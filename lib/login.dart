@@ -39,6 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 20),
                   TextField(
+                    textAlign: TextAlign.center,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(50)),
@@ -51,6 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 10),
                   TextField(
                     obscureText: _obscureText,
+                    textAlign: TextAlign.center,
                     decoration: InputDecoration(
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(50)),
@@ -132,16 +134,30 @@ class _LoginScreenState extends State<LoginScreen> {
                         vertical: 10,
                       ), // Padding
                     ),
-                    child: const Text(
-                      'Forgot Password?Reset Password',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+
+                    child: RichText(
+                      text: TextSpan(
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 16,
+                          // fontWeight: FontWeight.bold,
+                        ),
+                        children: const [
+                          TextSpan(text: 'Forgot Password?'),
+                          TextSpan(
+                            text: ' Reset',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                   const SizedBox(height: 40),
+
                   //  const Spacer(),
                 ],
               ),

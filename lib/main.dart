@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:savvy_stock/dayTrial.dart';
 import 'package:savvy_stock/getStarted.dart';
 import 'package:savvy_stock/login.dart';
+import 'package:savvy_stock/trial_page_refactored.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +22,8 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (context) => const LoginScreen(),
         '/getStarted': (context) => const GetStart(),
-        '/forgot-password': (context) => const TrialPage(),
+        // '/forgot-password': (context) => const TrialPageRefactored(),
+        '/register': (context) => const TrialPageRefactored(),
 
         //'/register': (context) => const RegisterScreen(),
       },
