@@ -7,12 +7,12 @@ class UserTypeDropdown extends StatelessWidget {
   final bool isTablet;
 
   const UserTypeDropdown({
-    Key? key,
+    super.key,
     required this.selectedUserType,
     required this.isEnglish,
     required this.onUserTypeSelected,
     this.isTablet = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -68,18 +68,9 @@ class UserTypeDropdown extends StatelessWidget {
 
   void _showUserTypeDropdown(BuildContext context) {
     final userTypes = [
-      {
-        'en': 'Individual User',
-        'ar': 'مستخدم فردي',
-      },
-      {
-        'en': 'Business Owner',
-        'ar': 'صاحب عمل',
-      },
-      {
-        'en': 'Company Admin',
-        'ar': 'مدير شركة',
-      },
+      {'en': 'Individual User', 'ar': 'مستخدم فردي'},
+      {'en': 'Business Owner', 'ar': 'صاحب عمل'},
+      {'en': 'Company Admin', 'ar': 'مدير شركة'},
     ];
 
     showModalBottomSheet(
@@ -112,17 +103,23 @@ class UserTypeDropdown extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               ...userTypes.map((userType) {
-                final displayText = isEnglish ? userType['en']! : userType['ar']!;
+                final displayText = isEnglish
+                    ? userType['en']!
+                    : userType['ar']!;
                 final isSelected = selectedUserType == displayText;
-                
+
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
                     title: Text(
                       displayText,
                       style: TextStyle(
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                        color: isSelected ? const Color(0xFF4DE89F) : Colors.black,
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                        color: isSelected
+                            ? const Color(0xFF4DE89F)
+                            : Colors.black,
                       ),
                     ),
                     trailing: isSelected
@@ -137,7 +134,7 @@ class UserTypeDropdown extends StatelessWidget {
                     },
                   ),
                 );
-              }).toList(),
+              }),
               const SizedBox(height: 20),
             ],
           ),

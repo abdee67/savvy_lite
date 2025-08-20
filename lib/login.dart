@@ -81,7 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: ElevatedButton(
                       onPressed: () {
                         // Handle login logic here
-                        Navigator.pushNamed(context, '/home');
+                        Navigator.pushNamed(context, '/salesScreen');
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.black, // Button color

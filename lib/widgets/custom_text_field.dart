@@ -11,7 +11,7 @@ class CustomTextField extends StatelessWidget {
   final TextInputType? keyboardType;
 
   const CustomTextField({
-    Key? key,
+    super.key,
     required this.labelText,
     this.isTablet = false,
     this.isDarkTheme = false,
@@ -20,7 +20,7 @@ class CustomTextField extends StatelessWidget {
     this.validator,
     this.onChanged,
     this.keyboardType,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -32,9 +32,7 @@ class CustomTextField extends StatelessWidget {
         validator: validator,
         onChanged: onChanged,
         keyboardType: keyboardType,
-        style: TextStyle(
-          color: isDarkTheme ? Colors.white : Colors.black,
-        ),
+        style: TextStyle(color: isDarkTheme ? Colors.white : Colors.black),
         decoration: InputDecoration(
           labelText: labelText,
           labelStyle: TextStyle(
@@ -42,33 +40,22 @@ class CustomTextField extends StatelessWidget {
             fontSize: isTablet ? 16 : 14,
           ),
           filled: true,
-          fillColor: isDarkTheme 
-              ? Colors.grey[800] 
-              : Colors.grey[100],
+          fillColor: isDarkTheme ? Colors.grey[800] : Colors.grey[100],
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(isTablet ? 12 : 10),
             borderSide: BorderSide.none,
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(isTablet ? 12 : 10),
-            borderSide: const BorderSide(
-              color: Color(0xFF4DE89F),
-              width: 2,
-            ),
+            borderSide: const BorderSide(color: Color(0xFF4DE89F), width: 2),
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(isTablet ? 12 : 10),
-            borderSide: const BorderSide(
-              color: Colors.red,
-              width: 1,
-            ),
+            borderSide: const BorderSide(color: Colors.red, width: 1),
           ),
           focusedErrorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(isTablet ? 12 : 10),
-            borderSide: const BorderSide(
-              color: Colors.red,
-              width: 2,
-            ),
+            borderSide: const BorderSide(color: Colors.red, width: 2),
           ),
           contentPadding: EdgeInsets.symmetric(
             horizontal: isTablet ? 16 : 12,

@@ -12,7 +12,7 @@ class _TrialPageState extends State<TrialPage> {
   bool isFormExpanded = false;
   int currentFormStep = 0;
   String? selectedUserType;
-  PageController _pageController = PageController();
+  final PageController _pageController = PageController();
 
   @override
   void dispose() {
@@ -551,7 +551,7 @@ class _TrialPageState extends State<TrialPage> {
                                     textAlign: TextAlign.center,
                                   ),
                                   SizedBox(height: isTablet ? 40 : 30),
-                                  Container(
+                                  SizedBox(
                                     width: double.infinity,
                                     height: isTablet ? 56 : 50,
                                     child: ElevatedButton(

@@ -7,17 +7,18 @@ class LanguageToggle extends StatelessWidget {
   final bool showLabel;
 
   const LanguageToggle({
-    Key? key,
+    super.key,
     required this.isEnglish,
     required this.onToggle,
     this.label,
     this.showLabel = true,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
-    final displayLabel = label ?? (isEnglish ? 'Get Started Here' : 'ابدأ من هنا');
-    
+    final displayLabel =
+        label ?? (isEnglish ? 'Get Started Here' : 'ابدأ من هنا');
+
     return Row(
       children: [
         if (showLabel) ...[
@@ -63,9 +64,7 @@ class LanguageToggle extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
-                      color: isEnglish
-                          ? const Color(0xFF4DE89F)
-                          : Colors.white,
+                      color: isEnglish ? const Color(0xFF4DE89F) : Colors.white,
                     ),
                   ),
                 ),

@@ -12,14 +12,14 @@ class TrialWizard extends StatefulWidget {
   final VoidCallback? onSubmit;
 
   const TrialWizard({
-    Key? key,
+    super.key,
     required this.isEnglish,
     required this.isTablet,
     required this.isSmallScreen,
     required this.formData,
     required this.onFormDataChanged,
     this.onSubmit,
-  }) : super(key: key);
+  });
 
   @override
   State<TrialWizard> createState() => TrialWizardState();
@@ -54,9 +54,15 @@ class TrialWizardState extends State<TrialWizard> {
     _phoneController = TextEditingController(text: widget.formData.phoneNumber);
     _usernameController = TextEditingController(text: widget.formData.username);
     _passwordController = TextEditingController(text: widget.formData.password);
-    _confirmPasswordController = TextEditingController(text: widget.formData.confirmPassword);
-    _businessNameController = TextEditingController(text: widget.formData.businessName);
-    _businessTypeController = TextEditingController(text: widget.formData.businessType);
+    _confirmPasswordController = TextEditingController(
+      text: widget.formData.confirmPassword,
+    );
+    _businessNameController = TextEditingController(
+      text: widget.formData.businessName,
+    );
+    _businessTypeController = TextEditingController(
+      text: widget.formData.businessType,
+    );
     _industryController = TextEditingController(text: widget.formData.industry);
   }
 
@@ -124,7 +130,7 @@ class TrialWizardState extends State<TrialWizard> {
           // Page Indicators
           _buildPageIndicators(),
           const SizedBox(height: 20),
-          
+
           // Wizard Pages
           SizedBox(
             height: widget.isSmallScreen ? 400 : 500,
@@ -143,9 +149,9 @@ class TrialWizardState extends State<TrialWizard> {
               ],
             ),
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           // Navigation Buttons
           _buildNavigationButtons(),
         ],
@@ -181,9 +187,9 @@ class TrialWizardState extends State<TrialWizard> {
           controller: _fullNameController,
           isTablet: widget.isTablet,
           validator: (value) => FormValidators.validateRequired(
-            value, 
-            widget.isEnglish ? 'Full Name' : 'الاسم الكامل', 
-            widget.isEnglish
+            value,
+            widget.isEnglish ? 'Full Name' : 'الاسم الكامل',
+            widget.isEnglish,
           ),
           onChanged: (_) => _updateFormData(),
         ),
@@ -193,7 +199,8 @@ class TrialWizardState extends State<TrialWizard> {
           controller: _emailController,
           isTablet: widget.isTablet,
           keyboardType: TextInputType.emailAddress,
-          validator: (value) => FormValidators.validateEmail(value, widget.isEnglish),
+          validator: (value) =>
+              FormValidators.validateEmail(value, widget.isEnglish),
           onChanged: (_) => _updateFormData(),
         ),
         const SizedBox(height: 16),
@@ -202,7 +209,8 @@ class TrialWizardState extends State<TrialWizard> {
           controller: _phoneController,
           isTablet: widget.isTablet,
           keyboardType: TextInputType.phone,
-          validator: (value) => FormValidators.validatePhone(value, widget.isEnglish),
+          validator: (value) =>
+              FormValidators.validatePhone(value, widget.isEnglish),
           onChanged: (_) => _updateFormData(),
         ),
       ],
@@ -217,7 +225,8 @@ class TrialWizardState extends State<TrialWizard> {
           labelText: widget.isEnglish ? 'Username' : 'اسم المستخدم',
           controller: _usernameController,
           isTablet: widget.isTablet,
-          validator: (value) => FormValidators.validateUsername(value, widget.isEnglish),
+          validator: (value) =>
+              FormValidators.validateUsername(value, widget.isEnglish),
           onChanged: (_) => _updateFormData(),
         ),
         const SizedBox(height: 16),
@@ -226,19 +235,22 @@ class TrialWizardState extends State<TrialWizard> {
           controller: _passwordController,
           isTablet: widget.isTablet,
           isPassword: true,
-          validator: (value) => FormValidators.validatePassword(value, widget.isEnglish),
+          validator: (value) =>
+              FormValidators.validatePassword(value, widget.isEnglish),
           onChanged: (_) => _updateFormData(),
         ),
         const SizedBox(height: 16),
         CustomTextField(
-          labelText: widget.isEnglish ? 'Confirm Password' : 'تأكيد كلمة المرور',
+          labelText: widget.isEnglish
+              ? 'Confirm Password'
+              : 'تأكيد كلمة المرور',
           controller: _confirmPasswordController,
           isTablet: widget.isTablet,
           isPassword: true,
           validator: (value) => FormValidators.validateConfirmPassword(
-            value, 
-            _passwordController.text, 
-            widget.isEnglish
+            value,
+            _passwordController.text,
+            widget.isEnglish,
           ),
           onChanged: (_) => _updateFormData(),
         ),
@@ -255,9 +267,9 @@ class TrialWizardState extends State<TrialWizard> {
           controller: _businessNameController,
           isTablet: widget.isTablet,
           validator: (value) => FormValidators.validateRequired(
-            value, 
-            widget.isEnglish ? 'Business Name' : 'اسم العمل', 
-            widget.isEnglish
+            value,
+            widget.isEnglish ? 'Business Name' : 'اسم العمل',
+            widget.isEnglish,
           ),
           onChanged: (_) => _updateFormData(),
         ),
@@ -267,9 +279,9 @@ class TrialWizardState extends State<TrialWizard> {
           controller: _businessTypeController,
           isTablet: widget.isTablet,
           validator: (value) => FormValidators.validateRequired(
-            value, 
-            widget.isEnglish ? 'Business Type' : 'نوع العمل', 
-            widget.isEnglish
+            value,
+            widget.isEnglish ? 'Business Type' : 'نوع العمل',
+            widget.isEnglish,
           ),
           onChanged: (_) => _updateFormData(),
         ),
@@ -279,9 +291,9 @@ class TrialWizardState extends State<TrialWizard> {
           controller: _industryController,
           isTablet: widget.isTablet,
           validator: (value) => FormValidators.validateRequired(
-            value, 
-            widget.isEnglish ? 'Industry' : 'الصناعة', 
-            widget.isEnglish
+            value,
+            widget.isEnglish ? 'Industry' : 'الصناعة',
+            widget.isEnglish,
           ),
           onChanged: (_) => _updateFormData(),
         ),
@@ -297,14 +309,11 @@ class TrialWizardState extends State<TrialWizard> {
           widget.isEnglish
               ? 'Review your information and submit'
               : 'راجع معلوماتك وأرسل',
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.grey[600],
-          ),
+          style: TextStyle(fontSize: 16, color: Colors.grey[600]),
           textAlign: TextAlign.center,
         ),
         SizedBox(height: widget.isTablet ? 40 : 30),
-        Container(
+        SizedBox(
           width: double.infinity,
           height: widget.isTablet ? 56 : 50,
           child: ElevatedButton(
@@ -366,14 +375,16 @@ class TrialWizardState extends State<TrialWizard> {
       children: [
         if (currentStep > 0)
           Expanded(
-            child: Container(
+            child: SizedBox(
               height: widget.isTablet ? 50 : 44,
               child: OutlinedButton(
                 onPressed: _previousPage,
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: Color(0xFF4DE89F)),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(widget.isTablet ? 25 : 22),
+                    borderRadius: BorderRadius.circular(
+                      widget.isTablet ? 25 : 22,
+                    ),
                   ),
                 ),
                 child: Text(
@@ -390,7 +401,7 @@ class TrialWizardState extends State<TrialWizard> {
         if (currentStep > 0 && currentStep < 3) const SizedBox(width: 16),
         if (currentStep < 3)
           Expanded(
-            child: Container(
+            child: SizedBox(
               height: widget.isTablet ? 50 : 44,
               child: ElevatedButton(
                 onPressed: _nextPage,
@@ -398,7 +409,9 @@ class TrialWizardState extends State<TrialWizard> {
                   backgroundColor: const Color(0xFF4DE89F),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(widget.isTablet ? 25 : 22),
+                    borderRadius: BorderRadius.circular(
+                      widget.isTablet ? 25 : 22,
+                    ),
                   ),
                 ),
                 child: Text(

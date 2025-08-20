@@ -5,10 +5,10 @@ class TrialHeader extends StatelessWidget {
   final bool isSmallScreen;
 
   const TrialHeader({
-    Key? key,
+    super.key,
     required this.isTablet,
     required this.isSmallScreen,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

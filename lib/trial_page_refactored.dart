@@ -6,7 +6,7 @@ import 'widgets/trial_header.dart';
 import 'widgets/trial_wizard.dart';
 
 class TrialPageRefactored extends StatefulWidget {
-  const TrialPageRefactored({Key? key}) : super(key: key);
+  const TrialPageRefactored({super.key});
 
   @override
   State<TrialPageRefactored> createState() => _TrialPageRefactoredState();
@@ -28,8 +28,9 @@ class _TrialPageRefactoredState extends State<TrialPageRefactored> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Container(
-          height: screenHeight -
+        child: SizedBox(
+          height:
+              screenHeight -
               MediaQuery.of(context).padding.top -
               MediaQuery.of(context).padding.bottom,
           child: Stack(
@@ -66,7 +67,9 @@ class _TrialPageRefactoredState extends State<TrialPageRefactored> {
                     child: Column(
                       children: [
                         SizedBox(
-                          height: isFormExpanded ? 20 : (isSmallScreen ? 40 : 60),
+                          height: isFormExpanded
+                              ? 20
+                              : (isSmallScreen ? 40 : 60),
                         ),
 
                         // Language Toggle
@@ -94,7 +97,7 @@ class _TrialPageRefactoredState extends State<TrialPageRefactored> {
 
                         if (isFormExpanded) ...[
                           const SizedBox(height: 30),
-                          
+
                           // Trial Wizard
                           TrialWizard(
                             key: _wizardKey,
@@ -175,19 +178,19 @@ class _TrialPageRefactoredState extends State<TrialPageRefactored> {
   void _handleFormSubmission() {
     // Handle form submission logic here
     print('Form submitted with data: ${formData.toJson()}');
-    
+
     // Show success message
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          isEnglish 
-              ? 'Application submitted successfully!' 
+          isEnglish
+              ? 'Application submitted successfully!'
               : 'تم إرسال الطلب بنجاح!',
         ),
         backgroundColor: const Color(0xFF4DE89F),
       ),
     );
-    
+
     // Optionally navigate to another page or reset form
     // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => NextPage()));
   }
