@@ -39,7 +39,7 @@ class LanguageToggle extends StatelessWidget {
             height: 34,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(50),
-              color: const Color(0xFF4DE89F),
+              color: const Color(0xFF155888),
             ),
             child: Stack(
               children: [

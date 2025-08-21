@@ -133,7 +133,7 @@ class _TrialPageRefactoredState extends State<TrialPageRefactored> {
                       width: isTablet ? 40 : 34,
                       height: isTablet ? 70 : 64,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFD9D9D9),
+                        color: Colors.amber,
                         borderRadius: BorderRadius.circular(isTablet ? 20 : 17),
                         boxShadow: [
                           BoxShadow(
@@ -148,8 +148,8 @@ class _TrialPageRefactoredState extends State<TrialPageRefactored> {
                           turns: isFormExpanded ? 0.5 : 0.0,
                           duration: const Duration(milliseconds: 300),
                           child: Icon(
-                            Icons.keyboard_arrow_up,
-                            color: const Color(0xFF4DE89F),
+                            Icons.keyboard_double_arrow_up,
+                            color: Colors.blue.shade900,
                             size: isTablet ? 28 : 24,
                           ),
                         ),

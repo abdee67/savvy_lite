@@ -20,13 +20,13 @@ class UserTypeDropdown extends StatelessWidget {
       width: double.infinity,
       height: isTablet ? 56 : 50,
       decoration: BoxDecoration(
-        color: const Color(0xFF4DE89F),
+        color: const Color(0xFF155888),
         borderRadius: BorderRadius.circular(isTablet ? 28 : 25),
       ),
       child: ElevatedButton(
         onPressed: () => _showUserTypeDropdown(context),
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF4DE89F),
+          backgroundColor: const Color(0xFF155888),
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(isTablet ? 28 : 25),
@@ -38,25 +38,33 @@ class UserTypeDropdown extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              selectedUserType ??
-                  (isEnglish ? 'Select User Type' : 'اختر نوع المستخدم'),
+              'Sign up as |',
               style: TextStyle(
                 fontSize: isTablet ? 18 : 16,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w300,
                 color: Colors.white,
               ),
             ),
             const SizedBox(width: 8),
+            Text(
+              selectedUserType ?? '',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 18),
             Container(
               width: isTablet ? 24 : 20,
               height: isTablet ? 24 : 20,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Color(0xFF155888),
                 borderRadius: BorderRadius.circular(isTablet ? 12 : 10),
+                border: Border.all(color: Colors.white),
               ),
               child: Icon(
                 Icons.keyboard_arrow_down,
-                color: const Color(0xFF4DE89F),
+                color: Colors.white,
                 size: isTablet ? 18 : 16,
               ),
             ),
@@ -118,14 +126,14 @@ class UserTypeDropdown extends StatelessWidget {
                             ? FontWeight.w600
                             : FontWeight.normal,
                         color: isSelected
-                            ? const Color(0xFF4DE89F)
+                            ? const Color(0xFF155888)
                             : Colors.black,
                       ),
                     ),
                     trailing: isSelected
                         ? const Icon(
                             Icons.check_circle,
-                            color: Color(0xFF4DE89F),
+                            color: Color(0xFF155888),
                           )
                         : null,
                     onTap: () {

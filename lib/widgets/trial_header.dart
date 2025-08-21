@@ -14,7 +14,18 @@ class TrialHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(color: Color(0xFF383838)),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.blue.shade900,
+            Colors.teal.shade600,
+            Colors.lightBlueAccent.shade400,
+            Colors.blue.shade900,
+          ],
+        ),
+      ),
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: isTablet ? 40.0 : 24.0),
         child: Column(
@@ -29,7 +40,7 @@ class TrialHeader extends StatelessWidget {
                 fontSize: isTablet ? 18 : 16,
                 color: Colors.white,
                 letterSpacing: 1.0,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w700,
               ),
             ),
             SizedBox(height: isSmallScreen ? 8 : 12),
@@ -39,7 +50,7 @@ class TrialHeader extends StatelessWidget {
               textAlign: TextAlign.center,
               text: TextSpan(
                 style: TextStyle(
-                  fontSize: isTablet ? 40 : (isSmallScreen ? 28 : 34),
+                  fontSize: isTablet ? 40 : (isSmallScreen ? 21 : 28),
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                   letterSpacing: 1.5,
@@ -47,7 +58,7 @@ class TrialHeader extends StatelessWidget {
                 children: const [
                   TextSpan(
                     text: 'FREE ',
-                    style: TextStyle(color: Color(0xFF4DE89F)),
+                    style: TextStyle(color: Colors.amber),
                   ),
                   TextSpan(text: '7 - DAYS TRIAL'),
                 ],
