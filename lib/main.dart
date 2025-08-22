@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:savvy_stock/getStarted.dart';
-import 'package:savvy_stock/login.dart';
+import 'package:savvy_stock/screens/login.dart';
 import 'package:savvy_stock/screens/salesScreen.dart';
-import 'package:savvy_stock/trial_page_refactored.dart';
+import 'package:savvy_stock/screens/trial_page.dart';
+import 'package:savvy_stock/widgets/getStarted/getStarted.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

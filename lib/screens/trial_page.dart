@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'models/trial_form_data.dart';
-import 'widgets/language_toggle.dart';
-import 'widgets/user_type_dropdown.dart';
-import 'widgets/trial_header.dart';
-import 'widgets/trial_wizard.dart';
+import 'package:savvy_stock/models/trial_form_data.dart';
+import 'package:savvy_stock/widgets/getStarted/language_toggle.dart';
+import 'package:savvy_stock/widgets/getStarted/trial_header.dart';
+import 'package:savvy_stock/widgets/getStarted/trial_wizard.dart';
+import 'package:savvy_stock/widgets/getStarted/user_type_dropdown.dart';
 
 class TrialPageRefactored extends StatefulWidget {
   const TrialPageRefactored({super.key});

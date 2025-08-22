@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:savvy_stock/models/salesorder.dart';
+import 'package:savvy_stock/models/SalesEntry/salesorder.dart';
 
 class ItemList extends StatelessWidget {
   final List<SalesOrderItem> items;
   final Function(int) onItemRemoved;
-  
-  const ItemList({
-    super.key,
-    required this.items,
-    required this.onItemRemoved,
-  });
+
+  const ItemList({super.key, required this.items, required this.onItemRemoved});
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) {

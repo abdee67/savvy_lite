@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:savvy_stock/models/salesorder.dart';
+import 'package:savvy_stock/models/SalesEntry/salesorder.dart';
 
 class BarcodeSection extends StatefulWidget {
   final Function(SalesOrderItem) onItemAdded;
-  
-  const BarcodeSection({
-    super.key,
-    required this.onItemAdded,
-  });
+
+  const BarcodeSection({super.key, required this.onItemAdded});
 
   @override
   State<BarcodeSection> createState() => _BarcodeSectionState();
@@ -62,7 +59,7 @@ class _BarcodeSectionState extends State<BarcodeSection> {
       quantity: 1,
       price: 10.99,
     );
-    
+
     widget.onItemAdded(newItem);
 
     // Clear the barcode field

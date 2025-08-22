@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:savvy_stock/models/customer.dart';
-import 'package:savvy_stock/models/salesorder.dart';
+import 'package:savvy_stock/models/SalesEntry/salesorder.dart';
+import 'package:savvy_stock/screens/item_entry.dart';
 import 'package:savvy_stock/widgets/salesEntry.dart/salesorder.dart/barcode_section.dart';
 import 'package:savvy_stock/widgets/salesEntry.dart/salesorder.dart/customer_details_field.dart';
 import 'package:savvy_stock/widgets/salesEntry.dart/salesorder.dart/customer_section.dart';
@@ -135,18 +136,25 @@ class _SalesOrderScreenState extends State<SalesOrderScreen> {
                   });
                 },
               ),
-
               // Next button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: goToNextPage,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade700,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: const Text('Next', style: TextStyle(fontSize: 16)),
+              Container(
+                alignment: Alignment.bottomRight,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    ElevatedButton(
+                      onPressed: goToNextPage,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF155888),
+                        foregroundColor: Colors.white,
+                        alignment: Alignment.center,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      child: const Text('Next', style: TextStyle(fontSize: 16)),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -164,7 +172,10 @@ class _SalesOrderScreenState extends State<SalesOrderScreen> {
       ).showSnackBar(const SnackBar(content: Text('Proceeding to next page')));
 
       // In a real app, you would navigate to the next screen
-      // Navigator.push(context, MaterialPageRoute(builder: (context) => NextPage()));
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => ItemEntryScreen()),
+      );
     }
   }
 }

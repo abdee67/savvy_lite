@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/trial_form_data.dart';
-import '../utils/form_validators.dart';
+import 'package:savvy_stock/models/trial_form_data.dart';
+import 'package:savvy_stock/utils/form_validators.dart';
 import 'custom_text_field.dart';
 
 class TrialWizard extends StatefulWidget {
