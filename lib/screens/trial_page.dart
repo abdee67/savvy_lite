@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:savvy_stock/models/trial_form_data.dart';
+import 'package:savvy_stock/models/GetStarted/trial_form_data.dart';
 import 'package:savvy_stock/widgets/getStarted/language_toggle.dart';
 import 'package:savvy_stock/widgets/getStarted/trial_header.dart';
 import 'package:savvy_stock/widgets/getStarted/trial_wizard.dart';

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:savvy_stock/models/trial_form_data.dart';
+import 'package:savvy_stock/models/GetStarted/trial_form_data.dart';
 import 'package:savvy_stock/utils/form_validators.dart';
 import 'custom_text_field.dart';
 

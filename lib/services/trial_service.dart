@@ -1,14 +1,15 @@
-import '../models/trial_form_data.dart';
+import 'package:savvy_stock/models/GetStarted/trial_form_data.dart';
 
 class TrialService {
-  static const String _baseUrl = 'https://api.savvystock.com'; // Replace with your API URL
-  
+  static const String _baseUrl =
+      'https://api.savvystock.com'; // Replace with your API URL
+
   /// Submit trial application to the server
   Future<bool> submitTrialApplication(TrialFormData formData) async {
     try {
       // Simulate API call delay
       await Future.delayed(const Duration(seconds: 2));
-      
+
       // Here you would make the actual HTTP request
       // Example using http package:
       /*
@@ -24,23 +25,22 @@ class TrialService {
         throw Exception('Failed to submit application: ${response.statusCode}');
       }
       */
-      
+
       // For now, simulate success
       print('Submitting trial application: ${formData.toJson()}');
       return true;
-      
     } catch (e) {
       print('Error submitting trial application: $e');
       return false;
     }
   }
-  
+
   /// Validate if email is already registered
   Future<bool> isEmailAvailable(String email) async {
     try {
       // Simulate API call
       await Future.delayed(const Duration(milliseconds: 500));
-      
+
       // Here you would check with your backend
       // For now, simulate that some emails are taken
       final unavailableEmails = [
@@ -48,38 +48,31 @@ class TrialService {
         'admin@savvystock.com',
         'user@test.com',
       ];
-      
+
       return !unavailableEmails.contains(email.toLowerCase());
-      
     } catch (e) {
       print('Error checking email availability: $e');
       return true; // Default to available if check fails
     }
   }
-  
+
   /// Validate if username is already taken
   Future<bool> isUsernameAvailable(String username) async {
     try {
       // Simulate API call
       await Future.delayed(const Duration(milliseconds: 500));
-      
+
       // Here you would check with your backend
       // For now, simulate that some usernames are taken
-      final unavailableUsernames = [
-        'admin',
-        'test',
-        'user',
-        'savvystock',
-      ];
-      
+      final unavailableUsernames = ['admin', 'test', 'user', 'savvystock'];
+
       return !unavailableUsernames.contains(username.toLowerCase());
-      
     } catch (e) {
       print('Error checking username availability: $e');
       return true; // Default to available if check fails
     }
   }
-  
+
   /// Get list of available business types
   List<String> getBusinessTypes(bool isEnglish) {
     if (isEnglish) {
@@ -110,7 +103,7 @@ class TrialService {
       ];
     }
   }
-  
+
   /// Get list of available industries
   List<String> getIndustries(bool isEnglish) {
     if (isEnglish) {
@@ -143,7 +136,7 @@ class TrialService {
       ];
     }
   }
-  
+
   /// Save form data locally (for offline support)
   Future<void> saveFormDataLocally(TrialFormData formData) async {
     try {
@@ -154,7 +147,7 @@ class TrialService {
       print('Error saving form data locally: $e');
     }
   }
-  
+
   /// Load saved form data from local storage
   Future<TrialFormData?> loadSavedFormData() async {
     try {

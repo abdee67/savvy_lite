@@ -8,7 +8,11 @@ class SummaryPaymentPage extends StatefulWidget {
   final List<SelectedItem> selectedItems;
   final double totalAmount;
 
-  const SummaryPaymentPage({super.key, required this.selectedItems, required this.totalAmount});
+  const SummaryPaymentPage({
+    super.key,
+    required this.selectedItems,
+    required this.totalAmount,
+  });
 
   @override
   _SummaryPaymentPageState createState() => _SummaryPaymentPageState();
@@ -41,12 +45,10 @@ class _SummaryPaymentPageState extends State<SummaryPaymentPage> {
     final totalAmount = subtotal + taxAmount - discountAmount - withholdAmount;
 
     return Scaffold(
-      appBar: AppBar(title: Text('Summary & Payment')),
       body: Column(
         children: [
           // Upper part - White background
           Expanded(
-            flex: 3,
             child: Container(
               color: Colors.white,
               padding: EdgeInsets.all(16),
@@ -137,20 +139,11 @@ class _SummaryPaymentPageState extends State<SummaryPaymentPage> {
           ),
           // Lower part - Black background
           Container(
+            height: MediaQuery.of(context).size.height * 0.4,
             color: Colors.black,
-            padding: EdgeInsets.all(16),
+            padding: EdgeInsets.all(8),
             child: Column(
               children: [
-                Text(
-                  'Payment Method & Instrument',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 16),
-                // Payment type selection
                 Row(
                   children: [
                     Expanded(
@@ -280,19 +273,25 @@ class _SummaryPaymentPageState extends State<SummaryPaymentPage> {
   }
 
   Widget _buildSummaryRow(String label, double value, {bool isBold = false}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
       children: [
         Text(
           label,
           style: TextStyle(
             fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
           ),
+          textAlign: TextAlign.left,
         ),
-        Text(
-          '\$${currencyFormat.format(value)}',
+        TextFormField(
+          initialValue: '${currencyFormat.format(value)} ETB',
           style: TextStyle(
             fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+          ),
+          textAlign: TextAlign.center,
+          readOnly: true,
+          decoration: InputDecoration(
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 0),
           ),
         ),
       ],
