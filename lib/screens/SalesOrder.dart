@@ -7,6 +7,7 @@ import 'package:savvy_stock/widgets/salesEntry.dart/salesorder.dart/customer_det
 import 'package:savvy_stock/widgets/salesEntry.dart/salesorder.dart/customer_section.dart';
 import 'package:savvy_stock/widgets/salesEntry.dart/salesorder.dart/item_list.dart';
 
+
 class SalesOrderScreen extends StatefulWidget {
   const SalesOrderScreen({super.key});
 
@@ -58,6 +59,7 @@ class _SalesOrderScreenState extends State<SalesOrderScreen> {
                 onChanged: (Customer? value) {
                   setState(() {
                     _selectedBillToCustomer = value;
+                    _selectedShipToCustomer = value; // Set Ship To same as Bill To
                     if (value != null) {
                       _tinController.text = value.tin;
                       _phoneController.text = value.phone;
@@ -87,7 +89,7 @@ class _SalesOrderScreenState extends State<SalesOrderScreen> {
               // Customer Ship To section
               CustomerSectionScreen(
                 title: 'Customer Ship To:',
-                value: _selectedBillToCustomer,
+                value: _selectedShipToCustomer,
                 onChanged: (Customer? value) {
                   setState(() {
                     _selectedShipToCustomer = value;

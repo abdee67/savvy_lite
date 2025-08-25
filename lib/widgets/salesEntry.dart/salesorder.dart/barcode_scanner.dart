@@ -1,26 +1,25 @@
-import 'dart:io';
 import 'dart:developer';
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:savvy_stock/models/SalesEntry/salesorder.dart';
-import 'package:savvy_stock/widgets/salesEntry.dart/salesorder.dart/barcode_scanner.dart';
 import 'package:qr_code_scanner_plus/qr_code_scanner_plus.dart';
+import 'package:savvy_stock/widgets/salesEntry.dart/salesorder.dart/barcode_section.dart';
 
-class BarcodeSection extends StatefulWidget {
-  final Function(SalesOrderItem) onItemAdded;
-
-  const BarcodeSection({super.key, required this.onItemAdded});
+class QRScannerSceen extends StatefulWidget {
+  const QRScannerSceen({Key? key}) : super(key: key);
 
   @override
-  State<BarcodeSection> createState() => _BarcodeSectionState();
+  State<StatefulWidget> createState() => _QRScannerSceenState();
 }
 
-class _BarcodeSectionState extends State<BarcodeSection> {
-  final TextEditingController _barcodeController = TextEditingController();
-    Barcode? result;
+class _QRScannerSceenState extends State<QRScannerSceen> {
+  Barcode? result;
   QRViewController? controller;
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
+
+  // In order to get hot reload to work we need to pause the camera if the platform
+  // is android, or resume the camera if the platform is iOS.
   @override
   void reassemble() {
     super.reassemble();
@@ -29,27 +28,10 @@ class _BarcodeSectionState extends State<BarcodeSection> {
     }
     controller!.resumeCamera();
   }
-  void submitBarcode(String barcode) {
-    // Create and add the item via callback
-    final newItem = SalesOrderItem(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: 'Item from barcode $barcode',
-      quantity: 1,
-      price: 10.99,
-    );
 
-    widget.onItemAdded(newItem);
-
-    // Clear the barcode field
-    _barcodeController.clear();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Item added from barcode: $barcode')),
-    );
-  }
-
-  Widget _scanner(){
-      return Scaffold(
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
       body: Column(
         children: <Widget>[
           Expanded(flex: 4, child: _buildQrView(context)),
@@ -138,7 +120,8 @@ class _BarcodeSectionState extends State<BarcodeSection> {
       ),
     );
   }
-    Widget _buildQrView(BuildContext context) {
+
+  Widget _buildQrView(BuildContext context) {
     // For this example we check how width or tall the device is and change the scanArea and overlay accordingly.
     var scanArea = (MediaQuery.of(context).size.width < 400 ||
             MediaQuery.of(context).size.height < 400)
@@ -168,8 +151,7 @@ class _BarcodeSectionState extends State<BarcodeSection> {
         result = scanData;
       });
       if (scanData.code != null && scanData.code!.isNotEmpty) {
-        submitBarcode(scanData.code!);
-        return;
+       // BarcodeSection.submitBarcode(scanData.code!);
       }
     });
   }
@@ -181,61 +163,5 @@ class _BarcodeSectionState extends State<BarcodeSection> {
         const SnackBar(content: Text('no Permission')),
       );
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Barcode', style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                controller: _barcodeController,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30.0),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 14,
-                  ),
-                  hintText: 'Enter barcode',
-                ),
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                onChanged: (value) {
-                  if (value.length == 12 || value.length == 13) {
-                    submitBarcode(value);
-                  }
-                },
-              ),
-            ),
-            const SizedBox(width: 10),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => _scanner()),
-                );
-              },
-              icon: const Icon(Icons.camera_alt),
-              label: const Text('Scan'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey.shade200,
-                foregroundColor: Colors.black87,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
   }
 }
