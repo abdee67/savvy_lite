@@ -7,7 +7,6 @@ import 'package:savvy_stock/widgets/salesEntry.dart/salesorder.dart/customer_det
 import 'package:savvy_stock/widgets/salesEntry.dart/salesorder.dart/customer_section.dart';
 import 'package:savvy_stock/widgets/salesEntry.dart/salesorder.dart/item_list.dart';
 
-
 class SalesOrderScreen extends StatefulWidget {
   const SalesOrderScreen({super.key});
 
@@ -40,10 +39,17 @@ class _SalesOrderScreenState extends State<SalesOrderScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Sales Order'),
-        backgroundColor: Colors.blue.shade700,
-        foregroundColor: Colors.white,
+        title: Text(
+          'Customer Information',
+          style: TextStyle(
+            color: Color.fromARGB(255, 21, 88, 136),
+            fontSize: 25,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -59,7 +65,8 @@ class _SalesOrderScreenState extends State<SalesOrderScreen> {
                 onChanged: (Customer? value) {
                   setState(() {
                     _selectedBillToCustomer = value;
-                    _selectedShipToCustomer = value; // Set Ship To same as Bill To
+                    _selectedShipToCustomer =
+                        value; // Set Ship To same as Bill To
                     if (value != null) {
                       _tinController.text = value.tin;
                       _phoneController.text = value.phone;
