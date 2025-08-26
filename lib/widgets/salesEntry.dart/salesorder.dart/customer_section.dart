@@ -299,8 +299,8 @@ class _CustomerSectionScreenState extends State<CustomerSectionScreen> {
             icon: const Icon(Icons.add, size: 18),
             label: const Text('Add Customer'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.blue.shade700,
-              side: BorderSide(color: Colors.blue.shade700),
+              foregroundColor: Color.fromARGB(255, 21, 88, 136),
+              side: BorderSide(color: Color.fromARGB(255, 21, 88, 136)),
             ),
           ),
         ],

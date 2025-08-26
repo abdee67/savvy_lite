@@ -4,10 +4,12 @@ import 'package:savvy_stock/models/customer.dart';
 class CustomerDropdown extends StatefulWidget {
   final Customer? value;
   final ValueChanged<Customer?> onChanged;
+  final String hintText;
   const CustomerDropdown({
     super.key,
     required this.value,
     required this.onChanged,
+    this.hintText = 'Select Customer',
   });
 
   @override
@@ -15,6 +17,17 @@ class CustomerDropdown extends StatefulWidget {
 }
 
 class _CustomerDropdownState extends State<CustomerDropdown> {
+  final OverlayPortalController _overlayPortalController =
+      OverlayPortalController();
+  final _link = LayerLink();
+  String _selectedCustomer = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedCustomer = widget.value?.name ?? '--Selecte Customer--';
+  }
+
   // Mock customer data
   final List<Customer> customers = [
     Customer(
@@ -54,97 +67,168 @@ class _CustomerDropdownState extends State<CustomerDropdown> {
     ),
   ];
 
+  Widget _buildTableCell(String text) {
+    return GestureDetector(
+      onTap: () {
+        final customer = customers.firstWhere(
+          (c) =>
+              c.name == text ||
+              c.phone == text ||
+              c.tin == text ||
+              c.country == text,
+        );
+        setState(() {
+          _selectedCustomer = customer.name;
+        });
+        widget.onChanged(customer);
+        _overlayPortalController.hide();
+      },
+      child: Padding(padding: const EdgeInsets.all(8.0), child: Text(text)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<Customer>(
-      itemBuilder: (BuildContext context) {
-        return customers.map((Customer customer) {
-          return PopupMenuItem<Customer>(
-            value: customer,
-            height: 100, // Set a fixed height for each item
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 300),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    customer.name,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.credit_card,
-                        size: 14,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        customer.tin,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
+    return CompositedTransformTarget(
+      link: _link,
+      child: OverlayPortal(
+        controller: _overlayPortalController,
+        overlayChildBuilder: (context) {
+          return CompositedTransformFollower(
+            link: _link,
+            targetAnchor: Alignment.bottomLeft,
+            offset: const Offset(0, -30),
+            child: Align(
+              alignment: AlignmentDirectional.topStart,
+              child: Material(
+                clipBehavior: Clip.antiAliasWithSaveLayer,
+                elevation: 4.0,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 200),
+                  child: SingleChildScrollView(
+                    child: Container(
+                      padding: const EdgeInsets.only(top: 20.0),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(50.0),
+                          bottomRight: Radius.circular(50.0),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.phone, size: 14, color: Colors.grey),
-                      const SizedBox(width: 4),
-                      Text(
-                        customer.phone,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
+                        border: Border(
+                          left: BorderSide(color: Colors.black),
+                          right: BorderSide(color: Colors.black),
+                          bottom: BorderSide(color: Colors.black),
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            spreadRadius: 1,
+                            blurRadius: 4,
+                            offset: Offset(0, 3), // changes position of shadow
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.location_on,
-                        size: 14,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        customer.country,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
+                      child: Table(
+                        border: TableBorder(
+                          top: BorderSide.none,
+                          left: BorderSide.none,
+                          right: BorderSide.none,
+                          horizontalInside: BorderSide(
+                            color: Colors.grey.shade300,
+                          ),
+                          verticalInside: BorderSide(
+                            color: Colors.grey.shade300,
+                          ),
                         ),
+                        columnWidths: const {
+                          0: FixedColumnWidth(150),
+                          1: FixedColumnWidth(100),
+                          2: FixedColumnWidth(120),
+                        },
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          // Table header
+                          TableRow(
+                            decoration: BoxDecoration(color: Colors.amber),
+                            children: const [
+                              Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: Text(
+                                  'Name',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: Text(
+                                  'Phone',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: Text(
+                                  'TIN',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ),
+                          // Table rows
+                          ...customers
+                              .map(
+                                (customer) => TableRow(
+                                  decoration: BoxDecoration(
+                                    color: _selectedCustomer == customer.name
+                                        ? Colors.blue[50]
+                                        : Colors.white,
+                                  ),
+                                  children: [
+                                    _buildTableCell(customer.name),
+                                    _buildTableCell(customer.phone),
+                                    _buildTableCell(customer.tin),
+                                  ],
+                                ),
+                              )
+                              .toList(),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ],
+                ),
               ),
             ),
           );
-        }).toList();
-      },
-      onSelected: widget.onChanged,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade400),
-          borderRadius: BorderRadius.circular(30.0),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              widget.value?.name ?? '--Select One--',
-              style: TextStyle(
-                color: widget.value != null ? Colors.black : Colors.grey,
-              ),
+        },
+        child: GestureDetector(
+          onTap: () {
+            if (_overlayPortalController.isShowing) {
+              _overlayPortalController.hide();
+            } else {
+              _overlayPortalController.show();
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            decoration: BoxDecoration(
+              border: Border.all(color: Color.fromARGB(255, 21, 88, 136)),
+              borderRadius: BorderRadius.circular(30.0),
             ),
-            const Icon(Icons.arrow_drop_down, color: Colors.grey),
-          ],
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _selectedCustomer,
+                  style: TextStyle(
+                    color: _selectedCustomer.isNotEmpty
+                        ? Colors.black
+                        : Colors.grey,
+                  ),
+                ),
+                Icon(Icons.arrow_drop_down, color: Colors.grey),
+              ],
+            ),
+          ),
         ),
       ),
     );
