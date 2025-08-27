@@ -107,44 +107,6 @@ class _SalesOrderScreenState extends State<SalesOrderScreen> {
 
               const SizedBox(height: 20),
 
-              // Barcode toggle
-              Row(
-                children: [
-                  Checkbox(
-                    value: _useBarcode,
-                    onChanged: (value) {
-                      setState(() {
-                        _useBarcode = value ?? false;
-                      });
-                    },
-                  ),
-                  const Text('Use Barcode'),
-                ],
-              ),
-
-              const SizedBox(height: 10),
-
-              // Barcode section (conditionally shown)
-              if (_useBarcode)
-                BarcodeSection(
-                  onItemAdded: (item) {
-                    setState(() {
-                      _items.add(item);
-                    });
-                  },
-                ),
-
-              const SizedBox(height: 20),
-
-              // Items list
-              ItemList(
-                items: _items,
-                onItemRemoved: (index) {
-                  setState(() {
-                    _items.removeAt(index);
-                  });
-                },
-              ),
               // Next button
               Container(
                 alignment: Alignment.bottomRight,
