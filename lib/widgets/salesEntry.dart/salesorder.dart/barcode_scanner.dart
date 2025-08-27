@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_code_scanner_plus/qr_code_scanner_plus.dart';
-import 'package:savvy_stock/widgets/salesEntry.dart/salesorder.dart/barcode_section.dart';
 
 class QRScannerSceen extends StatefulWidget {
   const QRScannerSceen({super.key});
