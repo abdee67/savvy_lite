@@ -1,13 +1,14 @@
 import 'dart:io';
 import 'dart:developer';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:savvy_stock/models/SalesEntry/salesorder.dart';
 import 'package:qr_code_scanner_plus/qr_code_scanner_plus.dart';
+import 'package:savvy_stock/models/confirmedItems.dart';
+import 'package:savvy_stock/models/selectedItem.dart';
 
 class BarcodeSection extends StatefulWidget {
-  final Function(SalesOrderItem) onItemAdded;
+  final Function(List<ConfirmedItem>) onItemAdded;
 
   const BarcodeSection({super.key, required this.onItemAdded});
 
@@ -16,6 +17,8 @@ class BarcodeSection extends StatefulWidget {
 }
 
 class _BarcodeSectionState extends State<BarcodeSection> {
+  List<SelectedItem> selectedItems = [];
+  List<ConfirmedItem> confirmedItems = [];
   final TextEditingController _barcodeController = TextEditingController();
   Barcode? result;
   QRViewController? controller;
@@ -30,22 +33,26 @@ class _BarcodeSectionState extends State<BarcodeSection> {
   }
 
   void submitBarcode(String barcode) {
-    // Create and add the item via callback
-    final newItem = SalesOrderItem(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: 'Item from barcode $barcode',
-      quantity: 1,
-      price: 10.99,
-    );
-
-    widget.onItemAdded(newItem);
-
-    // Clear the barcode field
-    _barcodeController.clear();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Item added from barcode: $barcode')),
-    );
+    setState(() {
+      for (var item in selectedItems) {
+        if (item.item != null && item.item!.barcode == double.parse(barcode)) {
+          confirmedItems.add(
+            ConfirmedItem(
+              itemName: item.item!.description,
+              quantity: item.quantity,
+              totalPrice: item.extendedPrice,
+            ),
+          );
+        }
+      }
+      selectedItems.clear();
+      _barcodeController.clear();
+      widget.onItemAdded(confirmedItems);
+      selectedItems.add(SelectedItem());
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Item added from barcode: $barcode')),
+      );
+    });
   }
 
   Widget _scanner() {
