@@ -50,6 +50,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
         TextFormField(
           controller: widget.tinController,
           decoration: InputDecoration(
+            fillColor: Color.fromARGB(220, 228, 228, 228),
+            filled: true,
             labelText: 'TIN Number',
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(30.0),
@@ -66,6 +68,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
         TextFormField(
           controller: widget.phoneController,
           decoration: InputDecoration(
+            fillColor: Color.fromARGB(220, 228, 228, 228),
+            filled: true,
             labelText: 'Phone Number',
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(30.0),
@@ -82,6 +86,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
         TextFormField(
           controller: widget.countryController,
           decoration: InputDecoration(
+            fillColor: Color.fromARGB(220, 228, 228, 228),
+            filled: true,
             labelText: 'Country',
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(30.0),
@@ -101,6 +107,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           },
           controller: widget.dateController,
           decoration: InputDecoration(
+            fillColor: Color.fromARGB(220, 228, 228, 228),
+            filled: true,
             labelText: 'Date',
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(30.0),
