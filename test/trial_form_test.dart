@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:savvy_stock/models/GetStarted/trial_form_data.dart';
 import 'package:savvy_stock/utils/form_validators.dart';
 import 'package:savvy_stock/services/trial_service.dart';
-import 'package:savvy_stock/widgets/getStarted/custom_text_field.dart';
 import 'package:savvy_stock/widgets/getStarted/language_toggle.dart';
+import 'package:savvy_stock/widgets/components/textfields.dart';
 
 void main() {
   group('TrialFormData Model Tests', () {

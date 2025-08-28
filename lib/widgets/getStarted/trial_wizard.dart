@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:savvy_stock/models/GetStarted/trial_form_data.dart';
 import 'package:savvy_stock/utils/form_validators.dart';
-import 'custom_text_field.dart';
+import 'package:savvy_stock/widgets/components/textfields.dart';
 
 class TrialWizard extends StatefulWidget {
   final bool isEnglish;
