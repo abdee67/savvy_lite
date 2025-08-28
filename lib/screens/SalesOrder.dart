@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:savvy_stock/models/customer.dart';
 import 'package:savvy_stock/models/SalesEntry/salesorder.dart';
 import 'package:savvy_stock/screens/item_entry.dart';
-import 'package:savvy_stock/widgets/salesEntry.dart/salesorder.dart/barcode_section.dart';
 import 'package:savvy_stock/widgets/salesEntry.dart/salesorder.dart/customer_details_field.dart';
 import 'package:savvy_stock/widgets/salesEntry.dart/salesorder.dart/customer_section.dart';
-import 'package:savvy_stock/widgets/salesEntry.dart/salesorder.dart/item_list.dart';
 
 class SalesOrderScreen extends StatefulWidget {
   const SalesOrderScreen({super.key});
@@ -24,7 +22,7 @@ class _SalesOrderScreenState extends State<SalesOrderScreen> {
   // Form state variables
   Customer? _selectedBillToCustomer;
   Customer? _selectedShipToCustomer;
-  bool _useBarcode = false;
+  final bool _useBarcode = false;
   final List<SalesOrderItem> _items = [];
 
   @override
@@ -137,12 +135,6 @@ class _SalesOrderScreenState extends State<SalesOrderScreen> {
 
   void goToNextPage() {
     if (_formKey.currentState!.validate()) {
-      // Navigate to next page
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Proceeding to next page')));
-
-      // In a real app, you would navigate to the next screen
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => ItemEntryScreen()),
