@@ -236,7 +236,7 @@ class _CustomerDropdownState extends State<CustomerDropdown> {
                           ),
                         ),
                       );
-                    }).toList(),
+                    }),
                   ],
                 ),
               ),
