@@ -156,7 +156,7 @@ class _ItemEntryScreenState extends State<ItemEntryScreen> {
           children: [
             // Upper Section - Order Items (will scroll when keyboard appears)
             Expanded(
-              flex: 3, // Give more space to the upper section
+              flex: 1, // Give more space to the upper section
               child: Container(
                 color: Colors.white,
                 child: Column(
@@ -167,11 +167,11 @@ class _ItemEntryScreenState extends State<ItemEntryScreen> {
                           ? _buildEmptyState()
                           : ListView.builder(
                               controller: _upperScrollController,
-                              padding: const EdgeInsets.all(16),
+                              padding: const EdgeInsets.all(8),
                               itemCount: selectedItems.length,
                               itemBuilder: (context, index) {
                                 return Padding(
-                                  padding: const EdgeInsets.only(bottom: 8.0),
+                                  padding: const EdgeInsets.only(bottom: 4.0),
                                   child: _buildItemEntry(
                                     selectedItems[index],
                                     index,
@@ -180,173 +180,184 @@ class _ItemEntryScreenState extends State<ItemEntryScreen> {
                               },
                             ),
                     ),
-                    // Action Button
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, -2),
-                          ),
-                        ],
-                      ),
-                      child: Align(
-                        alignment: Alignment.bottomRight,
-                        child: ElevatedButton.icon(
-                          onPressed:
-                              selectedItems.any(
-                                (item) => item.extendedPrice > 0,
-                              )
-                              ? _addToLowerPage
-                              : null,
-                          icon: Icon(
-                            selectedItems.any((item) => item.extendedPrice > 0)
-                                ? Icons.check
-                                : Icons.outlined_flag,
-                          ),
-                          label: Text(
-                            selectedItems.any((item) => item.extendedPrice > 0)
-                                ? 'Confirm Order'
-                                : 'Select first',
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                selectedItems.any(
-                                  (item) => item.extendedPrice > 0,
-                                )
-                                ? const Color.fromARGB(255, 29, 110, 168)
-                                : Colors.grey,
-                            foregroundColor:
-                                selectedItems.any(
-                                  (item) => item.extendedPrice > 0,
-                                )
-                                ? Colors.white
-                                : Colors.black,
-                          ),
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),
             ),
-            // Lower Section - Order Summary (fixed position)
-            Container(
-              height: MediaQuery.of(context).size.height * 0.4, // Fixed height
-              color: Colors.grey.shade500,
-              padding: const EdgeInsets.all(16),
-              child: Column(
+            // This Stack will contain both the button and the lower section
+            Expanded(
+              child: Stack(
+                clipBehavior: Clip.none, // Allow button to overflow
                 children: [
-                  // Scrollable list of confirmed items
-                  Expanded(
-                    child: confirmedItems.isEmpty
-                        ? Center(
-                            child: Text(
-                              'No items confirmed yet',
-                              style: TextStyle(color: Colors.white70),
-                            ),
-                          )
-                        : ListView.builder(
-                            controller: _lowerScrollController,
-                            itemCount: confirmedItems.length,
-                            itemBuilder: (context, index) {
-                              final item = confirmedItems[index];
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  color: Colors.white,
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        item.itemName,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Text(
-                                        item.quantity.toStringAsFixed(2),
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          background: Paint()
-                                            ..color = Colors.grey.shade200,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Text(
-                                        '\$${item.totalPrice.toStringAsFixed(2)}',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                        ),
-                                        textAlign: TextAlign.end,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: const Color.fromARGB(255, 29, 91, 134),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Grand Total',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        Text(
-                          '\$${_getTotalPrice().toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Align(
-                    alignment: Alignment.bottomRight,
-                    child: ElevatedButton(
-                      onPressed: _getTotalPrice() > 0
-                          ? _navigateToSummary
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(
-                          255,
-                          24,
-                          103,
-                          160,
-                        ),
-                        foregroundColor: Colors.white,
+                  // Lower Section - Order Summary (fixed position)
+                  Positioned.fill(
+                    child: Container(
+                      color: Colors.grey.shade500,
+                      padding: const EdgeInsets.only(
+                        top: 30, // Reduced top padding to make room for button
+                        left: 16,
+                        right: 16,
+                        bottom: 16,
                       ),
-                      child: const Text('Save & Continue'),
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 4), // Space for the button
+                          Expanded(
+                            child: confirmedItems.isEmpty
+                                ? Center(
+                                    child: Text(
+                                      'No items confirmed yet',
+                                      style: TextStyle(color: Colors.white70),
+                                    ),
+                                  )
+                                : ListView.builder(
+                                    controller: _lowerScrollController,
+                                    itemCount: confirmedItems.length,
+                                    itemBuilder: (context, index) {
+                                      final item = confirmedItems[index];
+                                      return Container(
+                                        margin: const EdgeInsets.only(
+                                          bottom: 8,
+                                        ),
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          color: Colors.white,
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                item.itemName,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            Expanded(
+                                              child: Text(
+                                                item.quantity.toStringAsFixed(
+                                                  2,
+                                                ),
+                                                style: TextStyle(fontSize: 14),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ),
+                                            Expanded(
+                                              child: Text(
+                                                '\$${item.totalPrice.toStringAsFixed(2)}',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
+                                                textAlign: TextAlign.end,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              color: const Color.fromARGB(255, 29, 91, 134),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Grand Total',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
+                                ),
+                                Text(
+                                  '\$${_getTotalPrice().toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Align(
+                            alignment: Alignment.bottomRight,
+                            child: ElevatedButton(
+                              onPressed: _getTotalPrice() > 0
+                                  ? _navigateToSummary
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color.fromARGB(
+                                  255,
+                                  24,
+                                  103,
+                                  160,
+                                ),
+                                foregroundColor: Colors.white,
+                              ),
+                              child: const Text('Save & Continue'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // The button positioned between sections
+                  Positioned(
+                    right: 16,
+                    top: -20, // Half outside the container
+                    child: SizedBox(
+                      width: 150,
+                      height: 40, // Fixed height for the button
+                      child: ElevatedButton(
+                        onPressed:
+                            selectedItems.any((item) => item.extendedPrice > 0)
+                            ? _addToLowerPage
+                            : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              selectedItems.any(
+                                (item) => item.extendedPrice > 0,
+                              )
+                              ? const Color.fromARGB(255, 29, 110, 168)
+                              : Colors.grey,
+                          foregroundColor:
+                              selectedItems.any(
+                                (item) => item.extendedPrice > 0,
+                              )
+                              ? Colors.white
+                              : Colors.black,
+                          padding: EdgeInsets.zero,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          elevation: 4,
+                        ),
+                        child: Text(
+                          selectedItems.any((item) => item.extendedPrice > 0)
+                              ? 'Confirm Order'
+                              : 'Select item',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -376,13 +387,8 @@ class _ItemEntryScreenState extends State<ItemEntryScreen> {
 
   Widget _buildItemEntry(SelectedItem selectedItem, int index) {
     final availableStores = _getAvailableStoresForItem(selectedItem.item);
-    selectedItem.isOutOfStock = availableStores.isEmpty && selectedItem.item != null;
-
-    // Use local controllers for UOM, unit price, and line price
-    final uom = selectedItem.item?.uom ?? '';
-    final unitPrice = selectedItem.unitPrice > 0 ? currencyFormat.format(selectedItem.unitPrice) : '';
-    final lineTotal = selectedItem.extendedPrice > 0 ? currencyFormat.format(selectedItem.extendedPrice) : '';
-
+    selectedItem.isOutOfStock =
+        availableStores.isEmpty && selectedItem.item != null;
     return Container(
       margin: EdgeInsets.only(bottom: 16),
       child: Padding(
@@ -391,48 +397,33 @@ class _ItemEntryScreenState extends State<ItemEntryScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Item selection with ID and Description
-            CustomTableDropdown<ItemInStore>(
+            CustomTableDropdown<Item>(
               title: 'Item',
-              items: itemsInStores,
-              displayText: (item) => item.item.description,
+              items: itemsInStores
+                  .map((ItemInStore itemInStore) => itemInStore.item)
+                  .toList(),
+              displayText: (item) => item.description,
+              selectedValue: selectedItem.item,
               columns: [
                 TableColumnConfig(
                   header: 'ID',
-                  cellBuilder: (item) => Text(item.item.id),
+                  cellBuilder: (item) => Text(item.id),
                 ),
                 TableColumnConfig(
                   header: 'Description',
-                  cellBuilder: (item) => Text(item.item.description),
+                  cellBuilder: (item) => Text(item.description),
                 ),
               ],
-              onItemSelected: (ItemInStore? newValue) {
+              onItemSelected: (Item? newValue) {
                 setState(() {
-                  selectedItem.item = newValue?.item;
+                  selectedItem.item = newValue;
                   selectedItem.store = null;
-                  final stores = _getAvailableStoresForItem(newValue?.item);
+                  final stores = _getAvailableStoresForItem(newValue);
                   if (stores.isNotEmpty) {
                     selectedItem.store = stores.first;
-                  } 
-                  // Recalculate line price
+                  }
                 });
               },
-            ),
-            SizedBox(height: 16),
-            CustomTextField(
-              labelText: 'Quantity',
-              keyboardType: TextInputType.number,
-              onChanged: (value) {
-                setState(() {
-                  selectedItem.quantity = double.tryParse(value) ?? 0;
-                });
-              },
-            ),
-
-            SizedBox(height: 16),
-            CustomTextField(
-              labelText: 'UoM',
-              controller: TextEditingController(text: uom),
-              readOnly: true,
             ),
             SizedBox(height: 16),
             // Store selection or Out of Stock message
@@ -451,6 +442,7 @@ class _ItemEntryScreenState extends State<ItemEntryScreen> {
                   title: 'Store',
                   items: _getAvailableStoresForItem(selectedItem.item),
                   displayText: (store) => store.branchName,
+                  selectedValue: selectedItem.store,
                   columns: [
                     TableColumnConfig(
                       header: 'Branch',
@@ -458,18 +450,21 @@ class _ItemEntryScreenState extends State<ItemEntryScreen> {
                     ),
                     TableColumnConfig(
                       header: 'Item',
-                      cellBuilder: (store) => Text(selectedItem.item?.description ?? ''),
+                      cellBuilder: (store) =>
+                          Text(selectedItem.item?.description ?? ''),
                     ),
                     TableColumnConfig(
                       header: 'Available ',
-                      cellBuilder: (store) => Text(store.availability.toString()),
+                      cellBuilder: (store) =>
+                          Text(store.availability.toString()),
                     ),
                     TableColumnConfig(
                       header: 'Unit Price',
-                      cellBuilder: (store) => Text(currencyFormat.format(store.unitPrice)),
+                      cellBuilder: (store) =>
+                          Text(currencyFormat.format(store.unitPrice)),
                     ),
                   ],
-                  onItemSelected: (Store? store) {
+                  onItemSelected: (store) {
                     setState(() {
                       selectedItem.store = store;
                     });
@@ -478,14 +473,35 @@ class _ItemEntryScreenState extends State<ItemEntryScreen> {
             ],
             SizedBox(height: 16),
             CustomTextField(
+              labelText: 'Quantity',
+              keyboardType: TextInputType.number,
+              onChanged: (value) {
+                setState(() {
+                  selectedItem.quantity = double.tryParse(value) ?? 0;
+                });
+              },
+            ),
+
+            SizedBox(height: 16),
+            CustomTextField(
+              labelText: 'UoM',
+              value: selectedItem.item?.uom ?? '',
+              readOnly: true,
+            ),
+            SizedBox(height: 16),
+            CustomTextField(
               labelText: 'Unit Price',
-              controller: TextEditingController(text: unitPrice),
+              value: selectedItem.store != null
+                  ? currencyFormat.format(selectedItem.store!.unitPrice)
+                  : '',
               readOnly: true,
             ),
             SizedBox(height: 16),
             CustomTextField(
               labelText: 'Line Total',
-              controller: TextEditingController(text: lineTotal),
+              value: selectedItem.extendedPrice > 0
+                  ? currencyFormat.format(selectedItem.extendedPrice)
+                  : '',
               readOnly: true,
             ),
             SizedBox(height: 16),
@@ -580,6 +596,7 @@ class _ItemEntryScreenState extends State<ItemEntryScreen> {
         }
       }
       selectedItems.clear();
+      _useBarcode = false;
       selectedItems.add(SelectedItem());
     });
   }
