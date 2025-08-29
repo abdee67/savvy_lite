@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:savvy_stock/models/customer.dart';
 
+/** 
 class CustomerDropdown extends StatefulWidget {
   final Customer? value;
+  final List<Customer> customers;
   final ValueChanged<Customer?> onChanged;
 
   const CustomerDropdown({
     super.key,
     required this.value,
+    required this.customers,
     required this.onChanged,
   });
 
@@ -39,65 +42,6 @@ class _CustomerDropdownState extends State<CustomerDropdown> {
     widget.onChanged(customer);
   }
 
-  // Mock customer data
-  final List<Customer> customers = [
-    Customer(
-      id: '1',
-      name: 'John Doe',
-      tin: '123456789',
-      phone: '555-1234',
-      country: 'USA',
-    ),
-    Customer(
-      id: '2',
-      name: 'Jane Smith',
-      tin: '987654321',
-      phone: '555-5678',
-      country: 'Canada',
-    ),
-    Customer(
-      id: '3',
-      name: 'Acme Corp',
-      tin: '456123789',
-      phone: '555-9012',
-      country: 'UK',
-    ),
-    Customer(
-      id: '4',
-      name: 'Global Enterprises',
-      tin: '789123456',
-      phone: '555-3456',
-      country: 'Germany',
-    ),
-    Customer(
-      id: '5',
-      name: 'Tech Solutions Ltd',
-      tin: '321654987',
-      phone: '555-7890',
-      country: 'Japan',
-    ),
-    Customer(
-      id: '6',
-      name: 'Acme Corp',
-      tin: '456123789',
-      phone: '555-9012',
-      country: 'UK',
-    ),
-    Customer(
-      id: '7',
-      name: 'Global Enterprises',
-      tin: '789123456',
-      phone: '555-3456',
-      country: 'Germany',
-    ),
-    Customer(
-      id: '8',
-      name: 'Tech Solutions Ltd',
-      tin: '321654987',
-      phone: '555-7890',
-      country: 'Japan',
-    ),
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -205,7 +149,7 @@ class _CustomerDropdownState extends State<CustomerDropdown> {
                     ),
 
                     // Customer list
-                    ...customers.map((customer) {
+                    ...widget.customers.map((customer) {
                       final bool isSelected =
                           _selectedCustomer == customer.name;
                       return InkWell(
@@ -253,3 +197,4 @@ class _CustomerDropdownState extends State<CustomerDropdown> {
     );
   }
 }
+**/
