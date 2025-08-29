@@ -22,8 +22,80 @@ class _SalesOrderScreenState extends State<SalesOrderScreen> {
   // Form state variables
   Customer? _selectedBillToCustomer;
   Customer? _selectedShipToCustomer;
-  final bool _useBarcode = false;
-  final List<SalesOrderItem> _items = [];
+  // Shared customer list
+  final List<Customer> _customers = [
+    Customer(
+      id: '1',
+      name: 'John Doe',
+      tin: '123456789',
+      phone: '555-1234',
+      country: 'USA',
+    ),
+    Customer(
+      id: '2',
+      name: 'Jane Smith',
+      tin: '987654321',
+      phone: '555-5678',
+      country: 'Canada',
+    ),
+    Customer(
+      id: '3',
+      name: 'Bob Johnson',
+      tin: '111111111',
+      phone: '555-9012',
+      country: 'UK',
+    ),
+    Customer(
+      id: '4',
+      name: 'Alice Brown',
+      tin: '222222222',
+      phone: '555-3456',
+      country: 'Australia',
+    ),
+    Customer(
+      id: '5',
+      name: 'Charlie Davis',
+      tin: '333333333',
+      phone: '555-7890',
+      country: 'New Zealand',
+    ),
+    Customer(
+      id: '6',
+      name: 'David Wilson',
+      tin: '444444444',
+      phone: '555-1111',
+      country: 'South Africa',
+    ),
+    Customer(
+      id: '7',
+      name: 'Emily Davis',
+      tin: '555555555',
+      phone: '555-2222',
+      country: 'Germany',
+    ),
+    Customer(
+      id: '8',
+      name: 'Frank Johnson',
+      tin: '666666666',
+      phone: '555-3333',
+      country: 'France',
+    ),
+    Customer(
+      id: '9',
+      name: 'Grace Brown',
+      tin: '777777777',
+      phone: '555-4444',
+      country: 'Italy',
+    ),
+    Customer(
+      id: '10',
+      name: 'Hannah Davis',
+      tin: '888888888',
+      phone: '555-5555',
+      country: 'Spain',
+    ),
+    // Add more customers as needed
+  ];
 
   @override
   void dispose() {
@@ -60,11 +132,11 @@ class _SalesOrderScreenState extends State<SalesOrderScreen> {
               CustomerSectionScreen(
                 title: 'Customer Bill To:',
                 value: _selectedBillToCustomer,
+                customers: _customers,
                 onChanged: (Customer? value) {
                   setState(() {
                     _selectedBillToCustomer = value;
-                    _selectedShipToCustomer =
-                        value; // Set Ship To same as Bill To
+                    _selectedShipToCustomer = value;
                     if (value != null) {
                       _tinController.text = value.tin;
                       _phoneController.text = value.phone;
@@ -95,6 +167,7 @@ class _SalesOrderScreenState extends State<SalesOrderScreen> {
               CustomerSectionScreen(
                 title: 'Customer Ship To:',
                 value: _selectedShipToCustomer,
+                customers: _customers,
                 onChanged: (Customer? value) {
                   setState(() {
                     _selectedShipToCustomer = value;
