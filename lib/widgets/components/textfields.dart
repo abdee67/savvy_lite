@@ -10,6 +10,7 @@ class CustomTextField extends StatefulWidget {
   final String? Function(String?)? validator;
   final void Function(String)? onChanged;
   final TextInputType? keyboardType;
+  final String? value;
 
   const CustomTextField({
     super.key,
@@ -22,6 +23,7 @@ class CustomTextField extends StatefulWidget {
     this.validator,
     this.onChanged,
     this.keyboardType,
+    this.value,
   });
 
   @override
@@ -29,11 +31,38 @@ class CustomTextField extends StatefulWidget {
 }
 
 class _CustomTextFieldState extends State<CustomTextField> {
+  late TextEditingController _controller;
+  @override
+  void initState() {
+    super.initState();
+    _controller = widget.controller ?? TextEditingController();
+    if (widget.value != null) {
+      _controller.text = widget.value!;
+    }
+  }
+
+  @override
+  void didUpdateWidget(CustomTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.value != null && widget.value != _controller.text) {
+      _controller.text = widget.value!;
+    }
+  }
+
+  @override
+  void dispose() {
+    if (widget.controller == null) {
+      _controller.dispose();
+    }
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: widget.isTablet ? 60 : 56,
       child: TextFormField(
+        controller: _controller,
         obscureText: widget.isPassword,
         validator: widget.validator,
         onChanged: widget.onChanged,
@@ -42,8 +71,10 @@ class _CustomTextFieldState extends State<CustomTextField> {
         style: TextStyle(
           color: widget.isDarkTheme ? Colors.white : Colors.black,
         ),
+        textAlign: TextAlign.center,
         decoration: InputDecoration(
           labelText: widget.labelText,
+          alignLabelWithHint: true,
           labelStyle: TextStyle(
             color: widget.isDarkTheme
                 ? Colors.amber
