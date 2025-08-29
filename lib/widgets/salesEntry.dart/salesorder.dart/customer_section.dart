@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:savvy_stock/models/customer.dart';
-import 'package:savvy_stock/widgets/salesEntry.dart/salesorder.dart/customerdropdown.dart';
+import 'package:savvy_stock/widgets/components/custome_dropdown.dart';
 
 class CustomerSectionScreen extends StatefulWidget {
   final String title;
   final Customer? value;
+  final List<Customer> customers;
   final ValueChanged<Customer?> onChanged;
   final bool showAddButton;
   const CustomerSectionScreen({
     super.key,
     required this.title,
     required this.value,
+    required this.customers,
     required this.onChanged,
     required this.showAddButton,
   });
@@ -38,6 +40,7 @@ class _CustomerSectionScreenState extends State<CustomerSectionScreen> {
   final addressLine3Controller = TextEditingController();
   final addressLine4Controller = TextEditingController();
   final addressLine5Controller = TextEditingController();
+
   void showAddCustomerDialog() {
     showDialog(
       context: context,
@@ -291,7 +294,26 @@ class _CustomerSectionScreenState extends State<CustomerSectionScreen> {
         ),
         const SizedBox(height: 8),
         // Use a custom dropdown to handle complex content
-        CustomerDropdown(value: widget.value, onChanged: widget.onChanged),
+        CustomTableDropdown<Customer>(
+          title: widget.title,
+          items: widget.customers,
+          displayText: (customer) => customer.name,
+          onItemSelected: (customer) => widget.onChanged(customer),
+          columns: [
+            TableColumnConfig(
+              header: 'Name',
+              cellBuilder: (customer) => Text(customer.name),
+            ),
+            TableColumnConfig(
+              header: 'TIN',
+              cellBuilder: (customer) => Text(customer.tin),
+            ),
+            TableColumnConfig(
+              header: 'Phone',
+              cellBuilder: (customer) => Text(customer.phone),
+            ),
+          ],
+        ),
         if (widget.showAddButton) ...[
           const SizedBox(height: 10),
           OutlinedButton.icon(
