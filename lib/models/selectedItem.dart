@@ -15,5 +15,8 @@ class SelectedItem {
   });
 
   double get unitPrice => store?.unitPrice ?? 0;
-  double get extendedPrice => quantity * unitPrice;
+  double get extendedPrice {
+    if (store == null || quantity <= 0 || unitPrice <= 0) return 0;
+    return quantity * unitPrice;
+  }
 }
