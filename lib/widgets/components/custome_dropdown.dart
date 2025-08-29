@@ -19,7 +19,7 @@ class CustomTableDropdown<T> extends StatefulWidget {
   final List<T> items;
   final String Function(T) displayText;
   final List<TableColumnConfig<T>> columns;
-  final ValueChanged<T>? onItemSelected;
+  final ValueChanged<T?> onItemSelected;
   final double expandedHeight;
   final String emptyText;
   final BorderRadius? borderRadius;
@@ -27,6 +27,7 @@ class CustomTableDropdown<T> extends StatefulWidget {
   final Color expandedBackgroundColor;
   final Color selectedColor;
   final bool showHeaderRow;
+  final T? selectedValue;
 
   const CustomTableDropdown({
     super.key,
@@ -34,7 +35,7 @@ class CustomTableDropdown<T> extends StatefulWidget {
     required this.items,
     required this.displayText,
     required this.columns,
-    this.onItemSelected,
+    required this.onItemSelected,
     this.expandedHeight = 200,
     this.emptyText = 'Select One',
     this.borderRadius,
@@ -42,6 +43,7 @@ class CustomTableDropdown<T> extends StatefulWidget {
     this.expandedBackgroundColor = const Color(0xFFFDD400),
     this.selectedColor = const Color(0xFF1C5380),
     this.showHeaderRow = true,
+    this.selectedValue,
   });
 
   @override
@@ -60,70 +62,9 @@ class _CustomTableDropdownState<T> extends State<CustomTableDropdown<T>> {
 
   void _selectItem(T item) {
     setState(() {
-      _selectedItem = item;
       _isExpanded = false;
+      widget.onItemSelected(item);
     });
-    widget.onItemSelected?.call(item);
-  }
-
-  Widget _buildTableHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16.0),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.black, width: 1.0)),
-      ),
-      child: Row(
-        children: widget.columns.map((column) {
-          return Expanded(
-            flex: column.flex.toInt(),
-            child: Text(
-              column.header,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14.0,
-              ),
-              textAlign: _getTextAlignment(column.alignment),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  TextAlign _getTextAlignment(MainAxisAlignment alignment) {
-    switch (alignment) {
-      case MainAxisAlignment.start:
-        return TextAlign.left;
-      case MainAxisAlignment.center:
-        return TextAlign.center;
-      case MainAxisAlignment.end:
-        return TextAlign.right;
-      default:
-        return TextAlign.left;
-    }
-  }
-
-  Widget _buildTableRow(T item, bool isSelected) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isSelected ? widget.selectedColor : Colors.transparent,
-        border: const Border(
-          bottom: BorderSide(color: Colors.black, width: 1.0),
-        ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-      child: Row(
-        children: widget.columns.map((column) {
-          return Expanded(
-            flex: column.flex.toInt(),
-            child: DefaultTextStyle(
-              style: TextStyle(color: isSelected ? Colors.white : Colors.black),
-              child: column.cellBuilder(item),
-            ),
-          );
-        }).toList(),
-      ),
-    );
   }
 
   @override
@@ -147,7 +88,7 @@ class _CustomTableDropdownState<T> extends State<CustomTableDropdown<T>> {
                     ? Radius.zero
                     : borderRadius.bottomRight,
               ),
-              border: Border.all(color: Colors.black, width: 1.0),
+              border: Border.all(color: Color(0xFF1C5380), width: 1.0),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -156,12 +97,11 @@ class _CustomTableDropdownState<T> extends State<CustomTableDropdown<T>> {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: Text(
-                      _selectedItem != null
-                          ? widget.displayText(_selectedItem as T)
+                      widget.selectedValue != null
+                          ? widget.displayText(widget.selectedValue as T)
                           : widget.emptyText,
                       style: const TextStyle(
                         color: Colors.black,
-                        fontWeight: FontWeight.bold,
                         fontSize: 16.0,
                       ),
                       textAlign: TextAlign.center,
@@ -229,6 +169,66 @@ class _CustomTableDropdownState<T> extends State<CustomTableDropdown<T>> {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTableHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16.0),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Colors.black, width: 1.0)),
+      ),
+      child: Row(
+        children: widget.columns.map((column) {
+          return Expanded(
+            flex: column.flex.toInt(),
+            child: Text(
+              column.header,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14.0,
+              ),
+              textAlign: _getTextAlignment(column.alignment),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  TextAlign _getTextAlignment(MainAxisAlignment alignment) {
+    switch (alignment) {
+      case MainAxisAlignment.start:
+        return TextAlign.left;
+      case MainAxisAlignment.center:
+        return TextAlign.center;
+      case MainAxisAlignment.end:
+        return TextAlign.right;
+      default:
+        return TextAlign.left;
+    }
+  }
+
+  Widget _buildTableRow(T item, bool isSelected) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isSelected ? widget.selectedColor : Colors.transparent,
+        border: const Border(
+          bottom: BorderSide(color: Colors.black, width: 1.0),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      child: Row(
+        children: widget.columns.map((column) {
+          return Expanded(
+            flex: column.flex.toInt(),
+            child: DefaultTextStyle(
+              style: TextStyle(color: isSelected ? Colors.white : Colors.black),
+              child: column.cellBuilder(item),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
