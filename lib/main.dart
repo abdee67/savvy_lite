@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:savvy_stock/screens/login.dart';
-import 'package:savvy_stock/screens/salesScreen.dart';
-import 'package:savvy_stock/screens/trial_page.dart';
-import 'package:savvy_stock/widgets/getStarted/getStarted.dart';
+import 'package:savvy_stock/features/auth/screens/login_screen.dart';
+import 'package:savvy_stock/features/onboarding/screens/trial_screen.dart';
+import 'package:savvy_stock/features/onboarding/widgets/getStarted.dart';
+import 'package:savvy_stock/features/sales/presentation/screens/sales_dashboard.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,7 +24,7 @@ class MyApp extends StatelessWidget {
         '/getStarted': (context) => const GetStart(),
         // '/forgot-password': (context) => const TrialPageRefactored(),
         '/register': (context) => const TrialPageRefactored(),
-        '/salesScreen': (context) => const SalesEntryScreen(),
+        '/salesScreen': (context) => const SalesDashboard(),
 
         //'/register': (context) => const RegisterScreen(),
       },
