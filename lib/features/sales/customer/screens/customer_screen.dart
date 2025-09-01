@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_event.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_state.dart';
@@ -61,7 +62,7 @@ class CustomerScreenView extends StatelessWidget {
                   customers: state.customers,
                   onCustomerSelected: (customer) {
                     context.read<CustomerBloc>().add(
-                      SelectBillToCustomer(customer!),
+                      SelectBillToCustomer(customer),
                     );
                   },
                   showAddButton: true,
@@ -94,7 +95,7 @@ class CustomerScreenView extends StatelessWidget {
                   customers: state.customers,
                   onCustomerSelected: (customer) {
                     context.read<CustomerBloc>().add(
-                      SelectShipToCustomer(customer!),
+                      SelectShipToCustomer(customer),
                     );
                   },
                   showAddButton: false,
@@ -136,9 +137,6 @@ class CustomerScreenView extends StatelessWidget {
   }
 
   void _goToNextPage(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const ItemEntryScreen()),
-    );
+    context.push('/itemEntryScreen');
   }
 }

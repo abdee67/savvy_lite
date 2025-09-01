@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -99,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: ElevatedButton(
                       onPressed: () {
                         // Handle login logic here
-                        Navigator.pushNamed(context, '/salesScreen');
+                        context.push('/salesScreen');
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color.fromARGB(
