@@ -1,33 +1,86 @@
 import 'package:flutter/material.dart';
-import 'package:savvy_stock/features/auth/screens/login_screen.dart';
-import 'package:savvy_stock/features/onboarding/screens/trial_screen.dart';
-import 'package:savvy_stock/features/onboarding/widgets/getStarted.dart';
-import 'package:savvy_stock/features/sales/presentation/screens/sales_dashboard.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:savvy_stock/core/routes/app_router.dart';
+import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
+import 'package:savvy_stock/features/sales/customer/blocs/customer_event.dart';
+import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_event.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+//import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  runApp(const MyApp());
+  // await dotenv.load(fileName: ".env");
+  runApp(const SavvyStock());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class SavvyStock extends StatefulWidget {
+  const SavvyStock({super.key});
+  @override
+  State<SavvyStock> createState() => _SavvyStockState();
+}
+
+class _SavvyStockState extends State<SavvyStock> {
+  bool showOnboarding = true;
+  bool isLoading = true;
+  late GoRouter _router;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkOnboardingStatus();
+  }
+
+  Future<void> _checkOnboardingStatus() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
+      setState(() {
+        showOnboarding = !hasSeenOnboarding;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        showOnboarding = true;
+        isLoading = false;
+      });
+    }
+
+    // Initialize router after onboarding status is determined
+    _router = AppRouter(showOnboarding: showOnboarding).router;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      initialRoute: '/',
-      routes: {
-        '/': (context) => const LoginScreen(),
-        '/getStarted': (context) => const GetStart(),
-        // '/forgot-password': (context) => const TrialPageRefactored(),
-        '/register': (context) => const TrialPageRefactored(),
-        '/salesScreen': (context) => const SalesDashboard(),
-
-        //'/register': (context) => const RegisterScreen(),
-      },
+    if (isLoading) {
+      return MaterialApp(
+        home: Scaffold(body: Center(child: CircularProgressIndicator())),
+      );
+    }
+    return MultiProvider(
+      providers: [
+        // Bloc providers
+        BlocProvider(create: (context) => CustomerBloc()..add(LoadCustomers())),
+        BlocProvider(
+          create: (context) => ItemEntryBloc()..add(LoadItemsAndStores()),
+        ),
+      ],
+      child: MaterialApp.router(
+        debugShowCheckedModeBanner: false,
+        title: 'Savvy Stock',
+        routerConfig: _router,
+        theme: ThemeData(
+          primarySwatch: Colors.deepPurple,
+          appBarTheme: AppBarTheme(
+            backgroundColor: Color(0xFF155888),
+            foregroundColor: Colors.white,
+            elevation: 0,
+          ),
+          fontFamily: 'Montserrat',
+        ),
+      ),
     );
   }
 }
