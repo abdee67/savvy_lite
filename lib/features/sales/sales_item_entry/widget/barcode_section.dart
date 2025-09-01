@@ -2,22 +2,22 @@ import 'dart:io';
 import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:qr_code_scanner_plus/qr_code_scanner_plus.dart';
+import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_state.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_items.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/selected_item.dart';
+import 'package:savvy_stock/features/sales/sales_item_entry/screens/sales_item_entry.dart';
 
 class BarcodeSection extends StatefulWidget {
-  final Function(List<ConfirmedItem>) onItemAdded;
-
-  const BarcodeSection({super.key, required this.onItemAdded});
+  const BarcodeSection({super.key});
 
   @override
   State<BarcodeSection> createState() => _BarcodeSectionState();
 }
 
 class _BarcodeSectionState extends State<BarcodeSection> {
-  List<SelectedItem> selectedItems = [];
-  List<ConfirmedItem> confirmedItems = [];
   final TextEditingController _barcodeController = TextEditingController();
   Barcode? result;
   QRViewController? controller;
@@ -31,112 +31,63 @@ class _BarcodeSectionState extends State<BarcodeSection> {
     controller!.resumeCamera();
   }
 
-  void submitBarcode(String barcode) {
-    setState(() {
-      for (var item in selectedItems) {
-        if (item.item != null && item.item!.barcode == double.parse(barcode)) {
-          confirmedItems.add(
-            ConfirmedItem(
-              itemName: item.item!.description,
-              quantity: item.quantity,
-              totalPrice: item.extendedPrice,
-            ),
-          );
-        }
-      }
-      selectedItems.clear();
-      _barcodeController.clear();
-      widget.onItemAdded(confirmedItems);
-      selectedItems.add(SelectedItem());
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Item added from barcode: $barcode')),
-      );
-    });
+  void _submitBarcode(String barcode) {
+    final bloc = context.read<ItemEntryBloc>();
+    bloc.add(ScanBarcode(barcode: barcode));
+
+    _barcodeController.clear();
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Scanned barcode: $barcode')));
   }
 
-  Widget _scanner() {
+  Widget _buildScannerScreen() {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Barcode Scanner'),
+        backgroundColor: const Color(0xFF155888),
+      ),
       body: Column(
         children: <Widget>[
           Expanded(flex: 4, child: _buildQrView(context)),
           Expanded(
             flex: 1,
-            child: FittedBox(
-              fit: BoxFit.contain,
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: <Widget>[
+                children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: <Widget>[
-                      Container(
-                        margin: const EdgeInsets.all(8),
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            await controller?.toggleFlash();
-                            setState(() {});
+                    children: [
+                      ElevatedButton(
+                        onPressed: () async {
+                          await controller?.toggleFlash();
+                          setState(() {});
+                        },
+                        child: FutureBuilder(
+                          future: controller?.getFlashStatus(),
+                          builder: (context, snapshot) {
+                            return Text(
+                              snapshot.data == true ? 'Flash ON' : 'Flash OFF',
+                            );
                           },
-                          child: FutureBuilder(
-                            future: controller?.getFlashStatus(),
-                            builder: (context, snapshot) {
-                              return Text('Flash');
-                            },
-                          ),
                         ),
                       ),
-                      Container(
-                        margin: const EdgeInsets.all(8),
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            await controller?.flipCamera();
-                            setState(() {});
-                          },
-                          child: FutureBuilder(
-                            future: controller?.getCameraInfo(),
-                            builder: (context, snapshot) {
-                              if (snapshot.data != null) {
-                                return Text(
-                                  'Camera Facing: ${snapshot.data!.name}',
-                                );
-                              } else {
-                                return const Text('loading...');
-                              }
-                            },
-                          ),
-                        ),
+                      const SizedBox(width: 16),
+                      ElevatedButton(
+                        onPressed: () async {
+                          await controller?.flipCamera();
+                          setState(() {});
+                        },
+                        child: const Text('Flip Camera'),
                       ),
                     ],
                   ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: <Widget>[
-                      Container(
-                        margin: const EdgeInsets.all(8),
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            await controller?.pauseCamera();
-                          },
-                          child: const Text(
-                            'Pause',
-                            style: TextStyle(fontSize: 20),
-                          ),
-                        ),
-                      ),
-                      Container(
-                        margin: const EdgeInsets.all(8),
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            await controller?.resumeCamera();
-                          },
-                          child: const Text(
-                            'Resume',
-                            style: TextStyle(fontSize: 20),
-                          ),
-                        ),
-                      ),
-                    ],
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Close Scanner'),
                   ),
                 ],
               ),
@@ -179,7 +130,7 @@ class _BarcodeSectionState extends State<BarcodeSection> {
         result = scanData;
       });
       if (scanData.code != null && scanData.code!.isNotEmpty) {
-        submitBarcode(scanData.code!);
+        _submitBarcode(scanData.code!);
         Navigator.pop(context);
       }
     });
@@ -190,63 +141,82 @@ class _BarcodeSectionState extends State<BarcodeSection> {
     if (!p) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('no Permission')));
+      ).showSnackBar(const SnackBar(content: Text('Camera Permission denied')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Barcode', style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                controller: _barcodeController,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30.0),
+    return BlocListener<ItemEntryBloc, ItemEntryState>(
+      listener: (context, state) {
+        if (state.errorMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.errorMessage ?? 'Something went wrong'),
+            ),
+          );
+        }
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Barcode Scanner',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _barcodeController,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30.0),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 14,
+                    ),
+                    hintText: 'Enter 12 or 13 digits barcode',
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _barcodeController.clear();
+                      },
+                    ),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 14,
-                  ),
-                  hintText: 'Enter barcode',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  onChanged: (value) {
+                    if (value.length == 12 || value.length == 13) {
+                      _submitBarcode(value);
+                    }
+                  },
                 ),
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                onChanged: (value) {
-                  if (value.length == 12 || value.length == 13) {
-                    submitBarcode(value);
-                  }
+              ),
+              const SizedBox(width: 10),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => _buildScannerScreen(),
+                    ),
+                  );
                 },
-              ),
-            ),
-            const SizedBox(width: 10),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => _scanner()),
-                );
-              },
-              icon: const Icon(Icons.camera_alt),
-              label: const Text('Scan'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey.shade200,
-                foregroundColor: Colors.black87,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
+                icon: const Icon(Icons.camera_alt),
+                label: const Text('Scan'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF155888),
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 ),
               ),
-            ),
-          ],
-        ),
-      ],
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
