@@ -1,6 +1,4 @@
 import 'package:bloc/bloc.dart';
-import 'package:equatable/equatable.dart';
-import 'package:meta/meta.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_event.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_state.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
