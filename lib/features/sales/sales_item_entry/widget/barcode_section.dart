@@ -6,8 +6,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:qr_code_scanner_plus/qr_code_scanner_plus.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_state.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_items.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/models/selected_item.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/screens/sales_item_entry.dart';
 
 class BarcodeSection extends StatefulWidget {

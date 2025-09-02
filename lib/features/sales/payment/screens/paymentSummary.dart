@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_items.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/models/selected_item.dart';
+import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
 
 class SummaryPaymentPage extends StatefulWidget {
   final List<ConfirmedItem> confirmedItems;
