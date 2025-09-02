@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/item_in_store.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_items.dart';
+import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/selected_item.dart';
 
 enum ItemEntryStatus { initial, loading, success, failure }
@@ -13,6 +13,7 @@ class ItemEntryState extends Equatable {
   final bool useBarcode;
   final String? errorMessage;
   final double totalAmount;
+  final List<int> selectedConfirmedItemIndices;
 
   const ItemEntryState({
     this.status = ItemEntryStatus.initial,
@@ -22,6 +23,7 @@ class ItemEntryState extends Equatable {
     this.useBarcode = false,
     this.errorMessage,
     this.totalAmount = 0,
+    this.selectedConfirmedItemIndices = const [],
   });
 
   ItemEntryState copyWith({
@@ -32,6 +34,7 @@ class ItemEntryState extends Equatable {
     bool? useBarcode,
     String? errorMessage,
     double? totalAmount,
+    List<int>? selectedConfirmedItemIndices,
   }) {
     return ItemEntryState(
       status: status ?? this.status,
@@ -41,11 +44,14 @@ class ItemEntryState extends Equatable {
       useBarcode: useBarcode ?? this.useBarcode,
       errorMessage: errorMessage ?? this.errorMessage,
       totalAmount: totalAmount ?? this.totalAmount,
+      selectedConfirmedItemIndices:
+          selectedConfirmedItemIndices ?? this.selectedConfirmedItemIndices,
     );
   }
 
   bool get hasValidItems => selectedItems.any((item) => item.isValid);
   bool get hasConfirmedItems => confirmedItems.isNotEmpty;
+  bool get hasSelectedConfirmedItems => selectedConfirmedItemIndices.isNotEmpty;
 
   @override
   List<Object?> get props => [
@@ -56,5 +62,6 @@ class ItemEntryState extends Equatable {
     useBarcode,
     errorMessage,
     totalAmount,
+    selectedConfirmedItemIndices,
   ];
 }

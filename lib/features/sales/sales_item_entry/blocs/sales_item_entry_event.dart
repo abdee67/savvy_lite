@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/items.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_items.dart';
+import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/stores.dart';
 
 @immutable
@@ -46,35 +46,70 @@ class UpdateQuantity extends ItemEntryEvent {
 
 class AddNewItem extends ItemEntryEvent {}
 
-class RemoveItem extends ItemEntryEvent {
+class EditConfirmedItem extends ItemEntryEvent {
+  final int index;
+  final double newQuantity;
+
+  const EditConfirmedItem({required this.index, required this.newQuantity});
+
+  @override
+  List<Object> get props => [index, newQuantity];
+}
+
+class DeleteConfirmedItem extends ItemEntryEvent {
   final int index;
 
-  const RemoveItem({required this.index});
+  const DeleteConfirmedItem({required this.index});
 
   @override
   List<Object> get props => [index];
 }
 
-class EditItem extends ItemEntryEvent {
+class SelectConfirmedItem extends ItemEntryEvent {
   final int index;
-  final Item? item;
-  final Store? store;
-  final double quantity;
+  final bool isMultiple;
 
-  const EditItem({
-    required this.index,
-    this.item,
-    this.store,
-    required this.quantity,
-  });
+  const SelectConfirmedItem({required this.index, this.isMultiple = false});
 
   @override
-  List<Object> get props => [
-    index,
-    item ?? Item.empty,
-    store ?? Store.empty,
-    quantity,
-  ];
+  List<Object> get props => [index, isMultiple];
+}
+
+class SelectAllConfirmedItem extends ItemEntryEvent {
+  const SelectAllConfirmedItem();
+
+  @override
+  List<Object> get props => [];
+}
+
+class UnSelectConfirmedItem extends ItemEntryEvent {
+  final int index;
+
+  const UnSelectConfirmedItem({required this.index});
+
+  @override
+  List<Object> get props => [index];
+}
+
+class ClearSelectedConfirmedItems extends ItemEntryEvent {}
+
+class MoveSelectedToEdit extends ItemEntryEvent {
+  final int index;
+
+  const MoveSelectedToEdit({required this.index});
+
+  @override
+  List<Object> get props => [index];
+}
+
+class MoveSelectedToDelete extends ItemEntryEvent {
+  final int index;
+  final bool isMultiple;
+
+  const MoveSelectedToDelete({required this.index, this.isMultiple = false});
+
+  @override
+  List<Object> get props => [index, isMultiple];
 }
 
 class ConfirmOrder extends ItemEntryEvent {}

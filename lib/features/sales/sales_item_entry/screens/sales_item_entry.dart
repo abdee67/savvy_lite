@@ -4,15 +4,16 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_text_form.dart';
-import 'package:savvy_stock/features/sales/payment/screens/paymentSummary.dart';
-import 'package:savvy_stock/features/sales/payment/screens/summaryAndPaymentPage.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_event.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_state.dart';
+import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/item_in_store.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/items.dart';
+import 'package:savvy_stock/features/sales/sales_item_entry/models/selected_item.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/stores.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/widget/barcode_section.dart';
+import 'package:flutter_context_menu/flutter_context_menu.dart';
 
 class ItemEntryScreen extends StatelessWidget {
   const ItemEntryScreen({super.key});
@@ -35,8 +36,244 @@ class ScanBarcode extends ItemEntryEvent {
   List<Object> get props => [barcode];
 }
 
-class ItemEntryScreenView extends StatelessWidget {
+class ItemEntryScreenView extends StatefulWidget {
   const ItemEntryScreenView({super.key});
+
+  @override
+  State<ItemEntryScreenView> createState() => _ItemEntryScreenViewState();
+}
+
+class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
+  bool _isSelectionMode = false;
+
+  void _showItemContextMenu(
+    BuildContext context,
+    int index,
+    ConfirmedItem item,
+  ) {
+    final bloc = context.read<ItemEntryBloc>();
+    final state = bloc.state;
+    final isSelected = state.selectedConfirmedItemIndices.contains(index);
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: Icon(
+                isSelected ? Icons.check_box : Icons.check_box_outline_blank,
+              ),
+              title: Text(isSelected ? 'Deselect' : 'Select'),
+              onTap: () {
+                _toggleItemSelection(context, index);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.select_all),
+              title: const Text('Select All'),
+              onTap: () {
+                bloc.add(const SelectAllConfirmedItem());
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit),
+              title: const Text('Edit Item'),
+              onTap: () {
+                Navigator.pop(context);
+                _editItem(context, index, item);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text(
+                'Delete Item',
+                style: TextStyle(color: Colors.red),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _deleteItem(context, index);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _editItem(BuildContext context, int index, ConfirmedItem item) {
+    final bloc = context.read<ItemEntryBloc>();
+
+    // Convert ConfirmedItem back to SelectedItem
+    final selectedItem = _convertConfirmedToSelectedItem(bloc.state, item);
+
+    // Remove from confirmed items
+    bloc.add(DeleteConfirmedItem(index: index));
+
+    // Add to selected items for editing
+    // You'll need to add this item to your selectedItems list
+    // This might require additional events/methods in your BLoC
+
+    // Show a message or navigate to the editing section
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${item.itemName} moved to editing area')),
+    );
+  }
+
+  // Helper method to convert ConfirmedItem to SelectedItem
+  SelectedItem _convertConfirmedToSelectedItem(
+    ItemEntryState state,
+    ConfirmedItem confirmedItem,
+  ) {
+    // Find the original item
+    for (final itemInStore in state.itemsInStores) {
+      if (itemInStore.item.description == confirmedItem.itemName) {
+        // Calculate unit price
+        final unitPrice = confirmedItem.totalPrice / confirmedItem.quantity;
+
+        // Find the store with matching price
+        Store? foundStore;
+        for (final store in itemInStore.availableStores) {
+          if ((store.unitPrice - unitPrice).abs() < 0.01) {
+            // Account for floating point precision
+            foundStore = store;
+            break;
+          }
+        }
+
+        return SelectedItem(
+          item: itemInStore.item,
+          store: foundStore,
+          quantity: confirmedItem.quantity,
+          isOutOfStock: itemInStore.availableStores.isEmpty,
+        );
+      }
+    }
+
+    // Fallback if item not found
+    return SelectedItem(quantity: confirmedItem.quantity);
+  }
+
+  void _moveSelectedToEdit(BuildContext context) {
+    final bloc = context.read<ItemEntryBloc>();
+    final state = bloc.state;
+
+    if (state.selectedConfirmedItemIndices.isNotEmpty) {
+      // Convert selected confirmed items back to selected items for editing
+      final itemsToEdit = state.selectedConfirmedItemIndices.map((index) {
+        return _convertConfirmedToSelectedItem(
+          state,
+          state.confirmedItems[index],
+        );
+      }).toList();
+
+      // Remove from confirmed items (in reverse order to maintain correct indices)
+      for (final index
+          in state.selectedConfirmedItemIndices.toList().reversed) {
+        bloc.add(DeleteConfirmedItem(index: index));
+      }
+
+      // Add to selected items for editing
+      // You'll need to implement this based on your BLoC structure
+      // For example: bloc.add(AddItemsToEdit(items: itemsToEdit));
+
+      // Clear selection
+      bloc.add(ClearSelectedConfirmedItems());
+      setState(() => _isSelectionMode = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${itemsToEdit.length} items moved to editing area'),
+        ),
+      );
+    }
+  }
+
+  void _deleteItem(BuildContext context, int index) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Item'),
+        content: const Text('Are you sure you want to delete this item?'),
+        actions: [
+          TextButton(
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.pop(context),
+          ),
+          TextButton(
+            onPressed: () {
+              context.read<ItemEntryBloc>().add(
+                DeleteConfirmedItem(index: index),
+              );
+              Navigator.pop(context);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _deleteSelectedItems(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Selected Items'),
+        content: Text(
+          'Are you sure you want to delete ${context.read<ItemEntryBloc>().state.selectedConfirmedItemIndices.length} items?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              // Delete all selected items
+              for (final index
+                  in context
+                      .read<ItemEntryBloc>()
+                      .state
+                      .selectedConfirmedItemIndices
+                      .toList()
+                      .reversed) {
+                context.read<ItemEntryBloc>().add(
+                  DeleteConfirmedItem(index: index),
+                );
+              }
+              Navigator.pop(context);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete All'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _toggleItemSelection(BuildContext context, int index) {
+    final bloc = context.read<ItemEntryBloc>();
+    final state = bloc.state;
+    final isSelected = state.selectedConfirmedItemIndices.contains(index);
+
+    if (isSelected) {
+      bloc.add(UnSelectConfirmedItem(index: index));
+    } else {
+      final isMultipleSelect = state.selectedConfirmedItemIndices.isNotEmpty;
+      if (isMultipleSelect) {
+        // Add to existing selection
+        final newSelection = List<int>.from(state.selectedConfirmedItemIndices)
+          ..add(index);
+        bloc.add(SelectConfirmedItem(index: index, isMultiple: true));
+      } else {
+        // Replace selection with single item
+        bloc.add(SelectConfirmedItem(index: index, isMultiple: false));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -282,6 +519,39 @@ class ItemEntryScreenView extends StatelessWidget {
               ),
               child: Column(
                 children: [
+                  // Selection actions (shown when items are selected)
+                  if (state.selectedConfirmedItemIndices.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () => _moveSelectedToEdit(context),
+                            child: const Text('Edit Selected'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () => _deleteSelectedItems(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                            ),
+                            child: const Text('Delete Selected'),
+                          ),
+                          IconButton(
+                            onPressed: () {
+                              context.read<ItemEntryBloc>().add(
+                                ClearSelectedConfirmedItems(),
+                              );
+                              setState(() {
+                                _isSelectionMode = false;
+                              });
+                            },
+                            icon: const Icon(Icons.clear),
+                            tooltip: 'Clear Selection',
+                          ),
+                        ],
+                      ),
+                    ),
                   const SizedBox(height: 4),
                   Expanded(
                     child: state.confirmedItems.isEmpty
@@ -290,72 +560,43 @@ class ItemEntryScreenView extends StatelessWidget {
                             itemCount: state.confirmedItems.length,
                             itemBuilder: (context, index) {
                               final item = state.confirmedItems[index];
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  color: Colors.white,
-                                ),
-                                child: GestureDetector(
-                                  onLongPress: () {
-                                    PopupMenuButton(
-                                      itemBuilder: (context) => [
-                                        const PopupMenuItem(
-                                          value: 'edit',
-                                          child: Text('Edit Item'),
-                                        ),
-                                        const PopupMenuItem(
-                                          value: 'remove',
-                                          child: Text('Remove Item'),
-                                        ),
-                                      ],
-                                      onSelected: (value) {
-                                        if (value == 'edit') {
-                                          context.read<ItemEntryBloc>().add(
-                                            EditItem(
-                                              index: index,
-                                              quantity: item.quantity,
-                                              store: item.store,
-                                              item: item.item,
-                                            ),
-                                          );
-                                        } else if (value == 'remove') {
-                                          showDialog(
-                                            context: context,
-                                            builder: (context) => AlertDialog(
-                                              title: Text('Remove Item'),
-                                              content: Text(item.itemName),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () =>
-                                                      Navigator.pop(context),
-                                                  child: const Text('Cancel'),
-                                                ),
-                                                TextButton(
-                                                  onPressed: () {
-                                                    context
-                                                        .read<ItemEntryBloc>()
-                                                        .add(
-                                                          RemoveItem(
-                                                            index: index,
-                                                          ),
-                                                        );
-                                                    Navigator.pop(context);
-                                                  },
-                                                  child: const Text('Remove'),
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        }
-                                      },
-                                    );
-                                  },
+                              final isSelected = state
+                                  .selectedConfirmedItemIndices
+                                  .contains(index);
+                              return GestureDetector(
+                                onLongPress: () {
+                                  setState(() => _isSelectionMode = true);
+                                  _showItemContextMenu(context, index, item);
+                                },
+                                onDoubleTap: () {
+                                  if (_isSelectionMode) {
+                                    _toggleItemSelection(context, index);
+                                  }
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    color: isSelected
+                                        ? Colors.grey.shade200
+                                        : Colors.white,
+                                    border: isSelected
+                                        ? Border.all(color: Color(0xFF000000))
+                                        : null,
+                                  ),
                                   child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
                                     children: [
+                                      if (_isSelectionMode || isSelected)
+                                        Checkbox(
+                                          value: isSelected,
+                                          onChanged: (_) {
+                                            _toggleItemSelection(
+                                              context,
+                                              index,
+                                            );
+                                          },
+                                        ),
                                       Expanded(
                                         child: Text(
                                           item.itemName,
