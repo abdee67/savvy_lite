@@ -6,7 +6,6 @@ import 'package:savvy_stock/features/sales/customer/blocs/customer_event.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_state.dart';
 import 'package:savvy_stock/features/sales/customer/widget/customer_details_field.dart';
 import 'package:savvy_stock/features/sales/customer/widget/customer_section.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/screens/sales_item_entry.dart';
 
 class CustomerScreen extends StatelessWidget {
   const CustomerScreen({super.key});
@@ -137,6 +136,6 @@ class CustomerScreenView extends StatelessWidget {
   }
 
   void _goToNextPage(BuildContext context) {
-    context.push('/itemEntryScreen');
+    context.push('/sales-item-entry-screen');
   }
 }

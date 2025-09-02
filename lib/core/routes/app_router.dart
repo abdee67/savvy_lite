@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:savvy_stock/features/auth/screens/login_screen.dart';
-import 'package:savvy_stock/features/onboarding/screens/trial_screen.dart';
+import 'package:savvy_stock/features/onboarding/screens/welcome_screen.dart';
 import 'package:savvy_stock/features/onboarding/widgets/getStarted.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_event.dart';
@@ -16,31 +15,23 @@ class AppRouter {
   AppRouter({required this.showOnboarding});
 
   GoRouter get router => GoRouter(
-    initialLocation: showOnboarding ? '/welcome' : '/login',
+    initialLocation: showOnboarding ? '/welcome' : '/sales-dashboard',
     routes: [
       GoRoute(
         path: '/welcome',
-        builder: (context, state) => const SalesDashboard(),
+        builder: (context, state) => const OnboardingScreen(),
       ),
       GoRoute(
-        path: '/salesScreen',
+        path: '/sales-dashboard',
         builder: (context, state) => const SalesDashboard(),
       ),
       GoRoute(path: '/signup', builder: (context, state) => const GetStart()),
       GoRoute(
-        path: '/salesScreen',
-        builder: (context, state) => const SalesDashboard(),
-      ),
-      GoRoute(
-        path: '/customerScreen',
-        builder: (context, state) => const CustomerScreen(),
-      ),
-      GoRoute(
-        path: '/itemEntryScreen',
+        path: '/sales-item-entry-screen',
         builder: (context, state) => const ItemEntryScreen(),
       ),
       GoRoute(
-        path: '/paymentScreen',
+        path: '/payment-screen',
         builder: (context, state) =>
             const SummaryPaymentPage(confirmedItems: [], totalAmount: 0),
       ),
@@ -50,7 +41,7 @@ class AppRouter {
         builder: (_, __) => const Placeholder(),
       ),
       GoRoute(
-        path: '/customerScreen',
+        path: '/customer-screen',
         builder: (_, __) => BlocProvider(
           create: (context) => CustomerBloc()..add(LoadCustomers()),
           child: const CustomerScreen(),
