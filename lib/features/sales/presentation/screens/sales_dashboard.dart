@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:savvy_stock/features/sales/customer/screens/customer_screen.dart';
 
 class SalesDashboard extends StatefulWidget {
   const SalesDashboard({super.key});
@@ -258,11 +257,11 @@ class _SalesDashboardState extends State<SalesDashboard> {
     switch (action) {
       case "Sales Entry":
         // Example: Navigate to Sales Entry screen
-        context.go('/sales-item-entry-screen');
+        context.push('/customer-screen');
         break;
 
       case "Customer Entry":
-        context.go('/customer-screen');
+        context.push('/customer-screen');
         break;
 
       default:

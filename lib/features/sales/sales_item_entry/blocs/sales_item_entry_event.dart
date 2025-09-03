@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/items.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
+import 'package:savvy_stock/features/sales/sales_item_entry/models/selected_item.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/stores.dart';
 
 @immutable
@@ -44,72 +45,41 @@ class UpdateQuantity extends ItemEntryEvent {
   List<Object> get props => [index, quantity];
 }
 
-class AddNewItem extends ItemEntryEvent {}
-
-class EditConfirmedItem extends ItemEntryEvent {
+class UpdatePrice extends ItemEntryEvent {
   final int index;
-  final double newQuantity;
+  final double price;
 
-  const EditConfirmedItem({required this.index, required this.newQuantity});
+  const UpdatePrice({required this.index, required this.price});
 
   @override
-  List<Object> get props => [index, newQuantity];
+  List<Object> get props => [index, price];
 }
+
+class AddNewItem extends ItemEntryEvent {}
 
 class DeleteConfirmedItem extends ItemEntryEvent {
   final int index;
-
-  const DeleteConfirmedItem({required this.index});
-
-  @override
-  List<Object> get props => [index];
-}
-
-class SelectConfirmedItem extends ItemEntryEvent {
-  final int index;
-  final bool isMultiple;
-
-  const SelectConfirmedItem({required this.index, this.isMultiple = false});
-
-  @override
-  List<Object> get props => [index, isMultiple];
-}
-
-class SelectAllConfirmedItem extends ItemEntryEvent {
-  const SelectAllConfirmedItem();
-
-  @override
-  List<Object> get props => [];
-}
-
-class UnSelectConfirmedItem extends ItemEntryEvent {
-  final int index;
-
-  const UnSelectConfirmedItem({required this.index});
+  const DeleteConfirmedItem({ required this.index});
 
   @override
   List<Object> get props => [index];
 }
 
-class ClearSelectedConfirmedItems extends ItemEntryEvent {}
+class UndoDelete  extends ItemEntryEvent {
+final ConfirmedItem deletedItem;
+final int deletedIndex;
 
-class MoveSelectedToEdit extends ItemEntryEvent {
-  final int index;
-
-  const MoveSelectedToEdit({required this.index});
-
-  @override
-  List<Object> get props => [index];
+const UndoDelete({required this.deletedItem, required this.deletedIndex});
 }
 
-class MoveSelectedToDelete extends ItemEntryEvent {
-  final int index;
-  final bool isMultiple;
+class MoveToEdit extends ItemEntryEvent {
+  final int confirmedIndex;
+  final int selectedIndex; // Optional: specify where to place it
 
-  const MoveSelectedToDelete({required this.index, this.isMultiple = false});
+  const MoveToEdit({required this.confirmedIndex, this.selectedIndex = -1});
 
   @override
-  List<Object> get props => [index, isMultiple];
+  List<Object> get props => [confirmedIndex, selectedIndex];
 }
 
 class ConfirmOrder extends ItemEntryEvent {}
@@ -130,6 +100,15 @@ class AddBarcodeItems extends ItemEntryEvent {
 
   @override
   List<Object> get props => [items];
+}
+
+class ScanBarcode extends ItemEntryEvent {
+  final String barcode;
+
+  const ScanBarcode({required this.barcode});
+
+  @override
+  List<Object> get props => [barcode];
 }
 
 class ClearSelectedItems extends ItemEntryEvent {}

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_event.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/screens/sales_item_entry.dart';
 import '../models/confirmed_item.dart';
 import '../models/item_in_store.dart';
 import '../models/items.dart';
@@ -14,21 +13,20 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
     on<LoadItemsAndStores>(_onLoadItemsAndStores);
     on<SelectItem>(_onSelectItem);
     on<SelectStore>(_onSelectStore);
-    on<UpdateQuantity>(_onUpdateQuantity);
-    on<AddNewItem>(_onAddNewItem);
-    on<DeleteConfirmedItem>(_onDeletConfirmedItem);
-    on<EditConfirmedItem>(_onEditConfirmedItem);
-    on<SelectConfirmedItem>(_onSelectConfirmedItem);
-    on<UnSelectConfirmedItem>(_onUnSelectConfirmedItem);
-    on<SelectAllConfirmedItem>(_onSelectAllConfirmedItem);
 
-    on<ClearSelectedConfirmedItems>(_onClearSelectedConfirmedItems);
-    on<MoveSelectedToEdit>(_onMoveSelectedToEdit);
-    on<MoveSelectedToDelete>(_onMoveSelectedToDelete);
+    on<UpdateQuantity>(_onUpdateQuantity);
+    on<UpdatePrice>(_onUpdatePrice);
+    on<AddNewItem>(_onAddNewItem);
+
+    on<DeleteConfirmedItem>(_onDeleteConfirmedItem);
+    on<UndoDelete>(_onUndoDelete);
+
+    on<MoveToEdit>(_onMoveToEdit);
     on<ConfirmOrder>(_onConfirmOrder);
+    on<ClearSelectedItems>(_onClearSelectedItems);
+
     on<ToggleBarcode>(_onToggleBarcode);
     on<AddBarcodeItems>(_onAddBarcodeItems);
-    on<ClearSelectedItems>(_onClearSelectedItems);
     on<ScanBarcode>(_onScanBarcode);
   }
 
@@ -170,12 +168,54 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
     emit(state.copyWith(selectedItems: updatedItems));
   }
 
+  void _onMoveToEdit(MoveToEdit event, Emitter<ItemEntryState> emit) {
+    if (event.confirmedIndex >= state.confirmedItems.length) return;
+
+    final confirmedItem = state.confirmedItems[event.confirmedIndex];
+    final selectedItem = _confirmedItemToSelectedItem(confirmedItem);
+
+    // Remove from confirmed items
+    final updatedConfirmedItems = List<ConfirmedItem>.from(
+      state.confirmedItems,
+    );
+    updatedConfirmedItems.removeAt(event.confirmedIndex);
+
+    // Clear all selected items and add only this one
+    final updatedSelectedItems = [selectedItem];
+
+    // Recalculate total amount
+    final newTotalAmount = updatedConfirmedItems.fold(
+      0.0,
+      (sum, item) => sum + item.totalPrice,
+    );
+
+    emit(
+      state.copyWith(
+        selectedItems: updatedSelectedItems,
+        confirmedItems: updatedConfirmedItems,
+        totalAmount: newTotalAmount,
+      ),
+    );
+  }
+
   void _onUpdateQuantity(UpdateQuantity event, Emitter<ItemEntryState> emit) {
     final updatedItems = List<SelectedItem>.from(state.selectedItems);
 
     if (event.index < updatedItems.length) {
       updatedItems[event.index] = updatedItems[event.index].copyWith(
         quantity: event.quantity,
+      );
+    }
+
+    emit(state.copyWith(selectedItems: updatedItems));
+  }
+
+void _onUpdatePrice(UpdatePrice event, Emitter<ItemEntryState> emit) {
+    final updatedItems = List<SelectedItem>.from(state.selectedItems);
+
+    if (event.index < updatedItems.length) {
+      updatedItems[event.index] = updatedItems[event.index].copyWith(
+        unitPrice: event.price,
       );
     }
 
@@ -189,7 +229,7 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
     emit(state.copyWith(selectedItems: updatedItems));
   }
 
-  void _onDeletConfirmedItem(
+  void _onDeleteConfirmedItem(
     DeleteConfirmedItem event,
     Emitter<ItemEntryState> emit,
   ) {
@@ -197,39 +237,8 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
 
     if (event.index < confirmedItems.length) {
       final deletedItem = confirmedItems.removeAt(event.index);
+
       final totalAmount = state.totalAmount - deletedItem.totalPrice;
-      final selecteIndices = state.selectedConfirmedItemIndices
-          .where((i) => i < event.index)
-          .map((i) => i > event.index ? i - 1 : i)
-          .toList();
-      emit(
-        state.copyWith(
-          confirmedItems: confirmedItems,
-          totalAmount: totalAmount,
-          selectedConfirmedItemIndices: selecteIndices,
-        ),
-      );
-    }
-  }
-
-  void _onEditConfirmedItem(
-    EditConfirmedItem event,
-    Emitter<ItemEntryState> emit,
-  ) {
-    final confirmedItems = List<ConfirmedItem>.from(state.confirmedItems);
-
-    if (event.index < confirmedItems.length) {
-      final oldItem = confirmedItems[event.index];
-      final unitPrice = oldItem.totalPrice / oldItem.quantity;
-      confirmedItems[event.index] = ConfirmedItem(
-        itemName: oldItem.itemName,
-        quantity: event.newQuantity,
-        totalPrice: event.newQuantity * unitPrice,
-      );
-      final totalAmount = confirmedItems.fold(
-        0.0,
-        (sum, item) => sum + item.totalPrice,
-      );
 
       emit(
         state.copyWith(
@@ -237,78 +246,21 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
           totalAmount: totalAmount,
         ),
       );
-    }
+    } else {}
   }
 
-  void _onSelectConfirmedItem(
-    SelectConfirmedItem event,
-    Emitter<ItemEntryState> emit,
-  ) {
-    final selectedIndices = List<int>.from(state.selectedConfirmedItemIndices);
+  void _onUndoDelete(UndoDelete event, Emitter<ItemEntryState> emit) {
+    final updateConfirmedItems = List<ConfirmedItem>.from(state.confirmedItems);
+    updateConfirmedItems.insert(event.deletedIndex, event.deletedItem);
 
-    if (event.isMultiple) {
-      // Toggle selection for multiple selection
-      if (selectedIndices.contains(event.index)) {
-        selectedIndices.remove(event.index);
-      } else {
-        selectedIndices.add(event.index);
-      }
-    } else {
-      // Single selection - replace current selection
-      selectedIndices.clear();
-      selectedIndices.add(event.index);
-    }
+    final newTotalAmount = state.totalAmount + event.deletedItem.totalPrice;
 
-    emit(state.copyWith(selectedConfirmedItemIndices: selectedIndices));
-  }
-
-  void _onSelectAllConfirmedItem(
-    SelectAllConfirmedItem event,
-    Emitter<ItemEntryState> emit,
-  ) {
-    final allIndices = List<int>.generate(
-      state.confirmedItems.length,
-      (index) => index,
+    emit(
+      state.copyWith(
+        confirmedItems: updateConfirmedItems,
+        totalAmount: newTotalAmount,
+      ),
     );
-    emit(state.copyWith(selectedConfirmedItemIndices: allIndices));
-  }
-
-  void _onUnSelectConfirmedItem(
-    UnSelectConfirmedItem event,
-    Emitter<ItemEntryState> emit,
-  ) {
-    final selectedIndices = List<int>.from(state.selectedConfirmedItemIndices);
-    selectedIndices.remove(event.index);
-
-    emit(state.copyWith(selectedConfirmedItemIndices: selectedIndices));
-  }
-
-  void _onClearSelectedConfirmedItems(
-    ClearSelectedConfirmedItems event,
-    Emitter<ItemEntryState> emit,
-  ) {
-    emit(state.copyWith(selectedConfirmedItemIndices: const []));
-  }
-
-  void _onMoveSelectedToEdit(
-    MoveSelectedToEdit event,
-    Emitter<ItemEntryState> emit,
-  ) {
-    final selectedItems = state.selectedConfirmedItemIndices.map((index) {
-      return state.confirmedItems[index];
-    }).toList();
-
-    emit(state.copyWith(selectedConfirmedItemIndices: const []));
-  }
-
-  void _onMoveSelectedToDelete(
-    MoveSelectedToDelete event,
-    Emitter<ItemEntryState> emit,
-  ) {
-    final selectedIndices = List<int>.from(state.selectedConfirmedItemIndices);
-    selectedIndices.clear();
-
-    emit(state.copyWith(selectedConfirmedItemIndices: selectedIndices));
   }
 
   void _onConfirmOrder(ConfirmOrder event, Emitter<ItemEntryState> emit) {
@@ -407,7 +359,7 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
     }
   }
 
-  SelectedItem _convertConfirmedToSelectedItem(ConfirmedItem confirmedItem) {
+  SelectedItem _confirmedItemToSelectedItem(ConfirmedItem confirmedItem) {
     // Find the original item from itemsInStores
     for (final itemInStore in state.itemsInStores) {
       if (itemInStore.item.description == confirmedItem.itemName) {
