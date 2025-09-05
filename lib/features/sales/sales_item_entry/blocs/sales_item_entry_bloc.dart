@@ -15,7 +15,6 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
     on<SelectStore>(_onSelectStore);
 
     on<UpdateQuantity>(_onUpdateQuantity);
-    on<UpdatePrice>(_onUpdatePrice);
     on<AddNewItem>(_onAddNewItem);
 
     on<DeleteConfirmedItem>(_onDeleteConfirmedItem);
@@ -204,18 +203,6 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
     if (event.index < updatedItems.length) {
       updatedItems[event.index] = updatedItems[event.index].copyWith(
         quantity: event.quantity,
-      );
-    }
-
-    emit(state.copyWith(selectedItems: updatedItems));
-  }
-
-void _onUpdatePrice(UpdatePrice event, Emitter<ItemEntryState> emit) {
-    final updatedItems = List<SelectedItem>.from(state.selectedItems);
-
-    if (event.index < updatedItems.length) {
-      updatedItems[event.index] = updatedItems[event.index].copyWith(
-        unitPrice: event.price,
       );
     }
 
