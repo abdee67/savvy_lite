@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 class CustomTextField extends StatefulWidget {
@@ -7,10 +8,11 @@ class CustomTextField extends StatefulWidget {
   final bool isPassword;
   final bool readOnly;
   final TextEditingController? controller;
-  final String? Function(String?)? validator;
   final void Function(String)? onChanged;
+  final String? Function(String?)? validator;
   final TextInputType? keyboardType;
   final String? value;
+  final AutovalidateMode autovalidateMode;
 
   const CustomTextField({
     super.key,
@@ -24,6 +26,7 @@ class CustomTextField extends StatefulWidget {
     this.onChanged,
     this.keyboardType,
     this.value,
+    this.autovalidateMode = AutovalidateMode.disabled,
   });
 
   @override
@@ -32,25 +35,46 @@ class CustomTextField extends StatefulWidget {
 
 class _CustomTextFieldState extends State<CustomTextField> {
   late TextEditingController _controller;
+  Timer? _debounce;
+  String? _lastValue;
+  bool _initialized = false;
+
   @override
   void initState() {
     super.initState();
     _controller = widget.controller ?? TextEditingController();
-    if (widget.value != null) {
-      _controller.text = widget.value!;
-    }
+    _lastValue = widget.value;
+    
+    // Schedule the initial value setting for after the build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.value != null && !_initialized) {
+        _controller.text = widget.value!;
+        _lastValue = widget.value;
+        _initialized = true;
+      }
+    });
   }
 
   @override
   void didUpdateWidget(CustomTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.value != null && widget.value != _controller.text) {
-      _controller.text = widget.value!;
+    
+    // Use post-frame callback to avoid setState during build
+    if (widget.value != _lastValue) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _lastValue = widget.value;
+            _controller.text = widget.value ?? '';
+          });
+        }
+      });
     }
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     if (widget.controller == null) {
       _controller.dispose();
     }
@@ -65,13 +89,24 @@ class _CustomTextFieldState extends State<CustomTextField> {
         controller: _controller,
         obscureText: widget.isPassword,
         validator: widget.validator,
-        onChanged: widget.onChanged,
+        autovalidateMode: widget.autovalidateMode,
         keyboardType: widget.keyboardType,
         readOnly: widget.readOnly,
         style: TextStyle(
           color: widget.isDarkTheme ? Colors.white : Colors.black,
         ),
         textAlign: TextAlign.center,
+        onChanged: (value) {
+          // Cancel previous timer
+          if (_debounce?.isActive ?? false) _debounce!.cancel();
+          
+          // Start a new timer
+          _debounce = Timer(const Duration(milliseconds: 500), () {
+            if (widget.onChanged != null) {
+              widget.onChanged!(value);
+            }
+          });
+        },
         decoration: InputDecoration(
           labelText: widget.labelText,
           alignLabelWithHint: true,
