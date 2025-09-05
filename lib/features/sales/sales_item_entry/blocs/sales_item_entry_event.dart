@@ -2,7 +2,6 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/items.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/models/selected_item.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/stores.dart';
 
 @immutable
@@ -59,17 +58,17 @@ class AddNewItem extends ItemEntryEvent {}
 
 class DeleteConfirmedItem extends ItemEntryEvent {
   final int index;
-  const DeleteConfirmedItem({ required this.index});
+  const DeleteConfirmedItem({required this.index});
 
   @override
   List<Object> get props => [index];
 }
 
-class UndoDelete  extends ItemEntryEvent {
-final ConfirmedItem deletedItem;
-final int deletedIndex;
+class UndoDelete extends ItemEntryEvent {
+  final ConfirmedItem deletedItem;
+  final int deletedIndex;
 
-const UndoDelete({required this.deletedItem, required this.deletedIndex});
+  const UndoDelete({required this.deletedItem, required this.deletedIndex});
 }
 
 class MoveToEdit extends ItemEntryEvent {
