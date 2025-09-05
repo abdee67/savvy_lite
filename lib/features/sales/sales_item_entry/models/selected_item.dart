@@ -41,5 +41,9 @@ class SelectedItem extends Equatable {
   bool get isEmpty => this == empty;
   bool get isNotEmpty => this != empty;
   bool get isValid =>
-      item != null && store != null && quantity > 0 && extendedPrice > 0;
+      item != null &&
+      store != null &&
+      quantity > 0 &&
+      extendedPrice > 0 &&
+      quantity <= store!.availability;
 }

@@ -7,10 +7,8 @@ import 'package:savvy_stock/core/widgets/custom_text_form.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_event.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_state.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/item_in_store.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/items.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/models/selected_item.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/stores.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/widget/barcode_section.dart';
 
@@ -34,8 +32,26 @@ class ItemEntryScreenView extends StatefulWidget {
 }
 
 class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
-  Color _widgetColor = Colors.green;
-  double _leftPosition = 0;
+  final List<GlobalKey<FormState>> _formKeys = [];
+  final ScrollController _upperScrollController = ScrollController();
+  final ScrollController _lowerScrollController = ScrollController();
+  final FocusNode _focusNode = FocusNode();
+
+ @override
+  void initState() {
+    super.initState();
+    // Initialize form keys based on initial selectedItems
+    _initializeFormKeys();
+  }
+
+  void _initializeFormKeys() {
+    final state = context.read<ItemEntryBloc>().state;
+    _formKeys.clear();
+    _formKeys.addAll(List.generate(
+      state.selectedItems.length,
+      (index) => GlobalKey<FormState>(),
+    ));
+  }
 
   void _safeDeleteItem(BuildContext context, int index) {
     final bloc = context.read<ItemEntryBloc>();
@@ -107,21 +123,45 @@ class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
     ).showSnackBar(const SnackBar(content: Text('Item moved to edit section')));
   }
 
+  final Map<int, double> _dragOffset = {};
+
+  void _onHorizontalDragUpdate(int index, DragUpdateDetails details) {
+    setState(() {
+      final current = _dragOffset[index] ?? 0;
+      var newOffset = current + details.delta.dx;
+
+      // only allow left swipe
+      if (newOffset > 0) newOffset = 0;
+      _dragOffset[index] = newOffset;
+    });
+  }
+
   void _onHorizontalDragEnd(
     BuildContext context,
     int index,
     DragEndDetails details,
   ) {
-    setState(() {
-      if (details.primaryVelocity! < 0) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final threshold = screenWidth * 0.3; // ✅ 30% of screen width
+    final current = _dragOffset[index] ?? 0;
+    if (current.abs() > threshold) {
+      // Swipe far enough → delete
+      setState(() {
+        _dragOffset[index] = -screenWidth; // slide fully left
+      });
+
+      Future.delayed(const Duration(milliseconds: 300), () {
         _safeDeleteItem(context, index);
-        _widgetColor = Colors.red;
-        _leftPosition += 50;
-      } else if (details.primaryVelocity! > 0) {
-        _widgetColor = Colors.green;
-        _leftPosition -= 50;
-      }
-    });
+        setState(() {
+          _dragOffset.remove(index);
+        });
+      });
+    } else {
+      // Not far enough → snap back
+      setState(() {
+        _dragOffset[index] = 0.0;
+      });
+    }
   }
 
   @override
@@ -138,6 +178,19 @@ class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
                 ),
               );
             }
+             if (_formKeys.length != state.selectedItems.length) {
+          setState(() {
+            if (_formKeys.length < state.selectedItems.length) {
+              // Add new keys for new items
+              for (int i = _formKeys.length; i < state.selectedItems.length; i++) {
+                _formKeys.add(GlobalKey<FormState>());
+              }
+            } else {
+              // Remove excess keys
+              _formKeys.removeRange(state.selectedItems.length, _formKeys.length);
+            }
+          });
+        }
           },
           builder: (context, state) {
             return Column(
@@ -205,143 +258,173 @@ class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
       context,
       selectedItem.item,
     );
+    if (index >= _formKeys.length) {
+      // Ensure form key exists
+      _formKeys.add(GlobalKey<FormState>());
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Item selection
-          CustomTableDropdown<Item>(
-            title: 'Item',
-            items: state.itemsInStores
-                .map((itemInStore) => itemInStore.item)
-                .toList(),
-            displayText: (item) => item.description,
-            selectedValue: selectedItem.item,
-            columns: [
-              TableColumnConfig(
-                header: 'ID',
-                cellBuilder: (item) => Text(item.id),
-              ),
-              TableColumnConfig(
-                header: 'Description',
-                cellBuilder: (item) => Text(item.description),
-              ),
-            ],
-            onItemSelected: (Item? newValue) {
-              context.read<ItemEntryBloc>().add(
-                SelectItem(index: index, item: newValue),
-              );
-            },
-          ),
-          const SizedBox(height: 16),
-
-          // Store selection or Out of Stock message
-          if (selectedItem.item != null) ...[
-            if (selectedItem.isOutOfStock)
-              Text(
-                'Out of Stock',
-                style: TextStyle(
-                  color: Colors.red,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
+      child: Form(
+        key: _formKeys[index],
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Item selection
+            CustomTableDropdown<Item>(
+              title: 'Item',
+              items: state.itemsInStores
+                  .map((itemInStore) => itemInStore.item)
+                  .toList(),
+              displayText: (item) => item.description,
+              selectedValue: selectedItem.item,
+              columns: [
+                TableColumnConfig(
+                  header: 'ID',
+                  cellBuilder: (item) => Text(item.id),
                 ),
-              )
-            else
-              CustomTableDropdown<Store>(
-                title: 'Store',
-                items: availableStores,
-                displayText: (store) => store.branchName,
-                selectedValue: selectedItem.store,
-                columns: [
-                  TableColumnConfig(
-                    header: 'Branch',
-                    cellBuilder: (store) => Text(store.branchName),
+                TableColumnConfig(
+                  header: 'Description',
+                  cellBuilder: (item) => Text(item.description),
+                ),
+              ],
+              onItemSelected: (Item? newValue) {
+                context.read<ItemEntryBloc>().add(
+                  SelectItem(index: index, item: newValue),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Store selection or Out of Stock message
+            if (selectedItem.item != null) ...[
+              if (selectedItem.isOutOfStock)
+                Text(
+                  'Out of Stock',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
                   ),
-                  TableColumnConfig(
-                    header: 'Item',
-                    cellBuilder: (store) =>
-                        Text(selectedItem.item?.description ?? ''),
-                  ),
-                  TableColumnConfig(
-                    header: 'Available',
-                    cellBuilder: (store) => Text(store.availability.toString()),
-                  ),
-                  TableColumnConfig(
-                    header: 'Unit Price',
-                    cellBuilder: (store) =>
-                        Text(_formatCurrency(store.unitPrice)),
-                  ),
-                ],
-                onItemSelected: (Store? store) {
-                  context.read<ItemEntryBloc>().add(
-                    SelectStore(index: index, store: store),
-                  );
-                },
-              ),
-          ],
-          const SizedBox(height: 16),
-
-          // Quantity input
-          CustomTextField(
-            labelText: 'Quantity',
-            keyboardType: TextInputType.number,
-            onChanged: (value) {
-              final quantity = double.tryParse(value) ?? 0;
-              context.read<ItemEntryBloc>().add(
-                UpdateQuantity(index: index, quantity: quantity),
-              );
-            },
-          ),
-          const SizedBox(height: 16),
-
-          // Read-only fields
-          CustomTextField(
-            labelText: 'UoM',
-            value: selectedItem.item?.uom ?? '',
-            readOnly: true,
-          ),
-          const SizedBox(height: 16),
-
-          CustomTextField(
-            labelText: 'Unit Price',
-            value: selectedItem.store != null
-                ? _formatCurrency(selectedItem.store!.unitPrice)
-                : '',
-            readOnly: true,
-          ),
-          const SizedBox(height: 16),
-
-          CustomTextField(
-            labelText: 'Line Total',
-            value: selectedItem.extendedPrice > 0
-                ? _formatCurrency(selectedItem.extendedPrice)
-                : '',
-            readOnly: true,
-          ),
-          const SizedBox(height: 16),
-
-          // Barcode toggle
-          Row(
-            children: [
-              Checkbox(
-                value: state.useBarcode,
-                onChanged: (value) {
-                  context.read<ItemEntryBloc>().add(
-                    ToggleBarcode(useBarcode: value ?? false),
-                  );
-                },
-              ),
-              const Text('Use Barcode'),
+                )
+              else
+                CustomTableDropdown<Store>(
+                  title: 'Store',
+                  items: availableStores,
+                  displayText: (store) => store.branchName,
+                  selectedValue: selectedItem.store,
+                  columns: [
+                    TableColumnConfig(
+                      header: 'Branch',
+                      cellBuilder: (store) => Text(store.branchName),
+                    ),
+                    TableColumnConfig(
+                      header: 'Item',
+                      cellBuilder: (store) =>
+                          Text(selectedItem.item?.description ?? ''),
+                    ),
+                    TableColumnConfig(
+                      header: 'Available',
+                      cellBuilder: (store) =>
+                          Text(store.availability.toString()),
+                    ),
+                    TableColumnConfig(
+                      header: 'Unit Price',
+                      cellBuilder: (store) =>
+                          Text(_formatCurrency(store.unitPrice)),
+                    ),
+                  ],
+                  onItemSelected: (Store? store) {
+                    context.read<ItemEntryBloc>().add(
+                      SelectStore(index: index, store: store),
+                    );
+                  },
+                ),
             ],
-          ),
-          const SizedBox(height: 10),
+            const SizedBox(height: 16),
 
-          // Barcode section
-          if (state.useBarcode) const BarcodeSection(),
-        ],
+            // Quantity input
+            CustomTextField(
+              labelText: 'Quantity',
+              keyboardType: TextInputType.number,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter a quantity';
+                }
+
+                final quantity = double.tryParse(value);
+                if (quantity == null) {
+                  return 'Please enter a valid number';
+                }
+
+                if (quantity <= 0) {
+                  return 'Quantity must be greater than 0';
+                }
+
+                final storeAvailability = selectedItem.store?.availability;
+                if (storeAvailability != null && quantity > storeAvailability) {
+                  return 'Quantity exceeds available stock ($storeAvailability)';
+                }
+
+                return null;
+              },
+              onChanged: (value) {
+                final quantity = double.tryParse(value) ?? 0;
+                context.read<ItemEntryBloc>().add(
+                  UpdateQuantity(index: index, quantity: quantity),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Read-only fields
+            CustomTextField(
+              labelText: 'UoM',
+              value: selectedItem.item?.uom ?? '',
+              readOnly: true,
+            ),
+            const SizedBox(height: 16),
+
+            CustomTextField(
+              labelText: 'Unit Price',
+              value: selectedItem.store != null
+                  ? _formatCurrency(selectedItem.store!.unitPrice)
+                  : '',
+              readOnly: true,
+            ),
+            const SizedBox(height: 16),
+
+            CustomTextField(
+              labelText: 'Line Total',
+              value: selectedItem.extendedPrice > 0
+                  ? _formatCurrency(selectedItem.extendedPrice)
+                  : '',
+              readOnly: true,
+            ),
+            const SizedBox(height: 16),
+
+            // Barcode toggle
+            Row(
+              children: [
+                Checkbox(
+                  value: state.useBarcode,
+                  onChanged: (value) {
+                    context.read<ItemEntryBloc>().add(
+                      ToggleBarcode(useBarcode: value ?? false),
+                    );
+                  },
+                ),
+                const Text('Use Barcode'),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // Barcode section
+            if (state.useBarcode) const BarcodeSection(),
+          ],
+        ),
       ),
     );
   }
@@ -361,9 +444,9 @@ class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
                 ),
               ),
               padding: const EdgeInsets.only(
-                top: 30,
-                left: 16,
-                right: 16,
+                top: 30, //spacing for confirm button
+                left: 10,
+                right: 10,
                 bottom: 16,
               ),
               child: Column(
@@ -379,55 +462,116 @@ class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
                               final isSelected = state
                                   .selectedConfirmedItemIndices
                                   .contains(index);
-                              final bloc = context.read<ItemEntryBloc>();
+                              final offset = _dragOffset[index] ?? 0.0;
                               return GestureDetector(
-                                onLongPress: () => _safeDeleteItem(context, index),
                                 onDoubleTap: () => _moveToEdit(context, index),
+                                onHorizontalDragUpdate: (details) =>
+                                    _onHorizontalDragUpdate(index, details),
                                 onHorizontalDragEnd: (details) =>
-                                    _onHorizontalDragEnd(context, index, details),
-                                child: Container(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(12),
-                                    color: isSelected
-                                        ? Colors.grey.shade200
-                                        : _widgetColor,
-                                    border: isSelected
-                                        ? Border.all(color: Color(0xFF000000))
-                                        : null,
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          item.itemName,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
+                                    _onHorizontalDragEnd(
+                                      context,
+                                      index,
+                                      details,
+                                    ),
+                                child: Stack(
+                                  children: [
+                                    // 🔴 Background (delete indicator)
+                                    Positioned.fill(
+                                      child: Container(
+                                        alignment: Alignment.centerRight,
+                                        decoration: BoxDecoration(
+                                          color: Colors.redAccent,
+                                          borderRadius: BorderRadius.only(
+                                            topLeft: Radius.circular(20),
+                                            topRight: Radius.circular(20),
+                                            bottomLeft: Radius.circular(20),
+                                            bottomRight: Radius.circular(20),
                                           ),
-                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 20,
+                                        ),
+                                        margin: const EdgeInsets.only(
+                                          bottom: 2,
+                                        ),
+                                        child: const Icon(
+                                          Icons.delete,
+                                          color: Colors.white,
+                                          size: 28,
                                         ),
                                       ),
-                                      Expanded(
-                                        child: Text(
-                                          item.quantity.toStringAsFixed(2),
-                                          style: const TextStyle(fontSize: 14),
-                                          textAlign: TextAlign.center,
-                                        ),
+                                    ),
+
+                                    // 🟢 Foreground (draggable card)
+                                    AnimatedContainer(
+                                      duration: const Duration(
+                                        milliseconds: 200,
                                       ),
-                                      Expanded(
-                                        child: Text(
-                                          '\$${item.totalPrice.toStringAsFixed(2)}',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
+                                      transform: Matrix4.translationValues(
+                                        offset,
+                                        0,
+                                        0,
+                                      ),
+                                      curve: Curves.easeOut,
+                                      margin: const EdgeInsets.only(bottom: 10),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? Colors.grey.shade200
+                                            : Colors.white,
+                                        borderRadius: BorderRadius.circular(12),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(
+                                              0.1,
+                                            ),
+                                            blurRadius: 6,
+                                            offset: const Offset(0, 3),
                                           ),
-                                          textAlign: TextAlign.end,
+                                        ],
+                                        border: isSelected
+                                            ? Border.all(color: Colors.black)
+                                            : null,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8),
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                item.itemName,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            Expanded(
+                                              child: Text(
+                                                item.quantity.toStringAsFixed(
+                                                  2,
+                                                ),
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                ),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ),
+                                            Expanded(
+                                              child: Text(
+                                                '\$${item.totalPrice.toStringAsFixed(2)}',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
+                                                textAlign: TextAlign.end,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
                               );
                             },
@@ -541,11 +685,35 @@ class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
   }
 
   void _confirmOrder(BuildContext context) {
-    context.read<ItemEntryBloc>().add(ConfirmOrder());
+  // Validate all forms
+  bool allValid = true;
+  
+  for (int i = 0; i < _formKeys.length; i++) {
+    if (_formKeys[i].currentState != null && 
+        !_formKeys[i].currentState!.validate()) {
+      allValid = false;
+      // Scroll to the first invalid field
+      _upperScrollController.animateTo(
+        i * 300.0, // Adjust based on your item height
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+      break;
+    }
   }
+  
+  if (allValid) {
+    context.read<ItemEntryBloc>().add(ConfirmOrder());
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Please fix validation errors')),
+    );
+  }
+}
 
   void _navigateToSummary(BuildContext context) {
     final state = context.read<ItemEntryBloc>().state;
     context.push('/paymentScreen', extra: state);
   }
+
 }

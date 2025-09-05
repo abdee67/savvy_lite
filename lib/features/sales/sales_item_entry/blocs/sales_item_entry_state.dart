@@ -50,6 +50,7 @@ class ItemEntryState extends Equatable {
   }
 
   bool get hasValidItems => selectedItems.any((item) => item.isValid);
+
   bool get hasConfirmedItems => confirmedItems.isNotEmpty;
   bool get hasSelectedConfirmedItems => selectedConfirmedItemIndices.isNotEmpty;
 
