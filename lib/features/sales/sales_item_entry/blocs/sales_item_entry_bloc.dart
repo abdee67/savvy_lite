@@ -45,86 +45,143 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
           description: 'Laptop Computer',
           uom: 'PCS',
           barcode: 123456789000,
-          unitPrice: 1000,
         ),
         const Item(
           id: 'ITM-002',
           description: 'Wireless Mouse',
           uom: 'PCS',
           barcode: 987654321000,
-          unitPrice: 999.99,
         ),
         const Item(
           id: 'ITM-003',
           description: 'Keyboard',
           uom: 'PCS',
           barcode: 112233445000,
-          unitPrice: 24.99,
         ),
         const Item(
           id: 'ITM-004',
           description: 'Monitor 24"',
           uom: 'PCS',
           barcode: 556677889000,
-          unitPrice: 249.99,
         ),
         const Item(
           id: 'ITM-005',
           description: 'Webcam HD',
           uom: 'PCS',
           barcode: 334455667000,
-          unitPrice: 149.99,
         ),
       ];
 
+      // Create stores (NO prices or availability here)
       final stores = [
-        const Store(
-          id: 'STR-001',
-          branchName: 'Main Branch',
+        const Store(id: 'STR-001', branchName: 'Main Branch'),
+        const Store(id: 'STR-002', branchName: 'Downtown Branch'),
+        const Store(id: 'STR-003', branchName: 'Westside Branch'),
+        const Store(id: 'STR-004', branchName: 'North Branch'),
+      ];
+
+      // Create relationships with proper prices and availability
+      final itemsInStores = [
+        // Laptop (ITM-001) in different stores with different prices
+        ItemInStore(
+          item: items[0],
+          store: stores[0],
           unitPrice: 999.99,
           availability: 15,
         ),
-        const Store(
-          id: 'STR-002',
-          branchName: 'Downtown Branch',
+        ItemInStore(
+          item: items[0],
+          store: stores[1],
           unitPrice: 1029.99,
           availability: 8,
         ),
-        const Store(
-          id: 'STR-003',
-          branchName: 'Westside Branch',
+        ItemInStore(
+          item: items[0],
+          store: stores[2],
           unitPrice: 949.99,
           availability: 3,
         ),
-        const Store(
-          id: 'STR-004',
-          branchName: 'North Branch',
-          unitPrice: 979.99,
-          availability: 0,
+
+        // Mouse (ITM-002) in different stores with different prices
+        ItemInStore(
+          item: items[1],
+          store: stores[0],
+          unitPrice: 24.99,
+          availability: 100,
+        ),
+        ItemInStore(
+          item: items[1],
+          store: stores[3],
+          unitPrice: 26.99,
+          availability: 50,
+        ),
+
+        // Keyboard (ITM-003) in different stores
+        ItemInStore(
+          item: items[2],
+          store: stores[1],
+          unitPrice: 49.99,
+          availability: 25,
+        ),
+        ItemInStore(
+          item: items[2],
+          store: stores[2],
+          unitPrice: 45.99,
+          availability: 15,
+        ),
+        ItemInStore(
+          item: items[2],
+          store: stores[3],
+          unitPrice: 52.99,
+          availability: 10,
+        ),
+
+        // Monitor (ITM-004) - out of stock in all stores
+        // No ItemInStore entries for this item
+
+        // Webcam (ITM-005) in all stores with different prices
+        ItemInStore(
+          item: items[4],
+          store: stores[0],
+          unitPrice: 89.99,
+          availability: 30,
+        ),
+        ItemInStore(
+          item: items[4],
+          store: stores[1],
+          unitPrice: 92.99,
+          availability: 20,
+        ),
+        ItemInStore(
+          item: items[4],
+          store: stores[2],
+          unitPrice: 85.99,
+          availability: 15,
+        ),
+        ItemInStore(
+          item: items[4],
+          store: stores[3],
+          unitPrice: 87.99,
+          availability: 10,
         ),
       ];
 
-      final itemsInStores = [
-        ItemInStore(
-          item: items[0],
-          availableStores: [stores[0], stores[1], stores[2]],
-        ),
-        ItemInStore(item: items[1], availableStores: [stores[0], stores[3]]),
-        ItemInStore(
-          item: items[2],
-          availableStores: [stores[1], stores[2], stores[3]],
-        ),
-        ItemInStore(item: items[3], availableStores: []),
-        ItemInStore(
-          item: items[4],
-          availableStores: [stores[0], stores[1], stores[2], stores[3]],
-        ),
-      ];
+      final uniqueItemsMap = <String, Item>{};
+      for (final itemInStore in itemsInStores) {
+        uniqueItemsMap[itemInStore.item.id] = itemInStore.item;
+      }
+      final uniqueItems = uniqueItemsMap.values.toList()
+        ..sort(
+          (a, b) => a.description.toLowerCase().compareTo(
+            b.description.toLowerCase(),
+          ),
+        );
 
       emit(
         state.copyWith(
           status: ItemEntryStatus.success,
           itemsInStores: itemsInStores,
+          uniqueItems: uniqueItems,
           selectedItems: [SelectedItem()], // Start with one empty item
         ),
       );
@@ -160,7 +217,7 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
 
     if (event.index < updatedItems.length) {
       updatedItems[event.index] = updatedItems[event.index].copyWith(
-        store: event.store,
+        store: event.itemInStore,
       );
     }
 
@@ -257,9 +314,11 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
     for (final item in validItems) {
       confirmedItems.add(
         ConfirmedItem(
+          itemId: item.item!.id,
           itemName: item.item!.description,
           quantity: item.quantity,
           totalPrice: item.extendedPrice,
+          storeId: item.store?.store.id,
         ),
       );
     }
@@ -303,10 +362,13 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
       if (existingIndex >= 0) {
         // Update quantity if item exists
         final existingItem = confirmedItems[existingIndex];
+        final itemInStore = List<ItemInStore>.from(state.itemsInStores);
         confirmedItems[existingIndex] = ConfirmedItem(
+          itemId: itemInStore.first.item.id,
           itemName: existingItem.itemName,
           quantity: existingItem.quantity + 1,
-          totalPrice: existingItem.totalPrice + (foundItem.unitPrice ?? 0),
+          totalPrice: existingItem.totalPrice + (itemInStore.first.unitPrice),
+          storeId: itemInStore.first.store.id,
         );
       } else {
         // Add new item
@@ -317,9 +379,11 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
 
         confirmedItems.add(
           ConfirmedItem(
+            itemId: foundItem.id,
             itemName: foundItem.description,
             quantity: 1,
             totalPrice: unitPrice,
+            storeId: availableStores.first.store.id,
           ),
         );
       }
@@ -347,30 +411,49 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
   }
 
   SelectedItem _confirmedItemToSelectedItem(ConfirmedItem confirmedItem) {
-    // Find the original item from itemsInStores
-    for (final itemInStore in state.itemsInStores) {
-      if (itemInStore.item.description == confirmedItem.itemName) {
-        // Find the store with matching unit price
-        final unitPrice = confirmedItem.totalPrice / confirmedItem.quantity;
-        Store? foundStore;
-
-        for (final store in itemInStore.availableStores) {
-          if (store.unitPrice == unitPrice) {
-            foundStore = store;
-            break;
-          }
+    if (confirmedItem.storeId != null) {
+      for (final itemInStore in state.itemsInStores) {
+        if (itemInStore.item.id == confirmedItem.itemId &&
+            itemInStore.store.id == confirmedItem.storeId) {
+          return SelectedItem(
+            item: itemInStore.item,
+            store: itemInStore,
+            quantity: confirmedItem.quantity,
+            isOutOfStock: itemInStore.availability == 0,
+          );
         }
+      }
+    }
+    //fallback:try byt item ID only
+    for (final itemInStore in state.itemsInStores) {
+      if (itemInStore.item.id == confirmedItem.itemId) {
+        final unitPrice = confirmedItem.totalPrice / confirmedItem.quantity;
+        if ((itemInStore.unitPrice - unitPrice).abs() < 0.001) {
+          return SelectedItem(
+            item: itemInStore.item,
+            store: itemInStore,
+            quantity: confirmedItem.quantity,
+            isOutOfStock: itemInStore.availability == 0,
+          );
+        }
+      }
+    }
 
+    // Find the original item from itemsInStores by name and price
+    final unitPrice = confirmedItem.totalPrice / confirmedItem.quantity;
+    for (final itemInStore in state.itemsInStores) {
+      if (itemInStore.item.description == confirmedItem.itemName &&
+          (itemInStore.unitPrice - unitPrice).abs() < 0.001) {
         return SelectedItem(
           item: itemInStore.item,
-          store: foundStore,
+          store: itemInStore,
           quantity: confirmedItem.quantity,
-          isOutOfStock: itemInStore.availableStores.isEmpty,
+          isOutOfStock: itemInStore.availability == 0,
         );
       }
     }
 
-    // Fallback if item not found
+    // Fallback if item not found return with just qunatity
     return SelectedItem(quantity: confirmedItem.quantity);
   }
 
@@ -399,14 +482,11 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
     emit(state.copyWith(selectedItems: [SelectedItem()]));
   }
 
-  List<Store> _getAvailableStoresForItem(Item? item) {
+  List<ItemInStore> _getAvailableStoresForItem(Item? item) {
     if (item == null) return [];
 
-    final itemInStore = state.itemsInStores.firstWhere(
-      (element) => element.item.id == item.id,
-      orElse: () => ItemInStore(item: item, availableStores: []),
-    );
-
-    return itemInStore.availableStores;
+    return state.itemsInStores
+        .where((itemInStore) => itemInStore.item.id == item.id)
+        .toList();
   }
 }
