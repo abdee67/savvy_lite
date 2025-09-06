@@ -37,7 +37,7 @@ class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
   final ScrollController _lowerScrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
 
- @override
+  @override
   void initState() {
     super.initState();
     // Initialize form keys based on initial selectedItems
@@ -47,10 +47,12 @@ class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
   void _initializeFormKeys() {
     final state = context.read<ItemEntryBloc>().state;
     _formKeys.clear();
-    _formKeys.addAll(List.generate(
-      state.selectedItems.length,
-      (index) => GlobalKey<FormState>(),
-    ));
+    _formKeys.addAll(
+      List.generate(
+        state.selectedItems.length,
+        (index) => GlobalKey<FormState>(),
+      ),
+    );
   }
 
   void _safeDeleteItem(BuildContext context, int index) {
@@ -59,9 +61,6 @@ class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
 
     // Validate the index
     if (index < 0 || index >= state.confirmedItems.length) {
-      print(
-        'Invalid index: $index. Available indices: 0-${state.confirmedItems.length - 1}',
-      );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cannot delete item. Invalid index.')),
       );
@@ -178,19 +177,26 @@ class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
                 ),
               );
             }
-             if (_formKeys.length != state.selectedItems.length) {
-          setState(() {
-            if (_formKeys.length < state.selectedItems.length) {
-              // Add new keys for new items
-              for (int i = _formKeys.length; i < state.selectedItems.length; i++) {
-                _formKeys.add(GlobalKey<FormState>());
-              }
-            } else {
-              // Remove excess keys
-              _formKeys.removeRange(state.selectedItems.length, _formKeys.length);
+            if (_formKeys.length != state.selectedItems.length) {
+              setState(() {
+                if (_formKeys.length < state.selectedItems.length) {
+                  // Add new keys for new items
+                  for (
+                    int i = _formKeys.length;
+                    i < state.selectedItems.length;
+                    i++
+                  ) {
+                    _formKeys.add(GlobalKey<FormState>());
+                  }
+                } else {
+                  // Remove excess keys
+                  _formKeys.removeRange(
+                    state.selectedItems.length,
+                    _formKeys.length,
+                  );
+                }
+              });
             }
-          });
-        }
           },
           builder: (context, state) {
             return Column(
@@ -254,10 +260,7 @@ class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
     int index,
   ) {
     final selectedItem = state.selectedItems[index];
-    final availableStores = _getAvailableStoresForItem(
-      context,
-      selectedItem.item,
-    );
+    final availableStores = _getAvailableStoresForItem(selectedItem.item);
     if (index >= _formKeys.length) {
       // Ensure form key exists
       _formKeys.add(GlobalKey<FormState>());
@@ -274,9 +277,7 @@ class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
             // Item selection
             CustomTableDropdown<Item>(
               title: 'Item',
-              items: state.itemsInStores
-                  .map((itemInStore) => itemInStore.item)
-                  .toList(),
+              items: state.uniqueItems,
               displayText: (item) => item.description,
               selectedValue: selectedItem.item,
               columns: [
@@ -309,15 +310,15 @@ class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
                   ),
                 )
               else
-                CustomTableDropdown<Store>(
+                CustomTableDropdown<ItemInStore>(
                   title: 'Store',
                   items: availableStores,
-                  displayText: (store) => store.branchName,
+                  displayText: (store) => store.store.branchName,
                   selectedValue: selectedItem.store,
                   columns: [
                     TableColumnConfig(
                       header: 'Branch',
-                      cellBuilder: (store) => Text(store.branchName),
+                      cellBuilder: (store) => Text(store.store.branchName),
                     ),
                     TableColumnConfig(
                       header: 'Item',
@@ -335,9 +336,9 @@ class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
                           Text(_formatCurrency(store.unitPrice)),
                     ),
                   ],
-                  onItemSelected: (Store? store) {
+                  onItemSelected: (ItemInStore? itemInStore) {
                     context.read<ItemEntryBloc>().add(
-                      SelectStore(index: index, store: store),
+                      SelectStore(index: index, itemInStore: itemInStore),
                     );
                   },
                 ),
@@ -348,6 +349,7 @@ class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
             CustomTextField(
               labelText: 'Quantity',
               keyboardType: TextInputType.number,
+              value: selectedItem.quantity.toString(),
               autovalidateMode: AutovalidateMode.onUserInteraction,
               validator: (value) {
                 if (value == null || value.isEmpty) {
@@ -357,10 +359,6 @@ class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
                 final quantity = double.tryParse(value);
                 if (quantity == null) {
                   return 'Please enter a valid number';
-                }
-
-                if (quantity <= 0) {
-                  return 'Quantity must be greater than 0';
                 }
 
                 final storeAvailability = selectedItem.store?.availability;
@@ -668,16 +666,15 @@ class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
     );
   }
 
-  List<Store> _getAvailableStoresForItem(BuildContext context, Item? item) {
+  List<ItemInStore> _getAvailableStoresForItem(Item? item) {
     if (item == null) return [];
 
-    final state = context.read<ItemEntryBloc>().state;
-    final itemInStore = state.itemsInStores.firstWhere(
-      (element) => element.item.id == item.id,
-      orElse: () => ItemInStore(item: item, availableStores: []),
-    );
-
-    return itemInStore.availableStores;
+    return context
+        .read<ItemEntryBloc>()
+        .state
+        .itemsInStores
+        .where((itemInStore) => itemInStore.item.id == item.id)
+        .toList();
   }
 
   String _formatCurrency(double amount) {
@@ -685,35 +682,34 @@ class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
   }
 
   void _confirmOrder(BuildContext context) {
-  // Validate all forms
-  bool allValid = true;
-  
-  for (int i = 0; i < _formKeys.length; i++) {
-    if (_formKeys[i].currentState != null && 
-        !_formKeys[i].currentState!.validate()) {
-      allValid = false;
-      // Scroll to the first invalid field
-      _upperScrollController.animateTo(
-        i * 300.0, // Adjust based on your item height
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+    // Validate all forms
+    bool allValid = true;
+    for (int i = 0; i < _formKeys.length; i++) {
+      if (_formKeys[i].currentState != null &&
+          !_formKeys[i].currentState!.validate()) {
+        allValid = false;
+
+        // Scroll to the first invalid field
+        _upperScrollController.animateTo(
+          i * 300.0, // Adjust based on your item height
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+        break;
+      }
+    }
+
+    if (allValid) {
+      context.read<ItemEntryBloc>().add(ConfirmOrder());
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fix validation errors')),
       );
-      break;
     }
   }
-  
-  if (allValid) {
-    context.read<ItemEntryBloc>().add(ConfirmOrder());
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Please fix validation errors')),
-    );
-  }
-}
 
   void _navigateToSummary(BuildContext context) {
     final state = context.read<ItemEntryBloc>().state;
-    context.push('/paymentScreen', extra: state);
+    context.push('/payment-screen', extra: state);
   }
-
 }
