@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/item_in_store.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/items.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/models/stores.dart';
 
 @immutable
 abstract class ItemEntryEvent extends Equatable {

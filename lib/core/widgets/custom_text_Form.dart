@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class CustomTextField extends StatefulWidget {
   final String labelText;
@@ -13,6 +14,8 @@ class CustomTextField extends StatefulWidget {
   final TextInputType? keyboardType;
   final String? value;
   final AutovalidateMode autovalidateMode;
+  final bool enabled;
+  final List<TextInputFormatter>? inputFormatters;
 
   const CustomTextField({
     super.key,
@@ -27,6 +30,8 @@ class CustomTextField extends StatefulWidget {
     this.keyboardType,
     this.value,
     this.autovalidateMode = AutovalidateMode.disabled,
+    this.enabled = true,
+    this.inputFormatters,
   });
 
   @override
@@ -44,7 +49,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
     super.initState();
     _controller = widget.controller ?? TextEditingController();
     _lastValue = widget.value;
-    
+
     // Schedule the initial value setting for after the build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.value != null && !_initialized) {
@@ -58,7 +63,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
   @override
   void didUpdateWidget(CustomTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     // Use post-frame callback to avoid setState during build
     if (widget.value != _lastValue) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -92,6 +97,8 @@ class _CustomTextFieldState extends State<CustomTextField> {
         autovalidateMode: widget.autovalidateMode,
         keyboardType: widget.keyboardType,
         readOnly: widget.readOnly,
+        enabled: widget.enabled,
+        inputFormatters: widget.inputFormatters,
         style: TextStyle(
           color: widget.isDarkTheme ? Colors.white : Colors.black,
         ),
@@ -99,7 +106,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
         onChanged: (value) {
           // Cancel previous timer
           if (_debounce?.isActive ?? false) _debounce!.cancel();
-          
+
           // Start a new timer
           _debounce = Timer(const Duration(milliseconds: 500), () {
             if (widget.onChanged != null) {

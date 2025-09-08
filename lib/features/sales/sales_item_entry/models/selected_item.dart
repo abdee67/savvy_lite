@@ -1,7 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/item_in_store.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/items.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/models/stores.dart';
 
 class SelectedItem extends Equatable {
   final Item? item;

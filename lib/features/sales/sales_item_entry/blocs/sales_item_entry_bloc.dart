@@ -336,6 +336,9 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
         totalAmount: totalAmount,
       ),
     );
+    print(
+      'Order confirmed- Items: ${confirmedItems.length}, Total Amount: $totalAmount',
+    );
   }
 
   void _onScanBarcode(ScanBarcode event, Emitter<ItemEntryState> emit) {
