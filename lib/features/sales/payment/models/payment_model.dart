@@ -1,4 +1,7 @@
-class PaymentModel {
+import 'package:equatable/equatable.dart';
+import 'package:savvy_stock/features/sales/payment/blocs/payment_state.dart';
+
+class PaymentModel extends Equatable {
   final String id;
   final String transactionID;
   final String paymentType;
@@ -19,24 +22,25 @@ class PaymentModel {
     required this.paymentMethod,
     required this.paymentInstrument,
     required this.paymentTerm,
+    required this.paymentStatus,
     required this.paymentDate,
     required this.amount,
-    required this.paymentStatus,
     this.discountAmount = 0,
     this.withholdingAmount = 0,
     this.taxAmount = 0,
   });
 
+  @override
   List<Object> get props => [
     id,
     transactionID,
-    amount,
     paymentType,
     paymentMethod,
     paymentInstrument,
     paymentTerm,
-    paymentDate,
     paymentStatus,
+    paymentDate,
+    amount,
     discountAmount,
     withholdingAmount,
     taxAmount,
@@ -50,11 +54,11 @@ class PaymentModel {
     String? paymentInstrument,
     String? paymentTerm,
     String? paymentStatus,
+    DateTime? paymentDate,
     double? amount,
-    double? taxAmount,
     double? discountAmount,
     double? withholdingAmount,
-    DateTime? paymentDate,
+    double? taxAmount,
   }) {
     return PaymentModel(
       id: id ?? this.id,
@@ -64,11 +68,11 @@ class PaymentModel {
       paymentInstrument: paymentInstrument ?? this.paymentInstrument,
       paymentTerm: paymentTerm ?? this.paymentTerm,
       paymentStatus: paymentStatus ?? this.paymentStatus,
+      paymentDate: paymentDate ?? this.paymentDate,
       amount: amount ?? this.amount,
-      taxAmount: taxAmount ?? this.taxAmount,
       discountAmount: discountAmount ?? this.discountAmount,
       withholdingAmount: withholdingAmount ?? this.withholdingAmount,
-      paymentDate: paymentDate ?? this.paymentDate,
+      taxAmount: taxAmount ?? this.taxAmount,
     );
   }
 
@@ -76,13 +80,13 @@ class PaymentModel {
     return {
       'id': id,
       'transactionID': transactionID,
-      'amount': amount,
       'paymentType': paymentType,
       'paymentMethod': paymentMethod,
       'paymentInstrument': paymentInstrument,
       'paymentTerm': paymentTerm,
-      'paymentDate': paymentDate.toIso8601String(),
       'paymentStatus': paymentStatus,
+      'paymentDate': paymentDate.toIso8601String(),
+      'amount': amount,
       'discountAmount': discountAmount,
       'withholdingAmount': withholdingAmount,
       'taxAmount': taxAmount,
@@ -91,18 +95,61 @@ class PaymentModel {
 
   factory PaymentModel.fromMap(Map<String, dynamic> map) {
     return PaymentModel(
-      id: map['id'] ?? '',
-      transactionID: map['transactionID'] ?? '',
-      paymentType: map['paymentType'] ?? '',
-      paymentMethod: map['paymentMethod'] ?? '',
-      paymentInstrument: map['paymentInstrument'] ?? '',
-      paymentTerm: map['paymentTerm'] ?? '',
-      paymentDate: DateTime.parse(map['paymentDate']),
-      amount: map['amount'] ?? 0,
-      discountAmount: map['discountAmount'] ?? 0,
-      withholdingAmount: map['withholdingAmount'] ?? 0,
-      taxAmount: map['taxAmount'] ?? 0,
-      paymentStatus: map['paymentStatus'] ?? '',
+      id: map['id']?.toString() ?? '',
+      transactionID: map['transactionID']?.toString() ?? '',
+      paymentType: map['paymentType']?.toString() ?? '',
+      paymentMethod: map['paymentMethod']?.toString() ?? '',
+      paymentInstrument: map['paymentInstrument']?.toString() ?? '',
+      paymentTerm: map['paymentTerm']?.toString() ?? '',
+      paymentStatus: map['paymentStatus']?.toString() ?? '',
+      paymentDate: map['paymentDate'] != null
+          ? DateTime.tryParse(map['paymentDate']) ?? DateTime.now()
+          : DateTime.now(),
+      amount: (map['amount'] as num?)?.toDouble() ?? 0,
+      discountAmount: (map['discountAmount'] as num?)?.toDouble() ?? 0,
+      withholdingAmount: (map['withholdingAmount'] as num?)?.toDouble() ?? 0,
+      taxAmount: (map['taxAmount'] as num?)?.toDouble() ?? 0,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'PaymentModel('
+        'id: $id, '
+        'transactionID: $transactionID, '
+        'paymentType: $paymentType, '
+        'paymentMethod: $paymentMethod, '
+        'paymentInstrument: $paymentInstrument, '
+        'paymentTerm: $paymentTerm, '
+        'paymentStatus: $paymentStatus, '
+        'paymentDate: $paymentDate, '
+        'amount: $amount, '
+        'discountAmount: $discountAmount, '
+        'withholdingAmount: $withholdingAmount, '
+        'taxAmount: $taxAmount'
+        ')';
+  }
+
+  // Helper method to create a PaymentModel from PaymentState
+  factory PaymentModel.fromPaymentState({
+    required String id,
+    required String transactionID,
+    required PaymentState state,
+    required String paymentStatus,
+  }) {
+    return PaymentModel(
+      id: id,
+      transactionID: transactionID,
+      paymentType: state.paymentType,
+      paymentMethod: state.paymentMethod,
+      paymentInstrument: state.paymentInstrument,
+      paymentTerm: state.paymentTerm,
+      paymentStatus: paymentStatus,
+      paymentDate: DateTime.now(),
+      amount: state.grandTotal,
+      discountAmount: state.discountAmount,
+      withholdingAmount: state.withholdingAmount,
+      taxAmount: state.taxAmount,
     );
   }
 }

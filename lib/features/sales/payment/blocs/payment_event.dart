@@ -51,24 +51,28 @@ class UpdatePaymentDetails extends PaymentEvent {
 }
 
 class UpdateTaxAndFees extends PaymentEvent {
-  final double taxAmount;
-  final double withholdingAmount;
+  final double subtotal;
   final double discountAmount;
+  final bool isWithholdingEnabled;
 
   const UpdateTaxAndFees({
-    required this.taxAmount,
-    required this.withholdingAmount,
+    required this.subtotal,
     required this.discountAmount,
+    this.isWithholdingEnabled = false,
   });
 
   @override
-  List<Object> get props => [taxAmount, withholdingAmount, discountAmount];
+  List<Object> get props => [
+    subtotal,
+    discountAmount,
+    isWithholdingEnabled,
+  ];
 }
 
-class PaymentSucess extends PaymentEvent {
+class PaymentSuccess extends PaymentEvent {
   final String transactionID;
 
-  const PaymentSucess({required this.transactionID});
+  const PaymentSuccess({required this.transactionID});
 
   @override
   List<Object> get props => [transactionID];
@@ -84,18 +88,10 @@ class PaymentFailure extends PaymentEvent {
 }
 
 class CancelPayment extends PaymentEvent {
-  final PaymentModel payment;
-  final List<ConfirmedItem> confirmedItems;
-  final double totalAmount;
-
-  const CancelPayment({
-    required this.payment,
-    required this.confirmedItems,
-    required this.totalAmount,
-  });
+  const CancelPayment();
 
   @override
-  List<Object> get props => [payment, confirmedItems, totalAmount];
+  List<Object> get props => [];
 }
 
 class ResetPayment extends PaymentEvent {

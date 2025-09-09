@@ -1,7 +1,15 @@
 import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
 
-enum PaymentStatus { initial, loading, ready, processing, success, failure }
+enum PaymentStatus {
+  initial,
+  loading,
+  ready,
+  processing,
+  success,
+  failure,
+  cancelled,
+}
 
 class PaymentState extends Equatable {
   final PaymentStatus status;
@@ -11,6 +19,7 @@ class PaymentState extends Equatable {
   final double taxAmount;
   final double withholdingAmount;
   final double discountAmount;
+  final bool isWithholdingEnabled;
   final String paymentType;
   final String paymentMethod;
   final String paymentInstrument;
@@ -26,6 +35,7 @@ class PaymentState extends Equatable {
     this.taxAmount = 0,
     this.withholdingAmount = 0,
     this.discountAmount = 0,
+    this.isWithholdingEnabled = false,
     this.paymentType = 'Cash',
     this.paymentMethod = '',
     this.paymentInstrument = '',
@@ -35,22 +45,18 @@ class PaymentState extends Equatable {
   });
 
   double get grandTotal =>
-      subtotal + taxAmount - discountAmount - withholdingAmount;
-  double get grandTotalWithheld => grandTotal - withholdingAmount;
-  double get grandTotalDiscount => grandTotal - discountAmount;
-  double get grandTotalTax => grandTotal - taxAmount;
-  double get grandTotalWithholding => grandTotal - withholdingAmount;
+      (subtotal + taxAmount - discountAmount - withholdingAmount).clamp(
+        0,
+        double.infinity,
+      );
+
   bool get isValid =>
       confirmedItems.isNotEmpty &&
-      totalAmount > 0 &&
+      grandTotal > 0 &&
       paymentType.isNotEmpty &&
       paymentMethod.isNotEmpty &&
       paymentInstrument.isNotEmpty &&
-      paymentTerm.isNotEmpty &&
-      grandTotalWithheld >= 0 &&
-      grandTotalDiscount >= 0 &&
-      grandTotalTax >= 0 &&
-      grandTotalWithholding >= 0;
+      paymentTerm.isNotEmpty;
 
   PaymentState copyWith({
     PaymentStatus? status,
@@ -60,6 +66,7 @@ class PaymentState extends Equatable {
     double? taxAmount,
     double? withholdingAmount,
     double? discountAmount,
+    bool? isWithholdingEnabled,
     String? paymentType,
     String? paymentMethod,
     String? paymentInstrument,
@@ -75,6 +82,7 @@ class PaymentState extends Equatable {
       taxAmount: taxAmount ?? this.taxAmount,
       withholdingAmount: withholdingAmount ?? this.withholdingAmount,
       discountAmount: discountAmount ?? this.discountAmount,
+      isWithholdingEnabled: isWithholdingEnabled ?? this.isWithholdingEnabled,
       paymentType: paymentType ?? this.paymentType,
       paymentMethod: paymentMethod ?? this.paymentMethod,
       paymentInstrument: paymentInstrument ?? this.paymentInstrument,
@@ -93,11 +101,13 @@ class PaymentState extends Equatable {
     taxAmount,
     withholdingAmount,
     discountAmount,
+    isWithholdingEnabled,
     paymentType,
     paymentMethod,
     paymentInstrument,
     paymentTerm,
     errorMessage,
     transactionID,
+    grandTotal, // Include computed properties in props for Equatable
   ];
 }
