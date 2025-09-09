@@ -86,7 +86,7 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
         ItemInStore(
           item: items[0],
           store: stores[0],
-          unitPrice: 999.99,
+          unitPrice: 99999.99,
           availability: 15,
         ),
         ItemInStore(

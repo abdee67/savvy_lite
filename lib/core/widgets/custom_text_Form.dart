@@ -16,6 +16,10 @@ class CustomTextField extends StatefulWidget {
   final AutovalidateMode autovalidateMode;
   final bool enabled;
   final List<TextInputFormatter>? inputFormatters;
+  final Widget? suffixIcon;
+  final Widget? prefixIcon;
+  final TextInputAction? textInputAction;
+  final String? hintText;
 
   const CustomTextField({
     super.key,
@@ -32,6 +36,10 @@ class CustomTextField extends StatefulWidget {
     this.autovalidateMode = AutovalidateMode.disabled,
     this.enabled = true,
     this.inputFormatters,
+    this.suffixIcon,
+    this.prefixIcon,
+    this.hintText,
+    this.textInputAction,
   });
 
   @override
@@ -99,6 +107,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
         readOnly: widget.readOnly,
         enabled: widget.enabled,
         inputFormatters: widget.inputFormatters,
+        textInputAction: widget.textInputAction,
         style: TextStyle(
           color: widget.isDarkTheme ? Colors.white : Colors.black,
         ),
@@ -115,7 +124,10 @@ class _CustomTextFieldState extends State<CustomTextField> {
           });
         },
         decoration: InputDecoration(
+          suffixIcon: widget.suffixIcon,
+          prefixIcon: widget.prefixIcon,
           labelText: widget.labelText,
+          hintText: widget.hintText,
           alignLabelWithHint: true,
           labelStyle: TextStyle(
             color: widget.isDarkTheme
