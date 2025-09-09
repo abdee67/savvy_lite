@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:savvy_stock/features/onboarding/screens/welcome_screen.dart';
-import 'package:savvy_stock/features/onboarding/widgets/getStarted.dart';
+import 'package:provider/provider.dart';
+import 'package:savvy_stock/core/routes/app_router.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_event.dart';
-import 'package:savvy_stock/features/sales/payment/screens/paymentSummary.dart';
-import 'package:savvy_stock/features/sales/presentation/screens/sales_dashboard.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_event.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/screens/sales_item_entry.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+//import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // await dotenv.load(fileName: ".env");
   runApp(const SavvyStock());
 }
 
@@ -26,6 +25,7 @@ class SavvyStock extends StatefulWidget {
 class _SavvyStockState extends State<SavvyStock> {
   bool showOnboarding = true;
   bool isLoading = true;
+  late GoRouter _router;
 
   @override
   void initState() {
@@ -47,6 +47,9 @@ class _SavvyStockState extends State<SavvyStock> {
         isLoading = false;
       });
     }
+
+    // Initialize router after onboarding status is determined
+    _router = AppRouter(showOnboarding: showOnboarding).router;
   }
 
   @override
@@ -56,20 +59,18 @@ class _SavvyStockState extends State<SavvyStock> {
         home: Scaffold(body: Center(child: CircularProgressIndicator())),
       );
     }
-
-    // Initialize BLoCs first
-    final customerBloc = CustomerBloc()..add(LoadCustomers());
-    final itemEntryBloc = ItemEntryBloc()..add(LoadItemsAndStores());
-
-    return MultiBlocProvider(
+    return MultiProvider(
       providers: [
-        BlocProvider.value(value: customerBloc),
-        BlocProvider.value(value: itemEntryBloc),
+        // Bloc providers
+        BlocProvider(create: (context) => CustomerBloc()..add(LoadCustomers())),
+        BlocProvider(
+          create: (context) => ItemEntryBloc()..add(LoadItemsAndStores()),
+        ),
       ],
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
         title: 'Savvy Stock',
-        routerConfig: _buildRouter(itemEntryBloc, customerBloc),
+        routerConfig: _router,
         theme: ThemeData(
           primarySwatch: Colors.deepPurple,
           appBarTheme: AppBarTheme(
@@ -80,47 +81,6 @@ class _SavvyStockState extends State<SavvyStock> {
           fontFamily: 'Montserrat',
         ),
       ),
-    );
-  }
-
-  // Build router with access to BLoCs
-  GoRouter _buildRouter(
-    ItemEntryBloc itemEntryBloc,
-    CustomerBloc customerBloc,
-  ) {
-    return GoRouter(
-      initialLocation: showOnboarding ? '/welcome' : '/sales-dashboard',
-      routes: [
-        GoRoute(
-          path: '/welcome',
-          builder: (context, state) => const OnboardingScreen(),
-        ),
-        GoRoute(
-          path: '/sales-dashboard',
-          builder: (context, state) => const SalesDashboard(),
-        ),
-        GoRoute(path: '/signup', builder: (context, state) => const GetStart()),
-        GoRoute(
-          path: '/sales-item-entry-screen',
-          builder: (context, state) => const ItemEntryScreen(),
-        ),
-        // Your other routes...
-        GoRoute(
-          path: '/payment-screen',
-          builder: (context, state) {
-            final bloc = BlocProvider.of<ItemEntryBloc>(context);
-            print(
-              'Order confirmed- Items: ${bloc.state.confirmedItems.length}, Total Amount: ${bloc.state.totalAmount}, bloc state: ${bloc.state}',
-            );
-
-            return PaymentScreen(
-              confirmedItems: bloc.state.confirmedItems,
-              totalAmount: bloc.state.totalAmount,
-            );
-          },
-        ),
-        // Add other routes here
-      ],
     );
   }
 }
