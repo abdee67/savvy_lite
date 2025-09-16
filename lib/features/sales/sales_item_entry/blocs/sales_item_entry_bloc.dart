@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:bloc/bloc.dart';
+import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_event.dart';
 import '../models/confirmed_item.dart';
 import '../models/item_in_store.dart';
@@ -492,4 +493,6 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
         .where((itemInStore) => itemInStore.item.id == item.id)
         .toList();
   }
+
+  List<ConfirmedItem> get confirmedItems => state.confirmedItems;
 }

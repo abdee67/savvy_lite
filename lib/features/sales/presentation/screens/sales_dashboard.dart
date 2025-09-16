@@ -257,7 +257,7 @@ class _SalesDashboardState extends State<SalesDashboard> {
     switch (action) {
       case "Sales Entry":
         // Example: Navigate to Sales Entry screen
-        context.push('/sales-item-entry-screen');
+        context.push('/customer-screen');
         break;
 
       case "Customer Entry":

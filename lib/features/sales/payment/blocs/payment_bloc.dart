@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math';
-
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/core/constants/payment_constants.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_event.dart';
@@ -18,16 +17,13 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     on<CancelPayment>(_onCancelPayment);
     on<ResetPayment>(_onResetPayment);
   }
-
   void _onLoadPayment(LoadPayment event, Emitter<PaymentState> emit) {
     try {
       final subtotal = event.confirmedItems.fold(
         0.0,
         (sum, item) => sum + item.totalPrice,
       );
-
       final taxAmount = subtotal * PaymentConstants.taxRate;
-
       emit(
         state.copyWith(
           status: PaymentStatus.ready,
@@ -35,7 +31,9 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
           subtotal: subtotal,
           taxAmount: taxAmount,
           totalAmount: event.totalAmount,
-          withholdingAmount: 0, // Start with 0, will be set when user enables it
+          withholdingAmount:
+              0, // Start with 0, will be set when user enables it
+          customer: event.customer,
         ),
       );
     } catch (e) {
@@ -64,10 +62,10 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
 
   void _onUpdateTaxAndFees(UpdateTaxAndFees event, Emitter<PaymentState> emit) {
     final taxAmount = event.subtotal * PaymentConstants.taxRate;
-    
+
     // Calculate withholding only if it's enabled and subtotal meets minimum
     double newWithholdingAmount = 0;
-    if (event.isWithholdingEnabled && 
+    if (event.isWithholdingEnabled &&
         event.subtotal > PaymentConstants.minSubtotalForWithholding) {
       newWithholdingAmount = event.subtotal * PaymentConstants.withholdingRate;
     }
@@ -166,4 +164,7 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
     return 'TXN$timestamp${random.nextInt(1000)}';
   }
+
+  PaymentState get currentState => state;
+  String? get transactionID => state.transactionID;
 }

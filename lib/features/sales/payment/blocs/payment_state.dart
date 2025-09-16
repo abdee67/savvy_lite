@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
 
 enum PaymentStatus {
@@ -26,6 +27,7 @@ class PaymentState extends Equatable {
   final String paymentTerm;
   final String? errorMessage;
   final String? transactionID;
+  final Customer? customer;
 
   const PaymentState({
     this.status = PaymentStatus.initial,
@@ -42,6 +44,7 @@ class PaymentState extends Equatable {
     this.paymentTerm = '',
     this.errorMessage,
     this.transactionID,
+    this.customer,
   });
 
   double get grandTotal =>
@@ -73,6 +76,7 @@ class PaymentState extends Equatable {
     String? paymentTerm,
     String? errorMessage,
     String? transactionID,
+    Customer? customer,
   }) {
     return PaymentState(
       status: status ?? this.status,
@@ -89,6 +93,7 @@ class PaymentState extends Equatable {
       paymentTerm: paymentTerm ?? this.paymentTerm,
       errorMessage: errorMessage ?? this.errorMessage,
       transactionID: transactionID ?? this.transactionID,
+      customer: customer ?? this.customer,
     );
   }
 
@@ -109,5 +114,6 @@ class PaymentState extends Equatable {
     errorMessage,
     transactionID,
     grandTotal, // Include computed properties in props for Equatable
+    customer,
   ];
 }

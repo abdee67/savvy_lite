@@ -152,7 +152,7 @@ class _PaymentMethodState extends State<PaymentMethod> {
       children: [
         CustomTextField(
           controller: _paymentTermController,
-          labelText: 'e.g., Net 30, Due on receipt',
+          labelText: 'Enter Due date on receipt',
           hintText: 'Enter payment terms',
           onChanged: (value) => _updatePaymentTerm(context, value),
           textInputAction: TextInputAction.done,
@@ -203,7 +203,7 @@ class _PaymentMethodState extends State<PaymentMethod> {
             borderRadius: BorderRadius.circular(8),
           ),
           child: DropdownButtonFormField<String>(
-            value:
+            initialValue:
                 state.paymentInstrument.isNotEmpty &&
                     availableInstruments.contains(state.paymentInstrument)
                 ? state.paymentInstrument
@@ -256,8 +256,11 @@ class _PaymentMethodState extends State<PaymentMethod> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          direction: Axis.horizontal,
+          spacing: 10,
+          runSpacing: 10,
           children: paymentTypes.map((type) {
             final isSelected = state.paymentType == type;
             return ChoiceChip(
@@ -270,7 +273,7 @@ class _PaymentMethodState extends State<PaymentMethod> {
               selected: isSelected,
               onSelected: (_) => _selectPaymentType(context, type),
               backgroundColor: Colors.white,
-              selectedColor: const Color(0xFF2A4B7C),
+              selectedColor: Colors.amber,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
                 side: BorderSide(

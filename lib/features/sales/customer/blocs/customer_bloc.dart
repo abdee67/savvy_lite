@@ -116,4 +116,6 @@ class CustomerBloc extends Bloc<CustomerEvent, CustomerState> {
       ),
     );
   }
+
+  Customer get selectedBillToCustomer => state.selectedBillToCustomer;
 }

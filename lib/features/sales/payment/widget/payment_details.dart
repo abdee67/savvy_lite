@@ -166,7 +166,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
                     }
                   });
                 },
-                activeColor: Theme.of(context).colorScheme.primary,
+                activeThumbColor: Theme.of(context).colorScheme.primary,
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
             ),
@@ -256,7 +256,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
                     ),
                   );
                 },
-                activeColor: isWithholdingApplied
+                activeThumbColor: isWithholdingApplied
                     ? Theme.of(context).colorScheme.primary
                     : Colors.orange,
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -272,7 +272,9 @@ class _PaymentDetailsState extends State<PaymentDetails> {
                 ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
                 : state.isWithholdingEnabled
                 ? Colors.orange.withOpacity(0.1)
-                : Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+                : Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest.withOpacity(0.5),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: isWithholdingApplied
@@ -398,7 +400,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
           decoration: BoxDecoration(
             color: Theme.of(
               context,
-            ).colorScheme.surfaceVariant.withOpacity(0.4),
+            ).colorScheme.surfaceContainerHighest.withOpacity(0.4),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: Theme.of(context).colorScheme.outline.withOpacity(0.2),

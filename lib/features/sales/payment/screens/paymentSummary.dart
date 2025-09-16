@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_event.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_state.dart';
@@ -11,11 +12,13 @@ import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_ite
 class PaymentScreen extends StatelessWidget {
   final List<ConfirmedItem> confirmedItems;
   final double totalAmount;
+  final Customer customer;
 
   const PaymentScreen({
     super.key,
     required this.confirmedItems,
     required this.totalAmount,
+    required this.customer,
   });
 
   @override
@@ -23,7 +26,11 @@ class PaymentScreen extends StatelessWidget {
     return BlocProvider(
       create: (context) => PaymentBloc()
         ..add(
-          LoadPayment(confirmedItems: confirmedItems, totalAmount: totalAmount),
+          LoadPayment(
+            confirmedItems: confirmedItems,
+            totalAmount: totalAmount,
+            customer: customer,
+          ),
         ),
       child: PaymentScreenContent(
         confirmedItems: confirmedItems,

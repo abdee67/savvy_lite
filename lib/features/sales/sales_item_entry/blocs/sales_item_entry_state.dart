@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/item_in_store.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/items.dart';
@@ -15,6 +16,7 @@ class ItemEntryState extends Equatable {
   final bool useBarcode;
   final String? errorMessage;
   final double totalAmount;
+  final Customer customer;
   final List<int> selectedConfirmedItemIndices;
 
   const ItemEntryState({
@@ -26,6 +28,13 @@ class ItemEntryState extends Equatable {
     this.useBarcode = false,
     this.errorMessage,
     this.totalAmount = 0,
+    this.customer = const Customer(
+      id: '',
+      name: '',
+      tin: '',
+      phone: '',
+      country: '',
+    ),
     this.selectedConfirmedItemIndices = const [],
   });
 
@@ -35,6 +44,7 @@ class ItemEntryState extends Equatable {
     List<SelectedItem>? selectedItems,
     List<ConfirmedItem>? confirmedItems,
     List<Item>? uniqueItems,
+    Customer? customer,
     bool? useBarcode,
     String? errorMessage,
     double? totalAmount,
@@ -45,6 +55,7 @@ class ItemEntryState extends Equatable {
       itemsInStores: itemsInStores ?? this.itemsInStores,
       selectedItems: selectedItems ?? this.selectedItems,
       confirmedItems: confirmedItems ?? this.confirmedItems,
+      customer: customer ?? this.customer,
       uniqueItems: uniqueItems ?? this.uniqueItems,
       useBarcode: useBarcode ?? this.useBarcode,
       errorMessage: errorMessage ?? this.errorMessage,
@@ -66,6 +77,7 @@ class ItemEntryState extends Equatable {
     itemsInStores,
     selectedItems,
     confirmedItems,
+    customer,
     uniqueItems,
     useBarcode,
     errorMessage,

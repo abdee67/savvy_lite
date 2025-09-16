@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
+import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
-import 'package:savvy_stock/features/sales/payment/models/payment_model.dart';
 
 @immutable
 abstract class PaymentEvent extends Equatable {
@@ -14,11 +14,16 @@ abstract class PaymentEvent extends Equatable {
 class LoadPayment extends PaymentEvent {
   final List<ConfirmedItem> confirmedItems;
   final double totalAmount;
+  final Customer customer;
 
-  const LoadPayment({required this.confirmedItems, required this.totalAmount});
+  const LoadPayment({
+    required this.confirmedItems,
+    required this.totalAmount,
+    required this.customer,
+  });
 
   @override
-  List<Object> get props => [confirmedItems, totalAmount];
+  List<Object> get props => [confirmedItems, totalAmount, customer];
 }
 
 class ProcessPayment extends PaymentEvent {
@@ -62,11 +67,7 @@ class UpdateTaxAndFees extends PaymentEvent {
   });
 
   @override
-  List<Object> get props => [
-    subtotal,
-    discountAmount,
-    isWithholdingEnabled,
-  ];
+  List<Object> get props => [subtotal, discountAmount, isWithholdingEnabled];
 }
 
 class PaymentSuccess extends PaymentEvent {

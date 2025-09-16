@@ -49,6 +49,7 @@ class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(title: const Text('Sales Item Entry')),
       resizeToAvoidBottomInset: false,
       body: SafeArea(
         child: BlocConsumer<ItemEntryBloc, ItemEntryState>(
@@ -111,7 +112,7 @@ class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
                   ),
                 ),
                 // Lower Section - Order Summary
-                SalesItemEntryConfirmedItem(state: state),
+                SalesItemEntryConfirmedItem(),
               ],
             );
           },
