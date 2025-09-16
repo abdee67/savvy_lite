@@ -1,298 +1,144 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
+import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
+import 'package:savvy_stock/features/sales/payment/blocs/payment_event.dart';
+import 'package:savvy_stock/features/sales/payment/blocs/payment_state.dart';
+import 'package:savvy_stock/features/sales/payment/widget/payment_action.dart';
+import 'package:savvy_stock/features/sales/payment/widget/payment_details.dart';
+import 'package:savvy_stock/features/sales/payment/widget/payment_method.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
 
-class SummaryPaymentPage extends StatefulWidget {
+class PaymentScreen extends StatelessWidget {
+  final List<ConfirmedItem> confirmedItems;
+  final double totalAmount;
+  final Customer customer;
+
+  const PaymentScreen({
+    super.key,
+    required this.confirmedItems,
+    required this.totalAmount,
+    required this.customer,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => PaymentBloc()
+        ..add(
+          LoadPayment(
+            confirmedItems: confirmedItems,
+            totalAmount: totalAmount,
+            customer: customer,
+          ),
+        ),
+      child: PaymentScreenContent(
+        confirmedItems: confirmedItems,
+        totalAmount: totalAmount,
+      ),
+    );
+  }
+}
+
+class PaymentScreenContent extends StatefulWidget {
   final List<ConfirmedItem> confirmedItems;
   final double totalAmount;
 
-  const SummaryPaymentPage({
+  const PaymentScreenContent({
     super.key,
     required this.confirmedItems,
     required this.totalAmount,
   });
 
   @override
-  _SummaryPaymentPageState createState() => _SummaryPaymentPageState();
+  State<PaymentScreenContent> createState() => _PaymentScreenContentState();
 }
 
-class _SummaryPaymentPageState extends State<SummaryPaymentPage> {
-  final _formKey = GlobalKey<FormState>();
-  final NumberFormat currencyFormat = NumberFormat('#,##0.00');
-
-  bool applyWithhold = false;
-  bool applyDiscount = false;
-  double taxAmount = 0.0;
-  double withholdAmount = 0.0;
-  double discountAmount = 0.0;
-  String paymentType = 'Cash';
-  String paymentMethod = '';
-  String paymentInstrument = '';
-  String paymentTerm = '';
+class _PaymentScreenContentState extends State<PaymentScreenContent> {
+  final _scrollController = ScrollController();
 
   @override
-  void initState() {
-    super.initState();
-    // Calculate tax (10% of total amount as an example)
-    taxAmount = widget.totalAmount * 0.1;
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final subtotal = widget.totalAmount;
-    final totalAmount = subtotal + taxAmount - discountAmount - withholdAmount;
-
     return Scaffold(
-      body: Column(
-        children: [
-          // Upper part - White background
-          Expanded(
-            child: Container(
-              color: Colors.white,
-              padding: EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    _buildSummaryRow('Subtotal:', subtotal),
-                    SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Apply Withhold',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        Checkbox(
-                          value: applyWithhold,
-                          onChanged: (value) {
-                            setState(() {
-                              applyWithhold = value ?? false;
-                              if (!applyWithhold) withholdAmount = 0.0;
-                            });
-                          },
-                        ),
-                        Expanded(
-                          child: TextFormField(
-                            enabled: applyWithhold,
-                            keyboardType: TextInputType.number,
-                            decoration: InputDecoration(
-                              labelText: 'Withhold Amount',
-                            ),
-                            onChanged: (value) {
-                              setState(() {
-                                withholdAmount = double.tryParse(value) ?? 0.0;
-                              });
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    _buildSummaryRow('Tax:', taxAmount),
-                    SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Discount',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        Checkbox(
-                          value: applyDiscount,
-                          onChanged: (value) {
-                            setState(() {
-                              applyDiscount = value ?? false;
-                              if (!applyDiscount) discountAmount = 0.0;
-                            });
-                          },
-                        ),
-                        Expanded(
-                          child: TextFormField(
-                            enabled: applyDiscount,
-                            keyboardType: TextInputType.number,
-                            decoration: InputDecoration(
-                              labelText: 'Discount Amount',
-                            ),
-                            onChanged: (value) {
-                              setState(() {
-                                discountAmount = double.tryParse(value) ?? 0.0;
-                              });
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    Divider(),
-                    _buildSummaryRow(
-                      'Total Amount:',
-                      totalAmount,
-                      isBold: true,
-                    ),
-                  ],
+      resizeToAvoidBottomInset: true,
+      appBar: AppBar(
+        title: const Text('Payment'),
+        backgroundColor: const Color(0xFF155888),
+        foregroundColor: Colors.white,
+        elevation: 2,
+      ),
+      body: SafeArea(
+        child: BlocConsumer<PaymentBloc, PaymentState>(
+          listener: (context, state) {
+            if (state.status == PaymentStatus.failure) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.errorMessage ?? 'Payment failed'),
+                  backgroundColor: Colors.red,
+                  behavior: SnackBarBehavior.floating,
                 ),
-              ),
-            ),
-          ),
-          // Lower part - Black background
-          Container(
-            height: MediaQuery.of(context).size.height * 0.4,
-            color: Colors.black,
-            padding: EdgeInsets.all(8),
-            child: Column(
+              );
+            } else if (state.status == PaymentStatus.success) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Payment successful!'),
+                  backgroundColor: Colors.green,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            return Column(
               children: [
-                Row(
+                // Upper Part - Scrollable Content
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          color: Colors.grey[50],
+                          child: const PaymentDetails(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Lower Part - Fixed Height
+                Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: ListTile(
-                        title: Text(
-                          'Cash',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        leading: Radio(
-                          value: 'Cash',
-                          groupValue: paymentType,
-                          onChanged: (value) {
-                            setState(() {
-                              paymentType = value.toString();
-                            });
-                          },
-                        ),
+                    // Divider between sections
+                    const Divider(height: 1, thickness: 1),
+
+                    // Payment Method Section
+                    const PaymentMethod(),
+
+                    // Payment Action Buttons
+                    Container(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
                       ),
-                    ),
-                    Expanded(
-                      child: ListTile(
-                        title: Text(
-                          'Credit',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        leading: Radio(
-                          value: 'Credit',
-                          groupValue: paymentType,
-                          onChanged: (value) {
-                            setState(() {
-                              paymentType = value.toString();
-                            });
-                          },
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: ListTile(
-                        title: Text(
-                          'Advance',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        leading: Radio(
-                          value: 'Advance',
-                          groupValue: paymentType,
-                          onChanged: (value) {
-                            setState(() {
-                              paymentType = value.toString();
-                            });
-                          },
-                        ),
-                      ),
+                      child: PaymentAction(state: state),
                     ),
                   ],
-                ),
-                SizedBox(height: 16),
-                TextFormField(
-                  decoration: InputDecoration(
-                    labelText: 'Payment Term',
-                    labelStyle: TextStyle(color: Colors.white70),
-                    enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white70),
-                    ),
-                    focusedBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white),
-                    ),
-                  ),
-                  style: TextStyle(color: Colors.white),
-                  onChanged: (value) {
-                    setState(() {
-                      paymentTerm = value;
-                    });
-                  },
-                ),
-                SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  decoration: InputDecoration(
-                    labelText: 'Payment Instrument',
-                    labelStyle: TextStyle(color: Colors.white70),
-                    enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white70),
-                    ),
-                    focusedBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white),
-                    ),
-                  ),
-                  style: TextStyle(color: Colors.white),
-                  dropdownColor: Colors.grey[900],
-                  value: paymentInstrument.isNotEmpty
-                      ? paymentInstrument
-                      : null,
-                  items: ['Cash', 'Check Payment', 'Card'].map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      paymentInstrument = newValue ?? '';
-                    });
-                  },
-                ),
-                SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      // Process payment
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Payment processed successfully!'),
-                        ),
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                  ),
-                  child: Text('Complete Payment'),
                 ),
               ],
-            ),
-          ),
-        ],
+            );
+          },
+        ),
       ),
-    );
-  }
-
-  Widget _buildSummaryRow(String label, double value, {bool isBold = false}) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-          ),
-          textAlign: TextAlign.left,
-        ),
-        TextFormField(
-          initialValue: '${currencyFormat.format(value)} ETB',
-          style: TextStyle(
-            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-          ),
-          textAlign: TextAlign.center,
-          readOnly: true,
-          decoration: InputDecoration(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-          ),
-        ),
-      ],
     );
   }
 }

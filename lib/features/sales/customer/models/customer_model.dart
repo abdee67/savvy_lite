@@ -95,6 +95,9 @@ class Customer extends Equatable {
     addressLine5,
   ];
 
+  bool get isEmpty => id.isEmpty;
+  bool get isNotEmpty => id.isNotEmpty;
+
   static const empty = Customer(
     id: '',
     name: '',
@@ -102,7 +105,4 @@ class Customer extends Equatable {
     phone: '',
     country: '',
   );
-
-  bool get isEmpty => this == empty;
-  bool get isNotEmpty => this != empty;
 }

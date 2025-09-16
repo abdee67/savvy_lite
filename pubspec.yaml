@@ -45,6 +45,8 @@ dependencies:
   flutter_context_menu: ^0.3.0
   animated_text_kit: ^4.2.3
   flutter_animate: ^4.5.2
+  get_it: ^8.2.0
+  dartz: ^0.10.1
   
 
 dev_dependencies:

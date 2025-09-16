@@ -1,8 +1,8 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
+import 'package:savvy_stock/features/sales/sales_item_entry/models/item_in_store.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/items.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/models/stores.dart';
 
 @immutable
 abstract class ItemEntryEvent extends Equatable {
@@ -26,12 +26,12 @@ class SelectItem extends ItemEntryEvent {
 
 class SelectStore extends ItemEntryEvent {
   final int index;
-  final Store? store;
+  final ItemInStore? itemInStore;
 
-  const SelectStore({required this.index, this.store});
+  const SelectStore({required this.index, this.itemInStore});
 
   @override
-  List<Object> get props => [index, store ?? Store.empty];
+  List<Object> get props => [index, itemInStore ?? ItemInStore.empty];
 }
 
 class UpdateQuantity extends ItemEntryEvent {

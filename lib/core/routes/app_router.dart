@@ -5,9 +5,11 @@ import 'package:savvy_stock/features/onboarding/screens/welcome_screen.dart';
 import 'package:savvy_stock/features/onboarding/widgets/getStarted.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_event.dart';
+import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/customer/screens/customer_screen.dart';
 import 'package:savvy_stock/features/sales/payment/screens/paymentSummary.dart';
 import 'package:savvy_stock/features/sales/presentation/screens/sales_dashboard.dart';
+import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/screens/sales_item_entry.dart';
 
 class AppRouter {
@@ -32,8 +34,14 @@ class AppRouter {
       ),
       GoRoute(
         path: '/payment-screen',
-        builder: (context, state) =>
-            const SummaryPaymentPage(confirmedItems: [], totalAmount: 0),
+        builder: (context, state) {
+          final args = state.extra as Map<String, dynamic>;
+          return PaymentScreen(
+            confirmedItems: args['confirmedItems'] as List<ConfirmedItem>,
+            totalAmount: args['totalAmount'] as double,
+            customer: args['customer'] as Customer, // Pass customer to screen
+          );
+        },
       ),
 
       GoRoute(

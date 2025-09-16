@@ -1,10 +1,10 @@
 import 'package:equatable/equatable.dart';
+import 'package:savvy_stock/features/sales/sales_item_entry/models/item_in_store.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/items.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/models/stores.dart';
 
 class SelectedItem extends Equatable {
   final Item? item;
-  final Store? store;
+  final ItemInStore? store;
   final double quantity;
   final bool isOutOfStock;
 
@@ -23,7 +23,7 @@ class SelectedItem extends Equatable {
 
   SelectedItem copyWith({
     Item? item,
-    Store? store,
+    ItemInStore? store,
     double? quantity,
     bool? isOutOfStock,
   }) {
