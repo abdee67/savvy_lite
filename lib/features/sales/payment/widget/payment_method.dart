@@ -81,6 +81,8 @@ class _PaymentMethodState extends State<PaymentMethod> {
 
   @override
   Widget build(BuildContext context) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+    final padding = isSmallScreen ? 16 : 24;
     return BlocConsumer<PaymentBloc, PaymentState>(
       listener: (context, state) {
         // Sync controller with state changes from other sources
@@ -93,7 +95,7 @@ class _PaymentMethodState extends State<PaymentMethod> {
 
         return Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(padding.toDouble()),
           decoration: BoxDecoration(
             color: const Color(0xFF1E3A5C),
             borderRadius: const BorderRadius.only(
@@ -128,16 +130,6 @@ class _PaymentMethodState extends State<PaymentMethod> {
                     _getInstrumentDescription(state.paymentInstrument),
                     style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
-                if (isCreditSelected) const SizedBox(height: 8),
-                if (isCreditSelected)
-                  Text(
-                    'Payment terms are required for credit transactions',
-                    style: TextStyle(
-                      color: Colors.amber[200],
-                      fontSize: 12,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
               ],
             ),
           ),
@@ -154,6 +146,7 @@ class _PaymentMethodState extends State<PaymentMethod> {
           controller: _paymentTermController,
           labelText: 'Enter Due date on receipt',
           hintText: 'Enter payment terms',
+          focusNode: FocusNode(debugLabel: 'Payment Term'),
           onChanged: (value) => _updatePaymentTerm(context, value),
           textInputAction: TextInputAction.done,
           suffixIcon: const Icon(Icons.calendar_today, size: 20),

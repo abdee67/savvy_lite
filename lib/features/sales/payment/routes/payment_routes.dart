@@ -15,7 +15,14 @@ class PaymentRoutes {
       final totalAmount = extra['totalAmount'] as double? ?? 0.0;
       final customer =
           extra['customer'] as Customer? ??
-          const Customer(id: '', name: '', tin: '', phone: '', country: '');
+          const Customer(
+            id: '',
+            name: '',
+            tin: '',
+            phone: '',
+            country: '',
+            email: '',
+          );
 
       return PaymentScreen(
         confirmedItems: confirmedItems,

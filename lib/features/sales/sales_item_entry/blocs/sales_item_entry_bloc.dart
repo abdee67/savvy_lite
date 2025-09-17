@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:bloc/bloc.dart';
+import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_event.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/confirmed_item.dart';
 import '../models/item_in_store.dart';
 import '../models/items.dart';
@@ -39,7 +41,9 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
     try {
       // Simulate API/database call
       // await Future.delayed(const Duration(milliseconds: 500));
-
+      final prefs = await SharedPreferences.getInstance();
+      final customerBloc = event.customerBloc;
+      final customer = customerBloc.state.selectedBillToCustomer;
       final items = [
         const Item(
           id: 'ITM-001',
@@ -184,6 +188,7 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
           itemsInStores: itemsInStores,
           uniqueItems: uniqueItems,
           selectedItems: [SelectedItem()], // Start with one empty item
+          customer: customer,
         ),
       );
     } catch (error) {
@@ -312,16 +317,40 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
     final confirmedItems = List<ConfirmedItem>.from(state.confirmedItems);
     final validItems = state.selectedItems.where((item) => item.isValid);
 
-    for (final item in validItems) {
-      confirmedItems.add(
-        ConfirmedItem(
-          itemId: item.item!.id,
-          itemName: item.item!.description,
-          quantity: item.quantity,
-          totalPrice: item.extendedPrice,
-          storeId: item.store?.store.id,
-        ),
-      );
+    for (final selectedItem in validItems) {
+      if (selectedItem.item != null && selectedItem.store != null) {
+        // Check if item already exists in confirmed items with same store
+        final existingIndex = confirmedItems.indexWhere(
+          (confirmedItem) =>
+              confirmedItem.itemId == selectedItem.item!.id &&
+              confirmedItem.storeId == selectedItem.store!.store.id,
+        );
+
+        if (existingIndex >= 0) {
+          // Update quantity and total price if item exists
+          final existingItem = confirmedItems[existingIndex];
+          confirmedItems[existingIndex] = ConfirmedItem(
+            itemId: existingItem.itemId,
+            itemName: existingItem.itemName,
+            quantity: existingItem.quantity + selectedItem.quantity,
+            totalPrice: existingItem.totalPrice + selectedItem.extendedPrice,
+            storeId: existingItem.storeId,
+            uom: existingItem.uom,
+          );
+        } else {
+          // Add new item if it doesn't exist
+          confirmedItems.add(
+            ConfirmedItem(
+              itemId: selectedItem.item!.id,
+              itemName: selectedItem.item!.description,
+              quantity: selectedItem.quantity,
+              totalPrice: selectedItem.extendedPrice,
+              storeId: selectedItem.store!.store.id,
+              uom: selectedItem.item!.uom,
+            ),
+          );
+        }
+      }
     }
 
     final totalAmount = confirmedItems.fold(
@@ -337,6 +366,7 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
         totalAmount: totalAmount,
       ),
     );
+
     print(
       'Order confirmed- Items: ${confirmedItems.length}, Total Amount: $totalAmount',
     );
@@ -373,6 +403,7 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
           quantity: existingItem.quantity + 1,
           totalPrice: existingItem.totalPrice + (itemInStore.first.unitPrice),
           storeId: itemInStore.first.store.id,
+          uom: itemInStore.first.item.uom,
         );
       } else {
         // Add new item
@@ -388,6 +419,7 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
             quantity: 1,
             totalPrice: unitPrice,
             storeId: availableStores.first.store.id,
+            uom: foundItem.uom,
           ),
         );
       }

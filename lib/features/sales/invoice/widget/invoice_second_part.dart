@@ -8,100 +8,249 @@ class InvoiceSecondPart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+    final colorScheme = Theme.of(context).colorScheme;
+    final totalAmount = items.fold(0.0, (sum, item) => sum + item.totalPrice);
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.list_alt, size: 20, color: colorScheme.primary),
+              const SizedBox(width: 8),
+              Text(
+                'ORDER ITEMS',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Scrollable content area with maximum height constraint
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 200),
+            child: _buildScrollableContent(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScrollableContent(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // For very small screens, use a simplified view
+        if (constraints.maxWidth < 400) {
+          return _buildCompactItemList();
+        }
+
+        // For medium screens, use a more compact table
+        if (constraints.maxWidth < 600) {
+          return _buildMediumTable();
+        }
+
+        // For larger screens, use the full table
+        return _buildFullTable();
+      },
+    );
+  }
+
+  Widget _buildCompactItemList() {
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const AlwaysScrollableScrollPhysics(),
+      itemCount: items.length,
+      separatorBuilder: (context, index) => const Divider(height: 16),
+      itemBuilder: (context, index) {
+        final item = items[index];
+        final double unitPrice = item.quantity > 0
+            ? item.totalPrice / item.quantity
+            : 0;
+
+        return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'ORDER ITEMS',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              item.itemName,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 16),
-            _buildItemsTable(),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('${item.quantity.toStringAsFixed(2)} ${item.uom}'),
+                Text('${unitPrice.toStringAsFixed(2)} Birr/${item.uom}'),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  _formatCurrency(item.totalPrice),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
           ],
+        );
+      },
+    );
+  }
+
+  Widget _buildMediumTable() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.vertical,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          columnSpacing: 16,
+          horizontalMargin: 0,
+          headingRowHeight: 36,
+          dataRowHeight: 40,
+          columns: [
+            DataColumn(label: Text('Item', style: _headerTextStyle())),
+            DataColumn(
+              label: Text('Qty', style: _headerTextStyle()),
+              numeric: true,
+            ),
+            DataColumn(
+              label: Text('Price', style: _headerTextStyle()),
+              numeric: true,
+            ),
+            DataColumn(
+              label: Text('Total', style: _headerTextStyle()),
+              numeric: true,
+            ),
+          ],
+          rows: items.map((item) {
+            final double unitPrice = item.quantity > 0
+                ? item.totalPrice / item.quantity
+                : 0;
+
+            return DataRow(
+              cells: [
+                DataCell(
+                  SizedBox(
+                    width: 100, // Fixed width for item name
+                    child: Text(
+                      item.itemName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ),
+                DataCell(
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text('${item.quantity.toStringAsFixed(2)} PCS'),
+                  ),
+                ),
+                DataCell(
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(_formatCurrency(unitPrice)),
+                  ),
+                ),
+                DataCell(
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      _formatCurrency(item.totalPrice),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
         ),
       ),
     );
   }
 
-  Widget _buildItemsTable() {
+  Widget _buildFullTable() {
     return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        columns: const [
-          DataColumn(
-            label: Text(
-              'Item Name',
-              style: TextStyle(fontWeight: FontWeight.bold),
+      scrollDirection: Axis.vertical,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          columnSpacing: 20,
+          horizontalMargin: 0,
+          headingRowHeight: 40,
+          dataRowHeight: 40,
+          columns: [
+            DataColumn(label: Text('Item Name', style: _headerTextStyle())),
+            DataColumn(
+              label: Text('Quantity', style: _headerTextStyle()),
+              numeric: true,
             ),
-          ),
-          DataColumn(
-            label: Text('Qty', style: TextStyle(fontWeight: FontWeight.bold)),
-            numeric: true,
-          ),
-          DataColumn(
-            label: Text('UoM', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-          DataColumn(
-            label: Text(
-              'Unit Price',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            DataColumn(label: Text('UoM', style: _headerTextStyle())),
+            DataColumn(
+              label: Text('Unit Price', style: _headerTextStyle()),
+              numeric: true,
             ),
-            numeric: true,
-          ),
-          DataColumn(
-            label: Text(
-              'Total Price',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            DataColumn(
+              label: Text('Total Price', style: _headerTextStyle()),
+              numeric: true,
             ),
-            numeric: true,
-          ),
-        ],
-        rows: items.map((item) {
-          final double unitPrice = item.quantity > 0
-              ? item.totalPrice / item.quantity
-              : 0;
-          return DataRow(
-            cells: [
-              DataCell(
-                Text(
-                  item.itemName,
-                  style: TextStyle(fontWeight: FontWeight.bold),
+          ],
+          rows: items.map((item) {
+            final double unitPrice = item.quantity > 0
+                ? item.totalPrice / item.quantity
+                : 0;
+
+            return DataRow(
+              cells: [
+                DataCell(
+                  Text(
+                    item.itemName,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
                 ),
-              ),
-              DataCell(
-                Text(
-                  item.quantity.toStringAsFixed(2),
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                DataCell(
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(item.quantity.toStringAsFixed(2)),
+                  ),
                 ),
-              ),
-              DataCell(
-                const Text(
-                  'PCS',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                DataCell(Text(item.uom)),
+                DataCell(
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(_formatCurrency(unitPrice)),
+                  ),
                 ),
-              ), // Assuming UoM is always PCS based on your items
-              DataCell(
-                Text(
-                  _formatCurrency(unitPrice),
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                DataCell(
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      _formatCurrency(item.totalPrice),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
                 ),
-              ),
-              DataCell(Text(_formatCurrency(item.totalPrice))),
-            ],
-          );
-        }).toList(),
+              ],
+            );
+          }).toList(),
+        ),
       ),
     );
   }
 
+  TextStyle _headerTextStyle() {
+    return const TextStyle(fontWeight: FontWeight.bold, fontSize: 13);
+  }
+
   String _formatCurrency(double amount) {
-    return '\$${amount.toStringAsFixed(2)}';
+    return '${amount.toStringAsFixed(2)} Birr';
   }
 }

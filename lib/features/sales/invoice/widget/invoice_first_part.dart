@@ -17,49 +17,80 @@ class InvoiceFirstPart extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 2,
+      color: Colors.amber,
       margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Two-column layout for compact information
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'INVOICE',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+                // Left column - Date and Bill To
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildCompactInfoRow(
+                        Icons.calendar_today_outlined,
+                        'Date',
+                        _formatDate(date),
+                        context,
+                      ),
+                      const SizedBox(height: 8),
+                      _buildCompactInfoRow(
+                        Icons.person_outline,
+                        'Bill To',
+                        customer.name,
+                        context,
+                      ),
+                      const SizedBox(height: 8),
+                      _buildCompactInfoRow(
+                        Icons.location_on_outlined,
+                        'Address',
+                        customer.address,
+                        context,
+                      ),
+                    ],
                   ),
                 ),
-                Text(
-                  '#$invoiceNumber',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
+
+                const SizedBox(width: 16),
+
+                // Right column - TIN and Contact
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (customer.tin.isNotEmpty)
+                        _buildCompactInfoRow(
+                          Icons.fingerprint_outlined,
+                          'TIN',
+                          customer.tin,
+                          context,
+                        ),
+                      if (customer.tin.isNotEmpty) const SizedBox(height: 8),
+                      if (customer.phone.isNotEmpty)
+                        _buildCompactInfoRow(
+                          Icons.phone_outlined,
+                          'Phone',
+                          customer.phone,
+                          context,
+                        ),
+                      const SizedBox(height: 8),
+                      _buildCompactInfoRow(
+                        Icons.receipt,
+                        'Invoice Number',
+                        invoiceNumber,
+                        context,
+                      ),
+                    ],
+                  ),
                 ),
               ],
-            ),
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 16),
-            _buildInfoRow('Date', _formatDate(date)),
-            const SizedBox(height: 12),
-            _buildInfoRow('Bill To', customer.name),
-            const SizedBox(height: 12),
-            _buildInfoRow(
-              'TIN Number',
-              customer.tin.isNotEmpty ? customer.tin : 'N/A',
-            ),
-            const SizedBox(height: 12),
-            _buildInfoRow(
-              'Address',
-              customer.address.isNotEmpty ? customer.address : 'N/A',
-            ),
-            const SizedBox(height: 12),
-            _buildInfoRow(
-              'Phone',
-              customer.phone.isNotEmpty ? customer.phone : 'N/A',
             ),
           ],
         ),
@@ -67,24 +98,58 @@ class InvoiceFirstPart extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildCompactInfoRow(
+    IconData icon,
+    String label,
+    String value,
+    BuildContext context,
+  ) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          width: 100,
-          child: Text(
-            '$label:',
-            style: const TextStyle(fontWeight: FontWeight.bold),
+        Icon(icon, size: 16, color: Color(0xFF155888)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Color(0xFF155888)),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
         ),
-        const SizedBox(width: 8),
-        Expanded(child: Text(value)),
       ],
     );
   }
 
   String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 }

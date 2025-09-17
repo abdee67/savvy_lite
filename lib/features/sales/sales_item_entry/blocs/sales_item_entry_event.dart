@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
+import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/item_in_store.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/items.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
@@ -12,7 +13,11 @@ abstract class ItemEntryEvent extends Equatable {
   List<Object> get props => [];
 }
 
-class LoadItemsAndStores extends ItemEntryEvent {}
+class LoadItemsAndStores extends ItemEntryEvent {
+  final CustomerBloc customerBloc;
+
+  const LoadItemsAndStores({required this.customerBloc});
+}
 
 class SelectItem extends ItemEntryEvent {
   final int index;
