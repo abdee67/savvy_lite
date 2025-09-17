@@ -1,11 +1,16 @@
 import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 
-enum CustomerStatus { initial, loading, success, failure }
+enum CustomerStatus { initial, loading, success, failure, searching }
 
 class CustomerState extends Equatable {
   final CustomerStatus status;
   final List<Customer> customers;
+  final List<Customer> filteredCustomers;
+  final List<Customer> selectedCustomers;
+  final String searchQuery;
+  final Customer? customerDetail;
+  final bool showDetailPanel;
   final Customer selectedBillToCustomer;
   final Customer selectedShipToCustomer;
   final String tin;
@@ -18,6 +23,11 @@ class CustomerState extends Equatable {
     this.customers = const [],
     this.selectedBillToCustomer = Customer.empty,
     this.selectedShipToCustomer = Customer.empty,
+    this.customerDetail,
+    this.filteredCustomers = const [],
+    this.selectedCustomers = const [],
+    this.searchQuery = '',
+    this.showDetailPanel = false,
     this.tin = '',
     this.phone = '',
     this.country = '',
@@ -33,6 +43,11 @@ class CustomerState extends Equatable {
     String? phone,
     String? country,
     String? errorMessage,
+    List<Customer>? filteredCustomers,
+    List<Customer>? selectedCustomers,
+    String? searchQuery,
+    bool? showDetailPanel,
+    Customer? customerDetail,
   }) {
     return CustomerState(
       status: status ?? this.status,
@@ -45,12 +60,20 @@ class CustomerState extends Equatable {
       phone: phone ?? this.phone,
       country: country ?? this.country,
       errorMessage: errorMessage ?? this.errorMessage,
+      filteredCustomers: filteredCustomers ?? this.filteredCustomers,
+      selectedCustomers: selectedCustomers ?? this.selectedCustomers,
+      searchQuery: searchQuery ?? this.searchQuery,
+      showDetailPanel: showDetailPanel ?? this.showDetailPanel,
+      customerDetail: customerDetail ?? this.customerDetail,
     );
   }
 
   bool get isBillToCustomerSelected => selectedBillToCustomer.isNotEmpty;
   bool get isShipToCustomerSelected => selectedShipToCustomer.isNotEmpty;
   bool get isValid => isBillToCustomerSelected;
+  bool get isSelectionMode => selectedCustomers.isNotEmpty;
+  bool get canEdit => selectedCustomers.length == 1;
+  bool get canDelete => selectedCustomers.isNotEmpty;
 
   @override
   List<Object?> get props => [
@@ -62,5 +85,10 @@ class CustomerState extends Equatable {
     phone,
     country,
     errorMessage,
+    filteredCustomers,
+    selectedCustomers,
+    searchQuery,
+    showDetailPanel,
+    customerDetail,
   ];
 }

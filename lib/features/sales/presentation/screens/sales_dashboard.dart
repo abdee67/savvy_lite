@@ -261,7 +261,7 @@ class _SalesDashboardState extends State<SalesDashboard> {
         break;
 
       case "Customer Entry":
-        context.push('/customer-screen');
+        context.push('/customer-list');
         break;
 
       default:

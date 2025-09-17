@@ -6,6 +6,7 @@ class Customer extends Equatable {
   final String tin;
   final String phone;
   final String country;
+  final String? email;
   final String? contactName;
   final String? title;
   final String? phone2;
@@ -24,6 +25,7 @@ class Customer extends Equatable {
     required this.tin,
     required this.phone,
     required this.country,
+    required this.email,
     this.contactName,
     this.title,
     this.phone2,
@@ -43,6 +45,7 @@ class Customer extends Equatable {
     String? tin,
     String? phone,
     String? country,
+    String? email,
     String? contactName,
     String? title,
     String? phone2,
@@ -61,6 +64,7 @@ class Customer extends Equatable {
       tin: tin ?? this.tin,
       phone: phone ?? this.phone,
       country: country ?? this.country,
+      email: email ?? this.email,
       contactName: contactName ?? this.contactName,
       title: title ?? this.title,
       phone2: phone2 ?? this.phone2,
@@ -82,6 +86,7 @@ class Customer extends Equatable {
     tin,
     phone,
     country,
+    email,
     contactName,
     title,
     phone2,
@@ -95,14 +100,33 @@ class Customer extends Equatable {
     addressLine5,
   ];
 
-  bool get isEmpty => id.isEmpty;
-  bool get isNotEmpty => id.isNotEmpty;
-
   static const empty = Customer(
-    id: '',
+    id: 'empty', // Changed from '' to 'empty'
     name: '',
     tin: '',
     phone: '',
     country: '',
+    email: '',
   );
+
+  bool get isEmpty => id == 'empty'; // Use this for checking
+  bool get isNotEmpty => id != 'empty';
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is Customer &&
+        other.id == id &&
+        other.name == name &&
+        other.tin == tin &&
+        other.phone == phone &&
+        other.country == country &&
+        other.email == email;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(id, name, tin, phone, country, email);
+  }
 }

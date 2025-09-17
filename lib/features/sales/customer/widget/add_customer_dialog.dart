@@ -128,6 +128,7 @@ class _AddCustomerDialogState extends State<AddCustomerDialog> {
         tin: _tinController.text,
         phone: _phoneController.text,
         country: _countryController.text,
+        email: '',
       );
 
       context.read<CustomerBloc>().add(AddCustomer(newCustomer));
