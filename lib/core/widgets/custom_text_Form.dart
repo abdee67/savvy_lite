@@ -20,6 +20,7 @@ class CustomTextField extends StatefulWidget {
   final Widget? prefixIcon;
   final TextInputAction? textInputAction;
   final String? hintText;
+  final FocusNode? focusNode;
 
   const CustomTextField({
     super.key,
@@ -40,6 +41,7 @@ class CustomTextField extends StatefulWidget {
     this.prefixIcon,
     this.hintText,
     this.textInputAction,
+    this.focusNode,
   });
 
   @override
@@ -108,6 +110,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
         enabled: widget.enabled,
         inputFormatters: widget.inputFormatters,
         textInputAction: widget.textInputAction,
+        focusNode: widget.focusNode,
         style: TextStyle(
           color: widget.isDarkTheme ? Colors.white : Colors.black,
         ),

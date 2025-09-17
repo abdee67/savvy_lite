@@ -34,6 +34,7 @@ class ItemEntryState extends Equatable {
       tin: '',
       phone: '',
       country: '',
+      email: '',
     ),
     this.selectedConfirmedItemIndices = const [],
   });
