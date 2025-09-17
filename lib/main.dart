@@ -5,6 +5,10 @@ import 'package:provider/provider.dart';
 import 'package:savvy_stock/core/routes/app_router.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_event.dart';
+import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
+import 'package:savvy_stock/features/sales/invoice/blocs/invoice_bloc.dart';
+import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
+import 'package:savvy_stock/features/sales/payment/blocs/payment_event.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_event.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -62,10 +66,10 @@ class _SavvyStockState extends State<SavvyStock> {
     return MultiProvider(
       providers: [
         // Bloc providers
-        BlocProvider(create: (context) => CustomerBloc()..add(LoadCustomers())),
-        BlocProvider(
-          create: (context) => ItemEntryBloc()..add(LoadItemsAndStores()),
-        ),
+        BlocProvider<CustomerBloc>(create: (context) => CustomerBloc()),
+        BlocProvider<ItemEntryBloc>(create: (context) => ItemEntryBloc()),
+        BlocProvider<PaymentBloc>(create: (context) => PaymentBloc()),
+        BlocProvider<InvoiceBloc>(create: (context) => InvoiceBloc()),
       ],
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,

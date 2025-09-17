@@ -12,10 +12,8 @@ class CustomerScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => CustomerBloc()..add(LoadCustomers()),
-      child: const CustomerScreenView(),
-    );
+    context.read<CustomerBloc>().add(LoadCustomers());
+    return const CustomerScreenView();
   }
 }
 
@@ -136,6 +134,18 @@ class CustomerScreenView extends StatelessWidget {
   }
 
   void _goToNextPage(BuildContext context) {
-    context.push('/sales-item-entry-screen');
+    final customerBloc = context.read<CustomerBloc>();
+    final selectedCustomer = customerBloc.state.selectedBillToCustomer;
+
+    if (selectedCustomer.id.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a customer first')),
+      );
+      return;
+    }
+    print(
+      'Selected customer:${selectedCustomer.id} - ${selectedCustomer.name} - ${selectedCustomer.country}',
+    );
+    context.push('/sales-item-entry-screen', extra: selectedCustomer);
   }
 }

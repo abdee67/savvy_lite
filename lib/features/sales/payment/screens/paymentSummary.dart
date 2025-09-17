@@ -23,120 +23,77 @@ class PaymentScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => PaymentBloc()
-        ..add(
-          LoadPayment(
-            confirmedItems: confirmedItems,
-            totalAmount: totalAmount,
-            customer: customer,
-          ),
+    final paymentBloc = context.read<PaymentBloc>();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      paymentBloc.add(
+        LoadPayment(
+          confirmedItems: confirmedItems,
+          totalAmount: totalAmount,
+          customer: customer,
         ),
-      child: PaymentScreenContent(
-        confirmedItems: confirmedItems,
-        totalAmount: totalAmount,
-      ),
-    );
-  }
-}
+      );
+    });
 
-class PaymentScreenContent extends StatefulWidget {
-  final List<ConfirmedItem> confirmedItems;
-  final double totalAmount;
-
-  const PaymentScreenContent({
-    super.key,
-    required this.confirmedItems,
-    required this.totalAmount,
-  });
-
-  @override
-  State<PaymentScreenContent> createState() => _PaymentScreenContentState();
-}
-
-class _PaymentScreenContentState extends State<PaymentScreenContent> {
-  final _scrollController = ScrollController();
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: const Text('Payment'),
         backgroundColor: const Color(0xFF155888),
         foregroundColor: Colors.white,
         elevation: 2,
       ),
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
-        child: BlocConsumer<PaymentBloc, PaymentState>(
-          listener: (context, state) {
-            if (state.status == PaymentStatus.failure) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.errorMessage ?? 'Payment failed'),
-                  backgroundColor: Colors.red,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            } else if (state.status == PaymentStatus.success) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Payment successful!'),
-                  backgroundColor: Colors.green,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            }
-          },
+        child: BlocBuilder<PaymentBloc, PaymentState>(
           builder: (context, state) {
-            return Column(
-              children: [
-                // Upper Part - Scrollable Content
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          color: Colors.grey[50],
-                          child: const PaymentDetails(),
-                        ),
-                      ],
-                    ),
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (state.status == PaymentStatus.failure) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(state.errorMessage ?? 'Payment failed'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
                   ),
-                ),
+                );
+              } else if (state.status == PaymentStatus.success) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Payment successful!'),
+                    backgroundColor: Colors.green,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            });
 
-                // Lower Part - Fixed Height
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Divider between sections
-                    const Divider(height: 1, thickness: 1),
-
-                    // Payment Method Section
-                    const PaymentMethod(),
-
-                    // Payment Action Buttons
-                    Container(
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 2,
-                      ),
-                      child: PaymentAction(state: state),
-                    ),
-                  ],
-                ),
-              ],
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: const [PaymentDetails()],
+              ),
             );
           },
+        ),
+      ),
+
+      /// ✅ This bottomNavigationBar will now respond to the keyboard
+      bottomNavigationBar: AnimatedPadding(
+        duration: const Duration(milliseconds: 150),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Divider(height: 1, thickness: 1),
+            const PaymentMethod(),
+            Container(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              child: const PaymentAction(),
+            ),
+          ],
         ),
       ),
     );

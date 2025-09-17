@@ -6,7 +6,9 @@ import 'package:savvy_stock/features/onboarding/widgets/getStarted.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_event.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
+import 'package:savvy_stock/features/sales/customer/screens/customer_list.dart';
 import 'package:savvy_stock/features/sales/customer/screens/customer_screen.dart';
+import 'package:savvy_stock/features/sales/invoice/screens/invoice_review_screen.dart';
 import 'package:savvy_stock/features/sales/payment/screens/paymentSummary.dart';
 import 'package:savvy_stock/features/sales/presentation/screens/sales_dashboard.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
@@ -30,17 +32,25 @@ class AppRouter {
       GoRoute(path: '/signup', builder: (context, state) => const GetStart()),
       GoRoute(
         path: '/sales-item-entry-screen',
-        builder: (context, state) => const ItemEntryScreen(),
+        pageBuilder: (context, state) => MaterialPage(child: ItemEntryScreen()),
       ),
       GoRoute(
         path: '/payment-screen',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final args = state.extra as Map<String, dynamic>;
-          return PaymentScreen(
-            confirmedItems: args['confirmedItems'] as List<ConfirmedItem>,
-            totalAmount: args['totalAmount'] as double,
-            customer: args['customer'] as Customer, // Pass customer to screen
+          return MaterialPage(
+            child: PaymentScreen(
+              confirmedItems: args['confirmedItems'] as List<ConfirmedItem>,
+              totalAmount: args['totalAmount'] as double,
+              customer: args['customer'] as Customer, // Pass customer to screen
+            ),
           );
+        },
+      ),
+      GoRoute(
+        path: '/invoice-review-screen',
+        pageBuilder: (context, state) {
+          return MaterialPage(child: InvoiceReviewScreen());
         },
       ),
 
@@ -50,10 +60,13 @@ class AppRouter {
       ),
       GoRoute(
         path: '/customer-screen',
-        builder: (_, __) => BlocProvider(
-          create: (context) => CustomerBloc()..add(LoadCustomers()),
-          child: const CustomerScreen(),
-        ),
+        pageBuilder: (context, state) =>
+            MaterialPage(child: const CustomerScreen()),
+      ),
+      GoRoute(
+        path: '/customer-list',
+        pageBuilder: (context, state) =>
+            MaterialPage(child: const CustomerListPage()),
       ),
     ],
     errorBuilder: (context, state) {

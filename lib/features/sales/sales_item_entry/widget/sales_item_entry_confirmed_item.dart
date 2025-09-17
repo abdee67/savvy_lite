@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
+import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/payment/screens/paymentSummary.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_event.dart';
@@ -114,9 +116,11 @@ class _SalesItemEntryConfirmedItemState
 
       Future.delayed(const Duration(milliseconds: 300), () {
         _safeDeleteItem(context, index);
-        setState(() {
-          _dragOffset.remove(index);
-        });
+        if (mounted) {
+          setState(() {
+            _dragOffset.remove(index);
+          });
+        }
       });
     } else {
       // Not far enough → snap back
@@ -432,23 +436,32 @@ class _SalesItemEntryConfirmedItemState
 
   void _navigateToSummary(BuildContext context, ItemEntryState state) {
     final customerBloc = context.read<CustomerBloc>();
-    final selectedCustomer = customerBloc.state.tin;
+    final selectedCustomerFromBloc = customerBloc.state.selectedBillToCustomer;
+    final selectedCustomerFromState = state.customer;
 
-    if (selectedCustomer.isEmpty) {
+    print(
+      'Customer from Bloc: "${selectedCustomerFromBloc.name}" (ID: ${selectedCustomerFromBloc.id})',
+    );
+    print(
+      'Customer from State: "${selectedCustomerFromState.name}" (ID: ${selectedCustomerFromState.id})',
+    );
+    print('Customer isEmpty: ${selectedCustomerFromState.isEmpty}');
+    print(
+      'Customer == Customer.empty: ${selectedCustomerFromState == Customer.empty}',
+    );
+    if (selectedCustomerFromState.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a customer first')),
       );
       return;
     }
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PaymentScreen(
-          confirmedItems: state.confirmedItems,
-          totalAmount: state.totalAmount,
-          customer: state.customer,
-        ),
-      ),
+    context.push(
+      '/payment-screen',
+      extra: {
+        'confirmedItems': state.confirmedItems,
+        'totalAmount': state.totalAmount,
+        'customer': selectedCustomerFromState,
+      },
     );
   }
 
