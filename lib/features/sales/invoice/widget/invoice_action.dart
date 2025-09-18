@@ -5,9 +5,6 @@ import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/invoice/blocs/invoice_bloc.dart';
 import 'package:savvy_stock/features/sales/invoice/blocs/invoice_state.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
-import 'package:savvy_stock/features/sales/payment/blocs/payment_event.dart';
-import 'package:savvy_stock/features/sales/payment/blocs/payment_state.dart';
-import 'package:savvy_stock/features/sales/payment/models/payment_model.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
 
 class InvoiceAction extends StatefulWidget {

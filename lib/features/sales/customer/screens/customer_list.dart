@@ -257,7 +257,7 @@ class _CustomerListPageState extends State<CustomerListPage> {
                 _navigateToAddScreen();
               }
             },
-            backgroundColor: Colors.blue,
+            backgroundColor: Color.fromARGB(255, 28, 66, 146),
             child: Icon(
               state.canEdit ? Icons.edit : Icons.add,
               color: Colors.white,
@@ -333,7 +333,10 @@ class _CustomerListPageState extends State<CustomerListPage> {
                   ),
                 if (state.canEdit)
                   IconButton(
-                    icon: const Icon(Iconsax.edit, color: Colors.blue),
+                    icon: const Icon(
+                      Iconsax.edit,
+                      color: Color.fromARGB(255, 28, 66, 146),
+                    ),
                     onPressed: () {
                       final customer = state.selectedCustomers.first;
                       _navigateToEditScreen(customer);
@@ -471,7 +474,9 @@ class _CustomerListPageState extends State<CustomerListPage> {
                 ),
               ],
               border: Border.all(
-                color: isSelected ? Colors.blue : Colors.transparent,
+                color: isSelected
+                    ? Color.fromARGB(255, 28, 66, 146)
+                    : Colors.transparent,
                 width: 2,
               ),
             ),
@@ -481,7 +486,9 @@ class _CustomerListPageState extends State<CustomerListPage> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: isSelected ? Colors.blue : Colors.grey[200],
+                  color: isSelected
+                      ? const Color.fromARGB(255, 28, 66, 146)
+                      : Colors.grey[200],
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -508,7 +515,10 @@ class _CustomerListPageState extends State<CustomerListPage> {
                 ],
               ),
               trailing: isSelected
-                  ? const Icon(Iconsax.tick_circle, color: Colors.blue)
+                  ? const Icon(
+                      Iconsax.tick_circle,
+                      color: Color.fromARGB(255, 28, 66, 146),
+                    )
                   : null,
             ),
           ),

@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'package:bloc/bloc.dart';
-import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
-import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_event.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/confirmed_item.dart';

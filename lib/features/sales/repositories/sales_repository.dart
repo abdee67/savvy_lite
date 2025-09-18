@@ -1,21 +1,22 @@
 import 'package:dartz/dartz.dart';
+import 'package:savvy_stock/core/errors/failures.dart';
 import 'package:savvy_stock/features/sales/payment/models/payment_model.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
 
 abstract class SalesRepository {
-  Future<Either<Fail, bool>> processPayment(
+  Future<Either<Failure, bool>> processPayment(
     PaymentModel payment,
     List<ConfirmedItem> items,
     double totalAmount,
   );
 
-  Future<Either<Fail, List<PaymentModel>>> getPaymentHistory();
-  Future<Either<Fail, PaymentModel>> getPaymentDetails(String transactionId);
+  Future<Either<Failure, List<PaymentModel>>> getPaymentHistory();
+  Future<Either<Failure, PaymentModel>> getPaymentDetails(String transactionId);
 }
 
 class SalesRepositoryImpl implements SalesRepository {
   @override
-  Future<Either<Fail, bool>> processPayment(
+  Future<Either<Failure, bool>> processPayment(
     PaymentModel payment,
     List<ConfirmedItem> items,
     double totalAmount,
@@ -28,12 +29,12 @@ class SalesRepositoryImpl implements SalesRepository {
       // For now, we'll simulate a successful payment
       return const Right(true);
     } catch (e) {
-      return Left(Fail(e.toString()));
+      return Left(Failure as Failure);
     }
   }
 
   @override
-  Future<Either<Fail, List<PaymentModel>>> getPaymentHistory() async {
+  Future<Either<Failure, List<PaymentModel>>> getPaymentHistory() async {
     try {
       // Simulate API call
       await Future.delayed(const Duration(seconds: 1));
@@ -41,12 +42,12 @@ class SalesRepositoryImpl implements SalesRepository {
       // Return empty list for simulation
       return const Right([]);
     } catch (e) {
-      return Left(Fail(e.toString()));
+      return Left(Failure as Failure);
     }
   }
 
   @override
-  Future<Either<Fail, PaymentModel>> getPaymentDetails(
+  Future<Either<Failure, PaymentModel>> getPaymentDetails(
     String transactionId,
   ) async {
     try {
@@ -71,7 +72,7 @@ class SalesRepositoryImpl implements SalesRepository {
         ),
       );
     } catch (e) {
-      return Left(Fail(e.toString()));
+      return Left(Failure as Failure);
     }
   }
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
-import 'package:savvy_stock/features/sales/customer/blocs/customer_state.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/invoice/blocs/invoice_bloc.dart';
 import 'package:savvy_stock/features/sales/invoice/blocs/invoice_event.dart';
@@ -12,10 +11,8 @@ import 'package:savvy_stock/features/sales/invoice/widget/invoice_first_part.dar
 import 'package:savvy_stock/features/sales/invoice/widget/invoice_second_part.dart';
 import 'package:savvy_stock/features/sales/invoice/widget/invoice_third_part.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
-import 'package:savvy_stock/features/sales/payment/blocs/payment_state.dart';
 import 'package:savvy_stock/features/sales/payment/models/payment_model.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_state.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
 
 class InvoiceReviewScreen extends StatelessWidget {

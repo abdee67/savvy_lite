@@ -116,12 +116,27 @@ class _SalesDashboardState extends State<SalesDashboard> {
               const Spacer(),
 
               // Three dot menu
-              IconButton(
-                icon: const Icon(Icons.more_vert),
-                onPressed: () {
-                  // Handle the button press, e.g., show a PopupMenuButton
+              // Handle the button press, e.g., show a PopupMenuButton
+              PopupMenuButton<String>(
+                tooltip: 'More',
+                iconColor: Colors.white,
+                onSelected: (value) {
+                  if (value == 'System Constants') {
+                    context.push('/system_constants');
+                  } else if (value == 'Logout') {
+                    context.push('/login');
+                  }
                 },
-                color: Colors.white,
+                itemBuilder: (BuildContext context) => [
+                  PopupMenuItem<String>(
+                    child: const Text('System Constants'),
+                    onTap: () => context.push('/system_constants'),
+                  ),
+                  PopupMenuItem<String>(
+                    child: const Text('Logout'),
+                    onTap: () => context.push('/login'),
+                  ),
+                ],
               ),
             ],
           ),

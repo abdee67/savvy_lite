@@ -168,7 +168,7 @@ class InvoiceThirdPart extends StatelessWidget {
     final wholeWords = _convertNumberToWordsHelper(wholePart);
     final decimalWords = _convertNumberToWordsHelper(decimalPart);
 
-    return '${wholeWords.isEmpty ? 'Zero' : wholeWords} Birr${decimalPart > 0 ? ' and ${decimalWords} Cents' : ''}';
+    return '${wholeWords.isEmpty ? 'Zero' : wholeWords} Birr${decimalPart > 0 ? ' and $decimalWords Cents' : ''}';
   }
 
   String _convertNumberToWordsHelper(int number) {
