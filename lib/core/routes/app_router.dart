@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/features/onboarding/screens/welcome_screen.dart';
 import 'package:savvy_stock/features/onboarding/widgets/getStarted.dart';
-import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
-import 'package:savvy_stock/features/sales/customer/blocs/customer_event.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/customer/screens/customer_list.dart';
 import 'package:savvy_stock/features/sales/customer/screens/customer_screen.dart';
@@ -13,6 +10,7 @@ import 'package:savvy_stock/features/sales/payment/screens/paymentSummary.dart';
 import 'package:savvy_stock/features/sales/presentation/screens/sales_dashboard.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/screens/sales_item_entry.dart';
+import 'package:savvy_stock/features/system_constant/screen/system_constants_screen.dart';
 
 class AppRouter {
   final bool showOnboarding;
@@ -52,6 +50,11 @@ class AppRouter {
         pageBuilder: (context, state) {
           return MaterialPage(child: InvoiceReviewScreen());
         },
+      ),
+
+      GoRoute(
+        path: '/system_constants',
+        builder: (context, state) => const SystemConstantsScreen(),
       ),
 
       GoRoute(
