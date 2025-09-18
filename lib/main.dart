@@ -2,21 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
+import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dart';
+import 'package:savvy_stock/core/di/injection_container.dart';
+import 'package:savvy_stock/core/repositories/system_repository.dart';
 import 'package:savvy_stock/core/routes/app_router.dart';
+import 'package:savvy_stock/core/services/auth_services/auth_service.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
-import 'package:savvy_stock/features/sales/customer/blocs/customer_event.dart';
-import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/invoice/blocs/invoice_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
-import 'package:savvy_stock/features/sales/payment/blocs/payment_event.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_event.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'core/repositories/system_constant_repository.dart';
 //import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // await dotenv.load(fileName: ".env");
+
+  await initDependencies();
   runApp(const SavvyStock());
 }
 
@@ -70,6 +75,12 @@ class _SavvyStockState extends State<SavvyStock> {
         BlocProvider<ItemEntryBloc>(create: (context) => ItemEntryBloc()),
         BlocProvider<PaymentBloc>(create: (context) => PaymentBloc()),
         BlocProvider<InvoiceBloc>(create: (context) => InvoiceBloc()),
+        BlocProvider<SystemConstantBloc>(
+          create: (context) => SystemConstantBloc(
+            systemConstantRepository: getIt<SystemConstantRepository>(),
+            authService: getIt<AuthService>(),
+          )..add(LoadSystemConstants()),
+        ),
       ],
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
