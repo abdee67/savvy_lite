@@ -26,6 +26,13 @@ class LoadPayment extends PaymentEvent {
   List<Object> get props => [confirmedItems, totalAmount, customer];
 }
 
+class LoadFeeSystemConstants extends PaymentEvent {
+  const LoadFeeSystemConstants();
+
+  @override
+  List<Object> get props => [];
+}
+
 class ProcessPayment extends PaymentEvent {
   const ProcessPayment();
 

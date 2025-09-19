@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:savvy_stock/core/constants/payment_constants.dart';
 import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
@@ -21,6 +22,14 @@ class _PaymentDetailsState extends State<PaymentDetails> {
   bool _initialized = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<PaymentBloc>().add(const LoadFeeSystemConstants());
+    });
+  }
+
+  @override
   void dispose() {
     _discountController.dispose();
     super.dispose();
@@ -39,6 +48,17 @@ class _PaymentDetailsState extends State<PaymentDetails> {
     );
   }
 
+  void _showSystemConstantsWarning(BuildContext context, String error) {
+    // Show a snackbar or dialog for system constants errors
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(error),
+        backgroundColor: Colors.orange,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isSmallScreen = MediaQuery.of(context).size.width < 600;
@@ -51,9 +71,6 @@ class _PaymentDetailsState extends State<PaymentDetails> {
         }
       },
       builder: (context, state) {
-        final canApplyWithholding =
-            state.subtotal > PaymentConstants.minSubtotalForWithholding;
-
         return SingleChildScrollView(
           child: Container(
             decoration: BoxDecoration(
@@ -71,6 +88,8 @@ class _PaymentDetailsState extends State<PaymentDetails> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (state.systemConstantsError != null)
+                  _buildSystemConstantsWarning(state.systemConstantsError!),
                 _buildSectionTitle('Payment Details', context),
                 const SizedBox(height: 16),
                 _buildReadOnlyField(
@@ -85,27 +104,56 @@ class _PaymentDetailsState extends State<PaymentDetails> {
                 _buildWithholdingField(
                   context,
                   state,
-                  canApplyWithholding,
+                  state.canApplyWithholding,
                   isSmallScreen,
                 ),
                 const SizedBox(height: 12),
-                _buildReadOnlyField(
-                  context,
-                  'Tax (${(PaymentConstants.taxRate * 100).toStringAsFixed(0)}%)',
-                  _currencyFormat.format(state.taxAmount),
-                  icon: Icons.receipt,
-                ),
+                _buildTaxField(context, state),
                 const SizedBox(height: 16),
                 const Divider(height: 1),
                 const SizedBox(height: 16),
                 _buildTotalField(context, 'Total', state.grandTotal),
-                if (!canApplyWithholding && state.isWithholdingEnabled)
-                  _buildWarningMessage(context),
+                if (!state.canApplyWithholding && state.isWithholdingEnabled)
+                  _buildWarningMessage(context, state),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildSystemConstantsWarning(String error) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.orange),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning, color: Colors.orange, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              error,
+              style: const TextStyle(color: Colors.orange, fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTaxField(BuildContext context, PaymentState state) {
+    return _buildReadOnlyField(
+      context,
+      'Tax (${(state.vatRate * 100).toStringAsFixed(1)}%)',
+      _currencyFormat.format(state.taxAmount),
+      icon: Icons.receipt,
+      subtitle: 'VAT rate from system configuration',
     );
   }
 
@@ -199,14 +247,11 @@ class _PaymentDetailsState extends State<PaymentDetails> {
     bool canApplyWithholding,
     bool isSmallScreen,
   ) {
-    final isWithholdingApplied =
-        state.isWithholdingEnabled && canApplyWithholding;
-    final withholdingAmount = isWithholdingApplied
-        ? state.subtotal * PaymentConstants.withholdingRate
-        : 0;
-
+    final isWithholdingApplied = state.canApplyWithholding;
+    final withholdingAmount = _currencyFormat.format(state.withholdingAmount);
+    final withholdingRate = _currencyFormat.format(state.withholdingRate * 100);
     final withholdingText = isWithholdingApplied
-        ? _currencyFormat.format(withholdingAmount)
+        ? '$withholdingAmount ($withholdingRate%)'
         : state.isWithholdingEnabled && !canApplyWithholding
         ? 'Not applicable'
         : '0.00';
@@ -320,7 +365,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
                       Padding(
                         padding: const EdgeInsets.only(top: 4.0),
                         child: Text(
-                          '${(PaymentConstants.withholdingRate * 100).toStringAsFixed(1)}% of subtotal',
+                          '${(state.withholdingRate * 100).toStringAsFixed(1)}% of subtotal',
                           style: TextStyle(
                             fontSize: 12,
                             color: Theme.of(
@@ -341,7 +386,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
             child: Text(
               canApplyWithholding
                   ? 'Withholding tax is applied to this transaction'
-                  : 'Subtotal must exceed \$${PaymentConstants.minSubtotalForWithholding} to apply withholding',
+                  : 'Subtotal must exceed \$${state.withholdingInitial} to apply withholding',
               style: TextStyle(
                 fontSize: 12,
                 color: canApplyWithholding
@@ -355,7 +400,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
     );
   }
 
-  Widget _buildWarningMessage(BuildContext context) {
+  Widget _buildWarningMessage(BuildContext context, PaymentState state) {
     return Container(
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.all(12),
@@ -366,11 +411,11 @@ class _PaymentDetailsState extends State<PaymentDetails> {
       ),
       child: Row(
         children: [
-          Icon(Icons.info_outline, color: Colors.orange[700], size: 20),
+          Icon(Iconsax.information_copy, color: Colors.orange[700], size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Withholding is enabled but cannot be applied because subtotal is below \$${PaymentConstants.minSubtotalForWithholding}',
+              'Withholding is enabled but cannot be applied because subtotal is below \$${_currencyFormat.format(state.withholdingInitial)}',
               style: TextStyle(fontSize: 12, color: Colors.orange[800]),
             ),
           ),
@@ -384,15 +429,30 @@ class _PaymentDetailsState extends State<PaymentDetails> {
     String label,
     String value, {
     IconData? icon,
+    String? subtitle,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            if (subtitle != null)
+              Text(
+                subtitle,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.6),
+                ),
+              ),
+          ],
         ),
         const SizedBox(height: 8),
         Container(

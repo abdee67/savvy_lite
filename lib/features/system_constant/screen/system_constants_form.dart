@@ -7,7 +7,7 @@ import 'package:savvy_stock/core/models/system_constant.dart';
 import '../../../core/blocs/system_constant/system_constant_bloc.dart';
 
 class SystemConstantsForm extends StatefulWidget {
-  const SystemConstantsForm({Key? key}) : super(key: key);
+  const SystemConstantsForm({super.key});
 
   @override
   _SystemConstantsFormState createState() => _SystemConstantsFormState();

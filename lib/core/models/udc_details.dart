@@ -36,4 +36,15 @@ class UdcDetails {
       'udc_group': udcGroup,
     };
   }
+
+  Map<String, dynamic> toDatabaseMap() {
+    return {
+      'id': id,
+      'detail_code': detailCode,
+      'description_1': description1,
+      'description_2': description2,
+      'record_header': recordHeader,
+      'udc_group': udcGroup,
+    };
+  }
 }

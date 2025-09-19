@@ -39,30 +39,60 @@ class _SystemConstantsScreenState extends State<SystemConstantsScreen>
   Widget build(BuildContext context) {
     return BlocConsumer<SystemConstantBloc, SystemConstantState>(
       listener: (context, state) {
-        if (state.status == SystemConstantStatus.success) {
-          if (state.systemConstants.isNotEmpty) {
-            _editedSystemConstant = state.systemConstants.first.copyWith();
-            _hasChanges = false;
-          }
+        // Show appropriate messages based on state
+        if (state.status == SystemConstantStatus.success &&
+            state.errorMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.errorMessage!),
+              backgroundColor: Colors.orange,
+            ),
+          );
         }
       },
       builder: (context, state) {
-        if (state.status == SystemConstantStatus.loading &&
-            state.systemConstants.isEmpty) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        if (state.systemConstants.isNotEmpty &&
-            _editedSystemConstant.id == null) {
-          _editedSystemConstant = state.systemConstants.first.copyWith();
-        }
-
         return Scaffold(
           appBar: AppBar(
             title: const Text('System Configuration'),
             actions: [
+              IconButton(
+                icon: Icon(
+                  state.isOnline ? Icons.cloud : Icons.cloud_off,
+                  color: state.isOnline ? Colors.green : Colors.orange,
+                ),
+                onPressed: () {
+                  if (!state.isOnline) {
+                    context.read<SystemConstantBloc>().add(
+                      const RetryFailedOperations(),
+                    );
+                  }
+                },
+                tooltip: state.isOnline ? 'Online' : 'Offline - Tap to retry',
+              ),
+              // Sync button
+              if (state.unsyncedCount > 0)
+                IconButton(
+                  icon: Badge(
+                    label: Text(state.unsyncedCount.toString()),
+                    child: const Icon(Icons.sync),
+                  ),
+                  onPressed: () {
+                    context.read<SystemConstantBloc>().add(
+                      const SyncSystemConstants(),
+                    );
+                  },
+                  tooltip: 'Sync changes',
+                ),
+              // Refresh button
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: () {
+                  context.read<SystemConstantBloc>().add(
+                    const PullSystemConstants(),
+                  );
+                },
+                tooltip: 'Refresh data',
+              ),
               if (_hasChanges)
                 IconButton(
                   icon: const Icon(Iconsax.refresh),
@@ -121,15 +151,27 @@ class _SystemConstantsScreenState extends State<SystemConstantsScreen>
 
   void _saveChanges(BuildContext context) {
     if (_formKey.currentState?.validate() ?? false) {
-      context.read<SystemConstantBloc>().add(
-        UpdateSystemConstant(_editedSystemConstant),
-      );
+      // Show loading indicator
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Saving changes...'),
-          backgroundColor: AppColors.info,
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('Saving system constants...'),
+            ],
+          ),
+          duration: Duration(seconds: 5),
         ),
       );
+
+      // Save with offline-first approach
+      context.read<SystemConstantBloc>().add(
+        SaveInEdit([_editedSystemConstant]),
+      );
+
+      // Try to sync immediately
+      context.read<SystemConstantBloc>().add(const SyncSystemConstants());
     }
   }
 }
@@ -140,11 +182,11 @@ class GeneralSettingsTab extends StatefulWidget {
   final Function(SystemConstant) onChanged;
 
   const GeneralSettingsTab({
-    Key? key,
+    super.key,
     required this.formKey,
     required this.systemConstant,
     required this.onChanged,
-  }) : super(key: key);
+  });
 
   @override
   _GeneralSettingsTabState createState() => _GeneralSettingsTabState();
@@ -170,7 +212,9 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
             children: [
               _buildGeneralConfigurationCard(),
               const SizedBox(height: 20),
-              _buildNumberFormattingCard(),
+              _buildNumberFormattingCard(
+                context.read<SystemConstantBloc>().state,
+              ),
               const SizedBox(height: 100),
             ],
           ),
@@ -225,7 +269,7 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
     );
   }
 
-  Widget _buildNumberFormattingCard() {
+  Widget _buildNumberFormattingCard(SystemConstantState state) {
     return Container(
       child: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -249,20 +293,7 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
                 label: 'Lot Type',
                 value: _localSystemConstant.lotType,
                 onChanged: (value) => _updateField(lotType: value),
-                items: const {
-                  1: 'Expiration Date',
-                  2: 'Effective Date',
-                  3: 'Receipt Date',
-                  4: 'Production Date',
-                  5: 'Manufacturing Date',
-                },
-                validator: (value) {
-                  if (_localSystemConstant.applyLotMgm == 'Y' &&
-                      value == null) {
-                    return 'Please select a lot type';
-                  }
-                  return null;
-                },
+                context: context,
               ),
               const SizedBox(height: 16),
               _buildSwitchTile(
@@ -291,19 +322,7 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
               label: 'Decimal Places for Display',
               value: _localSystemConstant.decimalPlaces,
               onChanged: (value) => _updateField(decimalPlaces: value),
-              items: const {
-                0: '0 (e.g., 123)',
-                1: '1 (e.g., 123.4)',
-                2: '2 (e.g., 123.45)',
-                3: '3 (e.g., 123.456)',
-                4: '4 (e.g., 123.4567)',
-              },
-              validator: (value) {
-                if (value == null) {
-                  return 'Please select decimal places';
-                }
-                return null;
-              },
+              context: context,
             ),
             const SizedBox(height: 16),
             _buildNumberField(
@@ -406,7 +425,7 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
               onChanged(newValue);
               widget.onChanged(_localSystemConstant);
             },
-            activeColor: AppColors.primary,
+            activeThumbColor: AppColors.primary,
           ),
         ],
       ),
@@ -414,37 +433,36 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
   }
 
   Widget _buildDropdownField<T>({
+    required BuildContext context,
     required String label,
-    required T? value,
-    required Function(T?) onChanged,
-    required Map<T, String> items,
-    String? Function(T?)? validator,
+    required int? value,
+    required Function(int?) onChanged,
   }) {
-    return DropdownButtonFormField<T>(
-      decoration: InputDecoration(
-        labelText: label,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
-        ),
-      ),
-      value: value,
-      items: items.entries.map((entry) {
-        return DropdownMenuItem<T>(
-          value: entry.key,
-          child: Text(entry.value, style: AppTextStyles.bodyMedium),
+    return BlocBuilder<SystemConstantBloc, SystemConstantState>(
+      builder: (context, state) {
+        return DropdownButtonFormField<int>(
+          decoration: InputDecoration(
+            labelText: label,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+          ),
+          initialValue: value,
+          items: state.lotTypes.entries.map((entry) {
+            return DropdownMenuItem<int>(
+              value: entry.key,
+              child: Text(entry.value, style: AppTextStyles.bodyMedium),
+            );
+          }).toList(),
+          onChanged: onChanged,
+          dropdownColor: Colors.white,
+          borderRadius: BorderRadius.circular(12),
         );
-      }).toList(),
-      validator: validator,
-      onChanged: (newValue) {
-        onChanged(newValue);
-        widget.onChanged(_localSystemConstant);
       },
-      dropdownColor: Colors.white,
-      borderRadius: BorderRadius.circular(12),
     );
   }
 
@@ -478,7 +496,7 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
 }
 
 class ReportSetupTab extends StatelessWidget {
-  const ReportSetupTab({Key? key}) : super(key: key);
+  const ReportSetupTab({super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 class NumberFormatter {
   static int decimalPlaces = 2;
 

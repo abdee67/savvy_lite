@@ -122,7 +122,7 @@ class _SalesDashboardState extends State<SalesDashboard> {
                 iconColor: Colors.white,
                 onSelected: (value) {
                   if (value == 'System Constants') {
-                    context.push('/system_constants');
+                    context.push('/system_constant');
                   } else if (value == 'Logout') {
                     context.push('/login');
                   }
@@ -130,7 +130,7 @@ class _SalesDashboardState extends State<SalesDashboard> {
                 itemBuilder: (BuildContext context) => [
                   PopupMenuItem<String>(
                     child: const Text('System Constants'),
-                    onTap: () => context.push('/system_constants'),
+                    onTap: () => context.push('/system_constant'),
                   ),
                   PopupMenuItem<String>(
                     child: const Text('Logout'),

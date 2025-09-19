@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -5,9 +7,12 @@ import 'package:provider/provider.dart';
 import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
 import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dart';
 import 'package:savvy_stock/core/di/injection_container.dart';
-import 'package:savvy_stock/core/repositories/system_repository.dart';
 import 'package:savvy_stock/core/routes/app_router.dart';
-import 'package:savvy_stock/core/services/auth_services/auth_service.dart';
+import 'package:savvy_stock/core/services/auth/auth_service.dart';
+import 'package:savvy_stock/core/services/conectitvity_service.dart';
+import 'package:savvy_stock/core/services/database/database_service.dart';
+import 'package:savvy_stock/core/services/system_constant/system_constant_service.dart';
+import 'package:savvy_stock/core/services/udc_service.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/invoice/blocs/invoice_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
@@ -15,14 +20,27 @@ import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_ent
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/repositories/system_constant_repository.dart';
-//import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // await dotenv.load(fileName: ".env");
 
-  await initDependencies();
-  runApp(const SavvyStock());
+  // Add error handling wrapper
+  runZonedGuarded(
+    () async {
+      await ConnectivityService().initConnectivity();
+      await initDependencies();
+
+      // Debug database tables (optional - remove in production)
+      await LocalDatabaseService().debugTable('system_constant');
+
+      runApp(const SavvyStock());
+    },
+    (error, stackTrace) {
+      // Log any startup errors
+      debugPrint('Application startup error: $error');
+      debugPrint('Stack trace: $stackTrace');
+    },
+  );
 }
 
 class SavvyStock extends StatefulWidget {
@@ -34,51 +52,104 @@ class SavvyStock extends StatefulWidget {
 class _SavvyStockState extends State<SavvyStock> {
   bool showOnboarding = true;
   bool isLoading = true;
+  bool hasError = false;
+  String? errorMessage;
   late GoRouter _router;
 
   @override
   void initState() {
     super.initState();
-    _checkOnboardingStatus();
+    _initializeApp();
   }
 
-  Future<void> _checkOnboardingStatus() async {
+  Future<void> _initializeApp() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
+
       setState(() {
         showOnboarding = !hasSeenOnboarding;
         isLoading = false;
       });
+
+      // Initialize router after onboarding status is determined
+      _router = AppRouter(showOnboarding: showOnboarding).router;
     } catch (e) {
       setState(() {
-        showOnboarding = true;
+        hasError = true;
+        errorMessage = e.toString();
         isLoading = false;
       });
     }
-
-    // Initialize router after onboarding status is determined
-    _router = AppRouter(showOnboarding: showOnboarding).router;
   }
 
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
       return MaterialApp(
-        home: Scaffold(body: Center(child: CircularProgressIndicator())),
+        home: Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Initializing Savvy Stock...'),
+              ],
+            ),
+          ),
+        ),
       );
     }
+
+    if (hasError) {
+      return MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, size: 64, color: Colors.red),
+                  SizedBox(height: 16),
+                  Text(
+                    'Initialization Error',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    errorMessage ?? 'Unknown error occurred',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: _initializeApp,
+                    child: Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return MultiProvider(
       providers: [
         // Bloc providers
         BlocProvider<CustomerBloc>(create: (context) => CustomerBloc()),
         BlocProvider<ItemEntryBloc>(create: (context) => ItemEntryBloc()),
-        BlocProvider<PaymentBloc>(create: (context) => PaymentBloc()),
+        BlocProvider<PaymentBloc>(
+          create: (context) => PaymentBloc(getIt<SystemConstantsService>()),
+        ),
         BlocProvider<InvoiceBloc>(create: (context) => InvoiceBloc()),
         BlocProvider<SystemConstantBloc>(
           create: (context) => SystemConstantBloc(
             systemConstantRepository: getIt<SystemConstantRepository>(),
             authService: getIt<AuthService>(),
+            udcService: getIt<UdcService>(),
           )..add(LoadSystemConstants()),
         ),
       ],
@@ -92,8 +163,25 @@ class _SavvyStockState extends State<SavvyStock> {
             backgroundColor: Color(0xFF155888),
             foregroundColor: Colors.white,
             elevation: 0,
+            iconTheme: IconThemeData(color: Colors.white),
           ),
           fontFamily: 'Montserrat',
+          scaffoldBackgroundColor: Colors.grey[50],
+          inputDecorationTheme: InputDecorationTheme(
+            border: OutlineInputBorder(),
+            filled: true,
+            fillColor: Colors.white,
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(0xFF155888),
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
         ),
       ),
     );

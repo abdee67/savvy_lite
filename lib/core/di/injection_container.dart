@@ -1,9 +1,14 @@
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
+import 'package:savvy_stock/core/constants/api_constants.dart';
 import 'package:savvy_stock/core/repositories/system_constant_repository.dart';
-import 'package:savvy_stock/core/services/auth_services/auth_service.dart';
+import 'package:savvy_stock/core/repositories/udc_repository.dart';
+import 'package:savvy_stock/core/services/auth/auth_service.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
+import 'package:savvy_stock/core/services/system_constant/system_constant_service.dart';
+import 'package:savvy_stock/core/services/udc_service.dart';
+import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
 import 'package:savvy_stock/features/sales/repositories/sales_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -35,9 +40,25 @@ Future<void> initDependencies() async {
     () => SystemConstantBloc(
       systemConstantRepository: getIt(),
       authService: getIt(),
+      udcService: getIt(),
     ),
   );
 
+  getIt.registerLazySingleton<UdcService>(() => UdcService(getIt()));
+
+  getIt.registerLazySingleton<UdcRepository>(
+    () => UdcRepository(
+      baseUrl: ApiConstants.baseUrl,
+      localDatabaseService: getIt(),
+      httpClient: getIt(),
+    ),
+  );
+
+  getIt.registerLazySingleton<SystemConstantsService>(
+    () => SystemConstantsService(getIt()),
+  );
+
+  getIt.registerFactory<PaymentBloc>(() => PaymentBloc(getIt()));
   // HTTP Client
   // Other dependencies...
 }

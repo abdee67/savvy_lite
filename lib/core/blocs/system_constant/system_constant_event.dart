@@ -165,3 +165,15 @@ class SaveInEdit extends SystemConstantEvent {
   @override
   List<Object> get props => [systemConstants];
 }
+
+class RetryFailedOperations extends SystemConstantEvent {
+  const RetryFailedOperations();
+}
+
+class CheckConnectivity extends SystemConstantEvent {
+  const CheckConnectivity();
+}
+
+class LoadUdcData extends SystemConstantEvent {
+  const LoadUdcData();
+}

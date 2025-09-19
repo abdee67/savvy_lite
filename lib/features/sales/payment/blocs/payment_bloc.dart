@@ -1,13 +1,18 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'dart:math';
+import 'dart:ui';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:savvy_stock/core/constants/payment_constants.dart';
+import 'package:savvy_stock/core/services/system_constant/system_constant_service.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_event.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_state.dart';
 import 'package:savvy_stock/features/sales/payment/models/payment_model.dart';
 
 class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
-  PaymentBloc() : super(const PaymentState()) {
+  final SystemConstantsService _systemConstantsService;
+  VoidCallback? _systemConstantsSubscription;
+
+  PaymentBloc(this._systemConstantsService) : super(const PaymentState()) {
     on<LoadPayment>(_onLoadPayment);
     on<UpdatePaymentDetails>(_onUpdatePaymentDetails);
     on<UpdateTaxAndFees>(_onUpdateTaxAndFees);
@@ -16,33 +21,153 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     on<PaymentFailure>(_onPaymentFailure);
     on<CancelPayment>(_onCancelPayment);
     on<ResetPayment>(_onResetPayment);
+    on<LoadFeeSystemConstants>(_onLoadFeeSystemConstants);
+
+    // Listen to system constants changes
+    _systemConstantsSubscription = () {
+      if (_systemConstantsService.currentSystemConstant != null) {
+        add(const LoadFeeSystemConstants());
+      }
+    };
+
+    _systemConstantsService.addListener(_systemConstantsSubscription!);
+
+    // Load system constants initially
+    _systemConstantsService.loadSystemConstants();
   }
+
+  @override
+  Future<void> close() {
+    if (_systemConstantsSubscription != null) {
+      _systemConstantsService.removeListener(_systemConstantsSubscription!);
+      _systemConstantsSubscription = null;
+    }
+    return super.close();
+  }
+
+  void _onLoadFeeSystemConstants(
+    LoadFeeSystemConstants event,
+    Emitter<PaymentState> emit,
+  ) {
+    try {
+      final vatRate = _systemConstantsService.vatRate;
+      final withholdingRate = _systemConstantsService.withholdingRate;
+      final withholdingInitial = _systemConstantsService.withholdingInitial;
+
+      developer.log('VAT Rate: $vatRate');
+      developer.log('Withholding Rate: $withholdingRate');
+      developer.log('Withholding Initial: $withholdingInitial');
+      emit(
+        state.copyWith(
+          vatRate: vatRate,
+          withholdingRate: withholdingRate,
+          withholdingInitial: withholdingInitial,
+          systemConstantsError: _systemConstantsService.error,
+        ),
+      );
+
+      // Recalculate taxes and fees with new rates
+      if (state.subtotal > 0) {
+        add(
+          UpdateTaxAndFees(
+            subtotal: state.subtotal,
+            discountAmount: state.discountAmount,
+            isWithholdingEnabled: state.isWithholdingEnabled,
+          ),
+        );
+      }
+    } catch (e) {
+      emit(
+        state.copyWith(
+          systemConstantsError:
+              'Failed to load system constants: ${e.toString()}',
+        ),
+      );
+    }
+  }
+
   void _onLoadPayment(LoadPayment event, Emitter<PaymentState> emit) {
     try {
       final subtotal = event.confirmedItems.fold(
         0.0,
         (sum, item) => sum + item.totalPrice,
       );
-      final taxAmount = subtotal * PaymentConstants.taxRate;
+      final vatRate = _systemConstantsService.vatRate;
+      final withholdingRate = _systemConstantsService.withholdingRate;
+      final withholdingInitial = _systemConstantsService.withholdingInitial;
+
+      final taxAmount = _systemConstantsService.calculateTaxAmount(subtotal);
+      final canApplyWithholding = _systemConstantsService
+          .shouldApplyWithholding(subtotal);
+      developer.log('Tax Amount: $taxAmount');
+      developer.log('Can Apply Withholding: $canApplyWithholding');
       emit(
         state.copyWith(
           status: PaymentStatus.ready,
           confirmedItems: event.confirmedItems,
           subtotal: subtotal,
           taxAmount: taxAmount,
-          totalAmount: event.totalAmount,
-          withholdingAmount:
-              0, // Start with 0, will be set when user enables it
+          grandTotal: event.totalAmount,
+          withholdingAmount: 0,
           customer: event.customer,
+          vatRate: vatRate,
+          withholdingRate: withholdingRate,
+          withholdingInitial: withholdingInitial,
+          canApplyWithholding: canApplyWithholding,
+          systemConstantsError: _systemConstantsService.error,
         ),
       );
     } catch (e) {
+      developer.log('Failed to load payment: ${e.toString()}');
       emit(
         state.copyWith(
           status: PaymentStatus.failure,
           errorMessage: 'Failed to load payment: ${e.toString()}',
+          systemConstantsError: _systemConstantsService.error,
         ),
       );
+    }
+  }
+
+  void _onUpdateTaxAndFees(UpdateTaxAndFees event, Emitter<PaymentState> emit) {
+    try {
+      final taxAmount = _systemConstantsService.calculateTaxAmount(
+        event.subtotal,
+      );
+      developer.log('Tax Amount: $taxAmount');
+      // Calculate withholding only if it's enabled and subtotal meets minimum
+      double newWithholdingAmount = 0;
+      if (event.isWithholdingEnabled) {
+        if (event.subtotal >= state.withholdingInitial) {
+          newWithholdingAmount = _systemConstantsService
+              .calculateWithholdingAmount(event.subtotal);
+        }
+      }
+
+      final grandTotal =
+          event.subtotal +
+          taxAmount -
+          event.discountAmount -
+          newWithholdingAmount;
+
+      final canApplyWithholding = _systemConstantsService
+          .shouldApplyWithholding(event.subtotal);
+
+      emit(
+        state.copyWith(
+          subtotal: event.subtotal,
+          taxAmount: taxAmount,
+          withholdingAmount: newWithholdingAmount,
+          discountAmount: event.discountAmount,
+          isWithholdingEnabled: event.isWithholdingEnabled,
+          grandTotal: grandTotal,
+          canApplyWithholding: canApplyWithholding,
+          systemConstantsError: _systemConstantsService.error,
+        ),
+      );
+    } catch (e) {
+      developer.log('Failed to update tax and fees: ${e.toString()}');
+      emit(state.copyWith(systemConstantsError: _systemConstantsService.error));
     }
   }
 
@@ -56,27 +181,6 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
         paymentMethod: event.paymentMethod,
         paymentInstrument: event.paymentInstrument,
         paymentTerm: event.paymentTerm,
-      ),
-    );
-  }
-
-  void _onUpdateTaxAndFees(UpdateTaxAndFees event, Emitter<PaymentState> emit) {
-    final taxAmount = event.subtotal * PaymentConstants.taxRate;
-
-    // Calculate withholding only if it's enabled and subtotal meets minimum
-    double newWithholdingAmount = 0;
-    if (event.isWithholdingEnabled &&
-        event.subtotal > PaymentConstants.minSubtotalForWithholding) {
-      newWithholdingAmount = event.subtotal * PaymentConstants.withholdingRate;
-    }
-
-    emit(
-      state.copyWith(
-        subtotal: event.subtotal,
-        taxAmount: taxAmount,
-        withholdingAmount: newWithholdingAmount,
-        discountAmount: event.discountAmount,
-        isWithholdingEnabled: event.isWithholdingEnabled,
       ),
     );
   }
