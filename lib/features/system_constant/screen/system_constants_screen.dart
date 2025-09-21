@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -22,11 +25,28 @@ class _SystemConstantsScreenState extends State<SystemConstantsScreen>
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   SystemConstant _editedSystemConstant = SystemConstant();
   bool _hasChanges = false;
+  bool _initialLoadComplete = false; // ADD THIS
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Load data when dependencies change (screen becomes visible)
+    if (!_initialLoadComplete) {
+      _loadInitialData();
+      _initialLoadComplete = true;
+    }
+  }
+
+  void _loadInitialData() {
+    // Load UDC data and system constants
+    context.read<SystemConstantBloc>().add(const LoadUdcData());
+    context.read<SystemConstantBloc>().add(const LoadSystemConstants());
   }
 
   @override
@@ -69,12 +89,22 @@ class _SystemConstantsScreenState extends State<SystemConstantsScreen>
                 },
                 tooltip: state.isOnline ? 'Online' : 'Offline - Tap to retry',
               ),
+              /**  IconButton(
+                icon: Icon(Iconsax.safe_home),
+                onPressed: () {
+                  context.read<SystemConstantBloc>().add(
+                    const DebugSystemConstants(),
+                  );
+                },
+                tooltip: 'Debug system constants',
+              ),
+*/
               // Sync button
               if (state.unsyncedCount > 0)
                 IconButton(
                   icon: Badge(
                     label: Text(state.unsyncedCount.toString()),
-                    child: const Icon(Icons.sync),
+                    child: const Icon(Iconsax.send),
                   ),
                   onPressed: () {
                     context.read<SystemConstantBloc>().add(
@@ -86,11 +116,9 @@ class _SystemConstantsScreenState extends State<SystemConstantsScreen>
               // Refresh button
               IconButton(
                 icon: const Icon(Icons.refresh),
-                onPressed: () {
-                  context.read<SystemConstantBloc>().add(
-                    const PullSystemConstants(),
-                  );
-                },
+                onPressed: () => context.read<SystemConstantBloc>().add(
+                  const LoadSystemConstants(),
+                ),
                 tooltip: 'Refresh data',
               ),
               if (_hasChanges)
@@ -102,9 +130,27 @@ class _SystemConstantsScreenState extends State<SystemConstantsScreen>
             ],
             bottom: TabBar(
               controller: _tabController,
-              tabs: const [
-                Tab(text: 'General Settings', icon: Icon(Iconsax.settings)),
-                Tab(text: 'Report Setup', icon: Icon(Iconsax.document)),
+              tabs: [
+                Tab(
+                  icon: Icon(Iconsax.settings, color: Colors.amber),
+                  child: Text(
+                    'General Settings',
+                    style: TextStyle(
+                      color: Colors.amber,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Tab(
+                  icon: Icon(Iconsax.document, color: Colors.amber),
+                  child: Text(
+                    'Report Setup',
+                    style: TextStyle(
+                      color: Colors.amber,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -112,9 +158,8 @@ class _SystemConstantsScreenState extends State<SystemConstantsScreen>
             controller: _tabController,
             children: [
               GeneralSettingsTab(
-                formKey: _formKey,
-                systemConstant: _editedSystemConstant,
                 onChanged: _handleFieldChange,
+                formKey: _formKey,
               ),
               const ReportSetupTab(),
             ],
@@ -169,62 +214,114 @@ class _SystemConstantsScreenState extends State<SystemConstantsScreen>
       context.read<SystemConstantBloc>().add(
         SaveInEdit([_editedSystemConstant]),
       );
-
-      // Try to sync immediately
-      context.read<SystemConstantBloc>().add(const SyncSystemConstants());
+      // RELOAD DATA AFTER SAVE to ensure UI shows latest
+      Future.delayed(const Duration(milliseconds: 500), () {
+        context.read<SystemConstantBloc>().add(const LoadSystemConstants());
+      });
+      setState(() {
+        _hasChanges = false;
+      });
     }
   }
 }
 
 class GeneralSettingsTab extends StatefulWidget {
+  final Function(SystemConstant)? onChanged;
   final GlobalKey<FormState> formKey;
-  final SystemConstant systemConstant;
-  final Function(SystemConstant) onChanged;
 
-  const GeneralSettingsTab({
-    super.key,
-    required this.formKey,
-    required this.systemConstant,
-    required this.onChanged,
-  });
+  const GeneralSettingsTab({super.key, this.onChanged, required this.formKey});
 
   @override
   _GeneralSettingsTabState createState() => _GeneralSettingsTabState();
 }
 
 class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
-  late SystemConstant _localSystemConstant;
+  SystemConstant _localSystemConstant = SystemConstant();
+  bool _isLoading = true;
+  bool _isEdititng = false;
 
   @override
   void initState() {
     super.initState();
-    _localSystemConstant = widget.systemConstant.copyWith();
+    // Load system constants when the tab is initialized
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<SystemConstantBloc>().add(const LoadSystemConstants());
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Form(
-      key: widget.formKey,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              _buildGeneralConfigurationCard(),
-              const SizedBox(height: 20),
-              _buildNumberFormattingCard(
-                context.read<SystemConstantBloc>().state,
+    return BlocConsumer<SystemConstantBloc, SystemConstantState>(
+      listener: (context, state) {
+        // Update local data when state changes
+        if (state.systemConstants.isNotEmpty && _isLoading) {
+          setState(() {
+            _localSystemConstant = state.systemConstants.first;
+            _isLoading = false;
+            developer.log(
+              'Data loaded from Bloc: ${_localSystemConstant.toJson()}',
+            );
+          });
+        } else if (state.status == SystemConstantStatus.success &&
+            state.systemConstants.isNotEmpty) {
+          // Update with latest data after save operations
+          setState(() {
+            _localSystemConstant = state.systemConstants.first;
+            _isEdititng = false;
+          });
+        }
+      },
+      builder: (context, state) {
+        if (_isLoading || state.systemConstants.isEmpty) {
+          return const Center(
+            child: Column(
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Loading system constants...'),
+              ],
+            ),
+          );
+        }
+        // If we have data but _isLoading is still true, fix it
+        if (_isLoading && state.systemConstants.isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            setState(() {
+              _localSystemConstant = state.systemConstants.first;
+              _isLoading = false;
+            });
+          });
+        }
+
+        // Debug output to see what's happening
+        developer.log(
+          'UI Building with system constant: ${_localSystemConstant.toJson()}',
+        );
+
+        return Form(
+          key: widget.formKey,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  _buildGeneralConfigurationCard(),
+                  const SizedBox(height: 20),
+                  _buildNumberFormattingCard(state),
+                  const SizedBox(height: 100),
+                ],
               ),
-              const SizedBox(height: 100),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
   Widget _buildGeneralConfigurationCard() {
-    return Container(
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
@@ -235,6 +332,7 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
               title: 'General Configuration',
             ),
             const SizedBox(height: 20),
+
             _buildNumberField(
               label: 'Withhold Initial (ETB)',
               value: _localSystemConstant.withHoldInitials ?? 0.0,
@@ -256,8 +354,9 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
             const SizedBox(height: 16),
             _buildNumberField(
               label: 'Rate Withhold (%)',
-              value: _localSystemConstant.rateWithPercentage ?? 0.0,
-              onChanged: (value) => _updateField(rateWithPercentage: value),
+              value: _localSystemConstant.rateWithholdingPercentage ?? 0.0,
+              onChanged: (value) =>
+                  _updateField(rateWithholdingPercentage: value),
               suffix: '%',
               min: 0,
               max: 100,
@@ -270,7 +369,9 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
   }
 
   Widget _buildNumberFormattingCard(SystemConstantState state) {
-    return Container(
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
@@ -392,7 +493,7 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
         final newValue = double.tryParse(text) ?? min;
         if (newValue >= min && newValue <= max) {
           onChanged(newValue);
-          widget.onChanged(_localSystemConstant);
+          _setEditingState();
         }
       },
     );
@@ -421,11 +522,11 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
           ),
           Switch(
             value: value,
-            onChanged: (newValue) {
-              onChanged(newValue);
-              widget.onChanged(_localSystemConstant);
+            onChanged: (value) {
+              onChanged(value);
+              _setEditingState();
             },
-            activeThumbColor: AppColors.primary,
+            activeColor: AppColors.primary,
           ),
         ],
       ),
@@ -440,6 +541,8 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
   }) {
     return BlocBuilder<SystemConstantBloc, SystemConstantState>(
       builder: (context, state) {
+        // Create default options if lotTypes is empty
+        developer.log('Lot types: ${state.lotTypes}');
         return DropdownButtonFormField<int>(
           decoration: InputDecoration(
             labelText: label,
@@ -458,7 +561,11 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
               child: Text(entry.value, style: AppTextStyles.bodyMedium),
             );
           }).toList(),
-          onChanged: onChanged,
+          onChanged: (value) {
+            onChanged(value);
+            _setEditingState();
+          },
+          onSaved: (value) => _setEditingState(),
           dropdownColor: Colors.white,
           borderRadius: BorderRadius.circular(12),
         );
@@ -466,10 +573,21 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
     );
   }
 
+  void _setEditingState() {
+    setState(() {
+      _isEdititng = true;
+    });
+
+    // Notify parent about changes but DON'T save automatically
+    if (widget.onChanged != null) {
+      widget.onChanged!(_localSystemConstant);
+    }
+  }
+
   void _updateField({
     double? withHoldInitials,
     double? rateVatPercentage,
-    double? rateWithPercentage,
+    double? rateWithholdingPercentage,
     String? applyLotMgm,
     int? lotType,
     String? lotQtyAutoForSales,
@@ -482,7 +600,7 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
       _localSystemConstant = _localSystemConstant.copyWith(
         withHoldInitials: withHoldInitials,
         rateVatPercentage: rateVatPercentage,
-        rateWithPercentage: rateWithPercentage,
+        rateWithholdingPercentage: rateWithholdingPercentage,
         applyLotMgm: applyLotMgm,
         lotType: lotType,
         lotQtyAutoForSales: lotQtyAutoForSales,
@@ -492,6 +610,11 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
         locationCategoryLevel: locationCategoryLevel,
       );
     });
+
+    // Notify parent about changes
+    if (widget.onChanged != null) {
+      widget.onChanged!(_localSystemConstant);
+    }
   }
 }
 

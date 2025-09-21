@@ -177,3 +177,7 @@ class CheckConnectivity extends SystemConstantEvent {
 class LoadUdcData extends SystemConstantEvent {
   const LoadUdcData();
 }
+
+class DebugSystemConstants extends SystemConstantEvent {
+  const DebugSystemConstants();
+}

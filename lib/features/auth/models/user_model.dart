@@ -1,3 +1,5 @@
+import 'package:savvy_stock/core/models/company.dart';
+
 class UserModel {
   final int? id;
   final String password;
@@ -11,7 +13,7 @@ class UserModel {
   final String? status;
   final String? superUser;
   final DateTime? passwordLastUpdated;
-  final int? company;
+  final Company? company;
   final String? userEmail;
   final String? confirmationCode;
   final DateTime? confirmationsExpireTime;

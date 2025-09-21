@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
 import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dart';
+import 'package:savvy_stock/core/config/app_config.dart';
 import 'package:savvy_stock/core/di/injection_container.dart';
 import 'package:savvy_stock/core/routes/app_router.dart';
 import 'package:savvy_stock/core/services/auth/auth_service.dart';
@@ -23,24 +24,28 @@ import 'core/repositories/system_constant_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  _initializeAndRunApp();
+}
 
-  // Add error handling wrapper
-  runZonedGuarded(
-    () async {
-      await ConnectivityService().initConnectivity();
-      await initDependencies();
+// Add error handling wrapper
+Future<void> _initializeAndRunApp() async {
+  try {
+    await ConnectivityService().initConnectivity();
+    initDependencies();
+    await getIt<SystemConstantsService>().ensureLoaded();
 
-      // Debug database tables (optional - remove in production)
-      await LocalDatabaseService().debugTable('system_constant');
-
-      runApp(const SavvyStock());
-    },
-    (error, stackTrace) {
-      // Log any startup errors
-      debugPrint('Application startup error: $error');
-      debugPrint('Stack trace: $stackTrace');
-    },
-  );
+    if (AppConfig.isTestMode) {
+      print('🚀 APP RUNNING IN TEST MODE');
+      print('📱 API calls bypassed');
+      print('💾 Using local database only');
+    }
+    // Debug database tables (optional - remove in production)
+    await LocalDatabaseService().debugTable('system_constant');
+  } catch (error, stackTrace) {
+    debugPrint('Initialization error: $error');
+    debugPrint('Stack trace: $stackTrace');
+  }
+  runApp(const SavvyStock());
 }
 
 class SavvyStock extends StatefulWidget {
@@ -150,6 +155,7 @@ class _SavvyStockState extends State<SavvyStock> {
             systemConstantRepository: getIt<SystemConstantRepository>(),
             authService: getIt<AuthService>(),
             udcService: getIt<UdcService>(),
+            systemConstantService: getIt<SystemConstantsService>(),
           )..add(LoadSystemConstants()),
         ),
       ],

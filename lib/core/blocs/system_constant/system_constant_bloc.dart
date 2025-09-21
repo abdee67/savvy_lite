@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
 import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/errors/exceptions.dart';
@@ -8,6 +9,7 @@ import 'package:savvy_stock/core/services/auth/auth_service.dart';
 import 'package:savvy_stock/core/services/udc_service.dart';
 import 'system_constant_event.dart';
 import 'system_constant_state.dart';
+import 'package:savvy_stock/core/services/system_constant/system_constant_service.dart';
 
 class SystemConstantBloc
     extends Bloc<SystemConstantEvent, SystemConstantState> {
@@ -15,11 +17,13 @@ class SystemConstantBloc
   final AuthService authService;
   final UdcService udcService;
   Timer? _syncTimer;
+  final SystemConstantsService systemConstantService;
 
   SystemConstantBloc({
     required this.systemConstantRepository,
     required this.authService,
     required this.udcService,
+    required this.systemConstantService,
   }) : super(const SystemConstantState()) {
     on<LoadSystemConstants>(_onLoadSystemConstants);
     on<LoadSystemConstant>(_onLoadSystemConstant);
@@ -39,6 +43,9 @@ class SystemConstantBloc
     on<RetryFailedOperations>(_onRetryFailedOperations);
     on<LoadUdcData>(_onLoadUdcData);
 
+    // Load data immediately when bloc is created
+    add(const LoadUdcData());
+    add(const LoadSystemConstants());
     // Start periodic sync (every 5 minutes)
     _startSyncTimer();
   }
@@ -64,11 +71,21 @@ class SystemConstantBloc
       // Try to load from local database first
       final systemConstants = await systemConstantRepository
           .getSystemConstants();
+      final companyConstants = await systemConstantRepository
+          .getCurrentCompanySystemConstants();
+
+      final allConstants = List<SystemConstant>.from(systemConstants);
+      if (companyConstants != null &&
+          !allConstants.any((c) => c.id == companyConstants.id)) {
+        allConstants.add(companyConstants);
+      }
+      final unSyncedCount = allConstants.where((c) => !c.isSynced).length;
       emit(
         state.copyWith(
           status: SystemConstantStatus.success,
-          systemConstants: systemConstants,
+          systemConstants: allConstants,
           errorMessage: null,
+          unsyncedCount: unSyncedCount,
         ),
       );
     } catch (e) {
@@ -86,12 +103,24 @@ class SystemConstantBloc
     Emitter<SystemConstantState> emit,
   ) async {
     try {
+      emit(state.copyWith(status: SystemConstantStatus.loading));
       await udcService.loadLotTypes();
-      emit(state.copyWith(lotTypes: udcService.getLotTypesMap()));
+
+      // Get the map after loading is complete
+      final lotTypesMap = udcService.getLotTypesMap();
+
+      emit(
+        state.copyWith(
+          lotTypes: lotTypesMap,
+          status: SystemConstantStatus.success,
+        ),
+      );
+
+      developer.log('Loaded ${lotTypesMap.length} lot types');
     } catch (e) {
-      if (kDebugMode) {
-        print('Failed to load UDC data: $e');
-      }
+      developer.log('Failed to load UDC data: $e');
+      // Don't fail the whole state, just log the error
+      emit(state.copyWith(status: SystemConstantStatus.success));
     }
   }
 
@@ -100,6 +129,7 @@ class SystemConstantBloc
     Emitter<SystemConstantState> emit,
   ) async {
     emit(state.copyWith(status: SystemConstantStatus.loading));
+
     try {
       // Try to load from local database first
       final systemConstant = await systemConstantRepository.getSystemConstant(
@@ -129,11 +159,14 @@ class SystemConstantBloc
   ) async {
     try {
       emit(state.copyWith(status: SystemConstantStatus.syncing));
-      await systemConstantRepository.syncSystemConstants();
 
-      // Reload data after sync
+      // For testing, we'll skip actual syncing
+      developer.log('Sync requested but bypassed for testing');
+
+      // Just reload data from local database
       final systemConstants = await systemConstantRepository
           .getSystemConstants();
+
       emit(
         state.copyWith(
           status: SystemConstantStatus.success,
@@ -142,10 +175,13 @@ class SystemConstantBloc
         ),
       );
     } catch (e) {
-      if (kDebugMode) {
-        print('Background Sync Failed: ${e.toString()}');
-        emit(state.copyWith(status: SystemConstantStatus.success));
-      }
+      developer.log('Sync error (ignored in test mode): $e');
+      emit(
+        state.copyWith(
+          status: SystemConstantStatus
+              .success, // Don't show error for background sync
+        ),
+      );
     }
   }
 
@@ -256,10 +292,10 @@ class SystemConstantBloc
           errorMessage: null,
         ),
       );
-      add(const LoadSystemConstants());
-
-      // Try to sync in background
-      add(const SyncSystemConstants());
+      // RELOAD DATA AFTER UPDATE to ensure UI shows latest
+      Future.delayed(const Duration(milliseconds: 500), () {
+        add(const LoadSystemConstants());
+      });
     } catch (e) {
       if (e is NetworkException) {
         emit(
@@ -291,9 +327,6 @@ class SystemConstantBloc
         event.systemConstant.id!,
       );
       add(const LoadSystemConstants());
-
-      // Try to sync in background
-      add(const SyncSystemConstants());
     } catch (e) {
       if (e is NetworkException) {
         emit(
@@ -321,7 +354,7 @@ class SystemConstantBloc
   ) async {
     try {
       final user = authService.currentUser;
-      final companyId = user?.company;
+      final companyId = authService.currentCompany?.id;
 
       // Create a new system constant with default values
       final newSystemConstant = SystemConstant(
@@ -356,25 +389,24 @@ class SystemConstantBloc
     Emitter<SystemConstantState> emit,
   ) async {
     try {
-      //Load UDC data
+      // Load UDC data first
       add(const LoadUdcData());
-      final user = authService.currentUser;
-      final companyId = user?.company;
-      final isSuperUser = user?.superUser == '1';
 
-      // Get system constants for the current company
-      final systemConstants = await systemConstantRepository
-          .getSystemConstants();
-      final companySystemConstants = systemConstants.where((sc) {
-        return (isSuperUser && sc.company == null) ||
-            (sc.company != null && sc.company == companyId);
-      }).toList();
+      final companyId = authService.currentCompany?.id;
+
+      // Get existing system constants for the current company
+      final existingConstant = await systemConstantRepository
+          .getSystemConstantByCompany(companyId!);
 
       SystemConstant selectedSystemConstant;
-      if (companySystemConstants.isNotEmpty) {
-        selectedSystemConstant = companySystemConstants.first;
+
+      if (existingConstant != null) {
+        // Use existing system constant
+        developer.log('Found existing system constant for editing');
+        selectedSystemConstant = existingConstant;
       } else {
         // Create a new one if none exists
+        developer.log('No existing system constant, creating new one');
         selectedSystemConstant = SystemConstant(
           company: companyId,
           applyLotMgm: 'N',
@@ -383,6 +415,10 @@ class SystemConstantBloc
           autoSalesPrice: 'N',
           lotQtyAutoForSales: 'Y',
           locationCategoryLevel: 1,
+          rateVatPercentage: 15.0,
+          rateWithholdingPercentage: 2.0,
+          withHoldInitials: 1000.0,
+          generateBarcodeForItem: 'N',
         );
       }
 
@@ -429,7 +465,7 @@ class SystemConstantBloc
     emit(state.copyWith(status: SystemConstantStatus.loading));
     try {
       final user = authService.currentUser;
-      final companyId = user?.company;
+      final companyId = authService.currentCompany?.id;
 
       for (final systemConstant in event.systemConstants) {
         final systemConstantWithCompany = systemConstant.copyWith(
@@ -468,19 +504,23 @@ class SystemConstantBloc
     SaveInEdit event,
     Emitter<SystemConstantState> emit,
   ) async {
+    //only save if there is actual change
+    if (event.systemConstants.isEmpty) {
+      return;
+    }
     emit(state.copyWith(status: SystemConstantStatus.loading));
     try {
-      final user = authService.currentUser;
-      final companyId = user?.company;
+      final companyId = authService.currentCompany?.id;
+      final userId = authService.currentUser?.id;
       final now = DateTime.now();
 
       bool hasError = false;
 
       for (final systemConstant in event.systemConstants) {
         // Validate rates
-        if ((systemConstant.rateWithPercentage != null &&
-                (systemConstant.rateWithPercentage! < 0.0 ||
-                    systemConstant.rateWithPercentage! > 100.0)) ||
+        if ((systemConstant.rateWithholdingPercentage != null &&
+                (systemConstant.rateWithholdingPercentage! < 0.0 ||
+                    systemConstant.rateWithholdingPercentage! > 100.0)) ||
             (systemConstant.rateVatPercentage != null &&
                 (systemConstant.rateVatPercentage! < 0.0 ||
                     systemConstant.rateVatPercentage! > 100.0))) {
@@ -498,43 +538,57 @@ class SystemConstantBloc
           company: companyId,
           dateLastUpdated: now,
           timeLastUpdated: now,
-          rateWithPercentage: systemConstant.rateWithPercentage,
-          rateVatPercentage: systemConstant.rateVatPercentage,
-          updatedBy: user?.id,
+          updatedBy: userId,
         );
 
-        if (systemConstantToSave.id == null) {
+        // Check if we should update or create
+        final existingConstant = await systemConstantRepository
+            .getSystemConstantByCompany(companyId!);
+        SystemConstant? savedConstant;
+        if (existingConstant != null) {
+          // Update existing record - ensure we preserve the ID
+          developer.log(
+            'Updating existing system constant for company $companyId',
+          );
+          await systemConstantRepository.updateSystemConstant(
+            systemConstantToSave.copyWith(id: existingConstant.id),
+          );
+          savedConstant = systemConstantToSave.copyWith(
+            id: existingConstant.id,
+          );
+        } else {
+          // Create new record
+          developer.log('Creating new system constant for company $companyId');
           await systemConstantRepository.createSystemConstant(
             systemConstantToSave,
           );
-        } else {
-          await systemConstantRepository.updateSystemConstant(
-            systemConstantToSave,
+          systemConstantService.updateSystemConstant(systemConstantToSave);
+        }
+
+        if (!hasError) {
+          // RELOAD DATA AFTER SAVING
+          final updatedConstants = await systemConstantRepository
+              .getSystemConstants();
+
+          emit(
+            state.copyWith(
+              status: SystemConstantStatus.success,
+              systemConstants: updatedConstants,
+              errorMessage: null,
+            ),
           );
+          systemConstantService.updateSystemConstant(savedConstant!);
+          // Reload to get the latest data
+          add(const LoadSystemConstants());
         }
       }
-
-      if (!hasError) {
-        emit(state.copyWith(status: SystemConstantStatus.success));
-      }
-      add(const LoadSystemConstants());
     } catch (e) {
-      if (e is NetworkException) {
-        emit(
-          state.copyWith(
-            status: SystemConstantStatus.success,
-            errorMessage: 'Saved locally. Will sync when online: ${e.message}',
-          ),
-        );
-        add(const LoadSystemConstants()); // Reload to include local changes
-      } else {
-        emit(
-          state.copyWith(
-            status: SystemConstantStatus.failure,
-            errorMessage: e.toString(),
-          ),
-        );
-      }
+      emit(
+        state.copyWith(
+          status: SystemConstantStatus.failure,
+          errorMessage: 'Failed to save system constants: ${e.toString()}',
+        ),
+      );
     }
   }
 

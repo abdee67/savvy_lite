@@ -108,3 +108,10 @@ class ResetPayment extends PaymentEvent {
   @override
   List<Object> get props => [];
 }
+
+class WaitForSystemConstants extends PaymentEvent {
+  const WaitForSystemConstants();
+
+  @override
+  List<Object> get props => [];
+}

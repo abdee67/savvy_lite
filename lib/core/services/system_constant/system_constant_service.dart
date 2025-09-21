@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
@@ -11,16 +12,23 @@ class SystemConstantsService with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
+  // Add stream controller for bloc integration
+  final StreamController<SystemConstant?> _streamController =
+      StreamController<SystemConstant?>.broadcast();
+
   SystemConstantsService(this._repository);
 
   SystemConstant? get currentSystemConstant => _currentSystemConstant;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // Tax and withholding properties
-  double get vatRate => _currentSystemConstant?.rateVatPercentage ?? 0.15;
+  // Add stream for bloc integration
+  Stream<SystemConstant?> get systemConstantsStream => _streamController.stream;
+
+  // Tax and withholding properties with better null safety
+  double get vatRate => _currentSystemConstant?.rateVatPercentage ?? 15.0;
   double get withholdingRate =>
-      _currentSystemConstant?.rateWithPercentage ?? 0.02;
+      _currentSystemConstant?.rateWithholdingPercentage ?? 2.0;
   double get withholdingInitial =>
       _currentSystemConstant?.withHoldInitials ?? 1000.0;
 
@@ -30,7 +38,7 @@ class SystemConstantsService with ChangeNotifier {
   bool get autoGenerateBarcode =>
       _currentSystemConstant?.generateBarcodeForItem == 'Y';
 
-  Future<void> loadSystemConstants() async {
+  Future<void> _loadSystemConstants() async {
     if (_isLoading) return;
 
     _isLoading = true;
@@ -40,32 +48,101 @@ class SystemConstantsService with ChangeNotifier {
     try {
       _currentSystemConstant = await _repository
           .getCurrentCompanySystemConstants();
+
+      developer.log(
+        'Loaded system constants from database: ${_currentSystemConstant?.toJson()}',
+      );
+
+      // If still null, create a default and save it
+      if (_currentSystemConstant == null) {
+        developer.log('No system constants found, creating default...');
+        final companyId = await _repository.getCurrentCompanySystemConstants();
+        _currentSystemConstant = SystemConstant(
+          company: companyId.id,
+          applyLotMgm: 'N',
+          applyLocationMgm: 'Y',
+          decimalPlaces: 2,
+          rateVatPercentage: 15.0,
+          rateWithholdingPercentage: 2.0,
+          withHoldInitials: 1000.0,
+          autoSalesPrice: 'N',
+          generateBarcodeForItem: 'N',
+          lotQtyAutoForSales: 'Y',
+          locationCategoryLevel: 1,
+          isSynced: false,
+        );
+
+        // Save to database
+        await _repository.createSystemConstant(_currentSystemConstant!);
+      }
+
+      developer.log(
+        'System constants loaded: ${_currentSystemConstant?.toJson()}',
+      );
+
       _error = null;
-      developer.log('System constants loaded successfully');
+      notifyListeners();
+
+      // Notify stream listeners
+      _streamController.add(_currentSystemConstant);
     } on NetworkException catch (e) {
       _error = 'Using offline data: ${e.message}';
       developer.log('Using offline data: ${e.message}');
-      if (kDebugMode) {
-        print(_error);
+
+      // Even in error, try to get local data
+      try {
+        _currentSystemConstant = await _getLocalSystemConstants();
+        _streamController.add(_currentSystemConstant);
+      } catch (localError) {
+        _error = 'Completely offline: $localError';
+        _streamController.addError(localError);
       }
     } on ServerException catch (e) {
       _error = 'Server error: ${e.message}';
       developer.log('Server error: ${e.message}');
+      _streamController.addError(e);
     } catch (e) {
       _error = 'Failed to load system constants: $e';
       developer.log('Failed to load system constants: $e');
+      _streamController.addError(e);
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
+  // Helper to get local constants as fallback
+  Future<SystemConstant> _getLocalSystemConstants() async {
+    try {
+      final constants = await _repository.getLocalSystemConstants();
+      if (constants.isNotEmpty) {
+        return constants.first;
+      }
+      throw Exception('No local system constants found');
+    } catch (e) {
+      // Return a default if everything fails
+      return SystemConstant(
+        applyLotMgm: 'N',
+        applyLocationMgm: 'Y',
+        decimalPlaces: 2,
+        rateVatPercentage: 15.0,
+        rateWithholdingPercentage: 2.0,
+        withHoldInitials: 1000.0,
+        autoSalesPrice: 'N',
+        generateBarcodeForItem: 'N',
+        lotQtyAutoForSales: 'Y',
+        locationCategoryLevel: 1,
+      );
+    }
+  }
+
   Future<void> refreshSystemConstants() async {
-    await loadSystemConstants();
+    await _loadSystemConstants();
   }
 
   Future<void> updateSystemConstant(SystemConstant systemConstant) async {
     _isLoading = true;
+    _currentSystemConstant = systemConstant;
     notifyListeners();
 
     try {
@@ -76,11 +153,15 @@ class SystemConstantsService with ChangeNotifier {
       }
 
       // Reload after update
-      await loadSystemConstants();
+      await _loadSystemConstants();
     } on NetworkException catch (e) {
       _error = 'Updated locally (will sync later): ${e.message}';
+      // Still update local reference
+      _currentSystemConstant = systemConstant;
+      _streamController.add(_currentSystemConstant);
     } catch (e) {
       _error = 'Failed to update system constant: $e';
+      _streamController.addError(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -90,28 +171,60 @@ class SystemConstantsService with ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+    _currentSystemConstant = null;
+    _isLoading = false;
   }
 
-  // Helper method to check if withholding should be applied
+  // Improved helper methods with error handling
   bool shouldApplyWithholding(double subtotal) {
-    return subtotal >= withholdingInitial;
-  }
-
-  // Helper method to calculate tax amount
-  double calculateTaxAmount(double subtotal) {
-    return subtotal * vatRate;
-  }
-
-  // Helper method to calculate withholding amount
-  double calculateWithholdingAmount(double subtotal) {
-    if (shouldApplyWithholding(subtotal)) {
-      return subtotal * withholdingRate;
+    try {
+      return subtotal >= withholdingInitial;
+    } catch (e) {
+      developer.log('Error in shouldApplyWithholding: $e');
+      return false;
     }
-    return 0.0;
   }
 
-  // Helper method to format numbers based on decimal places
+  double calculateTaxAmount(double subtotal) {
+    try {
+      return subtotal * (vatRate / 100);
+    } catch (e) {
+      developer.log('Error in calculateTaxAmount: $e');
+      return 0.0;
+    }
+  }
+
+  double calculateWithholdingAmount(double subtotal) {
+    try {
+      if (shouldApplyWithholding(subtotal)) {
+        return (subtotal * (withholdingRate / 100));
+      }
+      return 0.0;
+    } catch (e) {
+      developer.log('Error in calculateWithholdingAmount: $e');
+      return 0.0;
+    }
+  }
+
   String formatNumber(double value) {
-    return value.toStringAsFixed(decimalPlaces);
+    try {
+      return value.toStringAsFixed(decimalPlaces);
+    } catch (e) {
+      developer.log('Error in formatNumber: $e');
+      return value.toString();
+    }
+  }
+
+  @override
+  void dispose() {
+    _streamController.close();
+    super.dispose();
+  }
+
+  // Ensure system constants are loaded before use
+  Future<void> ensureLoaded() async {
+    if (_currentSystemConstant == null && !_isLoading) {
+      await _loadSystemConstants();
+    }
   }
 }

@@ -14,38 +14,29 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 final getIt = GetIt.instance;
 
-Future<void> initDependencies() async {
-  final prefs = await SharedPreferences.getInstance();
-  final client = http.Client();
-  getIt.registerLazySingleton<SharedPreferences>(() => prefs);
-  getIt.registerLazySingleton<http.Client>(() => client);
-  // Blocs
+void initDependencies() {
+  // Auth Service (with fake authentication)
+  getIt.registerLazySingleton<AuthService>(() => AuthService());
 
-  // Repositories
-  getIt.registerLazySingleton<SalesRepository>(() => SalesRepositoryImpl());
+  // HTTP Client
+  getIt.registerLazySingleton<http.Client>(() => http.Client());
 
-  // Repository
-  getIt.registerLazySingleton<SystemConstantRepository>(
-    () => SystemConstantRepository(localDatabaseService: getIt()),
-  );
-
+  // Database Service
   getIt.registerLazySingleton<LocalDatabaseService>(
     () => LocalDatabaseService(),
   );
 
-  getIt.registerLazySingleton<AuthService>(() => AuthService(prefs, client));
-
-  // BLoCs
-  getIt.registerFactory<SystemConstantBloc>(
-    () => SystemConstantBloc(
-      systemConstantRepository: getIt(),
-      authService: getIt(),
-      udcService: getIt(),
+  // Repository (with auth service dependency)
+  getIt.registerLazySingleton<SystemConstantRepository>(
+    () => SystemConstantRepository(
+      baseUrl: ApiConstants.baseUrl,
+      localDatabaseService: getIt(),
+      httpClient: getIt(),
+      authService: getIt(), // Pass auth service
     ),
   );
 
-  getIt.registerLazySingleton<UdcService>(() => UdcService(getIt()));
-
+  // UDC Repository
   getIt.registerLazySingleton<UdcRepository>(
     () => UdcRepository(
       baseUrl: ApiConstants.baseUrl,
@@ -54,11 +45,22 @@ Future<void> initDependencies() async {
     ),
   );
 
+  // Services
   getIt.registerLazySingleton<SystemConstantsService>(
     () => SystemConstantsService(getIt()),
   );
 
+  getIt.registerLazySingleton<UdcService>(() => UdcService(getIt()));
+
+  // BLoCs
+  getIt.registerFactory<SystemConstantBloc>(
+    () => SystemConstantBloc(
+      systemConstantRepository: getIt(),
+      udcService: getIt(),
+      authService: getIt(), // Pass auth service
+      systemConstantService: getIt(),
+    ),
+  );
+
   getIt.registerFactory<PaymentBloc>(() => PaymentBloc(getIt()));
-  // HTTP Client
-  // Other dependencies...
 }

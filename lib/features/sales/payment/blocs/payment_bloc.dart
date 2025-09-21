@@ -10,7 +10,8 @@ import 'package:savvy_stock/features/sales/payment/models/payment_model.dart';
 
 class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
   final SystemConstantsService _systemConstantsService;
-  VoidCallback? _systemConstantsSubscription;
+  StreamSubscription? _systemConstantsSubscription;
+  bool _isSystemConstantsLoaded = false;
 
   PaymentBloc(this._systemConstantsService) : super(const PaymentState()) {
     on<LoadPayment>(_onLoadPayment);
@@ -22,26 +23,61 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     on<CancelPayment>(_onCancelPayment);
     on<ResetPayment>(_onResetPayment);
     on<LoadFeeSystemConstants>(_onLoadFeeSystemConstants);
+    on<WaitForSystemConstants>(_onWaitForSystemConstants);
 
-    // Listen to system constants changes
-    _systemConstantsSubscription = () {
-      if (_systemConstantsService.currentSystemConstant != null) {
-        add(const LoadFeeSystemConstants());
-      }
-    };
-
-    _systemConstantsService.addListener(_systemConstantsSubscription!);
+    // Listen to system constants changes properly
+    _systemConstantsSubscription = _systemConstantsService.systemConstantsStream
+        .listen(
+          (systemConstant) {
+            if (systemConstant != null) {
+              _isSystemConstantsLoaded = true;
+              add(const LoadFeeSystemConstants());
+            }
+          },
+          onError: (error) {
+            emit(
+              state.copyWith(
+                systemConstantsError: 'System constants error: $error',
+              ),
+            );
+          },
+        );
 
     // Load system constants initially
-    _systemConstantsService.loadSystemConstants();
+    _loadInitialSystemConstants();
+  }
+
+  Future<void> _loadInitialSystemConstants() async {
+    try {
+      await _systemConstantsService.ensureLoaded();
+      _isSystemConstantsLoaded = true;
+      add(const LoadFeeSystemConstants());
+    } catch (e) {
+      emit(
+        state.copyWith(
+          systemConstantsError: 'Failed to load system constants: $e',
+        ),
+      );
+    }
+  }
+
+  void _onWaitForSystemConstants(
+    WaitForSystemConstants event,
+    Emitter<PaymentState> emit,
+  ) {
+    if (!_isSystemConstantsLoaded) {
+      emit(
+        state.copyWith(
+          status: PaymentStatus.loading,
+          systemConstantsError: 'Waititng for system constants to  load...',
+        ),
+      );
+    }
   }
 
   @override
   Future<void> close() {
-    if (_systemConstantsSubscription != null) {
-      _systemConstantsService.removeListener(_systemConstantsSubscription!);
-      _systemConstantsSubscription = null;
-    }
+    _systemConstantsSubscription?.cancel();
     return super.close();
   }
 
@@ -131,16 +167,18 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
 
   void _onUpdateTaxAndFees(UpdateTaxAndFees event, Emitter<PaymentState> emit) {
     try {
-      final taxAmount = _systemConstantsService.calculateTaxAmount(
-        event.subtotal,
-      );
+      // Use the current rates from the service
+      final vatRate = _systemConstantsService.vatRate;
+      final withholdingRate = _systemConstantsService.withholdingRate;
+      final withholdingInitial = _systemConstantsService.withholdingInitial;
+
+      final taxAmount = event.subtotal * (vatRate / 100);
       developer.log('Tax Amount: $taxAmount');
       // Calculate withholding only if it's enabled and subtotal meets minimum
       double newWithholdingAmount = 0;
       if (event.isWithholdingEnabled) {
-        if (event.subtotal >= state.withholdingInitial) {
-          newWithholdingAmount = _systemConstantsService
-              .calculateWithholdingAmount(event.subtotal);
+        if (event.subtotal >= withholdingInitial) {
+          newWithholdingAmount = event.subtotal * (withholdingRate / 100);
         }
       }
 
@@ -150,8 +188,7 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
           event.discountAmount -
           newWithholdingAmount;
 
-      final canApplyWithholding = _systemConstantsService
-          .shouldApplyWithholding(event.subtotal);
+      final canApplyWithholding = event.subtotal >= withholdingInitial;
 
       emit(
         state.copyWith(
@@ -163,6 +200,9 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
           grandTotal: grandTotal,
           canApplyWithholding: canApplyWithholding,
           systemConstantsError: _systemConstantsService.error,
+          vatRate: vatRate,
+          withholdingRate: withholdingRate,
+          withholdingInitial: withholdingInitial,
         ),
       );
     } catch (e) {

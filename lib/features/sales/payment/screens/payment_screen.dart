@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
+import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_event.dart';
@@ -52,6 +55,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Payment'),
+        actions: [
+          IconButton(
+            icon: const Icon(Iconsax.refresh),
+            onPressed: () {
+              context.read<PaymentBloc>().add(const LoadFeeSystemConstants());
+            },
+            tooltip: 'Refresh data',
+          ),
+        ],
         backgroundColor: const Color(0xFF155888),
         foregroundColor: Colors.white,
         elevation: 2,

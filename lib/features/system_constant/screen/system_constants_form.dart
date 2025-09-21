@@ -145,13 +145,16 @@ class _SystemConstantsFormState extends State<SystemConstantsForm> {
                   ),
                   _buildNumberField(
                     'Withholding Percentage',
-                    systemConstants.first.rateWithPercentage?.toString() ?? '',
+                    systemConstants.first.rateWithholdingPercentage
+                            ?.toString() ??
+                        '',
                     (value) {
                       final withPercentage = double.tryParse(value);
                       final updatedSystemConstants = systemConstants
                           .map(
-                            (sc) =>
-                                sc.copyWith(rateWithPercentage: withPercentage),
+                            (sc) => sc.copyWith(
+                              rateWithholdingPercentage: withPercentage,
+                            ),
                           )
                           .toList();
                       _updateSystemConstants(context, updatedSystemConstants);
