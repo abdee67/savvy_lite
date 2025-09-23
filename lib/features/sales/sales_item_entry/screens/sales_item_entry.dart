@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_event.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_state.dart';
@@ -11,10 +12,11 @@ class ItemEntryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => ItemEntryBloc()..add(LoadItemsAndStores()),
-      child: const ItemEntryScreenView(),
+    final customerBloc = context.read<CustomerBloc>();
+    context.read<ItemEntryBloc>().add(
+      LoadItemsAndStores(customerBloc: customerBloc),
     );
+    return ItemEntryScreenView();
   }
 }
 
@@ -48,6 +50,17 @@ class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
 
   @override
   Widget build(BuildContext context) {
+    // Debug: Check global CustomerBloc
+    final customerBloc = context.read<CustomerBloc>();
+    print(
+      'Global CustomerBloc selected customer: ${customerBloc.state.selectedBillToCustomer.name}',
+    );
+
+    // Debug: Check global ItemEntryBloc
+    final itemEntryBloc = context.read<ItemEntryBloc>();
+    print(
+      'Global ItemEntryBloc items: ${itemEntryBloc.state.confirmedItems.length}',
+    );
     return Scaffold(
       appBar: AppBar(title: const Text('Sales Item Entry')),
       resizeToAvoidBottomInset: false,
@@ -99,10 +112,7 @@ class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
                             itemBuilder: (context, index) {
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 4.0),
-                                child: SalesItemEntryForm(
-                                  state: state,
-                                  index: index,
-                                ),
+                                child: SalesItemEntryForm(index: index),
                               );
                             },
                           ),

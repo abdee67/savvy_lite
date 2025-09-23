@@ -28,16 +28,6 @@ class SelectShipToCustomer extends CustomerEvent {
   List<Object> get props => [customer];
 }
 
-class AddCustomer extends CustomerEvent {
-  final Customer customer;
-  const AddCustomer(this.customer);
-
-  @override
-  List<Object> get props => [customer];
-}
-
-class ClearSelection extends CustomerEvent {}
-
 class UpdateCustomerDetails extends CustomerEvent {
   final String tin;
   final String phone;
@@ -51,4 +41,74 @@ class UpdateCustomerDetails extends CustomerEvent {
 
   @override
   List<Object> get props => [tin, phone, country];
+}
+
+class SearchCustomers extends CustomerEvent {
+  final String query;
+  const SearchCustomers(this.query);
+
+  @override
+  List<Object> get props => [query];
+}
+
+class SelectCustomer extends CustomerEvent {
+  final Customer customer;
+  final bool isSelected;
+  const SelectCustomer(this.customer, {this.isSelected = true});
+
+  @override
+  List<Object> get props => [customer, isSelected];
+}
+
+class SelectAllCustomers extends CustomerEvent {
+  final bool selectAll;
+  const SelectAllCustomers(this.selectAll);
+
+  @override
+  List<Object> get props => [selectAll];
+}
+
+class ClearSelection extends CustomerEvent {}
+
+class DeleteSelectedCustomers extends CustomerEvent {}
+
+class UndoDelete extends CustomerEvent {
+  final Customer deletedItem;
+  final int deletedIndex;
+
+  const UndoDelete({required this.deletedItem, required this.deletedIndex});
+}
+
+class ShowCustomerDetail extends CustomerEvent {
+  final Customer customer;
+  const ShowCustomerDetail(this.customer);
+
+  @override
+  List<Object> get props => [customer];
+}
+
+class HideCustomerDetail extends CustomerEvent {}
+
+class AddCustomer extends CustomerEvent {
+  final Customer customer;
+  const AddCustomer(this.customer);
+
+  @override
+  List<Object> get props => [customer];
+}
+
+class UpdateCustomer extends CustomerEvent {
+  final Customer customer;
+  const UpdateCustomer(this.customer);
+
+  @override
+  List<Object> get props => [customer];
+}
+
+class ExportCustomer extends CustomerEvent {
+  final Customer customer;
+  const ExportCustomer(this.customer);
+
+  @override
+  List<Object> get props => [customer];
 }

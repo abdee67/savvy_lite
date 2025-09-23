@@ -1,6 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
-import 'package:savvy_stock/features/sales/payment/screens/paymentSummary.dart';
+import 'package:savvy_stock/features/sales/payment/screens/payment_screen.dart';
 import 'package:savvy_stock/features/sales/payment/screens/successful_payment_screen.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
 
@@ -15,7 +15,14 @@ class PaymentRoutes {
       final totalAmount = extra['totalAmount'] as double? ?? 0.0;
       final customer =
           extra['customer'] as Customer? ??
-          const Customer(id: '', name: '', tin: '', phone: '', country: '');
+          const Customer(
+            id: '',
+            name: '',
+            tin: '',
+            phone: '',
+            country: '',
+            email: '',
+          );
 
       return PaymentScreen(
         confirmedItems: confirmedItems,

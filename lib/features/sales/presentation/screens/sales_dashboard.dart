@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_event.dart';
 
 class SalesDashboard extends StatefulWidget {
   const SalesDashboard({super.key});
@@ -116,12 +119,28 @@ class _SalesDashboardState extends State<SalesDashboard> {
               const Spacer(),
 
               // Three dot menu
-              IconButton(
-                icon: const Icon(Icons.more_vert),
-                onPressed: () {
-                  // Handle the button press, e.g., show a PopupMenuButton
+              // Handle the button press, e.g., show a PopupMenuButton
+              PopupMenuButton<String>(
+                tooltip: 'More',
+                iconColor: Colors.white,
+                onSelected: (value) {
+                  if (value == 'System Constants') {
+                    context.push('/system_constant');
+                  } else if (value == 'Logout') {
+                    context.read<AuthBloc>().add(LogoutRequested());
+                  }
                 },
-                color: Colors.white,
+                itemBuilder: (BuildContext context) => [
+                  PopupMenuItem<String>(
+                    child: const Text('System Constants'),
+                    onTap: () => context.push('/system_constant'),
+                  ),
+                  PopupMenuItem<String>(
+                    child: const Text('Logout'),
+                    onTap: () =>
+                        context.read<AuthBloc>().add(LogoutRequested()),
+                  ),
+                ],
               ),
             ],
           ),
@@ -261,7 +280,7 @@ class _SalesDashboardState extends State<SalesDashboard> {
         break;
 
       case "Customer Entry":
-        context.push('/customer-screen');
+        context.push('/customer-list');
         break;
 
       default:
