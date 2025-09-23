@@ -1,18 +1,13 @@
-import 'dart:async';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:intl/intl.dart';
-import 'package:savvy_stock/core/constants/payment_constants.dart';
 import 'package:savvy_stock/core/di/injection_container.dart';
 import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_event.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_state.dart';
 import 'package:savvy_stock/core/services/system_constant/system_constant_service.dart';
-import 'package:savvy_stock/core/models/system_constant.dart';
 
 class PaymentDetails extends StatefulWidget {
   const PaymentDetails({super.key});

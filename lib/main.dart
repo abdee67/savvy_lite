@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -14,6 +15,8 @@ import 'package:savvy_stock/core/services/conectitvity_service.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/core/services/system_constant/system_constant_service.dart';
 import 'package:savvy_stock/core/services/udc_service.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/invoice/blocs/invoice_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
@@ -32,18 +35,18 @@ Future<void> _initializeAndRunApp() async {
   try {
     await ConnectivityService().initConnectivity();
     initDependencies();
-    await getIt<SystemConstantsService>().ensureLoaded();
+    // await LocalDatabaseService().resetDatabase();
 
     if (AppConfig.isTestMode) {
-      print('🚀 APP RUNNING IN TEST MODE');
-      print('📱 API calls bypassed');
-      print('💾 Using local database only');
+      developer.log('🚀 APP RUNNING IN TEST MODE');
+      developer.log('📱 API calls bypassed');
+      developer.log('💾 Using local database only');
     }
     // Debug database tables (optional - remove in production)
-    await LocalDatabaseService().debugTable('system_constant');
+    await LocalDatabaseService().debugTable('role_table');
   } catch (error, stackTrace) {
-    debugPrint('Initialization error: $error');
-    debugPrint('Stack trace: $stackTrace');
+    developer.log('Initialization error: $error');
+    developer.log('Stack trace: $stackTrace');
   }
   runApp(const SavvyStock());
 }
@@ -60,10 +63,12 @@ class _SavvyStockState extends State<SavvyStock> {
   bool hasError = false;
   String? errorMessage;
   late GoRouter _router;
+  late AuthBloc _authBloc;
 
   @override
   void initState() {
     super.initState();
+    _authBloc = getIt<AuthBloc>();
     _initializeApp();
   }
 
@@ -78,7 +83,10 @@ class _SavvyStockState extends State<SavvyStock> {
       });
 
       // Initialize router after onboarding status is determined
-      _router = AppRouter(showOnboarding: showOnboarding).router;
+      _router = AppRouter(
+        showOnboarding: showOnboarding,
+        authBloc: _authBloc,
+      ).router;
     } catch (e) {
       setState(() {
         hasError = true;
@@ -144,6 +152,8 @@ class _SavvyStockState extends State<SavvyStock> {
     return MultiProvider(
       providers: [
         // Bloc providers
+        // Provide the SAME instance used by AppRouter so redirects react to auth changes
+        BlocProvider<AuthBloc>.value(value: _authBloc),
         BlocProvider<CustomerBloc>(create: (context) => CustomerBloc()),
         BlocProvider<ItemEntryBloc>(create: (context) => ItemEntryBloc()),
         BlocProvider<PaymentBloc>(
@@ -153,7 +163,9 @@ class _SavvyStockState extends State<SavvyStock> {
         BlocProvider<SystemConstantBloc>(
           create: (context) => SystemConstantBloc(
             systemConstantRepository: getIt<SystemConstantRepository>(),
-            authService: getIt<AuthService>(),
+            // authService: getIt<AuthService>(),
+            // Use the same AuthBloc instance to avoid multiple instances
+            authBloc: _authBloc,
             udcService: getIt<UdcService>(),
             systemConstantService: getIt<SystemConstantsService>(),
           )..add(LoadSystemConstants()),

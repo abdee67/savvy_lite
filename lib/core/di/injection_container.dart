@@ -8,15 +8,25 @@ import 'package:savvy_stock/core/services/auth/auth_service.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/core/services/system_constant/system_constant_service.dart';
 import 'package:savvy_stock/core/services/udc_service.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
-import 'package:savvy_stock/features/sales/repositories/sales_repository.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 final getIt = GetIt.instance;
 
 void initDependencies() {
   // Auth Service (with fake authentication)
-  getIt.registerLazySingleton<AuthService>(() => AuthService());
+  // getIt.registerLazySingleton<AuthService>(() => AuthService());
+
+  // Auth Bloc
+  getIt.registerFactory<AuthBloc>(
+    () => AuthBloc(databaseService: getIt(), secureStorage: getIt()),
+  );
+
+  // Secure Storage
+  getIt.registerLazySingleton<FlutterSecureStorage>(
+    () => FlutterSecureStorage(),
+  );
 
   // HTTP Client
   getIt.registerLazySingleton<http.Client>(() => http.Client());
@@ -32,7 +42,7 @@ void initDependencies() {
       baseUrl: ApiConstants.baseUrl,
       localDatabaseService: getIt(),
       httpClient: getIt(),
-      authService: getIt(), // Pass auth service
+      authBloc: getIt(), // Pass auth service
     ),
   );
 
@@ -57,7 +67,7 @@ void initDependencies() {
     () => SystemConstantBloc(
       systemConstantRepository: getIt(),
       udcService: getIt(),
-      authService: getIt(), // Pass auth service
+      authBloc: getIt(),
       systemConstantService: getIt(),
     ),
   );

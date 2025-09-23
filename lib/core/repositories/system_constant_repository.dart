@@ -7,6 +7,7 @@ import 'package:savvy_stock/core/constants/api_constants.dart';
 import 'package:savvy_stock/core/models/system_constant.dart';
 import 'package:savvy_stock/core/services/auth/auth_service.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../errors/exceptions.dart';
@@ -14,13 +15,14 @@ import '../errors/exceptions.dart';
 class SystemConstantRepository {
   final LocalDatabaseService localDatabaseService;
   final String baseUrl;
-  final AuthService authService;
+  // final AuthService authService;
   final http.Client httpClient;
+  final AuthBloc authBloc;
 
   SystemConstantRepository({
     this.baseUrl = ApiConstants.baseUrl,
     required this.localDatabaseService,
-    required this.authService,
+    required this.authBloc,
     required this.httpClient,
   });
 
@@ -58,7 +60,7 @@ class SystemConstantRepository {
       await _saveSystemConstantToLocal(remoteConstant);
       developer.log('Successfully retrieved system constant from API');
       return remoteConstant;
-    } on NetworkException catch (e) {
+    } on NetworkException {
       // If API fails, try to get from local database
       try {
         final localConstant = await _getLocalSystemConstant(id);
@@ -68,7 +70,7 @@ class SystemConstantRepository {
           );
           return localConstant;
         }
-        throw e; // Re-throw if no local data
+        rethrow; // Re-throw if no local data
       } catch (dbError) {
         throw NetworkException('Failed to fetch system constant: $dbError');
       }
@@ -83,7 +85,7 @@ class SystemConstantRepository {
 
     try {
       final db = await localDatabaseService.database;
-      final companyId = authService.currentCompany?.id;
+      final companyId = authBloc.state.companyId;
 
       // Try to get company-specific constants first
       final companyMaps = await db.query(
@@ -171,7 +173,7 @@ class SystemConstantRepository {
 
   Future<SystemConstant> _getLocalCompanySystemConstants() async {
     final db = await localDatabaseService.database;
-    final companyId = authService.currentCompany?.id;
+    final companyId = authBloc.state.companyId;
 
     try {
       // Try to get company-specific constants first
@@ -315,7 +317,7 @@ class SystemConstantRepository {
   // Create system constant (offline-first)
   Future<void> createSystemConstant(SystemConstant systemConstant) async {
     final db = await localDatabaseService.database;
-    final companyId = authService.currentCompany?.id;
+    final companyId = authBloc.state.companyId;
     try {
       if (companyId != null) {
         final existingSystemConstant = await getSystemConstantByCompany(
@@ -449,13 +451,7 @@ class SystemConstantRepository {
         // Check if exists locally
         final existing = await getSystemConstant(remoteConstant.id!);
 
-        if (existing == null) {
-          // Insert new record
-          await db.insert(
-            'system_constant',
-            remoteConstant.copyWith(isSynced: true).toDatabaseMap(),
-          );
-        } else if (existing.lastSyncTime == null ||
+        if (existing.lastSyncTime == null ||
             remoteConstant.lastSyncTime != null &&
                 remoteConstant.lastSyncTime!.isAfter(existing.lastSyncTime!)) {
           // Update existing record if remote is newer

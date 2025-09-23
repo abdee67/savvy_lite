@@ -21,6 +21,7 @@ class CustomTextField extends StatefulWidget {
   final TextInputAction? textInputAction;
   final String? hintText;
   final FocusNode? focusNode;
+  final bool obscureText;
 
   const CustomTextField({
     super.key,
@@ -42,6 +43,7 @@ class CustomTextField extends StatefulWidget {
     this.hintText,
     this.textInputAction,
     this.focusNode,
+    this.obscureText = false,
   });
 
   @override
@@ -102,7 +104,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
       height: widget.isTablet ? 60 : 56,
       child: TextFormField(
         controller: _controller,
-        obscureText: widget.isPassword,
+        obscureText: widget.obscureText,
         validator: widget.validator,
         autovalidateMode: widget.autovalidateMode,
         keyboardType: widget.keyboardType,

@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:argon2/argon2.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'dart:developer' as developer;
@@ -116,12 +119,116 @@ class LocalDatabaseService {
         margin_rate REAL,
         margin_type TEXT,
         inventory_planner INTEGER,
-        FOREIGN KEY (category_code) REFERENCES udc_details (id) ON DELETE NO ACTION ON UPDATE NO ACTION
+        FOREIGN KEY (category_code) REFERENCES udc_details (detail_code) ON DELETE NO ACTION ON UPDATE NO ACTION
       )
     ''');
     developer.log('Created table: company_table');
 
-    // 4. Create user_table
+    //4. Create branch table
+    await db.execute('''
+  CREATE TABLE branch_table (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    reference_id INTEGER,
+    description TEXT,
+    city TEXT,
+    region TEXT,
+    state TEXT,
+    country TEXT,
+    address_line TEXT,
+    company INTEGER,
+    branch_phone TEXT,
+    margin_rate REAL,
+    margin_type TEXT,
+    FOREIGN KEY (company) REFERENCES company_table(id)
+  );
+''');
+    developer.log('Created table: branch_table');
+
+    //5. Create employee table
+    await db.execute('''
+  CREATE TABLE employees (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    employee_id TEXT,
+    name_first TEXT,
+    name_last TEXT,
+    name_middle TEXT,
+    title TEXT,
+    birth_date TEXT,
+    hire_date TEXT,
+    address TEXT,
+    city TEXT,
+    region TEXT,
+    country TEXT,
+    phone_home TEXT,
+    gender TEXT,
+    company INTEGER,
+    branch INTEGER,
+    FOREIGN KEY (company) REFERENCES company_table(id),
+    FOREIGN KEY (branch) REFERENCES branch_table(id)
+  );
+''');
+    developer.log('Created table: employees');
+
+    //6.create previlage table
+    await db.execute('''
+  CREATE TABLE previlage_table (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    description TEXT,
+    created_by INTEGER,
+    date_created TEXT,
+    updated_by INTEGER,
+    date_updated TEXT,
+    type TEXT,
+    link TEXT,
+    button TEXT,
+    link_lable TEXT UNIQUE,
+    button_lable TEXT,
+    vendor_only TEXT DEFAULT 'N',
+    FOREIGN KEY (created_by) REFERENCES employees(id),
+    FOREIGN KEY (updated_by) REFERENCES employees(id)
+  );
+''');
+    developer.log('Created table: previlage_table');
+
+    //7.Create role table
+    await db.execute('''
+  CREATE TABLE role_table (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    created_by INTEGER,
+    updated_by INTEGER,
+    description TEXT,
+    date_created TEXT,
+    date_updated TEXT,
+    company INTEGER,
+    UNIQUE (name, company),
+    FOREIGN KEY (created_by) REFERENCES employees(id),
+    FOREIGN KEY (updated_by) REFERENCES employees(id),
+    FOREIGN KEY (company) REFERENCES company_table(id)
+  );
+''');
+    developer.log('Created table: role_table');
+
+    //8.create role_previlage table
+    await db.execute('''
+  CREATE TABLE role_previlage (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    role_table_id INTEGER,
+    previlage_table_id INTEGER,
+    created_by INTEGER,
+    updated_by INTEGER,
+    date_created TEXT,
+    date_updated TEXT,
+    FOREIGN KEY (role_table_id) REFERENCES role_table(id),
+    FOREIGN KEY (previlage_table_id) REFERENCES previlage_table(id),
+    FOREIGN KEY (created_by) REFERENCES employees(id),
+    FOREIGN KEY (updated_by) REFERENCES employees(id)
+  );
+''');
+    developer.log('Created table: role_previlage');
+
+    // 9. Create user_table
     await db.execute('''
       CREATE TABLE user_table (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -142,12 +249,34 @@ class LocalDatabaseService {
         user_name TEXT,
         type TEXT DEFAULT 'Company',
         salesperson INTEGER,
-        FOREIGN KEY (company) REFERENCES company_table (id) ON DELETE NO ACTION ON UPDATE NO ACTION
+          FOREIGN KEY (employees_id) REFERENCES employees(id),
+    FOREIGN KEY (created_by) REFERENCES employees(id),
+    FOREIGN KEY (updated_by) REFERENCES employees(id),
+    FOREIGN KEY (branch) REFERENCES branch_table(id),
+    FOREIGN KEY (company) REFERENCES company_table(id)
       )
     ''');
     developer.log('Created table: user_table');
 
-    // 5. Create system_constant table
+    //10. Create user role table
+    await db.execute('''
+  CREATE TABLE user_role (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    role_table_id INTEGER,
+    user_id INTEGER,
+    created_by INTEGER,
+    updated_by INTEGER,
+    date_created TEXT,
+    date_updated TEXT,
+    FOREIGN KEY (role_table_id) REFERENCES role_table(id),
+    FOREIGN KEY (user_id) REFERENCES user_table(id),
+    FOREIGN KEY (created_by) REFERENCES employees(id),
+    FOREIGN KEY (updated_by) REFERENCES employees(id)
+  );
+''');
+    developer.log('Created table: user_role');
+
+    // 11. Create system_constant table
     await db.execute('''
       CREATE TABLE system_constant (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -194,6 +323,22 @@ class LocalDatabaseService {
     ''');
     developer.log('Created table: sync_queue');
 
+    // Add indexes for better performance
+    await db.execute('CREATE INDEX idx_company ON company_table(id)');
+    await db.execute('CREATE INDEX idx_user_company ON user_table(company)');
+    await db.execute(
+      'CREATE INDEX idx_privilege_uri ON previlage_table(link_lable)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_role_table_id ON user_role(role_table_id)',
+    );
+    await db.execute('CREATE INDEX idx_user_id ON user_role(user_id)');
+
+    await db.execute('''
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_user_company_username
+  ON user_table (user_name, company)
+''');
+
     // Insert default data for LOT types
     await _insertDefaultData(db);
   }
@@ -239,6 +384,158 @@ class LocalDatabaseService {
       await db.insert('udc_details', lotType);
     }
     developer.log('Inserted default LOT types');
+
+    // Insert Company
+    await db.insert('company_table', {
+      'id': 1,
+      'company_name': 'Savvy Corp',
+      'tin_number': 'TIN123456',
+      'phone_number_1': '+251911223344',
+      'email_address_1': 'info@savvy.com',
+      'city': 'Addis Ababa',
+      'country': 'Ethiopia',
+      'address_line': 'Bole Street, 5th Floor',
+      'subscription_fee': 999.99,
+      'user_limmit': 50,
+      'branch_limmit': 10,
+      'days_left': 30,
+      'margin_rate': 10.0,
+      'margin_type': 'Percentage',
+      'inventory_planner': 1,
+      'category_code': 1,
+      'date_created': DateTime.now().millisecondsSinceEpoch,
+      'date_updated': DateTime.now().millisecondsSinceEpoch,
+    });
+
+    // Insert Branch
+    await db.insert('branch_table', {
+      'id': 1,
+      'reference_id': 1001,
+      'description': 'Main Branch',
+      'city': 'Addis Ababa',
+      'region': 'Addis',
+      'country': 'Ethiopia',
+      'address_line': 'Bole Road',
+      'company': 1,
+      'margin_rate': 10.0,
+      'margin_type': 'Percentage',
+      'branch_phone': '+251911223344',
+    });
+
+    // Insert Employee
+    await db.insert('employees', {
+      'id': 1,
+      'employee_id': 'EMP001',
+      'name_first': 'Abdi',
+      'name_last': 'G',
+      'gender': 'M',
+      'hire_date': '2022-01-01',
+      'city': 'Addis Ababa',
+      'country': 'Ethiopia',
+      'company': 1,
+      'branch': 1,
+    });
+
+    // Insert Privilege
+    await db.insert('previlage_table', {
+      'id': 1,
+      'name': 'View Dashboard',
+      'description': 'Access to dashboard',
+      'type': 'link',
+      'link': '/dashboard',
+      'button': 'Open',
+      'link_lable': 'dashboard_link',
+      'button_lable': 'dashboard_button',
+      'created_by': 1,
+      'date_created': DateTime.now().toIso8601String(),
+    });
+
+    // Insert Role
+    await db.insert('role_table', {
+      'id': 1,
+      'name': 'Admin',
+      'description': 'Administrator with full access',
+      'company': 1,
+      'created_by': 1,
+      'date_created': DateTime.now().toIso8601String(),
+    });
+
+    // Link Role to Privilege
+    await db.insert('role_previlage', {
+      'role_table_id': 1,
+      'previlage_table_id': 1,
+      'created_by': 1,
+      'date_created': DateTime.now().toIso8601String(),
+    });
+
+    // Helper function to generate Argon2 hash
+    Future<String> generateArgon2Hash(String password) async {
+      final salt = 'somesalt'.toBytesLatin1();
+      final parameters = Argon2Parameters(
+        Argon2Parameters.ARGON2_i,
+        salt,
+        version: Argon2Parameters.ARGON2_VERSION_10,
+        iterations: 2,
+        memoryPowerOf2: 16,
+      );
+
+      final argon2 = Argon2BytesGenerator();
+      argon2.init(parameters);
+      final passwordBytes = parameters.converter.convert(password);
+      final result = Uint8List(32);
+      argon2.generateBytes(passwordBytes, result, 0, result.length);
+      return result.toHexString();
+    }
+
+    // Insert User (password = "password123", argon-hashed)
+    // Generate Argon2 hash for "admin123"
+    final argon2Hash = await generateArgon2Hash('admin123');
+    await db.insert('user_table', {
+      'id': 1,
+      'password': argon2Hash,
+      'employees_id': 1,
+      'created_by': 1,
+      'branch': 1,
+      'company': 1,
+      'user_name': 'admin',
+      'status': 'active',
+      'date_created': DateTime.now().millisecondsSinceEpoch,
+    });
+
+    // Link User to Role
+    await db.insert('user_role', {
+      'id': 1,
+      'role_table_id': 1,
+      'user_id': 1,
+      'created_by': 1,
+      'date_created': DateTime.now().toIso8601String(),
+    });
+
+    await db.insert('system_constant', {
+      'apply_lot_mgm': 'Y',
+      'apply_location_mgm': 'Y',
+      'interface_customer': 'Y',
+      'interface_employee': 'Y',
+      'decimal_places': 2,
+      'date_last_updated': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      'time_last_updated': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      'updated_by': 1,
+      'generate_barcode_for_item': 'Y',
+      'company': 1,
+      'rate_vat_percentage': 17.0,
+      'rate_with_percentage': 1.0,
+      'with_hold_initials': 2000.0,
+      'auto_sales_price': 'Y',
+      'lot_type': 'Expiration Date',
+      'location_category_level': 2,
+      'lot_qty_auto_for_sales': 'Y',
+      'is_synced': 1,
+      'last_sync_time': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      'updated_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+    });
+
+    developer.log('✅ Sample user and related data inserted successfully.');
   }
 
   Future<void> _debugPrintTablesAndData(Database db) async {
@@ -254,14 +551,6 @@ class LocalDatabaseService {
       for (final table in tables) {
         final tableName = table['name'] as String;
         developer.log('  - $tableName');
-
-        // Get table schema
-        final schema = await db.rawQuery("PRAGMA table_info($tableName)");
-        developer.log('    Schema:');
-        for (final column in schema) {
-          developer.log('      ${column['name']} (${column['type']})');
-        }
-
         // Get row count
         final countResult = await db.rawQuery(
           "SELECT COUNT(*) as count FROM $tableName",

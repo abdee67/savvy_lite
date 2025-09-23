@@ -68,9 +68,7 @@ class UdcService with ChangeNotifier {
   Map<int, String> getLotTypesMap() {
     final map = <int, String>{};
     for (final type in _lotTypes) {
-      if (type.id != null) {
-        map[type.id!] = type.description1 ?? 'Unknown';
-      }
+      map[type.id] = type.description1 ?? 'Unknown';
     }
 
     // Ensure we always have some options

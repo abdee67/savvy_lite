@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_event.dart';
 
 class SalesDashboard extends StatefulWidget {
   const SalesDashboard({super.key});
@@ -124,7 +127,7 @@ class _SalesDashboardState extends State<SalesDashboard> {
                   if (value == 'System Constants') {
                     context.push('/system_constant');
                   } else if (value == 'Logout') {
-                    context.push('/login');
+                    context.read<AuthBloc>().add(LogoutRequested());
                   }
                 },
                 itemBuilder: (BuildContext context) => [
@@ -134,7 +137,8 @@ class _SalesDashboardState extends State<SalesDashboard> {
                   ),
                   PopupMenuItem<String>(
                     child: const Text('Logout'),
-                    onTap: () => context.push('/login'),
+                    onTap: () =>
+                        context.read<AuthBloc>().add(LogoutRequested()),
                   ),
                 ],
               ),

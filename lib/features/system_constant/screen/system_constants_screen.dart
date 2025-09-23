@@ -1,6 +1,5 @@
 import 'dart:developer' as developer;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -526,7 +525,7 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
               onChanged(value);
               _setEditingState();
             },
-            activeColor: AppColors.primary,
+            activeThumbColor: AppColors.primary,
           ),
         ],
       ),

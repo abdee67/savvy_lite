@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
-import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as context;
 import 'package:savvy_stock/core/errors/exceptions.dart';
 import 'package:savvy_stock/core/models/system_constant.dart';
 import 'package:savvy_stock/core/repositories/system_constant_repository.dart';
 import 'package:savvy_stock/core/services/auth/auth_service.dart';
 import 'package:savvy_stock/core/services/udc_service.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'system_constant_event.dart';
 import 'system_constant_state.dart';
 import 'package:savvy_stock/core/services/system_constant/system_constant_service.dart';
@@ -14,16 +15,18 @@ import 'package:savvy_stock/core/services/system_constant/system_constant_servic
 class SystemConstantBloc
     extends Bloc<SystemConstantEvent, SystemConstantState> {
   final SystemConstantRepository systemConstantRepository;
-  final AuthService authService;
+  //final AuthService authService;
   final UdcService udcService;
   Timer? _syncTimer;
   final SystemConstantsService systemConstantService;
+  final AuthBloc authBloc;
 
   SystemConstantBloc({
     required this.systemConstantRepository,
-    required this.authService,
+    // required this.authService,
     required this.udcService,
     required this.systemConstantService,
+    required this.authBloc,
   }) : super(const SystemConstantState()) {
     on<LoadSystemConstants>(_onLoadSystemConstants);
     on<LoadSystemConstant>(_onLoadSystemConstant);
@@ -75,8 +78,7 @@ class SystemConstantBloc
           .getCurrentCompanySystemConstants();
 
       final allConstants = List<SystemConstant>.from(systemConstants);
-      if (companyConstants != null &&
-          !allConstants.any((c) => c.id == companyConstants.id)) {
+      if (!allConstants.any((c) => c.id == companyConstants.id)) {
         allConstants.add(companyConstants);
       }
       final unSyncedCount = allConstants.where((c) => !c.isSynced).length;
@@ -353,8 +355,8 @@ class SystemConstantBloc
     Emitter<SystemConstantState> emit,
   ) async {
     try {
-      final user = authService.currentUser;
-      final companyId = authService.currentCompany?.id;
+      final user = authBloc.state.userId;
+      final companyId = authBloc.state.companyId;
 
       // Create a new system constant with default values
       final newSystemConstant = SystemConstant(
@@ -392,7 +394,7 @@ class SystemConstantBloc
       // Load UDC data first
       add(const LoadUdcData());
 
-      final companyId = authService.currentCompany?.id;
+      final companyId = authBloc.state.companyId;
 
       // Get existing system constants for the current company
       final existingConstant = await systemConstantRepository
@@ -464,8 +466,8 @@ class SystemConstantBloc
   ) async {
     emit(state.copyWith(status: SystemConstantStatus.loading));
     try {
-      final user = authService.currentUser;
-      final companyId = authService.currentCompany?.id;
+      final user = authBloc.state.userId;
+      final companyId = authBloc.state.companyId;
 
       for (final systemConstant in event.systemConstants) {
         final systemConstantWithCompany = systemConstant.copyWith(
@@ -510,8 +512,8 @@ class SystemConstantBloc
     }
     emit(state.copyWith(status: SystemConstantStatus.loading));
     try {
-      final companyId = authService.currentCompany?.id;
-      final userId = authService.currentUser?.id;
+      final companyId = authBloc.state.companyId;
+      final userId = authBloc.state.userId;
       final now = DateTime.now();
 
       bool hasError = false;
