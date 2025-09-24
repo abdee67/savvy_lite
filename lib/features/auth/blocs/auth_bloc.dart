@@ -4,18 +4,16 @@ import 'dart:developer' as developer;
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:bloc/bloc.dart';
-import 'package:meta/meta.dart';
-import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:argon2/argon2.dart';
-import 'package:savvy_stock/core/errors/failures.dart';
 import 'package:savvy_stock/core/models/company.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
+import 'package:savvy_stock/features/admin/users/models/user_with_role.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_event.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
-import 'package:savvy_stock/features/auth/models/privilege_model.dart';
-import 'package:savvy_stock/features/auth/models/role_model';
-import 'package:savvy_stock/features/auth/models/user_model.dart';
+import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart';
+import 'package:savvy_stock/features/admin/role/models/role_model.dart';
+import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:sqflite/sqflite.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
@@ -122,54 +120,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         );
         return;
       }
-      // If user exists in multiple companies, handle accordingly
-      if (users.length > 1) {
-        // Get company details for each user record
-        final companies = await _getCompaniesForUsers(users);
-        emit(
-          AuthState(
-            status: AuthStatus.companySelectionRequired,
-            message: 'Multiple companies found for user',
-            companySelectionRequired: CompanySelectionRequired(
-              availableCompanies: companies,
-              username: event.username,
-            ),
-          ),
-        );
-        return;
-      }
-
       final userData = users.first;
       final user = UserModel.fromMap(userData);
 
-      // Get user roles and privileges
-      final rolesResult = await db.rawQuery(
-        '''
-        SELECT r.* FROM role_table r
-        INNER JOIN user_role ur ON ur.role_table_id = r.id
-          WHERE ur.user_id = ? AND r.company = ?
-        ''',
-        [user.id, user.company],
+      // Get user roles with their privileges through proper joins
+      final userWithRoles = await _getUserWithRolesAndPrivileges(
+        db,
+        user.id!,
+        user.company!,
       );
-
-      final roles = rolesResult.map((r) => Role.fromMap(r)).toList();
-
-      final privilegesResult = await db.rawQuery(
-        '''
-         SELECT DISTINCT p.* FROM previlage_table p
-      INNER JOIN role_previlage rp ON rp.previlage_table_id = p.id
-      INNER JOIN user_role ur ON ur.role_table_id = rp.role_table_id
-      WHERE ur.user_id = ?
-    ''',
-        [user.id],
-      );
-
-      final privileges = privilegesResult
-          .map((p) => Privilege.fromMap(p))
-          .toList();
 
       // Create mock JWT token
-      final token = _createToken(user, privileges, roles);
+      final token = _createToken(
+        userWithRoles,
+        userWithRoles.allPrivileges,
+        userWithRoles.roles,
+      );
       await secureStorage.write(key: _tokenKey, value: token);
       await secureStorage.write(
         key: _companyKey,
@@ -187,19 +153,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           userId: user.id,
           username: user.userName,
           companyId: user.company,
-          roles: roles,
-          privileges: privileges
-              .map(
-                (p) => Privilege(
-                  id: p.id,
-                  name: p.name,
-                  type: p.type,
-                  linkLabel: p.linkLabel,
-                  description: p.description,
-                  vendorOnly: p.vendorOnly,
-                ),
-              )
-              .toList(),
+          roles: userWithRoles.roles,
+          privileges: userWithRoles.allPrivileges,
         ),
       );
       developer.log(
@@ -216,6 +171,36 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         ),
       );
     }
+  }
+
+  Future<UserWithRole> _getUserWithRolesAndPrivileges(
+    Database db,
+    int userId,
+    int companyId,
+  ) async {
+    // Get user roles and privileges
+    final rolesResult = await db.rawQuery(
+      '''
+        SELECT r.* FROM role_table r
+        INNER JOIN user_role ur ON ur.role_table_id = r.id
+          WHERE ur.user_id = ? AND r.company = ?
+        ''',
+      [userId, companyId],
+    );
+
+    final roles = await Future.wait(
+      rolesResult.map((roleData) => Role.withPrivileges(roleData, db)),
+    );
+
+    return UserWithRole(
+      user: UserModel(
+        id: userId,
+        userName: '',
+        company: 0,
+        password: '',
+      ), // Minimal user object
+      roles: roles,
+    );
   }
 
   Future<List<Company>> _getCompaniesForUsers(
@@ -359,11 +344,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       final oldState = state;
       final newToken = _createToken(
-        UserModel(
-          id: oldState.userId!,
-          userName: oldState.username!,
-          company: oldState.companyId!,
-          password: oldState.password!,
+        UserWithRole(
+          user: UserModel(
+            id: oldState.userId!,
+            userName: oldState.username!,
+            company: oldState.companyId!,
+            password: oldState.password!,
+          ),
+          roles: oldState.roles,
         ),
         oldState.privileges,
         oldState.roles,
@@ -430,12 +418,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   String _createToken(
-    UserModel user,
+    UserWithRole user,
     List<Privilege> privileges,
     List<Role> roles,
   ) {
     final tokenData = {
-      'user': user.toMap(),
+      'user': user.user.toMap(),
       'privileges': privileges.map((p) => p.toMap()).toList(),
       'roles': roles.map((r) => r.toMap()).toList(),
       'auth_time': DateTime.now().millisecondsSinceEpoch,
