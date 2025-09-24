@@ -1,5 +1,3 @@
-import 'package:equatable/equatable.dart';
-
 abstract class AppException implements Exception {
   final String message;
   final StackTrace? stackTrace;
@@ -66,4 +64,9 @@ class TimeoutException extends AppException {
 // System constants specific exceptions
 class SystemConstantException extends AppException {
   const SystemConstantException(super.message, [super.stackTrace]);
+}
+
+// NotFoundException
+class NotFoundException extends AppException {
+  const NotFoundException(super.message, [super.stackTrace]);
 }

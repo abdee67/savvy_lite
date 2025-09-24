@@ -7,7 +7,7 @@ import 'package:savvy_stock/core/models/system_constant.dart';
 import '../../../core/blocs/system_constant/system_constant_bloc.dart';
 
 class SystemConstantsForm extends StatefulWidget {
-  const SystemConstantsForm({Key? key}) : super(key: key);
+  const SystemConstantsForm({super.key});
 
   @override
   _SystemConstantsFormState createState() => _SystemConstantsFormState();
@@ -145,13 +145,16 @@ class _SystemConstantsFormState extends State<SystemConstantsForm> {
                   ),
                   _buildNumberField(
                     'Withholding Percentage',
-                    systemConstants.first.rateWithPercentage?.toString() ?? '',
+                    systemConstants.first.rateWithholdingPercentage
+                            ?.toString() ??
+                        '',
                     (value) {
                       final withPercentage = double.tryParse(value);
                       final updatedSystemConstants = systemConstants
                           .map(
-                            (sc) =>
-                                sc.copyWith(rateWithPercentage: withPercentage),
+                            (sc) => sc.copyWith(
+                              rateWithholdingPercentage: withPercentage,
+                            ),
                           )
                           .toList();
                       _updateSystemConstants(context, updatedSystemConstants);

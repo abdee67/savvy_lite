@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:savvy_stock/features/sales/invoice/models/invoice_model.dart';
-import 'package:number_to_words_english/number_to_words_english.dart';
 
 class InvoiceThirdPart extends StatelessWidget {
   final PaymentInfo payment;

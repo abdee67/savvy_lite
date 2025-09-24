@@ -1,7 +1,15 @@
 import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/core/models/system_constant.dart';
 
-enum SystemConstantStatus { initial, loading, success, failure, syncing }
+enum SystemConstantStatus {
+  initial,
+  loading,
+  success,
+  failure,
+  syncing,
+  online,
+  offline,
+}
 
 class SystemConstantState extends Equatable {
   final SystemConstantStatus status;
@@ -14,6 +22,9 @@ class SystemConstantState extends Equatable {
   final SystemConstant? selected2;
   final String? errorMessage;
   final int unsyncedCount;
+  final bool isOnline;
+  final DateTime? lastSyncedAt;
+  final Map<int, String> lotTypes;
 
   const SystemConstantState({
     this.status = SystemConstantStatus.initial,
@@ -26,6 +37,9 @@ class SystemConstantState extends Equatable {
     this.selected2,
     this.errorMessage,
     this.unsyncedCount = 0,
+    this.isOnline = true,
+    this.lastSyncedAt,
+    this.lotTypes = const {},
   });
 
   SystemConstantState copyWith({
@@ -39,6 +53,9 @@ class SystemConstantState extends Equatable {
     SystemConstant? selected2,
     String? errorMessage,
     int? unsyncedCount,
+    bool? isOnline,
+    DateTime? lastSyncedAt,
+    Map<int, String>? lotTypes,
   }) {
     return SystemConstantState(
       status: status ?? this.status,
@@ -51,6 +68,9 @@ class SystemConstantState extends Equatable {
       selected2: selected2 ?? this.selected2,
       errorMessage: errorMessage ?? this.errorMessage,
       unsyncedCount: unsyncedCount ?? this.unsyncedCount,
+      isOnline: isOnline ?? this.isOnline,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      lotTypes: lotTypes ?? this.lotTypes,
     );
   }
 
@@ -66,5 +86,8 @@ class SystemConstantState extends Equatable {
     selected2,
     errorMessage,
     unsyncedCount,
+    isOnline,
+    lastSyncedAt,
+    lotTypes,
   ];
 }

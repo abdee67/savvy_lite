@@ -11,7 +11,7 @@ class SystemConstant {
   late final String? generateBarcodeForItem;
   final int? company;
   final double? rateVatPercentage;
-  final double? rateWithPercentage;
+  final double? rateWithholdingPercentage;
   final double? withHoldInitials;
   late final String? autoSalesPrice;
   final int? lotType;
@@ -34,7 +34,7 @@ class SystemConstant {
     this.generateBarcodeForItem,
     this.company,
     this.rateVatPercentage,
-    this.rateWithPercentage,
+    this.rateWithholdingPercentage,
     this.withHoldInitials,
     this.autoSalesPrice,
     this.lotType,
@@ -63,7 +63,7 @@ class SystemConstant {
       generateBarcodeForItem: json['generate_barcode_for_item'],
       company: json['company'],
       rateVatPercentage: json['rate_vat_percentage']?.toDouble(),
-      rateWithPercentage: json['rate_with_percentage']?.toDouble(),
+      rateWithholdingPercentage: json['rate_with_percentage']?.toDouble(),
       withHoldInitials: json['with_hold_initials']?.toDouble(),
       autoSalesPrice: json['auto_sales_price'],
       lotType: json['lot_type'],
@@ -93,7 +93,7 @@ class SystemConstant {
       'generate_barcode_for_item': generateBarcodeForItem,
       'company': company,
       'rate_vat_percentage': rateVatPercentage,
-      'rate_with_percentage': rateWithPercentage,
+      'rate_with_percentage': rateWithholdingPercentage,
       'with_hold_initials': withHoldInitials,
       'auto_sales_price': autoSalesPrice,
       'lot_type': lotType,
@@ -116,9 +116,9 @@ class SystemConstant {
       'time_last_updated': timeLastUpdated?.millisecondsSinceEpoch,
       'updated_by': updatedBy,
       'generate_barcode_for_item': generateBarcodeForItem,
-      'company_id': company,
+      'company': company,
       'rate_vat_percentage': rateVatPercentage,
-      'rate_with_percentage': rateWithPercentage,
+      'rate_with_percentage': rateWithholdingPercentage,
       'with_hold_initials': withHoldInitials,
       'auto_sales_price': autoSalesPrice,
       'lot_type': lotType,
@@ -145,9 +145,9 @@ class SystemConstant {
           : null,
       updatedBy: map['updated_by'],
       generateBarcodeForItem: map['generate_barcode_for_item'],
-      company: map['company_id'],
+      company: map['company'],
       rateVatPercentage: map['rate_vat_percentage']?.toDouble(),
-      rateWithPercentage: map['rate_with_percentage']?.toDouble(),
+      rateWithholdingPercentage: map['rate_with_percentage']?.toDouble(),
       withHoldInitials: map['with_hold_initials']?.toDouble(),
       autoSalesPrice: map['auto_sales_price'],
       lotType: map['lot_type'],
@@ -173,7 +173,7 @@ class SystemConstant {
     String? generateBarcodeForItem,
     int? company,
     double? rateVatPercentage,
-    double? rateWithPercentage,
+    double? rateWithholdingPercentage,
     double? withHoldInitials,
     String? autoSalesPrice,
     int? lotType,
@@ -197,7 +197,8 @@ class SystemConstant {
           generateBarcodeForItem ?? this.generateBarcodeForItem,
       company: company ?? this.company,
       rateVatPercentage: rateVatPercentage ?? this.rateVatPercentage,
-      rateWithPercentage: rateWithPercentage ?? this.rateWithPercentage,
+      rateWithholdingPercentage:
+          rateWithholdingPercentage ?? this.rateWithholdingPercentage,
       withHoldInitials: withHoldInitials ?? this.withHoldInitials,
       autoSalesPrice: autoSalesPrice ?? this.autoSalesPrice,
       lotType: lotType ?? this.lotType,
