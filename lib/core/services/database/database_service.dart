@@ -169,9 +169,9 @@ class LocalDatabaseService {
 ''');
     developer.log('Created table: employees');
 
-    //6.create previlage table
+    //6.create privilege table
     await db.execute('''
-  CREATE TABLE previlage_table (
+  CREATE TABLE privilege_table (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
     description TEXT,
@@ -189,7 +189,7 @@ class LocalDatabaseService {
     FOREIGN KEY (updated_by) REFERENCES employees(id)
   );
 ''');
-    developer.log('Created table: previlage_table');
+    developer.log('Created table: privilege_table');
 
     //7.Create role table
     await db.execute('''
@@ -210,23 +210,23 @@ class LocalDatabaseService {
 ''');
     developer.log('Created table: role_table');
 
-    //8.create role_previlage table
+    //8.create role_privilege table
     await db.execute('''
-  CREATE TABLE role_previlage (
+  CREATE TABLE role_privilege (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     role_table_id INTEGER,
-    previlage_table_id INTEGER,
+    privilege_table_id INTEGER,
     created_by INTEGER,
     updated_by INTEGER,
     date_created TEXT,
     date_updated TEXT,
     FOREIGN KEY (role_table_id) REFERENCES role_table(id),
-    FOREIGN KEY (previlage_table_id) REFERENCES previlage_table(id),
+    FOREIGN KEY (privilege_table_id) REFERENCES privilege_table(id),
     FOREIGN KEY (created_by) REFERENCES employees(id),
     FOREIGN KEY (updated_by) REFERENCES employees(id)
   );
 ''');
-    developer.log('Created table: role_previlage');
+    developer.log('Created table: role_privilege');
 
     // 9. Create user_table
     await db.execute('''
@@ -327,7 +327,7 @@ class LocalDatabaseService {
     await db.execute('CREATE INDEX idx_company ON company_table(id)');
     await db.execute('CREATE INDEX idx_user_company ON user_table(company)');
     await db.execute(
-      'CREATE INDEX idx_privilege_uri ON previlage_table(link_lable)',
+      'CREATE INDEX idx_privilege_uri ON privilege_table(link_lable)',
     );
     await db.execute(
       'CREATE INDEX idx_role_table_id ON user_role(role_table_id)',
@@ -386,90 +386,272 @@ class LocalDatabaseService {
     developer.log('Inserted default LOT types');
 
     // Insert Company
-    await db.insert('company_table', {
-      'id': 1,
-      'company_name': 'Savvy Corp',
-      'tin_number': 'TIN123456',
-      'phone_number_1': '+251911223344',
-      'email_address_1': 'info@savvy.com',
-      'city': 'Addis Ababa',
-      'country': 'Ethiopia',
-      'address_line': 'Bole Street, 5th Floor',
-      'subscription_fee': 999.99,
-      'user_limmit': 50,
-      'branch_limmit': 10,
-      'days_left': 30,
-      'margin_rate': 10.0,
-      'margin_type': 'Percentage',
-      'inventory_planner': 1,
-      'category_code': 1,
-      'date_created': DateTime.now().millisecondsSinceEpoch,
-      'date_updated': DateTime.now().millisecondsSinceEpoch,
-    });
+    final companies = [
+      {
+        'id': 1,
+        'company_name': 'Savvy Corp',
+        'tin_number': 'TIN123456',
+        'phone_number_1': '+251911223344',
+        'email_address_1': 'info@savvy.com',
+        'city': 'Addis Ababa',
+        'country': 'Ethiopia',
+        'address_line': 'Bole Street, 5th Floor',
+        'subscription_fee': 999.99,
+        'user_limmit': 50,
+        'branch_limmit': 10,
+        'days_left': 30,
+        'margin_rate': 10.0,
+        'margin_type': 'Percentage',
+        'inventory_planner': 1,
+        'category_code': 1,
+        'date_created': DateTime.now().millisecondsSinceEpoch,
+        'date_updated': DateTime.now().millisecondsSinceEpoch,
+      },
+      /*{
+        'id': 2,
+        'company_name': 'ABCD Corp',
+        'tin_number': 'TIN77777',
+        'phone_number_1': '+251911223344',
+        'email_address_1': 'info@abcd.com',
+        'city': 'Addis Ababa',
+        'country': 'Ethiopia',
+        'address_line': 'Sar bet, 5th Floor',
+        'subscription_fee': 888.88,
+        'user_limmit': 20,
+        'branch_limmit': 5,
+        'days_left': 10,
+        'margin_rate': 15.0,
+        'margin_type': 'number',
+        'inventory_planner': 1,
+        'category_code': 2,
+        'date_created': DateTime.now().millisecondsSinceEpoch,
+        'date_updated': DateTime.now().millisecondsSinceEpoch,
+      }, */
+    ];
+
+    for (final company in companies) {
+      await db.insert('company_table', company);
+    }
+    developer.log('Inserted companies');
 
     // Insert Branch
-    await db.insert('branch_table', {
-      'id': 1,
-      'reference_id': 1001,
-      'description': 'Main Branch',
-      'city': 'Addis Ababa',
-      'region': 'Addis',
-      'country': 'Ethiopia',
-      'address_line': 'Bole Road',
-      'company': 1,
-      'margin_rate': 10.0,
-      'margin_type': 'Percentage',
-      'branch_phone': '+251911223344',
-    });
+    final branches = [
+      {
+        'id': 1,
+        'reference_id': 1001,
+        'description': 'Savvy Main Branch',
+        'city': 'Addis Ababa',
+        'region': 'Addis',
+        'country': 'Ethiopia',
+        'address_line': 'Kera road',
+        'company': 1,
+        'margin_rate': 10.0,
+        'margin_type': 'Percentage',
+        'branch_phone': '+2519111111',
+      },
+      /* {
+        'id': 2,
+        'reference_id': 1002,
+        'description': 'Sar bet Branch',
+        'city': 'Addis Ababa',
+        'region': 'Addis',
+        'country': 'Ethiopia',
+        'address_line': 'Kera Road',
+        'company': 1,
+        'margin_rate': 10.0,
+        'margin_type': 'Percentage',
+        'branch_phone': '+251911223355',
+      },
+      {
+        'id': 3,
+        'reference_id': 2001,
+        'description': 'ABCD Main Branch',
+        'city': 'Addis Ababa',
+        'region': 'Addis',
+        'country': 'Ethiopia',
+        'address_line': 'Bole Road',
+        'company': 2,
+        'margin_rate': 15.0,
+        'margin_type': 'number',
+        'branch_phone': '+2519222222',
+      },
+      {
+        'id': 4,
+        'reference_id': 2002,
+        'description': 'Bole Branch',
+        'city': 'Addis Ababa',
+        'region': 'Addis',
+        'country': 'Ethiopia',
+        'address_line': 'Bole Road',
+        'company': 2,
+        'margin_rate': 15.0,
+        'margin_type': 'number',
+        'branch_phone': '+251922222',
+      },*/
+    ];
+    for (final branch in branches) {
+      await db.insert('branch_table', branch);
+    }
+    developer.log('Inserted companies');
 
     // Insert Employee
-    await db.insert('employees', {
-      'id': 1,
-      'employee_id': 'EMP001',
-      'name_first': 'Abdi',
-      'name_last': 'G',
-      'gender': 'M',
-      'hire_date': '2022-01-01',
-      'city': 'Addis Ababa',
-      'country': 'Ethiopia',
-      'company': 1,
-      'branch': 1,
-    });
+    final employees = [
+      {
+        'id': 1,
+        'employee_id': 'EMP001',
+        'name_first': 'Abdi(admin)',
+        'name_last': 'G',
+        'gender': 'M',
+        'hire_date': '2022-01-01',
+        'city': 'Addis Ababa',
+        'country': 'Ethiopia',
+        'company': 1,
+        'branch': 1,
+      },
+      {
+        'id': 2,
+        'employee_id': 'EMP002',
+        'name_first': 'Chalatu(salesPerson)',
+        'name_last': 'C',
+        'gender': 'F',
+        'hire_date': '2000-01-01',
+        'city': 'Addis Ababa',
+        'country': 'Ethiopia',
+        'company': 1,
+        'branch': 1,
+      },
+    ];
+    for (final employee in employees) {
+      await db.insert('employees', employee);
+    }
 
     // Insert Privilege
-    await db.insert('previlage_table', {
-      'id': 1,
-      'name': 'View Dashboard',
-      'description': 'Access to dashboard',
-      'type': 'link',
-      'link': '/dashboard',
-      'button': 'Open',
-      'link_lable': 'dashboard_link',
-      'button_lable': 'dashboard_button',
-      'created_by': 1,
-      'date_created': DateTime.now().toIso8601String(),
-    });
+    final privileges = [
+      {
+        'id': 1,
+        'name': 'Item entry Dashboard',
+        'description': 'Access to dashboard',
+        'type': 'link',
+        'link': '/item-entry-dashboard',
+        'link_lable': 'item_entry_dashboard_link',
+        'created_by': 1,
+        'date_created': DateTime.now().toIso8601String(),
+      },
+
+      {
+        'id': 2,
+        'name': 'Customer entry Dashboard',
+        'description': 'Access to dashboard',
+        'type': 'link',
+        'link': '/customer-entry-dashboard',
+        'link_lable': 'customer_entry_dashboard_link',
+        'created_by': 1,
+        'date_created': DateTime.now().toIso8601String(),
+      },
+      {
+        'id': 3,
+        'name': 'Payment Dashboard',
+        'description': 'Access to dashboard',
+        'type': 'link',
+        'link': '/payment-dashboard',
+        'link_lable': 'payment_dashboard_link',
+        'created_by': 1,
+        'date_created': DateTime.now().toIso8601String(),
+      },
+      {
+        'id': 4,
+        'name': 'Invoice Dashboard',
+        'description': 'Access to dashboard',
+        'type': 'link',
+        'link': '/invoice-dashboard',
+        'link_lable': 'invoice_dashboard_link',
+        'created_by': 1,
+        'date_created': DateTime.now().toIso8601String(),
+      },
+      {
+        'id': 5,
+        'name': 'Role create Dashboard',
+        'description': 'Access to dashboard',
+        'type': 'link',
+        'link': '/role-create-dashboard',
+        'link_lable': 'role_create_dashboard_link',
+        'created_by': 1,
+        'date_created': DateTime.now().toIso8601String(),
+      },
+      {
+        'id': 6,
+        'name': 'Privilege create Dashboard',
+        'description': 'Access to dashboard',
+        'type': 'link',
+        'link': '/privilege-create-dashboard',
+        'link_lable': 'privilege_create_dashboard_link',
+        'created_by': 1,
+        'date_created': DateTime.now().toIso8601String(),
+      },
+      {
+        'id': 7,
+        'name': 'User create Dashboard',
+        'description': 'Access to dashboard',
+        'type': 'link',
+        'link': '/user-create-dashboard',
+        'link_lable': 'user_create_dashboard_link',
+        'created_by': 1,
+        'date_created': DateTime.now().toIso8601String(),
+      },
+    ];
+    for (final privilege in privileges) {
+      await db.insert('privilege_table', privilege);
+    }
+    developer.log('Inserted privileges');
 
     // Insert Role
-    await db.insert('role_table', {
-      'id': 1,
-      'name': 'Admin',
-      'description': 'Administrator with full access',
-      'company': 1,
-      'created_by': 1,
-      'date_created': DateTime.now().toIso8601String(),
-    });
+    final roles = [
+      {
+        'id': 1,
+        'name': 'Admin',
+        'description': 'Administrator with full access(security)',
+        'company': 1,
+        'created_by': 1,
+        'date_created': DateTime.now().toIso8601String(),
+      },
+      {
+        'id': 2,
+        'name': 'Sales Person',
+        'description': 'Sales Person with sales access',
+        'company': 1,
+        'created_by': 1,
+        'date_created': DateTime.now().toIso8601String(),
+      },
+    ];
+    for (final role in roles) {
+      await db.insert('role_table', role);
+    }
 
     // Link Role to Privilege
-    await db.insert('role_previlage', {
-      'role_table_id': 1,
-      'previlage_table_id': 1,
-      'created_by': 1,
-      'date_created': DateTime.now().toIso8601String(),
-    });
+    // Assign all privileges to admin role
+    for (int i = 1; i <= privileges.length; i++) {
+      await db.insert('role_privilege', {
+        'role_table_id': 1,
+        'privilege_table_id': i,
+        'created_by': 1,
+        'date_created': DateTime.now().toIso8601String(),
+      });
+    }
+    final batch = db.batch();
+    final salesPrivilegeIds = [1, 2, 3, 4]; // use valid ids; no 0
+    for (final pid in salesPrivilegeIds) {
+      batch.insert('role_privilege', {
+        'role_table_id': 2,
+        'privilege_table_id': pid,
+        'created_by': 1,
+        'date_created': DateTime.now().toIso8601String(),
+      });
+    }
+    await batch.commit(noResult: true);
+    developer.log('Inserted role privileges');
 
     // Helper function to generate Argon2 hash
-    Future<String> generateArgon2Hash(String password) async {
+    Future<String> generateArgon2Hash(password) async {
       final salt = 'somesalt'.toBytesLatin1();
       final parameters = Argon2Parameters(
         Argon2Parameters.ARGON2_i,
@@ -490,26 +672,56 @@ class LocalDatabaseService {
     // Insert User (password = "password123", argon-hashed)
     // Generate Argon2 hash for "admin123"
     final argon2Hash = await generateArgon2Hash('admin123');
-    await db.insert('user_table', {
-      'id': 1,
-      'password': argon2Hash,
-      'employees_id': 1,
-      'created_by': 1,
-      'branch': 1,
-      'company': 1,
-      'user_name': 'admin',
-      'status': 'active',
-      'date_created': DateTime.now().millisecondsSinceEpoch,
-    });
+    final users = [
+      {
+        'id': 1,
+        'password': argon2Hash,
+        'employees_id': 1,
+        'created_by': 1,
+        'branch': 1,
+        'company': 1,
+        'user_name': 'admin',
+        'status': 'active',
+        'date_created': DateTime.now().millisecondsSinceEpoch,
+      },
+      {
+        'id': 2,
+        'password': argon2Hash,
+        'employees_id': 2,
+        'created_by': 1,
+        'branch': 1,
+        'company': 1,
+        'user_name': 'salesPerson',
+        'status': 'active',
+        'date_created': DateTime.now().millisecondsSinceEpoch,
+      },
+    ];
+
+    for (final user in users) {
+      await db.insert('user_table', user);
+    }
 
     // Link User to Role
-    await db.insert('user_role', {
-      'id': 1,
-      'role_table_id': 1,
-      'user_id': 1,
-      'created_by': 1,
-      'date_created': DateTime.now().toIso8601String(),
-    });
+    final userRoles = [
+      {
+        'id': 1,
+        'role_table_id': 1,
+        'user_id': 1,
+        'created_by': 1,
+        'date_created': DateTime.now().toIso8601String(),
+      },
+      {
+        'id': 2,
+        'role_table_id': 2,
+        'user_id': 2,
+        'created_by': 1,
+        'date_created': DateTime.now().toIso8601String(),
+      },
+    ];
+
+    for (final userRole in userRoles) {
+      await db.insert('user_role', userRole);
+    }
 
     await db.insert('system_constant', {
       'apply_lot_mgm': 'Y',

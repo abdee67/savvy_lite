@@ -4,10 +4,13 @@ import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart
 import 'package:savvy_stock/core/constants/api_constants.dart';
 import 'package:savvy_stock/core/repositories/system_constant_repository.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
-import 'package:savvy_stock/core/services/auth/auth_service.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/core/services/system_constant/system_constant_service.dart';
 import 'package:savvy_stock/core/services/udc_service.dart';
+import 'package:savvy_stock/features/admin/employees/blocs/employee_bloc.dart';
+import 'package:savvy_stock/features/admin/privilege/blocs/privilege_bloc.dart';
+import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
+import 'package:savvy_stock/features/admin/users/blocs/user_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -19,8 +22,20 @@ void initDependencies() {
   // getIt.registerLazySingleton<AuthService>(() => AuthService());
 
   // Auth Bloc
-  getIt.registerFactory<AuthBloc>(
+  getIt.registerLazySingleton<AuthBloc>(
     () => AuthBloc(databaseService: getIt(), secureStorage: getIt()),
+  );
+  getIt.registerLazySingleton<EmployeeBloc>(
+    () => EmployeeBloc(databaseService: getIt()),
+  );
+  getIt.registerLazySingleton<UserBloc>(
+    () => UserBloc(databaseService: getIt()),
+  );
+  getIt.registerLazySingleton<PrivilegeBloc>(
+    () => PrivilegeBloc(databaseService: getIt()),
+  );
+  getIt.registerLazySingleton<RoleBloc>(
+    () => RoleBloc(databaseService: getIt()),
   );
 
   // Secure Storage

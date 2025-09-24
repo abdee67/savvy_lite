@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
-import 'package:http/http.dart' as context;
 import 'package:savvy_stock/core/errors/exceptions.dart';
 import 'package:savvy_stock/core/models/system_constant.dart';
 import 'package:savvy_stock/core/repositories/system_constant_repository.dart';
-import 'package:savvy_stock/core/services/auth/auth_service.dart';
 import 'package:savvy_stock/core/services/udc_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'system_constant_event.dart';

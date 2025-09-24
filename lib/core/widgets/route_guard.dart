@@ -3,14 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_event.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
 
-class RouteGuard extends StatelessWidget {
+class PrivilegeRouteGuard extends StatelessWidget {
   final Widget child;
   final String requiredPrivilege;
   final Widget? unauthorizedWidget;
 
-  const RouteGuard({
+  const PrivilegeRouteGuard({
     super.key,
     required this.child,
     required this.requiredPrivilege,
@@ -61,7 +62,7 @@ class RouteGuard extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () => context.push('/login'),
+              onPressed: () => context.read<AuthBloc>().add(LogoutRequested()),
               child: const Text('Go to Login'),
             ),
           ],

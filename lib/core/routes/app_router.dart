@@ -3,6 +3,9 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:savvy_stock/core/widgets/route_guard.dart';
+import 'package:savvy_stock/features/admin/employees/screens/employee_dashboard.dart';
+import 'package:savvy_stock/features/admin/privilege/screens/privilege_dahsboard.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
 import 'package:savvy_stock/features/auth/screens/login_screen.dart';
@@ -48,20 +51,27 @@ class AppRouter {
       ),
       GoRoute(
         path: '/sales-dashboard',
-        builder: (context, state) => const SalesDashboard(),
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: '/item-entry-dashboard', //Basic dashboard
+          child: SalesDashboard(),
+        ),
         redirect: (context, state) => _protectedRouteRedirect(context, state),
       ),
       GoRoute(path: '/signup', builder: (context, state) => const GetStart()),
       GoRoute(
-        path: '/sales-item-entry-screen',
-        pageBuilder: (context, state) => MaterialPage(child: ItemEntryScreen()),
+        path: '/item-entry-dashboard',
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: '/item-entry-dashboard',
+          child: ItemEntryScreen(),
+        ),
         redirect: (context, state) => _protectedRouteRedirect(context, state),
       ),
       GoRoute(
-        path: '/payment-screen',
-        pageBuilder: (context, state) {
+        path: '/payment-dashboard',
+        builder: (context, state) {
           final args = state.extra as Map<String, dynamic>;
-          return MaterialPage(
+          return PrivilegeRouteGuard(
+            requiredPrivilege: '/payment-dashboard',
             child: PaymentScreen(
               confirmedItems: args['confirmedItems'] as List<ConfirmedItem>,
               totalAmount: args['totalAmount'] as double,
@@ -72,9 +82,12 @@ class AppRouter {
         redirect: (context, state) => _protectedRouteRedirect(context, state),
       ),
       GoRoute(
-        path: '/invoice-review-screen',
-        pageBuilder: (context, state) {
-          return MaterialPage(child: InvoiceReviewScreen());
+        path: '/invoice-dashboard',
+        builder: (context, state) {
+          return PrivilegeRouteGuard(
+            requiredPrivilege: '/invoice-dashboard',
+            child: InvoiceReviewScreen(),
+          );
         },
         redirect: (context, state) => _protectedRouteRedirect(context, state),
       ),
@@ -89,15 +102,65 @@ class AppRouter {
         builder: (_, __) => const Placeholder(),
       ),
       GoRoute(
-        path: '/customer-screen',
-        pageBuilder: (context, state) =>
-            MaterialPage(child: const CustomerScreen()),
+        path: '/customer-entry-dashboard',
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: '/customer-entry-dashboard',
+          child: const CustomerScreen(),
+        ),
         redirect: (context, state) => _protectedRouteRedirect(context, state),
       ),
       GoRoute(
-        path: '/customer-list',
-        pageBuilder: (context, state) =>
-            MaterialPage(child: const CustomerListPage()),
+        path: '/customer-list-dashboard',
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: '/customer-list-dashboard',
+          child: CustomerListPage(),
+        ),
+        redirect: (context, state) => _protectedRouteRedirect(context, state),
+      ),
+      GoRoute(
+        path: '/invoice-dashboard',
+        builder: (context, state) => const PrivilegeRouteGuard(
+          requiredPrivilege: '/invoice-dashboard',
+          child: InvoiceReviewScreen(),
+        ),
+        redirect: (context, state) => _protectedRouteRedirect(context, state),
+      ),
+
+      // Admin Features
+      GoRoute(
+        path: '/role-create-dashboard',
+        builder: (context, state) => const PrivilegeRouteGuard(
+          requiredPrivilege: '/role-create-dashboard',
+          child: RoleManagementScreen(),
+        ),
+        redirect: (context, state) => _protectedRouteRedirect(context, state),
+      ),
+
+      GoRoute(
+        path: '/privilege-create-dashboard',
+        builder: (context, state) => const PrivilegeRouteGuard(
+          requiredPrivilege: '/privilege-create-dashboard',
+          child: PrivilegeManagementScreen(),
+        ),
+        redirect: (context, state) => _protectedRouteRedirect(context, state),
+      ),
+
+      GoRoute(
+        path: '/user-create-dashboard',
+        builder: (context, state) => const PrivilegeRouteGuard(
+          requiredPrivilege: '/user-create-dashboard',
+          child: UserManagementScreen(),
+        ),
+        redirect: (context, state) => _protectedRouteRedirect(context, state),
+      ),
+
+      GoRoute(
+        path: '/employee-management',
+        builder: (context, state) => const PrivilegeRouteGuard(
+          requiredPrivilege:
+              '/user-create-dashboard', // Only admins can manage employees
+          child: EmployeeListScreen(),
+        ),
         redirect: (context, state) => _protectedRouteRedirect(context, state),
       ),
       // Unauthorized route
@@ -152,21 +215,10 @@ class AppRouter {
     }
 
     if (authState.status == AuthStatus.authenticated) {
-      // If already authenticated and trying to access auth-check or login, go to dashboard
-      if (state.uri.path == '/auth-check' || state.uri.path == '/login') {
-        developer.log('✅ Router: Authenticated, redirecting to dashboard');
-        return '/sales-dashboard';
-      }
-      return null; // Stay on current page if it's a protected route
+      final intendedLocation = state.uri.queryParameters['redirect'];
+      return intendedLocation ?? '/dashboard';
     }
-
-    // Not authenticated - redirect to login
-    if (state.uri.path != '/login') {
-      developer.log('❌ Router: Not authenticated, redirecting to login');
-      return '/login?redirect=${Uri.encodeComponent(state.uri.toString())}';
-    }
-
-    return null; // Already on login page
+    return '/login'; // Stay on current page if it's a protected route
   }
 
   String? _loginRedirect(BuildContext context, GoRouterState state) {
