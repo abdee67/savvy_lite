@@ -1,7 +1,9 @@
 import 'package:equatable/equatable.dart';
+import 'package:savvy_stock/features/admin/role/models/role_model.dart';
+import 'package:savvy_stock/features/admin/users/models/user_model.dart';
+import 'package:savvy_stock/features/admin/users/models/user_with_role.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_event.dart';
-import 'package:savvy_stock/features/auth/models/privilege_model.dart';
-import 'package:savvy_stock/features/auth/models/role_model';
+import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart';
 
 enum AuthStatus {
   initial,
@@ -24,6 +26,7 @@ class AuthState extends Equatable {
   final String? password;
   final List<Role> roles;
   final List<Privilege> privileges;
+  final UserWithRole? userWithRole;
 
   final DateTime? authenticatedAt;
   final DateTime? tokenExpiryTime;
@@ -45,6 +48,7 @@ class AuthState extends Equatable {
     this.password,
     this.roles = const [],
     this.privileges = const [],
+    this.userWithRole,
     this.authenticatedAt,
     this.tokenExpiryTime,
     this.availableCompanies,
@@ -60,20 +64,21 @@ class AuthState extends Equatable {
 
   bool get isAuthenticated => status == AuthStatus.authenticated;
 
-  bool hasPrivilege(String uri) {
-    return privileges.any((p) => p.linkLabel == uri);
+  bool hasPrivilege(String privilegeUri) {
+    // Flatten the privileges from all roles and check if any matches the URI.
+    return userWithRole?.hasPrivilege(privilegeUri) ?? false;
   }
 
-  bool hasAnyPrivilege(List<String> uris) {
-    return privileges.any((p) => uris.contains(p.linkLabel));
+  bool hasAnyPrivilege(List<String> privilegeUris) {
+    return userWithRole?.hasAnyPrivilege(privilegeUris) ?? false;
   }
 
   bool hasRole(String roleName) {
-    return roles.any((r) => r.name == roleName);
+    return userWithRole?.hasRole(roleName) ?? false;
   }
 
   bool hasAnyRole(List<String> roleNames) {
-    return roles.any((r) => roleNames.contains(r.name));
+    return userWithRole?.hasAnyRole(roleNames) ?? false;
   }
 
   bool get isTokenExpiringSoon {
@@ -92,6 +97,7 @@ class AuthState extends Equatable {
     int? companyId,
     List<Role>? roles,
     List<Privilege>? privileges,
+    UserWithRole? userWithRole,
     DateTime? authenticatedAt,
     DateTime? tokenExpiryTime,
     List<dynamic>? availableCompanies,
@@ -111,6 +117,7 @@ class AuthState extends Equatable {
       companyId: companyId ?? this.companyId,
       roles: roles ?? this.roles,
       privileges: privileges ?? this.privileges,
+      userWithRole: userWithRole ?? this.userWithRole,
       authenticatedAt: authenticatedAt ?? this.authenticatedAt,
       tokenExpiryTime: tokenExpiryTime ?? this.tokenExpiryTime,
       availableCompanies: availableCompanies ?? this.availableCompanies,
@@ -135,6 +142,7 @@ class AuthState extends Equatable {
     companyId,
     roles,
     privileges,
+    userWithRole,
     authenticatedAt,
     tokenExpiryTime,
     availableCompanies,

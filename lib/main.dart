@@ -10,13 +10,15 @@ import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dar
 import 'package:savvy_stock/core/config/app_config.dart';
 import 'package:savvy_stock/core/di/injection_container.dart';
 import 'package:savvy_stock/core/routes/app_router.dart';
-import 'package:savvy_stock/core/services/auth/auth_service.dart';
 import 'package:savvy_stock/core/services/conectitvity_service.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/core/services/system_constant/system_constant_service.dart';
 import 'package:savvy_stock/core/services/udc_service.dart';
+import 'package:savvy_stock/features/admin/employees/blocs/employee_bloc.dart';
+import 'package:savvy_stock/features/admin/privilege/blocs/privilege_bloc.dart';
+import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
+import 'package:savvy_stock/features/admin/users/blocs/user_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
-import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/invoice/blocs/invoice_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
@@ -35,7 +37,8 @@ Future<void> _initializeAndRunApp() async {
   try {
     await ConnectivityService().initConnectivity();
     initDependencies();
-    // await LocalDatabaseService().resetDatabase();
+    await LocalDatabaseService().resetDatabase();
+    await LocalDatabaseService().debugTable('role_privilege_table');
 
     if (AppConfig.isTestMode) {
       developer.log('🚀 APP RUNNING IN TEST MODE');
@@ -154,6 +157,18 @@ class _SavvyStockState extends State<SavvyStock> {
         // Bloc providers
         // Provide the SAME instance used by AppRouter so redirects react to auth changes
         BlocProvider<AuthBloc>.value(value: _authBloc),
+        BlocProvider<EmployeeBloc>(
+          create: (context) => EmployeeBloc(databaseService: getIt()),
+        ),
+        BlocProvider<UserBloc>(
+          create: (context) => UserBloc(databaseService: getIt()),
+        ),
+        BlocProvider<PrivilegeBloc>(
+          create: (context) => PrivilegeBloc(databaseService: getIt()),
+        ),
+        BlocProvider<RoleBloc>(
+          create: (context) => RoleBloc(databaseService: getIt()),
+        ),
         BlocProvider<CustomerBloc>(create: (context) => CustomerBloc()),
         BlocProvider<ItemEntryBloc>(create: (context) => ItemEntryBloc()),
         BlocProvider<PaymentBloc>(

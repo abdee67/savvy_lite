@@ -1,5 +1,3 @@
-import 'package:savvy_stock/core/models/company.dart';
-
 class UserModel {
   final int? id;
   final String? password;
@@ -44,7 +42,7 @@ class UserModel {
   });
 
   factory UserModel.fromMap(Map<String, dynamic> json) {
-    DateTime? _parseDate(dynamic v) {
+    DateTime? parseDate(dynamic v) {
       if (v == null) return null;
       if (v is int) {
         // Treat as milliseconds since epoch
@@ -67,38 +65,38 @@ class UserModel {
       return null;
     }
 
-    int? _asInt(dynamic v) {
+    int? asInt(dynamic v) {
       if (v == null) return null;
       if (v is int) return v;
       if (v is String) return int.tryParse(v);
       return null;
     }
 
-    String? _asString(dynamic v) {
+    String? asString(dynamic v) {
       if (v == null) return null;
       return v.toString();
     }
 
     return UserModel(
-      id: _asInt(json['id']),
-      password: _asString(json['password']),
-      employeesId: _asInt(json['employees_id']),
-      createdBy: _asInt(json['created_by']),
-      updatedBy: _asInt(json['updated_by']),
-      dateCreated: _parseDate(json['date_created']),
-      dateUpdated: _parseDate(json['date_updated']),
-      usercol: _asString(json['usercol']),
-      branch: _asInt(json['branch']),
-      status: _asString(json['status']),
-      superUser: _asString(json['super_user']),
-      passwordLastUpdated: _parseDate(json['password_last_updated']),
-      company: _asInt(json['company']),
-      userEmail: _asString(json['user_email']),
-      confirmationCode: _asString(json['confirmation_code']),
-      confirmationsExpireTime: _parseDate(json['confirmations_expire_time']),
-      userName: _asString(json['user_name']),
-      type: _asString(json['type']) ?? 'Company',
-      salesperson: _asInt(json['salesperson']),
+      id: asInt(json['id']),
+      password: asString(json['password']),
+      employeesId: asInt(json['employees_id']),
+      createdBy: asInt(json['created_by']),
+      updatedBy: asInt(json['updated_by']),
+      dateCreated: parseDate(json['date_created']),
+      dateUpdated: parseDate(json['date_updated']),
+      usercol: asString(json['usercol']),
+      branch: asInt(json['branch']),
+      status: asString(json['status']),
+      superUser: asString(json['super_user']),
+      passwordLastUpdated: parseDate(json['password_last_updated']),
+      company: asInt(json['company']),
+      userEmail: asString(json['user_email']),
+      confirmationCode: asString(json['confirmation_code']),
+      confirmationsExpireTime: parseDate(json['confirmations_expire_time']),
+      userName: asString(json['user_name']),
+      type: asString(json['type']) ?? 'Company',
+      salesperson: asInt(json['salesperson']),
     );
   }
 

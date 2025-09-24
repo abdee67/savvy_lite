@@ -1,7 +1,6 @@
 import 'dart:developer' as developer;
 
 import 'package:savvy_stock/core/di/injection_container.dart';
-import 'package:savvy_stock/core/services/auth/auth_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
 

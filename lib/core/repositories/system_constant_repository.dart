@@ -1,11 +1,8 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
-import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as httpClient;
 import 'package:http/http.dart' as http;
 import 'package:savvy_stock/core/constants/api_constants.dart';
 import 'package:savvy_stock/core/models/system_constant.dart';
-import 'package:savvy_stock/core/services/auth/auth_service.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:sqflite/sqflite.dart';
