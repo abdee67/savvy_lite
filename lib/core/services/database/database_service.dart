@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:argon2/argon2.dart';
@@ -143,8 +144,8 @@ class LocalDatabaseService {
   );
 ''');
     developer.log('Created table: branch_table');
-
     //5. Create employee table
+    developer.log('Creating table: employees');
     await db.execute('''
   CREATE TABLE employees (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -527,128 +528,227 @@ class LocalDatabaseService {
 
     // Insert Privilege
     final privileges = [
+      // --- Admin ---
       {
-        'id': 1,
-        'name': 'Item entry Dashboard',
-        'description': 'Access to dashboard',
+        'name': 'Admin Dashboard',
         'type': 'link',
-        'link': '/item-entry-dashboard',
-        'link_lable': 'item_entry_dashboard_link',
-        'created_by': 1,
-        'date_created': DateTime.now().toIso8601String(),
+        'link': '/admin-dashboard',
+        'link_lable': 'admin_dashboard',
+      },
+      {
+        'name': 'Sales Dashboard',
+        'type': 'link',
+        'link': '/sales-dashboard',
+        'link_lable': 'sales_dashboard',
+      },
+      {
+        'name': 'Stock Dashboard',
+        'type': 'link',
+        'link': '/stock-dashboard',
+        'link_lable': 'stock_dashboard',
+      },
+      {
+        'name': 'Privilege Management',
+        'type': 'link',
+        'link': '/admin/privilege-management',
+        'link_lable': 'privilege_management',
+      },
+      {
+        'name': 'Role Management',
+        'type': 'link',
+        'link': '/admin/role-management',
+        'link_lable': 'role_management',
+      },
+      {
+        'name': 'Employee Management',
+        'type': 'link',
+        'link': '/admin/employee-management',
+        'link_lable': 'employee_management',
+      },
+      {
+        'name': 'User Management',
+        'type': 'link',
+        'link': '/admin/user-management',
+        'link_lable': 'user_management',
+      },
+      {
+        'name': 'Add Privilege',
+        'type': 'button',
+        'link': '/admin/privilege-management/add-privilege',
+        'button_lable': 'add_privilege',
+      },
+      {
+        'name': 'Edit Privilege',
+        'type': 'button',
+        'link': '/admin/privilege-management/edit-privilege',
+        'button_lable': 'edit_privilege',
+      },
+      {
+        'name': 'Delete Privilege',
+        'type': 'button',
+        'link': '/admin/privilege-management/delete-privilege',
+        'button_lable': 'delete_privilege',
       },
 
+      // --- Sales ---
       {
-        'id': 2,
-        'name': 'Customer entry Dashboard',
-        'description': 'Access to dashboard',
+        'name': 'Sales Entry',
         'type': 'link',
-        'link': '/customer-entry-dashboard',
-        'link_lable': 'customer_entry_dashboard_link',
-        'created_by': 1,
-        'date_created': DateTime.now().toIso8601String(),
+        'link': '/sales/sales-dashboard',
+        'link_lable': 'sales_entry',
       },
       {
-        'id': 3,
-        'name': 'Payment Dashboard',
-        'description': 'Access to dashboard',
+        'name': 'Customer Entry',
         'type': 'link',
-        'link': '/payment-dashboard',
-        'link_lable': 'payment_dashboard_link',
-        'created_by': 1,
-        'date_created': DateTime.now().toIso8601String(),
+        'link': '/sales/customer-dashboard',
+        'link_lable': 'customer_entry',
       },
       {
-        'id': 4,
-        'name': 'Invoice Dashboard',
-        'description': 'Access to dashboard',
+        'name': 'Sales Customer Info',
         'type': 'link',
-        'link': '/invoice-dashboard',
-        'link_lable': 'invoice_dashboard_link',
-        'created_by': 1,
-        'date_created': DateTime.now().toIso8601String(),
+        'link': '/sales/sales-dashboard/sales-customer-info',
+        'link_lable': 'sales_customer_info',
       },
       {
-        'id': 5,
-        'name': 'Role create Dashboard',
-        'description': 'Access to dashboard',
+        'name': 'Sales Item Entry',
         'type': 'link',
-        'link': '/role-create-dashboard',
-        'link_lable': 'role_create_dashboard_link',
-        'created_by': 1,
-        'date_created': DateTime.now().toIso8601String(),
+        'link': '/sales/sales-dashboard/sales-item-entry',
+        'link_lable': 'sales_item_entry',
       },
       {
-        'id': 6,
-        'name': 'Privilege create Dashboard',
-        'description': 'Access to dashboard',
+        'name': 'Payment Summary',
         'type': 'link',
-        'link': '/privilege-create-dashboard',
-        'link_lable': 'privilege_create_dashboard_link',
-        'created_by': 1,
-        'date_created': DateTime.now().toIso8601String(),
+        'link': '/sales/sales-dashboard/payment-summary',
+        'link_lable': 'payment_summary',
       },
       {
-        'id': 7,
-        'name': 'User create Dashboard',
-        'description': 'Access to dashboard',
+        'name': 'Sales Invoice',
         'type': 'link',
-        'link': '/user-create-dashboard',
-        'link_lable': 'user_create_dashboard_link',
-        'created_by': 1,
-        'date_created': DateTime.now().toIso8601String(),
+        'link': '/sales/sales-dashboard/sales-invoice',
+        'link_lable': 'sales_invoice',
+      },
+      {
+        'name': 'Add Customer',
+        'type': 'button',
+        'link': '/sales/customer-dashboard/add-customer',
+        'button_lable': 'add_customer',
+      },
+      {
+        'name': 'Edit Customer',
+        'type': 'button',
+        'link': '/sales/customer-dashboard/edit-customer',
+        'button_lable': 'edit_customer',
+      },
+      {
+        'name': 'Delete Customer',
+        'type': 'button',
+        'link': '/sales/customer-dashboard/delete-customer',
+        'button_lable': 'delete_customer',
+      },
+
+      // --- Stock ---
+      {
+        'name': 'Item Entry',
+        'type': 'link',
+        'link': '/stock/item-entry',
+        'link_lable': 'item_entry',
+      },
+      {
+        'name': 'UoM Management',
+        'type': 'link',
+        'link': '/stock/uom-management',
+        'link_lable': 'uom_management',
       },
     ];
-    for (final privilege in privileges) {
-      await db.insert('privilege_table', privilege);
+
+    // Add shared fields before insert
+    for (final p in privileges) {
+      p['description'] = p['name']!;
+      p['created_by'] = '1';
+      p['date_created'] = DateTime.now().toIso8601String();
+      p['vendor_only'] = 'N';
+      p['updated_by'] = '1';
+      p['date_updated'] = DateTime.now().toIso8601String();
+      await db.insert('privilege_table', p);
     }
+
     developer.log('Inserted privileges');
 
-    // Insert Role
     final roles = [
       {
-        'id': 1,
-        'name': 'Admin',
-        'description': 'Administrator with full access(security)',
-        'company': 1,
-        'created_by': 1,
-        'date_created': DateTime.now().toIso8601String(),
+        'name': 'Administrator',
+        'description': 'Full system access with all privileges',
       },
       {
-        'id': 2,
-        'name': 'Sales Person',
-        'description': 'Sales Person with sales access',
-        'company': 1,
-        'created_by': 1,
-        'date_created': DateTime.now().toIso8601String(),
+        'name': 'Sales Manager',
+        'description': 'Sales operations with customer management',
+      },
+      {'name': 'Sales Person', 'description': 'Basic sales entry capabilities'},
+      {
+        'name': 'Stock Manager',
+        'description': 'Inventory and stock management',
       },
     ];
+
+    final roleIds = <String, int>{};
+
     for (final role in roles) {
-      await db.insert('role_table', role);
+      role['company'] = '1';
+      role['created_by'] = '1';
+      role['date_created'] = DateTime.now().toIso8601String();
+      role['updated_by'] = '1';
+      role['date_updated'] = DateTime.now().toIso8601String();
+      final id = await db.insert('role_table', role);
+      roleIds[role['name']!] = id;
     }
 
-    // Link Role to Privilege
-    // Assign all privileges to admin role
-    for (int i = 1; i <= privileges.length; i++) {
+    // Admin gets all privileges
+    for (int id = 1; id <= privileges.length; id++) {
       await db.insert('role_privilege', {
-        'role_table_id': 1,
-        'privilege_table_id': i,
+        'role_table_id': roleIds['Administrator'],
+        'privilege_table_id': id,
         'created_by': 1,
         'date_created': DateTime.now().toIso8601String(),
       });
     }
-    final batch = db.batch();
-    final salesPrivilegeIds = [1, 2, 3, 4]; // use valid ids; no 0
-    for (final pid in salesPrivilegeIds) {
-      batch.insert('role_privilege', {
-        'role_table_id': 2,
+    developer.log('Inserted admin role privileges');
+
+    // Sales Manager (subset)
+    final salesManagerPrivileges = [2, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+    for (final pid in salesManagerPrivileges) {
+      await db.insert('role_privilege', {
+        'role_table_id': roleIds['Sales Manager'],
         'privilege_table_id': pid,
         'created_by': 1,
         'date_created': DateTime.now().toIso8601String(),
       });
     }
-    await batch.commit(noResult: true);
-    developer.log('Inserted role privileges');
+    developer.log('Inserted sales manager role privileges');
+
+    // Sales Person
+    final salesPersonPrivileges = [2, 13, 14, 15, 16];
+    for (final pid in salesPersonPrivileges) {
+      await db.insert('role_privilege', {
+        'role_table_id': roleIds['Sales Person'],
+        'privilege_table_id': pid,
+        'created_by': 1,
+        'date_created': DateTime.now().toIso8601String(),
+      });
+    }
+    developer.log('Inserted sales person role privileges');
+
+    // Stock Manager
+    final stockManagerPrivileges = [3, 20, 21];
+    for (final pid in stockManagerPrivileges) {
+      await db.insert('role_privilege', {
+        'role_table_id': roleIds['Stock Manager'],
+        'privilege_table_id': pid,
+        'created_by': 1,
+        'date_created': DateTime.now().toIso8601String(),
+      });
+    }
+
+    developer.log('Inserted stock manager role privileges');
 
     // Helper function to generate Argon2 hash
     Future<String> generateArgon2Hash(password) async {
@@ -695,25 +795,40 @@ class LocalDatabaseService {
         'status': 'active',
         'date_created': DateTime.now().millisecondsSinceEpoch,
       },
+      {
+        'id': 3,
+        'password': argon2Hash,
+        'employees_id': 3,
+        'created_by': 1,
+        'branch': 1,
+        'company': 1,
+        'user_name': 'stockManager',
+        'status': 'active',
+        'date_created': DateTime.now().millisecondsSinceEpoch,
+      },
     ];
 
     for (final user in users) {
       await db.insert('user_table', user);
     }
+    developer.log('Inserted users');
 
-    // Link User to Role
     final userRoles = [
       {
-        'id': 1,
-        'role_table_id': 1,
-        'user_id': 1,
+        'user_id': 1, // admin user
+        'role_table_id': roleIds['Administrator'],
         'created_by': 1,
         'date_created': DateTime.now().toIso8601String(),
       },
       {
-        'id': 2,
-        'role_table_id': 2,
-        'user_id': 2,
+        'user_id': 2, // salesperson
+        'role_table_id': roleIds['Sales Person'],
+        'created_by': 1,
+        'date_created': DateTime.now().toIso8601String(),
+      },
+      {
+        'user_id': 3, // stock manager
+        'role_table_id': roleIds['Stock Manager'],
         'created_by': 1,
         'date_created': DateTime.now().toIso8601String(),
       },
@@ -722,6 +837,7 @@ class LocalDatabaseService {
     for (final userRole in userRoles) {
       await db.insert('user_role', userRole);
     }
+    developer.log('Inserted user roles');
 
     await db.insert('system_constant', {
       'apply_lot_mgm': 'Y',
@@ -751,39 +867,51 @@ class LocalDatabaseService {
   }
 
   Future<void> _debugPrintTablesAndData(Database db) async {
-    developer.log('=== DATABASE DEBUG INFORMATION ===');
+    developer.log('\n📦 === DATABASE DEBUG START ===');
 
     try {
-      // Get all tables
+      // Get all tables excluding internal ones
       final tables = await db.rawQuery(
-        "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name",
+        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
       );
 
-      developer.log('Available tables:');
+      if (tables.isEmpty) {
+        developer.log('⚠️ No user-defined tables found.');
+        return;
+      }
+
       for (final table in tables) {
         final tableName = table['name'] as String;
-        developer.log('  - $tableName');
-        // Get row count
+
+        // Table header
+        developer.log('\n📁 Table: $tableName');
+
+        // Row count
         final countResult = await db.rawQuery(
-          "SELECT COUNT(*) as count FROM $tableName",
+          "SELECT COUNT(*) AS count FROM $tableName",
         );
         final count = countResult.first['count'] as int;
+        developer.log('  🔢 Row count: $count');
 
-        developer.log('    Row count: $count');
-
-        // Show sample data (first 5 rows if any)
+        // Sample data
         if (count > 0) {
-          final sampleData = await db.query(tableName, limit: 5);
-          developer.log('    Sample data:');
-          for (final row in sampleData) {
-            developer.log('      $row');
+          final sampleRows = await db.query(tableName, limit: 5);
+          developer.log('  📄 Sample rows (max 5):');
+
+          for (int i = 0; i < sampleRows.length; i++) {
+            final rowJson = const JsonEncoder.withIndent(
+              '    ',
+            ).convert(sampleRows[i]);
+            developer.log('    #${i + 1}:\n$rowJson');
           }
+        } else {
+          developer.log('  🚫 No rows found.');
         }
       }
 
-      developer.log('=== END DATABASE DEBUG ===');
-    } catch (e) {
-      developer.log('Error during database debugging: $e');
+      developer.log('\n✅ === DATABASE DEBUG END ===');
+    } catch (e, stackTrace) {
+      developer.log('❌ Error during database debug: $e\n$stackTrace');
     }
   }
 

@@ -7,18 +7,18 @@ import 'package:savvy_stock/features/sales/customer/blocs/customer_state.dart';
 import 'package:savvy_stock/features/sales/customer/widget/customer_details_field.dart';
 import 'package:savvy_stock/features/sales/customer/widget/customer_section.dart';
 
-class CustomerScreen extends StatelessWidget {
-  const CustomerScreen({super.key});
+class CustomerInfoScreen extends StatelessWidget {
+  const CustomerInfoScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     context.read<CustomerBloc>().add(LoadCustomers());
-    return const CustomerScreenView();
+    return const CustomerInfoScreenView();
   }
 }
 
-class CustomerScreenView extends StatelessWidget {
-  const CustomerScreenView({super.key});
+class CustomerInfoScreenView extends StatelessWidget {
+  const CustomerInfoScreenView({super.key});
 
   @override
   Widget build(BuildContext context) {

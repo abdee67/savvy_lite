@@ -6,9 +6,24 @@ import 'package:savvy_stock/features/admin/employees/blocs/employee_event.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_state.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
 import 'package:savvy_stock/features/admin/users/screens/user_dashboard.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 
-class EmployeeListScreen extends StatelessWidget {
-  const EmployeeListScreen({super.key});
+class EmployeeListScreen extends StatefulWidget {
+  final AuthBloc authBloc;
+  const EmployeeListScreen({super.key, required this.authBloc});
+
+  @override
+  State<EmployeeListScreen> createState() => _EmployeeListScreenState();
+}
+
+class _EmployeeListScreenState extends State<EmployeeListScreen> {
+  @override
+  void initState() {
+    super.initState();
+    context.read<EmployeeBloc>().add(
+      LoadEmployees(widget.authBloc.state.companyId!),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

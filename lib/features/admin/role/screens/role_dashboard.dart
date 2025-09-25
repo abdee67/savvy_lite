@@ -3,20 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_state.dart';
 import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import '../blocs/role_bloc.dart';
 import '../blocs/role_event.dart';
 import '../../privilege/blocs/privilege_bloc.dart';
 import '../../privilege/blocs/privilege_event.dart';
 
 class RoleCreationScreen extends StatefulWidget {
-  final int companyId;
-  final int createdBy;
-
-  const RoleCreationScreen({
-    required this.companyId,
-    required this.createdBy,
-    super.key,
-  });
+  final AuthBloc authBloc;
+  const RoleCreationScreen({super.key, required this.authBloc});
 
   @override
   State<RoleCreationScreen> createState() => _RoleCreationScreenState();
@@ -26,14 +21,15 @@ class _RoleCreationScreenState extends State<RoleCreationScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
-
-  List<int> _selectedPrivilegeIds = [];
+  final List<int> _selectedPrivilegeIds = [];
 
   @override
   void initState() {
     super.initState();
     // Load available privileges
-    context.read<PrivilegeBloc>().add(LoadPrivileges());
+    context.read<PrivilegeBloc>().add(
+      LoadPrivileges(widget.authBloc.state.companyId!),
+    );
   }
 
   @override
@@ -130,8 +126,6 @@ class _RoleCreationScreenState extends State<RoleCreationScreen> {
         CreateRole(
           _nameController.text,
           _descriptionController.text,
-          widget.companyId,
-          widget.createdBy,
           _selectedPrivilegeIds,
         ),
       );
@@ -139,8 +133,6 @@ class _RoleCreationScreenState extends State<RoleCreationScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Role created successfully')),
       );
-
-      Navigator.pop(context);
     }
   }
 }

@@ -1,6 +1,6 @@
 class Employee {
   final int id;
-  final String? employeeId;
+  final int? employeeId;
   final String? nameFirst;
   final String? nameLast;
   final String? nameMiddle;

@@ -24,7 +24,6 @@ import 'package:savvy_stock/features/sales/invoice/blocs/invoice_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'core/repositories/system_constant_repository.dart';
 
 void main() async {
@@ -37,7 +36,7 @@ Future<void> _initializeAndRunApp() async {
   try {
     await ConnectivityService().initConnectivity();
     initDependencies();
-    await LocalDatabaseService().resetDatabase();
+    // await LocalDatabaseService().resetDatabase();
     await LocalDatabaseService().debugTable('role_privilege_table');
 
     if (AppConfig.isTestMode) {
@@ -152,22 +151,26 @@ class _SavvyStockState extends State<SavvyStock> {
       );
     }
 
-    return MultiProvider(
+    return MultiBlocProvider(
       providers: [
         // Bloc providers
         // Provide the SAME instance used by AppRouter so redirects react to auth changes
         BlocProvider<AuthBloc>.value(value: _authBloc),
         BlocProvider<EmployeeBloc>(
-          create: (context) => EmployeeBloc(databaseService: getIt()),
+          create: (context) =>
+              EmployeeBloc(databaseService: getIt(), authBloc: _authBloc),
         ),
         BlocProvider<UserBloc>(
-          create: (context) => UserBloc(databaseService: getIt()),
+          create: (context) =>
+              UserBloc(databaseService: getIt(), authBloc: _authBloc),
         ),
         BlocProvider<PrivilegeBloc>(
-          create: (context) => PrivilegeBloc(databaseService: getIt()),
+          create: (context) =>
+              PrivilegeBloc(databaseService: getIt(), authBloc: _authBloc),
         ),
         BlocProvider<RoleBloc>(
-          create: (context) => RoleBloc(databaseService: getIt()),
+          create: (context) =>
+              RoleBloc(databaseService: getIt(), authBloc: _authBloc),
         ),
         BlocProvider<CustomerBloc>(create: (context) => CustomerBloc()),
         BlocProvider<ItemEntryBloc>(create: (context) => ItemEntryBloc()),

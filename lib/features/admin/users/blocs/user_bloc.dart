@@ -8,14 +8,16 @@ import 'package:savvy_stock/features/admin/users/blocs/user_event.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_state.dart';
 import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/admin/users/models/user_with_role.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:sqflite/sqflite.dart';
 import 'dart:convert';
 import 'package:argon2/argon2.dart';
 
 class UserBloc extends Bloc<UserEvent, UserState> {
   final LocalDatabaseService databaseService;
+  final AuthBloc authBloc;
 
-  UserBloc({required this.databaseService})
+  UserBloc({required this.databaseService, required this.authBloc})
     : super(UserState(status: UserStatus.initial)) {
     on<LoadUsers>(_onLoadUsers);
     on<CreateUser>(_onCreateUser);
@@ -70,15 +72,25 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       final db = await databaseService.database;
 
       // Hash password (defensive: ensure not null)
-      final rawPassword = event.user.password ?? '';
+      final rawPassword = event.password;
       final hashedPassword = await generateArgon2Hash(rawPassword);
 
       // Create user
       final userId = await db.insert('user_table', {
-        'user_name': event.user.userName,
+        'user_name': event.userName,
         'password': hashedPassword,
-        'company_id': event.user.company,
-        'created_by': event.createdBy,
+        'employees_id': event.employeesId,
+        'company': authBloc.state.companyId,
+        'created_by': authBloc.state.userId,
+        'date_created': DateTime.now().millisecondsSinceEpoch,
+        'date_updated': DateTime.now().millisecondsSinceEpoch,
+        'usercol': '',
+        'branch': 1,
+        'status': 'active',
+        'password_last_updated': DateTime.now().millisecondsSinceEpoch,
+        'user_email': '',
+        'confirmation_code': 'confirmation_code',
+        'confirmations_expire_time': DateTime.now().millisecondsSinceEpoch,
       });
 
       // Assign roles if any
@@ -87,13 +99,13 @@ class UserBloc extends Bloc<UserEvent, UserState> {
           await db.insert('user_role', {
             'user_id': userId,
             'role_table_id': roleId,
-            'created_by': event.createdBy,
+            'created_by': authBloc.state.userId,
             'date_created': DateTime.now().toIso8601String(),
           });
         }
       }
 
-      add(LoadUsers(event.user.company!)); // Reload the list
+      add(LoadUsers(authBloc.state.companyId!)); // Reload the list
     } catch (e) {
       emit(
         UserState(

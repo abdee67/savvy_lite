@@ -1,6 +1,7 @@
 // features/user/screens/user_creation_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:savvy_stock/features/admin/employees/blocs/employee_bloc.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
 import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
 import 'package:savvy_stock/features/admin/role/blocs/role_event.dart';
@@ -23,9 +24,9 @@ class _UserCreationScreenState extends State<UserCreationScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _emailController = TextEditingController();
-
-  final List<Role> _selectedRoles = [];
+  final _employeeController = TextEditingController();
+  final _branchController = TextEditingController();
+  final List<int> _selectedRoles = [];
 
   @override
   void initState() {
@@ -53,7 +54,7 @@ class _UserCreationScreenState extends State<UserCreationScreen> {
               if (widget.employee != null) ...[
                 ListTile(
                   title: Text(
-                    'Employee: ${widget.employee!.nameFirst} ${widget.employee!.nameLast}',
+                    'USER: ${widget.employee!.nameFirst} ${widget.employee!.nameLast}',
                   ),
                   subtitle: Text('ID: ${widget.employee!.employeeId}'),
                 ),
@@ -86,16 +87,28 @@ class _UserCreationScreenState extends State<UserCreationScreen> {
                 },
               ),
 
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
-                keyboardType: TextInputType.emailAddress,
+              DropdownButtonFormField<int>(
+                initialValue: widget.employee?.id,
+                items: context
+                    .read<EmployeeBloc>()
+                    .state
+                    .employees
+                    .map(
+                      (employee) => DropdownMenuItem(
+                        value: employee.id,
+                        child: Text(employee.nameFirst.toString()),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _employeeController.text = value.toString();
+                  });
+                },
+                decoration: const InputDecoration(labelText: 'Employee'),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter email';
-                  }
-                  if (!value.contains('@')) {
-                    return 'Please enter a valid email';
+                  if (value == null || value == 0) {
+                    return 'Please select employee';
                   }
                   return null;
                 },
@@ -137,14 +150,14 @@ class _UserCreationScreenState extends State<UserCreationScreen> {
           .map(
             (role) => CheckboxListTile(
               title: Text(role.name),
-              subtitle: Text(role.description),
-              value: _selectedRoles.any((r) => r.id == role.id),
+              subtitle: Text('${role.description}'),
+              value: _selectedRoles.contains(role.id),
               onChanged: (selected) {
                 setState(() {
                   if (selected == true) {
-                    _selectedRoles.add(role);
+                    _selectedRoles.add(role.id);
                   } else {
-                    _selectedRoles.removeWhere((r) => r.id == role.id);
+                    _selectedRoles.remove(role.id);
                   }
                 });
               },
@@ -157,22 +170,13 @@ class _UserCreationScreenState extends State<UserCreationScreen> {
   void _createUser() {
     if (_formKey.currentState!.validate()) {
       final userBloc = context.read<UserBloc>();
-
-      // Create user model
-      final user = UserModel(
-        id: 0, // Will be assigned by database
-        userName: _usernameController.text,
-        password: _passwordController.text, // Will be hashed in BLoC
-        userEmail: _emailController.text,
-        employeesId: widget.employee?.id,
-        company: widget.employee?.company ?? 1, // Get from current context
-        branch: widget.employee?.branch ?? 1,
-        status: 'active',
-        dateCreated: DateTime.now(),
-      );
-
       userBloc.add(
-        CreateUser(user, _selectedRoles.map((role) => role.id).toList(), 1),
+        CreateUser(
+          _employeeController.text,
+          _usernameController.text,
+          _passwordController.text,
+          _selectedRoles,
+        ),
       );
 
       ScaffoldMessenger.of(context).showSnackBar(

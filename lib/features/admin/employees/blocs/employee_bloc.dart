@@ -5,11 +5,13 @@ import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_event.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_state.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 
 class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
   final LocalDatabaseService databaseService;
+  final AuthBloc authBloc;
 
-  EmployeeBloc({required this.databaseService})
+  EmployeeBloc({required this.databaseService, required this.authBloc})
     : super(EmployeeState(status: EmployeeStatus.initial)) {
     on<LoadEmployees>(_onLoadEmployees);
     on<CreateEmployee>(_onCreateEmployee);
@@ -24,7 +26,11 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
     emit(EmployeeState(status: EmployeeStatus.loading));
     try {
       final db = await databaseService.database;
-      final employees = await db.query('employees');
+      final employees = await db.query(
+        'employees',
+        where: 'company = ?',
+        whereArgs: [event.companyId],
+      );
 
       final employeeList = employees.map((p) => Employee.fromMap(p)).toList();
 
@@ -47,9 +53,26 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
   ) async {
     try {
       final db = await databaseService.database;
-      await db.insert('employees', event.employee.toMap());
+      await db.insert('employees', {
+        'id': event.id,
+        'name_first': event.nameFirst,
+        'name_last': event.nameLast,
+        'title': event.title,
+        'email': event.email,
+        'phone': event.phone,
+        'address': event.address,
+        'city': event.city,
+        'state': event.state,
+        'zip': event.zip,
+        'country': event.country,
+        'notes': event.notes,
+        'company': authBloc.state.companyId,
+        'created_by': authBloc.state.userId,
 
-      add(LoadEmployees()); // Reload the list
+        'date_created': DateTime.now().toIso8601String(),
+      });
+
+      add(LoadEmployees(authBloc.state.companyId!)); // Reload the list
     } catch (e) {
       emit(
         EmployeeState(
@@ -68,12 +91,28 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
       final db = await databaseService.database;
       await db.update(
         'employees',
-        event.employee.toMap(),
+        {
+          'id': event.id,
+          'name_first': event.nameFirst,
+          'name_last': event.nameLast,
+          'title': event.title,
+          'email': event.email,
+          'phone': event.phone,
+          'address': event.address,
+          'city': event.city,
+          'state': event.state,
+          'zip': event.zip,
+          'country': event.country,
+          'notes': event.notes,
+          'company': authBloc.state.companyId,
+          'created_by': authBloc.state.userId,
+          'date_created': DateTime.now().toIso8601String(),
+        },
         where: 'id = ?',
-        whereArgs: [event.employee.id],
+        whereArgs: [event.id],
       );
 
-      add(LoadEmployees()); // Reload the list
+      add(LoadEmployees(authBloc.state.companyId!)); // Reload the list
     } catch (e) {
       emit(
         EmployeeState(
@@ -92,11 +131,11 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
       final db = await databaseService.database;
       await db.delete(
         'employees',
-        where: 'id = ?',
-        whereArgs: [event.employeeId],
+        where: 'id = ? AND company = ?',
+        whereArgs: [event.employeeId, authBloc.state.companyId],
       );
 
-      add(LoadEmployees()); // Reload the list
+      add(LoadEmployees(authBloc.state.companyId!)); // Reload the list
     } catch (e) {
       emit(
         EmployeeState(

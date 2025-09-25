@@ -5,11 +5,13 @@ import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_event.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_state.dart';
 import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 
 class PrivilegeBloc extends Bloc<PrivilegeEvent, PrivilegeState> {
   final LocalDatabaseService databaseService;
+  final AuthBloc authBloc;
 
-  PrivilegeBloc({required this.databaseService})
+  PrivilegeBloc({required this.databaseService, required this.authBloc})
     : super(PrivilegeState(status: PrivilegeStatus.initial)) {
     on<LoadPrivileges>(_onLoadPrivileges);
     on<CreatePrivilege>(_onCreatePrivilege);
@@ -52,9 +54,19 @@ class PrivilegeBloc extends Bloc<PrivilegeEvent, PrivilegeState> {
   ) async {
     try {
       final db = await databaseService.database;
-      await db.insert('privilege_table', event.privilege.toMap());
+      await db.insert('privilege_table', {
+        'name': event.name,
+        'description': event.description,
+        'type': event.type,
+        'link': event.uri,
+        'link_lable': event.linkLabel,
+        'button_lable': event.buttonLabel,
+        'vendor_only': event.vendorOnly ? 'Y' : 'N',
+        'created_by': authBloc.state.userId,
+        'date_created': DateTime.now().toIso8601String(),
+      });
 
-      add(LoadPrivileges()); // Reload the list
+      add(LoadPrivileges(authBloc.state.companyId!)); // Reload the list
     } catch (e) {
       emit(
         PrivilegeState(
@@ -78,7 +90,7 @@ class PrivilegeBloc extends Bloc<PrivilegeEvent, PrivilegeState> {
         whereArgs: [event.privilege.id],
       );
 
-      add(LoadPrivileges()); // Reload the list
+      add(LoadPrivileges(authBloc.state.companyId!)); // Reload the list
     } catch (e) {
       emit(
         PrivilegeState(
@@ -101,7 +113,7 @@ class PrivilegeBloc extends Bloc<PrivilegeEvent, PrivilegeState> {
         whereArgs: [event.privilegeId],
       );
 
-      add(LoadPrivileges()); // Reload the list
+      add(LoadPrivileges(authBloc.state.companyId!)); // Reload the list
     } catch (e) {
       emit(
         PrivilegeState(

@@ -21,7 +21,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final FlutterSecureStorage secureStorage;
 
   static const _tokenKey = 'jwt_token';
-  static const _companyKey = 'company_id';
+  static const _companyKey = 'company';
   static const _userIdKey = 'user_id';
   static const _passwordKey = 'password';
 
@@ -128,6 +128,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         db,
         user.id!,
         user.company!,
+        user.userName!,
+        user.password!,
       );
 
       // Create mock JWT token
@@ -177,6 +179,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Database db,
     int userId,
     int companyId,
+    String username,
+    String password,
   ) async {
     // Get user roles and privileges
     final rolesResult = await db.rawQuery(
@@ -195,9 +199,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     return UserWithRole(
       user: UserModel(
         id: userId,
-        userName: '',
-        company: 0,
-        password: '',
+        userName: username,
+        company: companyId,
+        password: password,
       ), // Minimal user object
       roles: roles,
     );
@@ -260,7 +264,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
               status: AuthStatus.tokenRefreshRequired,
               userId: tokenData['user_id'],
               username: tokenData['username'],
-              companyId: tokenData['company_id'],
+              companyId: tokenData['company'],
               roles: List<Role>.from(
                 tokenData['roles'].map((r) => Role.fromMap(r)),
               ),

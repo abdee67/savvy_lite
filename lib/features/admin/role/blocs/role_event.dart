@@ -12,16 +12,8 @@ class LoadRoles extends RoleEvent {
 class CreateRole extends RoleEvent {
   final String name;
   final String description;
-  final int companyId;
-  final int createdBy;
   final List<int> privilegeIds;
-  CreateRole(
-    this.name,
-    this.description,
-    this.companyId,
-    this.createdBy,
-    this.privilegeIds,
-  );
+  CreateRole(this.name, this.description, this.privilegeIds);
 }
 
 class UpdateRole extends RoleEvent {
