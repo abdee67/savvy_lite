@@ -36,8 +36,8 @@ Future<void> _initializeAndRunApp() async {
   try {
     await ConnectivityService().initConnectivity();
     initDependencies();
-    // await LocalDatabaseService().resetDatabase();
-    await LocalDatabaseService().debugTable('role_privilege_table');
+    //  await LocalDatabaseService().resetDatabase();
+    await LocalDatabaseService().debugTable('employees');
 
     if (AppConfig.isTestMode) {
       developer.log('🚀 APP RUNNING IN TEST MODE');
