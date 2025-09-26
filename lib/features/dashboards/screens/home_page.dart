@@ -37,7 +37,7 @@ class _HomePageState extends State<HomePage> {
       description: 'Sales operations and customer management',
       color: Colors.blue,
       features: {
-        PrivilegeConstants.salesEntry: 'Sales Entry',
+        PrivilegeConstants.salesItemEntry: 'Sales Item Entry',
         PrivilegeConstants.customerEntry: 'Customer Entry',
       },
     ),
@@ -433,36 +433,9 @@ class _HomePageState extends State<HomePage> {
     String privilegeUri,
     AuthState authState,
   ) {
-    // Map privilege URIs to routes
-    final routeMap = {
-      PrivilegeConstants.salesEntry: '/sales/sales-dashboard',
-      PrivilegeConstants.customerEntry: '/sales/customer-dashboard',
-      PrivilegeConstants.privilegeManagement: '/admin/privilege-management',
-      PrivilegeConstants.roleManagement: '/admin/role-management',
-      PrivilegeConstants.employeeManagement: '/admin/employee-management',
-      PrivilegeConstants.userManagement: '/admin/user-management',
-      PrivilegeConstants.itemEntry: '/stock/item-entry',
-      PrivilegeConstants.uomManagement: '/stock/uom-management',
-      PrivilegeConstants.itemWorkbench: '/stock/item-workbench',
-      PrivilegeConstants.itemUomConversions: '/stock/item-uom-conversions',
-      PrivilegeConstants.locationEntry: '/stock/location-entry',
-      PrivilegeConstants.lotEntry: '/stock/lot-entry',
-      PrivilegeConstants.lotColorings: '/stock/lot-colorings',
-      PrivilegeConstants.inventoryTransaction: '/stock/inventory-transaction',
-      PrivilegeConstants.itemBranchEntry: '/stock/item-branch-entry',
-      PrivilegeConstants.barcodeFunction: '/stock/barcode-function',
-      PrivilegeConstants.exportFunction: '/stock/export-function',
-      PrivilegeConstants.purchaseDashboard: '/purchase/purchase-dashboard',
-      PrivilegeConstants.companyDashboard: '/company/company-dashboard',
-      PrivilegeConstants.branchListDashboard:
-          '/branch-list/branch-list-dashboard',
-      // Add more mappings as needed
-    };
-
-    final route = routeMap[privilegeUri];
-    if (route != null) {
-      context.push(route);
-    } else {
+    if (authState.hasPrivilege(privilegeUri)) {
+      context.push(privilegeUri);
+    } else if (privilegeUri.isNotEmpty) {
       // Fallback: Show feature dialog for unimplemented features
       showDialog(
         context: context,
@@ -479,26 +452,26 @@ class _HomePageState extends State<HomePage> {
       );
     }
   }
+}
 
-  Widget _buildFooter() {
-    return Container(
-      height: 60,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: Colors.grey[300]!)),
-      ),
-      child: const Center(
-        child: Text(
-          'POWERED BY TECH EQUATIONS',
-          style: TextStyle(
-            color: Colors.black54,
-            fontSize: 14,
-            fontWeight: FontWeight.w300,
-          ),
+Widget _buildFooter() {
+  return Container(
+    height: 60,
+    width: double.infinity,
+    decoration: BoxDecoration(
+      border: Border(top: BorderSide(color: Colors.grey[300]!)),
+    ),
+    child: const Center(
+      child: Text(
+        'POWERED BY TECH EQUATIONS',
+        style: TextStyle(
+          color: Colors.black54,
+          fontSize: 14,
+          fontWeight: FontWeight.w300,
         ),
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _DashboardConfig {

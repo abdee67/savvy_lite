@@ -112,6 +112,11 @@ class PrivilegeBloc extends Bloc<PrivilegeEvent, PrivilegeState> {
         where: 'id = ?',
         whereArgs: [event.privilegeId],
       );
+      await db.delete(
+        'role_privilege',
+        where: 'privilege_table_id = ?',
+        whereArgs: [event.privilegeId],
+      );
 
       add(LoadPrivileges(authBloc.state.companyId!)); // Reload the list
     } catch (e) {

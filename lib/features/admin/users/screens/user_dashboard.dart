@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_bloc.dart';
+import 'package:savvy_stock/features/admin/employees/blocs/employee_event.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
 import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
 import 'package:savvy_stock/features/admin/role/blocs/role_event.dart';
@@ -33,6 +34,10 @@ class _UserCreationScreenState extends State<UserCreationScreen> {
     super.initState();
     // Load available roles
     context.read<RoleBloc>().add(LoadRoles(widget.employee?.company ?? 1));
+    context.read<UserBloc>().add(LoadUsers(widget.employee?.company ?? 1));
+    context.read<EmployeeBloc>().add(
+      LoadEmployees(widget.employee?.company ?? 1),
+    );
   }
 
   @override

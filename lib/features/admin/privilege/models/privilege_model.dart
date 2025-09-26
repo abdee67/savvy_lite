@@ -110,6 +110,10 @@ class Privilege {
     if (uri.startsWith('/admin/')) return PrivilegeConstants.adminDashboard;
     if (uri.startsWith('/sales/')) return PrivilegeConstants.salesDashboard;
     if (uri.startsWith('/stock/')) return PrivilegeConstants.stockDashboard;
+    if (uri.startsWith('/availability/'))
+      return PrivilegeConstants.availabilityDashboard;
+    if (uri.startsWith('/purchase/'))
+      return PrivilegeConstants.purchaseDashboard;
 
     // For simple cases like '/sales-dashboard' itself
     if (_dashboardUris.contains(uri)) return uri;
