@@ -160,7 +160,8 @@ class LocalDatabaseService {
     city TEXT,
     region TEXT,
     country TEXT,
-    phone_home TEXT,
+    phone TEXT,
+    email TEXT,
     gender TEXT,
     company INTEGER,
     branch INTEGER,
@@ -594,7 +595,7 @@ class LocalDatabaseService {
       {
         'name': 'Sales Entry',
         'type': 'link',
-        'link': '/sales/sales-dashboard',
+        'link': '/sales/sales-dashboard/sales-entry',
         'link_lable': 'sales_entry',
       },
       {

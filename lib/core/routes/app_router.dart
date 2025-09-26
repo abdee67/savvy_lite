@@ -158,7 +158,7 @@ class AppRouter {
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: PrivilegeConstants.employeeManagement,
           parentPrivilege: PrivilegeConstants.adminDashboard,
-          child: EmployeeListScreen(authBloc: context.read<AuthBloc>()),
+          child: EmployeeListPage(authBloc: context.read<AuthBloc>()),
         ),
         redirect: _protectedRouteRedirect,
       ),

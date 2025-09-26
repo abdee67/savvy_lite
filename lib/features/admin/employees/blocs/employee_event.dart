@@ -73,6 +73,71 @@ class UpdateEmployee extends EmployeeEvent {
 
 class DeleteEmployee extends EmployeeEvent {
   final int employeeId;
+  final int deletedIndex;
   final int companyId;
-  DeleteEmployee(this.employeeId, this.companyId);
+  final Employee deletedEmployee;
+  DeleteEmployee(
+    this.employeeId,
+    this.deletedIndex,
+    this.companyId,
+    this.deletedEmployee,
+  );
+}
+
+class DeleteSelectedEmployees extends EmployeeEvent {
+  final List<int> selectedEmployees;
+  final List<Employee> deletedEmployees;
+  final List<int> deletedIndexes;
+  final int companyId;
+  DeleteSelectedEmployees(
+    this.selectedEmployees,
+    this.deletedEmployees,
+    this.deletedIndexes,
+    this.companyId,
+  );
+}
+
+class SearchEmployees extends EmployeeEvent {
+  final String query;
+  SearchEmployees(this.query);
+}
+
+class SelectEmployee extends EmployeeEvent {
+  final Employee employee;
+  final bool isSelected;
+  SelectEmployee(this.employee, {this.isSelected = true});
+
+  List<Object> get props => [employee, isSelected];
+}
+
+class SelectAllEmployees extends EmployeeEvent {
+  final bool selectAll;
+  SelectAllEmployees(this.selectAll);
+
+  List<Object> get props => [selectAll];
+}
+
+class ClearSelection extends EmployeeEvent {}
+
+class UndoDelete extends EmployeeEvent {
+  final List<Employee> deletedItems;
+  final List<int> deletedIndexes;
+
+  UndoDelete({required this.deletedItems, required this.deletedIndexes});
+}
+
+class ShowEmployeeDetail extends EmployeeEvent {
+  final Employee employee;
+  ShowEmployeeDetail(this.employee);
+
+  List<Object> get props => [employee];
+}
+
+class HideEmployeeDetail extends EmployeeEvent {}
+
+class ExportEmployee extends EmployeeEvent {
+  final Employee employee;
+  ExportEmployee(this.employee);
+
+  List<Object> get props => [employee];
 }
