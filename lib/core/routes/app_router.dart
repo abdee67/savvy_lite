@@ -1,9 +1,8 @@
 import 'dart:async';
-import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:savvy_stock/core/constants/privilege_constants.dart';
+import 'package:savvy_stock/core/constants/app_routes.dart';
+import 'package:savvy_stock/core/errors/unauthorized_screen.dart';
 import 'package:savvy_stock/core/widgets/route_guard.dart';
 import 'package:savvy_stock/features/admin/employees/screens/employee_dashboard.dart';
 import 'package:savvy_stock/features/admin/privilege/screens/privilege_dahsboard.dart';
@@ -20,10 +19,13 @@ import 'package:savvy_stock/features/sales/customer/screens/customer_list.dart';
 import 'package:savvy_stock/features/sales/customer/screens/customer_screen.dart';
 import 'package:savvy_stock/features/sales/invoice/screens/invoice_review_screen.dart';
 import 'package:savvy_stock/features/sales/payment/screens/payment_screen.dart';
-import 'package:savvy_stock/features/sales/presentation/screens/sales_dashboard.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/screens/sales_item_entry.dart';
 import 'package:savvy_stock/features/system_constant/screen/system_constants_screen.dart';
+
+// Import your screen files for missing routes
+// import 'package:savvy_stock/features/sales/sales_entry/screens/sales_entry_screen.dart';
+// import 'package:savvy_stock/features/sales/sales_dashboard/screens/sales_dashboard.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -35,53 +37,66 @@ class AppRouter {
   late final GoRouter router = GoRouter(
     navigatorKey: navigatorKey,
     refreshListenable: GoRouterRefreshStream(authBloc.stream),
-    initialLocation: showOnboarding ? '/welcome' : '/auth-check',
+    initialLocation: showOnboarding ? AppRoutes.welcome : AppRoutes.authCheck,
     routes: [
+      // Auth Routes
       GoRoute(
-        path: '/welcome',
+        path: AppRoutes.welcome,
         builder: (context, state) => const OnboardingScreen(),
       ),
       GoRoute(
-        path: '/auth-check',
+        path: AppRoutes.authCheck,
         builder: (context, state) =>
             const Scaffold(body: Center(child: CircularProgressIndicator())),
         redirect: (context, state) => _authRedirect(context, state),
       ),
       GoRoute(
-        path: '/login',
+        path: AppRoutes.login,
         builder: (context, state) => const LoginScreen(),
         redirect: (context, state) => _loginRedirect(context, state),
       ),
-      GoRoute(path: '/signup', builder: (context, state) => const GetStart()),
-
-      // Dynamically select dashboard based on privileges
       GoRoute(
-        path: '/homePage',
+        path: AppRoutes.signup,
+        builder: (context, state) => const GetStart(),
+      ),
+
+      // Main Dashboard
+      GoRoute(
+        path: AppRoutes.homePage,
         builder: (context, state) => const HomePage(),
         redirect: (context, state) => _protectedRouteRedirect(context, state),
       ),
 
-      // SALES ROUTES
+      // Sales Routes
       GoRoute(
-        path: PrivilegeConstants.salesCustomerInfo,
+        path: AppRoutes.customerEntry,
         builder: (context, state) => PrivilegeRouteGuard(
-          requiredPrivilege: PrivilegeConstants.salesCustomerInfo,
-          parentPrivilege: PrivilegeConstants.salesEntry,
+          requiredPrivilege: AppRoutes.customerEntry,
+          parentPrivilege: AppRoutes.salesDashboard,
+          child: const CustomerListPage(),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.salesCustomerInfo,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.salesCustomerInfo,
+          parentPrivilege: AppRoutes.salesDashboard,
           child: const CustomerInfoScreen(),
         ),
         redirect: _protectedRouteRedirect,
       ),
       GoRoute(
-        path: PrivilegeConstants.salesItemEntry,
+        path: AppRoutes.salesItemEntry,
         builder: (context, state) => PrivilegeRouteGuard(
-          requiredPrivilege: PrivilegeConstants.salesItemEntry,
-          parentPrivilege: PrivilegeConstants.salesEntry,
+          requiredPrivilege: AppRoutes.salesItemEntry,
+          parentPrivilege: AppRoutes.salesCustomerInfo,
           child: ItemEntryScreen(),
         ),
         redirect: _protectedRouteRedirect,
       ),
       GoRoute(
-        path: PrivilegeConstants.paymentSummary,
+        path: AppRoutes.paymentSummary,
         builder: (context, state) {
           final args = state.extra as Map<String, dynamic>?;
 
@@ -95,8 +110,8 @@ class AppRouter {
           }
 
           return PrivilegeRouteGuard(
-            requiredPrivilege: PrivilegeConstants.paymentSummary,
-            parentPrivilege: PrivilegeConstants.salesEntry,
+            requiredPrivilege: AppRoutes.paymentSummary,
+            parentPrivilege: AppRoutes.salesCustomerInfo,
             child: PaymentScreen(
               confirmedItems: args['confirmedItems'] as List<ConfirmedItem>,
               totalAmount: args['totalAmount'] as double,
@@ -107,88 +122,63 @@ class AppRouter {
         redirect: _protectedRouteRedirect,
       ),
       GoRoute(
-        path: PrivilegeConstants.salesInvoice,
+        path: AppRoutes.salesInvoice,
         builder: (context, state) => PrivilegeRouteGuard(
-          requiredPrivilege: PrivilegeConstants.salesInvoice,
-          parentPrivilege: PrivilegeConstants.salesEntry,
+          requiredPrivilege: AppRoutes.salesInvoice,
+          parentPrivilege: AppRoutes.salesCustomerInfo,
           child: InvoiceReviewScreen(),
         ),
         redirect: _protectedRouteRedirect,
       ),
-      GoRoute(
-        path: PrivilegeConstants.customerEntry,
-        builder: (context, state) => PrivilegeRouteGuard(
-          requiredPrivilege: PrivilegeConstants.customerEntry,
-          parentPrivilege: PrivilegeConstants.salesEntry,
-          child: const CustomerListPage(),
-        ),
-        redirect: _protectedRouteRedirect,
-      ),
 
-      // ADMIN ROUTES
+      // Admin Routes
       GoRoute(
-        path: PrivilegeConstants.roleManagement,
+        path: AppRoutes.roleManagement,
         builder: (context, state) => PrivilegeRouteGuard(
-          requiredPrivilege: PrivilegeConstants.roleManagement,
-          parentPrivilege: PrivilegeConstants.adminDashboard,
-          child: RoleCreationScreen(authBloc: context.read<AuthBloc>()),
+          requiredPrivilege: AppRoutes.roleManagement,
+          parentPrivilege: AppRoutes.adminDashboard,
+          child: RoleCreationScreen(authBloc: authBloc),
         ),
         redirect: _protectedRouteRedirect,
       ),
       GoRoute(
-        path: PrivilegeConstants.privilegeManagement,
+        path: AppRoutes.privilegeManagement,
         builder: (context, state) => PrivilegeRouteGuard(
-          requiredPrivilege: PrivilegeConstants.privilegeManagement,
-          parentPrivilege: PrivilegeConstants.adminDashboard,
-          child: PrivilegeManagementScreen(authBloc: context.read<AuthBloc>()),
+          requiredPrivilege: AppRoutes.privilegeManagement,
+          parentPrivilege: AppRoutes.adminDashboard,
+          child: PrivilegeManagementScreen(authBloc: authBloc),
         ),
         redirect: _protectedRouteRedirect,
       ),
       GoRoute(
-        path: PrivilegeConstants.userManagement,
+        path: AppRoutes.userManagement,
         builder: (context, state) => PrivilegeRouteGuard(
-          requiredPrivilege: PrivilegeConstants.userManagement,
-          parentPrivilege: PrivilegeConstants.adminDashboard,
+          requiredPrivilege: AppRoutes.userManagement,
+          parentPrivilege: AppRoutes.adminDashboard,
           child: const UserCreationScreen(),
         ),
         redirect: _protectedRouteRedirect,
       ),
       GoRoute(
-        path: PrivilegeConstants.employeeManagement,
+        path: AppRoutes.employeeManagement,
         builder: (context, state) => PrivilegeRouteGuard(
-          requiredPrivilege: PrivilegeConstants.employeeManagement,
-          parentPrivilege: PrivilegeConstants.adminDashboard,
-          child: EmployeeListPage(authBloc: context.read<AuthBloc>()),
+          requiredPrivilege: AppRoutes.employeeManagement,
+          parentPrivilege: AppRoutes.adminDashboard,
+          child: EmployeeListPage(authBloc: authBloc),
         ),
         redirect: _protectedRouteRedirect,
       ),
 
-      // SYSTEM CONSTANT
+      // System Constants
       GoRoute(
-        path: '/system_constant',
+        path: AppRoutes.systemConstants,
         builder: (context, state) => const SystemConstantsScreen(),
       ),
 
-      // UNAUTHORIZED
+      // Unauthorized
       GoRoute(
-        path: '/unauthorized',
-        name: 'unauthorized',
-        builder: (context, state) => Scaffold(
-          appBar: AppBar(title: const Text('Access Denied')),
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('You do not have permission to access this page.'),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () => context.go('/homePage'),
-                  child: const Text('Go to Dashboard'),
-                ),
-              ],
-            ),
-          ),
-        ),
+        path: AppRoutes.unauthorized,
+        builder: (context, state) => const UnauthorizedScreen(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
@@ -200,7 +190,7 @@ class AppRouter {
             Text('Page not found: ${state.uri}'),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () => context.go('/homePage'),
+              onPressed: () => context.push(AppRoutes.homePage),
               child: const Text('Go to Dashboard'),
             ),
           ],
@@ -209,7 +199,7 @@ class AppRouter {
     ),
   );
 
-  // Redirect logic
+  // Redirect logic (same as before)
   String? _authRedirect(BuildContext context, GoRouterState state) {
     final authState = authBloc.state;
 
@@ -217,14 +207,14 @@ class AppRouter {
 
     if (authState.status == AuthStatus.authenticated) {
       final intended = state.uri.queryParameters['redirect'];
-      return intended ?? '/homePage';
+      return intended ?? AppRoutes.homePage;
     }
-    return '/login';
+    return AppRoutes.login;
   }
 
   String? _loginRedirect(BuildContext context, GoRouterState state) {
     if (authBloc.state.status == AuthStatus.authenticated) {
-      return '/homePage';
+      return AppRoutes.homePage;
     }
     return null;
   }
@@ -232,17 +222,16 @@ class AppRouter {
   String? _protectedRouteRedirect(BuildContext context, GoRouterState state) {
     final authState = authBloc.state;
 
-    if (authState.status == AuthStatus.loading) return '/auth-check';
+    if (authState.status == AuthStatus.loading) return AppRoutes.authCheck;
 
     if (authState.status != AuthStatus.authenticated) {
-      return '/login?redirect=${Uri.encodeComponent(state.uri.toString())}';
+      return '${AppRoutes.login}?redirect=${Uri.encodeComponent(state.uri.toString())}';
     }
 
     return null;
   }
 }
 
-// Utility to refresh routes when auth state changes
 class GoRouterRefreshStream extends ChangeNotifier {
   GoRouterRefreshStream(Stream<dynamic> stream) {
     notifyListeners();

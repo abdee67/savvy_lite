@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:argon2/argon2.dart';
+import 'package:savvy_stock/core/constants/app_routes.dart';
+import 'package:savvy_stock/core/services/database/seeders/privilege_seeder.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'dart:developer' as developer;
@@ -513,7 +515,7 @@ class LocalDatabaseService {
       {
         'id': 2,
         'employee_id': 'EMP002',
-        'name_first': 'Chalatu(salesPerson)',
+        'name_first': 'Chalatu(salesManager)',
         'name_last': 'C',
         'gender': 'F',
         'hire_date': '2000-01-01',
@@ -526,154 +528,18 @@ class LocalDatabaseService {
     for (final employee in employees) {
       await db.insert('employees', employee);
     }
+    developer.log('employee inewelsdfghbnvcxsdf');
 
-    // Insert Privilege
-    final privileges = [
-      // --- Admin ---
-      {
-        'name': 'Admin Dashboard',
-        'type': 'link',
-        'link': '/admin-dashboard',
-        'link_lable': 'admin_dashboard',
-      },
-      {
-        'name': 'Sales Dashboard',
-        'type': 'link',
-        'link': '/sales-dashboard',
-        'link_lable': 'sales_dashboard',
-      },
-      {
-        'name': 'Stock Dashboard',
-        'type': 'link',
-        'link': '/stock-dashboard',
-        'link_lable': 'stock_dashboard',
-      },
-      {
-        'name': 'Privilege Management',
-        'type': 'link',
-        'link': '/admin/privilege-management',
-        'link_lable': 'privilege_management',
-      },
-      {
-        'name': 'Role Management',
-        'type': 'link',
-        'link': '/admin/role-management',
-        'link_lable': 'role_management',
-      },
-      {
-        'name': 'Employee Management',
-        'type': 'link',
-        'link': '/admin/employee-management',
-        'link_lable': 'employee_management',
-      },
-      {
-        'name': 'User Management',
-        'type': 'link',
-        'link': '/admin/user-management',
-        'link_lable': 'user_management',
-      },
-      {
-        'name': 'Add Privilege',
-        'type': 'button',
-        'link': '/admin/privilege-management/add-privilege',
-        'button_lable': 'add_privilege',
-      },
-      {
-        'name': 'Edit Privilege',
-        'type': 'button',
-        'link': '/admin/privilege-management/edit-privilege',
-        'button_lable': 'edit_privilege',
-      },
-      {
-        'name': 'Delete Privilege',
-        'type': 'button',
-        'link': '/admin/privilege-management/delete-privilege',
-        'button_lable': 'delete_privilege',
-      },
+    // 1. Seed privileges
+    await PrivilegeSeeder.seedPrivileges(db);
 
-      // --- Sales ---
-      {
-        'name': 'Sales Entry',
-        'type': 'link',
-        'link': '/sales/sales-dashboard/sales-entry',
-        'link_lable': 'sales_entry',
-      },
-      {
-        'name': 'Customer Entry',
-        'type': 'link',
-        'link': '/sales/customer-dashboard',
-        'link_lable': 'customer_entry',
-      },
-      {
-        'name': 'Sales Customer Info',
-        'type': 'link',
-        'link': '/sales/sales-dashboard/sales-customer-info',
-        'link_lable': 'sales_customer_info',
-      },
-      {
-        'name': 'Sales Item Entry',
-        'type': 'link',
-        'link': '/sales/sales-dashboard/sales-item-entry',
-        'link_lable': 'sales_item_entry',
-      },
-      {
-        'name': 'Payment Summary',
-        'type': 'link',
-        'link': '/sales/sales-dashboard/payment-summary',
-        'link_lable': 'payment_summary',
-      },
-      {
-        'name': 'Sales Invoice',
-        'type': 'link',
-        'link': '/sales/sales-dashboard/sales-invoice',
-        'link_lable': 'sales_invoice',
-      },
-      {
-        'name': 'Add Customer',
-        'type': 'button',
-        'link': '/sales/customer-dashboard/add-customer',
-        'button_lable': 'add_customer',
-      },
-      {
-        'name': 'Edit Customer',
-        'type': 'button',
-        'link': '/sales/customer-dashboard/edit-customer',
-        'button_lable': 'edit_customer',
-      },
-      {
-        'name': 'Delete Customer',
-        'type': 'button',
-        'link': '/sales/customer-dashboard/delete-customer',
-        'button_lable': 'delete_customer',
-      },
+    // 2. Fetch privileges back (with their IDs)
+    final privileges = await db.query('privilege_table');
 
-      // --- Stock ---
-      {
-        'name': 'Item Entry',
-        'type': 'link',
-        'link': '/stock/item-entry',
-        'link_lable': 'item_entry',
-      },
-      {
-        'name': 'UoM Management',
-        'type': 'link',
-        'link': '/stock/uom-management',
-        'link_lable': 'uom_management',
-      },
-    ];
-
-    // Add shared fields before insert
-    for (final p in privileges) {
-      p['description'] = p['name']!;
-      p['created_by'] = '1';
-      p['date_created'] = DateTime.now().toIso8601String();
-      p['vendor_only'] = 'N';
-      p['updated_by'] = '1';
-      p['date_updated'] = DateTime.now().toIso8601String();
-      await db.insert('privilege_table', p);
-    }
-
-    developer.log('Inserted privileges');
+    // 3. Use map for quick lookup
+    final privilegeByUri = {
+      for (var p in privileges) p['link'] as String: p['id'] as int,
+    };
 
     final roles = [
       {
@@ -684,7 +550,6 @@ class LocalDatabaseService {
         'name': 'Sales Manager',
         'description': 'Sales operations with customer management',
       },
-      {'name': 'Sales Person', 'description': 'Basic sales entry capabilities'},
       {
         'name': 'Stock Manager',
         'description': 'Inventory and stock management',
@@ -703,53 +568,38 @@ class LocalDatabaseService {
       roleIds[role['name']!] = id;
     }
 
-    // Admin gets all privileges
-    for (int id = 1; id <= privileges.length; id++) {
+    // Example: assign all to Admin
+    for (final privilege in privileges) {
       await db.insert('role_privilege', {
         'role_table_id': roleIds['Administrator'],
-        'privilege_table_id': id,
+        'privilege_table_id': privilege['id'],
         'created_by': 1,
         'date_created': DateTime.now().toIso8601String(),
       });
     }
+
     developer.log('Inserted admin role privileges');
 
-    // Sales Manager (subset)
-    final salesManagerPrivileges = [2, 11, 12, 13, 14, 15, 16, 17, 18, 19];
-    for (final pid in salesManagerPrivileges) {
-      await db.insert('role_privilege', {
-        'role_table_id': roleIds['Sales Manager'],
-        'privilege_table_id': pid,
-        'created_by': 1,
-        'date_created': DateTime.now().toIso8601String(),
-      });
+    // Example: Sales Manager subset
+    final salesPrivileges = [
+      AppRoutes.salesDashboard,
+      AppRoutes.customerEntry,
+      AppRoutes.salesCustomerInfo,
+      AppRoutes.salesItemEntry,
+    ];
+
+    for (final uri in salesPrivileges) {
+      final pid = privilegeByUri[uri];
+      if (pid != null) {
+        await db.insert('role_privilege', {
+          'role_table_id': roleIds['Sales Manager'],
+          'privilege_table_id': pid,
+          'created_by': 1,
+          'date_created': DateTime.now().toIso8601String(),
+        });
+      }
     }
     developer.log('Inserted sales manager role privileges');
-
-    // Sales Person
-    final salesPersonPrivileges = [2, 13, 14, 15, 16];
-    for (final pid in salesPersonPrivileges) {
-      await db.insert('role_privilege', {
-        'role_table_id': roleIds['Sales Person'],
-        'privilege_table_id': pid,
-        'created_by': 1,
-        'date_created': DateTime.now().toIso8601String(),
-      });
-    }
-    developer.log('Inserted sales person role privileges');
-
-    // Stock Manager
-    final stockManagerPrivileges = [3, 20, 21];
-    for (final pid in stockManagerPrivileges) {
-      await db.insert('role_privilege', {
-        'role_table_id': roleIds['Stock Manager'],
-        'privilege_table_id': pid,
-        'created_by': 1,
-        'date_created': DateTime.now().toIso8601String(),
-      });
-    }
-
-    developer.log('Inserted stock manager role privileges');
 
     // Helper function to generate Argon2 hash
     Future<String> generateArgon2Hash(password) async {
@@ -775,7 +625,6 @@ class LocalDatabaseService {
     final argon2Hash = await generateArgon2Hash('admin123');
     final users = [
       {
-        'id': 1,
         'password': argon2Hash,
         'employees_id': 1,
         'created_by': 1,
@@ -786,18 +635,6 @@ class LocalDatabaseService {
         'date_created': DateTime.now().millisecondsSinceEpoch,
       },
       {
-        'id': 2,
-        'password': argon2Hash,
-        'employees_id': 2,
-        'created_by': 1,
-        'branch': 1,
-        'company': 1,
-        'user_name': 'salesPerson',
-        'status': 'active',
-        'date_created': DateTime.now().millisecondsSinceEpoch,
-      },
-      {
-        'id': 3,
         'password': argon2Hash,
         'employees_id': 3,
         'created_by': 1,
@@ -821,12 +658,7 @@ class LocalDatabaseService {
         'created_by': 1,
         'date_created': DateTime.now().toIso8601String(),
       },
-      {
-        'user_id': 2, // salesperson
-        'role_table_id': roleIds['Sales Person'],
-        'created_by': 1,
-        'date_created': DateTime.now().toIso8601String(),
-      },
+
       {
         'user_id': 3, // stock manager
         'role_table_id': roleIds['Stock Manager'],

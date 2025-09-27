@@ -1,10 +1,10 @@
-import 'package:savvy_stock/core/constants/privilege_constants.dart';
+import 'package:savvy_stock/core/constants/privilege_heirarchy.dart';
 
 class Privilege {
   final int id;
   final String name;
   final String type; // 'link' or 'button'
-  final String uri; // e.g., '/stock/privilegeTable/List.xhtml'
+  final String uri;
   final String description;
   final String? buttonLabel;
   final String? linkLabel;
@@ -99,35 +99,27 @@ class Privilege {
     'button_lable': buttonLabel,
     'vendor_only': vendorOnly ? 'Y' : 'N',
   };
-  bool get isDashboardPrivilege {
-    return uri.endsWith('/dashboard') ||
-        uri.contains('/dashboard/') ||
-        _dashboardUris.contains(uri);
+
+  /// Check if this is a dashboard privilege using the hierarchy config
+  bool get isDashboardPrivilege => PrivilegeHierarchy.isDashboardPrivilege(uri);
+
+  /// Get parent dashboard using the hierarchy config
+  String? get parentDashboard => PrivilegeHierarchy.getParentPrivilege(uri);
+
+  /// Get complete hierarchy required to access this privilege
+  List<String> get privilegeHierarchy =>
+      PrivilegeHierarchy.getRequiredPrivilegeHierarchy(uri);
+
+  /// Check if user has access to this privilege (including hierarchy)
+  bool hasAccess(List<Privilege> userPrivileges) {
+    final userUris = userPrivileges.map((p) => p.uri).toList();
+    return PrivilegeHierarchy.hasAccessToPrivilege(userUris, uri);
   }
 
-  // Helper to get parent dashboard from URI
-  String? get parentDashboard {
-    if (uri.startsWith('/admin/')) return PrivilegeConstants.adminDashboard;
-    if (uri.startsWith('/sales/')) return PrivilegeConstants.salesDashboard;
-    if (uri.startsWith('/stock/')) return PrivilegeConstants.stockDashboard;
-    if (uri.startsWith('/availability/'))
-      return PrivilegeConstants.availabilityDashboard;
-    if (uri.startsWith('/purchase/'))
-      return PrivilegeConstants.purchaseDashboard;
-
-    // For simple cases like '/sales-dashboard' itself
-    if (_dashboardUris.contains(uri)) return uri;
-
-    return null;
+  /// Get child privileges for this privilege
+  List<String> getChildPrivileges() {
+    return PrivilegeHierarchy.getChildPrivileges(uri);
   }
-
-  static final _dashboardUris = [
-    PrivilegeConstants.adminDashboard,
-    PrivilegeConstants.salesDashboard,
-    PrivilegeConstants.stockDashboard,
-    PrivilegeConstants.availabilityDashboard,
-    PrivilegeConstants.purchaseDashboard,
-  ];
 
   Privilege copyWith({
     int? id,
@@ -160,23 +152,18 @@ class Privilege {
   }
 
   @override
-  List<Object?> get props => [
-    id,
-    name,
-    description,
-    createdBy,
-    dateCreated,
-    updatedBy,
-    dateUpdated,
-    type,
-    uri,
-    linkLabel,
-    buttonLabel,
-    vendorOnly,
-  ];
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Privilege &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          uri == other.uri;
+
+  @override
+  int get hashCode => id.hashCode ^ uri.hashCode;
 
   @override
   String toString() {
-    return 'Privilege{id: $id, name: $name, description: $description, createdBy: $createdBy, dateCreated: $dateCreated, updatedBy: $updatedBy, dateUpdated: $dateUpdated, type: $type, uri: $uri, linkLabel: $linkLabel, buttonLabel: $buttonLabel, vendorOnly: $vendorOnly}';
+    return 'Privilege{id: $id, name: $name, uri: $uri, type: $type, parent: $parentDashboard}';
   }
 }

@@ -1,15 +1,11 @@
-// core/widgets/route_guard.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:savvy_stock/core/constants/privilege_constants.dart';
-import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart';
+import 'package:savvy_stock/core/constants/app_routes.dart';
+import 'package:savvy_stock/core/constants/privilege_heirarchy.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
-import 'package:savvy_stock/features/auth/blocs/auth_event.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
 
-// core/widgets/route_guard.dart
 class PrivilegeRouteGuard extends StatelessWidget {
   final Widget child;
   final String requiredPrivilege;
@@ -26,90 +22,150 @@ class PrivilegeRouteGuard extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
-        if (state.status == AuthStatus.authenticated) {
-          final hasAccess = _checkAccess(state);
+        switch (state.status) {
+          case AuthStatus.loading:
+            return _buildLoadingScreen('Checking authentication...');
 
-          if (hasAccess) {
-            return child;
-          } else {
-            return _buildAccessDeniedScreen(
-              context,
-              requiredPrivilege,
-              parentPrivilege,
-            );
-          }
+          case AuthStatus.unauthenticated:
+            return _buildLoadingScreen('Redirecting to login...');
+
+          case AuthStatus.authenticated:
+            final accessResult = _checkAccess(state);
+
+            if (accessResult.hasAccess) {
+              return child;
+            } else {
+              return _buildUnauthorizedScreen(context, accessResult);
+            }
+
+          case AuthStatus.failure:
+            return _buildErrorScreen(context, state.message);
+
+          default:
+            return _buildErrorScreen(context, 'something went wrong');
         }
-
-        return const Scaffold(body: Center(child: CircularProgressIndicator()));
       },
     );
   }
 
-  bool _checkAccess(AuthState state) {
-    // Check if user has the required privilege
-    final hasRequired = state.hasPrivilege(requiredPrivilege);
-    if (!hasRequired) return false;
+  AccessCheckResult _checkAccess(AuthState state) {
+    final missingPrivileges = <String>[];
 
-    // If parent privilege is specified, check it
-    if (parentPrivilege != null) {
-      return state.hasPrivilege(parentPrivilege!);
+    // Use explicit parent if provided, otherwise use hierarchy config
+    final effectiveParent =
+        parentPrivilege ??
+        PrivilegeHierarchy.getParentPrivilege(requiredPrivilege);
+
+    // Get complete hierarchy required for access
+    final requiredHierarchy = effectiveParent != null
+        ? PrivilegeHierarchy.getRequiredPrivilegeHierarchy(requiredPrivilege)
+        : [requiredPrivilege];
+
+    // Check each privilege in the hierarchy
+    for (final privilege in requiredHierarchy) {
+      if (!state.hasPrivilege(privilege)) {
+        missingPrivileges.add(privilege);
+      }
     }
 
-    // Auto-detect parent dashboard from URI structure
-    final privilege = state.privileges.firstWhere(
-      (p) => p.uri == requiredPrivilege,
-      orElse: () => Privilege(
-        id: 0,
-        name: '',
-        description: '',
-        createdBy: 0,
-        dateCreated: DateTime.now(),
-        type: '',
-        uri: '',
-        linkLabel: '',
-        buttonLabel: '',
-        vendorOnly: false,
-        dateUpdated: null,
-        updatedBy: null,
-      ),
+    return AccessCheckResult(
+      hasAccess: missingPrivileges.isEmpty,
+      missingPrivileges: missingPrivileges,
+      requiredPrivilege: requiredPrivilege,
+      parentPrivilege: effectiveParent,
     );
-
-    if (privilege.parentDashboard != null) {
-      return state.hasPrivilege(privilege.parentDashboard!);
-    }
-
-    return true;
   }
 
-  Widget _buildAccessDeniedScreen(
-    BuildContext context,
-    String requiredPrivilege,
-    String? parentPrivilege,
-  ) {
+  Widget _buildLoadingScreen(String message) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Access Denied')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.block, size: 64, color: Colors.red),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(message),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUnauthorizedScreen(
+    BuildContext context,
+    AccessCheckResult result,
+  ) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Access Denied')),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.lock_outline, size: 64, color: Colors.redAccent),
+              const SizedBox(height: 16),
+              const Text(
+                'You do not have permission to access this page.',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              if (result.missingPrivileges.isNotEmpty)
+                Text(
+                  'Missing: ${result.missingPrivileges.join(', ')}',
+                  textAlign: TextAlign.center,
+                ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => context.go('/homePage'),
+                child: const Text('Go to Dashboard'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorScreen(BuildContext context, String? errorMessage) {
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
             const Text(
-              'Insufficient Privileges',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              'Authentication Error',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 12),
-            Text('Required: $requiredPrivilege'),
-            if (parentPrivilege != null)
-              Text('Parent Dashboard: $parentPrivilege'),
+            if (errorMessage != null) ...[
+              const SizedBox(height: 8),
+              Text(errorMessage, textAlign: TextAlign.center),
+            ],
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () => context.go('/homePage'),
-              child: const Text('Go to Home'),
+              onPressed: () => context.go(AppRoutes.login),
+              child: const Text('Return to Login'),
             ),
           ],
         ),
       ),
     );
   }
+}
+
+class AccessCheckResult {
+  final bool hasAccess;
+  final List<String> missingPrivileges;
+  final String requiredPrivilege;
+  final String? parentPrivilege;
+
+  AccessCheckResult({
+    required this.hasAccess,
+    required this.missingPrivileges,
+    required this.requiredPrivilege,
+    required this.parentPrivilege,
+  });
 }
