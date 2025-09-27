@@ -1,14 +1,31 @@
 // features/privilege/screens/privilege_management_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:savvy_stock/features/admin/privilege/blocs/privilege_bloc.dart';
+import 'package:savvy_stock/features/admin/privilege/blocs/privilege_event.dart';
+import 'package:savvy_stock/features/admin/privilege/blocs/privilege_state.dart';
 import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart';
-import '../blocs/privilege_bloc.dart';
-import '../blocs/privilege_event.dart';
-import '../blocs/privilege_state.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import '../widgets/privilege_form.dart';
 
-class PrivilegeManagementScreen extends StatelessWidget {
-  const PrivilegeManagementScreen({super.key});
+class PrivilegeManagementScreen extends StatefulWidget {
+  final AuthBloc authBloc;
+  const PrivilegeManagementScreen({super.key, required this.authBloc});
+
+  @override
+  State<PrivilegeManagementScreen> createState() =>
+      _PrivilegeManagementScreenState();
+}
+
+class _PrivilegeManagementScreenState extends State<PrivilegeManagementScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Load available privileges
+    context.read<PrivilegeBloc>().add(
+      LoadPrivileges(widget.authBloc.state.companyId!),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +81,7 @@ class PrivilegeManagementScreen extends StatelessWidget {
               children: [
                 IconButton(
                   icon: const Icon(Icons.edit),
-                  onPressed: () => _showPrivilegeForm(context, privilege),
+                  onPressed: () => _showPrivilegeForm(context),
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete),

@@ -1,310 +1,198 @@
-import 'package:flutter/material.dart';
+// features/sales/screens/sales_dashboard.dart
+/* import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
-import 'package:savvy_stock/features/auth/blocs/auth_event.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
+import '../../../auth/blocs/auth_bloc.dart';
+import '../../../../core/constants/privilege_constants.dart';
 
-class SalesDashboard extends StatefulWidget {
+class SalesDashboard extends StatelessWidget {
   const SalesDashboard({super.key});
 
   @override
-  State<SalesDashboard> createState() => _SalesDashboardState();
+  Widget build(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Sales Dashboard'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/home'),
+        ),
+      ),
+      body: _buildSalesDashboard(context, authState),
+    );
+  }
+
+  Widget _buildSalesDashboard(BuildContext context, AuthState authState) {
+    final hasSalesEntry = authState.hasPrivilege(PrivilegeConstants.salesEntry);
+    final hasCustomerManagement = authState.hasPrivilege(PrivilegeConstants.customerEntry);
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Sales Operations', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          
+          if (hasSalesEntry) _buildSalesEntrySection(context, authState),
+          if (hasCustomerManagement) _buildCustomerManagementSection(context, authState),
+          
+          if (!hasSalesEntry && !hasCustomerManagement)
+            _buildNoAccessSection('Sales operations'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSalesEntrySection(BuildContext context, AuthState authState) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Sales Entry Process', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                if (authState.hasPrivilege(PrivilegeConstants.customerEntry))
+                  _FeatureButton(
+                    label: 'Customer Entry',
+                    icon: Icons.person_add,
+                    onPressed: () => context.go('/sales/customer-entry'),
+                  ),
+                
+                if (authState.hasPrivilege(PrivilegeConstants.itemEntry))
+                  _FeatureButton(
+                    label: 'Item Entry',
+                    icon: Icons.inventory,
+                    onPressed: () => _startItemEntry(context, authState),
+                  ),
+                
+                if (authState.hasPrivilege(PrivilegeConstants.paymentSummary))
+                  _FeatureButton(
+                    label: 'Payment Summary',
+                    icon: Icons.payment,
+                    onPressed: () => context.go('/sales/payment-summary'),
+                  ),
+                
+                if (authState.hasPrivilege(PrivilegeConstants.salesInvoice))
+                  _FeatureButton(
+                    label: 'Invoice',
+                    icon: Icons.receipt,
+                    onPressed: () => context.go('/sales/sales-dashboard/sales-invoice'),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _startItemEntry(BuildContext context, AuthState authState) {
+    // Start item entry process
+    context.go('/sales/item-entry');
+    
+    // Store the next step based on user privileges
+    final nextStep = authState.hasPrivilege(PrivilegeConstants.paymentSummary) 
+        ? '/sales/payment-summary'
+        : '/sales-dashboard';
+        
+    // You can store this in a sales bloc or pass as parameter
+  }
+
+  Widget _buildCustomerManagementSection(BuildContext context, AuthState authState) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Customer Management', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                if (authState.hasPrivilege(PrivilegeConstants.viewCustomerList))
+                  _FeatureButton(
+                    label: 'View Customers',
+                    icon: Icons.list,
+                    onPressed: () => context.go('/sales/customer-list'),
+                  ),
+                
+                if (authState.hasPrivilege(PrivilegeConstants.addCustomer))
+                  _FeatureButton(
+                    label: 'Add Customer',
+                    icon: Icons.add,
+                    onPressed: () => context.go('/sales/add-customer'),
+                  ),
+                
+                if (authState.hasPrivilege(PrivilegeConstants.editCustomer))
+                  _FeatureButton(
+                    label: 'Edit Customer',
+                    icon: Icons.edit,
+                    onPressed: () => context.go('/sales/edit-customer'),
+                  ),
+                
+                if (authState.hasPrivilege(PrivilegeConstants.deleteCustomer))
+                  _FeatureButton(
+                    label: 'Delete Customer',
+                    icon: Icons.delete,
+                    onPressed: () => context.go('/sales/delete-customer'),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoAccessSection(String sectionName) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            const Icon(Icons.block, size: 48, color: Colors.grey),
+            const SizedBox(height: 12),
+            Text('No access to $sectionName features', style: const TextStyle(color: Colors.grey)),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _SalesDashboardState extends State<SalesDashboard> {
-  // Track the selected card
-  String selectedCard = "Employee";
+class _FeatureButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onPressed;
 
-  // Descriptions for each card
-  final Map<String, String> cardDescriptions = {
-    "Employee": "Manage employee records and related information here.",
-    "Sales": "Track and manage all your sales entries efficiently.",
-    "Stock": "Add new items, categories, or services easily.",
-    "Orders": "View and manage customer orders seamlessly.",
-  };
-
-  // Data sections for each card
-  final Map<String, List<String>> cardActions = {
-    "Employee": ["Employee Entry", "Employee List"],
-    "Sales": ["Sales Entry", "Customer Entry"],
-    "Stock": ["Add Product", "Add Customer"],
-    "Orders": ["Order Entry", "Order History"],
-  };
-  // Map cards to icons
-  final Map<String, IconData> cardIcons = {
-    "Employee": Icons.person,
-    "Sales": Icons.sell,
-    "Stock": Icons.add_circle,
-    "Orders": Icons.shopping_cart,
-  };
+  const _FeatureButton({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SingleChildScrollView(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            minWidth: 375,
-            minHeight: 812,
-            maxWidth: MediaQuery.of(context).size.width,
-          ),
-          child: Container(
-            width: MediaQuery.of(context).size.width,
-            constraints: BoxConstraints(minHeight: 812),
-            decoration: BoxDecoration(color: Colors.white),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(0),
-              child: Stack(
-                children: [
-                  // Background with radial gradient
-                  Container(
-                    width: double.infinity,
-                    height: 167,
-                    decoration: const BoxDecoration(
-                      gradient: RadialGradient(
-                        center: Alignment(0.5, -0.5),
-                        radius: 2.5,
-                        colors: [Color(0xFF383838), Color(0xFF565555)],
-                        stops: [0.46, 1.0],
-                      ),
-                    ),
-                  ),
-
-                  // Main content
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildHeaderSection(),
-                      _buildCardSection(),
-                      _buildDataSection(),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-      bottomSheet: _buildFooter(),
-    );
-  }
-
-  Widget _buildHeaderSection() {
-    return Padding(
-      padding: const EdgeInsets.only(top: 40, left: 10, right: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Back button and title
-          Row(
-            children: [
-              Container(
-                width: 41,
-                height: 41,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.person, color: Colors.black),
-              ),
-              const SizedBox(width: 16),
-              const Text(
-                'ABEBA ADMASU',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const Spacer(),
-
-              // Three dot menu
-              // Handle the button press, e.g., show a PopupMenuButton
-              PopupMenuButton<String>(
-                tooltip: 'More',
-                iconColor: Colors.white,
-                onSelected: (value) {
-                  if (value == 'System Constants') {
-                    context.push('/system_constant');
-                  } else if (value == 'Logout') {
-                    context.read<AuthBloc>().add(LogoutRequested());
-                  }
-                },
-                itemBuilder: (BuildContext context) => [
-                  PopupMenuItem<String>(
-                    child: const Text('System Constants'),
-                    onTap: () => context.push('/system_constant'),
-                  ),
-                  PopupMenuItem<String>(
-                    child: const Text('Logout'),
-                    onTap: () =>
-                        context.read<AuthBloc>().add(LogoutRequested()),
-                  ),
-                ],
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 45),
-        ],
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
   }
-
-  Widget _buildCardSection() {
-    final cards = ["Employee", "Sales", "Stock", "Orders"];
-
-    return Container(
-      margin: const EdgeInsets.only(top: 0, left: 30, right: 30),
-      padding: const EdgeInsets.all(0),
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: const Color(0X00000000),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: const Color(0xFFEBEBEB), width: 0.3),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Card buttons
-          Container(
-            decoration: const BoxDecoration(
-              color: Color(0xFF383838),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(15),
-                topRight: Radius.circular(15),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: cards.map((card) {
-                final isSelected = selectedCard == card;
-                return TextButton(
-                  onPressed: () {
-                    setState(() {
-                      selectedCard = card;
-                    });
-                  },
-                  child: isSelected
-                      ? Container(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 8,
-                            horizontal: 14,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.amber,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            card,
-                            style: TextStyle(
-                              color: Colors.white,
-                              backgroundColor: Colors.amber,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        )
-                      : Icon(cardIcons[card], color: Colors.white),
-                );
-              }).toList(),
-            ),
-          ),
-
-          // Description text
-          Container(
-            constraints: const BoxConstraints(minHeight: 100),
-            decoration: const BoxDecoration(
-              color: Color(0xFF155888),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(25),
-                bottomRight: Radius.circular(25),
-              ),
-            ),
-            alignment: Alignment.center,
-            padding: const EdgeInsets.all(18),
-            child: Text(
-              cardDescriptions[selectedCard] ?? "",
-              textAlign: TextAlign.center,
-              softWrap: true,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDataSection() {
-    final actions = cardActions[selectedCard] ?? [];
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 30, left: 30, right: 30),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch, // full width buttons
-        children: actions.map((action) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 20),
-            child: ElevatedButton(
-              onPressed: () => _handleAction(action), // call handler
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF155888),
-                minimumSize: const Size(
-                  double.infinity,
-                  60,
-                ), // full width, fixed height
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                action,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  /// Handle all button presses here
-  void _handleAction(String action) {
-    switch (action) {
-      case "Sales Entry":
-        // Example: Navigate to Sales Entry screen
-        context.push('/customer-screen');
-        break;
-
-      case "Customer Entry":
-        context.push('/customer-list');
-        break;
-
-      default:
-        // Fallback: show a snackbar
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Clicked: $action")));
-    }
-  }
-
-  Widget _buildFooter() {
-    return SizedBox(
-      height: 60,
-      width: double.infinity,
-      child: const Center(
-        child: Text(
-          'POWERED BY TECH EQUATIONS',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 16,
-            fontWeight: FontWeight.w200,
-          ),
-        ),
-      ),
-    );
-  }
-}
+}*/

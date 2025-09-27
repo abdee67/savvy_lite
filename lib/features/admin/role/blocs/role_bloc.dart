@@ -1,14 +1,18 @@
 // features/role/blocs/role_bloc.dart
+import 'dart:developer' as developer;
+
 import 'package:bloc/bloc.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/admin/role/blocs/role_event.dart';
 import 'package:savvy_stock/features/admin/role/blocs/role_state.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 
 class RoleBloc extends Bloc<RoleEvent, RoleState> {
   final LocalDatabaseService databaseService;
+  final AuthBloc authBloc;
 
-  RoleBloc({required this.databaseService})
+  RoleBloc({required this.databaseService, required this.authBloc})
     : super(RoleState(status: RoleStatus.initial)) {
     on<LoadRoles>(_onLoadRoles);
     on<CreateRole>(_onCreateRole);
@@ -48,24 +52,32 @@ class RoleBloc extends Bloc<RoleEvent, RoleState> {
       final roleId = await db.insert('role_table', {
         'name': event.name,
         'description': event.description,
-        'company': event.companyId,
-        'created_by': event.createdBy,
+        'company': authBloc.state.companyId,
+        'created_by': authBloc.state.userId,
         'date_created': DateTime.now().toIso8601String(),
       });
-
+      developer.log(
+        'Creating role for company: ${authBloc.state.companyId}, by user: ${authBloc.state.userId}',
+      );
+      emit(
+        RoleState(
+          status: RoleStatus.success,
+          message: 'Role created successfully: $roleId, {$event.name}',
+        ),
+      );
       // Assign privileges if any
       if (event.privilegeIds.isNotEmpty) {
         for (final privilegeId in event.privilegeIds) {
           await db.insert('role_privilege', {
             'role_table_id': roleId,
             'privilege_table_id': privilegeId,
-            'created_by': event.createdBy,
+            'created_by': authBloc.state.userId,
             'date_created': DateTime.now().toIso8601String(),
           });
         }
       }
 
-      add(LoadRoles(event.companyId)); // Reload the list
+      add(LoadRoles(authBloc.state.companyId!)); // Reload the list
     } catch (e) {
       emit(
         RoleState(
@@ -86,8 +98,8 @@ class RoleBloc extends Bloc<RoleEvent, RoleState> {
       // Remove existing privileges
       await db.delete(
         'role_privilege',
-        where: 'role_table_id = ?',
-        whereArgs: [event.role.id],
+        where: 'role_table_id = ? AND company = ?',
+        whereArgs: [event.role.id, authBloc.state.companyId],
       );
 
       // Add new privileges
@@ -95,12 +107,13 @@ class RoleBloc extends Bloc<RoleEvent, RoleState> {
         await db.insert('role_privilege', {
           'role_table_id': event.role.id,
           'privilege_table_id': privilege,
-          'created_by': event.createdBy,
+          'company': authBloc.state.companyId,
+          'created_by': authBloc.state.userId,
           'date_created': DateTime.now().toIso8601String(),
         });
       }
 
-      add(LoadRoles(event.role.companyId)); // Reload the list
+      add(LoadRoles(authBloc.state.companyId!)); // Reload the list
     } catch (e) {
       emit(
         RoleState(
@@ -118,10 +131,10 @@ class RoleBloc extends Bloc<RoleEvent, RoleState> {
       await db.update(
         'role_table',
         event.role.toMap(),
-        where: 'id = ?',
-        whereArgs: [event.role.id],
+        where: 'id = ? AND company = ?',
+        whereArgs: [event.role.id, authBloc.state.companyId],
       );
-      add(LoadRoles(event.role.companyId)); // Reload the list
+      add(LoadRoles(authBloc.state.companyId!)); // Reload the list
     } catch (e) {
       emit(
         RoleState(
@@ -137,10 +150,10 @@ class RoleBloc extends Bloc<RoleEvent, RoleState> {
       final db = await databaseService.database;
       await db.delete(
         'role_table',
-        where: 'id = ?',
-        whereArgs: [event.role.id],
+        where: 'id = ? AND company = ?',
+        whereArgs: [event.role.id, authBloc.state.companyId],
       );
-      add(LoadRoles(event.role.companyId)); // Reload the list
+      add(LoadRoles(authBloc.state.companyId!)); // Reload the list
     } catch (e) {
       emit(
         RoleState(

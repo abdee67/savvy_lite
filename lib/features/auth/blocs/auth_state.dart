@@ -65,20 +65,33 @@ class AuthState extends Equatable {
   bool get isAuthenticated => status == AuthStatus.authenticated;
 
   bool hasPrivilege(String privilegeUri) {
-    // Flatten the privileges from all roles and check if any matches the URI.
-    return userWithRole?.hasPrivilege(privilegeUri) ?? false;
+    // Check BOTH sources to avoid null issues
+    if (userWithRole != null) {
+      return userWithRole!.hasPrivilege(privilegeUri);
+    }
+    // Fallback to direct privileges list
+    return privileges.any((privilege) => privilege.uri == privilegeUri);
   }
 
   bool hasAnyPrivilege(List<String> privilegeUris) {
-    return userWithRole?.hasAnyPrivilege(privilegeUris) ?? false;
+    if (userWithRole != null) {
+      return userWithRole!.hasAnyPrivilege(privilegeUris);
+    }
+    return privileges.any((privilege) => privilegeUris.contains(privilege.uri));
   }
 
   bool hasRole(String roleName) {
-    return userWithRole?.hasRole(roleName) ?? false;
+    if (userWithRole != null) {
+      return userWithRole!.hasRole(roleName);
+    }
+    return roles.any((role) => role.name == roleName);
   }
 
   bool hasAnyRole(List<String> roleNames) {
-    return userWithRole?.hasAnyRole(roleNames) ?? false;
+    if (userWithRole != null) {
+      return userWithRole!.hasAnyRole(roleNames);
+    }
+    return roles.any((role) => roleNames.contains(role.name));
   }
 
   bool get isTokenExpiringSoon {

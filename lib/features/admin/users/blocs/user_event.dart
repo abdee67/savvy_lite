@@ -10,10 +10,11 @@ class LoadUsers extends UserEvent {
 }
 
 class CreateUser extends UserEvent {
-  final UserModel user;
+  final String employeesId;
+  final String userName;
+  final String password;
   final List<int> roleIds;
-  final int createdBy;
-  CreateUser(this.user, this.roleIds, this.createdBy);
+  CreateUser(this.employeesId, this.userName, this.password, this.roleIds);
 }
 
 class UpdateUser extends UserEvent {

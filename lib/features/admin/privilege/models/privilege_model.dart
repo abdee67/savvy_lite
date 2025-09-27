@@ -1,3 +1,5 @@
+import 'package:savvy_stock/core/constants/privilege_constants.dart';
+
 class Privilege {
   final int id;
   final String name;
@@ -9,14 +11,14 @@ class Privilege {
   final bool vendorOnly;
   final DateTime dateCreated;
   final DateTime? dateUpdated;
-  final int createdBy;
+  final int? createdBy;
   final int? updatedBy;
 
   Privilege({
     required this.id,
     required this.name,
     required this.description,
-    required this.createdBy,
+    this.createdBy,
     required this.dateCreated,
     required this.type,
     required this.uri,
@@ -61,7 +63,7 @@ class Privilege {
       if (v is bool) return v;
       if (v is int) return v == 1;
       if (v is String) {
-        return v.toUpperCase() == 'Y' || v == '1' || v.toLowerCase() == 'true';
+        return v.toUpperCase() == 'Y';
       }
       return false;
     }
@@ -75,7 +77,7 @@ class Privilege {
       updatedBy: asInt(map['updated_by']),
       dateUpdated: parseDate(map['date_updated']),
       type: asString(map['type']),
-      uri: asString(map['uri']),
+      uri: asString(map['link'] ?? map['button']),
       linkLabel: asString(map['link_lable']),
       buttonLabel: asString(map['button_lable']),
       vendorOnly: asVendorOnly(map['vendor_only']),
@@ -91,11 +93,41 @@ class Privilege {
     'updated_by': updatedBy,
     'date_updated': dateUpdated?.toIso8601String(),
     'type': type,
-    'uri': uri,
+    'link': uri,
+    'button': uri,
     'link_lable': linkLabel,
     'button_lable': buttonLabel,
     'vendor_only': vendorOnly ? 'Y' : 'N',
   };
+  bool get isDashboardPrivilege {
+    return uri.endsWith('/dashboard') ||
+        uri.contains('/dashboard/') ||
+        _dashboardUris.contains(uri);
+  }
+
+  // Helper to get parent dashboard from URI
+  String? get parentDashboard {
+    if (uri.startsWith('/admin/')) return PrivilegeConstants.adminDashboard;
+    if (uri.startsWith('/sales/')) return PrivilegeConstants.salesDashboard;
+    if (uri.startsWith('/stock/')) return PrivilegeConstants.stockDashboard;
+    if (uri.startsWith('/availability/'))
+      return PrivilegeConstants.availabilityDashboard;
+    if (uri.startsWith('/purchase/'))
+      return PrivilegeConstants.purchaseDashboard;
+
+    // For simple cases like '/sales-dashboard' itself
+    if (_dashboardUris.contains(uri)) return uri;
+
+    return null;
+  }
+
+  static final _dashboardUris = [
+    PrivilegeConstants.adminDashboard,
+    PrivilegeConstants.salesDashboard,
+    PrivilegeConstants.stockDashboard,
+    PrivilegeConstants.availabilityDashboard,
+    PrivilegeConstants.purchaseDashboard,
+  ];
 
   Privilege copyWith({
     int? id,
