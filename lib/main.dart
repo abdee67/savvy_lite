@@ -4,10 +4,10 @@ import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
 import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dart';
 import 'package:savvy_stock/core/config/app_config.dart';
+import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/di/injection_container.dart';
 import 'package:savvy_stock/core/routes/app_router.dart';
 import 'package:savvy_stock/core/services/conectitvity_service.dart';
@@ -19,6 +19,8 @@ import 'package:savvy_stock/features/admin/privilege/blocs/privilege_bloc.dart';
 import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_event.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/invoice/blocs/invoice_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
@@ -151,75 +153,118 @@ class _SavvyStockState extends State<SavvyStock> {
       );
     }
 
-    return MultiBlocProvider(
-      providers: [
-        // Bloc providers
-        // Provide the SAME instance used by AppRouter so redirects react to auth changes
-        BlocProvider<AuthBloc>.value(value: _authBloc),
-        BlocProvider<EmployeeBloc>(
-          create: (context) =>
-              EmployeeBloc(databaseService: getIt(), authBloc: _authBloc),
-        ),
-        BlocProvider<UserBloc>(
-          create: (context) =>
-              UserBloc(databaseService: getIt(), authBloc: _authBloc),
-        ),
-        BlocProvider<PrivilegeBloc>(
-          create: (context) =>
-              PrivilegeBloc(databaseService: getIt(), authBloc: _authBloc),
-        ),
-        BlocProvider<RoleBloc>(
-          create: (context) =>
-              RoleBloc(databaseService: getIt(), authBloc: _authBloc),
-        ),
-        BlocProvider<CustomerBloc>(create: (context) => CustomerBloc()),
-        BlocProvider<ItemEntryBloc>(create: (context) => ItemEntryBloc()),
-        BlocProvider<PaymentBloc>(
-          create: (context) => PaymentBloc(getIt<SystemConstantsService>()),
-        ),
-        BlocProvider<InvoiceBloc>(create: (context) => InvoiceBloc()),
-        BlocProvider<SystemConstantBloc>(
-          create: (context) => SystemConstantBloc(
-            systemConstantRepository: getIt<SystemConstantRepository>(),
-            // authService: getIt<AuthService>(),
-            // Use the same AuthBloc instance to avoid multiple instances
-            authBloc: _authBloc,
-            udcService: getIt<UdcService>(),
-            systemConstantService: getIt<SystemConstantsService>(),
-          )..add(LoadSystemConstants()),
-        ),
-      ],
-      child: MaterialApp.router(
-        debugShowCheckedModeBanner: false,
-        title: 'Savvy Stock',
-        routerConfig: _router,
-        theme: ThemeData(
-          primarySwatch: Colors.deepPurple,
-          appBarTheme: AppBarTheme(
-            backgroundColor: Color(0xFF155888),
-            foregroundColor: Colors.white,
-            elevation: 0,
-            iconTheme: IconThemeData(color: Colors.white),
+    return _AppWrapper(
+      authBloc: _authBloc,
+      router: _router,
+      child: MultiBlocProvider(
+        providers: [
+          // Bloc providers
+          BlocProvider<AuthBloc>.value(value: _authBloc),
+          BlocProvider<EmployeeBloc>(
+            create: (context) =>
+                EmployeeBloc(databaseService: getIt(), authBloc: _authBloc),
           ),
-          fontFamily: 'Montserrat',
-          scaffoldBackgroundColor: Colors.grey[50],
-          inputDecorationTheme: InputDecorationTheme(
-            border: OutlineInputBorder(),
-            filled: true,
-            fillColor: Colors.white,
+          BlocProvider<UserBloc>(
+            create: (context) =>
+                UserBloc(databaseService: getIt(), authBloc: _authBloc),
           ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
+          BlocProvider<PrivilegeBloc>(
+            create: (context) =>
+                PrivilegeBloc(databaseService: getIt(), authBloc: _authBloc),
+          ),
+          BlocProvider<RoleBloc>(
+            create: (context) =>
+                RoleBloc(databaseService: getIt(), authBloc: _authBloc),
+          ),
+          BlocProvider<CustomerBloc>(create: (context) => CustomerBloc()),
+          BlocProvider<ItemEntryBloc>(create: (context) => ItemEntryBloc()),
+          BlocProvider<PaymentBloc>(
+            create: (context) => PaymentBloc(getIt<SystemConstantsService>()),
+          ),
+          BlocProvider<InvoiceBloc>(create: (context) => InvoiceBloc()),
+          BlocProvider<SystemConstantBloc>(
+            create: (context) => SystemConstantBloc(
+              systemConstantRepository: getIt<SystemConstantRepository>(),
+              authBloc: _authBloc,
+              udcService: getIt<UdcService>(),
+              systemConstantService: getIt<SystemConstantsService>(),
+            )..add(LoadSystemConstants()),
+          ),
+        ],
+        child: MaterialApp.router(
+          debugShowCheckedModeBanner: false,
+          title: 'Savvy Stock',
+          routerConfig: _router,
+          theme: ThemeData(
+            primarySwatch: Colors.deepPurple,
+            appBarTheme: AppBarTheme(
               backgroundColor: Color(0xFF155888),
               foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+              elevation: 0,
+              iconTheme: IconThemeData(color: Colors.white),
+            ),
+            fontFamily: 'Montserrat',
+            scaffoldBackgroundColor: Colors.grey[50],
+            inputDecorationTheme: InputDecorationTheme(
+              border: OutlineInputBorder(),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+            elevatedButtonTheme: ElevatedButtonThemeData(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF155888),
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
           ),
         ),
       ),
     );
+  }
+}
+
+// Wrapper widget to handle auth state changes safely
+class _AppWrapper extends StatefulWidget {
+  final AuthBloc authBloc;
+  final GoRouter router;
+  final Widget child;
+
+  const _AppWrapper({
+    required this.authBloc,
+    required this.router,
+    required this.child,
+  });
+
+  @override
+  State<_AppWrapper> createState() => _AppWrapperState();
+}
+
+class _AppWrapperState extends State<_AppWrapper> {
+  @override
+  void initState() {
+    super.initState();
+
+    // Listen for logout events and handle navigation safely
+    widget.authBloc.stream.listen((state) {
+      if (state.status == AuthStatus.unauthenticated &&
+          state.message?.contains('logout') == true) {
+        // Use a post-frame callback to ensure safe navigation
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          // Navigate to login screen safely
+          if (mounted) {
+            widget.router.push(AppRoutes.login);
+          }
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
   }
 }
