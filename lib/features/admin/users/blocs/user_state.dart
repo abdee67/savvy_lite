@@ -1,6 +1,4 @@
 import 'package:equatable/equatable.dart';
-import 'package:savvy_stock/features/admin/role/models/role_model.dart';
-import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/admin/users/models/user_with_role.dart';
 
 enum UserStatus { initial, loading, success, failure }

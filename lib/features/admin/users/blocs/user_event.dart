@@ -1,5 +1,4 @@
 import 'package:flutter/widgets.dart';
-import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 
 @immutable
 abstract class UserEvent {}

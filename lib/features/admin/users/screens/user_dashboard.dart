@@ -10,7 +10,6 @@ import 'package:savvy_stock/features/admin/role/blocs/role_state.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_bloc.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_event.dart';
-import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 
 class UserCreationScreen extends StatefulWidget {
   final Employee? employee;
@@ -155,7 +154,7 @@ class _UserCreationScreenState extends State<UserCreationScreen> {
           .map(
             (role) => CheckboxListTile(
               title: Text(role.name),
-              subtitle: Text('${role.description}'),
+              subtitle: Text(role.description),
               value: _selectedRoles.contains(role.id),
               onChanged: (selected) {
                 setState(() {

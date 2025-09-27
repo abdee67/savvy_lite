@@ -2,10 +2,12 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:math';
-import 'dart:typed_data';
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:argon2/argon2.dart';
+import 'package:go_router/go_router.dart';
+import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/models/company.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/admin/users/models/user_with_role.dart';
@@ -57,55 +59,29 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
+  // features/auth/blocs/auth_bloc.dart - Updated LoginRequested handler
   Future<void> _onLoginRequested(
     LoginRequested event,
     Emitter<AuthState> emit,
   ) async {
     emit(AuthState(status: AuthStatus.loading, message: 'Logging in...'));
+
     try {
       final db = await databaseService.database;
-      await _debugUserTable(db);
-      // Hash the password using Argon
-      final password = event.password;
-      final salt = 'somesalt'.toBytesLatin1();
 
-      final parameters = Argon2Parameters(
-        Argon2Parameters.ARGON2_i,
-        salt,
-        version: Argon2Parameters.ARGON2_VERSION_10,
-        iterations: 2,
-        memoryPowerOf2: 16,
-      );
+      // Use compute to run Argon2 hashing in a separate isolate
+      final hashedPassword = await _hashPasswordInIsolate(event.password);
 
-      final argon2 = Argon2BytesGenerator();
-
-      argon2.init(parameters);
-
-      final passwordBytes = parameters.converter.convert(password);
-
-      developer.log('Generating key from password...');
-
-      final result = Uint8List(32);
-      argon2.generateBytes(passwordBytes, result, 0, result.length);
-
-      final resultHex = result.toHexString();
-      developer.log('Result: $resultHex');
       developer.log('Username entered: ${event.username}');
-      developer.log('Password entered: ${event.password}');
-      developer.log('Hashed password: $resultHex');
-
-      // Debug: Check what the query is actually doing
-      developer.log(
-        'Executing query: user_name = ? AND password = ? AND status = "active"',
-      );
-      developer.log('With args: [${event.username}, $resultHex]');
+      developer.log('Hashed password: $hashedPassword');
 
       // Check user credentials
       final users = await db.query(
         'user_table',
         where: 'user_name = ? AND password = ? AND status = "active"',
-        whereArgs: [event.username, resultHex],
+        whereArgs: [event.username, hashedPassword],
       );
+
       developer.log('Found ${users.length} users matching credentials');
 
       if (users.isEmpty) {
@@ -120,6 +96,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         );
         return;
       }
+
       final userData = users.first;
       final user = UserModel.fromMap(userData);
 
@@ -138,16 +115,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         userWithRoles.allPrivileges,
         userWithRoles.roles,
       );
+
       await secureStorage.write(key: _tokenKey, value: token);
       await secureStorage.write(
         key: _companyKey,
         value: user.company.toString(),
       );
       await secureStorage.write(key: _userIdKey, value: user.id.toString());
-      await secureStorage.write(
-        key: _passwordKey,
-        value: user.password.toString(),
-      );
 
       emit(
         AuthState(
@@ -159,11 +133,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           privileges: userWithRoles.allPrivileges,
         ),
       );
-      developer.log(
-        '🎯 EMITTED AUTHENTICATED STATE - Router should detect this automatically',
-      );
     } catch (e) {
-      developer.log('Login Failedd: $e');
+      developer.log('Login Failed: $e');
       emit(
         AuthState(
           status: AuthStatus.failure,
@@ -173,6 +144,32 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         ),
       );
     }
+  }
+
+  // Helper function to run Argon2 in isolate
+  Future<String> _hashPasswordInIsolate(String password) async {
+    return await compute(_performArgon2Hashing, password);
+  }
+
+  // Static function that can be called in isolate
+  static String _performArgon2Hashing(String password) {
+    final salt = 'somesalt'.toBytesLatin1();
+    final parameters = Argon2Parameters(
+      Argon2Parameters.ARGON2_i,
+      salt,
+      version: Argon2Parameters.ARGON2_VERSION_10,
+      iterations: 2,
+      memoryPowerOf2: 16,
+    );
+
+    final argon2 = Argon2BytesGenerator();
+    argon2.init(parameters);
+    final passwordBytes = parameters.converter.convert(password);
+
+    final result = Uint8List(32);
+    argon2.generateBytes(passwordBytes, result, 0, result.length);
+
+    return result.toHexString();
   }
 
   Future<UserWithRole> _getUserWithRolesAndPrivileges(
@@ -226,7 +223,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     LogoutRequested event,
     Emitter<AuthState> emit,
   ) async {
+    // Navigate first, then clear storage and emit state
+    if (event.context != null && event.context!.mounted) {
+      event.context!.push(AppRoutes.login);
+    }
     await _clearStorage();
+
+    // Add a small delay to ensure navigation completes
+    await Future.delayed(const Duration(milliseconds: 100));
+
     emit(
       AuthState(status: AuthStatus.initial, message: 'Logged out successfully'),
     );
@@ -432,7 +437,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       'roles': roles.map((r) => r.toMap()).toList(),
       'auth_time': DateTime.now().millisecondsSinceEpoch,
       'exp': DateTime.now()
-          .add(const Duration(hours: 24))
+          .add(const Duration(minutes: 2))
           .millisecondsSinceEpoch,
       'jti': Random().nextInt(1000000), // Mock JWT ID
     };
