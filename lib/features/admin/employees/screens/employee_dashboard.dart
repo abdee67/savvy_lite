@@ -6,6 +6,7 @@ import 'package:savvy_stock/features/admin/employees/blocs/employee_bloc.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_event.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_state.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
+import 'package:savvy_stock/features/admin/employees/widgets/emloyee_create_and_edit.dart.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 
 class EmployeeListPage extends StatefulWidget {
@@ -47,9 +48,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
   }
 
   void _toggleEmployeeSelection(Employee employee, bool selected) {
-    context.read<EmployeeBloc>().add(
-      SelectEmployee(employee, isSelected: selected),
-    );
+    context.read<EmployeeBloc>().add(SelectEmployee(employee, selected));
   }
 
   void _showEmployeeDetail(Employee employee) {
@@ -80,7 +79,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
   }
 
   void _exportEmployee(Employee employee) {
-    context.read<EmployeeBloc>().add(ExportEmployee(employee));
+    context.read<EmployeeBloc>().add(ExportEmployee());
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Employee data exported')));
@@ -103,12 +102,11 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
           final ids = employeesToDelete.map((e) => e.id).toList();
           bloc.add(
             DeleteSelectedEmployees(
-              ids,
-              employeesToDelete,
-              employeesToDelete
+              selectedEmployees: ids,
+              deletedEmployees: employeesToDelete,
+              deletedIndexes: employeesToDelete
                   .map((emp) => state.employees.indexOf(emp))
                   .toList(),
-              widget.authBloc.state.companyId!,
             ),
           );
         },
@@ -134,10 +132,9 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
       onConfirm: () {
         bloc.add(
           DeleteEmployee(
-            employeeToDelete.id,
-            widget.authBloc.state.companyId!,
-            index,
-            employeeToDelete,
+            deletedEmployee: employeeToDelete,
+            deletedIndex: index,
+            employeeId: employeeToDelete.id,
           ),
         );
       },
@@ -477,7 +474,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
                 ),
               ),
               title: Text(
-                employee.nameFirst!,
+                employee.nameFirst,
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -486,10 +483,9 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (employee.nameFirst != null)
-                    Text('Contact: ${employee.nameFirst}'),
-                  if (employee.phone != null) Text('Phone: ${employee.phone}'),
-                  if (employee.email != null) Text('Email: ${employee.email}'),
+                  Text('Contact: ${employee.nameFirst}'),
+                  Text('Phone: ${employee.phone}'),
+                  Text('Email: ${employee.email}'),
                 ],
               ),
               trailing: isSelected
@@ -556,7 +552,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
                   children: [
                     Center(
                       child: Text(
-                        employee.nameFirst!,
+                        employee.nameFirst,
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -567,12 +563,11 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
 
                     _buildDetailRow(
                       'Employee Full Name',
-                      '${employee.nameFirst!} ${employee.nameLast!}',
+                      '${employee.nameFirst} ${employee.nameLast}',
                     ),
                     _buildDetailRow('Employee ID', employee.employeeId),
                     _buildDetailRow('Email', employee.email),
                     _buildDetailRow('Phone', employee.phone),
-                    _buildDetailRow('Nationality', employee.nationality),
                     _buildDetailRow('Country', employee.country),
                     _buildDetailRow('City', employee.city),
                     _buildDetailRow('Address', employee.address),
@@ -593,12 +588,12 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
                 children: [
                   IconButton(
                     icon: const Icon(Iconsax.call, size: 28),
-                    onPressed: () => _callEmployee(employee.phone!),
+                    onPressed: () => _callEmployee(employee.phone),
                     tooltip: 'Call employee',
                   ),
                   IconButton(
                     icon: const Icon(Iconsax.sms, size: 28),
-                    onPressed: () => _emailEmployee(employee.email!),
+                    onPressed: () => _emailEmployee(employee.email),
                     tooltip: 'Email employee',
                   ),
                   IconButton(
@@ -639,11 +634,27 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
 
   void _navigateToAddScreen() {
     // Navigate to add employee screen
-    print('Navigate to add employee screen');
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BlocProvider.value(
+          value: context.read<EmployeeBloc>(),
+          child: const EmployeeFormPage(),
+        ),
+      ),
+    );
   }
 
   void _navigateToEditScreen(Employee employee) {
     // Navigate to edit employee screen
-    print('Navigate to edit employee screen for ${employee.nameFirst}');
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BlocProvider.value(
+          value: context.read<EmployeeBloc>(),
+          child: EmployeeFormPage(employee: employee),
+        ),
+      ),
+    );
   }
 }

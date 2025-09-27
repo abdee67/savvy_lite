@@ -1,8 +1,6 @@
 // features/Employee/blocs/Employee_bloc.dart
-import 'dart:math';
 
 import 'package:bloc/bloc.dart';
-import 'package:meta/meta.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_event.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_state.dart';
@@ -29,6 +27,8 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
     on<HideEmployeeDetail>(_onHideEmployeeDetail);
     on<ExportEmployee>(_onExportEmployee);
     on<ClearSelection>(_onClearSelection);
+    on<SetEmployeeForm>(_onSetEmployeeForm);
+    on<ResetEmployeeForm>(_onResetEmployeeForm);
   }
 
   Future<void> _onLoadEmployees(
@@ -68,27 +68,26 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
     CreateEmployee event,
     Emitter<EmployeeState> emit,
   ) async {
+    emit(
+      state.copyWith(
+        status: EmployeeStatus.loading,
+        message: 'Creating Employee...',
+      ),
+    );
     try {
       final db = await databaseService.database;
-      await db.insert('employees', {
-        'id': event.id,
-        'name_first': event.nameFirst,
-        'name_last': event.nameLast,
-        'title': event.title,
-        'email': event.email,
-        'phone': event.phone,
-        'address': event.address,
-        'city': event.city,
-        'state': event.state,
-        'zip': event.zip,
-        'country': event.country,
-        'notes': event.notes,
-        'company': authBloc.state.companyId,
-        'created_by': authBloc.state.userId,
+      final employeeMap = event.employee.toMap();
 
-        'date_created': DateTime.now().toIso8601String(),
-      });
+      //remove id for new employee insrtion
+      employeeMap.remove('id');
 
+      await db.insert('employees', employeeMap);
+      emit(
+        state.copyWith(
+          status: EmployeeStatus.success,
+          message: 'Employee created successfully',
+        ),
+      );
       add(LoadEmployees(authBloc.state.companyId!)); // Reload the list
     } catch (e) {
       emit(
@@ -104,31 +103,26 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
     UpdateEmployee event,
     Emitter<EmployeeState> emit,
   ) async {
+    emit(
+      state.copyWith(
+        status: EmployeeStatus.loading,
+        message: 'Updating Employee...',
+      ),
+    );
     try {
       final db = await databaseService.database;
       await db.update(
         'employees',
-        {
-          'id': event.id,
-          'name_first': event.nameFirst,
-          'name_last': event.nameLast,
-          'title': event.title,
-          'email': event.email,
-          'phone': event.phone,
-          'address': event.address,
-          'city': event.city,
-          'state': event.state,
-          'zip': event.zip,
-          'country': event.country,
-          'notes': event.notes,
-          'company': authBloc.state.companyId,
-          'created_by': authBloc.state.userId,
-          'date_created': DateTime.now().toIso8601String(),
-        },
+        event.employee.toMap(),
         where: 'id = ?',
-        whereArgs: [event.id],
+        whereArgs: [event.employee.id],
       );
-
+      emit(
+        state.copyWith(
+          status: EmployeeStatus.success,
+          message: 'Employee updated successfully',
+        ),
+      );
       add(LoadEmployees(authBloc.state.companyId!)); // Reload the list
     } catch (e) {
       emit(
@@ -140,10 +134,22 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
     }
   }
 
+  void _onSetEmployeeForm(SetEmployeeForm event, Emitter<EmployeeState> emit) {
+    emit(state.copyWith(employeeForm: event.employee));
+  }
+
+  void _onResetEmployeeForm(
+    ResetEmployeeForm event,
+    Emitter<EmployeeState> emit,
+  ) {
+    emit(state.copyWith(employeeForm: Employee.empty()));
+  }
+
   Future<void> _onDeleteEmployee(
     DeleteEmployee event,
     Emitter<EmployeeState> emit,
   ) async {
+    emit(EmployeeState(status: EmployeeStatus.loading, message: 'Deleting..'));
     try {
       final db = await databaseService.database;
       await db.delete(

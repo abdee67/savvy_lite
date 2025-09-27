@@ -1,6 +1,5 @@
 import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
-import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 
 enum EmployeeStatus { initial, loading, searching, success, failure }
@@ -15,6 +14,7 @@ class EmployeeState extends Equatable {
   final List<Employee> selectedEmployees;
   final bool showDetailPanel;
   final Employee? employeeDetail;
+  final Employee? employeeForm;
 
   final List<Employee> employees;
   final List<Role> roles;
@@ -40,6 +40,7 @@ class EmployeeState extends Equatable {
     this.selectedEmployees = const [],
     this.showDetailPanel = false,
     this.employeeDetail,
+    this.employeeForm,
     this.recentlyDeleted = const [],
     this.recentlyDeletedIndexes = const [],
   });
@@ -86,6 +87,7 @@ class EmployeeState extends Equatable {
     List<Employee>? selectedEmployees,
     bool? showDetailPanel,
     Employee? employeeDetail,
+    Employee? employeeForm,
     List<Employee>? recentlyDeleted,
     List<int>? recentlyDeletedIndexes,
   }) {
@@ -103,6 +105,7 @@ class EmployeeState extends Equatable {
       selectedEmployees: selectedEmployees ?? this.selectedEmployees,
       showDetailPanel: showDetailPanel ?? this.showDetailPanel,
       employeeDetail: employeeDetail ?? this.employeeDetail,
+      employeeForm: employeeForm ?? this.employeeForm,
       recentlyDeleted: recentlyDeleted ?? this.recentlyDeleted,
       recentlyDeletedIndexes:
           recentlyDeletedIndexes ?? this.recentlyDeletedIndexes,
@@ -124,6 +127,7 @@ class EmployeeState extends Equatable {
     selectedEmployees,
     showDetailPanel,
     employeeDetail,
+    employeeForm,
     recentlyDeleted,
     recentlyDeletedIndexes,
   ];
