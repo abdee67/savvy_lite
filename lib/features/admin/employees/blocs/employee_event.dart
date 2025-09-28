@@ -67,7 +67,11 @@ class SelectEmployee extends EmployeeEvent {
 }
 
 class SelectAllEmployees extends EmployeeEvent {
-  const SelectAllEmployees();
+  final List<Employee> employees;
+  const SelectAllEmployees(this.employees);
+
+  @override
+  List<Object> get props => [employees];
 }
 
 class DeleteSelectedEmployees extends EmployeeEvent {
@@ -112,7 +116,19 @@ class HideEmployeeDetail extends EmployeeEvent {
 }
 
 class ExportEmployee extends EmployeeEvent {
-  const ExportEmployee();
+  final List<Employee> employeesToExport;
+  const ExportEmployee(this.employeesToExport);
+
+  @override
+  List<Object> get props => [employeesToExport];
+}
+
+class ExportSingleEmployee extends EmployeeEvent {
+  final Employee employeeToExport;
+  const ExportSingleEmployee(this.employeeToExport);
+
+  @override
+  List<Object> get props => [employeeToExport];
 }
 
 class ClearSelection extends EmployeeEvent {
@@ -129,4 +145,56 @@ class SetEmployeeForm extends EmployeeEvent {
 
 class ResetEmployeeForm extends EmployeeEvent {
   const ResetEmployeeForm();
+}
+
+class ChangeEmployeePage extends EmployeeEvent {
+  final int pageIndex;
+  const ChangeEmployeePage(this.pageIndex);
+
+  @override
+  List<Object> get props => [pageIndex];
+}
+
+class UpdateEmployeeFormField extends EmployeeEvent {
+  final String field;
+  final dynamic value;
+  const UpdateEmployeeFormField(this.field, this.value);
+
+  @override
+  List<Object> get props => [field, value];
+}
+
+class ConvertEmployeeToUser extends EmployeeEvent {
+  final int employeeId;
+  final String username;
+  final String password;
+  final int branchId;
+  final String email;
+
+  const ConvertEmployeeToUser({
+    required this.employeeId,
+    required this.username,
+    required this.password,
+    required this.branchId,
+    required this.email,
+  });
+
+  @override
+  List<Object> get props => [employeeId, username, password, branchId, email];
+}
+
+class ToggleRoleManagement extends EmployeeEvent {
+  final int employeeId;
+  const ToggleRoleManagement(this.employeeId);
+
+  @override
+  List<Object> get props => [employeeId];
+}
+
+class SearchRoles extends EmployeeEvent {
+  final String query;
+  const SearchRoles(this.query);
+
+  @override
+  List<Object> get props => [query];
 }

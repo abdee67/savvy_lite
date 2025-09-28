@@ -35,7 +35,7 @@ class _PrivilegeManagementScreenState extends State<PrivilegeManagementScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () => _showPrivilegeForm(context),
+            onPressed: () => _showPrivilegeForm(context, null),
           ),
         ],
       ),
@@ -81,7 +81,7 @@ class _PrivilegeManagementScreenState extends State<PrivilegeManagementScreen> {
               children: [
                 IconButton(
                   icon: const Icon(Icons.edit),
-                  onPressed: () => _showPrivilegeForm(context),
+                  onPressed: () => _showPrivilegeForm(context, privilege),
                 ),
                 if (context.read<AuthBloc>().state.hasAccessToPrivilege(
                   '/admin/privilege-management/delete-privilege',

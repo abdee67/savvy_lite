@@ -13,7 +13,16 @@ class CreateUser extends UserEvent {
   final String userName;
   final String password;
   final List<int> roleIds;
-  CreateUser(this.employeesId, this.userName, this.password, this.roleIds);
+  final int branch;
+  final String email;
+  CreateUser(
+    this.employeesId,
+    this.userName,
+    this.password,
+    this.roleIds,
+    this.branch,
+    this.email,
+  );
 }
 
 class UpdateUser extends UserEvent {

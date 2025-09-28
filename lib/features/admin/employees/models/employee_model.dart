@@ -17,6 +17,8 @@ class Employee {
   final int? company;
   final int? branch;
 
+  bool get isUser => employeeId != null;
+
   Employee({
     required this.id,
     this.employeeId,
@@ -154,4 +156,36 @@ class Employee {
     'company': company,
     'branch': branch,
   };
+  Employee copyWithField(String field, dynamic value) {
+    switch (field) {
+      case 'nameFirst':
+        return copyWith(nameFirst: value as String);
+      case 'nameLast':
+        return copyWith(nameLast: value as String);
+      case 'nameMiddle':
+        return copyWith(nameMiddle: value as String);
+      case 'employeeId':
+        return copyWith(employeeId: value as String);
+      case 'phone':
+        return copyWith(phone: value as String);
+      case 'email':
+        return copyWith(email: value as String);
+      case 'title':
+        return copyWith(title: value as String);
+      case 'gender':
+        return copyWith(gender: value as String);
+      case 'city':
+        return copyWith(city: value as String);
+      case 'address':
+        return copyWith(address: value as String);
+      case 'birthDate':
+        return copyWith(birthDate: value as String);
+      case 'hireDate':
+        return copyWith(hireDate: value as String);
+      case 'country':
+        return copyWith(country: value as String);
+      default:
+        return this;
+    }
+  }
 }
