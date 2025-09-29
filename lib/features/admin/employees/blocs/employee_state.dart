@@ -25,6 +25,8 @@ class EmployeeState extends Equatable {
   final List<Employee> filteredEmployees;
   final String searchQuery;
   final List<Employee> selectedEmployees;
+  final List<Role> selectedRolesForAssignment;
+  final bool hasRoleChanges;
 
   final EmployeeDetailStatus detailStatus;
   final Employee? employeeDetail;
@@ -64,6 +66,8 @@ class EmployeeState extends Equatable {
     this.isRoleManagementMode = false,
     this.roleSearchQuery = '',
     this.employeeInRoleManagement,
+    this.selectedRolesForAssignment = const [],
+    this.hasRoleChanges = false,
   });
 
   // --- Helper Getters ---
@@ -111,6 +115,8 @@ class EmployeeState extends Equatable {
     bool? isRoleManagementMode,
     String? roleSearchQuery,
     int? employeeInRoleManagement,
+    List<Role>? selectedRolesForAssignment,
+    bool? hasRoleChanges,
   }) {
     return EmployeeState(
       status: status ?? this.status,
@@ -135,6 +141,9 @@ class EmployeeState extends Equatable {
       roleSearchQuery: roleSearchQuery ?? this.roleSearchQuery,
       employeeInRoleManagement:
           employeeInRoleManagement ?? this.employeeInRoleManagement,
+      selectedRolesForAssignment:
+          selectedRolesForAssignment ?? this.selectedRolesForAssignment,
+      hasRoleChanges: hasRoleChanges ?? this.hasRoleChanges,
     );
   }
 
@@ -160,5 +169,7 @@ class EmployeeState extends Equatable {
     isRoleManagementMode,
     roleSearchQuery,
     employeeInRoleManagement,
+    selectedRolesForAssignment,
+    hasRoleChanges,
   ];
 }

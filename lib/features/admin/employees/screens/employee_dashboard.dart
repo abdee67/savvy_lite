@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/utils/ui_helper.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_bloc.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_event.dart';
@@ -8,12 +10,16 @@ import 'package:savvy_stock/features/admin/employees/blocs/employee_state.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
 import 'package:savvy_stock/features/admin/employees/widgets/convert_to_user.dart';
 import 'package:savvy_stock/features/admin/employees/widgets/emloyee_create_and_edit.dart.dart';
+import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
+import 'package:savvy_stock/features/admin/role/blocs/role_event.dart';
+import 'package:savvy_stock/features/admin/role/blocs/role_state.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_bloc.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_event.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_state.dart';
 import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/admin/users/models/user_with_role.dart';
+import 'package:savvy_stock/features/admin/users/screens/user_dashboard.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 
 class EmployeeListPage extends StatefulWidget {
@@ -38,7 +44,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
   bool _employeeDetail = false;
 
   bool _isEmployeeUser(Employee employee) {
-    final userState = context.read<UserBloc>().state;
+    final userState = context.watch<UserBloc>().state;
     return userState.users.any(
       (userWithRole) => userWithRole.user.employeesId == employee.id,
     );
@@ -46,10 +52,11 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
 
   UserWithRole? _getUserForEmployee(Employee employee) {
     final userState = context.read<UserBloc>().state;
-    return userState.users.firstWhere(
-      (userWithRole) => userWithRole.user.employeesId == employee.id,
-      orElse: () => UserWithRole(user: UserModel.empty(), roles: []),
+    final matches = userState.users.where(
+      (u) => u.user.employeesId == employee.id,
     );
+    if (matches.isEmpty) return null; // No linked system user
+    return matches.first;
   }
 
   @override
@@ -59,6 +66,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
       LoadEmployees(widget.authBloc.state.companyId!),
     );
     context.read<UserBloc>().add(LoadUsers(widget.authBloc.state.companyId!));
+    context.read<RoleBloc>().add(LoadRoles(widget.authBloc.state.companyId!));
   }
 
   @override
@@ -82,13 +90,17 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
   }
 
   void _showEmployeeDetail(Employee employee) {
+    context.read<EmployeeBloc>().add(ClearRoleSelection());
     setState(() {
       _selectedEmployee = employee;
       _employeeDetail = true;
     });
+    context.read<RoleBloc>().add(LoadRoles(widget.authBloc.state.companyId!));
   }
 
   void _hideEmployeeDetail() {
+    context.read<EmployeeBloc>().add(ClearSelection());
+    context.read<EmployeeBloc>().add(ToggleRoleManagement(0));
     setState(() {
       _employeeDetail = false;
       Future.delayed(const Duration(milliseconds: 300), () {
@@ -429,8 +441,18 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
       itemBuilder: (context, index) {
         final employee = state.filteredEmployees[index];
         final isSelected = state.selectedEmployees.contains(employee);
+        final isUser = _isEmployeeUser(employee);
+        final screenWidth = MediaQuery.of(context).size.width;
+        final useCompactLayout = screenWidth < 700;
 
-        return _buildEmployeeListItem(employee, isSelected, state, index);
+        return _buildEmployeeListItem(
+          employee,
+          isSelected,
+          state,
+          index,
+          isUser,
+          useCompactLayout,
+        );
       },
     );
   }
@@ -440,17 +462,21 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     bool isSelected,
     EmployeeState state,
     int index,
+    bool isUser,
+    bool isCompact,
   ) {
     final offset = _dragOffset[index] ?? 0.0;
+
     return GestureDetector(
       onTap: () {
         if (_isSelectionMode) {
-          // In selection mode, single tap toggles selection
           _toggleEmployeeSelection(employee, !isSelected);
+        } else {
+          // Single tap shows detail when not in selection mode
+          _showEmployeeDetail(employee);
         }
       },
       onLongPress: () {
-        // Long press enters selection mode and toggles this item
         if (!_isSelectionMode) {
           setState(() {
             _isSelectionMode = true;
@@ -465,24 +491,21 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
       onDoubleTap: () => _showEmployeeDetail(employee),
       child: Stack(
         children: [
-          // 🔴 Background (delete indicator)
+          // Background (delete indicator)
           Positioned.fill(
             child: Container(
               alignment: Alignment.centerRight,
               decoration: BoxDecoration(
-                color: Colors.amber,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
-                  bottomLeft: Radius.circular(20),
-                  bottomRight: Radius.circular(20),
-                ),
+                color: Colors.amber, // Changed to red for delete action
+                borderRadius: BorderRadius.circular(16),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 20),
               margin: const EdgeInsets.only(bottom: 2),
               child: const Icon(Icons.delete, color: Colors.white, size: 28),
             ),
           ),
+
+          // Employee card
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             transform: Matrix4.translationValues(offset, 0, 0),
@@ -500,53 +523,170 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
               ],
               border: Border.all(
                 color: isSelected
-                    ? Color.fromARGB(255, 28, 66, 146)
+                    ? const Color.fromARGB(255, 28, 66, 146)
                     : Colors.transparent,
                 width: 2,
               ),
             ),
             child: ListTile(
               contentPadding: const EdgeInsets.all(16),
-              leading: Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? const Color.fromARGB(255, 28, 66, 146)
-                      : Colors.grey[200],
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Iconsax.profile_circle,
-                  color: isSelected ? Colors.white : Colors.grey[600],
-                  size: 24,
-                ),
+              leading: _buildEmployeeAvatar(
+                employee,
+                isSelected,
+                isUser,
+                isCompact,
               ),
               title: Text(
-                employee.nameFirst,
+                '${employee.nameFirst} ${employee.nameLast}',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),
               ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Contact: ${employee.nameFirst}'),
-                  Text('Phone: ${employee.phone}'),
-                  Text('Email: ${employee.email}'),
-                ],
-              ),
-              trailing: isSelected
-                  ? const Icon(
-                      Iconsax.tick_circle,
-                      color: Color.fromARGB(255, 28, 66, 146),
-                    )
-                  : null,
+              subtitle: _buildEmployeeSubtitle(employee, isUser),
+              trailing: _buildEmployeeTrailing(isSelected, isUser),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  // Separate method for employee avatar
+  Widget _buildEmployeeAvatar(
+    Employee employee,
+    bool isSelected,
+    bool isUser,
+    bool isCompact,
+  ) {
+    // Define colors based on user status
+    final Color backgroundColor;
+    final Color iconColor;
+
+    if (isSelected) {
+      backgroundColor = const Color.fromARGB(255, 28, 66, 146);
+      iconColor = Colors.white;
+    } else if (isUser) {
+      backgroundColor = Colors.green;
+      iconColor = Colors.white;
+    } else {
+      backgroundColor = Colors.grey[200]!;
+      iconColor = Colors.grey[600]!;
+    }
+
+    return Stack(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Iconsax.profile_circle,
+            color: iconColor,
+            size: isCompact ? 20 : 24,
+          ),
+        ),
+        // User status badge
+        if (isUser)
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Container(
+              width: 16,
+              height: 16,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Iconsax.verify, size: 12, color: Colors.green),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // Separate method for employee subtitle
+  Widget _buildEmployeeSubtitle(Employee employee, bool isUser) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Show position/title if available
+        if (employee.title != null && employee.title!.isNotEmpty)
+          Text(
+            employee.title!,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+
+        // Contact information
+        Text('📞 ${employee.phone}', style: const TextStyle(fontSize: 12)),
+        Text(
+          '📧 ${employee.email}',
+          style: const TextStyle(fontSize: 12),
+          overflow: TextOverflow.ellipsis,
+        ),
+
+        // User status badge
+        if (isUser)
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.green[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.green[200]!),
+            ),
+            child: Text(
+              'System User',
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.green[800],
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          )
+        else
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.orange[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange[200]!),
+            ),
+            child: Text(
+              'Employee Only',
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.orange[800],
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // Separate method for trailing widget
+  Widget _buildEmployeeTrailing(bool isSelected, bool isUser) {
+    if (isSelected) {
+      return const Icon(
+        Iconsax.tick_circle,
+        color: Color.fromARGB(255, 28, 66, 146),
+      );
+    }
+
+    // Show user type indicator when not selected
+    return Icon(
+      isUser ? Iconsax.user : Iconsax.profile_2user,
+      color: isUser ? Colors.green : Colors.grey[400],
+      size: 20,
     );
   }
 
@@ -571,13 +711,14 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
             bottom: 0,
             left: 0,
             right: 0,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final screenWidth = constraints.maxWidth;
-                final screenHeight = constraints.maxHeight;
-                final panelHeight = screenHeight * 0.7.clamp(0.5, 0.8);
-                final useHorizontalLayout = screenWidth > 600;
-                final useCompactLayout = screenWidth < 400;
+            child: Builder(
+              builder: (context) {
+                final size = MediaQuery.of(context).size;
+                final screenWidth = size.width;
+                final screenHeight = size.height;
+                final panelHeight = screenHeight * 0.7; // finite height
+                final useHorizontalLayout = screenWidth > 700;
+                final useCompactLayout = screenWidth < 700;
 
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 400),
@@ -607,28 +748,20 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
                         employee,
                         state,
                         userWithRole,
+                        isUser,
                         useCompactLayout,
-                        useHorizontalLayout,
                       ),
 
                       // Content Section
                       Expanded(
                         child: Padding(
                           padding: EdgeInsets.all(useCompactLayout ? 12 : 20),
-                          child: state.isRoleManagementMode
-                              ? _buildRoleManagementView(
-                                  employee,
-                                  userWithRole,
-                                  state,
-                                  useHorizontalLayout,
-                                  useCompactLayout,
-                                )
-                              : _buildEmployeeInfoView(
-                                  employee,
-                                  state,
-                                  useHorizontalLayout,
-                                  useCompactLayout,
-                                ),
+                          child: _buildContentSection(
+                            employee,
+                            state,
+                            useHorizontalLayout,
+                            useCompactLayout,
+                          ),
                         ),
                       ),
 
@@ -646,6 +779,30 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     );
   }
 
+  // Add this new method:
+  Widget _buildContentSection(
+    Employee employee,
+    EmployeeState state,
+    bool useHorizontal,
+    bool isCompact,
+  ) {
+    final isUser = _isEmployeeUser(employee);
+
+    if (state.isRoleManagementMode && isUser) {
+      // Show role management only for users in role management mode
+      return _buildRoleManagementView(
+        employee,
+        _getUserForEmployee(employee),
+        state,
+        useHorizontal,
+        isCompact,
+      );
+    } else {
+      // Show basic employee info for all employees
+      return _buildEmployeeInfoView(employee, state, useHorizontal, isCompact);
+    }
+  }
+
   Widget _buildDetailHeader(
     Employee employee,
     EmployeeState state,
@@ -655,6 +812,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
   ) {
     final roleNames =
         userWithRole?.roles.map((r) => r.name).join(', ') ?? 'No roles';
+
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: isCompact ? 16 : 20,
@@ -701,7 +859,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
                             gradient: LinearGradient(
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
-                              colors: employee.isUser
+                              colors: isUser
                                   ? [Color(0xFF10b981), Color(0xFF059669)]
                                   : [Color(0xFF667eea), Color(0xFF764ba2)],
                             ),
@@ -782,77 +940,11 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
                 ),
               ),
 
-              // Action button
+              // Action button - ONLY show role management for users
               if (state.isRoleManagementMode)
-                BlocConsumer<UserBloc, UserState>(
-                  listener: (context, userState) {
-                    if (userState.status == UserStatus.success) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Roles updated successfully'),
-                        ),
-                      );
-                      context.read<EmployeeBloc>().add(
-                        ToggleRoleManagement(employee.id),
-                      );
-                    }
-                  },
-                  builder: (context, userState) {
-                    return ElevatedButton(
-                      onPressed: userState.isLoading
-                          ? null
-                          : () {
-                              // Save will be handled by the role assignment in the body
-                              context.read<EmployeeBloc>().add(
-                                ToggleRoleManagement(employee.id),
-                              );
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isCompact ? 12 : 16,
-                          vertical: 8,
-                        ),
-                      ),
-                      child: userState.isLoading
-                          ? SizedBox(
-                              width: isCompact ? 16 : 20,
-                              height: isCompact ? 16 : 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(
-                              'Back to Info',
-                              style: TextStyle(fontSize: isCompact ? 12 : 14),
-                            ),
-                    );
-                  },
-                )
+                _buildRoleManagementButton(employee, state, isCompact, context)
               else
-                ElevatedButton(
-                  onPressed: employee.isUser
-                      ? () => context.read<EmployeeBloc>().add(
-                          ToggleRoleManagement(employee.id),
-                        )
-                      : () => _showConvertToUserDialog(employee),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: employee.isUser
-                        ? Colors.blue
-                        : Colors.green,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isCompact ? 12 : 16,
-                      vertical: 8,
-                    ),
-                  ),
-                  child: Text(
-                    employee.isUser ? 'Show Roles' : 'Convert to User',
-                    style: TextStyle(fontSize: isCompact ? 12 : 14),
-                  ),
-                ),
+                _buildMainActionButton(employee, isUser, isCompact, context),
 
               SizedBox(width: 8),
 
@@ -876,6 +968,160 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
         ],
       ),
     );
+  }
+
+  // Separate method for role management button
+  Widget _buildRoleManagementButton(
+    Employee employee,
+    EmployeeState state,
+    bool isCompact,
+    BuildContext context,
+  ) {
+    return BlocConsumer<UserBloc, UserState>(
+      listener: (context, userState) {
+        if (userState.status == UserStatus.success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Roles updated successfully')),
+          );
+          context.read<EmployeeBloc>().add(ToggleRoleManagement(employee.id));
+          context.read<EmployeeBloc>().add(ClearRoleSelection());
+        }
+      },
+      builder: (context, userState) {
+        final hasChanges = state.hasRoleChanges;
+
+        return ElevatedButton(
+          onPressed: userState.isLoading
+              ? null
+              : () {
+                  if (hasChanges) {
+                    // Save role changes
+                    _saveRoleChanges(employee);
+                    context.read<UserBloc>().add(
+                      LoadUsers(widget.authBloc.state.companyId!),
+                    );
+                  } else {
+                    // Just go back to info view
+                    context.read<EmployeeBloc>().add(
+                      ToggleRoleManagement(employee.id),
+                    );
+                  }
+                },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: hasChanges ? Colors.amber : Colors.blue,
+            foregroundColor: Colors.white,
+            padding: EdgeInsets.symmetric(
+              horizontal: isCompact ? 12 : 16,
+              vertical: 8,
+            ),
+          ),
+          child: userState.isLoading
+              ? SizedBox(
+                  width: isCompact ? 16 : 20,
+                  height: isCompact ? 16 : 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  hasChanges ? 'Save Changes' : 'Back to Info',
+                  style: TextStyle(fontSize: isCompact ? 12 : 14),
+                ),
+        );
+      },
+    );
+  }
+
+  // Separate method for main action button
+  Widget _buildMainActionButton(
+    Employee employee,
+    bool isUser,
+    bool isCompact,
+    BuildContext context,
+  ) {
+    if (isUser) {
+      // Employee has user account - show "Show Roles" button
+      return ElevatedButton(
+        onPressed: () {
+          context.read<EmployeeBloc>().add(ToggleRoleManagement(employee.id));
+          context.read<UserBloc>().add(
+            LoadUsers(widget.authBloc.state.companyId!),
+          );
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
+          padding: EdgeInsets.symmetric(
+            horizontal: isCompact ? 12 : 16,
+            vertical: 8,
+          ),
+        ),
+        child: Text(
+          'Show Roles',
+          style: TextStyle(fontSize: isCompact ? 12 : 14),
+        ),
+      );
+    } else {
+      // Employee doesn't have user account - show "Convert to User" button
+      return ElevatedButton(
+        onPressed: () => context.push(
+          AppRoutes.userManagement,
+          extra: {'employee': employee},
+        ),
+
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.green,
+          foregroundColor: Colors.white,
+          padding: EdgeInsets.symmetric(
+            horizontal: isCompact ? 12 : 16,
+            vertical: 8,
+          ),
+        ),
+        child: Text(
+          'Convert to User',
+          style: TextStyle(fontSize: isCompact ? 12 : 14),
+        ),
+      );
+    }
+  }
+
+  // Helper method for saving role changes
+  void _saveRoleChanges(Employee employee) {
+    final userWithRole = _getUserForEmployee(employee);
+    final state = context.read<EmployeeBloc>().state;
+    if (userWithRole?.user.id != null) {
+      final currentAssignedRoles = userWithRole!.roles;
+
+      // additions: selected roles not currently assigned
+      final additions = state.selectedRolesForAssignment
+          .where((r) => !currentAssignedRoles.any((a) => a.id == r.id))
+          .map((r) => r.id)
+          .toList();
+
+      // removals: selected roles that are currently assigned
+      final removals = state.selectedRolesForAssignment
+          .where((r) => currentAssignedRoles.any((a) => a.id == r.id))
+          .map((r) => r.id)
+          .toSet();
+
+      // final = (current - removals) + additions
+      final finalRoleIds = [
+        ...currentAssignedRoles
+            .where((r) => !removals.contains(r.id))
+            .map((r) => r.id),
+        ...additions,
+      ];
+
+      widget.userBloc.add(
+        AssignRolesToUser(
+          userWithRole.user.id!,
+          widget.authBloc.state.companyId!,
+          finalRoleIds,
+          widget.authBloc.state.userId!,
+        ),
+      );
+    }
   }
 
   Widget _buildEmployeeInfoView(
@@ -1044,18 +1290,31 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     bool useHorizontal,
     bool isCompact,
   ) {
-    return BlocBuilder<UserBloc, UserState>(
-      builder: (context, userState) {
+    return BlocBuilder<RoleBloc, RoleState>(
+      builder: (context, roleState) {
+        // Get the SPECIFIC employee's assigned roles
         final assignedRoles = userWithRole?.roles ?? [];
-        final allRoles =
-            userState.users?.roles ??
-            []; // You'll need to load roles in UserBloc
+
+        // Get all available roles in the system
+        final allRoles = roleState.roles;
+
+        // Filter to get only roles NOT assigned to this specific employee
         final availableRoles = allRoles
             .where(
               (role) =>
                   !assignedRoles.any((assigned) => assigned.id == role.id),
             )
             .toList();
+
+        // Filter available roles based on search query
+        final filteredAvailableRoles = availableRoles
+            .where(
+              (role) => role.name.toLowerCase().contains(
+                roleState.searchQuery.toLowerCase(),
+              ),
+            )
+            .toList();
+
         return Column(
           children: [
             // Search bar for roles
@@ -1085,7 +1344,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
                         contentPadding: EdgeInsets.zero,
                       ),
                       onChanged: (query) {
-                        context.read<EmployeeBloc>().add(SearchRoles(query));
+                        context.read<RoleBloc>().add(SearchRoles(query));
                       },
                     ),
                   ),
@@ -1095,20 +1354,14 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
             SizedBox(height: 16),
 
             Expanded(
-              child: useHorizontal
-                  ? _buildHorizontalRoleManagement(
-                      assignedRoles,
-                      availableRoles,
-                      state,
-                      employee,
-                      isCompact,
-                    )
-                  : _buildVerticalRoleManagement(
-                      assignedRoles,
-                      availableRoles,
-                      state,
-                      isCompact,
-                    ),
+              child: _buildVerticalRoleManagement(
+                assignedRoles,
+                filteredAvailableRoles,
+                state,
+                employee,
+                userWithRole,
+                isCompact,
+              ),
             ),
           ],
         );
@@ -1116,93 +1369,230 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     );
   }
 
-  Widget _buildHorizontalRoleManagement(
-    List<Role> assignedRoles,
-    List<Role> availableRoles,
-    EmployeeState state,
-    Employee employee,
-    bool isCompact,
-  ) {
-    final filteredAvailableRoles = availableRoles
-        .where(
-          (role) =>
-              role.name.toLowerCase().contains(state.searchQuery.toLowerCase()),
-        )
-        .toList();
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Assigned Roles
-        Expanded(
-          child: _buildRoleSection(
-            title: 'User Roles (${assignedRoles.length})',
-            roles: assignedRoles,
-            isAssigned: true,
-            isCompact: isCompact,
-          ),
-        ),
-        SizedBox(width: isCompact ? 12 : 20),
-        // Available Roles
-        Expanded(
-          child: _buildRoleSection(
-            title: 'Available Roles (${filteredAvailableRoles.length})',
-            roles: filteredAvailableRoles,
-            isAssigned: false,
-            isCompact: isCompact,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildVerticalRoleManagement(
     List<Role> assignedRoles,
     List<Role> availableRoles,
     EmployeeState state,
+    Employee employee,
+    UserWithRole? userWithRole,
     bool isCompact,
   ) {
-    final filteredAvailableRoles = availableRoles
+    // For the User Roles section: show permanently assigned roles + temporarily selected roles
+    final userRolesToShow = [
+      ...assignedRoles.where(
+        (role) => !state.selectedRolesForAssignment.any(
+          (selected) => selected.id == role.id,
+        ),
+      ),
+    ];
+
+    // For the Available Roles section: show available roles excluding temporarily selected ones
+    final availableRolesToShow = availableRoles
         .where(
-          (role) =>
-              role.name.toLowerCase().contains(state.searchQuery.toLowerCase()),
+          (role) => !state.selectedRolesForAssignment.any(
+            (selected) => selected.id == role.id,
+          ),
         )
         .toList();
+
     return SingleChildScrollView(
       child: Column(
         children: [
           _buildRoleSection(
-            title: 'User Roles (${assignedRoles.length})',
-            roles: assignedRoles,
+            title: 'Current User Roles',
+            roles: userRolesToShow,
             isAssigned: true,
             isCompact: isCompact,
+            selectedRoles: state.selectedRolesForAssignment,
+            onRoleTap: (role) {
+              // Tapping on assigned role: remove it (move to available)
+              context.read<EmployeeBloc>().add(SelectRoleForAssignment(role));
+            },
           ),
           SizedBox(height: 16),
           _buildRoleSection(
-            title: 'Available Roles (${filteredAvailableRoles.length})',
-            roles: filteredAvailableRoles,
+            title: 'Available Roles ',
+            roles: availableRolesToShow,
             isAssigned: false,
             isCompact: isCompact,
+            selectedRoles: state.selectedRolesForAssignment,
+            onRoleTap: (role) {
+              // Tapping on available role: select it (will appear in user roles temporarily)
+              context.read<EmployeeBloc>().add(SelectRoleForAssignment(role));
+            },
+          ),
+
+          // Show temporarily selected roles in a separate section or as part of user roles
+          if (state.selectedRolesForAssignment.isNotEmpty) ...[
+            SizedBox(height: 16),
+            _buildRolesToAssignSection(
+              roles: state.selectedRolesForAssignment,
+              currentAssignedRoles: assignedRoles,
+              isCompact: isCompact,
+              onRemove: (role) {
+                context.read<EmployeeBloc>().add(
+                  DeselectRoleForAssignment(role),
+                );
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRolesToAssignSection({
+    required List<Role> roles,
+    required List<Role> currentAssignedRoles,
+    required bool isCompact,
+    required ValueChanged<Role> onRemove,
+  }) {
+    // Calculate what the final role assignment will look like
+    final finalRoles = [
+      ...currentAssignedRoles.where(
+        (role) => !roles.any((r) => r.id == role.id),
+      ),
+      ...roles,
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.amber[50],
+        borderRadius: BorderRadius.circular(isCompact ? 12 : 16),
+        border: Border.all(color: Colors.amber[300]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section header
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isCompact ? 12 : 16,
+              vertical: isCompact ? 8 : 12,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.amber.withOpacity(0.2),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(isCompact ? 12 : 16),
+                topRight: Radius.circular(isCompact ? 12 : 16),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Iconsax.edit,
+                  size: isCompact ? 16 : 20,
+                  color: Colors.amber[800],
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Roles to Assign (${roles.length})',
+                        style: TextStyle(
+                          fontSize: isCompact ? 14 : 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.amber[800],
+                        ),
+                      ),
+                      Text(
+                        'Final roles: ${finalRoles.length} total',
+                        style: TextStyle(
+                          fontSize: isCompact ? 12 : 14,
+                          color: Colors.amber[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Roles to assign list
+          Container(
+            constraints: BoxConstraints(minHeight: isCompact ? 60 : 80),
+            child: ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: roles.length,
+              itemBuilder: (context, index) {
+                final role = roles[index];
+                final isAdding = !currentAssignedRoles.any(
+                  (r) => r.id == role.id,
+                );
+
+                return _buildRoleToAssignItem(
+                  role: role,
+                  isAdding: isAdding,
+                  onRemove: () => onRemove(role),
+                  isCompact: isCompact,
+                );
+              },
+            ),
           ),
         ],
       ),
     );
   }
 
-  void _assignRoleToUser(Employee employee, Role role) {
-    final userWithRole = _getUserForEmployee(employee);
-    if (userWithRole != null) {
-      final currentRoleIds = userWithRole.roles.map((r) => r.id).toList();
-      final newRoleIds = [...currentRoleIds, role.id];
-
-      context.read<UserBloc>().add(
-        AssignRolesToUser(
-          userWithRole.user.id!,
-          newRoleIds,
-          widget.authBloc.state.userId!,
-          widget.authBloc.state.companyId!,
+  Widget _buildRoleToAssignItem({
+    required Role role,
+    required bool isAdding,
+    required VoidCallback onRemove,
+    required bool isCompact,
+  }) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: isCompact ? 8 : 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: isAdding ? Colors.green[50] : Colors.orange[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isAdding ? Colors.green[300]! : Colors.orange[300]!,
         ),
-      );
-    }
+      ),
+      child: ListTile(
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: isCompact ? 8 : 12,
+          vertical: 4,
+        ),
+        leading: Container(
+          width: isCompact ? 32 : 40,
+          height: isCompact ? 32 : 40,
+          decoration: BoxDecoration(
+            color: isAdding ? Colors.green[100]! : Colors.orange[100]!,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            isAdding ? Iconsax.add_circle : Iconsax.refresh,
+            size: isCompact ? 16 : 20,
+            color: isAdding ? Colors.green : Colors.orange,
+          ),
+        ),
+        title: Text(
+          role.name,
+          style: TextStyle(
+            fontSize: isCompact ? 14 : 16,
+            fontWeight: FontWeight.w600,
+            color: isAdding ? Colors.green[800] : Colors.orange[800],
+          ),
+        ),
+        subtitle: Text(
+          isAdding ? 'Adding new role' : 'Replacing existing role',
+          style: TextStyle(
+            fontSize: isCompact ? 12 : 14,
+            color: isAdding ? Colors.green[600] : Colors.orange[600],
+          ),
+        ),
+        trailing: IconButton(
+          icon: Icon(Iconsax.close_circle, size: isCompact ? 16 : 20),
+          color: Colors.red,
+          onPressed: onRemove,
+        ),
+        onTap: onRemove,
+      ),
+    );
   }
 
   Widget _buildRoleSection({
@@ -1210,8 +1600,14 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     required List<Role> roles,
     required bool isAssigned,
     required bool isCompact,
-    List<Role> selectedRoles = const [],
+    required List<Role> selectedRoles,
+    required ValueChanged<Role> onRoleTap,
   }) {
+    // For assigned roles section, show count of permanently assigned + temporarily selected
+    final effectiveRoleCount = isAssigned
+        ? roles.length + selectedRoles.length
+        : roles.length;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1245,7 +1641,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
                 ),
                 SizedBox(width: 8),
                 Text(
-                  title,
+                  '$title ($effectiveRoleCount)',
                   style: TextStyle(
                     fontSize: isCompact ? 14 : 16,
                     fontWeight: FontWeight.bold,
@@ -1258,7 +1654,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
           // Roles list
           Container(
             constraints: BoxConstraints(minHeight: isCompact ? 120 : 200),
-            child: roles.isEmpty
+            child: roles.isEmpty && (!isAssigned || selectedRoles.isEmpty)
                 ? Center(
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
@@ -1277,11 +1673,11 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
                       final isSelected = selectedRoles.any(
                         (r) => r.id == role.id,
                       );
-
                       return _buildRoleItem(
                         role: role,
                         isAssigned: isAssigned,
-                        onRoleTap: () => onRoleTap?.call(role),
+                        isSelected: isSelected,
+                        onRoleTap: () => onRoleTap(role),
                         isCompact: isCompact,
                       );
                     },
@@ -1297,15 +1693,43 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     required bool isAssigned,
     VoidCallback? onRoleTap,
     required bool isCompact,
+    required bool isSelected,
   }) {
     Color getBackgroundColor() {
-      if (isAssigned) return Color(0xFF10b981).withOpacity(0.05);
-      return Color(0xFF1e293b).withOpacity(0.8);
+      if (isAssigned) {
+        return Color(0xFF10b981).withOpacity(0.1); // Original assigned - green
+      }
+      if (isSelected) {
+        return Colors.amber.withOpacity(0.2); // Selected - amber
+      }
+      if (isAssigned) {
+        return Color(0xFF10b981).withOpacity(0.05); // Assigned but blurred
+      }
+      return Color(0xFF1e293b).withOpacity(0.8); // Available - blue/black
     }
 
     Color getTextColor() {
-      if (isAssigned) return Color(0xFF10b981);
-      return Colors.white;
+      if (isAssigned) {
+        return Color(0xFF10b981); // Original assigned - green
+      }
+      if (isSelected) {
+        return Colors.amber[800]!; // Selected - amber
+      }
+      return Colors.white; // Available - white
+    }
+
+    Color getBorderColor() {
+      if (isSelected) {
+        return Colors.amber;
+      }
+      return Colors.transparent;
+    }
+
+    String getActionText() {
+      if (isAssigned) {
+        return 'Tap to remove';
+      }
+      return 'Tap to assign';
     }
 
     return Container(
@@ -1313,6 +1737,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
       decoration: BoxDecoration(
         color: getBackgroundColor(),
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: getBorderColor()),
       ),
       child: ListTile(
         contentPadding: EdgeInsets.symmetric(
@@ -1341,36 +1766,22 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
           ),
         ),
         subtitle: Text(
-          role.description,
+          getActionText(),
           style: TextStyle(
             fontSize: isCompact ? 12 : 14,
             color: getTextColor().withOpacity(0.7),
           ),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
         ),
-        onTap: isAssigned ? null : onRoleTap,
-        trailing: isAssigned
-            ? Icon(Iconsax.add_circle, color: Colors.green)
-            : Icon(Iconsax.add_circle, color: Colors.red),
+        onTap: onRoleTap,
+        trailing: Icon(
+          isAssigned ? Iconsax.arrow_swap_horizontal : Iconsax.add_circle,
+          color: Colors.amber,
+          size: isCompact ? 16 : 20,
+        ),
       ),
     );
   }
 
-  // Add the convert to user dialog method
-  void _showConvertToUserDialog(Employee employee) {
-    showDialog(
-      context: context,
-      builder: (context) => ConvertToUserDialog(
-        employee: employee,
-        userBloc: widget.userBloc,
-        authBloc: widget.authBloc,
-      ),
-    );
-  }
-
-  // Keep your existing _buildInfoSection, _buildInfoItem, _buildDetailFooter methods
-  // ... (they remain the same as in previous implementation)
   Widget _buildInfoSection({
     required String title,
     required IconData icon,
@@ -1490,41 +1901,6 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     );
   }
 
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onPressed,
-  }) {
-    return Column(
-      children: [
-        Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            shape: BoxShape.circle,
-            border: Border.all(color: color.withOpacity(0.2), width: 2),
-          ),
-          child: IconButton(
-            icon: Icon(icon, size: 20),
-            color: color,
-            onPressed: onPressed,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: color,
-          ),
-        ),
-      ],
-    );
-  }
-
   String _formatDate(String? dateString) {
     if (dateString == null || dateString.isEmpty) return 'N/A';
 
@@ -1534,28 +1910,6 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     } catch (e) {
       return dateString;
     }
-  }
-
-  Widget _buildDetailRow(String label, String? value) {
-    if (value == null || value.isEmpty) return const SizedBox();
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              color: Colors.black,
-              fontSize: 12,
-            ),
-          ),
-          Text(value, style: const TextStyle(fontSize: 16)),
-        ],
-      ),
-    );
   }
 
   void _navigateToAddScreen() {

@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
+import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 
 @immutable
 abstract class EmployeeEvent extends Equatable {
@@ -190,11 +191,33 @@ class ToggleRoleManagement extends EmployeeEvent {
   @override
   List<Object> get props => [employeeId];
 }
+// Add to your existing EmployeeEvent classes
 
-class SearchRoles extends EmployeeEvent {
-  final String query;
-  const SearchRoles(this.query);
+class SelectRoleForAssignment extends EmployeeEvent {
+  final Role role;
+  const SelectRoleForAssignment(this.role);
 
   @override
-  List<Object> get props => [query];
+  List<Object> get props => [role];
+}
+
+class DeselectRoleForAssignment extends EmployeeEvent {
+  final Role role;
+  const DeselectRoleForAssignment(this.role);
+
+  @override
+  List<Object> get props => [role];
+}
+
+class ClearRoleSelection extends EmployeeEvent {
+  const ClearRoleSelection();
+}
+
+class SaveRoleChanges extends EmployeeEvent {
+  final int employeeId;
+  final List<int> roleIds;
+  const SaveRoleChanges(this.employeeId, this.roleIds);
+
+  @override
+  List<Object> get props => [employeeId, roleIds];
 }

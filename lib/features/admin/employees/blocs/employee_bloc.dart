@@ -7,6 +7,7 @@ import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_event.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_state.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
+import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -41,9 +42,12 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
     on<ResetEmployeeForm>(_onResetEmployeeForm);
     on<ChangeEmployeePage>(_onChangeEmployeePage);
     on<UpdateEmployeeFormField>(_onUpdateEmployeeFormField);
-    on<ConvertEmployeeToUser>(_mapConvertEmployeeToUser);
-    on<ToggleRoleManagement>(_mapToggleRoleManagement);
-    on<SearchRoles>(_mapSearchRoles);
+    on<ToggleRoleManagement>(_onToggleRoleManagement);
+    on<ConvertEmployeeToUser>(_onConvertEmployeeToUser);
+    on<SelectRoleForAssignment>(_onSelectRoleForAssignment);
+    on<DeselectRoleForAssignment>(_onDeselectRoleForAssignment);
+    on<ClearRoleSelection>(_onClearRoleSelection);
+    on<SaveRoleChanges>(_onSaveRoleChanges);
   }
 
   @override
@@ -108,10 +112,8 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
 
       //add creation metadata
       employeeMap['company'] = authBloc.state.companyId!;
-      employeeMap['created_by'] = authBloc.state.userId!;
-      employeeMap['created_at'] = DateTime.now().toIso8601String();
 
-      final id = await db.insert('employees', employeeMap);
+      await db.insert('employees', employeeMap);
       add(LoadEmployees(authBloc.state.companyId!));
       emit(
         state.copyWith(
@@ -144,9 +146,6 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
       final employeeMap = event.employee.toMap();
 
       //add update metadata
-      employeeMap['updated_by'] = authBloc.state.userId!;
-      employeeMap['updated_at'] = DateTime.now().toIso8601String();
-
       await db.update(
         'employees',
         employeeMap,
@@ -460,39 +459,141 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
     });
   }
 
-  Stream<EmployeeState> _mapConvertEmployeeToUser(
+  void _onConvertEmployeeToUser(
     ConvertEmployeeToUser event,
-  ) async* {
-    yield state.copyWith(status: EmployeeStatus.creating);
+    Emitter<EmployeeState> emit,
+  ) {
+    emit(state.copyWith(status: EmployeeStatus.creating));
 
     try {
       // We'll let the UI handle the actual user creation via UserBloc
       // This event is just for tracking the state
-      yield state.copyWith(
-        status: EmployeeStatus.success,
-        message: 'Employee conversion initiated',
+      emit(
+        state.copyWith(
+          status: EmployeeStatus.success,
+          message: 'Employee conversion initiated',
+        ),
       );
     } catch (e) {
-      yield state.copyWith(
-        status: EmployeeStatus.failure,
-        message: 'Failed to initiate employee conversion: $e',
+      emit(
+        state.copyWith(
+          status: EmployeeStatus.failure,
+          message: 'Failed to initiate employee conversion: $e',
+        ),
       );
     }
   }
 
-  Stream<EmployeeState> _mapToggleRoleManagement(
+  void _onToggleRoleManagement(
     ToggleRoleManagement event,
-  ) async* {
-    yield state.copyWith(
-      isRoleManagementMode: !state.isRoleManagementMode,
-      employeeInRoleManagement: state.isRoleManagementMode
-          ? null
-          : event.employeeId,
-      roleSearchQuery: state.isRoleManagementMode ? '' : state.roleSearchQuery,
+    Emitter<EmployeeState> emit,
+  ) async {
+    if (state.isRoleManagementMode) {
+      emit(
+        state.copyWith(
+          isRoleManagementMode: false,
+          employeeInRoleManagement: null,
+          selectedRolesForAssignment: [],
+          roleSearchQuery: '',
+          hasRoleChanges: false,
+        ),
+      );
+    } else {
+      // Entering role management mode - only if employee has user account
+      final employee = state.employees.firstWhere(
+        (e) => e.id == event.employeeId,
+        orElse: () => Employee.empty(),
+      );
+
+      if (employee.id == 0) {
+        // Employee not found, don't enter role management
+        emit(state);
+        return;
+      }
+
+      // Check if this employee has a user account (you'll need to implement this check)
+      final hasUserAccount = await _checkIfEmployeeHasUserAccount(
+        event.employeeId,
+      );
+
+      if (!hasUserAccount) {
+        // Employee doesn't have user account, don't enter role management
+        emit(state);
+        return;
+      }
+
+      emit(
+        state.copyWith(
+          isRoleManagementMode: true,
+          employeeInRoleManagement: event.employeeId,
+          selectedRolesForAssignment: [],
+          roleSearchQuery: '',
+          hasRoleChanges: false,
+        ),
+      );
+    }
+  }
+
+  // Helper method to check if employee has user account
+  Future<bool> _checkIfEmployeeHasUserAccount(int employeeId) async {
+    try {
+      final db = await databaseService.database;
+      final users = await db.query(
+        'user_table',
+        where: 'employees_id = ?',
+        whereArgs: [employeeId],
+      );
+      return users.isNotEmpty;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  void _onSelectRoleForAssignment(
+    SelectRoleForAssignment event,
+    Emitter<EmployeeState> emit,
+  ) {
+    final selectedRoles = List<Role>.from(state.selectedRolesForAssignment);
+
+    if (selectedRoles.any((role) => role.id == event.role.id)) {
+      selectedRoles.removeWhere((role) => role.id == event.role.id);
+    } else {
+      selectedRoles.add(event.role);
+    }
+
+    emit(
+      state.copyWith(
+        selectedRolesForAssignment: selectedRoles,
+        hasRoleChanges: selectedRoles.isNotEmpty,
+      ),
     );
   }
 
-  Stream<EmployeeState> _mapSearchRoles(SearchRoles event) async* {
-    yield state.copyWith(roleSearchQuery: event.query);
+  void _onDeselectRoleForAssignment(
+    DeselectRoleForAssignment event,
+    Emitter<EmployeeState> emit,
+  ) {
+    final selectedRoles = List<Role>.from(state.selectedRolesForAssignment);
+    selectedRoles.removeWhere((role) => role.id == event.role.id);
+
+    emit(
+      state.copyWith(
+        selectedRolesForAssignment: selectedRoles,
+        hasRoleChanges: selectedRoles.isNotEmpty,
+      ),
+    );
+  }
+
+  void _onClearRoleSelection(
+    ClearRoleSelection event,
+    Emitter<EmployeeState> emit,
+  ) {
+    emit(state.copyWith(selectedRolesForAssignment: [], hasRoleChanges: false));
+  }
+
+  void _onSaveRoleChanges(SaveRoleChanges event, Emitter<EmployeeState> emit) {
+    // This will be handled by the UI using UserBloc directly
+    // We just reset the state
+    emit(state.copyWith(selectedRolesForAssignment: [], hasRoleChanges: false));
   }
 }
