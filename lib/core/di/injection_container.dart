@@ -25,11 +25,11 @@ void initDependencies() {
   getIt.registerLazySingleton<AuthBloc>(
     () => AuthBloc(databaseService: getIt(), secureStorage: getIt()),
   );
-  getIt.registerLazySingleton<EmployeeBloc>(
-    () => EmployeeBloc(databaseService: getIt(), authBloc: getIt()),
-  );
   getIt.registerLazySingleton<UserBloc>(
     () => UserBloc(databaseService: getIt(), authBloc: getIt()),
+  );
+  getIt.registerLazySingleton<EmployeeBloc>(
+    () => EmployeeBloc(databaseService: getIt(), authBloc: getIt()),
   );
   getIt.registerLazySingleton<PrivilegeBloc>(
     () => PrivilegeBloc(databaseService: getIt(), authBloc: getIt()),

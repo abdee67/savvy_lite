@@ -19,7 +19,6 @@ import 'package:savvy_stock/features/admin/privilege/blocs/privilege_bloc.dart';
 import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
-import 'package:savvy_stock/features/auth/blocs/auth_event.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/invoice/blocs/invoice_bloc.dart';
@@ -68,11 +67,13 @@ class _SavvyStockState extends State<SavvyStock> {
   String? errorMessage;
   late GoRouter _router;
   late AuthBloc _authBloc;
+  late UserBloc _userBloc;
 
   @override
   void initState() {
     super.initState();
     _authBloc = getIt<AuthBloc>();
+    _userBloc = getIt<UserBloc>();
     _initializeApp();
   }
 
@@ -90,6 +91,7 @@ class _SavvyStockState extends State<SavvyStock> {
       _router = AppRouter(
         showOnboarding: showOnboarding,
         authBloc: _authBloc,
+        userBloc: _userBloc,
       ).router;
     } catch (e) {
       setState(() {

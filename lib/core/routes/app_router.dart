@@ -4,9 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/errors/unauthorized_screen.dart';
 import 'package:savvy_stock/core/widgets/route_guard.dart';
+import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
 import 'package:savvy_stock/features/admin/employees/screens/employee_dashboard.dart';
 import 'package:savvy_stock/features/admin/privilege/screens/privilege_dahsboard.dart';
 import 'package:savvy_stock/features/admin/role/screens/role_dashboard.dart';
+import 'package:savvy_stock/features/admin/users/blocs/user_bloc.dart';
 import 'package:savvy_stock/features/admin/users/screens/user_dashboard.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
@@ -31,8 +33,13 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 class AppRouter {
   final AuthBloc authBloc;
+  final UserBloc userBloc;
   final bool showOnboarding;
-  AppRouter({required this.showOnboarding, required this.authBloc});
+  AppRouter({
+    required this.showOnboarding,
+    required this.authBloc,
+    required this.userBloc,
+  });
 
   late final GoRouter router = GoRouter(
     navigatorKey: navigatorKey,
@@ -152,11 +159,17 @@ class AppRouter {
       ),
       GoRoute(
         path: AppRoutes.userManagement,
-        builder: (context, state) => PrivilegeRouteGuard(
-          requiredPrivilege: AppRoutes.userManagement,
-          parentPrivilege: AppRoutes.adminDashboard,
-          child: const UserCreationScreen(),
-        ),
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final employee = extra != null
+              ? extra['employee'] as Employee?
+              : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.userManagement,
+            parentPrivilege: AppRoutes.adminDashboard,
+            child: UserCreationScreen(employee: employee),
+          );
+        },
         redirect: _protectedRouteRedirect,
       ),
       GoRoute(
@@ -164,7 +177,7 @@ class AppRouter {
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: AppRoutes.employeeManagement,
           parentPrivilege: AppRoutes.adminDashboard,
-          child: EmployeeListPage(authBloc: authBloc),
+          child: EmployeeListPage(authBloc: authBloc, userBloc: userBloc),
         ),
         redirect: _protectedRouteRedirect,
       ),
