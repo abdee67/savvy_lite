@@ -25,18 +25,25 @@ class _UserCreationScreenState extends State<UserCreationScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _employeeController = TextEditingController();
+  final _emailController = TextEditingController();
   final _branchController = TextEditingController();
   final List<int> _selectedRoles = [];
 
   @override
   void initState() {
     super.initState();
-    // Load available roles
+    // Load lists
     context.read<RoleBloc>().add(LoadRoles(widget.employee?.company ?? 1));
     context.read<UserBloc>().add(LoadUsers(widget.employee?.company ?? 1));
     context.read<EmployeeBloc>().add(
       LoadEmployees(widget.employee?.company ?? 1),
     );
+
+    // Prefill when converting an employee to user
+    if (widget.employee != null) {
+      _employeeController.text = widget.employee!.id.toString();
+      _emailController.text = widget.employee!.email ?? '';
+    }
   }
 
   @override
@@ -77,6 +84,36 @@ class _UserCreationScreenState extends State<UserCreationScreen> {
               ),
 
               TextFormField(
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email *',
+                  prefixIcon: Icon(Icons.email),
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter email';
+                  }
+                  if (!value.contains('@')) {
+                    return 'Please enter a valid email';
+                  }
+                  return null;
+                },
+              ),
+
+              TextFormField(
+                controller: _branchController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Branch'),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter branch number';
+                  }
+                  return null;
+                },
+              ),
+
+              TextFormField(
                 controller: _passwordController,
                 decoration: const InputDecoration(labelText: 'Password'),
                 obscureText: true,
@@ -92,7 +129,11 @@ class _UserCreationScreenState extends State<UserCreationScreen> {
               ),
 
               DropdownButtonFormField<int>(
-                initialValue: widget.employee?.id,
+                initialValue:
+                    widget.employee?.id ??
+                    (_employeeController.text.isNotEmpty
+                        ? int.tryParse(_employeeController.text)
+                        : null),
                 items: context
                     .read<EmployeeBloc>()
                     .state
@@ -104,18 +145,17 @@ class _UserCreationScreenState extends State<UserCreationScreen> {
                       ),
                     )
                     .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _employeeController.text = value.toString();
-                  });
-                },
+                onChanged: widget.employee != null
+                    ? null
+                    : (value) {
+                        setState(
+                          () => _employeeController.text = value.toString(),
+                        );
+                      },
                 decoration: const InputDecoration(labelText: 'Employee'),
-                validator: (value) {
-                  if (value == null || value == 0) {
-                    return 'Please select employee';
-                  }
-                  return null;
-                },
+                validator: (value) => (value == null || value == 0)
+                    ? 'Please select employee'
+                    : null,
               ),
 
               const SizedBox(height: 16),
@@ -180,6 +220,8 @@ class _UserCreationScreenState extends State<UserCreationScreen> {
           _usernameController.text,
           _passwordController.text,
           _selectedRoles,
+          int.parse(_branchController.text),
+          _emailController.text,
         ),
       );
 

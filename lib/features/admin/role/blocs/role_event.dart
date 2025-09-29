@@ -33,3 +33,8 @@ class AssignPrivilegesToRole extends RoleEvent {
   final int createdBy;
   AssignPrivilegesToRole(this.role, this.privilegeIds, this.createdBy);
 }
+
+class SearchRoles extends RoleEvent {
+  final String query;
+  SearchRoles(this.query);
+}

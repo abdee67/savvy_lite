@@ -19,6 +19,7 @@ class RoleBloc extends Bloc<RoleEvent, RoleState> {
     on<UpdateRole>(_onUpdateRole);
     on<DeleteRole>(_onDeleteRole);
     on<AssignPrivilegesToRole>(_onAssignPrivilegesToRole);
+    on<SearchRoles>(_onSearchRoles);
   }
 
   Future<void> _onLoadRoles(LoadRoles event, Emitter<RoleState> emit) async {
@@ -162,5 +163,33 @@ class RoleBloc extends Bloc<RoleEvent, RoleState> {
         ),
       );
     }
+  }
+
+  void _onSearchRoles(SearchRoles event, Emitter<RoleState> emit) {
+    final query = event.query.toLowerCase().trim();
+
+    if (query.isEmpty) {
+      emit(
+        state.copyWith(
+          filteredRoles: state.roles,
+          searchQuery: '',
+          status: RoleStatus.success,
+        ),
+      );
+      return;
+    }
+
+    final filtered = state.roles.where((role) {
+      return role.name.toLowerCase().contains(query) ||
+          role.description.toLowerCase().contains(query);
+    }).toList();
+
+    emit(
+      state.copyWith(
+        filteredRoles: filtered,
+        searchQuery: query,
+        status: RoleStatus.searching,
+      ),
+    );
   }
 }

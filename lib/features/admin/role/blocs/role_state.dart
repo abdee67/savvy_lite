@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 
-enum RoleStatus { initial, loading, success, failure }
+enum RoleStatus { initial, loading, success, failure, searching }
 
 class RoleState extends Equatable {
   final RoleStatus status;
@@ -12,12 +12,17 @@ class RoleState extends Equatable {
   final RoleErrorType? errorType;
   final DateTime? occuredAt;
 
+  final String searchQuery;
+  final List<Role> filteredRoles;
+
   const RoleState({
     required this.status,
     this.message,
     this.roles = const [],
     this.errorType,
     this.occuredAt,
+    this.searchQuery = '',
+    this.filteredRoles = const [],
   });
 
   // --- Helper Getters ---
@@ -43,6 +48,8 @@ class RoleState extends Equatable {
     List<Role>? roles,
     RoleErrorType? errorType,
     DateTime? occuredAt,
+    String? searchQuery,
+    List<Role>? filteredRoles,
   }) {
     return RoleState(
       status: status ?? this.status,
@@ -50,11 +57,21 @@ class RoleState extends Equatable {
       roles: roles ?? this.roles,
       errorType: errorType ?? this.errorType,
       occuredAt: occuredAt ?? this.occuredAt,
+      searchQuery: searchQuery ?? this.searchQuery,
+      filteredRoles: filteredRoles ?? this.filteredRoles,
     );
   }
 
   @override
-  List<Object?> get props => [status, message, roles, errorType, occuredAt];
+  List<Object?> get props => [
+    status,
+    message,
+    roles,
+    errorType,
+    occuredAt,
+    searchQuery,
+    filteredRoles,
+  ];
 }
 
 // Optional enum for error types
