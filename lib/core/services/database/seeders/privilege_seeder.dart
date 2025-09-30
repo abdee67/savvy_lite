@@ -111,20 +111,26 @@ class PrivilegeSeeder {
       _createPrivilege(
         'Add Employee',
         'button',
-        '/admin/employee-management/add-employee',
+        AppRoutes.employeeCreation,
         'add_employee',
       ),
       _createPrivilege(
         'Edit Employee',
         'button',
-        '/admin/employee-management/edit-employee',
+        AppRoutes.employeeEdit,
         'edit_employee',
       ),
       _createPrivilege(
         'Delete Employee',
         'button',
-        '/admin/employee-management/delete-employee',
+        AppRoutes.employeeDelete,
         'delete_employee',
+      ),
+      _createPrivilege(
+        'Convert Employee to User',
+        'button',
+        AppRoutes.employeeConversionToUser,
+        'convert_employee_to_user',
       ),
 
       // User Management
@@ -137,19 +143,14 @@ class PrivilegeSeeder {
       _createPrivilege(
         'Add User',
         'button',
-        '/admin/user-management/add-user',
+        AppRoutes.userCreation,
         'add_user',
       ),
-      _createPrivilege(
-        'Edit User',
-        'button',
-        '/admin/user-management/edit-user',
-        'edit_user',
-      ),
+      _createPrivilege('Edit User', 'button', AppRoutes.userEdit, 'edit_user'),
       _createPrivilege(
         'Delete User',
         'button',
-        '/admin/user-management/delete-user',
+        AppRoutes.userDelete,
         'delete_user',
       ),
 

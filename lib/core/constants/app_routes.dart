@@ -32,6 +32,20 @@ class AppRoutes {
   static const String employeeManagement = '$admin/employee-management';
   static const String userManagement = '$admin/user-management';
 
+  // Employee Sub-Routes
+  static const String employeeCreation =
+      '/admin/employee-management/add-employee';
+  static const String employeeConversionToUser =
+      '/admin/employee-management/employee-conversion-to-user';
+  static const String employeeEdit = '/admin/employee-management/employee-edit';
+  static const String employeeDelete =
+      '/admin/employee-management/employee-delete';
+
+  // User Sub-Routes
+  static const String userCreation = '/admin/user-management/add-user';
+  static const String userEdit = '/admin/user-management/edit-user';
+  static const String userDelete = '/admin/user-management/delete-user';
+
   // Sales Sub-Routes
   static const String customerEntry = '$sales/customer-dashboard';
 

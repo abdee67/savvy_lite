@@ -9,7 +9,9 @@ import 'package:savvy_stock/features/admin/employees/screens/employee_dashboard.
 import 'package:savvy_stock/features/admin/privilege/screens/privilege_dahsboard.dart';
 import 'package:savvy_stock/features/admin/role/screens/role_dashboard.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_bloc.dart';
+import 'package:savvy_stock/features/admin/users/models/user_with_role.dart';
 import 'package:savvy_stock/features/admin/users/screens/user_dashboard.dart';
+import 'package:savvy_stock/features/admin/users/widgets/user_creat_edit.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
 import 'package:savvy_stock/features/auth/screens/login_screen.dart';
@@ -159,19 +161,36 @@ class AppRouter {
       ),
       GoRoute(
         path: AppRoutes.userManagement,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.userManagement,
+          parentPrivilege: AppRoutes.adminDashboard,
+          child: UserDashboard(authBloc: authBloc, userBloc: userBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.userCreation,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.userCreation,
+          parentPrivilege: AppRoutes.userManagement,
+          child: UserManagementScreen(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.userEdit,
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
-          final employee = extra != null
-              ? extra['employee'] as Employee?
-              : null;
+          final user = extra != null ? extra['user'] as UserWithRole? : null;
           return PrivilegeRouteGuard(
-            requiredPrivilege: AppRoutes.userManagement,
-            parentPrivilege: AppRoutes.adminDashboard,
-            child: UserCreationScreen(employee: employee),
+            requiredPrivilege: AppRoutes.userEdit,
+            parentPrivilege: AppRoutes.userManagement,
+            child: UserManagementScreen(user: user, authBloc: authBloc),
           );
         },
         redirect: _protectedRouteRedirect,
       ),
+
       GoRoute(
         path: AppRoutes.employeeManagement,
         builder: (context, state) => PrivilegeRouteGuard(
@@ -179,6 +198,21 @@ class AppRouter {
           parentPrivilege: AppRoutes.adminDashboard,
           child: EmployeeListPage(authBloc: authBloc, userBloc: userBloc),
         ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.employeeConversionToUser,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final employee = extra != null
+              ? extra['employee'] as Employee?
+              : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.employeeConversionToUser,
+            parentPrivilege: AppRoutes.employeeManagement,
+            child: UserManagementScreen(employee: employee, authBloc: authBloc),
+          );
+        },
         redirect: _protectedRouteRedirect,
       ),
 

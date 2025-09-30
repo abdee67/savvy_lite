@@ -28,15 +28,16 @@ class PrivilegeHierarchy {
 
     // Employee Management (child of Admin Dashboard)
     AppRoutes.employeeManagement: AppRoutes.adminDashboard,
-    '/admin/employee-management/add-employee': AppRoutes.employeeManagement,
-    '/admin/employee-management/edit-employee': AppRoutes.employeeManagement,
-    '/admin/employee-management/delete-employee': AppRoutes.employeeManagement,
+    AppRoutes.employeeCreation: AppRoutes.employeeManagement,
+    AppRoutes.employeeConversionToUser: AppRoutes.employeeManagement,
+    AppRoutes.employeeEdit: AppRoutes.employeeManagement,
+    AppRoutes.employeeDelete: AppRoutes.employeeManagement,
 
     // User Management (child of Admin Dashboard)
     AppRoutes.userManagement: AppRoutes.adminDashboard,
-    '/admin/user-management/add-user': AppRoutes.userManagement,
-    '/admin/user-management/edit-user': AppRoutes.userManagement,
-    '/admin/user-management/delete-user': AppRoutes.userManagement,
+    AppRoutes.userCreation: AppRoutes.userManagement,
+    AppRoutes.userEdit: AppRoutes.userManagement,
+    AppRoutes.userDelete: AppRoutes.userManagement,
 
     // ==================== SALES MODULE ====================
     // Sales Entry (child of Sales Dashboard)
