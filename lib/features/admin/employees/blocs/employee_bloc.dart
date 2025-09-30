@@ -43,7 +43,6 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
     on<ChangeEmployeePage>(_onChangeEmployeePage);
     on<UpdateEmployeeFormField>(_onUpdateEmployeeFormField);
     on<ToggleRoleManagement>(_onToggleRoleManagement);
-    on<ConvertEmployeeToUser>(_onConvertEmployeeToUser);
     on<SelectRoleForAssignment>(_onSelectRoleForAssignment);
     on<DeselectRoleForAssignment>(_onDeselectRoleForAssignment);
     on<ClearRoleSelection>(_onClearRoleSelection);
@@ -457,31 +456,6 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
         ),
       );
     });
-  }
-
-  void _onConvertEmployeeToUser(
-    ConvertEmployeeToUser event,
-    Emitter<EmployeeState> emit,
-  ) {
-    emit(state.copyWith(status: EmployeeStatus.creating));
-
-    try {
-      // We'll let the UI handle the actual user creation via UserBloc
-      // This event is just for tracking the state
-      emit(
-        state.copyWith(
-          status: EmployeeStatus.success,
-          message: 'Employee conversion initiated',
-        ),
-      );
-    } catch (e) {
-      emit(
-        state.copyWith(
-          status: EmployeeStatus.failure,
-          message: 'Failed to initiate employee conversion: $e',
-        ),
-      );
-    }
   }
 
   void _onToggleRoleManagement(

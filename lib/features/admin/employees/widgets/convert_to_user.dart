@@ -4,6 +4,7 @@ import 'package:savvy_stock/features/admin/employees/models/employee_model.dart'
 import 'package:savvy_stock/features/admin/users/blocs/user_bloc.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_event.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_state.dart';
+import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 
 class ConvertToUserDialog extends StatefulWidget {
@@ -244,12 +245,14 @@ class _ConvertToUserDialogState extends State<ConvertToUserDialog> {
     if (_formKey.currentState!.validate() && _selectedBranchId != null) {
       widget.userBloc.add(
         CreateUser(
-          widget.employee.id.toString(), // employees_id
-          _usernameController.text,
-          _passwordController.text,
-          _selectedRoles, // empty roles for now, can assign later
-          _selectedBranchId!,
-          _emailController.text,
+          UserModel(
+            id: widget.employee.id,
+            userName: _usernameController.text,
+            password: _passwordController.text,
+            branch: _selectedBranchId!,
+            userEmail: _emailController.text,
+          ),
+          _selectedRoles,
         ),
       );
     }

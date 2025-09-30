@@ -501,7 +501,6 @@ class LocalDatabaseService {
     // Insert Employee
     final employees = [
       {
-        'id': 1,
         'employee_id': 'EMP001',
         'name_first': 'Abdi(admin)',
         'name_last': 'G',
@@ -513,10 +512,31 @@ class LocalDatabaseService {
         'branch': 1,
       },
       {
-        'id': 2,
         'employee_id': 'EMP002',
         'name_first': 'Chalatu(salesManager)',
         'name_last': 'C',
+        'gender': 'F',
+        'hire_date': '2000-01-01',
+        'city': 'Addis Ababa',
+        'country': 'Ethiopia',
+        'company': 1,
+        'branch': 1,
+      },
+      {
+        'employee_id': 'EMP003',
+        'name_first': 'pimp',
+        'name_last': 'slickback',
+        'gender': 'M',
+        'hire_date': '2000-01-01',
+        'city': 'Addis Ababa',
+        'country': 'Ethiopia',
+        'company': 1,
+        'branch': 1,
+      },
+      {
+        'employee_id': 'EMP003',
+        'name_first': 'baby',
+        'name_last': 'slickback',
         'gender': 'F',
         'hire_date': '2000-01-01',
         'city': 'Addis Ababa',
@@ -660,7 +680,7 @@ class LocalDatabaseService {
       },
 
       {
-        'user_id': 3, // stock manager
+        'user_id': 2, // stock manager
         'role_table_id': roleIds['Stock Manager'],
         'created_by': 1,
         'date_created': DateTime.now().toIso8601String(),

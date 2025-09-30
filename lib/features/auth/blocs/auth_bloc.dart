@@ -103,7 +103,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       // Get user roles with their privileges through proper joins
       final userWithRoles = await _getUserWithRolesAndPrivileges(
         db,
-        user.id!,
+        user.id,
         user.company!,
         user.userName!,
         user.password!,

@@ -8,18 +8,16 @@ import 'package:savvy_stock/features/admin/employees/blocs/employee_bloc.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_event.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_state.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
-import 'package:savvy_stock/features/admin/employees/widgets/convert_to_user.dart';
 import 'package:savvy_stock/features/admin/employees/widgets/emloyee_create_and_edit.dart.dart';
 import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
 import 'package:savvy_stock/features/admin/role/blocs/role_event.dart';
 import 'package:savvy_stock/features/admin/role/blocs/role_state.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_bloc.dart';
-import 'package:savvy_stock/features/admin/users/blocs/user_event.dart';
+import 'package:savvy_stock/features/admin/users/blocs/user_event.dart'
+    hide ClearSelection;
 import 'package:savvy_stock/features/admin/users/blocs/user_state.dart';
-import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/admin/users/models/user_with_role.dart';
-import 'package:savvy_stock/features/admin/users/screens/user_dashboard.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 
 class EmployeeListPage extends StatefulWidget {
@@ -45,18 +43,18 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
 
   bool _isEmployeeUser(Employee employee) {
     final userState = context.watch<UserBloc>().state;
-    return userState.users.any(
+    return userState.usersRole.any(
       (userWithRole) => userWithRole.user.employeesId == employee.id,
     );
   }
 
   UserWithRole? _getUserForEmployee(Employee employee) {
     final userState = context.read<UserBloc>().state;
-    final matches = userState.users.where(
-      (u) => u.user.employeesId == employee.id,
+    final matchingUsers = userState.usersRole.where(
+      (userWithRole) => userWithRole.user.employeesId == employee.id,
     );
-    if (matches.isEmpty) return null; // No linked system user
-    return matches.first;
+    if (matchingUsers.isEmpty) return null; // No linked system user
+    return matchingUsers.first;
   }
 
   @override
@@ -1066,7 +1064,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
       // Employee doesn't have user account - show "Convert to User" button
       return ElevatedButton(
         onPressed: () => context.push(
-          AppRoutes.userManagement,
+          AppRoutes.employeeConversionToUser,
           extra: {'employee': employee},
         ),
 
@@ -1115,7 +1113,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
 
       widget.userBloc.add(
         AssignRolesToUser(
-          userWithRole.user.id!,
+          userWithRole.user.id,
           widget.authBloc.state.companyId!,
           finalRoleIds,
           widget.authBloc.state.userId!,

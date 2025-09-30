@@ -165,25 +165,6 @@ class UpdateEmployeeFormField extends EmployeeEvent {
   List<Object> get props => [field, value];
 }
 
-class ConvertEmployeeToUser extends EmployeeEvent {
-  final int employeeId;
-  final String username;
-  final String password;
-  final int branchId;
-  final String email;
-
-  const ConvertEmployeeToUser({
-    required this.employeeId,
-    required this.username,
-    required this.password,
-    required this.branchId,
-    required this.email,
-  });
-
-  @override
-  List<Object> get props => [employeeId, username, password, branchId, email];
-}
-
 class ToggleRoleManagement extends EmployeeEvent {
   final int employeeId;
   const ToggleRoleManagement(this.employeeId);
