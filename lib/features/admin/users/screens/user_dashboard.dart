@@ -5,7 +5,8 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/utils/ui_helper.dart';
 import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
-import 'package:savvy_stock/features/admin/role/blocs/role_event.dart';
+import 'package:savvy_stock/features/admin/role/blocs/role_event.dart'
+    hide ClearSelection;
 import 'package:savvy_stock/features/admin/users/blocs/user_bloc.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_event.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_state.dart';
@@ -31,8 +32,6 @@ class _UserDashboardState extends State<UserDashboard> {
   final ScrollController _scrollController = ScrollController();
   bool _isSelectionMode = false;
   final Map<int, double> _dragOffset = {};
-  UserModel? _selectedUser;
-  bool _userDetail = false;
 
   @override
   void initState() {
@@ -57,29 +56,6 @@ class _UserDashboardState extends State<UserDashboard> {
     context.read<UserBloc>().add(SearchUsers(''));
   }
 
-  void _showUserDetail(UserModel user) {
-    context.read<UserBloc>().add(ClearSelection());
-    setState(() {
-      _selectedUser = user;
-      _userDetail = true;
-    });
-    context.read<RoleBloc>().add(LoadRoles(widget.authBloc.state.companyId!));
-  }
-
-  void _hideUserDetail() {
-    context.read<UserBloc>().add(ClearSelection());
-    setState(() {
-      _userDetail = false;
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) {
-          setState(() {
-            _selectedUser = null;
-          });
-        }
-      });
-    });
-  }
-
   void _clearSelection() {
     context.read<UserBloc>().add(ClearSelection());
     setState(() {
@@ -89,18 +65,6 @@ class _UserDashboardState extends State<UserDashboard> {
 
   void _toggleUserSelection(UserModel user, bool selected) {
     context.read<UserBloc>().add(SelectUser(user, selected));
-  }
-
-  void _callUser(String phone) {
-    // Implement phone call functionality
-    print('Calling: $phone');
-  }
-
-  void _emailUser(String? email) {
-    if (email != null) {
-      // Implement email functionality
-      print('Emailing: $email');
-    }
   }
 
   void _exportUser(UserModel user) {
@@ -126,7 +90,7 @@ class _UserDashboardState extends State<UserDashboard> {
         onConfirm: () {
           final ids = usersToDelete.map((e) => e.id).toList();
           final deletedIndexes = usersToDelete
-              .map((emp) => state.user.indexOf(emp))
+              .map((emp) => state.users.indexOf(emp))
               .toList();
           bloc.add(
             DeleteSelectedUsers(
@@ -211,13 +175,24 @@ class _UserDashboardState extends State<UserDashboard> {
   }
 
   void _navigateToEditScreen(UserModel user) {
-    // Navigate to edit user screen
-    context.push(AppRoutes.userEdit, extra: user);
+    // You need to get the UserWithRole from your state
+    final userState = context.read<UserBloc>().state;
+    final userWithRole = userState.getUserWithRole(
+      user.id,
+    ); // Use the safe method we added
+
+    if (userWithRole != null) {
+      context.push(AppRoutes.userEdit, extra: userWithRole);
+    } else {
+      // Fallback: create a basic UserWithRole
+      final fallbackUserWithRole = UserWithRole(user: user, roles: []);
+      context.push(AppRoutes.userEdit, extra: fallbackUserWithRole);
+    }
   }
 
   UserWithRole _safeFindUserWithRole(UserState state, UserModel user) {
     try {
-      return state.usersRole.firstWhere(
+      return state.usersWithRole.firstWhere(
         (userWithRole) => userWithRole.user.id == user.id,
       );
     } catch (e) {
@@ -233,11 +208,11 @@ class _UserDashboardState extends State<UserDashboard> {
       appBar: AppBar(title: const Text('User List')),
       body: BlocConsumer<UserBloc, UserState>(
         listener: (context, state) {
-          if (state.user.isNotEmpty && !_isSelectionMode) {
+          if (state.usersWithRole.isNotEmpty && !_isSelectionMode) {
             setState(() {
               _isSelectionMode = true;
             });
-          } else if (state.user.isEmpty && _isSelectionMode) {
+          } else if (state.usersWithRole.isEmpty && _isSelectionMode) {
             setState(() {
               _isSelectionMode = false;
             });
@@ -255,10 +230,6 @@ class _UserDashboardState extends State<UserDashboard> {
                   Expanded(child: _buildUserList(state)),
                 ],
               ),
-
-              // Detail Panel
-              if (_userDetail && _selectedUser != null)
-                _buildDetailPanel(_selectedUser!),
             ],
           );
         },
@@ -362,7 +333,7 @@ class _UserDashboardState extends State<UserDashboard> {
           onPressed: () {
             if (state.canEdit) {
               // Navigate to edit screen with selected user
-              final user = state.user.first;
+              final user = state.selectedUsers.first;
               _navigateToEditScreen(user);
             } else {
               // Navigate to add screen
@@ -459,9 +430,6 @@ class _UserDashboardState extends State<UserDashboard> {
       onTap: () {
         if (_isSelectionMode) {
           _toggleUserSelection(user, !isSelected);
-        } else {
-          // Single tap shows detail when not in selection mode
-          _showUserDetail(user);
         }
       },
       onLongPress: () {
@@ -476,7 +444,6 @@ class _UserDashboardState extends State<UserDashboard> {
           _onHorizontalDragUpdate(index, details),
       onHorizontalDragEnd: (details) =>
           _onHorizontalDragEnd(context, index, details),
-      onDoubleTap: () => _showUserDetail(user),
       child: Stack(
         children: [
           // Background (delete indicator)
@@ -597,6 +564,11 @@ class _UserDashboardState extends State<UserDashboard> {
               fontWeight: FontWeight.w500,
             ),
           ),
+        Text(
+          user.id.toString(),
+          style: const TextStyle(fontSize: 12),
+          overflow: TextOverflow.ellipsis,
+        ),
 
         // Contact information
         Text(
@@ -639,467 +611,4 @@ class _UserDashboardState extends State<UserDashboard> {
     // Show user type indicator when not selected
     return Icon(Iconsax.user, color: Colors.green, size: 20);
   }
-
-  Widget _buildDetailPanel(UserModel user) {
-    return BlocConsumer<UserBloc, UserState>(
-      listener: (context, state) {
-        if (state.status == UserStatus.success && state.message != null) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(state.message!)));
-        }
-      },
-      builder: (context, state) {
-        return Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: Builder(
-            builder: (context) {
-              final size = MediaQuery.of(context).size;
-              final screenWidth = size.width;
-              final screenHeight = size.height;
-              final panelHeight = screenHeight * 0.4; // finite height
-              final useHorizontalLayout = screenWidth > 500;
-              final useCompactLayout = screenWidth < 500;
-
-              final userWithRole = _safeFindUserWithRole(state, user);
-
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 400),
-                curve: Curves.easeOut,
-                height: panelHeight,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Colors.white, Colors.grey[50]!],
-                  ),
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(32),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.25),
-                      blurRadius: 32,
-                      offset: const Offset(0, -8),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    // Header Section
-                    _buildDetailHeader(
-                      user,
-                      state,
-                      userWithRole,
-                      useHorizontalLayout,
-                      useCompactLayout,
-                    ),
-
-                    // Content Section
-                    Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.all(useCompactLayout ? 12 : 20),
-                        child: _buildContentSection(
-                          user,
-                          state,
-                          useHorizontalLayout,
-                          useCompactLayout,
-                        ),
-                      ),
-                    ),
-
-                    // Footer Actions
-                    // if (!state.isRoleManagementMode)
-                    //  _buildDetailFooter(user, useCompactLayout),
-                  ],
-                ),
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  // Add this new method:
-  Widget _buildContentSection(
-    UserModel user,
-    UserState state,
-    bool useHorizontal,
-    bool isCompact,
-  ) {
-    // Show basic user info for all users
-    return _builduserInfoView(user, state, useHorizontal, isCompact);
-  }
-
-  Widget _buildDetailHeader(
-    UserModel user,
-    UserState state,
-    UserWithRole? userWithRole,
-    bool isUser,
-    bool isCompact,
-  ) {
-    // Safe role names extraction
-    final roleNames =
-        userWithRole?.roles.map((r) => r.name).join(', ') ??
-        'No roles assigned';
-
-    // Safe user name with null check
-    final String safeUserName = user.userName ?? 'Unknown User';
-    final String displayInitials = safeUserName.length > 2
-        ? safeUserName.substring(0, 2).toUpperCase()
-        : safeUserName.toUpperCase();
-
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: isCompact ? 16 : 20,
-        vertical: isCompact ? 8 : 12,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Drag handle
-          Container(
-            width: isCompact ? 40 : 60,
-            height: 4,
-            margin: EdgeInsets.only(bottom: isCompact ? 4 : 8),
-            decoration: BoxDecoration(
-              color: Colors.grey[400],
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-
-          // Header content
-          Row(
-            children: [
-              // Avatar and basic info
-              Expanded(
-                child: Row(
-                  children: [
-                    // Avatar with user status indicator
-                    Stack(
-                      children: [
-                        Container(
-                          width: isCompact ? 40 : 50,
-                          height: isCompact ? 40 : 50,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: isUser
-                                  ? [Color(0xFF10b981), Color(0xFF059669)]
-                                  : [Color(0xFF667eea), Color(0xFF764ba2)],
-                            ),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Text(
-                              displayInitials,
-                              style: TextStyle(
-                                fontSize: isCompact ? 14 : 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          right: 0,
-                          bottom: 0,
-                          child: Container(
-                            width: isCompact ? 12 : 16,
-                            height: isCompact ? 12 : 16,
-                            decoration: BoxDecoration(
-                              color: Colors.green,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
-                            child: Icon(
-                              Icons.check,
-                              size: isCompact ? 8 : 10,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    SizedBox(width: isCompact ? 8 : 12),
-
-                    // Name and user status
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            safeUserName,
-                            style: TextStyle(
-                              fontSize: isCompact ? 16 : 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            roleNames,
-                            style: TextStyle(
-                              fontSize: isCompact ? 12 : 14,
-                              color: Colors.orange,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Action button - ONLY show role management for users
-              _buildMainActionButton(user, isCompact, context),
-
-              SizedBox(width: 8),
-
-              // Close button
-              Container(
-                width: isCompact ? 32 : 36,
-                height: isCompact ? 32 : 36,
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: Icon(Icons.close, size: isCompact ? 16 : 18),
-                  onPressed: _hideUserDetail,
-                  padding: EdgeInsets.zero,
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Separate method for main action button
-  Widget _buildMainActionButton(
-    UserModel user,
-    bool isCompact,
-    BuildContext context,
-  ) {
-    return ElevatedButton(
-      onPressed: () =>
-          context.push(AppRoutes.userManagement, extra: {'user': user}),
-
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
-        padding: EdgeInsets.symmetric(
-          horizontal: isCompact ? 12 : 16,
-          vertical: 8,
-        ),
-      ),
-      child: Text('Edit User', style: TextStyle(fontSize: isCompact ? 12 : 14)),
-    );
-  }
-}
-
-Widget _builduserInfoView(
-  UserModel user,
-  UserState state,
-  bool useHorizontal,
-  bool isCompact,
-) {
-  // Safe values with null checks
-  final String safeUserName = user.userName ?? 'No username';
-  final String safeUserEmail = user.userEmail ?? 'No email';
-  final String safeUserId = user.id.toString();
-
-  if (useHorizontal) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Personal Information
-        Expanded(
-          child: _buildInfoSection(
-            title: 'Personal Information',
-            icon: Iconsax.profile_circle,
-            color: Color(0xFF667eea),
-            isCompact: isCompact,
-            children: [
-              _buildInfoItem('User ID', safeUserId, Iconsax.card, isCompact),
-              _buildInfoItem(
-                'User Name',
-                safeUserName,
-                Iconsax.user,
-                isCompact,
-              ),
-              _buildInfoItem('Email', safeUserEmail, Iconsax.user, isCompact),
-            ],
-          ),
-        ),
-        SizedBox(width: isCompact ? 12 : 20),
-      ],
-    );
-  } else {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          _buildInfoSection(
-            title: 'Personal Information',
-            icon: Iconsax.profile_circle,
-            color: Color(0xFF667eea),
-            isCompact: isCompact,
-            children: [
-              _buildInfoItem('User ID', safeUserId, Iconsax.card, isCompact),
-              _buildInfoItem(
-                'User Name',
-                safeUserName,
-                Iconsax.user,
-                isCompact,
-              ),
-              _buildInfoItem('Email', safeUserEmail, Iconsax.user, isCompact),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-Widget _buildInfoSection({
-  required String title,
-  required IconData icon,
-  required Color color,
-  required bool isCompact,
-  required List<Widget> children,
-}) {
-  return Container(
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.05),
-          blurRadius: 12,
-          offset: const Offset(0, 4),
-        ),
-      ],
-      border: Border.all(color: Colors.grey[100]!, width: 1),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Section header
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              topRight: Radius.circular(16),
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                child: Icon(icon, size: 16, color: Colors.white),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
-        ),
-        // Section content
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(children: children),
-        ),
-      ],
-    ),
-  );
-}
-
-Widget _buildInfoItem(
-  String label,
-  String value,
-  IconData icon,
-  bool isCompact,
-) {
-  return Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: Colors.grey[50],
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, size: 16, color: Colors.grey[600]),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[600],
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
 }

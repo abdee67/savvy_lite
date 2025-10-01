@@ -119,21 +119,41 @@ class UserModel {
     return result.toHexString();
   }
 
-  // Factory to create a new user with hashed password
-  static Future<UserModel> create({
+  // Factory method for creating new users with hashed password
+  static Future<UserModel> createWithHashedPassword({
     required int id,
     required String plainPassword,
     String? userName,
+    String? userEmail,
+    int? branch,
     int? company,
+    int? employeesId,
   }) async {
-    final hashed = await generateArgon2Hash(plainPassword);
+    final hashedPassword = await generateArgon2Hash(plainPassword);
     return UserModel(
       id: id,
-      password: hashed,
+      password: hashedPassword,
       userName: userName,
+      userEmail: userEmail,
+      branch: branch,
       company: company,
+      employeesId: employeesId,
       dateCreated: DateTime.now(),
+      type: 'Company',
     );
+  }
+
+  // Method to verify password
+  Future<bool> verifyPassword(String plainPassword) async {
+    if (password == null) return false;
+    final hashedInput = await generateArgon2Hash(plainPassword);
+    return hashedInput == password;
+  }
+
+  // Method to check if password needs rehashing (if algorithm changes)
+  bool get passwordNeedsRehash {
+    // You can add logic here to check if the hash uses outdated parameters
+    return false; // Placeholder
   }
 
   Map<String, dynamic> toMap() {
@@ -147,7 +167,7 @@ class UserModel {
       'date_updated': dateUpdated?.toIso8601String(),
       'usercol': usercol,
       'branch': branch,
-      'status': status,
+      'status': 'active',
       'password_last_updated': passwordLastUpdated?.toIso8601String(),
       'company': company,
       'user_email': userEmail,

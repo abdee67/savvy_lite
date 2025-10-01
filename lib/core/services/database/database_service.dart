@@ -510,6 +510,13 @@ class LocalDatabaseService {
         'country': 'Ethiopia',
         'company': 1,
         'branch': 1,
+        'name_middle': 'M',
+        'title': 'Admin',
+        'birth_date': '2022-01-01',
+        'address': 'Addis Ababa',
+        'region': 'Addis',
+        'phone': '+2519111111',
+        'email': 'admin@gmail.com',
       },
       {
         'employee_id': 'EMP002',
@@ -521,6 +528,13 @@ class LocalDatabaseService {
         'country': 'Ethiopia',
         'company': 1,
         'branch': 1,
+        'name_middle': 'M',
+        'title': 'Sales Manager',
+        'birth_date': '2022-01-01',
+        'address': 'Addis Ababa',
+        'region': 'Addis',
+        'phone': '+2519111111',
+        'email': 'salesManager@gmail.com',
       },
       {
         'employee_id': 'EMP003',
@@ -532,6 +546,13 @@ class LocalDatabaseService {
         'country': 'Ethiopia',
         'company': 1,
         'branch': 1,
+        'name_middle': 'M',
+        'title': 'Sales Manager',
+        'birth_date': '2022-01-01',
+        'address': 'Addis Ababa',
+        'region': 'Addis',
+        'phone': '+2519111111',
+        'email': 'stockManager@gmail.com',
       },
       {
         'employee_id': 'EMP003',
@@ -543,6 +564,13 @@ class LocalDatabaseService {
         'country': 'Ethiopia',
         'company': 1,
         'branch': 1,
+        'name_middle': 'M',
+        'title': 'Sales Manager',
+        'birth_date': '2022-01-01',
+        'address': 'Addis Ababa',
+        'region': 'Addis',
+        'phone': '+2519111111',
+        'email': 'babyManager@gmail.com',
       },
     ];
     for (final employee in employees) {
@@ -621,6 +649,35 @@ class LocalDatabaseService {
     }
     developer.log('Inserted sales manager role privileges');
 
+    // Example: Stock Manager subset
+    final stockPrivileges = [
+      AppRoutes.stockDashboard,
+      AppRoutes.itemEntry,
+      AppRoutes.uomManagement,
+      AppRoutes.itemWorkbench,
+      AppRoutes.itemUomConversions,
+      AppRoutes.locationEntry,
+      AppRoutes.lotEntry,
+      AppRoutes.lotColorings,
+      AppRoutes.inventoryTransaction,
+      AppRoutes.itemBranchEntry,
+      AppRoutes.barcodeFunction,
+      AppRoutes.exportFunction,
+    ];
+
+    for (final uri in stockPrivileges) {
+      final pid = privilegeByUri[uri];
+      if (pid != null) {
+        await db.insert('role_privilege', {
+          'role_table_id': roleIds['Stock Manager'],
+          'privilege_table_id': pid,
+          'created_by': 1,
+          'date_created': DateTime.now().toIso8601String(),
+        });
+      }
+    }
+    developer.log('Inserted stock manager role privileges');
+
     // Helper function to generate Argon2 hash
     Future<String> generateArgon2Hash(password) async {
       final salt = 'somesalt'.toBytesLatin1();
@@ -652,7 +709,33 @@ class LocalDatabaseService {
         'company': 1,
         'user_name': 'admin',
         'status': 'active',
+        'password_last_updated': DateTime.now().millisecondsSinceEpoch,
+        'usercol': 'admin',
+        'user_email': 'admin@gmail.com',
+        'confirmation_code': '123456',
+        'confirmations_expire_time': DateTime.now().millisecondsSinceEpoch,
+        'type': 'Company',
+        'salesperson': 1,
         'date_created': DateTime.now().millisecondsSinceEpoch,
+        'date_updated': DateTime.now().millisecondsSinceEpoch,
+      },
+
+      {
+        'password': argon2Hash,
+        'employees_id': 2,
+        'created_by': 1,
+        'branch': 1,
+        'company': 1,
+        'user_name': 'salesManager',
+        'status': 'active',
+        'date_created': DateTime.now().millisecondsSinceEpoch,
+        'password_last_updated': DateTime.now().millisecondsSinceEpoch,
+        'user_email': 'salesManager@gmail.com',
+        'confirmation_code': '123456',
+        'confirmations_expire_time': DateTime.now().millisecondsSinceEpoch,
+        'type': 'Company',
+        'salesperson': 1,
+        'date_updated': DateTime.now().millisecondsSinceEpoch,
       },
       {
         'password': argon2Hash,
@@ -660,9 +743,16 @@ class LocalDatabaseService {
         'created_by': 1,
         'branch': 1,
         'company': 1,
-        'user_name': 'stockManager',
+        'user_name': 'StockManager',
         'status': 'active',
         'date_created': DateTime.now().millisecondsSinceEpoch,
+        'password_last_updated': DateTime.now().millisecondsSinceEpoch,
+        'user_email': 'stockManager@gmail.com',
+        'confirmation_code': '123456',
+        'confirmations_expire_time': DateTime.now().millisecondsSinceEpoch,
+        'type': 'Company',
+        'salesperson': 1,
+        'date_updated': DateTime.now().millisecondsSinceEpoch,
       },
     ];
 

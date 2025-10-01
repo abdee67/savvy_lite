@@ -18,25 +18,26 @@ class LoadUsers extends UserEvent {
 
 class CreateUser extends UserEvent {
   final UserModel user;
-  final List<int> roleIds;
-  const CreateUser(this.user, this.roleIds);
+  final List<Role> roles;
+  const CreateUser(this.user, this.roles);
 }
 
 class UpdateUser extends UserEvent {
   final UserModel user;
   final List<Role> roles;
-  const UpdateUser(this.user, this.roles);
+  final String? newPassword;
+  const UpdateUser(this.user, this.roles, this.newPassword);
 }
 
 class AssignRolesToUser extends UserEvent {
   final int userId;
   final int companyId;
-  final List<int> roleIds;
+  final List<Role> roles;
   final int createdBy;
   const AssignRolesToUser(
     this.userId,
     this.companyId,
-    this.roleIds,
+    this.roles,
     this.createdBy,
   );
 }

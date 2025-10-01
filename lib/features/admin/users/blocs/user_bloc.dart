@@ -1,7 +1,9 @@
 // features/user/blocs/user_bloc.dart
-import 'dart:typed_data';
+
+import 'dart:async';
 
 import 'package:bloc/bloc.dart';
+import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_event.dart';
@@ -9,12 +11,13 @@ import 'package:savvy_stock/features/admin/users/blocs/user_state.dart';
 import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/admin/users/models/user_with_role.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:argon2/argon2.dart';
 
 class UserBloc extends Bloc<UserEvent, UserState> {
   final LocalDatabaseService databaseService;
   final AuthBloc authBloc;
+  StreamSubscription? _authSubscription;
 
   UserBloc({required this.databaseService, required this.authBloc})
     : super(UserState(status: UserStatus.initial)) {
@@ -33,6 +36,12 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     on<ExportSingleUser>(_onExportSingleUser);
     on<SearchUsers>(_onSearchUsers);
     on<ClearSelection>(_onClearSelection);
+
+    _authSubscription = authBloc.stream.listen((state) {
+      if (state.companyId != null) {
+        add(LoadUsers(state.companyId!));
+      }
+    });
   }
 
   Future<void> _onLoadUsers(LoadUsers event, Emitter<UserState> emit) async {
@@ -40,17 +49,16 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     try {
       final db = await databaseService.database;
       final users = await db.query('user_table');
-      final userList = await Future.wait(
+
+      final usersWithRole = await Future.wait(
         users.map((u) async => await _getUserWithRoles(u, db)),
       );
 
       emit(
         UserState(
           status: UserStatus.success,
-          user: users.map((u) => UserModel.fromMap(u)).toList(),
-          usersRole: userList,
-          companyId: event.companyId,
-          filteredUsers: users.map((u) => UserModel.fromMap(u)).toList(),
+          usersWithRole: usersWithRole,
+          filteredUsersWithRole: usersWithRole, // Initially, filtered = all
           searchQuery: '',
           selectedUsers: [],
         ),
@@ -92,32 +100,45 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     );
     try {
       final db = await databaseService.database;
+      final companyId = authBloc.state.companyId;
+      final createdBy = authBloc.state.userId!;
+      final password = await UserModel.generateArgon2Hash(event.user.password!);
 
-      final userMap = event.user.toMap();
+      final userMap = event.user
+          .copyWith(
+            company: companyId,
+            createdBy: createdBy,
+            dateCreated: DateTime.now(),
+            password: password,
+          )
+          .toMap();
+      userMap.remove('id');
 
       // Create user
-      final user = await db.insert(
-        'user_table',
-        userMap,
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      final userId = await db.insert('user_table', userMap);
 
       // Assign roles if any
-      if (event.roleIds.isNotEmpty) {
-        for (final roleId in event.roleIds) {
+      if (event.roles.isNotEmpty) {
+        for (final role in event.roles) {
           await db.insert('user_role', {
-            'user_id': user,
-            'role_table_id': roleId,
-            'created_by': authBloc.state.userId,
+            'user_id': userId,
+            'role_table_id': role.id,
+            'created_by': createdBy,
             'date_created': DateTime.now().toIso8601String(),
           });
         }
       }
-
       add(LoadUsers(authBloc.state.companyId!)); // Reload the list
+
+      emit(
+        state.copyWith(
+          status: UserStatus.success,
+          message: 'User created successfully',
+        ),
+      );
     } catch (e) {
       emit(
-        UserState(
+        state.copyWith(
           status: UserStatus.failure,
           message: 'Failed to create user: $e',
         ),
@@ -140,19 +161,24 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       );
 
       // Add new roles
-      for (final roleId in event.roleIds) {
+      for (final roleId in event.roles) {
         await db.insert('user_role', {
           'user_id': event.userId,
-          'role_table_id': roleId,
+          'role_table_id': roleId.id,
           'created_by': event.createdBy,
           'date_created': DateTime.now().toIso8601String(),
         });
       }
-
       add(LoadUsers(event.companyId)); // Reload the list
+      emit(
+        state.copyWith(
+          status: UserStatus.success,
+          message: 'Roles assigned successfully',
+        ),
+      );
     } catch (e) {
       emit(
-        UserState(
+        state.copyWith(
           status: UserStatus.failure,
           message: 'Failed to assign roles: $e',
         ),
@@ -162,9 +188,9 @@ class UserBloc extends Bloc<UserEvent, UserState> {
 
   Future<void> _onUpdateUser(UpdateUser event, Emitter<UserState> emit) async {
     // 1. Check if user has update privilege
-    if (!authBloc.state.hasPrivilege('/admin/user-management/edit-user')) {
+    if (!authBloc.state.hasPrivilege(AppRoutes.userEdit)) {
       emit(
-        UserState(
+        state.copyWith(
           status: UserStatus.failure,
           message: 'Insufficient privileges to update users',
         ),
@@ -177,66 +203,93 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     try {
       final db = await databaseService.database;
       final companyId = authBloc.state.companyId;
+      final updatedBy = authBloc.state.userId!;
+      // Check if password is being updated (new password provided)
+      String? finalPassword;
+      if (event.newPassword != null && event.newPassword!.isNotEmpty) {
+        // Hash the new password
+        finalPassword = await UserModel.generateArgon2Hash(event.newPassword);
+      }
+      // Prepare updated user data
+      UserModel updatedUser = event.user.copyWith(
+        updatedBy: updatedBy,
+        dateUpdated: DateTime.now(),
+      );
+      if (finalPassword != null) {
+        updatedUser = updatedUser.copyWith(
+          password: finalPassword,
+          passwordLastUpdated: DateTime.now(),
+        );
+      }
 
       // 2. Verify user exists and belongs to current company
       final existingUsers = await db.query(
         'user_table',
         where: 'id = ? AND company = ?',
-        whereArgs: [event.user.id, companyId],
+        whereArgs: [updatedUser.id, companyId],
       );
 
       if (existingUsers.isEmpty) {
         emit(
-          UserState(
+          state.copyWith(
             status: UserStatus.failure,
             message: 'User not found or access denied',
           ),
         );
         return;
       }
+      // 3. Update user in database - only update password if it was changed
+      final userMap = updatedUser.toMap();
+      if (finalPassword == null || finalPassword.isEmpty) {
+        // Don't update password if it wasn't changed
+        userMap.remove('password');
+        userMap.remove('password_last_updated');
+      }
 
       // 3. Update user in database
       final updateResult = await db.update(
         'user_table',
-        event.user.toMap(),
+        userMap,
         where: 'id = ? AND company = ?',
-        whereArgs: [event.user.id, companyId],
+        whereArgs: [updatedUser.id, companyId],
       );
 
       if (updateResult == 0) {
         throw Exception('Failed to update user - no rows affected');
       }
 
-      // 4. Update user roles
-      // First remove existing roles
-      await db.delete(
-        'user_role',
-        where: 'user_id = ?',
-        whereArgs: [event.user.id],
-      );
+      // 4. Update user roles if provided
+      if (event.roles.isNotEmpty) {
+        // First remove existing roles
+        await db.delete(
+          'user_role',
+          where: 'user_id = ?',
+          whereArgs: [updatedUser.id],
+        );
 
-      // Then add new roles
-      for (final role in event.roles) {
-        await db.insert('user_role', {
-          'user_id': event.user.id,
-          'role_table_id': role.id,
-          'created_by': authBloc.state.userId, // Current admin user
-          'date_created': DateTime.now().toIso8601String(),
-        });
+        // Then add new roles
+        for (final role in event.roles) {
+          await db.insert('user_role', {
+            'user_id': updatedUser.id,
+            'role_table_id': role.id,
+            'created_by': updatedBy,
+            'date_created': DateTime.now().toIso8601String(),
+          });
+        }
       }
-
       // 5. Reload users to get fresh data
       add(LoadUsers(companyId!));
 
       emit(
-        UserState(
+        state.copyWith(
           status: UserStatus.success,
-          message: 'User updated successfully',
+          message:
+              'User updated successfully${finalPassword != null ? ' with new password' : ''}',
         ),
       );
     } catch (e) {
       emit(
-        UserState(
+        state.copyWith(
           status: UserStatus.failure,
           message: 'Failed to update user: ${e.toString()}',
         ),
@@ -245,10 +298,24 @@ class UserBloc extends Bloc<UserEvent, UserState> {
   }
 
   Future<void> _onDeleteUser(DeleteUser event, Emitter<UserState> emit) async {
-    // 1. Check if user has delete privilege
-    if (!authBloc.state.hasPrivilege('/admin/user-management/delete-user')) {
+    // Add null checks for critical authentication values
+    final currentUserId = authBloc.state.userId;
+    final companyId = authBloc.state.companyId;
+
+    if (currentUserId == null || companyId == null) {
       emit(
-        UserState(
+        state.copyWith(
+          status: UserStatus.failure,
+          message: 'Authentication error: User not properly authenticated',
+        ),
+      );
+      return;
+    }
+
+    // 1. Check if user has delete privilege
+    if (!authBloc.state.hasPrivilege(AppRoutes.userDelete)) {
+      emit(
+        state.copyWith(
           status: UserStatus.failure,
           message: 'Insufficient privileges to delete users',
         ),
@@ -257,11 +324,12 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     }
 
     // 2. Prevent self-deletion
-    if (event.userId == authBloc.state.userId) {
+    if (event.userId == currentUserId) {
+      final currentUser = authBloc.state.username;
       emit(
-        UserState(
+        state.copyWith(
           status: UserStatus.failure,
-          message: 'Cannot delete your own account',
+          message: 'Cannot delete your own account $currentUser',
         ),
       );
       return;
@@ -271,9 +339,8 @@ class UserBloc extends Bloc<UserEvent, UserState> {
 
     try {
       final db = await databaseService.database;
-      final companyId = authBloc.state.companyId;
 
-      // 3. Verify user exists and belongs to current company
+      // 4. Verify user exists and belongs to current company
       final existingUsers = await db.query(
         'user_table',
         where: 'id = ? AND company = ?',
@@ -282,7 +349,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
 
       if (existingUsers.isEmpty) {
         emit(
-          UserState(
+          state.copyWith(
             status: UserStatus.failure,
             message: 'User not found or access denied',
           ),
@@ -290,17 +357,28 @@ class UserBloc extends Bloc<UserEvent, UserState> {
         return;
       }
 
-      // 4. Store user data for potential undo (optional)
+      // 5. Store user data for potential undo (optional)
       final userToDelete = UserModel.fromMap(existingUsers.first);
 
-      // 5. Delete user roles first (foreign key constraint)
-      final rolesDeleted = await db.delete(
+      // 6. Prevent deleting super admin or essential accounts
+      if (userToDelete.userName == 'admin') {
+        emit(
+          state.copyWith(
+            status: UserStatus.failure,
+            message: 'Cannot delete system administrator accounts',
+          ),
+        );
+        return;
+      }
+
+      // 7. Delete user roles first (foreign key constraint)
+      await db.delete(
         'user_role',
         where: 'user_id = ?',
         whereArgs: [event.userId],
       );
 
-      // 6. Delete user
+      // 8. Delete user
       final userDeleted = await db.delete(
         'user_table',
         where: 'id = ? AND company = ?',
@@ -311,20 +389,18 @@ class UserBloc extends Bloc<UserEvent, UserState> {
         throw Exception('Failed to delete user - no rows affected');
       }
 
-      // 7. Reload users list
-      add(LoadUsers(companyId!));
+      // 9. Reload users list
+      add(LoadUsers(companyId));
 
       emit(
-        UserState(
+        state.copyWith(
           status: UserStatus.success,
-          message: 'User deleted successfully',
-          // Optional: Store for undo functionality
-          recentlyDeleted: [...state.recentlyDeleted, userToDelete],
+          message: 'User "${userToDelete.userName}" deleted successfully',
         ),
       );
     } catch (e) {
       emit(
-        UserState(
+        state.copyWith(
           status: UserStatus.failure,
           message: 'Failed to delete user: ${e.toString()}',
         ),
@@ -342,7 +418,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     if (query.isEmpty) {
       emit(
         state.copyWith(
-          filteredUsers: state.user,
+          filteredUsersWithRole: state.usersWithRole,
           selectedUsers: [],
           searchQuery: '',
           status: UserStatus.success,
@@ -351,14 +427,14 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       return;
     }
 
-    final filtered = state.user.where((user) {
-      return user.userName!.toLowerCase().contains(query) ||
-          user.userEmail!.toLowerCase().contains(query);
+    final filtered = state.usersWithRole.where((user) {
+      return user.user.userName!.toLowerCase().contains(query) ||
+          user.user.userEmail!.toLowerCase().contains(query);
     }).toList();
 
     emit(
       state.copyWith(
-        filteredUsers: filtered,
+        filteredUsersWithRole: filtered,
         searchQuery: query,
         selectedUsers: [],
         status: UserStatus.searching,
@@ -398,31 +474,13 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       ).join(',');
       final whereArgs = [...event.selectedUsers, authBloc.state.companyId];
       await db.delete(
-        'Users',
+        'user_table',
         where: 'id IN ($placeholders) AND company = ?',
         whereArgs: whereArgs,
       );
-      final updatedUsers = state.user
-          .where((e) => !event.selectedUsers.contains(e.id))
-          .toList();
-      final updatedUsersRole = state.usersRole
-          .where((e) => !event.selectedUsers.contains(e.user.id))
-          .toList();
-      final updatedFiltered = state.filteredUsers
-          .where((e) => !event.selectedUsers.contains(e.id))
-          .toList();
-
       emit(
         state.copyWith(
-          user: updatedUsers,
-          usersRole: updatedUsersRole,
-          filteredUsers: updatedFiltered,
-          selectedUsers: [],
-          recentlyDeleted: [...state.recentlyDeleted, ...event.deletedUsers],
-          recentlyDeletedIndexes: [
-            ...state.recentlyDeletedIndexes,
-            ...event.deletedIndexes,
-          ],
+          status: UserStatus.success,
           message: '${event.selectedUsers.length} Users deleted successfully',
         ),
       );
@@ -442,8 +500,8 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       final db = await databaseService.database;
 
       // Reinsert at original positions in memory
-      final updatedUsers = List<UserModel>.from(state.user);
-      final updatedUsersRole = List<UserWithRole>.from(state.usersRole);
+      final updatedUsers = List<UserModel>.from(state.users);
+      final updatedUsersRole = List<UserWithRole>.from(state.usersWithRole);
 
       // Restore items at their original positions
       for (int i = 0; i < event.deletedItems.length; i++) {
@@ -465,9 +523,8 @@ class UserBloc extends Bloc<UserEvent, UserState> {
 
         emit(
           state.copyWith(
-            user: updatedUsers,
-            usersRole: updatedUsersRole,
-            filteredUsers: updatedUsers,
+            usersWithRole: updatedUsersRole,
+            filteredUsersWithRole: updatedUsersRole,
             recentlyDeleted: [],
             recentlyDeletedIndexes: [],
           ),
