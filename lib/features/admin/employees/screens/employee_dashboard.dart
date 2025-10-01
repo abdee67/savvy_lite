@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -10,7 +12,8 @@ import 'package:savvy_stock/features/admin/employees/blocs/employee_state.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
 import 'package:savvy_stock/features/admin/employees/widgets/emloyee_create_and_edit.dart.dart';
 import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
-import 'package:savvy_stock/features/admin/role/blocs/role_event.dart';
+import 'package:savvy_stock/features/admin/role/blocs/role_event.dart'
+    hide ClearSelection;
 import 'package:savvy_stock/features/admin/role/blocs/role_state.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_bloc.dart';
@@ -43,14 +46,14 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
 
   bool _isEmployeeUser(Employee employee) {
     final userState = context.watch<UserBloc>().state;
-    return userState.usersRole.any(
+    return userState.usersWithRole.any(
       (userWithRole) => userWithRole.user.employeesId == employee.id,
     );
   }
 
   UserWithRole? _getUserForEmployee(Employee employee) {
     final userState = context.read<UserBloc>().state;
-    final matchingUsers = userState.usersRole.where(
+    final matchingUsers = userState.usersWithRole.where(
       (userWithRole) => userWithRole.user.employeesId == employee.id,
     );
     if (matchingUsers.isEmpty) return null; // No linked system user
@@ -347,7 +350,10 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
                     ),
                     onPressed: () {
                       final employee = state.selectedEmployees.first;
-                      _navigateToEditScreen(employee);
+                      context.push(
+                        AppRoutes.employeeEdit,
+                        extra: {'employee': employee},
+                      );
                     },
                     tooltip: 'Edit employee',
                   ),
@@ -369,11 +375,14 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
           onPressed: () {
             if (state.canEdit) {
               // Navigate to edit screen with selected employee
-              final employee = state.employees.first;
-              _navigateToEditScreen(employee);
+              final employee = state.selectedEmployees.first;
+              context.push(
+                AppRoutes.employeeEdit,
+                extra: {'employee': employee},
+              );
             } else {
               // Navigate to add screen
-              _navigateToAddScreen();
+              context.push(AppRoutes.employeeEdit);
             }
           },
           backgroundColor: Color.fromARGB(255, 28, 66, 146),
@@ -977,16 +986,21 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
   ) {
     return BlocConsumer<UserBloc, UserState>(
       listener: (context, userState) {
-        if (userState.status == UserStatus.success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Roles updated successfully')),
-          );
-          context.read<EmployeeBloc>().add(ToggleRoleManagement(employee.id));
+        if (userState.status == UserStatus.success &&
+            userState.message?.contains('role') == true) {
+          // Roles were updated successfully
+          context.read<EmployeeBloc>().add(ToggleRoleManagement(0));
           context.read<EmployeeBloc>().add(ClearRoleSelection());
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Roles updated successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
         }
       },
       builder: (context, userState) {
-        final hasChanges = state.hasRoleChanges;
+        final hasChanges = state.selectedRolesForAssignment.isNotEmpty;
 
         return ElevatedButton(
           onPressed: userState.isLoading
@@ -995,14 +1009,12 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
                   if (hasChanges) {
                     // Save role changes
                     _saveRoleChanges(employee);
-                    context.read<UserBloc>().add(
-                      LoadUsers(widget.authBloc.state.companyId!),
-                    );
                   } else {
                     // Just go back to info view
                     context.read<EmployeeBloc>().add(
                       ToggleRoleManagement(employee.id),
                     );
+                    context.read<EmployeeBloc>().add(ClearRoleSelection());
                   }
                 },
           style: ElevatedButton.styleFrom(
@@ -1043,9 +1055,6 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
       return ElevatedButton(
         onPressed: () {
           context.read<EmployeeBloc>().add(ToggleRoleManagement(employee.id));
-          context.read<UserBloc>().add(
-            LoadUsers(widget.authBloc.state.companyId!),
-          );
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.blue,
@@ -1084,42 +1093,70 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     }
   }
 
-  // Helper method for saving role changes
+  // Alternative simplified version
   void _saveRoleChanges(Employee employee) {
     final userWithRole = _getUserForEmployee(employee);
     final state = context.read<EmployeeBloc>().state;
-    if (userWithRole?.user.id != null) {
-      final currentAssignedRoles = userWithRole!.roles;
 
-      // additions: selected roles not currently assigned
-      final additions = state.selectedRolesForAssignment
-          .where((r) => !currentAssignedRoles.any((a) => a.id == r.id))
-          .map((r) => r.id)
-          .toList();
-
-      // removals: selected roles that are currently assigned
-      final removals = state.selectedRolesForAssignment
-          .where((r) => currentAssignedRoles.any((a) => a.id == r.id))
-          .map((r) => r.id)
-          .toSet();
-
-      // final = (current - removals) + additions
-      final finalRoleIds = [
-        ...currentAssignedRoles
-            .where((r) => !removals.contains(r.id))
-            .map((r) => r.id),
-        ...additions,
-      ];
-
-      widget.userBloc.add(
-        AssignRolesToUser(
-          userWithRole.user.id,
-          widget.authBloc.state.companyId!,
-          finalRoleIds,
-          widget.authBloc.state.userId!,
+    // Validate inputs
+    if (userWithRole?.user.id == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No user account found for this employee'),
         ),
       );
+      return;
     }
+
+    if (state.selectedRolesForAssignment.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select at least one role')),
+      );
+      return;
+    }
+    // Calculate final roles: current assigned roles + selected roles (toggle logic)
+    final currentAssignedRoles = userWithRole?.roles ?? [];
+    final selectedRoles = state.selectedRolesForAssignment;
+
+    // Toggle logic: if role was assigned, remove it; if not assigned, add it
+    final finalRoles = <Role>[];
+
+    // Start with currently assigned roles
+    for (final assignedRole in currentAssignedRoles) {
+      // Keep role if it's NOT in selected roles (not toggled for removal)
+      if (!selectedRoles.any((selected) => selected.id == assignedRole.id)) {
+        finalRoles.add(assignedRole);
+      }
+    }
+
+    // Add roles that are selected but not currently assigned
+    for (final selectedRole in selectedRoles) {
+      if (!currentAssignedRoles.any(
+        (assigned) => assigned.id == selectedRole.id,
+      )) {
+        finalRoles.add(selectedRole);
+      }
+    }
+
+    // Extract role IDs
+    widget.userBloc.add(
+      AssignRolesToUser(
+        userWithRole!.user.id,
+        widget.authBloc.state.companyId!,
+        finalRoles,
+        widget.authBloc.state.userId!,
+      ),
+    );
+    // Clear selection and exit role management mode
+    context.read<EmployeeBloc>().add(ClearRoleSelection());
+    context.read<EmployeeBloc>().add(ToggleRoleManagement(0));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Role changes saved successfully'),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
   Widget _buildEmployeeInfoView(
@@ -1140,6 +1177,12 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
               color: Color(0xFF667eea),
               isCompact: isCompact,
               children: [
+                _buildInfoItem(
+                  'ID',
+                  employee.id.toString(),
+                  Iconsax.card,
+                  isCompact,
+                ),
                 _buildInfoItem(
                   'Employee ID',
                   employee.employeeId ?? 'N/A',
@@ -1236,6 +1279,12 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
               isCompact: isCompact,
               children: [
                 _buildInfoItem(
+                  'ID',
+                  employee.id.toString(),
+                  Iconsax.card,
+                  isCompact,
+                ),
+                _buildInfoItem(
                   'Employee ID',
                   employee.employeeId ?? 'N/A',
                   Iconsax.card,
@@ -1281,6 +1330,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     }
   }
 
+  // Replace your entire _buildRoleManagementView method with this:
   Widget _buildRoleManagementView(
     Employee employee,
     UserWithRole? userWithRole,
@@ -1288,15 +1338,39 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     bool useHorizontal,
     bool isCompact,
   ) {
-    return BlocBuilder<RoleBloc, RoleState>(
+    return BlocConsumer<RoleBloc, RoleState>(
+      listener: (context, roleState) {
+        // Handle role state changes if needed
+      },
       builder: (context, roleState) {
-        // Get the SPECIFIC employee's assigned roles
+        if (roleState.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (roleState.isFailure) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, color: Colors.red),
+                const SizedBox(height: 8),
+                Text(
+                  'Failed to load roles: ${roleState.message}',
+                  style: const TextStyle(color: Colors.red),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
+
+        // Get current assigned roles
         final assignedRoles = userWithRole?.roles ?? [];
 
-        // Get all available roles in the system
+        // Get all available roles
         final allRoles = roleState.roles;
 
-        // Filter to get only roles NOT assigned to this specific employee
+        // Filter available roles (not assigned)
         final availableRoles = allRoles
             .where(
               (role) =>
@@ -1304,66 +1378,233 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
             )
             .toList();
 
-        // Filter available roles based on search query
-        final filteredAvailableRoles = availableRoles
-            .where(
-              (role) => role.name.toLowerCase().contains(
-                roleState.searchQuery.toLowerCase(),
-              ),
-            )
-            .toList();
+        return _buildSimpleRoleManagement(
+          assignedRoles,
+          availableRoles,
+          employee,
+          userWithRole,
+          state,
+          isCompact,
+        );
+      },
+    );
+  }
 
-        return Column(
-          children: [
-            // Search bar for roles
-            Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: isCompact ? 8 : 12,
-                vertical: 8,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey[300]!),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Iconsax.search_normal,
-                    size: isCompact ? 16 : 20,
-                    color: Colors.grey[600],
+  Widget _buildSimpleRoleManagement(
+    List<Role> assignedRoles,
+    List<Role> availableRoles,
+    Employee employee,
+    UserWithRole? userWithRole,
+    EmployeeState state,
+    bool isCompact,
+  ) {
+    return Column(
+      children: [
+        // Search bar
+        _buildRoleSearchBar(isCompact),
+        const SizedBox(height: 16),
+
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                // Assigned Roles Section
+                _buildRoleSection(
+                  title: 'Assigned Roles',
+                  roles: assignedRoles,
+                  isAssigned: true,
+                  isCompact: isCompact,
+                  selectedRoles: state.selectedRolesForAssignment,
+                  onRoleTap: (role) {
+                    // Remove role from assigned (will be unassigned on save)
+                    context.read<EmployeeBloc>().add(
+                      SelectRoleForAssignment(role),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                // Available Roles Section
+                _buildRoleSection(
+                  title: 'Available Roles',
+                  roles: availableRoles,
+                  isAssigned: false,
+                  isCompact: isCompact,
+                  selectedRoles: state.selectedRolesForAssignment,
+                  onRoleTap: (role) {
+                    // Add role to selected (will be assigned on save)
+                    context.read<EmployeeBloc>().add(
+                      SelectRoleForAssignment(role),
+                    );
+                  },
+                ),
+
+                // Selected Roles Preview (roles to be changed)
+                if (state.selectedRolesForAssignment.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _buildSelectedRolesPreview(
+                    state.selectedRolesForAssignment,
+                    assignedRoles,
+                    isCompact,
                   ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Search roles...',
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      onChanged: (query) {
-                        context.read<RoleBloc>().add(SearchRoles(query));
-                      },
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRoleSearchBar(bool isCompact) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Row(
+        children: [
+          const Icon(Iconsax.search_normal, size: 20, color: Colors.grey),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              decoration: const InputDecoration(
+                hintText: 'Search roles...',
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+              ),
+              onChanged: (query) {
+                context.read<RoleBloc>().add(SearchRoles(query));
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectedRolesPreview(
+    List<Role> selectedRoles,
+    List<Role> currentAssignedRoles,
+    bool isCompact,
+  ) {
+    // Calculate what will happen to each role
+    final rolesToAdd = selectedRoles
+        .where((role) => !currentAssignedRoles.any((r) => r.id == role.id))
+        .toList();
+
+    final rolesToRemove = selectedRoles
+        .where((role) => currentAssignedRoles.any((r) => r.id == role.id))
+        .toList();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.amber[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.amber[300]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.amber[100],
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Iconsax.info_circle, color: Colors.amber),
+                const SizedBox(width: 8),
+                Text(
+                  'Changes to Save (${selectedRoles.length})',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.amber,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Roles to Add
+          if (rolesToAdd.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Adding (${rolesToAdd.length}):',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green[800],
+                      fontSize: 12,
                     ),
+                  ),
+                  Wrap(
+                    spacing: 8,
+                    children: rolesToAdd
+                        .map(
+                          (role) => Chip(
+                            label: Text(role.name),
+                            backgroundColor: Colors.green[100],
+                            labelStyle: TextStyle(
+                              color: Colors.green[800],
+                              fontSize: 12,
+                            ),
+                          ),
+                        )
+                        .toList(),
                   ),
                 ],
               ),
             ),
-            SizedBox(height: 16),
+          ],
 
-            Expanded(
-              child: _buildVerticalRoleManagement(
-                assignedRoles,
-                filteredAvailableRoles,
-                state,
-                employee,
-                userWithRole,
-                isCompact,
+          // Roles to Remove
+          if (rolesToRemove.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Removing (${rolesToRemove.length}):',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red[800],
+                      fontSize: 12,
+                    ),
+                  ),
+                  Wrap(
+                    spacing: 8,
+                    children: rolesToRemove
+                        .map(
+                          (role) => Chip(
+                            label: Text(role.name),
+                            backgroundColor: Colors.red[100],
+                            labelStyle: TextStyle(
+                              color: Colors.red[800],
+                              fontSize: 12,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
               ),
             ),
           ],
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -1908,31 +2149,5 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     } catch (e) {
       return dateString;
     }
-  }
-
-  void _navigateToAddScreen() {
-    // Navigate to add employee screen
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => BlocProvider.value(
-          value: context.read<EmployeeBloc>(),
-          child: const EmployeeFormPage(),
-        ),
-      ),
-    );
-  }
-
-  void _navigateToEditScreen(Employee employee) {
-    // Navigate to edit employee screen
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => BlocProvider.value(
-          value: context.read<EmployeeBloc>(),
-          child: EmployeeFormPage(employee: employee),
-        ),
-      ),
-    );
   }
 }

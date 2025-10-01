@@ -148,7 +148,7 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
       await db.update(
         'employees',
         employeeMap,
-        where: 'id = ?',
+        where: 'id = ? AND company = ?',
         whereArgs: [event.employee.id, authBloc.state.companyId!],
       );
       add(LoadEmployees(authBloc.state.companyId!));

@@ -91,6 +91,9 @@ class EmployeeState extends Equatable {
 
   bool get hasRecentDeletions => recentlyDeleted.isNotEmpty;
 
+  bool get isRoleManagementModeActive =>
+      isRoleManagementMode && employeeInRoleManagement != null;
+
   Employee get currentEmployeeForm => employeeForm!;
 
   // --- CopyWith for immutability ---
