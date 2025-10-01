@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
+import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_bloc.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_event.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_state.dart';
@@ -29,7 +30,7 @@ class _ConvertToUserDialogState extends State<ConvertToUserDialog> {
   final _passwordController = TextEditingController();
   final _emailController = TextEditingController();
   int? _selectedBranchId;
-  final List<int> _selectedRoles = [];
+  final List<Role> _selectedRoles = [];
 
   @override
   void initState() {
@@ -246,7 +247,7 @@ class _ConvertToUserDialogState extends State<ConvertToUserDialog> {
       widget.userBloc.add(
         CreateUser(
           UserModel(
-            id: widget.employee.id,
+            id: widget.employee.id!,
             userName: _usernameController.text,
             password: _passwordController.text,
             branch: _selectedBranchId!,

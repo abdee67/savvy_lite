@@ -1,40 +1,68 @@
+import 'package:equatable/equatable.dart';
 import 'package:flutter/widgets.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 
 @immutable
-abstract class RoleEvent {}
+abstract class RoleEvent extends Equatable {
+  const RoleEvent();
+
+  @override
+  List<Object> get props => [];
+}
 
 class LoadRoles extends RoleEvent {
   final int companyId;
-  LoadRoles(this.companyId);
+  const LoadRoles(this.companyId);
 }
 
 class CreateRole extends RoleEvent {
   final String name;
   final String description;
   final List<int> privilegeIds;
-  CreateRole(this.name, this.description, this.privilegeIds);
+  const CreateRole(this.name, this.description, this.privilegeIds);
 }
 
 class UpdateRole extends RoleEvent {
   final Role role;
-  final List<int> privilegeIds;
-  UpdateRole(this.role, this.privilegeIds);
+  const UpdateRole(this.role);
 }
 
 class DeleteRole extends RoleEvent {
   final Role role;
-  DeleteRole(this.role);
+  const DeleteRole(this.role);
+}
+
+class DeleteMultipleRoles extends RoleEvent {
+  final List<Role> roles;
+  const DeleteMultipleRoles(this.roles);
 }
 
 class AssignPrivilegesToRole extends RoleEvent {
   final Role role;
   final List<int> privilegeIds;
-  final int createdBy;
-  AssignPrivilegesToRole(this.role, this.privilegeIds, this.createdBy);
+  const AssignPrivilegesToRole(this.role, this.privilegeIds);
 }
 
 class SearchRoles extends RoleEvent {
   final String query;
-  SearchRoles(this.query);
+  const SearchRoles(this.query);
 }
+
+class SelectRole extends RoleEvent {
+  final Role role;
+  final bool isSelected;
+  const SelectRole(this.role, this.isSelected);
+
+  @override
+  List<Object> get props => [role, isSelected];
+}
+
+class SelectAllRoles extends RoleEvent {
+  final List<Role> roles;
+  const SelectAllRoles(this.roles);
+
+  @override
+  List<Object> get props => [roles];
+}
+
+class ClearSelection extends RoleEvent {}

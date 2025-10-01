@@ -1,13 +1,23 @@
 import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 
-enum RoleStatus { initial, loading, success, failure, searching }
+enum RoleStatus {
+  initial,
+  loading,
+  updating,
+  success,
+  failure,
+  searching,
+  deleting,
+}
 
 class RoleState extends Equatable {
   final RoleStatus status;
   final String? message;
 
   final List<Role> roles;
+  final List<Role> selectedRoles;
+  final List<Role> recentlyDeleted;
 
   final RoleErrorType? errorType;
   final DateTime? occuredAt;
@@ -19,6 +29,8 @@ class RoleState extends Equatable {
     required this.status,
     this.message,
     this.roles = const [],
+    this.selectedRoles = const [],
+    this.recentlyDeleted = const [],
     this.errorType,
     this.occuredAt,
     this.searchQuery = '',
@@ -32,6 +44,11 @@ class RoleState extends Equatable {
   bool get isSuccess => status == RoleStatus.success;
 
   bool get isFailure => status == RoleStatus.failure;
+  bool get hasFilteredRoles => filteredRoles.isNotEmpty;
+  bool get hasSelection => selectedRoles.isNotEmpty;
+  bool get canEdit => selectedRoles.length == 1;
+  bool get canDelete => selectedRoles.isNotEmpty;
+  bool get canExport => filteredRoles.isNotEmpty;
 
   bool hasRole(String roleName) {
     return roles.any((r) => r.name == roleName);
@@ -46,6 +63,8 @@ class RoleState extends Equatable {
     RoleStatus? status,
     String? message,
     List<Role>? roles,
+    List<Role>? selectedRoles,
+    List<Role>? recentlyDeleted,
     RoleErrorType? errorType,
     DateTime? occuredAt,
     String? searchQuery,
@@ -55,6 +74,8 @@ class RoleState extends Equatable {
       status: status ?? this.status,
       message: message ?? this.message,
       roles: roles ?? this.roles,
+      selectedRoles: selectedRoles ?? this.selectedRoles,
+      recentlyDeleted: recentlyDeleted ?? this.recentlyDeleted,
       errorType: errorType ?? this.errorType,
       occuredAt: occuredAt ?? this.occuredAt,
       searchQuery: searchQuery ?? this.searchQuery,
@@ -67,6 +88,8 @@ class RoleState extends Equatable {
     status,
     message,
     roles,
+    selectedRoles,
+    recentlyDeleted,
     errorType,
     occuredAt,
     searchQuery,
