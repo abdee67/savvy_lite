@@ -54,6 +54,11 @@ class AppRoutes {
   static const String paymentSummary = '$salesCustomerInfo/payment-summary';
   static const String salesInvoice = '$salesCustomerInfo/sales-invoice';
 
+  //Role sub-routes
+  static const String roleCreation = '$roleManagement/add-role';
+  static const String roleEdit = '$roleManagement/edit-role';
+  static const String roleDelete = '$roleManagement/delete-role';
+
   // Stock Sub-Routes
   static const String itemEntry = '$stock/item-entry';
   static const String uomManagement = '$stock/uom-management';

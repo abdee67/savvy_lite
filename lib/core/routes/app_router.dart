@@ -6,9 +6,13 @@ import 'package:savvy_stock/core/errors/unauthorized_screen.dart';
 import 'package:savvy_stock/core/widgets/route_guard.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
 import 'package:savvy_stock/features/admin/employees/screens/employee_dashboard.dart';
+import 'package:savvy_stock/features/admin/employees/widgets/emloyee_create_and_edit.dart.dart';
 import 'package:savvy_stock/features/admin/privilege/screens/privilege_dahsboard.dart';
+import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 import 'package:savvy_stock/features/admin/role/screens/role_dashboard.dart';
+import 'package:savvy_stock/features/admin/role/widgets/role_form.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_bloc.dart';
+import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/admin/users/models/user_with_role.dart';
 import 'package:savvy_stock/features/admin/users/screens/user_dashboard.dart';
 import 'package:savvy_stock/features/admin/users/widgets/user_creat_edit.dart';
@@ -146,8 +150,30 @@ class AppRouter {
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: AppRoutes.roleManagement,
           parentPrivilege: AppRoutes.adminDashboard,
-          child: RoleCreationScreen(authBloc: authBloc),
+          child: RoleDashboard(authBloc: authBloc),
         ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.roleCreation,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.roleCreation,
+          parentPrivilege: AppRoutes.roleManagement,
+          child: RoleFormScreen(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.roleEdit,
+        builder: (context, state) {
+          final extra = state.extra;
+          final role = extra != null ? extra as Role : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.roleEdit,
+            parentPrivilege: AppRoutes.roleManagement,
+            child: RoleFormScreen(role: role, authBloc: authBloc),
+          );
+        },
         redirect: _protectedRouteRedirect,
       ),
       GoRoute(
@@ -180,12 +206,20 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.userEdit,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>?;
-          final user = extra != null ? extra['user'] as UserWithRole? : null;
+          final extra = state.extra;
+          UserWithRole? userWithRole;
+
+          // Handle both UserModel and UserWithRole cases
+          if (extra is UserWithRole) {
+            userWithRole = extra;
+          } else if (extra is UserModel) {
+            // If only UserModel is passed, create a basic UserWithRole
+            userWithRole = UserWithRole(user: extra, roles: []);
+          }
           return PrivilegeRouteGuard(
             requiredPrivilege: AppRoutes.userEdit,
             parentPrivilege: AppRoutes.userManagement,
-            child: UserManagementScreen(user: user, authBloc: authBloc),
+            child: UserManagementScreen(user: userWithRole, authBloc: authBloc),
           );
         },
         redirect: _protectedRouteRedirect,
@@ -213,6 +247,64 @@ class AppRouter {
             child: UserManagementScreen(employee: employee, authBloc: authBloc),
           );
         },
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.employeeEdit,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final employee = extra != null
+              ? extra['employee'] as Employee?
+              : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.employeeEdit,
+            parentPrivilege: AppRoutes.employeeManagement,
+            child: EmployeeFormPage(employee: employee),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.employeeCreation,
+        builder: (context, state) {
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.employeeCreation,
+            parentPrivilege: AppRoutes.employeeManagement,
+            child: EmployeeFormPage(),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.employeeDelete,
+        builder: (context, state) {
+          final extra = state.extra;
+          final employee = extra != null ? extra as Employee? : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.employeeDelete,
+            parentPrivilege: AppRoutes.employeeManagement,
+            child: EmployeeFormPage(employee: employee),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      // Stock Routes
+      GoRoute(
+        path: AppRoutes.itemEntry,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.itemEntry,
+          parentPrivilege: AppRoutes.stockDashboard,
+          child: const Placeholder(),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.uomManagement,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.uomManagement,
+          parentPrivilege: AppRoutes.stockDashboard,
+          child: const Placeholder(),
+        ),
         redirect: _protectedRouteRedirect,
       ),
 

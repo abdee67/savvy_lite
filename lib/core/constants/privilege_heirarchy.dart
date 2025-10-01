@@ -22,9 +22,9 @@ class PrivilegeHierarchy {
 
     // Role Management (child of Admin Dashboard)
     AppRoutes.roleManagement: AppRoutes.adminDashboard,
-    '/admin/role-management/add-role': AppRoutes.roleManagement,
-    '/admin/role-management/edit-role': AppRoutes.roleManagement,
-    '/admin/role-management/delete-role': AppRoutes.roleManagement,
+    AppRoutes.roleCreation: AppRoutes.roleManagement,
+    AppRoutes.roleEdit: AppRoutes.roleManagement,
+    AppRoutes.roleDelete: AppRoutes.roleManagement,
 
     // Employee Management (child of Admin Dashboard)
     AppRoutes.employeeManagement: AppRoutes.adminDashboard,
