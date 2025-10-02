@@ -1,6 +1,8 @@
 // features/privilege/screens/privilege_management_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_bloc.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_event.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_state.dart';
@@ -35,7 +37,7 @@ class _PrivilegeManagementScreenState extends State<PrivilegeManagementScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () => _showPrivilegeForm(context, null),
+            onPressed: () => context.push(AppRoutes.createPrivilege),
           ),
         ],
       ),
@@ -81,10 +83,13 @@ class _PrivilegeManagementScreenState extends State<PrivilegeManagementScreen> {
               children: [
                 IconButton(
                   icon: const Icon(Icons.edit),
-                  onPressed: () => _showPrivilegeForm(context, privilege),
+                  onPressed: () => context.push(
+                    AppRoutes.editPrivilege,
+                    extra: {'privilege': privilege},
+                  ),
                 ),
                 if (context.read<AuthBloc>().state.hasAccessToPrivilege(
-                  '/admin/privilege-management/delete-privilege',
+                  AppRoutes.deletePrivilege,
                 ))
                   IconButton(
                     icon: const Icon(Icons.delete),
@@ -95,13 +100,6 @@ class _PrivilegeManagementScreenState extends State<PrivilegeManagementScreen> {
           ),
         );
       },
-    );
-  }
-
-  void _showPrivilegeForm(BuildContext context, [Privilege? privilege]) {
-    showDialog(
-      context: context,
-      builder: (context) => PrivilegeForm(privilege: privilege),
     );
   }
 

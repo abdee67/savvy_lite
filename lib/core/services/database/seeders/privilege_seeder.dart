@@ -59,19 +59,19 @@ class PrivilegeSeeder {
       _createPrivilege(
         'Add Privilege',
         'button',
-        '/admin/privilege-management/add-privilege',
+        AppRoutes.createPrivilege,
         'add_privilege',
       ),
       _createPrivilege(
         'Edit Privilege',
         'button',
-        '/admin/privilege-management/edit-privilege',
+        AppRoutes.editPrivilege,
         'edit_privilege',
       ),
       _createPrivilege(
         'Delete Privilege',
         'button',
-        '/admin/privilege-management/delete-privilege',
+        AppRoutes.deletePrivilege,
         'delete_privilege',
       ),
 
@@ -263,6 +263,32 @@ class PrivilegeSeeder {
         'link',
         AppRoutes.exportFunction,
         'export_function',
+      ),
+
+      // ==================== BRANCH MODULE ====================
+      _createPrivilege(
+        'Branch Management',
+        'link',
+        AppRoutes.branchManagement,
+        'branch_management',
+      ),
+      _createPrivilege(
+        'Add Branch',
+        'button',
+        AppRoutes.branchCreation,
+        'add_branch',
+      ),
+      _createPrivilege(
+        'Edit Branch',
+        'button',
+        AppRoutes.branchEdit,
+        'edit_branch',
+      ),
+      _createPrivilege(
+        'Delete Branch',
+        'button',
+        AppRoutes.branchDelete,
+        'delete_branch',
       ),
     ];
 

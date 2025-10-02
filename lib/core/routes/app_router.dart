@@ -7,7 +7,9 @@ import 'package:savvy_stock/core/widgets/route_guard.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
 import 'package:savvy_stock/features/admin/employees/screens/employee_dashboard.dart';
 import 'package:savvy_stock/features/admin/employees/widgets/emloyee_create_and_edit.dart.dart';
+import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart';
 import 'package:savvy_stock/features/admin/privilege/screens/privilege_dahsboard.dart';
+import 'package:savvy_stock/features/admin/privilege/widgets/privilege_form.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 import 'package:savvy_stock/features/admin/role/screens/role_dashboard.dart';
 import 'package:savvy_stock/features/admin/role/widgets/role_form.dart';
@@ -19,6 +21,9 @@ import 'package:savvy_stock/features/admin/users/widgets/user_creat_edit.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
 import 'package:savvy_stock/features/auth/screens/login_screen.dart';
+import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
+import 'package:savvy_stock/features/branch_list/screens/branch_list_dashboard.dart';
+import 'package:savvy_stock/features/branch_list/widgets/branch_list_create_and_edit.dart.dart';
 import 'package:savvy_stock/features/dashboards/screens/home_page.dart';
 import 'package:savvy_stock/features/onboarding/screens/welcome_screen.dart';
 import 'package:savvy_stock/features/onboarding/widgets/getStarted.dart';
@@ -186,6 +191,30 @@ class AppRouter {
         redirect: _protectedRouteRedirect,
       ),
       GoRoute(
+        path: AppRoutes.editPrivilege,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final privilege = extra != null
+              ? extra['privilege'] as Privilege?
+              : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.editPrivilege,
+            parentPrivilege: AppRoutes.privilegeManagement,
+            child: PrivilegeForm(privilege: privilege),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.createPrivilege,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.createPrivilege,
+          parentPrivilege: AppRoutes.privilegeManagement,
+          child: PrivilegeForm(),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
         path: AppRoutes.userManagement,
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: AppRoutes.userManagement,
@@ -307,7 +336,37 @@ class AppRouter {
         ),
         redirect: _protectedRouteRedirect,
       ),
-
+      GoRoute(
+        path: AppRoutes.branchManagement,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.branchManagement,
+          parentPrivilege: AppRoutes.branchListDashboard,
+          child: BranchDashboard(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.branchCreation,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.branchCreation,
+          parentPrivilege: AppRoutes.branchManagement,
+          child: BranchFormPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.branchEdit,
+        builder: (context, state) {
+          final extra = state.extra;
+          final branch = extra != null ? extra as Branch? : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.branchEdit,
+            parentPrivilege: AppRoutes.branchManagement,
+            child: BranchFormPage(branch: branch, authBloc: authBloc),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
       // System Constants
       GoRoute(
         path: AppRoutes.systemConstants,

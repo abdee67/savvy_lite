@@ -12,6 +12,7 @@ import 'package:savvy_stock/features/admin/privilege/blocs/privilege_bloc.dart';
 import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
+import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -85,6 +86,10 @@ void initDependencies() {
       authBloc: getIt(),
       systemConstantService: getIt(),
     ),
+  );
+
+  getIt.registerFactory<BranchBloc>(
+    () => BranchBloc(databaseService: getIt(), authBloc: getIt()),
   );
 
   getIt.registerFactory<PaymentBloc>(() => PaymentBloc(getIt()));

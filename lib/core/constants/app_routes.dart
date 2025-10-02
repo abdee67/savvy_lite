@@ -24,13 +24,17 @@ class AppRoutes {
   static const String availabilityDashboard = '$availability/dashboard';
   static const String purchaseDashboard = '$purchase/dashboard';
   static const String companyDashboard = '$company/dashboard';
-  static const String branchListDashboard = '$branch/list-dashboard';
+  static const String branchListDashboard = '$branch/dashboard';
 
   // Admin Sub-Routes
   static const String privilegeManagement = '$admin/privilege-management';
   static const String roleManagement = '$admin/role-management';
   static const String employeeManagement = '$admin/employee-management';
   static const String userManagement = '$admin/user-management';
+
+  static const String createPrivilege = '$privilegeManagement/create-privilege';
+  static const String deletePrivilege = '$privilegeManagement/delete-privilege';
+  static const String editPrivilege = '$privilegeManagement/edit-privilege';
 
   // Employee Sub-Routes
   static const String employeeCreation =
@@ -71,6 +75,13 @@ class AppRoutes {
   static const String itemBranchEntry = '$stock/item-branch-entry';
   static const String barcodeFunction = '$stock/barcode-function';
   static const String exportFunction = '$stock/export-function';
+
+  // Branch Sub-Routes
+  static const String branchManagement = '$branch/branch-management';
+
+  static const String branchCreation = '$branchManagement/branch-creation';
+  static const String branchEdit = '$branchManagement/edit-branch';
+  static const String branchDelete = '$branchManagement/delete-branch';
 
   // Helper method to get all dashboard routes
   static List<String> get dashboardRoutes => [

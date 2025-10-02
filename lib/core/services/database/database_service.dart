@@ -33,7 +33,7 @@ class LocalDatabaseService {
       onCreate: _onCreate,
       onUpgrade: _onUpgrade, // Add upgrade handler
       onOpen: (db) async {
-        await _debugPrintTablesAndData(db);
+        // await _debugPrintTablesAndData(db);
       },
     );
   }
@@ -117,8 +117,8 @@ class LocalDatabaseService {
         woreda TEXT,
         category_code INTEGER,
         referred_by_salesperson_id INTEGER,
-        date_created INTEGER,
-        date_updated INTEGER,
+        date_created TEXT,
+        date_updated TEXT,
         margin_rate REAL,
         margin_type TEXT,
         inventory_planner INTEGER,
@@ -131,7 +131,7 @@ class LocalDatabaseService {
     await db.execute('''
   CREATE TABLE branch_table (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    reference_id INTEGER,
+    reference_id TEXT,
     description TEXT,
     city TEXT,
     region TEXT,
@@ -343,6 +343,30 @@ class LocalDatabaseService {
   ON user_table (user_name, company)
 ''');
 
+    // Company table indexes
+    await db.execute(
+      'CREATE INDEX idx_company_name ON company_table(company_name)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_company_tin ON company_table(tin_number)',
+    );
+    await db.execute('CREATE INDEX idx_company_city ON company_table(city)');
+    await db.execute(
+      'CREATE INDEX idx_company_category ON company_table(category_code)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_company_inventory_planner ON company_table(inventory_planner)',
+    );
+
+    // Branch table indexes
+    await db.execute(
+      'CREATE INDEX idx_branch_company ON branch_table(company)',
+    );
+    await db.execute('CREATE INDEX idx_branch_city ON branch_table(city)');
+    await db.execute(
+      'CREATE INDEX idx_branch_reference ON branch_table(reference_id)',
+    );
+
     // Insert default data for LOT types
     await _insertDefaultData(db);
   }
@@ -442,7 +466,7 @@ class LocalDatabaseService {
     final branches = [
       {
         'id': 1,
-        'reference_id': 1001,
+        'reference_id': 'M1001',
         'description': 'Savvy Main Branch',
         'city': 'Addis Ababa',
         'region': 'Addis',
@@ -455,7 +479,7 @@ class LocalDatabaseService {
       },
       /* {
         'id': 2,
-        'reference_id': 1002,
+        'reference_id': 'M1002',
         'description': 'Sar bet Branch',
         'city': 'Addis Ababa',
         'region': 'Addis',
@@ -699,7 +723,7 @@ class LocalDatabaseService {
 
     // Insert User (password = "password123", argon-hashed)
     // Generate Argon2 hash for "admin123"
-    final argon2Hash = await generateArgon2Hash('admin123');
+    final argon2Hash = await generateArgon2Hash('a');
     final users = [
       {
         'password': argon2Hash,
@@ -707,7 +731,7 @@ class LocalDatabaseService {
         'created_by': 1,
         'branch': 1,
         'company': 1,
-        'user_name': 'admin',
+        'user_name': 'a',
         'status': 'active',
         'password_last_updated': DateTime.now().millisecondsSinceEpoch,
         'usercol': 'admin',
@@ -941,7 +965,7 @@ void testDatabase() async {
   final db = await dbService.database;
 
   // Debug all tables
-  await dbService._debugPrintTablesAndData(db);
+  //await dbService._debugPrintTablesAndData(db);
 
   // Debug specific table
   await dbService.debugTable('system_constant');

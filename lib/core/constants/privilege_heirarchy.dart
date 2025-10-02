@@ -15,10 +15,9 @@ class PrivilegeHierarchy {
     // ==================== ADMIN MANAGEMENT ====================
     // Privilege Management (child of Admin Dashboard)
     AppRoutes.privilegeManagement: AppRoutes.adminDashboard,
-    '/admin/privilege-management/add-privilege': AppRoutes.privilegeManagement,
-    '/admin/privilege-management/edit-privilege': AppRoutes.privilegeManagement,
-    '/admin/privilege-management/delete-privilege':
-        AppRoutes.privilegeManagement,
+    AppRoutes.createPrivilege: AppRoutes.privilegeManagement,
+    AppRoutes.editPrivilege: AppRoutes.privilegeManagement,
+    AppRoutes.deletePrivilege: AppRoutes.privilegeManagement,
 
     // Role Management (child of Admin Dashboard)
     AppRoutes.roleManagement: AppRoutes.adminDashboard,
@@ -64,6 +63,12 @@ class PrivilegeHierarchy {
     AppRoutes.itemBranchEntry: AppRoutes.stockDashboard,
     AppRoutes.barcodeFunction: AppRoutes.stockDashboard,
     AppRoutes.exportFunction: AppRoutes.stockDashboard,
+
+    // ==================== BRANCH MODULE ====================
+    AppRoutes.branchManagement: AppRoutes.branchListDashboard,
+    AppRoutes.branchCreation: AppRoutes.branchManagement,
+    AppRoutes.branchEdit: AppRoutes.branchManagement,
+    AppRoutes.branchDelete: AppRoutes.branchManagement,
   };
 
   /// Get the parent privilege for a given privilege URI

@@ -20,6 +20,7 @@ import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
+import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/invoice/blocs/invoice_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
@@ -37,8 +38,8 @@ Future<void> _initializeAndRunApp() async {
   try {
     await ConnectivityService().initConnectivity();
     initDependencies();
-    //  await LocalDatabaseService().resetDatabase();
-    await LocalDatabaseService().debugTable('employees');
+    //await LocalDatabaseService().resetDatabase();
+    await LocalDatabaseService().debugTable('branch_table');
 
     if (AppConfig.isTestMode) {
       developer.log('🚀 APP RUNNING IN TEST MODE');
@@ -191,6 +192,10 @@ class _SavvyStockState extends State<SavvyStock> {
               udcService: getIt<UdcService>(),
               systemConstantService: getIt<SystemConstantsService>(),
             )..add(LoadSystemConstants()),
+          ),
+          BlocProvider<BranchBloc>(
+            create: (context) =>
+                BranchBloc(databaseService: getIt(), authBloc: _authBloc),
           ),
         ],
         child: MaterialApp.router(
