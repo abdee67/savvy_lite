@@ -247,7 +247,7 @@ class _ConvertToUserDialogState extends State<ConvertToUserDialog> {
       widget.userBloc.add(
         CreateUser(
           UserModel(
-            id: widget.employee.id!,
+            id: widget.employee.id,
             userName: _usernameController.text,
             password: _passwordController.text,
             branch: _selectedBranchId!,

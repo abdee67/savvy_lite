@@ -15,15 +15,21 @@ import 'package:savvy_stock/features/admin/users/blocs/user_state.dart';
 import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/admin/users/models/user_with_role.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
+import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
+import 'package:savvy_stock/features/branch_list/blocs/branch_list_event.dart';
+import 'package:savvy_stock/features/branch_list/blocs/branch_list_state.dart';
+import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 
 class UserManagementScreen extends StatefulWidget {
   final Employee? employee; // For employee conversion
+  final Branch? branch;
   final UserWithRole? user; // For user editing
   final AuthBloc authBloc;
 
   const UserManagementScreen({
     super.key,
     this.employee,
+    this.branch,
     this.user,
     required this.authBloc,
   });
@@ -47,6 +53,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
   // Employee selection for create mode
   int? _selectedEmployeeId;
+  int? _selectBranchId;
 
   // Mode detection
   bool get _isEditMode => widget.user != null;
@@ -67,6 +74,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       context.read<UserBloc>().add(LoadUsers(companyId));
       if (_isCreateMode) {
         context.read<EmployeeBloc>().add(LoadEmployees(companyId));
+        context.read<BranchBloc>().add(LoadBranchs(companyId));
       }
     }
   }
@@ -76,8 +84,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       final user = widget.user!.user;
       _usernameController.text = user.userName ?? '';
       _emailController.text = user.userEmail ?? '';
-      _branchController.text = user.branch?.toString() ?? '1';
       _currentUserRoles.addAll(widget.user!.roles);
+      _selectBranchId = user.branch;
     } else if (_isConversionMode && widget.employee != null) {
       _selectedEmployeeId = widget.employee!.id;
       _emailController.text = widget.employee!.email;
@@ -94,6 +102,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     _selectedRoles.clear();
     _roleSearchQuery = '';
     _selectedEmployeeId = null;
+    _selectBranchId = null;
   }
 
   String _generateUsername(Employee employee) {
@@ -261,22 +270,55 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             const SizedBox(height: 16),
 
             // Branch
-            TextFormField(
-              controller: _branchController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Branch ID *',
-                prefixIcon: Icon(Iconsax.building),
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter branch ID';
+            BlocBuilder<BranchBloc, BranchState>(
+              builder: (context, state) {
+                if (state.branchs.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                      'No branch available for user creation',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  );
                 }
-                if (int.tryParse(value) == null) {
-                  return 'Please enter a valid number';
+
+                // Safe employee list with null check
+                final branch = state.branchs.toList();
+                if (branch.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                      'No valid branch found',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  );
                 }
-                return null;
+
+                return DropdownButtonFormField<int>(
+                  decoration: const InputDecoration(
+                    labelText: 'Branch *',
+                    prefixIcon: Icon(Iconsax.profile_circle),
+                    border: OutlineInputBorder(),
+                  ),
+                  initialValue: _selectBranchId,
+                  items: branch.map((branch) {
+                    return DropdownMenuItem(
+                      value: branch.id,
+                      child: Text('${branch.description}'),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectBranchId = value;
+                    });
+                  },
+                  validator: (value) {
+                    if (value == null) {
+                      return 'Please select an branch';
+                    }
+                    return null;
+                  },
+                );
               },
             ),
             const SizedBox(height: 16),
@@ -832,7 +874,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         final updatedUser = widget.user!.user.copyWith(
           userName: _usernameController.text,
           userEmail: _emailController.text,
-          branch: int.parse(_branchController.text),
+          branch: _selectBranchId,
           updatedBy: createdBy,
           dateUpdated: DateTime.now(),
         );
@@ -869,7 +911,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           password: _passwordController.text,
           userName: _usernameController.text,
           userEmail: _emailController.text,
-          branch: int.parse(_branchController.text),
+          branch: _selectBranchId,
           employeesId: employeeId,
           company: companyId,
           createdBy: createdBy,
