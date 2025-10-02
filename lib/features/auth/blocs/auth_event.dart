@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:flutter/material.dart';
 import 'package:savvy_stock/core/models/company.dart';
 
 abstract class AuthEvent extends Equatable {
@@ -24,10 +25,11 @@ class LoginRequested extends AuthEvent {
 }
 
 class LogoutRequested extends AuthEvent {
-  const LogoutRequested();
+  final BuildContext? context;
+  const LogoutRequested(this.context);
 
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [context];
 }
 
 class RegisterRequested extends AuthEvent {

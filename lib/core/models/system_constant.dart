@@ -150,7 +150,9 @@ class SystemConstant {
       rateWithholdingPercentage: map['rate_with_percentage']?.toDouble(),
       withHoldInitials: map['with_hold_initials']?.toDouble(),
       autoSalesPrice: map['auto_sales_price'],
-      lotType: map['lot_type'],
+      lotType: map['lot_type'] is String
+          ? int.tryParse(map['lot_type'])
+          : map['lot_type'],
       locationCategoryLevel: map['location_category_level'],
       lotQtyAutoForSales: map['lot_qty_auto_for_sales'],
       isSynced: map['is_synced'] == 1,

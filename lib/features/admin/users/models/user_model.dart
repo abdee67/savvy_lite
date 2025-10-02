@@ -1,5 +1,9 @@
+import 'dart:typed_data';
+
+import 'package:argon2/argon2.dart';
+
 class UserModel {
-  final int? id;
+  final int id;
   final String? password;
   final int? employeesId;
   final int? createdBy;
@@ -9,7 +13,6 @@ class UserModel {
   final String? usercol;
   final int? branch;
   final String? status;
-  final String? superUser;
   final DateTime? passwordLastUpdated;
   final int? company;
   final String? userEmail;
@@ -30,7 +33,6 @@ class UserModel {
     this.usercol,
     this.branch,
     this.status,
-    this.superUser,
     this.passwordLastUpdated,
     this.company,
     this.userEmail,
@@ -78,7 +80,7 @@ class UserModel {
     }
 
     return UserModel(
-      id: asInt(json['id']),
+      id: asInt(json['id'])!,
       password: asString(json['password']),
       employeesId: asInt(json['employees_id']),
       createdBy: asInt(json['created_by']),
@@ -88,7 +90,6 @@ class UserModel {
       usercol: asString(json['usercol']),
       branch: asInt(json['branch']),
       status: asString(json['status']),
-      superUser: asString(json['super_user']),
       passwordLastUpdated: parseDate(json['password_last_updated']),
       company: asInt(json['company']),
       userEmail: asString(json['user_email']),
@@ -98,6 +99,61 @@ class UserModel {
       type: asString(json['type']) ?? 'Company',
       salesperson: asInt(json['salesperson']),
     );
+  }
+  // Argon2 password hashing helper
+  static Future<String> generateArgon2Hash(password) async {
+    final salt = 'somesalt'.toBytesLatin1();
+    final parameters = Argon2Parameters(
+      Argon2Parameters.ARGON2_i,
+      salt,
+      version: Argon2Parameters.ARGON2_VERSION_10,
+      iterations: 2,
+      memoryPowerOf2: 16,
+    );
+
+    final argon2 = Argon2BytesGenerator();
+    argon2.init(parameters);
+    final passwordBytes = parameters.converter.convert(password);
+    final result = Uint8List(32);
+    argon2.generateBytes(passwordBytes, result, 0, result.length);
+    return result.toHexString();
+  }
+
+  // Factory method for creating new users with hashed password
+  static Future<UserModel> createWithHashedPassword({
+    required int id,
+    required String plainPassword,
+    String? userName,
+    String? userEmail,
+    int? branch,
+    int? company,
+    int? employeesId,
+  }) async {
+    final hashedPassword = await generateArgon2Hash(plainPassword);
+    return UserModel(
+      id: id,
+      password: hashedPassword,
+      userName: userName,
+      userEmail: userEmail,
+      branch: branch,
+      company: company,
+      employeesId: employeesId,
+      dateCreated: DateTime.now(),
+      type: 'Company',
+    );
+  }
+
+  // Method to verify password
+  Future<bool> verifyPassword(String plainPassword) async {
+    if (password == null) return false;
+    final hashedInput = await generateArgon2Hash(plainPassword);
+    return hashedInput == password;
+  }
+
+  // Method to check if password needs rehashing (if algorithm changes)
+  bool get passwordNeedsRehash {
+    // You can add logic here to check if the hash uses outdated parameters
+    return false; // Placeholder
   }
 
   Map<String, dynamic> toMap() {
@@ -111,8 +167,7 @@ class UserModel {
       'date_updated': dateUpdated?.toIso8601String(),
       'usercol': usercol,
       'branch': branch,
-      'status': status,
-      'super_user': superUser,
+      'status': 'active',
       'password_last_updated': passwordLastUpdated?.toIso8601String(),
       'company': company,
       'user_email': userEmail,
@@ -156,7 +211,6 @@ class UserModel {
       usercol: usercol ?? this.usercol,
       branch: branch ?? this.branch,
       status: status ?? this.status,
-      superUser: superUser ?? this.superUser,
       passwordLastUpdated: passwordLastUpdated ?? this.passwordLastUpdated,
       company: company ?? this.company,
       userEmail: userEmail ?? this.userEmail,
@@ -180,7 +234,6 @@ class UserModel {
     usercol,
     branch,
     status,
-    superUser,
     passwordLastUpdated,
     company,
     userEmail,
@@ -192,6 +245,6 @@ class UserModel {
   ];
   @override
   String toString() {
-    return 'UserModel{id: $id, password: $password, employeesId: $employeesId, createdBy: $createdBy, updatedBy: $updatedBy, dateCreated: $dateCreated, dateUpdated: $dateUpdated, usercol: $usercol, branch: $branch, status: $status, superUser: $superUser, passwordLastUpdated: $passwordLastUpdated, company: $company, userEmail: $userEmail, confirmationCode: $confirmationCode, confirmationsExpireTime: $confirmationsExpireTime, userName: $userName, type: $type, salesperson: $salesperson}';
+    return 'UserModel{id: $id, password: $password, employeesId: $employeesId, createdBy: $createdBy, updatedBy: $updatedBy, dateCreated: $dateCreated, dateUpdated: $dateUpdated, usercol: $usercol, branch: $branch, status: $status, passwordLastUpdated: $passwordLastUpdated, company: $company, userEmail: $userEmail, confirmationCode: $confirmationCode, confirmationsExpireTime: $confirmationsExpireTime, userName: $userName, type: $type, salesperson: $salesperson}';
   }
 }

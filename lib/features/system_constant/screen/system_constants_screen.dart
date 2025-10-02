@@ -58,6 +58,7 @@ class _SystemConstantsScreenState extends State<SystemConstantsScreen>
   Widget build(BuildContext context) {
     return BlocConsumer<SystemConstantBloc, SystemConstantState>(
       listener: (context, state) {
+        if (!mounted) return;
         // Show appropriate messages based on state
         if (state.status == SystemConstantStatus.success &&
             state.errorMessage != null) {
@@ -244,6 +245,7 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
     super.initState();
     // Load system constants when the tab is initialized
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       context.read<SystemConstantBloc>().add(const LoadSystemConstants());
     });
   }
@@ -285,6 +287,7 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
         // If we have data but _isLoading is still true, fix it
         if (_isLoading && state.systemConstants.isNotEmpty) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
             setState(() {
               _localSystemConstant = state.systemConstants.first;
               _isLoading = false;

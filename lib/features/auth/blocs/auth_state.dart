@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
+import 'package:savvy_stock/core/constants/privilege_heirarchy.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
-import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/admin/users/models/user_with_role.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_event.dart';
 import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart';
@@ -14,6 +14,7 @@ enum AuthStatus {
   tokenRefreshRequired,
   authenticated,
   unauthenticated,
+  error,
 }
 
 class AuthState extends Equatable {
@@ -31,7 +32,7 @@ class AuthState extends Equatable {
   final DateTime? authenticatedAt;
   final DateTime? tokenExpiryTime;
 
-  final List<dynamic>? availableCompanies; // can be List<Company> if defined
+  final List<dynamic>? availableCompanies;
   final AuthErrorType? errorType;
   final DateTime? lastLoginAt;
   final DateTime? lastLogoutAt;
@@ -98,6 +99,131 @@ class AuthState extends Equatable {
     if (tokenExpiryTime == null) return false;
     return DateTime.now().isAfter(
       tokenExpiryTime!.subtract(const Duration(minutes: 5)),
+    );
+  }
+
+  /// Check if user has access to a privilege including hierarchy
+  bool hasAccessToPrivilege(String targetPrivilege) {
+    if (!isAuthenticated) return false;
+
+    final requiredHierarchy = PrivilegeHierarchy.getRequiredPrivilegeHierarchy(
+      targetPrivilege,
+    );
+
+    for (final privilege in requiredHierarchy) {
+      if (!hasPrivilege(privilege)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /// Get available dashboards for the user
+  List<String> getAvailableDashboards() {
+    if (!isAuthenticated) return [];
+
+    return PrivilegeHierarchy.getDashboardPrivileges()
+        .where((dashboard) => hasPrivilege(dashboard))
+        .toList();
+  }
+
+  /// Get features for a specific dashboard - FIXED METHOD
+  List<Privilege> getFeaturesForDashboard(String dashboardUri) {
+    if (!isAuthenticated) return [];
+
+    final userPrivileges = _getUserPrivileges();
+    final featureUris = PrivilegeHierarchy.getFeaturesForDashboard(
+      dashboardUri,
+      userPrivileges.map((p) => p.uri).toList(),
+    );
+
+    return userPrivileges.where((p) => featureUris.contains(p.uri)).toList();
+  }
+
+  /// Get user's privileges grouped by dashboard
+  Map<String, List<String>> getPrivilegesByDashboard() {
+    if (!isAuthenticated) return {};
+
+    final Map<String, List<String>> result = {};
+    final userPrivileges = _getUserPrivilegeUris();
+
+    for (final dashboard in PrivilegeHierarchy.getDashboardPrivileges()) {
+      if (userPrivileges.contains(dashboard)) {
+        final features = PrivilegeHierarchy.getFeaturesForDashboard(
+          dashboard,
+          userPrivileges,
+        );
+        result[dashboard] = features;
+      }
+    }
+
+    return result;
+  }
+
+  /// Get all privileges from user (handles both userWithRole and direct privileges)
+  List<Privilege> _getUserPrivileges() {
+    if (userWithRole != null) {
+      return userWithRole!.allPrivileges;
+    }
+    return privileges;
+  }
+
+  /// Helper method to get all privilege URIs from user
+  List<String> _getUserPrivilegeUris() {
+    return _getUserPrivileges().map((p) => p.uri).toList();
+  }
+
+  // --- Factory methods for common states ---
+  factory AuthState.initial() {
+    return const AuthState(
+      status: AuthStatus.initial,
+      roles: [],
+      privileges: [],
+    );
+  }
+
+  factory AuthState.loading() {
+    return AuthState.initial().copyWith(status: AuthStatus.loading);
+  }
+
+  factory AuthState.authenticated({
+    required int userId,
+    required String username,
+    required List<Privilege> privileges,
+    required List<Role> roles,
+    UserWithRole? userWithRole,
+    int? companyId,
+  }) {
+    return AuthState(
+      status: AuthStatus.authenticated,
+      userId: userId,
+      username: username,
+      privileges: privileges,
+      roles: roles,
+      userWithRole: userWithRole,
+      companyId: companyId,
+      authenticatedAt: DateTime.now(),
+      tokenExpiryTime: DateTime.now().add(
+        const Duration(minutes: 2),
+      ), // Example
+    );
+  }
+
+  factory AuthState.unauthenticated({String? message}) {
+    return AuthState.initial().copyWith(
+      status: AuthStatus.unauthenticated,
+      message: message,
+      lastLogoutAt: DateTime.now(),
+    );
+  }
+
+  factory AuthState.error(String message, {AuthErrorType? errorType}) {
+    return AuthState.initial().copyWith(
+      status: AuthStatus.error,
+      message: message,
+      errorType: errorType,
+      occuredAt: DateTime.now(),
     );
   }
 

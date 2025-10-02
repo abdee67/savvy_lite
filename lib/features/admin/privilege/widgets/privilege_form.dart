@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_bloc.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_event.dart';
 import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart';
@@ -112,7 +111,7 @@ class _PrivilegeFormState extends State<PrivilegeForm> {
 
               // Type
               DropdownButtonFormField<String>(
-                value: _type,
+                initialValue: _type,
                 items: const [
                   DropdownMenuItem(value: 'link', child: Text('Link')),
                   DropdownMenuItem(value: 'button', child: Text('Button')),

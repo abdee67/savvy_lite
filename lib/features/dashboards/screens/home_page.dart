@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:savvy_stock/core/constants/privilege_constants.dart';
+import 'package:savvy_stock/core/constants/app_routes.dart';
+import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_event.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
@@ -17,69 +18,51 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   String? _selectedDashboard;
 
-  // Dashboard configuration
+  // Dashboard configuration - Updated to use AppRoutes
   final Map<String, _DashboardConfig> _dashboardConfigs = {
-    PrivilegeConstants.adminDashboard: _DashboardConfig(
+    AppRoutes.adminDashboard: _DashboardConfig(
       title: 'Admin',
       icon: Iconsax.user,
       description: 'Manage system administration and user management',
       color: Colors.red,
-      features: {
-        PrivilegeConstants.privilegeManagement: 'Privilege Management',
-        PrivilegeConstants.roleManagement: 'Role Management',
-        PrivilegeConstants.employeeManagement: 'Employee Management',
-        PrivilegeConstants.userManagement: 'User Management',
-      },
     ),
-    PrivilegeConstants.salesDashboard: _DashboardConfig(
+    AppRoutes.salesDashboard: _DashboardConfig(
       title: 'Sales',
       icon: Iconsax.shopping_cart,
-      description: 'Sales operations and customer management',
+      description:
+          'Sales operations,Customer info, Payment summary and customer management',
       color: Colors.blue,
-      features: {
-        PrivilegeConstants.salesItemEntry: 'Sales Item Entry',
-        PrivilegeConstants.customerEntry: 'Customer Entry',
-      },
     ),
-    PrivilegeConstants.stockDashboard: _DashboardConfig(
+    AppRoutes.stockDashboard: _DashboardConfig(
       title: 'Stock',
       icon: Iconsax.shapes,
-      description: 'Inventory and stock management',
+      description:
+          'Item entry,UoM Management and stock management with Location Entry',
       color: Colors.green,
-      features: {
-        PrivilegeConstants.itemEntry: 'Item Entry',
-        PrivilegeConstants.uomManagement: 'UoM Management',
-        PrivilegeConstants.itemWorkbench: 'Item Entry Workbench',
-        PrivilegeConstants.itemUomConversions: 'Item UoM Conversions',
-        PrivilegeConstants.locationEntry: 'Location Entry',
-        PrivilegeConstants.lotEntry: 'Lot Entry',
-        PrivilegeConstants.lotColorings: 'Lot Colorings',
-        PrivilegeConstants.inventoryTransaction: 'Inventory Transaction Entry',
-        PrivilegeConstants.itemBranchEntry: 'Item Branch Entry',
-      },
     ),
-    PrivilegeConstants.availabilityDashboard: _DashboardConfig(
+    AppRoutes.availabilityDashboard: _DashboardConfig(
       title: 'Availability',
       icon: Iconsax.calendar,
-      description: 'Stock availability and planning',
+      description: 'Stock availability,Item avaialability and planning',
       color: Colors.orange,
-      features: {
-        // Add availability-specific features here
-        '/availability/order-entry': 'Order Entry',
-        '/availability/order-history': 'Order History',
-      },
     ),
-    PrivilegeConstants.purchaseDashboard: _DashboardConfig(
+    AppRoutes.purchaseDashboard: _DashboardConfig(
       title: 'Purchase',
       icon: Iconsax.buy_crypto,
-      description: 'Purchase and procurement management',
+      description: 'Purchase assignment and procurement management',
       color: Colors.purple,
-      features: {
-        // Add purchase-specific features here
-        '/purchase/purchase-entry': 'Purchase Entry',
-        '/purchase/credit-purchase': 'Credit Purchase',
-        '/purchase/supplier': 'Supplier Management',
-      },
+    ),
+    AppRoutes.companyDashboard: _DashboardConfig(
+      title: 'Company',
+      icon: Iconsax.building,
+      description: 'Company information,branch infromation and settings',
+      color: Colors.teal,
+    ),
+    AppRoutes.branchListDashboard: _DashboardConfig(
+      title: 'Branches',
+      icon: Iconsax.location,
+      description: 'Branch management,controll, information and  and locations',
+      color: Colors.indigo,
     ),
   };
 
@@ -93,9 +76,8 @@ class _HomePageState extends State<HomePage> {
           );
         }
 
-        final availableDashboards = PrivilegeConstants.getAvailableDashboards(
-          authState.privileges,
-        );
+        // Use the new hierarchy-based method
+        final availableDashboards = authState.getAvailableDashboards();
 
         if (availableDashboards.isEmpty) {
           return _buildNoPrivilegesScreen();
@@ -104,6 +86,7 @@ class _HomePageState extends State<HomePage> {
         // Auto-select first available dashboard if none selected
         if (_selectedDashboard == null && availableDashboards.isNotEmpty) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return; // prevent setState after dispose
             setState(() {
               _selectedDashboard = availableDashboards.first;
             });
@@ -139,19 +122,16 @@ class _HomePageState extends State<HomePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildHeaderSection(context, authState),
-                        if (availableDashboards.isEmpty)
-                          _buildNoPrivilegesScreen()
-                        else
-                          Column(
-                            children: [
-                              _buildDashboardSelector(
-                                context,
-                                availableDashboards,
-                                authState,
-                              ),
-                              _buildFeaturesSection(context, authState),
-                            ],
-                          ),
+                        Column(
+                          children: [
+                            _buildDashboardSelector(
+                              context,
+                              availableDashboards,
+                              authState,
+                            ),
+                            _buildFeaturesSection(context, authState),
+                          ],
+                        ),
                       ],
                     ),
                   ],
@@ -209,9 +189,9 @@ class _HomePageState extends State<HomePage> {
                 icon: const Icon(Icons.more_vert, color: Colors.white),
                 onSelected: (value) {
                   if (value == 'System Constants') {
-                    context.push('/system_constant');
+                    context.push(AppRoutes.systemConstants);
                   } else if (value == 'Logout') {
-                    context.read<AuthBloc>().add(LogoutRequested());
+                    context.read<AuthBloc>().add(LogoutRequested(context));
                   }
                 },
                 itemBuilder: (BuildContext context) => [
@@ -248,6 +228,7 @@ class _HomePageState extends State<HomePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Dashboard selector buttons
+          // Enhanced Dashboard selector with smooth scrolling
           Container(
             decoration: const BoxDecoration(
               color: Color(0xFF383838),
@@ -256,49 +237,161 @@ class _HomePageState extends State<HomePage> {
                 topRight: Radius.circular(15),
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: availableDashboards.map((dashboardUri) {
-                final config = _dashboardConfigs[dashboardUri];
-                final isSelected = _selectedDashboard == dashboardUri;
+            child: Column(
+              children: [
+                // Scrollable dashboard buttons
+                SizedBox(
+                  height: 70, // Slightly taller to accommodate the scrollbar
+                  child: Scrollbar(
+                    thumbVisibility:
+                        false, // Always show scrollbar when scrollable
+                    thickness: 4,
+                    radius: const Radius.circular(2),
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      children: availableDashboards.asMap().entries.map((
+                        entry,
+                      ) {
+                        final index = entry.key;
+                        final dashboardUri = entry.value;
+                        final config = _dashboardConfigs[dashboardUri];
+                        final isSelected = _selectedDashboard == dashboardUri;
+                        final isFirst = index == 0;
+                        final isLast = index == availableDashboards.length - 1;
 
-                return Tooltip(
-                  message: config?.title ?? dashboardUri,
-                  child: TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _selectedDashboard = dashboardUri;
-                      });
-                    },
-                    child: isSelected
-                        ? Container(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 8,
-                              horizontal: 14,
-                            ),
-                            decoration: BoxDecoration(
-                              color: config?.color ?? Colors.amber,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              config?.title ?? dashboardUri,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
+                        return Container(
+                          margin: EdgeInsets.only(
+                            left: isFirst ? 0 : 4,
+                            right: isLast ? 0 : 4,
+                          ),
+                          child: Tooltip(
+                            message:
+                                config?.title ??
+                                _formatDashboardName(dashboardUri),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              curve: Curves.easeInOut,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedDashboard = dashboardUri;
+                                    });
+                                  },
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 10,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? config?.color ?? Colors.amber
+                                          : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: isSelected
+                                          ? null
+                                          : Border.all(
+                                              color: Colors.white.withOpacity(
+                                                0.2,
+                                              ),
+                                              width: 1,
+                                            ),
+                                      boxShadow: isSelected
+                                          ? [
+                                              BoxShadow(
+                                                color:
+                                                    (config?.color ??
+                                                            Colors.amber)
+                                                        .withOpacity(0.3),
+                                                blurRadius: 8,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ]
+                                          : null,
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (!isSelected) ...[
+                                          Icon(
+                                            config?.icon ?? Iconsax.user,
+                                            color: Colors.white,
+                                            size: 18,
+                                          ),
+                                          const SizedBox(width: 6),
+                                        ],
+                                        Text(
+                                          isSelected
+                                              ? config?.title ??
+                                                    _formatDashboardName(
+                                                      dashboardUri,
+                                                    )
+                                              : config?.title ??
+                                                    _formatDashboardName(
+                                                      dashboardUri,
+                                                    ),
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: isSelected ? 14 : 12,
+                                            fontWeight: isSelected
+                                                ? FontWeight.w600
+                                                : FontWeight.w400,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
-                          )
-                        : Icon(
-                            config?.icon ?? Iconsax.user,
-                            color: Colors.white,
-                            size: 20,
                           ),
+                        );
+                      }).toList(),
+                    ),
                   ),
-                );
-              }).toList(),
+                ),
+
+                // Optional: Add indicators for scroll hint
+                if (availableDashboards.length > 4) ...[
+                  Container(
+                    height: 2,
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      children: List.generate(availableDashboards.length, (
+                        index,
+                      ) {
+                        final isActive =
+                            _selectedDashboard == availableDashboards[index];
+                        return Container(
+                          width: 8,
+                          height: 2,
+                          margin: const EdgeInsets.symmetric(horizontal: 2),
+                          decoration: BoxDecoration(
+                            color: isActive
+                                ? Colors.white
+                                : Colors.white.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(1),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-
           // Description section
           Container(
             decoration: BoxDecoration(
@@ -314,7 +407,8 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.all(18),
             child: _selectedDashboard != null
                 ? Text(
-                    _dashboardConfigs[_selectedDashboard]?.description ?? '',
+                    _dashboardConfigs[_selectedDashboard]?.description ??
+                        'Manage ${_formatDashboardName(_selectedDashboard!)} operations',
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: Colors.white, fontSize: 14),
                   )
@@ -334,15 +428,14 @@ class _HomePageState extends State<HomePage> {
       return const SizedBox.shrink();
     }
 
-    final config = _dashboardConfigs[_selectedDashboard!];
-    if (config == null) return const SizedBox.shrink();
-
-    // Get features that user has access to
-    final availableFeatures = config.features.entries
-        .where((feature) => authState.hasPrivilege(feature.key))
-        .toList();
+    // Get features using the new hierarchy system
+    final availableFeatures = authState.getFeaturesForDashboard(
+      _selectedDashboard!,
+    );
 
     if (availableFeatures.isEmpty) {
+      final config = _dashboardConfigs[_selectedDashboard!];
+
       return Padding(
         padding: const EdgeInsets.all(32.0),
         child: Column(
@@ -350,7 +443,7 @@ class _HomePageState extends State<HomePage> {
             Icon(Icons.lock_outline, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
-              'No Access to ${config.title} Features',
+              'No Access to ${config?.title ?? _formatDashboardName(_selectedDashboard!)} Features',
               style: TextStyle(
                 fontSize: 18,
                 color: Colors.grey[600],
@@ -368,13 +461,15 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
+    final config = _dashboardConfigs[_selectedDashboard!];
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            '${config.title} Features',
+            '${config?.title ?? _formatDashboardName(_selectedDashboard!)} Features',
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -383,14 +478,12 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 16),
           ...availableFeatures.map(
-            (feature) => Padding(
+            (privilege) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: _FeatureButton(
-                featureName: feature.value,
-                privilegeUri: feature.key,
-                color: config.color,
-                onPressed: () =>
-                    _handleFeatureNavigation(context, feature.key, authState),
+                privilege: privilege,
+                color: config?.color ?? Colors.grey,
+                onPressed: () => _handleFeatureNavigation(context, privilege),
               ),
             ),
           ),
@@ -420,7 +513,8 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () => context.read<AuthBloc>().add(LogoutRequested()),
+            onPressed: () =>
+                context.read<AuthBloc>().add(LogoutRequested(context)),
             child: const Text('Return to Login'),
           ),
         ],
@@ -428,20 +522,19 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _handleFeatureNavigation(
-    BuildContext context,
-    String privilegeUri,
-    AuthState authState,
-  ) {
-    if (authState.hasPrivilege(privilegeUri)) {
-      context.push(privilegeUri);
-    } else if (privilegeUri.isNotEmpty) {
-      // Fallback: Show feature dialog for unimplemented features
+  void _handleFeatureNavigation(BuildContext context, Privilege privilege) {
+    // Check if user has access to this specific feature using hierarchy
+    if (context.read<AuthBloc>().state.hasAccessToPrivilege(privilege.uri)) {
+      context.push(privilege.uri);
+    } else {
+      // Show access denied or feature not available
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Feature Coming Soon'),
-          content: Text('The $privilegeUri feature is under development.'),
+          title: const Text('Access Denied'),
+          content: Text(
+            'You do not have permission to access ${privilege.name}.',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -451,6 +544,12 @@ class _HomePageState extends State<HomePage> {
         ),
       );
     }
+  }
+
+  String _formatDashboardName(String dashboardUri) {
+    // Convert URI to readable name (e.g., "/admin/dashboard" -> "Admin")
+    final name = dashboardUri.split('/').where((part) => part.isNotEmpty).first;
+    return name[0].toUpperCase() + name.substring(1);
   }
 }
 
@@ -479,26 +578,22 @@ class _DashboardConfig {
   final IconData icon;
   final String description;
   final Color color;
-  final Map<String, String> features; // privilege_uri -> display_name
 
   const _DashboardConfig({
     required this.title,
     required this.icon,
     required this.description,
     required this.color,
-    required this.features,
   });
 }
 
 class _FeatureButton extends StatelessWidget {
-  final String featureName;
-  final String privilegeUri;
+  final Privilege privilege;
   final Color color;
   final VoidCallback onPressed;
 
   const _FeatureButton({
-    required this.featureName,
-    required this.privilegeUri,
+    required this.privilege,
     required this.color,
     required this.onPressed,
   });
@@ -515,14 +610,14 @@ class _FeatureButton extends StatelessWidget {
             color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(Icons.arrow_forward, color: color, size: 20),
+          child: Icon(_getFeatureIcon(privilege.type), color: color, size: 20),
         ),
         title: Text(
-          featureName,
+          privilege.name,
           style: const TextStyle(fontWeight: FontWeight.w500),
         ),
         subtitle: Text(
-          privilegeUri,
+          privilege.uri,
           style: TextStyle(fontSize: 10, color: Colors.grey[600]),
         ),
         trailing: const Icon(Icons.chevron_right, color: Colors.grey),
@@ -530,5 +625,15 @@ class _FeatureButton extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
+  }
+
+  IconData _getFeatureIcon(String type) {
+    switch (type) {
+      case 'button':
+        return Icons.play_arrow;
+      case 'link':
+      default:
+        return Icons.arrow_forward;
+    }
   }
 }

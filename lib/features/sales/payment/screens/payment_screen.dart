@@ -31,6 +31,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return; // Prevent using context after dispose
       final bloc = context.read<PaymentBloc>();
       bloc.add(
         LoadPayment(

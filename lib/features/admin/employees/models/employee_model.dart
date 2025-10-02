@@ -4,7 +4,6 @@ class Employee {
   final String nameFirst;
   final String nameLast;
   final String nameMiddle;
-  final String? nationality;
   final String email;
   final String phone;
   final String? title;
@@ -14,10 +13,11 @@ class Employee {
   final String? city;
   final String? region;
   final String? country;
-  final String? phoneHome;
   final String? gender;
   final int? company;
   final int? branch;
+
+  bool get isUser => employeeId != null;
 
   Employee({
     required this.id,
@@ -25,7 +25,6 @@ class Employee {
     required this.nameFirst,
     required this.nameLast,
     required this.nameMiddle,
-    this.nationality,
     required this.email,
     required this.phone,
     this.title,
@@ -35,7 +34,6 @@ class Employee {
     this.city,
     this.region,
     this.country,
-    this.phoneHome,
     this.gender,
     this.company,
     this.branch,
@@ -50,7 +48,6 @@ class Employee {
     String? nameFirst,
     String? nameLast,
     String? nameMiddle,
-    String? nationality,
     String? email,
     String? phone,
     String? title,
@@ -60,7 +57,6 @@ class Employee {
     String? city,
     String? region,
     String? country,
-    String? phoneHome,
     String? gender,
     int? company,
     int? branch,
@@ -71,7 +67,6 @@ class Employee {
       nameFirst: nameFirst ?? this.nameFirst,
       nameLast: nameLast ?? this.nameLast,
       nameMiddle: nameMiddle ?? this.nameMiddle,
-      nationality: nationality ?? this.nationality,
       email: email ?? this.email,
       phone: phone ?? this.phone,
       title: title ?? this.title,
@@ -81,12 +76,25 @@ class Employee {
       city: city ?? this.city,
       region: region ?? this.region,
       country: country ?? this.country,
-      phoneHome: phoneHome ?? this.phoneHome,
       gender: gender ?? this.gender,
       company: company ?? this.company,
       branch: branch ?? this.branch,
     );
   }
+
+  static Employee empty() {
+    return Employee(
+      id: 0,
+      nameFirst: '',
+      nameLast: '',
+      nameMiddle: '',
+      email: '',
+      phone: '',
+    );
+  }
+
+  bool get isEmpty => id == 0;
+  bool get isNotEmpty => id != 0;
 
   @override
   List<Object?> get props => [
@@ -95,7 +103,6 @@ class Employee {
     nameFirst,
     nameLast,
     nameMiddle,
-    nationality,
     email,
     phone,
     title,
@@ -105,21 +112,19 @@ class Employee {
     city,
     region,
     country,
-    phoneHome,
     gender,
     company,
     branch,
   ];
 
   factory Employee.fromMap(Map<String, dynamic> map) => Employee(
-    id: map['id'],
+    id: map['id'] ?? 0,
     employeeId: map['employee_id'],
-    nameFirst: map['name_first'],
-    nameLast: map['name_last'],
-    nameMiddle: map['name_middle'],
-    nationality: map['nationality'],
-    email: map['email'],
-    phone: map['phone'],
+    nameFirst: map['name_first'] ?? '',
+    nameLast: map['name_last'] ?? '',
+    nameMiddle: map['name_middle'] ?? '',
+    email: map['email'] ?? '',
+    phone: map['phone'] ?? '',
     title: map['title'],
     birthDate: map['birth_date'],
     hireDate: map['hire_date'],
@@ -127,7 +132,6 @@ class Employee {
     city: map['city'],
     region: map['region'],
     country: map['country'],
-    phoneHome: map['phone_home'],
     gender: map['gender'],
     company: map['company'],
     branch: map['branch'],
@@ -139,7 +143,6 @@ class Employee {
     'name_first': nameFirst,
     'name_last': nameLast,
     'name_middle': nameMiddle,
-    'nationality': nationality,
     'email': email,
     'phone': phone,
     'title': title,
@@ -149,9 +152,40 @@ class Employee {
     'city': city,
     'region': region,
     'country': country,
-    'phone_home': phoneHome,
     'gender': gender,
     'company': company,
     'branch': branch,
   };
+  Employee copyWithField(String field, dynamic value) {
+    switch (field) {
+      case 'nameFirst':
+        return copyWith(nameFirst: value as String);
+      case 'nameLast':
+        return copyWith(nameLast: value as String);
+      case 'nameMiddle':
+        return copyWith(nameMiddle: value as String);
+      case 'employeeId':
+        return copyWith(employeeId: value as String);
+      case 'phone':
+        return copyWith(phone: value as String);
+      case 'email':
+        return copyWith(email: value as String);
+      case 'title':
+        return copyWith(title: value as String);
+      case 'gender':
+        return copyWith(gender: value as String);
+      case 'city':
+        return copyWith(city: value as String);
+      case 'address':
+        return copyWith(address: value as String);
+      case 'birthDate':
+        return copyWith(birthDate: value as String);
+      case 'hireDate':
+        return copyWith(hireDate: value as String);
+      case 'country':
+        return copyWith(country: value as String);
+      default:
+        return this;
+    }
+  }
 }
