@@ -280,7 +280,36 @@ class LocalDatabaseService {
 ''');
     developer.log('Created table: user_role');
 
-    // 11. Create system_constant table
+    //11.Create items table
+    await db.execute('''
+CREATE TABLE items_table (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  items_id TEXT,
+  item_description TEXT,
+  unit_of_measure INTEGER,
+  unit_price REAL,
+  taxable TEXT,               -- store 'Y' or 'N'
+  barcode TEXT,
+  company INTEGER,
+  margin_rate REAL,
+  margin_type TEXT,           -- e.g. '%' or 'N'
+  reorder_point REAL,
+  FOREIGN KEY (company) REFERENCES company_table(id) ON DELETE CASCADE,
+  FOREIGN KEY (unit_of_measure) REFERENCES udc_details(id)
+);
+''');
+    developer.log('Created table: items_table');
+
+    // Indexes for faster lookup
+    await db.execute('''
+CREATE INDEX idx_items_company ON items_table(company);
+CREATE INDEX idx_items_uom ON items_table(unit_of_measure);
+CREATE INDEX idx_items_barcode ON items_table(barcode);
+CREATE INDEX idx_items_id ON items_table(items_id);
+''');
+    developer.log('Created indexes for items_table');
+
+    // 12. Create system_constant table
     await db.execute('''
       CREATE TABLE system_constant (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

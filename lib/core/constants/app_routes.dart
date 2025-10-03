@@ -63,8 +63,14 @@ class AppRoutes {
   static const String roleEdit = '$roleManagement/edit-role';
   static const String roleDelete = '$roleManagement/delete-role';
 
-  // Stock Sub-Routes
+  //////////STOCK ROUTES///////////////
   static const String itemEntry = '$stock/item-entry';
+  static const String itemCreation = '$itemEntry/add-item';
+  static const String itemEdit = '$itemEntry/edit-item';
+  static const String itemDelete = '$itemEntry/delete-item';
+  static const String itemExport = '$itemEntry/export-item';
+  static const String itemImport = '$itemEntry/import-item';
+
   static const String uomManagement = '$stock/uom-management';
   static const String itemWorkbench = '$stock/item-workbench';
   static const String itemUomConversions = '$stock/item-uom-conversions';

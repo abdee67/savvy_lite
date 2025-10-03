@@ -209,6 +209,21 @@ class PrivilegeSeeder {
 
       // ==================== STOCK MODULE ====================
       _createPrivilege('Item Entry', 'link', AppRoutes.itemEntry, 'item_entry'),
+
+      _createPrivilege(
+        'Add Item',
+        'button',
+        AppRoutes.itemCreation,
+        'add_item',
+      ),
+      _createPrivilege('Edit Item', 'button', AppRoutes.itemEdit, 'edit_item'),
+      _createPrivilege(
+        'Delete Item',
+        'button',
+        AppRoutes.itemDelete,
+        'delete_item',
+      ),
+
       _createPrivilege(
         'UoM Management',
         'link',

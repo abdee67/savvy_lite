@@ -1,94 +1,145 @@
 import 'package:equatable/equatable.dart';
-import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
+import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 
-enum CustomerStatus { initial, loading, success, failure, searching }
+enum ItemEntryStatus {
+  initial,
+  loading,
+  searching,
+  success,
+  failure,
+  creating,
+  updating,
+  deleting,
+  exporting,
+}
 
-class CustomerState extends Equatable {
-  final CustomerStatus status;
-  final List<Customer> customers;
-  final List<Customer> filteredCustomers;
-  final List<Customer> selectedCustomers;
+enum ItemEntryDetailStatus { hidden, showing, editing }
+
+class ItemEntryState extends Equatable {
+  final ItemEntryStatus status;
+  final String? message;
+  final int? itemId;
+  final int? companyId;
+  final List<ItemEntryModel> items;
+  final List<ItemEntryModel> filteredItems;
   final String searchQuery;
-  final Customer? customerDetail;
-  final bool showDetailPanel;
-  final Customer selectedBillToCustomer;
-  final Customer selectedShipToCustomer;
-  final String tin;
-  final String phone;
-  final String country;
-  final String? errorMessage;
+  final List<ItemEntryModel> selectedItems;
+  final ItemEntryModel? itemForm;
 
-  const CustomerState({
-    this.status = CustomerStatus.initial,
-    this.customers = const [],
-    this.selectedBillToCustomer = Customer.empty,
-    this.selectedShipToCustomer = Customer.empty,
-    this.customerDetail,
-    this.filteredCustomers = const [],
-    this.selectedCustomers = const [],
+  final ItemEntryDetailStatus detailStatus;
+  final ItemEntryModel? itemDetail;
+
+  final List<ItemEntryModel> recentlyDeleted;
+  final List<int> recentlyDeletedIndexes;
+
+  final bool isExporting;
+  final bool showDetailPanel;
+  final List<ItemEntryModel> exportedItems; //export multiple Branchs
+  final ItemEntryModel? exportedItem; //export single Branch
+
+  // Role management state
+
+  const ItemEntryState({
+    this.status = ItemEntryStatus.initial,
+    this.message,
+    this.itemId,
+    this.companyId,
+    this.items = const [],
+    this.filteredItems = const [],
     this.searchQuery = '',
+    this.selectedItems = const [],
+    this.itemForm,
+    this.detailStatus = ItemEntryDetailStatus.hidden,
+    this.itemDetail,
+    this.recentlyDeleted = const [],
+    this.recentlyDeletedIndexes = const [],
+    this.isExporting = false,
     this.showDetailPanel = false,
-    this.tin = '',
-    this.phone = '',
-    this.country = '',
-    this.errorMessage,
+    this.exportedItems = const [],
+    this.exportedItem,
   });
 
-  CustomerState copyWith({
-    CustomerStatus? status,
-    List<Customer>? customers,
-    Customer? selectedBillToCustomer,
-    Customer? selectedShipToCustomer,
-    String? tin,
-    String? phone,
-    String? country,
-    String? errorMessage,
-    List<Customer>? filteredCustomers,
-    List<Customer>? selectedCustomers,
+  // --- Helper Getters ---
+  bool get isLoading => status == ItemEntryStatus.loading;
+  bool get isSuccess => status == ItemEntryStatus.success;
+  bool get isFailure => status == ItemEntryStatus.failure;
+  bool get isCreating => status == ItemEntryStatus.creating;
+  bool get isUpdating => status == ItemEntryStatus.updating;
+  bool get isDeleting => status == ItemEntryStatus.deleting;
+  bool get isExportingData => status == ItemEntryStatus.exporting;
+
+  bool get isDetailVisible => detailStatus != ItemEntryDetailStatus.hidden;
+  bool get isDetailEditing => detailStatus == ItemEntryDetailStatus.editing;
+
+  bool get hasItems => items.isNotEmpty;
+  bool get hasFilteredItems => filteredItems.isNotEmpty;
+  bool get hasSelection => selectedItems.isNotEmpty;
+  bool get canEdit => selectedItems.length == 1;
+  bool get canDelete => selectedItems.isNotEmpty;
+  bool get canExport => filteredItems.isNotEmpty;
+
+  bool get hasRecentDeletions => recentlyDeleted.isNotEmpty;
+
+  // --- CopyWith for immutability ---
+  ItemEntryState copyWith({
+    ItemEntryStatus? status,
+    String? message,
+    int? itemId,
+    int? companyId,
+    List<ItemEntryModel>? items,
+    List<ItemEntryModel>? filteredItems,
     String? searchQuery,
+    List<ItemEntryModel>? selectedItems,
+    ItemEntryModel? itemForm,
+    ItemEntryDetailStatus? detailStatus,
+    ItemEntryModel? itemDetail,
+    List<ItemEntryModel>? recentlyDeleted,
+    List<int>? recentlyDeletedIndexes,
+    bool? isExporting,
     bool? showDetailPanel,
-    Customer? customerDetail,
+    List<ItemEntryModel>? exportedItems,
+    ItemEntryModel? exportedItem,
   }) {
-    return CustomerState(
+    return ItemEntryState(
       status: status ?? this.status,
-      customers: customers ?? this.customers,
-      selectedBillToCustomer:
-          selectedBillToCustomer ?? this.selectedBillToCustomer,
-      selectedShipToCustomer:
-          selectedShipToCustomer ?? this.selectedShipToCustomer,
-      tin: tin ?? this.tin,
-      phone: phone ?? this.phone,
-      country: country ?? this.country,
-      errorMessage: errorMessage ?? this.errorMessage,
-      filteredCustomers: filteredCustomers ?? this.filteredCustomers,
-      selectedCustomers: selectedCustomers ?? this.selectedCustomers,
+      message: message ?? this.message,
+      itemId: itemId ?? this.itemId,
+      companyId: companyId ?? this.companyId,
+      items: items ?? this.items,
+      filteredItems: filteredItems ?? this.filteredItems,
       searchQuery: searchQuery ?? this.searchQuery,
+      selectedItems: selectedItems ?? this.selectedItems,
+      itemForm: itemForm ?? this.itemForm,
+      detailStatus: detailStatus ?? this.detailStatus,
+      itemDetail: itemDetail ?? this.itemDetail,
+      recentlyDeleted: recentlyDeleted ?? this.recentlyDeleted,
+      recentlyDeletedIndexes:
+          recentlyDeletedIndexes ?? this.recentlyDeletedIndexes,
+      isExporting: isExporting ?? this.isExporting,
       showDetailPanel: showDetailPanel ?? this.showDetailPanel,
-      customerDetail: customerDetail ?? this.customerDetail,
+      exportedItems: exportedItems ?? this.exportedItems,
+      exportedItem: exportedItem ?? this.exportedItem,
     );
   }
-
-  bool get isBillToCustomerSelected => selectedBillToCustomer.isNotEmpty;
-  bool get isShipToCustomerSelected => selectedShipToCustomer.isNotEmpty;
-  bool get isValid => isBillToCustomerSelected;
-  bool get isSelectionMode => selectedCustomers.isNotEmpty;
-  bool get canEdit => selectedCustomers.length == 1;
-  bool get canDelete => selectedCustomers.isNotEmpty;
 
   @override
   List<Object?> get props => [
     status,
-    customers,
-    selectedBillToCustomer,
-    selectedShipToCustomer,
-    tin,
-    phone,
-    country,
-    errorMessage,
-    filteredCustomers,
-    selectedCustomers,
+    message,
+    itemId,
+    companyId,
+    items,
+    filteredItems,
     searchQuery,
+    selectedItems,
+    itemForm,
+    detailStatus,
+    itemDetail,
+    recentlyDeleted,
+    recentlyDeletedIndexes,
+    isExporting,
     showDetailPanel,
-    customerDetail,
+    exportedItems,
+    exportedItem,
   ];
 }

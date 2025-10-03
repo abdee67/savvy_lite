@@ -15,6 +15,7 @@ import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 
 final getIt = GetIt.instance;
 
@@ -90,6 +91,10 @@ void initDependencies() {
 
   getIt.registerFactory<BranchBloc>(
     () => BranchBloc(databaseService: getIt(), authBloc: getIt()),
+  );
+
+  getIt.registerFactory<StockItemEntryBloc>(
+    () => StockItemEntryBloc(databaseService: getIt(), authBloc: getIt()),
   );
 
   getIt.registerFactory<PaymentBloc>(() => PaymentBloc(getIt()));

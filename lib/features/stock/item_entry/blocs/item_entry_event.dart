@@ -1,114 +1,143 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
-import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
+import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 
 @immutable
-abstract class CustomerEvent extends Equatable {
-  const CustomerEvent();
+abstract class ItemEntryEvent extends Equatable {
+  const ItemEntryEvent();
 
   @override
   List<Object> get props => [];
 }
 
-class LoadCustomers extends CustomerEvent {}
-
-class SelectBillToCustomer extends CustomerEvent {
-  final Customer customer;
-  const SelectBillToCustomer(this.customer);
+class LoadItems extends ItemEntryEvent {
+  final int companyId;
+  const LoadItems(this.companyId);
 
   @override
-  List<Object> get props => [customer];
+  List<Object> get props => [companyId];
 }
 
-class SelectShipToCustomer extends CustomerEvent {
-  final Customer customer;
-  const SelectShipToCustomer(this.customer);
+class CreateItem extends ItemEntryEvent {
+  final ItemEntryModel item;
+  const CreateItem(this.item);
 
   @override
-  List<Object> get props => [customer];
+  List<Object> get props => [item];
 }
 
-class UpdateCustomerDetails extends CustomerEvent {
-  final String tin;
-  final String phone;
-  final String country;
+class UpdateItem extends ItemEntryEvent {
+  final ItemEntryModel item;
+  const UpdateItem(this.item);
 
-  const UpdateCustomerDetails({
-    required this.tin,
-    required this.phone,
-    required this.country,
+  @override
+  List<Object> get props => [item];
+}
+
+class DeleteItem extends ItemEntryEvent {
+  final int itemId;
+  final ItemEntryModel deletedItem;
+  final int deletedIndex;
+
+  const DeleteItem({
+    required this.itemId,
+    required this.deletedItem,
+    required this.deletedIndex,
   });
 
   @override
-  List<Object> get props => [tin, phone, country];
+  List<Object> get props => [itemId, deletedItem, deletedIndex];
 }
 
-class SearchCustomers extends CustomerEvent {
+class SearchItems extends ItemEntryEvent {
   final String query;
-  const SearchCustomers(this.query);
+  const SearchItems(this.query);
 
   @override
   List<Object> get props => [query];
 }
 
-class SelectCustomer extends CustomerEvent {
-  final Customer customer;
+class SelectItem extends ItemEntryEvent {
+  final ItemEntryModel item;
   final bool isSelected;
-  const SelectCustomer(this.customer, {this.isSelected = true});
+  const SelectItem(this.item, this.isSelected);
 
   @override
-  List<Object> get props => [customer, isSelected];
+  List<Object> get props => [item, isSelected];
 }
 
-class SelectAllCustomers extends CustomerEvent {
-  final bool selectAll;
-  const SelectAllCustomers(this.selectAll);
+class SelectAllItems extends ItemEntryEvent {
+  final List<ItemEntryModel> items;
+  const SelectAllItems(this.items);
 
   @override
-  List<Object> get props => [selectAll];
+  List<Object> get props => [items];
 }
 
-class ClearSelection extends CustomerEvent {}
-
-class DeleteSelectedCustomers extends CustomerEvent {}
-
-class UndoDelete extends CustomerEvent {
-  final Customer deletedItem;
-  final int deletedIndex;
-
-  const UndoDelete({required this.deletedItem, required this.deletedIndex});
-}
-
-class ShowCustomerDetail extends CustomerEvent {
-  final Customer customer;
-  const ShowCustomerDetail(this.customer);
+class ClearSelection extends ItemEntryEvent {
+  const ClearSelection();
 
   @override
-  List<Object> get props => [customer];
+  List<Object> get props => [];
 }
 
-class HideCustomerDetail extends CustomerEvent {}
-
-class AddCustomer extends CustomerEvent {
-  final Customer customer;
-  const AddCustomer(this.customer);
+class SetItemForm extends ItemEntryEvent {
+  final ItemEntryModel item;
+  const SetItemForm(this.item);
 
   @override
-  List<Object> get props => [customer];
+  List<Object> get props => [item];
 }
 
-class UpdateCustomer extends CustomerEvent {
-  final Customer customer;
-  const UpdateCustomer(this.customer);
+class DeleteSelectedItems extends ItemEntryEvent {
+  final List<int> selectedItems;
+  final List<ItemEntryModel> deletedItems;
+  final List<int> deletedIndexes;
+
+  const DeleteSelectedItems({
+    required this.selectedItems,
+    required this.deletedItems,
+    required this.deletedIndexes,
+  });
 
   @override
-  List<Object> get props => [customer];
+  List<Object> get props => [selectedItems, deletedItems, deletedIndexes];
 }
 
-class ExportCustomer extends CustomerEvent {
-  final Customer customer;
-  const ExportCustomer(this.customer);
+class UndoDelete extends ItemEntryEvent {
+  final List<ItemEntryModel> deletedItems;
+  final List<int> deletedIndexes;
+
+  const UndoDelete({required this.deletedItems, required this.deletedIndexes});
 
   @override
-  List<Object> get props => [customer];
+  List<Object> get props => [deletedItems, deletedIndexes];
+}
+
+class ShowItemDetail extends ItemEntryEvent {
+  final ItemEntryModel item;
+  const ShowItemDetail(this.item);
+
+  @override
+  List<Object> get props => [item];
+}
+
+class HideItemDetail extends ItemEntryEvent {
+  const HideItemDetail();
+}
+
+class ExportItem extends ItemEntryEvent {
+  final List<ItemEntryModel> itemsToExport;
+  const ExportItem(this.itemsToExport);
+
+  @override
+  List<Object> get props => [itemsToExport];
+}
+
+class ExportSingleItem extends ItemEntryEvent {
+  final ItemEntryModel itemToExport;
+  const ExportSingleItem(this.itemToExport);
+
+  @override
+  List<Object> get props => [itemToExport];
 }

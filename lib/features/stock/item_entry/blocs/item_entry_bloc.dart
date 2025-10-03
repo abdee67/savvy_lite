@@ -1,404 +1,387 @@
-import 'package:bloc/bloc.dart';
-import 'package:savvy_stock/features/sales/customer/blocs/customer_event.dart';
-import 'package:savvy_stock/features/sales/customer/blocs/customer_state.dart';
-import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
+// features/ItemEntry/blocs/ItemEntry_bloc.dart
 
-class CustomerBloc extends Bloc<CustomerEvent, CustomerState> {
-  CustomerBloc() : super(const CustomerState()) {
-    on<LoadCustomers>(_onLoadCustomers);
-    on<SelectBillToCustomer>(_onSelectBillToCustomer);
-    on<SelectShipToCustomer>(_onSelectShipToCustomer);
-    on<AddCustomer>(_onAddCustomer);
+import 'dart:async';
+
+import 'package:bloc/bloc.dart';
+import 'package:savvy_stock/core/services/database/database_service.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
+import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
+import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_state.dart';
+import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+
+class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
+  final LocalDatabaseService databaseService;
+  final AuthBloc authBloc;
+  StreamSubscription? _authSubscription;
+
+  StockItemEntryBloc({required this.databaseService, required this.authBloc})
+    : super(const ItemEntryState()) {
+    // Listen to auth state changes
+    _authSubscription = authBloc.stream.listen((authState) {
+      if (authState.isAuthenticated && authState.companyId != null) {
+        add(LoadItems(authState.companyId!));
+      }
+    });
+    on<LoadItems>(_onLoadItems);
+    on<CreateItem>(_onCreateItem);
+    on<UpdateItem>(_onUpdateItem);
+    on<DeleteItem>(_onDeleteItem);
+    on<SearchItems>(_onSearchItem);
+    on<SelectItem>(_onSelectItem);
+    on<SelectAllItems>(_onSelectAllItemEntrys);
     on<ClearSelection>(_onClearSelection);
-    on<UpdateCustomerDetails>(_onUpdateCustomerDetails);
-    on<SelectCustomer>(_onSelectCustomer);
-    on<SelectAllCustomers>(_onSelectAllCustomers);
-    on<DeleteSelectedCustomers>(_onDeleteSelectedCustomers);
-    on<UndoDelete>(_onUndoDelete);
-    on<ShowCustomerDetail>(_onShowCustomerDetail);
-    on<HideCustomerDetail>(_onHideCustomerDetail);
-    on<UpdateCustomer>(_onUpdateCustomer);
-    on<ExportCustomer>(_onExportCustomer);
-    on<SearchCustomers>(_onSearchCustomers);
+    on<DeleteSelectedItems>(_onDeleteSelectedItemEntrys);
+    on<ShowItemDetail>(_onShowItemEntryDetail);
+    on<HideItemDetail>(_onHideItemEntryDetail);
+    on<ExportItem>(_onExportItemEntry);
+    on<ExportSingleItem>(_onExportSingleItemEntry);
+    on<SetItemForm>(_onSetItemEntryForm);
   }
 
-  Future<void> _onLoadCustomers(
-    LoadCustomers event,
-    Emitter<CustomerState> emit,
+  @override
+  Future<void> close() {
+    _authSubscription?.cancel();
+    return super.close();
+  }
+
+  Future<void> _onLoadItems(
+    LoadItems event,
+    Emitter<ItemEntryState> emit,
   ) async {
-    emit(state.copyWith(status: CustomerStatus.loading, selectedCustomers: []));
-
+    emit(ItemEntryState(status: ItemEntryStatus.loading));
     try {
-      // Simulate API call or database fetch
-      await Future.delayed(const Duration(milliseconds: 500));
+      final db = await databaseService.database;
+      final items = await db.query(
+        'items_table',
+        where: 'company = ?',
+        whereArgs: [event.companyId],
+      );
 
-      final customers = [
-        const Customer(
-          id: '1',
-          name: 'John Doe',
-          tin: '123456789',
-          phone: '555-1234',
-          country: 'USA',
-          email: 'john.doe@example.com',
-          city: 'New York',
-          state: 'New York',
-          region: 'New York',
-          addressLine1: '123 Main St',
-          addressLine2: 'Suite 456',
-          addressLine3: 'Apt 789',
-          addressLine4: 'Building 101',
-          addressLine5: 'Floor 2',
-          contactName: 'John Doe',
-          title: 'Mr.',
-          phone2: '555-1234',
-        ),
-        const Customer(
-          id: '2',
-          name: 'Jane Smith',
-          tin: '987654321',
-          phone: '555-5678',
-          country: 'Canada',
-          email: 'jane.smith@example.com',
-          city: 'Toronto',
-          state: 'Ontario',
-          region: 'Toronto',
-          addressLine1: '456 Elm St',
-          addressLine2: 'Suite 789',
-          addressLine3: 'Bldg 202',
-          addressLine4: 'Floor 3',
-          addressLine5: 'Room 4',
-          contactName: 'Jane Smith',
-          title: 'Ms.',
-          phone2: '555-5678',
-        ),
-        const Customer(
-          id: '3',
-          name: 'Jane Smith',
-          tin: '987654321',
-          phone: '555-5678',
-          country: 'Canada',
-          email: 'jane.smith@example.com',
-          city: 'Toronto',
-          state: 'Ontario',
-          region: 'Toronto',
-          addressLine1: '456 Elm St',
-          addressLine2: 'Suite 789',
-          addressLine3: 'Bldg 202',
-          addressLine4: 'Floor 3',
-          addressLine5: 'Room 4',
-          contactName: 'Jane Smith',
-          title: 'Ms.',
-          phone2: '555-5678',
-        ),
-        const Customer(
-          id: '4',
-          name: 'Jane Smith',
-          tin: '987654321',
-          phone: '555-5678',
-          country: 'Canada',
-          email: 'jane.smith@example.com',
-          city: 'Toronto',
-          state: 'Ontario',
-          region: 'Toronto',
-          addressLine1: '456 Elm St',
-          addressLine2: 'Suite 789',
-          addressLine3: 'Bldg 202',
-          addressLine4: 'Floor 3',
-          addressLine5: 'Room 4',
-          contactName: 'Jane Smith',
-          title: 'Ms.',
-          phone2: '555-5678',
-        ),
-        const Customer(
-          id: '5',
-          name: 'Jane Smith',
-          tin: '987654321',
-          phone: '555-5678',
-          country: 'Canada',
-          email: 'jane.smith@example.com',
-          city: 'Toronto',
-          state: 'Ontario',
-          region: 'Toronto',
-          addressLine1: '456 Elm St',
-          addressLine2: 'Suite 789',
-          addressLine3: 'Bldg 202',
-          addressLine4: 'Floor 3',
-          addressLine5: 'Room 4',
-          contactName: 'Jane Smith',
-          title: 'Ms.',
-          phone2: '555-5678',
-        ),
-        const Customer(
-          id: '6',
-          name: 'Jane Smith',
-          tin: '987654321',
-          phone: '555-5678',
-          country: 'Canada',
-          email: 'jane.smith@example.com',
-          city: 'Toronto',
-          state: 'Ontario',
-          region: 'Toronto',
-          addressLine1: '456 Elm St',
-          addressLine2: 'Suite 789',
-          addressLine3: 'Bldg 202',
-          addressLine4: 'Floor 3',
-          addressLine5: 'Room 4',
-          contactName: 'Jane Smith',
-          title: 'Ms.',
-          phone2: '555-5678',
-        ),
-        const Customer(
-          id: '7',
-          name: 'Jane Smith',
-          tin: '987654321',
-          phone: '555-5678',
-          country: 'Canada',
-          email: 'jane.smith@example.com',
-          city: 'Toronto',
-          state: 'Ontario',
-          region: 'Toronto',
-          addressLine1: '456 Elm St',
-          addressLine2: 'Suite 789',
-          addressLine3: 'Bldg 202',
-          addressLine4: 'Floor 3',
-          addressLine5: 'Room 4',
-          contactName: 'Jane Smith',
-          title: 'Ms.',
-          phone2: '555-5678',
-        ),
-        const Customer(
-          id: '8',
-          name: 'Jane Smith',
-          tin: '987654321',
-          phone: '555-5678',
-          country: 'Canada',
-          email: 'jane.smith@example.com',
-          city: 'Toronto',
-          state: 'Ontario',
-          region: 'Toronto',
-          addressLine1: '456 Elm St',
-          addressLine2: 'Suite 789',
-          addressLine3: 'Bldg 202',
-          addressLine4: 'Floor 3',
-          addressLine5: 'Room 4',
-          contactName: 'Jane Smith',
-          title: 'Ms.',
-          phone2: '555-5678',
-        ),
-      ];
+      final itemList = items.map((p) => ItemEntryModel.fromMap(p)).toList();
 
       emit(
-        state.copyWith(
-          status: CustomerStatus.success,
-          customers: customers,
-          filteredCustomers: customers,
-          selectedCustomers: [],
-          selectedBillToCustomer: customers.first,
-          selectedShipToCustomer: customers.first,
-          tin: customers.first.tin,
-          phone: customers.first.phone,
-          country: customers.first.country,
+        ItemEntryState(
+          status: ItemEntryStatus.success,
+          items: itemList,
+          filteredItems: itemList,
+          searchQuery: '',
+          detailStatus: ItemEntryDetailStatus.hidden,
+          companyId: event.companyId,
+          selectedItems: [],
         ),
       );
-    } catch (error) {
+    } catch (e) {
       emit(
-        state.copyWith(
-          status: CustomerStatus.failure,
-          errorMessage: 'Failed to load customers',
-          selectedCustomers: [],
+        ItemEntryState(
+          status: ItemEntryStatus.failure,
+          message: 'Failed to load Items: $e',
         ),
       );
     }
   }
 
-  void _onSelectBillToCustomer(
-    SelectBillToCustomer event,
-    Emitter<CustomerState> emit,
-  ) {
+  Future<void> _onCreateItem(
+    CreateItem event,
+    Emitter<ItemEntryState> emit,
+  ) async {
     emit(
       state.copyWith(
-        selectedBillToCustomer: event.customer,
-        selectedShipToCustomer:
-            event.customer, // Auto-fill ship to same as bill to
-        tin: event.customer.tin,
-        phone: event.customer.phone,
-        country: event.customer.country,
+        status: ItemEntryStatus.creating,
+        message: 'Creating Item...',
       ),
     );
+    try {
+      final db = await databaseService.database;
+      final itemMap = event.item.toMap();
+
+      //remove id for new employee insrtion
+      itemMap.remove('id');
+
+      //add creation metadata
+      itemMap['company'] = authBloc.state.companyId;
+
+      await db.insert('items_table', itemMap);
+      add(LoadItems(authBloc.state.companyId!));
+      emit(
+        state.copyWith(
+          status: ItemEntryStatus.success,
+          message: 'Item created successfully',
+        ),
+      );
+    } catch (e) {
+      emit(
+        ItemEntryState(
+          status: ItemEntryStatus.failure,
+          message: 'Failed to create Item: $e',
+        ),
+      );
+    }
   }
 
-  void _onSelectShipToCustomer(
-    SelectShipToCustomer event,
-    Emitter<CustomerState> emit,
-  ) {
-    emit(state.copyWith(selectedShipToCustomer: event.customer));
-  }
-
-  void _onAddCustomer(AddCustomer event, Emitter<CustomerState> emit) {
-    final updatedCustomers = List<Customer>.from(state.customers)
-      ..add(event.customer);
-
+  Future<void> _onUpdateItem(
+    UpdateItem event,
+    Emitter<ItemEntryState> emit,
+  ) async {
     emit(
       state.copyWith(
-        customers: updatedCustomers,
-        selectedBillToCustomer: event.customer,
-        selectedShipToCustomer: event.customer,
-        tin: event.customer.tin,
-        phone: event.customer.phone,
-        country: event.customer.country,
-        filteredCustomers: updatedCustomers,
+        status: ItemEntryStatus.updating,
+        message: 'Updating Item...',
       ),
     );
+    try {
+      final db = await databaseService.database;
+      final companyId = authBloc.state.companyId;
+
+      // FIX: Add null checks
+      if (companyId == null) {
+        emit(
+          state.copyWith(
+            status: ItemEntryStatus.failure,
+            message: 'Authentication error: Company ID not found',
+          ),
+        );
+        return;
+      }
+
+      final itemMap = event.item.toMap();
+
+      // FIX: Ensure company field is included and not null
+      itemMap['company'] = companyId; // Make sure company is set
+
+      await db.update(
+        'items_table',
+        itemMap,
+        where: 'id = ? AND company = ?',
+        whereArgs: [event.item.id, companyId],
+      );
+
+      add(LoadItems(companyId));
+
+      emit(
+        state.copyWith(
+          status: ItemEntryStatus.success,
+          message: 'Item updated successfully',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemEntryStatus.failure,
+          message: 'Failed to update ItemEntry: $e',
+        ),
+      );
+    }
   }
 
-  void _onClearSelection(ClearSelection event, Emitter<CustomerState> emit) {
+  Future<void> _onDeleteItem(
+    DeleteItem event,
+    Emitter<ItemEntryState> emit,
+  ) async {
     emit(
-      state.copyWith(
-        selectedBillToCustomer: Customer.empty,
-        selectedShipToCustomer: Customer.empty,
-        tin: '',
-        phone: '',
-        country: '',
-        selectedCustomers: [],
-      ),
+      state.copyWith(status: ItemEntryStatus.deleting, message: 'Deleting..'),
     );
+    try {
+      final db = await databaseService.database;
+      await db.delete(
+        'items_table',
+        where: 'id = ? AND company = ?',
+        whereArgs: [event.itemId, authBloc.state.companyId],
+      );
+      final updateItemEntrys = List<ItemEntryModel>.from(state.items)
+        ..removeWhere((p) => p.id == event.itemId);
+      final updateFilteredItemEntrys = List<ItemEntryModel>.from(
+        state.filteredItems,
+      )..removeWhere((p) => p.id == event.itemId);
+      emit(
+        state.copyWith(
+          items: updateItemEntrys,
+          filteredItems: updateFilteredItemEntrys,
+          recentlyDeleted: [...state.recentlyDeleted, event.deletedItem],
+          recentlyDeletedIndexes: [
+            ...state.recentlyDeletedIndexes,
+            event.deletedIndex,
+          ],
+          message: 'Item deleted successfully',
+        ),
+      );
+      add(LoadItems(authBloc.state.companyId!));
+    } catch (e) {
+      emit(
+        ItemEntryState(
+          status: ItemEntryStatus.failure,
+          message: 'Failed to delete Item: $e',
+        ),
+      );
+    }
   }
 
-  void _onUpdateCustomerDetails(
-    UpdateCustomerDetails event,
-    Emitter<CustomerState> emit,
-  ) {
-    emit(
-      state.copyWith(
-        tin: event.tin,
-        phone: event.phone,
-        country: event.country,
-      ),
-    );
+  void _onClearSelection(ClearSelection event, Emitter<ItemEntryState> emit) {
+    emit(state.copyWith(selectedItems: []));
   }
 
-  void _onSearchCustomers(SearchCustomers event, Emitter<CustomerState> emit) {
-    final query = event.query.toLowerCase();
+  void _onSearchItem(SearchItems event, Emitter<ItemEntryState> emit) {
+    final query = event.query.toLowerCase().trim();
 
     if (query.isEmpty) {
       emit(
         state.copyWith(
-          filteredCustomers: state.customers,
+          filteredItems: state.items,
+          selectedItems: [],
           searchQuery: '',
-          status: CustomerStatus.success,
+          status: ItemEntryStatus.success,
         ),
       );
       return;
     }
 
-    final filtered = state.customers.where((customer) {
-      return customer.name.toLowerCase().contains(query) ||
-          customer.contactName?.toLowerCase().contains(query) == true ||
-          customer.phone.toLowerCase().contains(query) ||
-          customer.email?.toLowerCase().contains(query) == true;
+    final filtered = state.items.where((item) {
+      return item.barcode!.toLowerCase().contains(query) ||
+          item.itemDescription!.toLowerCase().contains(query) ||
+          item.itemsId!.toLowerCase().contains(query);
     }).toList();
 
     emit(
       state.copyWith(
-        filteredCustomers: filtered,
+        filteredItems: filtered,
         searchQuery: query,
-        status: CustomerStatus.searching,
+        selectedItems: [],
+        status: ItemEntryStatus.searching,
       ),
     );
   }
 
-  void _onSelectCustomer(SelectCustomer event, Emitter<CustomerState> emit) {
-    final selectedCustomers = List<Customer>.from(state.selectedCustomers);
+  void _onSelectItem(SelectItem event, Emitter<ItemEntryState> emit) {
+    final selectedItems = List<ItemEntryModel>.from(state.selectedItems);
     if (event.isSelected) {
-      selectedCustomers.add(event.customer);
+      selectedItems.add(event.item);
     } else {
-      selectedCustomers.removeWhere(
-        (customer) => customer.id == event.customer.id,
+      selectedItems.removeWhere((item) => item.id == event.item.id);
+    }
+    emit(state.copyWith(selectedItems: selectedItems));
+  }
+
+  void _onSelectAllItemEntrys(
+    SelectAllItems event,
+    Emitter<ItemEntryState> emit,
+  ) {
+    if (state.selectedItems.length == event.items.length) {
+      // If all are selected, clear selection
+      emit(state.copyWith(selectedItems: []));
+    } else {
+      // Select all
+      emit(state.copyWith(selectedItems: List.from(event.items)));
+    }
+  }
+
+  void _onSetItemEntryForm(SetItemForm event, Emitter<ItemEntryState> emit) {
+    emit(state.copyWith(itemForm: event.item));
+  }
+
+  void _onDeleteSelectedItemEntrys(
+    DeleteSelectedItems event,
+    Emitter<ItemEntryState> emit,
+  ) async {
+    try {
+      final db = await databaseService.database;
+      final placeholders = List.filled(
+        event.selectedItems.length,
+        '?',
+      ).join(',');
+      final whereArgs = [...event.selectedItems, authBloc.state.companyId];
+      await db.delete(
+        'items_table',
+        where: 'id IN ($placeholders) AND company = ?',
+        whereArgs: whereArgs,
+      );
+      final updatedItemEntrys = state.items
+          .where((e) => !event.selectedItems.contains(e.id))
+          .toList();
+      final updatedFiltered = state.filteredItems
+          .where((e) => !event.selectedItems.contains(e.id))
+          .toList();
+
+      emit(
+        state.copyWith(
+          items: updatedItemEntrys,
+          filteredItems: updatedFiltered,
+          selectedItems: [],
+          recentlyDeleted: [...state.recentlyDeleted, ...event.deletedItems],
+          recentlyDeletedIndexes: [
+            ...state.recentlyDeletedIndexes,
+            ...event.deletedIndexes,
+          ],
+          message: '${event.selectedItems.length} items deleted successfully',
+        ),
+      );
+      add(LoadItems(authBloc.state.companyId!));
+    } catch (e) {
+      emit(
+        ItemEntryState(
+          status: ItemEntryStatus.failure,
+          message: 'Failed to delete selected Items: $e',
+        ),
       );
     }
-    emit(state.copyWith(selectedCustomers: selectedCustomers));
   }
 
-  void _onSelectAllCustomers(
-    SelectAllCustomers event,
-    Emitter<CustomerState> emit,
+  void _onShowItemEntryDetail(
+    ShowItemDetail event,
+    Emitter<ItemEntryState> emit,
   ) {
-    final selectedCustomers = List<Customer>.from(state.filteredCustomers);
-    emit(state.copyWith(selectedCustomers: selectedCustomers));
-  }
-
-  void _onDeleteSelectedCustomers(
-    DeleteSelectedCustomers event,
-    Emitter<CustomerState> emit,
-  ) {
-    final remainingCustomers = state.customers
-        .where((customer) => !state.selectedCustomers.contains(customer))
-        .toList();
-
-    final remainingFiltered = state.filteredCustomers
-        .where((customer) => !state.selectedCustomers.contains(customer))
-        .toList();
-
     emit(
       state.copyWith(
-        customers: remainingCustomers,
-        filteredCustomers: remainingFiltered,
-        selectedCustomers: [],
+        itemDetail: event.item,
+        detailStatus: ItemEntryDetailStatus.showing,
+        showDetailPanel: true,
       ),
     );
   }
 
-  void _onUndoDelete(UndoDelete event, Emitter<CustomerState> emit) {
-    final updatedCustomers = List<Customer>.from(state.customers);
-    updatedCustomers.insert(event.deletedIndex, event.deletedItem);
-    emit(state.copyWith(customers: updatedCustomers));
-  }
-
-  void _onShowCustomerDetail(
-    ShowCustomerDetail event,
-    Emitter<CustomerState> emit,
+  void _onHideItemEntryDetail(
+    HideItemDetail event,
+    Emitter<ItemEntryState> emit,
   ) {
-    emit(state.copyWith(customerDetail: event.customer, showDetailPanel: true));
-  }
-
-  void _onHideCustomerDetail(
-    HideCustomerDetail event,
-    Emitter<CustomerState> emit,
-  ) {
-    emit(state.copyWith(showDetailPanel: false));
-  }
-
-  void _onUpdateCustomer(UpdateCustomer event, Emitter<CustomerState> emit) {
-    final updatedCustomers = state.customers
-        .map(
-          (customer) =>
-              customer.id == event.customer.id ? event.customer : customer,
-        )
-        .toList();
-
-    final updatedFiltered = state.filteredCustomers
-        .map(
-          (customer) =>
-              customer.id == event.customer.id ? event.customer : customer,
-        )
-        .toList();
-
     emit(
       state.copyWith(
-        customers: updatedCustomers,
-        filteredCustomers: updatedFiltered,
+        detailStatus: ItemEntryDetailStatus.hidden,
+        itemDetail: null,
+        showDetailPanel: false,
       ),
     );
   }
 
-  void _onExportCustomer(ExportCustomer event, Emitter<CustomerState> emit) {
-    emit(
-      state.copyWith(
-        customers: state.customers,
-        filteredCustomers: state.filteredCustomers,
-      ),
-    );
+  void _onExportItemEntry(ExportItem event, Emitter<ItemEntryState> emit) {
+    emit(state.copyWith(status: ItemEntryStatus.exporting, isExporting: true));
+
+    // Simulate export process
+    Future.delayed(const Duration(seconds: 2), () {
+      emit(
+        state.copyWith(
+          status: ItemEntryStatus.success,
+          isExporting: false,
+          exportedItems: event.itemsToExport,
+          message: 'Exported ${event.itemsToExport.length} items successfully',
+        ),
+      );
+    });
   }
 
-  Customer get selectedBillToCustomer => state.selectedBillToCustomer;
+  void _onExportSingleItemEntry(
+    ExportSingleItem event,
+    Emitter<ItemEntryState> emit,
+  ) {
+    emit(state.copyWith(status: ItemEntryStatus.exporting, isExporting: true));
+
+    // Simulate export process
+    Future.delayed(const Duration(seconds: 2), () {
+      emit(
+        state.copyWith(
+          status: ItemEntryStatus.success,
+          isExporting: false,
+          exportedItem: event.itemToExport,
+          message: 'Exported ${event.itemToExport} items successfully',
+        ),
+      );
+    });
+  }
 }
