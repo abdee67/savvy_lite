@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
+import 'package:savvy_stock/core/widgets/custom_table_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_text_form.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_event.dart';

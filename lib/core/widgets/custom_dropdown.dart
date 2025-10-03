@@ -1,234 +1,151 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-class TableColumnConfig<T> {
-  final String header;
-  final double flex;
-  final Widget Function(T item) cellBuilder;
-  final MainAxisAlignment alignment;
+class CustomDropdown extends StatefulWidget {
+  final String labelText;
+  final bool isTablet;
+  final bool isDarkTheme;
+  final bool isPassword;
+  final List<String> items;
+  final void Function(String)? onChanged;
+  final String? Function(String?)? validator;
+  final String? value;
+  final AutovalidateMode autovalidateMode;
+  final bool enabled;
+  final Widget? suffixIcon;
+  final Widget? prefixIcon;
+  final String? hintText;
+  final FocusNode? focusNode;
+  final bool obscureText;
 
-  const TableColumnConfig({
-    required this.header,
-    required this.cellBuilder,
-    this.flex = 1,
-    this.alignment = MainAxisAlignment.spaceBetween,
-  });
-}
-
-class CustomTableDropdown<T> extends StatefulWidget {
-  final String title;
-  final List<T> items;
-  final String Function(T) displayText;
-  final List<TableColumnConfig<T>> columns;
-  final ValueChanged<T?> onItemSelected;
-  final double expandedHeight;
-  final String emptyText;
-  final BorderRadius? borderRadius;
-  final Color backgroundColor;
-  final Color expandedBackgroundColor;
-  final Color selectedColor;
-  final bool showHeaderRow;
-  final T? selectedValue;
-
-  const CustomTableDropdown({
+  const CustomDropdown({
     super.key,
-    required this.title,
-    required this.items,
-    required this.displayText,
-    required this.columns,
-    required this.onItemSelected,
-    this.expandedHeight = 200,
-    this.emptyText = 'Select One',
-    this.borderRadius,
-    this.backgroundColor = const Color.fromARGB(220, 228, 228, 228),
-    this.expandedBackgroundColor = const Color(0xFFFDD400),
-    this.selectedColor = const Color(0xFF1C5380),
-    this.showHeaderRow = true,
-    this.selectedValue,
+    required this.labelText,
+    this.isTablet = false,
+    this.isDarkTheme = false,
+    this.isPassword = false,
+    this.items = const [],
+    this.validator,
+    this.onChanged,
+    this.value,
+    this.autovalidateMode = AutovalidateMode.disabled,
+    this.enabled = true,
+    this.suffixIcon,
+    this.prefixIcon,
+    this.hintText,
+    this.focusNode,
+    this.obscureText = false,
   });
 
   @override
-  State<CustomTableDropdown<T>> createState() => _CustomTableDropdownState<T>();
+  State<CustomDropdown> createState() => _CustomDropdownState();
 }
 
-class _CustomTableDropdownState<T> extends State<CustomTableDropdown<T>> {
-  bool _isExpanded = false;
-  T? _selectedItem;
+class _CustomDropdownState extends State<CustomDropdown> {
+  Timer? _debounce;
+  String? _lastValue;
+  bool _initialized = false;
 
-  void _toggleExpand() {
-    setState(() {
-      _isExpanded = !_isExpanded;
+  @override
+  void initState() {
+    super.initState();
+    _lastValue = widget.value;
+
+    // Schedule the initial value setting for after the build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.value != null && !_initialized) {
+        _lastValue = widget.value;
+        _initialized = true;
+      }
     });
   }
 
-  void _selectItem(T item) {
-    setState(() {
-      _isExpanded = false;
-      widget.onItemSelected(item);
-    });
+  @override
+  void didUpdateWidget(CustomDropdown oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Use post-frame callback to avoid setState during build
+    if (widget.value != _lastValue) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _lastValue = widget.value;
+          });
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final borderRadius = widget.borderRadius ?? BorderRadius.circular(50.0);
+    return SizedBox(
+      height: widget.isTablet ? 60 : 56,
+      child: DropdownButtonFormField(
+        initialValue: widget.items.contains(widget.value) ? widget.value : null,
+        items: widget.items.map((String value) {
+          return DropdownMenuItem<String>(value: value, child: Text(value));
+        }).toList(),
+        validator: widget.validator,
+        autovalidateMode: widget.autovalidateMode,
+        focusNode: widget.focusNode,
+        style: TextStyle(
+          color: widget.isDarkTheme ? Colors.white : Colors.black,
+        ),
+        onChanged: (value) {
+          // Cancel previous timer
+          if (_debounce?.isActive ?? false) _debounce!.cancel();
 
-    return Container(
-      decoration: BoxDecoration(borderRadius: borderRadius),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Header/Trigger
-          Container(
-            decoration: BoxDecoration(
-              color: widget.backgroundColor,
-              borderRadius: BorderRadius.only(
-                topLeft: borderRadius.topLeft,
-                topRight: borderRadius.topRight,
-                bottomLeft: _isExpanded ? Radius.zero : borderRadius.bottomLeft,
-                bottomRight: _isExpanded
-                    ? Radius.zero
-                    : borderRadius.bottomRight,
-              ),
-              border: Border.all(color: Color(0xFF1C5380), width: 1.0),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Text(
-                      widget.selectedValue != null
-                          ? widget.displayText(widget.selectedValue as T)
-                          : widget.emptyText,
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 16.0,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(
-                    _isExpanded ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-                  ),
-                  onPressed: _toggleExpand,
-                ),
-              ],
+          // Start a new timer
+          _debounce = Timer(const Duration(milliseconds: 500), () {
+            if (widget.onChanged != null) {
+              widget.onChanged!(value!);
+            }
+          });
+        },
+        decoration: InputDecoration(
+          suffixIcon: widget.suffixIcon,
+          prefixIcon: widget.prefixIcon,
+          labelText: widget.labelText,
+          hintText: widget.hintText,
+          alignLabelWithHint: true,
+          labelStyle: TextStyle(
+            color: widget.isDarkTheme
+                ? Colors.amber
+                : const Color.fromARGB(255, 34, 102, 179),
+            fontSize: widget.isTablet ? 16 : 14,
+          ),
+          filled: true,
+          fillColor: widget.isDarkTheme ? Colors.grey[800] : Colors.grey[100],
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(widget.isTablet ? 12 : 50),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(widget.isTablet ? 12 : 10),
+            borderSide: const BorderSide(
+              color: Color.fromARGB(255, 35, 117, 175),
+              width: 2,
             ),
           ),
-
-          // Expanded Table Content
-          if (_isExpanded)
-            Container(
-              padding: const EdgeInsets.all(8.0),
-              decoration: BoxDecoration(
-                color: widget.expandedBackgroundColor,
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(10.0),
-                  bottomRight: Radius.circular(10.0),
-                ),
-                border: const Border(
-                  left: BorderSide(color: Colors.black, width: 1.0),
-                  right: BorderSide(color: Colors.black, width: 1.0),
-                  bottom: BorderSide(color: Colors.black, width: 1.0),
-                ),
-              ),
-              height: widget.expandedHeight,
-              child: Column(
-                children: [
-                  // Table Header
-                  if (widget.showHeaderRow && widget.columns.isNotEmpty)
-                    _buildTableHeader(),
-
-                  // Table Rows
-                  Expanded(
-                    child: widget.items.isEmpty
-                        ? Center(
-                            child: Text(
-                              'No items available',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 14.0,
-                              ),
-                            ),
-                          )
-                        : SingleChildScrollView(
-                            child: Column(
-                              children: widget.items.map((item) {
-                                final bool isSelected = _selectedItem == item;
-                                return InkWell(
-                                  onTap: () => _selectItem(item),
-                                  child: _buildTableRow(item, isSelected),
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTableHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16.0),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.black, width: 1.0)),
-      ),
-      child: Row(
-        children: widget.columns.map((column) {
-          return Expanded(
-            flex: column.flex.toInt(),
-            child: Text(
-              column.header,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14.0,
-              ),
-              textAlign: _getTextAlignment(column.alignment),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  TextAlign _getTextAlignment(MainAxisAlignment alignment) {
-    switch (alignment) {
-      case MainAxisAlignment.start:
-        return TextAlign.left;
-      case MainAxisAlignment.center:
-        return TextAlign.center;
-      case MainAxisAlignment.end:
-        return TextAlign.right;
-      default:
-        return TextAlign.left;
-    }
-  }
-
-  Widget _buildTableRow(T item, bool isSelected) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isSelected ? widget.selectedColor : Colors.transparent,
-        border: const Border(
-          bottom: BorderSide(color: Colors.black, width: 1.0),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(widget.isTablet ? 12 : 10),
+            borderSide: const BorderSide(color: Colors.red, width: 1),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(widget.isTablet ? 12 : 10),
+            borderSide: const BorderSide(color: Colors.red, width: 2),
+          ),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: widget.isTablet ? 16 : 12,
+            vertical: widget.isTablet ? 16 : 12,
+          ),
         ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-      child: Row(
-        children: widget.columns.map((column) {
-          return Expanded(
-            flex: column.flex.toInt(),
-            child: DefaultTextStyle(
-              style: TextStyle(color: isSelected ? Colors.white : Colors.black),
-              child: column.cellBuilder(item),
-            ),
-          );
-        }).toList(),
       ),
     );
   }

@@ -8,7 +8,6 @@ import 'package:savvy_stock/features/admin/privilege/blocs/privilege_event.dart'
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_state.dart';
 import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
-import '../widgets/privilege_form.dart';
 
 class PrivilegeManagementScreen extends StatefulWidget {
   final AuthBloc authBloc;

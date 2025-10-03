@@ -8,7 +8,6 @@ import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_event.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_state.dart';
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
-import 'package:sqflite/sqflite.dart';
 
 class BranchBloc extends Bloc<BranchEvent, BranchState> {
   final LocalDatabaseService databaseService;

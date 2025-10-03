@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
+import 'package:savvy_stock/core/widgets/custom_table_dropdown.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/customer/widget/add_customer_dialog.dart';
