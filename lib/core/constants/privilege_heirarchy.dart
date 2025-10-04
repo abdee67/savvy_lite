@@ -52,7 +52,23 @@ class PrivilegeHierarchy {
     '/sales/customer-dashboard/delete-customer': AppRoutes.customerEntry,
 
     // ==================== STOCK MODULE ====================
+    // Item Entry (child of Stock Dashboard)
     AppRoutes.itemEntry: AppRoutes.stockDashboard,
+    AppRoutes.itemCreation: AppRoutes.itemEntry,
+    AppRoutes.itemEdit: AppRoutes.itemEntry,
+    AppRoutes.itemDelete: AppRoutes.itemEntry,
+    AppRoutes.itemExport: AppRoutes.itemEntry,
+    AppRoutes.itemImport: AppRoutes.itemEntry,
+
+    // Item In Branch (child of Stock Dashboard)
+    AppRoutes.itemInBranch: AppRoutes.stockDashboard,
+    AppRoutes.addItemToBranch: AppRoutes.itemInBranch,
+    AppRoutes.editItemInBranch: AppRoutes.itemInBranch,
+    AppRoutes.deleteItemInBranch: AppRoutes.itemInBranch,
+    AppRoutes.exportItemInBranch: AppRoutes.itemInBranch,
+    AppRoutes.importItemInBranch: AppRoutes.itemInBranch,
+
+    // UOM Management (child of Stock Dashboard)
     AppRoutes.uomManagement: AppRoutes.stockDashboard,
     AppRoutes.itemWorkbench: AppRoutes.stockDashboard,
     AppRoutes.itemUomConversions: AppRoutes.stockDashboard,

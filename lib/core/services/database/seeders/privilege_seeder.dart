@@ -208,6 +208,7 @@ class PrivilegeSeeder {
       ),
 
       // ==================== STOCK MODULE ====================
+      //item entry
       _createPrivilege('Item Entry', 'link', AppRoutes.itemEntry, 'item_entry'),
 
       _createPrivilege(
@@ -223,7 +224,33 @@ class PrivilegeSeeder {
         AppRoutes.itemDelete,
         'delete_item',
       ),
+      //item in branch
+      _createPrivilege(
+        'Item In Branch',
+        'link',
+        AppRoutes.itemInBranch,
+        'item_in_branch',
+      ),
+      _createPrivilege(
+        'Add Item In Branch',
+        'button',
+        AppRoutes.addItemToBranch,
+        'add_item_in_branch',
+      ),
+      _createPrivilege(
+        'Edit Item In Branch',
+        'button',
+        AppRoutes.editItemInBranch,
+        'edit_item_in_branch',
+      ),
+      _createPrivilege(
+        'Delete Item In Branch',
+        'button',
+        AppRoutes.deleteItemInBranch,
+        'delete_item_in_branch',
+      ),
 
+      //uom management
       _createPrivilege(
         'UoM Management',
         'link',

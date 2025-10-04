@@ -1,31 +1,28 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
-class CustomDropdown extends StatefulWidget {
+class CustomDropdown<T> extends StatefulWidget {
   final String labelText;
   final bool isTablet;
   final bool isDarkTheme;
-  final bool isPassword;
-  final List<String> items;
-  final void Function(String)? onChanged;
-  final String? Function(String?)? validator;
-  final String? value;
+  final List<DropdownMenuItem<T>> items;
+  final void Function(T?)? onChanged;
+  final String? Function(T?)? validator;
+  final T? value;
   final AutovalidateMode autovalidateMode;
   final bool enabled;
   final Widget? suffixIcon;
   final Widget? prefixIcon;
   final String? hintText;
   final FocusNode? focusNode;
-  final bool obscureText;
+  final bool isDense;
 
   const CustomDropdown({
     super.key,
     required this.labelText,
     this.isTablet = false,
     this.isDarkTheme = false,
-    this.isPassword = false,
-    this.items = const [],
+    required this.items,
     this.validator,
     this.onChanged,
     this.value,
@@ -35,80 +32,34 @@ class CustomDropdown extends StatefulWidget {
     this.prefixIcon,
     this.hintText,
     this.focusNode,
-    this.obscureText = false,
+    this.isDense = false,
   });
 
   @override
-  State<CustomDropdown> createState() => _CustomDropdownState();
+  State<CustomDropdown<T>> createState() => _CustomDropdownState<T>();
 }
 
-class _CustomDropdownState extends State<CustomDropdown> {
-  Timer? _debounce;
-  String? _lastValue;
-  bool _initialized = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _lastValue = widget.value;
-
-    // Schedule the initial value setting for after the build
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.value != null && !_initialized) {
-        _lastValue = widget.value;
-        _initialized = true;
-      }
-    });
-  }
-
-  @override
-  void didUpdateWidget(CustomDropdown oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    // Use post-frame callback to avoid setState during build
-    if (widget.value != _lastValue) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() {
-            _lastValue = widget.value;
-          });
-        }
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    super.dispose();
-  }
-
+class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: widget.isTablet ? 60 : 56,
-      child: DropdownButtonFormField(
-        initialValue: widget.items.contains(widget.value) ? widget.value : null,
-        items: widget.items.map((String value) {
-          return DropdownMenuItem<String>(value: value, child: Text(value));
-        }).toList(),
+      child: DropdownButtonFormField<T>(
+        value: widget.value,
+        items: widget.items,
         validator: widget.validator,
         autovalidateMode: widget.autovalidateMode,
         focusNode: widget.focusNode,
         style: TextStyle(
           color: widget.isDarkTheme ? Colors.white : Colors.black,
         ),
-        onChanged: (value) {
-          // Cancel previous timer
-          if (_debounce?.isActive ?? false) _debounce!.cancel();
-
-          // Start a new timer
-          _debounce = Timer(const Duration(milliseconds: 500), () {
-            if (widget.onChanged != null) {
-              widget.onChanged!(value!);
-            }
-          });
-        },
+        onChanged: widget.enabled
+            ? (value) {
+                if (widget.onChanged != null) {
+                  widget.onChanged!(value);
+                }
+              }
+            : null,
         decoration: InputDecoration(
           suffixIcon: widget.suffixIcon,
           prefixIcon: widget.prefixIcon,

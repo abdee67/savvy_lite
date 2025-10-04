@@ -22,7 +22,7 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
   final _formKey = GlobalKey<FormState>();
 
   // Controllers
-  final TextEditingController _storeNumberController = TextEditingController();
+  final TextEditingController _itemNumberController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _barcodeController = TextEditingController();
   final TextEditingController _defaultUnitPriceController =
@@ -35,7 +35,7 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
   String? _selectedTaxable;
 
   final List<String> _marginTypes = ['Flat', 'Percentage'];
-  final List<String> _uom = ['pices', 'kg', 'g', 'ml', 'ltr'];
+  final List<String> _uom = ['pices', 'kg', 'gggg', 'ml', 'ltr'];
   final List<String> _taxable = ['YES', 'NO'];
 
   @override
@@ -50,7 +50,7 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
   void _initializeControllers() {
     final item = widget.item ?? ItemEntryModel.empty();
 
-    _storeNumberController.text = item.itemsId ?? '';
+    _itemNumberController.text = item.itemsId ?? '';
     _descriptionController.text = item.itemDescription ?? '';
     _barcodeController.text = item.barcode ?? '';
 
@@ -59,7 +59,7 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
     _marginRateController.text = item.marginRate?.toString() ?? '';
 
     _selectedMarginType = item.marginType;
-    _selectedUom = item.unitOfMeasure.toString();
+    _selectedUom = item.unitOfMeasure;
     _selectedTaxable = item.taxable == 'Y'
         ? 'YES'
         : item.taxable == 'N'
@@ -75,15 +75,12 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
 
   @override
   void dispose() {
-    _storeNumberController.dispose();
+    _itemNumberController.dispose();
     _descriptionController.dispose();
     _barcodeController.dispose();
     _defaultUnitPriceController.dispose();
     _reorderPointController.dispose();
     _marginRateController.dispose();
-    _selectedMarginType = null;
-    _selectedUom = null;
-    _selectedTaxable = null;
     super.dispose();
   }
 
@@ -91,7 +88,7 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
     if (_formKey.currentState!.validate()) {
       final item = ItemEntryModel(
         id: widget.item?.id ?? 0,
-        itemsId: _storeNumberController.text.trim(),
+        itemsId: _itemNumberController.text.trim(),
         itemDescription: _descriptionController.text.trim(),
         barcode: _barcodeController.text.trim().isEmpty
             ? null
@@ -116,7 +113,6 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
       } else {
         context.read<StockItemEntryBloc>().add(UpdateItem(item));
       }
-
       _showSuccessDialog();
     }
   }
@@ -183,17 +179,17 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
         child: Column(
           children: [
             CustomTextField(
-              labelText: 'Store Number *',
-              controller: _storeNumberController,
+              labelText: 'Item Number *',
+              controller: _itemNumberController,
               keyboardType: TextInputType.number,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Store Number is required';
+                  return 'Item Number is required';
                 }
                 return null;
               },
               onChanged: (value) {
-                _storeNumberController.text = value;
+                _itemNumberController.text = value;
               },
               prefixIcon: const Icon(Icons.store),
             ),
@@ -272,7 +268,14 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
             const SizedBox(height: 16),
             CustomDropdown(
               labelText: 'Margin Type',
-              items: _marginTypes,
+              items: _marginTypes
+                  .map(
+                    (marginType) => DropdownMenuItem(
+                      value: marginType,
+                      child: Text(marginType),
+                    ),
+                  )
+                  .toList(),
               value: _selectedMarginType,
               onChanged: (value) {
                 setState(() {
@@ -283,7 +286,9 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
             const SizedBox(height: 16),
             CustomDropdown(
               labelText: 'Unit of Measure',
-              items: _uom,
+              items: _uom
+                  .map((uom) => DropdownMenuItem(value: uom, child: Text(uom)))
+                  .toList(),
               value: _selectedUom,
               onChanged: (value) {
                 setState(() {
@@ -294,7 +299,12 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
             const SizedBox(height: 16),
             CustomDropdown(
               labelText: 'Taxable',
-              items: _taxable,
+              items: _taxable
+                  .map(
+                    (taxable) =>
+                        DropdownMenuItem(value: taxable, child: Text(taxable)),
+                  )
+                  .toList(),
               value: _selectedTaxable,
               onChanged: (value) {
                 setState(() {

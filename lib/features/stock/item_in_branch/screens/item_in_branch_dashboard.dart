@@ -5,20 +5,20 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/utils/ui_helper.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
-import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
-import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
-import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_state.dart';
-import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_event.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_state.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 
-class ItemEntryDashboard extends StatefulWidget {
+class ItemInBranchDashboard extends StatefulWidget {
   final AuthBloc authBloc;
-  const ItemEntryDashboard({super.key, required this.authBloc});
+  const ItemInBranchDashboard({super.key, required this.authBloc});
 
   @override
-  State<ItemEntryDashboard> createState() => _ItemEntryDashboardState();
+  State<ItemInBranchDashboard> createState() => _ItemInBranchDashboardState();
 }
 
-class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
+class _ItemInBranchDashboardState extends State<ItemInBranchDashboard> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isSelectionMode = false;
@@ -27,8 +27,8 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
   @override
   void initState() {
     super.initState();
-    context.read<StockItemEntryBloc>().add(
-      LoadItems(widget.authBloc.state.companyId!),
+    context.read<StockItemInBranchBloc>().add(
+      LoadItemsFromBranch(widget.authBloc.state.companyId!),
     );
   }
 
@@ -40,30 +40,32 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
   }
 
   void _handleSearch(String query) {
-    context.read<StockItemEntryBloc>().add(SearchItems(query));
+    context.read<StockItemInBranchBloc>().add(SearchItemsFromBranch(query));
   }
 
   void _clearSearch() {
     _searchController.clear();
-    context.read<StockItemEntryBloc>().add(SearchItems(''));
+    context.read<StockItemInBranchBloc>().add(SearchItemsFromBranch(''));
   }
 
-  void _toggleItemEntryModelSelection(ItemEntryModel items, bool selected) {
-    context.read<StockItemEntryBloc>().add(SelectItem(items, selected));
+  void _toggleItemInBranchSelection(ItemInBranchModel items, bool selected) {
+    context.read<StockItemInBranchBloc>().add(
+      SelectItemFromBranch(items, selected),
+    );
   }
 
-  void _showItemDetail(ItemEntryModel item) {
+  void _showItemDetail(ItemInBranchModel item) {
     if (!_isSelectionMode) {
-      context.read<StockItemEntryBloc>().add(ShowItemDetail(item));
+      context.read<StockItemInBranchBloc>().add(ShowItemDetailFromBranch(item));
     }
   }
 
   void _hideItemDetail() {
-    context.read<StockItemEntryBloc>().add(HideItemDetail());
+    context.read<StockItemInBranchBloc>().add(HideItemDetailFromBranch());
   }
 
   void _clearSelection() {
-    context.read<StockItemEntryBloc>().add(ClearSelection());
+    context.read<StockItemInBranchBloc>().add(ClearSelectionFromBranch());
     setState(() {
       _isSelectionMode = false;
     });
@@ -75,27 +77,29 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
   }
 
   void _emailItem(String itemId) {
-    // Implement email functionality
-    print('Emailing: $itemId');
+    if (itemId != null) {
+      // Implement email functionality
+      print('Emailing: $itemId');
+    }
   }
 
-  void _exportItem(ItemEntryModel item) {
-    context.read<StockItemEntryBloc>().add(ExportSingleItem(item));
+  void _exportItem(ItemInBranchModel item) {
+    context.read<StockItemInBranchBloc>().add(ExportSingleItemFromBranch(item));
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Item data exported')));
   }
 
-  void _navigateToEditScreen(ItemEntryModel item) {
-    context.push(AppRoutes.itemEdit, extra: item);
+  void _navigateToEditScreen(ItemInBranchModel item) {
+    context.push(AppRoutes.editItemInBranch, extra: item);
   }
 
   void _navigateToAddScreen() {
-    context.push(AppRoutes.itemCreation);
+    context.push(AppRoutes.addItemToBranch);
   }
 
   void _safeDelete(BuildContext context, {int? index}) {
-    final bloc = context.read<StockItemEntryBloc>();
+    final bloc = context.read<StockItemInBranchBloc>();
     final state = bloc.state;
 
     // CASE 1: Multiple users
@@ -113,7 +117,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
               .map((emp) => state.items.indexOf(emp))
               .toList();
           bloc.add(
-            DeleteSelectedItems(
+            DeleteSelectedItemsFromBranch(
               selectedItems: ids,
               deletedItems: itemsToDelete,
               deletedIndexes: deletedIndexes,
@@ -136,12 +140,11 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
 
     showDeleteDialog(
       context,
-      title: 'Delete "${itemToDelete.itemDescription}"?',
-      content:
-          'Are you sure you want to delete "${itemToDelete.itemDescription}"?',
+      title: 'Delete "${itemToDelete.itemNumber}"?',
+      content: 'Are you sure you want to delete "${itemToDelete.itemNumber}"?',
       onConfirm: () {
         bloc.add(
-          DeleteItem(
+          DeleteItemFromBranch(
             deletedItem: itemToDelete,
             deletedIndex: index,
             itemId: itemToDelete.id,
@@ -195,11 +198,11 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('ItemEntry Management'),
+        title: const Text('Item In Branch Management'),
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
       ),
-      body: BlocConsumer<StockItemEntryBloc, ItemEntryState>(
+      body: BlocConsumer<StockItemInBranchBloc, ItemInBranchState>(
         listener: (context, state) {
           if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
             setState(() {
@@ -231,36 +234,37 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
         },
       ),
       // Floating Action Button for Add
-      floatingActionButton: BlocBuilder<StockItemEntryBloc, ItemEntryState>(
-        builder: (context, state) {
-          if (state.showDetailPanel) {
-            return const SizedBox.shrink();
-          }
-          return FloatingActionButton(
-            onPressed: () {
-              if (state.canEdit && state.selectedItems.isNotEmpty) {
-                // Navigate to edit screen with selected customer
-                final customer = state.selectedItems.first;
-                _navigateToEditScreen(customer);
-              } else {
-                // Navigate to add screen
-                _navigateToAddScreen();
+      floatingActionButton:
+          BlocBuilder<StockItemInBranchBloc, ItemInBranchState>(
+            builder: (context, state) {
+              if (state.showDetailPanel) {
+                return const SizedBox.shrink();
               }
+              return FloatingActionButton(
+                onPressed: () {
+                  if (state.canEdit && state.selectedItems.isNotEmpty) {
+                    // Navigate to edit screen with selected customer
+                    final customer = state.selectedItems.first;
+                    _navigateToEditScreen(customer);
+                  } else {
+                    // Navigate to add screen
+                    _navigateToAddScreen();
+                  }
+                },
+                backgroundColor: Color.fromARGB(255, 28, 66, 146),
+                child: Icon(
+                  state.canEdit && state.selectedItems.isNotEmpty
+                      ? Icons.edit
+                      : Icons.add,
+                  color: Colors.white,
+                ),
+              );
             },
-            backgroundColor: Color.fromARGB(255, 28, 66, 146),
-            child: Icon(
-              state.canEdit && state.selectedItems.isNotEmpty
-                  ? Icons.edit
-                  : Icons.add,
-              color: Colors.white,
-            ),
-          );
-        },
-      ),
+          ),
     );
   }
 
-  Widget _buildActionButtons(ItemEntryState state) {
+  Widget _buildActionButtons(ItemInBranchState state) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       height: state.hasSelection ? 60 : 0,
@@ -346,12 +350,12 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
     );
   }
 
-  Widget _buildRoleList(ItemEntryState state) {
-    if (state.status == ItemEntryStatus.loading) {
+  Widget _buildRoleList(ItemInBranchState state) {
+    if (state.status == ItemInBranchStatus.loading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (state.status == ItemEntryStatus.failure) {
+    if (state.status == ItemInBranchStatus.failure) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -364,8 +368,8 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => context.read<StockItemEntryBloc>().add(
-                LoadItems(widget.authBloc.state.companyId!),
+              onPressed: () => context.read<StockItemInBranchBloc>().add(
+                LoadItemsFromBranch(widget.authBloc.state.companyId!),
               ),
               child: const Text('Retry'),
             ),
@@ -402,7 +406,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
         final screenWidth = MediaQuery.of(context).size.width;
         final useCompactLayout = screenWidth < 700;
 
-        return _buildItemEntryModelListItem(
+        return _buildItemInBranchListItem(
           item,
           state,
           isSelected,
@@ -413,9 +417,9 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
     );
   }
 
-  Widget _buildItemEntryModelListItem(
-    ItemEntryModel item,
-    ItemEntryState state,
+  Widget _buildItemInBranchListItem(
+    ItemInBranchModel item,
+    ItemInBranchState state,
     bool isSelected,
     int index,
     bool isCompact,
@@ -425,7 +429,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
     return GestureDetector(
       onTap: () {
         if (_isSelectionMode) {
-          _toggleItemEntryModelSelection(item, !isSelected);
+          _toggleItemInBranchSelection(item, !isSelected);
         }
       },
       onLongPress: () {
@@ -434,7 +438,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
             _isSelectionMode = true;
           });
         }
-        _toggleItemEntryModelSelection(item, !isSelected);
+        _toggleItemInBranchSelection(item, !isSelected);
       },
       onDoubleTap: () => _showItemDetail(item),
       onHorizontalDragUpdate: (details) =>
@@ -482,15 +486,15 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
             ),
             child: ListTile(
               contentPadding: const EdgeInsets.all(16),
-              leading: _buildItemEntryModelAvatar(item, isSelected, isCompact),
+              leading: _buildItemInBranchAvatar(item, isSelected, isCompact),
               title: Text(
-                item.itemDescription!,
+                item.itemNumber.toString(),
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),
               ),
-              trailing: _buildItemEntryModelTrailing(item),
+              trailing: _buildItemInBranchTrailing(item),
             ),
           ),
         ],
@@ -498,7 +502,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
     );
   }
 
-  Widget _buildDetailPanel(ItemEntryModel item) {
+  Widget _buildDetailPanel(ItemInBranchModel item) {
     return Positioned(
       bottom: 0,
       left: 0,
@@ -521,7 +525,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
         child: Column(
           children: [
             // Header
-            _buildHeader(item),
+            _buildHeader(),
 
             // Content
             Expanded(
@@ -532,7 +536,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
                   children: [
                     // Item Title
                     Text(
-                      item.itemDescription ?? 'No Description',
+                      item.itemNumber.toString(),
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -540,36 +544,31 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Item ID: ${item.itemsId ?? 'N/A'}',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        color: Colors.black54,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
+                    const SizedBox(height: 26),
                     // Detail grid
                     Wrap(
                       spacing: 16,
                       runSpacing: 16,
                       children: [
                         _buildDetailCard(
-                          title: 'Barcode',
-                          value: item.barcode ?? 'N/A',
+                          title: 'Item Number',
+                          value: item.itemNumber.toString(),
                           color: Colors.blue,
                         ),
                         _buildDetailCard(
-                          title: 'Unit Price',
-                          value: item.unitPrice != null
-                              ? '\$${item.unitPrice!.toStringAsFixed(2)}'
-                              : 'N/A',
+                          title: 'Branch',
+                          value:
+                              item.branchrefrence?.referenceId.toString() ?? '',
                           color: Colors.blue,
                         ),
                         _buildDetailCard(
                           title: 'Margin Rate',
-                          value: item.marginRate?.toStringAsFixed(2) ?? 'N/A',
+                          value: item.marginRate.toString(),
+                          color: Colors.blue,
+                        ),
+                        _buildDetailCard(
+                          title: 'Unit Price',
+                          value: item.unitPrice.toString(),
                           color: Colors.blue,
                         ),
                         _buildDetailCard(
@@ -583,20 +582,8 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
                           color: Colors.blue,
                         ),
                         _buildDetailCard(
-                          title: 'Reorder Point',
-                          value: item.reorderPoint?.toStringAsFixed(2) ?? 'N/A',
-                          color: Colors.blue,
-                        ),
-                        _buildDetailCard(
-                          title: 'Taxable',
-                          value: item.taxable == 'Y' ? 'Yes' : 'No',
-                          color: item.taxable == 'Y'
-                              ? Colors.red
-                              : Colors.green,
-                        ),
-                        _buildDetailCard(
-                          title: 'Status',
-                          value: 'Active',
+                          title: 'Available Quantity',
+                          value: item.quantityAvailable.toString() ?? 'N/A',
                           color: Colors.blue,
                         ),
                       ],
@@ -615,7 +602,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
   }
 
   // Header with drag handle + close
-  Widget _buildHeader(ItemEntryModel item) {
+  Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.only(top: 10, bottom: 8),
       decoration: const BoxDecoration(
@@ -640,27 +627,12 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(
-                  'Item Details',
+                  'Item In Branch Details',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
-                ),
-              ),
-              ElevatedButton(
-                onPressed: () => context.push(
-                  AppRoutes.addItemToBranch,
-                  extra: {'item': item},
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-                child: const Text(
-                  'Add to branch',
-                  style: TextStyle(color: Colors.white),
                 ),
               ),
               IconButton(
@@ -723,7 +695,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
   }
 
   // Bottom action bar
-  Widget _buildActionBar(ItemEntryModel item) {
+  Widget _buildActionBar(ItemInBranchModel item) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       decoration: const BoxDecoration(
@@ -787,8 +759,8 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
     );
   }
 
-  Widget _buildItemEntryModelAvatar(
-    ItemEntryModel item,
+  Widget _buildItemInBranchAvatar(
+    ItemInBranchModel item,
     bool isSelected,
     bool isCompact,
   ) {
@@ -809,7 +781,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
     );
   }
 
-  Widget _buildItemEntryModelTrailing(ItemEntryModel item) {
+  Widget _buildItemInBranchTrailing(ItemInBranchModel item) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -818,29 +790,29 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: item.taxable == 'Y'
+            color: item.item?.taxable == 'Y'
                 ? Colors.red.withOpacity(0.1)
                 : Colors.green.withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: item.taxable == 'Y' ? Colors.red : Colors.green,
+              color: item.item?.taxable == 'Y' ? Colors.red : Colors.green,
             ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                item.taxable == 'Y' ? Icons.receipt : Icons.money_off,
+                item.item?.taxable == 'Y' ? Icons.receipt : Icons.money_off,
                 size: 12,
-                color: item.taxable == 'Y' ? Colors.red : Colors.green,
+                color: item.item?.taxable == 'Y' ? Colors.red : Colors.green,
               ),
               const SizedBox(width: 4),
               Text(
-                item.taxable == 'Y' ? 'Taxable' : 'Non-Tax',
+                item.item?.taxable == 'Y' ? 'Taxable' : 'Non-Tax',
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
-                  color: item.taxable == 'Y' ? Colors.red : Colors.green,
+                  color: item.item?.taxable == 'Y' ? Colors.red : Colors.green,
                   fontFamily: 'Roboto',
                 ),
               ),

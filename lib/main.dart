@@ -26,6 +26,7 @@ import 'package:savvy_stock/features/sales/invoice/blocs/invoice_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/repositories/system_constant_repository.dart';
 
@@ -40,7 +41,7 @@ Future<void> _initializeAndRunApp() async {
     await ConnectivityService().initConnectivity();
     initDependencies();
     //await LocalDatabaseService().resetDatabase();
-    await LocalDatabaseService().debugTable('items_table');
+    await LocalDatabaseService().debugTable('branch_table');
 
     if (AppConfig.isTestMode) {
       developer.log('🚀 APP RUNNING IN TEST MODE');
@@ -200,6 +201,12 @@ class _SavvyStockState extends State<SavvyStock> {
           ),
           BlocProvider<StockItemEntryBloc>(
             create: (context) => StockItemEntryBloc(
+              databaseService: getIt(),
+              authBloc: _authBloc,
+            ),
+          ),
+          BlocProvider<StockItemInBranchBloc>(
+            create: (context) => StockItemInBranchBloc(
               databaseService: getIt(),
               authBloc: _authBloc,
             ),

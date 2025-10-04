@@ -309,7 +309,37 @@ CREATE INDEX idx_items_id ON items_table(items_id);
 ''');
     developer.log('Created indexes for items_table');
 
-    // 12. Create system_constant table
+    // 12. Create items in branch table
+    await db.execute('''
+CREATE TABLE items_in_branch (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_number INTEGER,
+  branch INTEGER,
+  unit_price REAL,
+  quantity_available REAL,
+  company INTEGER,
+  unit_of_measure INTEGER,
+  margin_rate REAL,
+  margin_type TEXT,
+
+  -- Indexes for performance
+  FOREIGN KEY (item_number) REFERENCES items_table(id),
+  FOREIGN KEY (branch) REFERENCES branch_table(id),
+  FOREIGN KEY (company) REFERENCES company_table(id),
+  FOREIGN KEY (unit_of_measure) REFERENCES udc_details(id)
+);
+
+-- Useful indexes
+CREATE INDEX idx_items_in_branch_item_number ON items_in_branch(item_number);
+CREATE INDEX idx_items_in_branch_branch ON items_in_branch(branch);
+CREATE INDEX idx_items_in_branch_company ON items_in_branch(company);
+CREATE INDEX idx_items_in_branch_uom ON items_in_branch(unit_of_measure);
+
+);
+''');
+    developer.log('Created table: items_in_branch');
+
+    // 13. Create system_constant table
     await db.execute('''
       CREATE TABLE system_constant (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

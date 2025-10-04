@@ -37,6 +37,9 @@ import 'package:savvy_stock/features/sales/sales_item_entry/screens/sales_item_e
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/screens/item_entry_dashboard.dart';
 import 'package:savvy_stock/features/stock/item_entry/widgets/item_entry_create_and_edit.dart.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/screens/item_in_branch_dashboard.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/widgets/item_in_branch_create_and_edit.dart.dart';
 import 'package:savvy_stock/features/system_constant/screen/system_constants_screen.dart';
 
 // Import your screen files for missing routes
@@ -320,7 +323,8 @@ class AppRouter {
         },
         redirect: _protectedRouteRedirect,
       ),
-      // Stock Routes
+      //  =======Stock Routes=======
+      // Item Entry
       GoRoute(
         path: AppRoutes.itemEntry,
         builder: (context, state) => PrivilegeRouteGuard(
@@ -365,6 +369,56 @@ class AppRouter {
         },
         redirect: _protectedRouteRedirect,
       ),
+      // Item In Branch
+      GoRoute(
+        path: AppRoutes.itemInBranch,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.itemInBranch,
+          parentPrivilege: AppRoutes.stockDashboard,
+          child: ItemInBranchDashboard(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.addItemToBranch,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final item = extra != null ? extra['item'] as ItemEntryModel? : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.addItemToBranch,
+            parentPrivilege: AppRoutes.itemInBranch,
+            child: ItemInBranchFormPage(itemEntry: item, authBloc: authBloc),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.editItemInBranch,
+        builder: (context, state) {
+          final extra = state.extra;
+          final item = extra != null ? extra as ItemInBranchModel? : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.editItemInBranch,
+            parentPrivilege: AppRoutes.itemInBranch,
+            child: ItemInBranchFormPage(item: item, authBloc: authBloc),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.itemDelete,
+        builder: (context, state) {
+          final extra = state.extra;
+          final item = extra != null ? extra as ItemInBranchModel? : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.itemDelete,
+            parentPrivilege: AppRoutes.itemInBranch,
+            child: ItemInBranchFormPage(item: item, authBloc: authBloc),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      // UOM Management
       GoRoute(
         path: AppRoutes.uomManagement,
         builder: (context, state) => PrivilegeRouteGuard(
