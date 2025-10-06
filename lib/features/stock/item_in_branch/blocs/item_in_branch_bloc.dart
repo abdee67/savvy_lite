@@ -71,7 +71,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
 
       emit(
         ItemInBranchState(
-          status: ItemInBranchStatus.success,
+          status: ItemInBranchStatus.loaded,
           items: itemList,
           filteredItems: itemList,
           searchQuery: '',

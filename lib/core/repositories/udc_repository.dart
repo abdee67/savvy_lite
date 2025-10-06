@@ -21,16 +21,6 @@ class UdcRepository {
   // Get UDC details by code (offline-first)
   Future<List<UdcDetails>> getUdcDetailsByCode(String detailCode) async {
     try {
-      // First try to get from API
-      final remoteDetails = await _getRemoteUdcDetailsByCode(detailCode);
-
-      // Save to local database
-      await _saveUdcDetailsToLocal(remoteDetails);
-
-      return remoteDetails;
-    } on NetworkException catch (e) {
-      // If API fails, try to get from local database
-      developer.log('API failed, falling back to local database: ${e.message}');
       return await getLocalUdcDetailsByCode(detailCode);
     } catch (e) {
       developer.log('Unexpected error, trying local database: $e');
@@ -41,19 +31,8 @@ class UdcRepository {
   // Get UDC details by header code (offline-first)
   Future<List<UdcDetails>> getUdcDetailsByHeaderCode(String headerCode) async {
     try {
-      // First try to get from API
-      final remoteDetails = await _getRemoteUdcDetailsByHeaderCode(headerCode);
-
-      // Save to local database
-      await _saveUdcDetailsToLocal(remoteDetails);
-
-      return remoteDetails;
-    } on NetworkException catch (e) {
-      // If API fails, try to get from local database
-      developer.log('API failed, falling back to local database: ${e.message}');
       return await getLocalUdcDetailsByHeaderCode(headerCode);
     } catch (e) {
-      developer.log('Unexpected error, trying local database: $e');
       return await getLocalUdcDetailsByHeaderCode(headerCode);
     }
   }
@@ -89,77 +68,9 @@ class UdcRepository {
       ''',
         [headerCode],
       );
-
-      developer.log('Found ${maps.length} UDC details for header: $headerCode');
       return maps.map((map) => UdcDetails.fromJson(map)).toList();
     } catch (e) {
-      developer.log('Error getting local UDC details by header: $e');
       return [];
-    }
-  }
-
-  // Remote API operations
-  Future<List<UdcDetails>> _getRemoteUdcDetailsByCode(String detailCode) async {
-    try {
-      final response = await httpClient
-          .get(
-            Uri.parse('$baseUrl/udc-details?detail_code=$detailCode'),
-            headers: await _getAuthHeaders(),
-          )
-          .timeout(const Duration(seconds: 30));
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        developer.log(
-          'Retrieved ${data.length} UDC details from API for code: $detailCode',
-        );
-        return data.map((json) => UdcDetails.fromJson(json)).toList();
-      } else if (response.statusCode == 404) {
-        developer.log('No UDC details found in API for code: $detailCode');
-        return [];
-      } else {
-        throw ServerException(
-          'Failed to load UDC details: ${response.statusCode}',
-          response.statusCode,
-        );
-      }
-    } on ServerException {
-      rethrow;
-    } catch (e) {
-      throw NetworkException('Network error: $e');
-    }
-  }
-
-  Future<List<UdcDetails>> _getRemoteUdcDetailsByHeaderCode(
-    String headerCode,
-  ) async {
-    try {
-      final response = await httpClient
-          .get(
-            Uri.parse('$baseUrl/udc-details?header_code=$headerCode'),
-            headers: await _getAuthHeaders(),
-          )
-          .timeout(const Duration(seconds: 30));
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        developer.log(
-          'Retrieved ${data.length} UDC details from API for header: $headerCode',
-        );
-        return data.map((json) => UdcDetails.fromJson(json)).toList();
-      } else if (response.statusCode == 404) {
-        developer.log('No UDC details found in API for header: $headerCode');
-        return [];
-      } else {
-        throw ServerException(
-          'Failed to load UDC details: ${response.statusCode}',
-          response.statusCode,
-        );
-      }
-    } on ServerException {
-      rethrow;
-    } catch (e) {
-      throw NetworkException('Network error: $e');
     }
   }
 

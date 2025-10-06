@@ -77,11 +77,9 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard> {
   }
 
   void _emailItem(String itemId) {
-    if (itemId != null) {
-      // Implement email functionality
-      print('Emailing: $itemId');
+    // Implement email functionality
+    print('Emailing: $itemId');
     }
-  }
 
   void _exportItem(ItemInBranchModel item) {
     context.read<StockItemInBranchBloc>().add(ExportSingleItemFromBranch(item));

@@ -2,15 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
+import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dart';
 import 'package:savvy_stock/core/di/injection_container.dart';
 import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_event.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_state.dart';
 import 'package:savvy_stock/core/services/system_constant/system_constant_service.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 
 class PaymentDetails extends StatefulWidget {
-  const PaymentDetails({super.key});
+  final AuthBloc authBloc;
+  const PaymentDetails({super.key, required this.authBloc});
 
   @override
   State<PaymentDetails> createState() => _PaymentDetailsState();
@@ -35,6 +39,9 @@ class _PaymentDetailsState extends State<PaymentDetails> {
           _systemConstantsLoaded = true;
         });
         context.read<PaymentBloc>().add(const LoadFeeSystemConstants());
+        context.read<SystemConstantBloc>().add(
+          LoadSystemConstants(widget.authBloc.state.companyId!),
+        );
       } else {
         // Wait for system constants
         context.read<PaymentBloc>().add(const WaitForSystemConstants());

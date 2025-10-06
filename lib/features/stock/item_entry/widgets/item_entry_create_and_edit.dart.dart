@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
+import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dart';
+import 'package:savvy_stock/core/blocs/system_constant/system_constant_state.dart';
 import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -7,6 +10,7 @@ import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_state.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/stock/item_entry/widgets/stock_qr_scanner.dart';
 
 class ItemEntryFormPage extends StatefulWidget {
   final ItemEntryModel? item;
@@ -42,6 +46,9 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
   void initState() {
     super.initState();
     _initializeControllers();
+    context.read<SystemConstantBloc>().add(
+      LoadSystemConstantsForCompany(widget.authBloc.state.companyId!),
+    );
     if (widget.item != null) {
       context.read<StockItemEntryBloc>().add(SetItemForm(widget.item!));
     }
@@ -67,10 +74,37 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
         : null;
   }
 
+  // Handle barcode scanning
+  void _scanBarcode() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => StockItemQRScanner(
+          barcodeController: _barcodeController,
+          onBarcodeScanned: (barcode) {
+            setState(() {
+              _barcodeController.text = barcode;
+            });
+          },
+        ),
+      ),
+    );
+  }
+
   // Add this helper method for safe number parsing
   double? _parseDouble(String value) {
     if (value.trim().isEmpty) return null;
     return double.tryParse(value.trim());
+  }
+
+  // Enhanced barcode generation
+  String _generateBarcode() {
+    final companyId = widget.authBloc.state.companyId ?? 0;
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final random = DateTime.now().microsecondsSinceEpoch % 10000;
+
+    // Format: COMPANY_TIMESTAMP_RANDOM
+    return 'C${companyId}_T${timestamp}_R$random';
   }
 
   @override
@@ -86,13 +120,26 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
 
   void _saveItem() {
     if (_formKey.currentState!.validate()) {
+      final systemConstantState = context.read<SystemConstantBloc>().state;
+      final systemConstant = systemConstantState.systemConstant;
+      String? finalBarcode = _barcodeController.text.trim();
+      //if it is auto is on
+      if (systemConstant?.shouldAutoGenerateBarcodeForItem == true) {
+        if (finalBarcode.isEmpty) {
+          finalBarcode = _generateBarcode();
+        }
+      } else {
+        //if filed is empty
+        if (finalBarcode.isEmpty) {
+          finalBarcode = null;
+        }
+        //filed has  user input there
+      }
       final item = ItemEntryModel(
         id: widget.item?.id ?? 0,
         itemsId: _itemNumberController.text.trim(),
         itemDescription: _descriptionController.text.trim(),
-        barcode: _barcodeController.text.trim().isEmpty
-            ? null
-            : _barcodeController.text.trim(),
+        barcode: finalBarcode,
         unitPrice: _defaultUnitPriceController.text.trim().isEmpty
             ? null
             : _parseDouble(_defaultUnitPriceController.text),
@@ -155,19 +202,157 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         elevation: 0,
       ),
-      body: BlocListener<StockItemEntryBloc, ItemEntryState>(
-        listener: (context, state) {
-          if (state.status == ItemEntryStatus.failure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message ?? 'An error occurred'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        child: Column(children: [_buildForm(), _buildBottomNavigation()]),
+      body: MultiBlocListener(
+        listeners: [
+          BlocListener<StockItemEntryBloc, ItemEntryState>(
+            listener: (context, state) {
+              if (state.status == ItemEntryStatus.failure) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(state.message ?? 'An error occurred'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+          ),
+          BlocListener<SystemConstantBloc, SystemConstantState>(
+            listener: (context, state) {
+              if (state.status == SystemConstantStatus.failure) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(state.errorMessage ?? 'An error occurred'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+          ),
+        ],
+        child: Column(
+          children: [
+            _buildBarcodeInfo(),
+            Expanded(child: _buildForm()),
+            _buildBottomNavigation(),
+          ],
+        ),
       ),
+    );
+  }
+
+  // Barcode information widget
+  Widget _buildBarcodeInfo() {
+    return BlocBuilder<SystemConstantBloc, SystemConstantState>(
+      builder: (context, state) {
+        final isAutoGenerateEnabled =
+            state.systemConstant?.shouldAutoGenerateBarcodeForItem == true;
+
+        if (isAutoGenerateEnabled) {
+          return Container(
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue[200]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info, color: Colors.blue[600], size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Auto-barcode generation is ENABLED',
+                        style: TextStyle(
+                          color: Colors.blue[800],
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Empty field will auto-generate barcode',
+                        style: TextStyle(color: Colors.blue[700], fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        } else {
+          return Container(
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.orange[200]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info, color: Colors.orange[600], size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Auto-barcode generation is DISABLED',
+                        style: TextStyle(
+                          color: Colors.orange[800],
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Empty field will be saved as empty',
+                        style: TextStyle(
+                          color: Colors.orange[700],
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+      },
+    );
+  }
+
+  // In your ItemEntryFormPage
+  Widget _buildBarcodeField() {
+    return BlocBuilder<SystemConstantBloc, SystemConstantState>(
+      builder: (context, state) {
+        final isAutoGenerateEnabled =
+            state.systemConstant?.shouldAutoGenerateBarcodeForItem == true;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            StockItemQRScanner(
+              barcodeController: _barcodeController,
+              onBarcodeScanned: (barcode) {
+                // Handle the scanned barcode
+                setState(() {});
+              },
+            ),
+            const SizedBox(height: 8),
+            if (isAutoGenerateEnabled && _barcodeController.text.isEmpty)
+              Text(
+                '• Leave empty for auto-generation',
+                style: TextStyle(fontSize: 12, color: Colors.green[700]),
+              ),
+          ],
+        );
+      },
     );
   }
 
@@ -209,14 +394,7 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
               prefixIcon: const Icon(Icons.description),
             ),
             const SizedBox(height: 16),
-            CustomTextField(
-              labelText: 'Barcode',
-              controller: _barcodeController,
-              onChanged: (value) {
-                _barcodeController.text = value;
-              },
-              prefixIcon: const Icon(Icons.qr_code),
-            ),
+            _buildBarcodeField(),
             const SizedBox(height: 16),
             CustomTextField(
               labelText: 'Default Unit Price',

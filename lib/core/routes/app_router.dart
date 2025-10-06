@@ -140,6 +140,7 @@ class AppRouter {
               confirmedItems: args['confirmedItems'] as List<ConfirmedItem>,
               totalAmount: args['totalAmount'] as double,
               customer: args['customer'] as Customer,
+              authBloc: authBloc,
             ),
           );
         },
@@ -462,7 +463,7 @@ class AppRouter {
       // System Constants
       GoRoute(
         path: AppRoutes.systemConstants,
-        builder: (context, state) => const SystemConstantsScreen(),
+        builder: (context, state) => SystemConstantsScreen(authBloc: authBloc),
       ),
 
       // Unauthorized

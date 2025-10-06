@@ -9,10 +9,12 @@ abstract class SystemConstantEvent extends Equatable {
 }
 
 class LoadSystemConstants extends SystemConstantEvent {
-  const LoadSystemConstants();
+  final int companyId;
+
+  const LoadSystemConstants(this.companyId);
 
   @override
-  List<Object> get props => [];
+  List<Object> get props => [companyId];
 }
 
 class LoadSystemConstant extends SystemConstantEvent {

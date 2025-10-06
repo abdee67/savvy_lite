@@ -6,6 +6,7 @@ enum ItemInBranchStatus {
   loading,
   searching,
   success,
+  loaded,
   failure,
   creating,
   updating,
@@ -63,6 +64,7 @@ class ItemInBranchState extends Equatable {
   // --- Helper Getters ---
   bool get isLoading => status == ItemInBranchStatus.loading;
   bool get isSuccess => status == ItemInBranchStatus.success;
+  bool get isLoaded => status == ItemInBranchStatus.loaded;
   bool get isFailure => status == ItemInBranchStatus.failure;
   bool get isCreating => status == ItemInBranchStatus.creating;
   bool get isUpdating => status == ItemInBranchStatus.updating;

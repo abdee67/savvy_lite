@@ -10,9 +10,11 @@ import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dar
 import 'package:savvy_stock/core/theme/colors.dart';
 import 'package:savvy_stock/core/theme/text_styles.dart';
 import 'package:savvy_stock/core/widgets/app_button.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 
 class SystemConstantsScreen extends StatefulWidget {
-  const SystemConstantsScreen({super.key});
+  final AuthBloc authBloc;
+  const SystemConstantsScreen({super.key, required this.authBloc});
 
   @override
   _SystemConstantsScreenState createState() => _SystemConstantsScreenState();
@@ -45,7 +47,9 @@ class _SystemConstantsScreenState extends State<SystemConstantsScreen>
   void _loadInitialData() {
     // Load UDC data and system constants
     context.read<SystemConstantBloc>().add(const LoadUdcData());
-    context.read<SystemConstantBloc>().add(const LoadSystemConstants());
+    context.read<SystemConstantBloc>().add(
+      LoadSystemConstants(widget.authBloc.state.companyId!),
+    );
   }
 
   @override
@@ -117,7 +121,7 @@ class _SystemConstantsScreenState extends State<SystemConstantsScreen>
               IconButton(
                 icon: const Icon(Icons.refresh),
                 onPressed: () => context.read<SystemConstantBloc>().add(
-                  const LoadSystemConstants(),
+                  LoadSystemConstants(widget.authBloc.state.companyId!),
                 ),
                 tooltip: 'Refresh data',
               ),
@@ -160,6 +164,7 @@ class _SystemConstantsScreenState extends State<SystemConstantsScreen>
               GeneralSettingsTab(
                 onChanged: _handleFieldChange,
                 formKey: _formKey,
+                authBloc: widget.authBloc,
               ),
               const ReportSetupTab(),
             ],
@@ -216,7 +221,9 @@ class _SystemConstantsScreenState extends State<SystemConstantsScreen>
       );
       // RELOAD DATA AFTER SAVE to ensure UI shows latest
       Future.delayed(const Duration(milliseconds: 500), () {
-        context.read<SystemConstantBloc>().add(const LoadSystemConstants());
+        context.read<SystemConstantBloc>().add(
+          LoadSystemConstants(widget.authBloc.state.companyId!),
+        );
       });
       setState(() {
         _hasChanges = false;
@@ -228,8 +235,14 @@ class _SystemConstantsScreenState extends State<SystemConstantsScreen>
 class GeneralSettingsTab extends StatefulWidget {
   final Function(SystemConstant)? onChanged;
   final GlobalKey<FormState> formKey;
+  final AuthBloc authBloc;
 
-  const GeneralSettingsTab({super.key, this.onChanged, required this.formKey});
+  const GeneralSettingsTab({
+    super.key,
+    this.onChanged,
+    required this.formKey,
+    required this.authBloc,
+  });
 
   @override
   _GeneralSettingsTabState createState() => _GeneralSettingsTabState();
@@ -246,7 +259,9 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
     // Load system constants when the tab is initialized
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<SystemConstantBloc>().add(const LoadSystemConstants());
+      context.read<SystemConstantBloc>().add(
+        LoadSystemConstants(widget.authBloc.state.companyId!),
+      );
     });
   }
 

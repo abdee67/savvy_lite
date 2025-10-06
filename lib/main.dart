@@ -41,7 +41,7 @@ Future<void> _initializeAndRunApp() async {
     await ConnectivityService().initConnectivity();
     initDependencies();
     //await LocalDatabaseService().resetDatabase();
-    await LocalDatabaseService().debugTable('branch_table');
+    // await LocalDatabaseService().debugTable('branch_table');
 
     if (AppConfig.isTestMode) {
       developer.log('🚀 APP RUNNING IN TEST MODE');
@@ -49,7 +49,7 @@ Future<void> _initializeAndRunApp() async {
       developer.log('💾 Using local database only');
     }
     // Debug database tables (optional - remove in production)
-    await LocalDatabaseService().debugTable('role_table');
+    await LocalDatabaseService().debugTable('system_constant');
   } catch (error, stackTrace) {
     developer.log('Initialization error: $error');
     developer.log('Stack trace: $stackTrace');
@@ -193,7 +193,7 @@ class _SavvyStockState extends State<SavvyStock> {
               authBloc: _authBloc,
               udcService: getIt<UdcService>(),
               systemConstantService: getIt<SystemConstantsService>(),
-            )..add(LoadSystemConstants()),
+            )..add(LoadSystemConstants(_authBloc.state.companyId!)),
           ),
           BlocProvider<BranchBloc>(
             create: (context) =>

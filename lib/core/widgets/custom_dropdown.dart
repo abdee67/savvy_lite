@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 
 class CustomDropdown<T> extends StatefulWidget {
@@ -45,7 +44,7 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
     return SizedBox(
       height: widget.isTablet ? 60 : 56,
       child: DropdownButtonFormField<T>(
-        value: widget.value,
+        initialValue: widget.value,
         items: widget.items,
         validator: widget.validator,
         autovalidateMode: widget.autovalidateMode,

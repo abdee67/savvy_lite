@@ -28,6 +28,7 @@ class SystemConstantBloc
   }) : super(const SystemConstantState()) {
     on<LoadSystemConstants>(_onLoadSystemConstants);
     on<LoadSystemConstant>(_onLoadSystemConstant);
+    on<LoadSystemConstantsForCompany>(_onLoadSystemConstantsForCompany);
     on<CreateSystemConstant>(_onCreateSystemConstant);
     on<UpdateSystemConstant>(_onUpdateSystemConstant);
     on<DeleteSystemConstant>(_onDeleteSystemConstant);
@@ -46,7 +47,7 @@ class SystemConstantBloc
 
     // Load data immediately when bloc is created
     add(const LoadUdcData());
-    add(const LoadSystemConstants());
+    add(LoadSystemConstants(authBloc.state.companyId!));
     // Start periodic sync (every 5 minutes)
     _startSyncTimer();
   }
@@ -139,7 +140,7 @@ class SystemConstantBloc
       emit(
         state.copyWith(
           status: SystemConstantStatus.success,
-          selected: systemConstant,
+          systemConstants: [systemConstant],
           errorMessage: null,
         ),
       );
@@ -148,6 +149,35 @@ class SystemConstantBloc
         state.copyWith(
           status: SystemConstantStatus.failure,
           errorMessage: 'Failed to load system constant: ${e.toString()}',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onLoadSystemConstantsForCompany(
+    LoadSystemConstantsForCompany event,
+    Emitter<SystemConstantState> emit,
+  ) async {
+    emit(state.copyWith(status: SystemConstantStatus.loading));
+
+    try {
+      // Try to load from local database first
+      final systemConstant = await systemConstantRepository
+          .getCurrentCompanySystemConstants();
+
+      emit(
+        state.copyWith(
+          status: SystemConstantStatus.success,
+          systemConstants: [systemConstant],
+          errorMessage: null,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: SystemConstantStatus.failure,
+          errorMessage:
+              'Failed to load system constant for company: ${e.toString()}',
         ),
       );
     }
@@ -257,7 +287,7 @@ class SystemConstantBloc
           errorMessage: null,
         ),
       );
-      add(const LoadSystemConstants());
+      add(LoadSystemConstantsForCompany(authBloc.state.companyId!));
     } catch (e) {
       if (e is NetworkException) {
         emit(
@@ -267,7 +297,9 @@ class SystemConstantBloc
                 'Created locally.Will sync when online:${e.toString()}',
           ),
         );
-        add(const LoadSystemConstants()); //Reload to include loacla changes
+        add(
+          LoadSystemConstantsForCompany(authBloc.state.companyId!),
+        ); //Reload to include loacla changes
       } else {
         emit(
           state.copyWith(
@@ -294,7 +326,7 @@ class SystemConstantBloc
       );
       // RELOAD DATA AFTER UPDATE to ensure UI shows latest
       Future.delayed(const Duration(milliseconds: 500), () {
-        add(const LoadSystemConstants());
+        add(LoadSystemConstantsForCompany(authBloc.state.companyId!));
       });
     } catch (e) {
       if (e is NetworkException) {
@@ -305,7 +337,9 @@ class SystemConstantBloc
                 'Updated locally.Will sync when online:${e.toString()}',
           ),
         );
-        add(const LoadSystemConstants()); //Reload to include loacla changes
+        add(
+          LoadSystemConstantsForCompany(authBloc.state.companyId!),
+        ); //Reload to include loacla changes
       } else {
         emit(
           state.copyWith(
@@ -326,7 +360,7 @@ class SystemConstantBloc
       await systemConstantRepository.deleteSystemConstant(
         event.systemConstant.id!,
       );
-      add(const LoadSystemConstants());
+      add(LoadSystemConstantsForCompany(authBloc.state.companyId!));
     } catch (e) {
       if (e is NetworkException) {
         emit(
@@ -336,7 +370,9 @@ class SystemConstantBloc
                 'Marked for deletion locally.Will sync when online:${e.toString()}',
           ),
         );
-        add(const LoadSystemConstants()); //Reload to include loacla changes
+        add(
+          LoadSystemConstantsForCompany(authBloc.state.companyId!),
+        ); //Reload to include loacla changes
       } else {
         emit(
           state.copyWith(
@@ -489,7 +525,7 @@ class SystemConstantBloc
         ),
       );
 
-      add(const LoadSystemConstants());
+      add(LoadSystemConstantsForCompany(companyId!));
     } catch (e) {
       emit(
         state.copyWith(
@@ -579,7 +615,7 @@ class SystemConstantBloc
           );
           systemConstantService.updateSystemConstant(savedConstant!);
           // Reload to get the latest data
-          add(const LoadSystemConstants());
+          add(LoadSystemConstantsForCompany(companyId!));
         }
       }
     } catch (e) {
@@ -626,7 +662,9 @@ class SystemConstantBloc
                 'Deleted locally. Will sync when online: ${e.message}',
           ),
         );
-        add(const LoadSystemConstants()); // Reload to include local changes
+        add(
+          LoadSystemConstantsForCompany(authBloc.state.companyId!),
+        ); // Reload to include local changes
       } else {
         emit(
           state.copyWith(
