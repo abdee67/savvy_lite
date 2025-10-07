@@ -1,88 +1,166 @@
+// bloc/item_uom_conversion_state.dart
 import 'package:equatable/equatable.dart';
-import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/models/item_in_store.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/models/items.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/models/selected_item.dart';
+import 'package:savvy_stock/features/stock/item_UoM_conversions/models/item_UoM_conversions_model.dart';
+import 'package:savvy_stock/features/stock/item_UoM_conversions/models/uom_cconverstion_ui_state.dart';
 
-enum ItemEntryStatus { initial, loading, success, failure }
+enum ItemUomConversionStatus {
+  initial,
+  loading,
+  searching,
+  success,
+  loaded,
+  failure,
+  creating,
+  updating,
+  deleting,
+  duplication,
+  exporting,
+  converting,
+}
 
-class ItemEntryState extends Equatable {
-  final ItemEntryStatus status;
-  final List<Item> uniqueItems;
-  final List<ItemInStore> itemsInStores;
-  final List<SelectedItem> selectedItems;
-  final List<ConfirmedItem> confirmedItems;
-  final bool useBarcode;
-  final String? errorMessage;
-  final double totalAmount;
-  final Customer customer;
-  final List<int> selectedConfirmedItemIndices;
+enum ItemUomConversionDetailStatus { hidden, showing, editing }
 
-  const ItemEntryState({
-    this.status = ItemEntryStatus.initial,
-    this.itemsInStores = const [],
-    this.selectedItems = const [],
-    this.confirmedItems = const [],
-    this.uniqueItems = const [],
-    this.useBarcode = false,
-    this.errorMessage,
-    this.totalAmount = 0,
-    this.customer = const Customer(
-      id: '',
-      name: '',
-      tin: '',
-      phone: '',
-      country: '',
-      email: '',
-    ),
-    this.selectedConfirmedItemIndices = const [],
+class ItemUomConversionState extends Equatable {
+  final ItemUomConversionStatus status;
+  final String? message;
+  final int? companyId;
+  final List<ItemUomConversion> items;
+  final List<ItemUomConversion> filteredItems;
+  final String searchQuery;
+
+  // UI state management
+  final UomConversionUiState uiState;
+
+  final ItemUomConversionDetailStatus detailStatus;
+  final ItemUomConversion? itemDetail;
+
+  final List<ItemUomConversion> recentlyDeleted;
+  final List<int> recentlyDeletedIndexes;
+
+  final bool isExporting;
+  final bool showDetailPanel;
+  final List<ItemUomConversion> exportedItems;
+  final ItemUomConversion? exportedItem;
+
+  // Conversion results
+  final double? conversionFactor;
+  final String? conversionError;
+
+  const ItemUomConversionState({
+    this.status = ItemUomConversionStatus.initial,
+    this.message,
+    this.companyId,
+    this.items = const [],
+    this.filteredItems = const [],
+    this.searchQuery = '',
+    this.uiState = const UomConversionUiState(),
+    this.detailStatus = ItemUomConversionDetailStatus.hidden,
+    this.itemDetail,
+    this.recentlyDeleted = const [],
+    this.recentlyDeletedIndexes = const [],
+    this.isExporting = false,
+    this.showDetailPanel = false,
+    this.exportedItems = const [],
+    this.exportedItem,
+    this.conversionFactor,
+    this.conversionError,
   });
 
-  ItemEntryState copyWith({
-    ItemEntryStatus? status,
-    List<ItemInStore>? itemsInStores,
-    List<SelectedItem>? selectedItems,
-    List<ConfirmedItem>? confirmedItems,
-    List<Item>? uniqueItems,
-    Customer? customer,
-    bool? useBarcode,
-    String? errorMessage,
-    double? totalAmount,
-    List<int>? selectedConfirmedItemIndices,
+  // Helper getters for UI state
+  List<ItemUomConversion> get createItems => uiState.createItems;
+  List<ItemUomConversion> get editItems => uiState.editItems;
+  ItemUomConversion? get selected => uiState.selected;
+  ItemUomConversion? get selected1 => uiState.selected1;
+  ItemUomConversion? get selected2 => uiState.selected2;
+  List<ItemUomConversion> get multiSelectionItems =>
+      uiState.multiSelectionItems;
+
+  bool get isLoading => status == ItemUomConversionStatus.loading;
+  bool get isSuccess => status == ItemUomConversionStatus.success;
+  bool get isLoaded => status == ItemUomConversionStatus.loaded;
+  bool get isFailure => status == ItemUomConversionStatus.failure;
+  bool get isCreating => status == ItemUomConversionStatus.creating;
+  bool get isUpdating => status == ItemUomConversionStatus.updating;
+  bool get isDeleting => status == ItemUomConversionStatus.deleting;
+  bool get isExportingData => status == ItemUomConversionStatus.exporting;
+  bool get isConverting => status == ItemUomConversionStatus.converting;
+
+  bool get isDetailVisible =>
+      detailStatus != ItemUomConversionDetailStatus.hidden;
+  bool get isDetailEditing =>
+      detailStatus == ItemUomConversionDetailStatus.editing;
+
+  bool get hasItems => items.isNotEmpty;
+  bool get hasFilteredItems => filteredItems.isNotEmpty;
+  bool get hasSelection => uiState.selected != null;
+  bool get hasMultiSelection => uiState.multiSelectionItems.isNotEmpty;
+  bool get canEdit => uiState.multiSelectionItems.length == 1;
+  bool get canDelete => uiState.multiSelectionItems.isNotEmpty;
+  bool get canExport => filteredItems.isNotEmpty;
+
+  bool get hasRecentDeletions => recentlyDeleted.isNotEmpty;
+  bool get hasCreateItems => uiState.createItems.isNotEmpty;
+  bool get hasEditItems => uiState.editItems.isNotEmpty;
+
+  ItemUomConversionState copyWith({
+    ItemUomConversionStatus? status,
+    String? message,
+    int? companyId,
+    List<ItemUomConversion>? items,
+    List<ItemUomConversion>? filteredItems,
+    String? searchQuery,
+    UomConversionUiState? uiState,
+    ItemUomConversionDetailStatus? detailStatus,
+    ItemUomConversion? itemDetail,
+    List<ItemUomConversion>? recentlyDeleted,
+    List<int>? recentlyDeletedIndexes,
+    bool? isExporting,
+    bool? showDetailPanel,
+    List<ItemUomConversion>? exportedItems,
+    ItemUomConversion? exportedItem,
+    double? conversionFactor,
+    String? conversionError,
   }) {
-    return ItemEntryState(
+    return ItemUomConversionState(
       status: status ?? this.status,
-      itemsInStores: itemsInStores ?? this.itemsInStores,
-      selectedItems: selectedItems ?? this.selectedItems,
-      confirmedItems: confirmedItems ?? this.confirmedItems,
-      customer: customer ?? this.customer,
-      uniqueItems: uniqueItems ?? this.uniqueItems,
-      useBarcode: useBarcode ?? this.useBarcode,
-      errorMessage: errorMessage ?? this.errorMessage,
-      totalAmount: totalAmount ?? this.totalAmount,
-      selectedConfirmedItemIndices:
-          selectedConfirmedItemIndices ?? this.selectedConfirmedItemIndices,
+      message: message ?? this.message,
+      companyId: companyId ?? this.companyId,
+      items: items ?? this.items,
+      filteredItems: filteredItems ?? this.filteredItems,
+      searchQuery: searchQuery ?? this.searchQuery,
+      uiState: uiState ?? this.uiState,
+      detailStatus: detailStatus ?? this.detailStatus,
+      itemDetail: itemDetail ?? this.itemDetail,
+      recentlyDeleted: recentlyDeleted ?? this.recentlyDeleted,
+      recentlyDeletedIndexes:
+          recentlyDeletedIndexes ?? this.recentlyDeletedIndexes,
+      isExporting: isExporting ?? this.isExporting,
+      showDetailPanel: showDetailPanel ?? this.showDetailPanel,
+      exportedItems: exportedItems ?? this.exportedItems,
+      exportedItem: exportedItem ?? this.exportedItem,
+      conversionFactor: conversionFactor ?? this.conversionFactor,
+      conversionError: conversionError ?? this.conversionError,
     );
   }
-
-  bool get hasValidItems => selectedItems.any((item) => item.isValid);
-
-  bool get hasConfirmedItems => confirmedItems.isNotEmpty;
-  bool get hasItems => uniqueItems.isNotEmpty;
-  bool get hasSelectedConfirmedItems => selectedConfirmedItemIndices.isNotEmpty;
 
   @override
   List<Object?> get props => [
     status,
-    itemsInStores,
-    selectedItems,
-    confirmedItems,
-    customer,
-    uniqueItems,
-    useBarcode,
-    errorMessage,
-    totalAmount,
-    selectedConfirmedItemIndices,
+    message,
+    companyId,
+    items,
+    filteredItems,
+    searchQuery,
+    uiState,
+    detailStatus,
+    itemDetail,
+    recentlyDeleted,
+    recentlyDeletedIndexes,
+    isExporting,
+    showDetailPanel,
+    exportedItems,
+    exportedItem,
+    conversionFactor,
+    conversionError,
   ];
 }

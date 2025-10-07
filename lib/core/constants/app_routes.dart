@@ -80,7 +80,15 @@ class AppRoutes {
 
   static const String uomManagement = '$stock/uom-management';
   static const String itemWorkbench = '$stock/item-workbench';
+
   static const String itemUomConversions = '$stock/item-uom-conversions';
+  static const String itemUomConversionsCreate =
+      '$itemUomConversions/create-item-uom-conversion';
+  static const String itemUomConversionsEdit =
+      '$itemUomConversions/edit-item-uom-conversion';
+  static const String itemUomConversionsDelete =
+      '$itemUomConversions/delete-item-uom-conversion';
+
   static const String locationEntry = '$stock/location-entry';
   static const String lotEntry = '$stock/lot-entry';
   static const String lotColorings = '$stock/lot-colorings';

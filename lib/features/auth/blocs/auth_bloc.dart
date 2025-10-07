@@ -437,7 +437,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       'roles': roles.map((r) => r.toMap()).toList(),
       'auth_time': DateTime.now().millisecondsSinceEpoch,
       'exp': DateTime.now()
-          .add(const Duration(minutes: 2))
+          .add(const Duration(hours: 2))
           .millisecondsSinceEpoch,
       'jti': Random().nextInt(1000000), // Mock JWT ID
     };

@@ -1,118 +1,95 @@
+// bloc/item_uom_conversion_event.dart
 import 'package:equatable/equatable.dart';
-import 'package:flutter/material.dart';
-import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/models/item_in_store.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/models/items.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
+import 'package:flutter/foundation.dart';
+import 'package:savvy_stock/features/stock/item_UoM_conversions/models/item_UoM_conversions_model.dart';
 
 @immutable
-abstract class ItemEntryEvent extends Equatable {
-  const ItemEntryEvent();
+abstract class ItemUomConversionEvent extends Equatable {
+  const ItemUomConversionEvent();
+}
 
+class LoadItemUomConversions extends ItemUomConversionEvent {
+  final int companyId;
+  const LoadItemUomConversions(this.companyId);
   @override
-  List<Object> get props => [];
+  List<Object> get props => [companyId];
 }
 
-class LoadItemsAndStores extends ItemEntryEvent {
-  final CustomerBloc customerBloc;
-
-  const LoadItemsAndStores({required this.customerBloc});
-}
-
-class SelectItem extends ItemEntryEvent {
-  final int index;
-  final Item? item;
-
-  const SelectItem({required this.index, this.item});
-
+class SaveItemUomConversion extends ItemUomConversionEvent {
+  final ItemUomConversion item;
+  final int userId;
+  const SaveItemUomConversion(this.item, this.userId);
   @override
-  List<Object> get props => [index, item ?? Item.empty];
+  List<Object> get props => [item, userId];
 }
 
-class SelectStore extends ItemEntryEvent {
-  final int index;
-  final ItemInStore? itemInStore;
-
-  const SelectStore({required this.index, this.itemInStore});
-
+class UpdateItemUomConversion extends ItemUomConversionEvent {
+  final ItemUomConversion item;
+  final int? userId;
+  const UpdateItemUomConversion(this.item, this.userId);
   @override
-  List<Object> get props => [index, itemInStore ?? ItemInStore.empty];
+  List<Object> get props => [item, userId ?? Object()];
 }
 
-class UpdateQuantity extends ItemEntryEvent {
-  final int index;
-  final double quantity;
-
-  const UpdateQuantity({required this.index, required this.quantity});
-
+class DeleteItemUomConversion extends ItemUomConversionEvent {
+  final ItemUomConversion item;
+  const DeleteItemUomConversion(this.item);
   @override
-  List<Object> get props => [index, quantity];
+  List<Object> get props => [item];
 }
 
-class UpdatePrice extends ItemEntryEvent {
-  final int index;
-  final double price;
-
-  const UpdatePrice({required this.index, required this.price});
-
+// UI Management Events
+class PrepareCreateUomConversion extends ItemUomConversionEvent {
+  final int companyId;
+  const PrepareCreateUomConversion(this.companyId);
   @override
-  List<Object> get props => [index, price];
+  List<Object> get props => [companyId];
 }
 
-class AddNewItem extends ItemEntryEvent {}
-
-class DeleteConfirmedItem extends ItemEntryEvent {
-  final int index;
-  const DeleteConfirmedItem({required this.index});
-
+class AddToCreateList extends ItemUomConversionEvent {
+  final ItemUomConversion item;
+  const AddToCreateList(this.item);
   @override
-  List<Object> get props => [index];
+  List<Object> get props => [item];
 }
 
-class UndoDelete extends ItemEntryEvent {
-  final ConfirmedItem deletedItem;
-  final int deletedIndex;
-
-  const UndoDelete({required this.deletedItem, required this.deletedIndex});
-}
-
-class MoveToEdit extends ItemEntryEvent {
-  final int confirmedIndex;
-  final int selectedIndex; // Optional: specify where to place it
-
-  const MoveToEdit({required this.confirmedIndex, this.selectedIndex = -1});
-
+class RemoveFromCreateList extends ItemUomConversionEvent {
+  final ItemUomConversion item;
+  const RemoveFromCreateList(this.item);
   @override
-  List<Object> get props => [confirmedIndex, selectedIndex];
+  List<Object> get props => [item];
 }
 
-class ConfirmOrder extends ItemEntryEvent {}
-
-class ToggleBarcode extends ItemEntryEvent {
-  final bool useBarcode;
-
-  const ToggleBarcode({required this.useBarcode});
-
+class SetSelectedItem extends ItemUomConversionEvent {
+  final ItemUomConversion? item;
+  const SetSelectedItem(this.item);
   @override
-  List<Object> get props => [useBarcode];
+  List<Object> get props => [item ?? Object()];
 }
 
-class AddBarcodeItems extends ItemEntryEvent {
-  final List<ConfirmedItem> items;
-
-  const AddBarcodeItems({required this.items});
-
+class SetMultiSelectionItems extends ItemUomConversionEvent {
+  final List<ItemUomConversion> items;
+  const SetMultiSelectionItems(this.items);
   @override
   List<Object> get props => [items];
 }
 
-class ScanBarcode extends ItemEntryEvent {
-  final String barcode;
-
-  const ScanBarcode({required this.barcode});
-
+class ClearCreateList extends ItemUomConversionEvent {
   @override
-  List<Object> get props => [barcode];
+  List<Object> get props => [];
 }
 
-class ClearSelectedItems extends ItemEntryEvent {}
+class CalculateUomConversion extends ItemUomConversionEvent {
+  final int itemId;
+  final int fromUomId;
+  final int toUomId;
+  final int companyId;
+  const CalculateUomConversion({
+    required this.itemId,
+    required this.fromUomId,
+    required this.toUomId,
+    required this.companyId,
+  });
+  @override
+  List<Object> get props => [itemId, fromUomId, toUomId, companyId];
+}

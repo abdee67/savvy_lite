@@ -15,8 +15,10 @@ import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
+import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 
 final getIt = GetIt.instance;
 
@@ -103,4 +105,11 @@ void initDependencies() {
   );
 
   getIt.registerFactory<PaymentBloc>(() => PaymentBloc(getIt()));
+
+  getIt.registerFactory<ItemUomConversionBloc>(
+    () => ItemUomConversionBloc(databaseService: getIt(), authBloc: getIt()),
+  );
+  getIt.registerFactory<UdcDetailsBloc>(
+    () => UdcDetailsBloc(databaseService: getIt(), authBloc: getIt()),
+  );
 }

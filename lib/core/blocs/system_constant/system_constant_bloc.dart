@@ -615,7 +615,7 @@ class SystemConstantBloc
           );
           systemConstantService.updateSystemConstant(savedConstant!);
           // Reload to get the latest data
-          add(LoadSystemConstantsForCompany(companyId!));
+          add(LoadSystemConstantsForCompany(companyId));
         }
       }
     } catch (e) {

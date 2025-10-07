@@ -34,6 +34,9 @@ import 'package:savvy_stock/features/sales/invoice/screens/invoice_review_screen
 import 'package:savvy_stock/features/sales/payment/screens/payment_screen.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/screens/sales_item_entry.dart';
+import 'package:savvy_stock/features/stock/item_UoM_conversions/models/item_UoM_conversions_model.dart';
+import 'package:savvy_stock/features/stock/item_UoM_conversions/screens/item_UoM_conversion_dashboard.dart';
+import 'package:savvy_stock/features/stock/item_UoM_conversions/widgets/item_UoM_conversion_create_and_edit.dart.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/screens/item_entry_dashboard.dart';
 import 'package:savvy_stock/features/stock/item_entry/widgets/item_entry_create_and_edit.dart.dart';
@@ -419,14 +422,38 @@ class AppRouter {
         },
         redirect: _protectedRouteRedirect,
       ),
-      // UOM Management
+      // UOM Conversion
       GoRoute(
-        path: AppRoutes.uomManagement,
+        path: AppRoutes.itemUomConversions,
         builder: (context, state) => PrivilegeRouteGuard(
-          requiredPrivilege: AppRoutes.uomManagement,
+          requiredPrivilege: AppRoutes.itemUomConversions,
           parentPrivilege: AppRoutes.stockDashboard,
-          child: const Placeholder(),
+          child: ItemUomConversionListScreen(authBloc: authBloc),
         ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.itemUomConversionsCreate,
+        builder: (context, state) {
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.itemUomConversionsCreate,
+            parentPrivilege: AppRoutes.itemInBranch,
+            child: ItemUomConversionForm(authBloc: authBloc),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.itemUomConversionsEdit,
+        builder: (context, state) {
+          final extra = state.extra;
+          final item = extra != null ? extra as ItemUomConversion? : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.itemUomConversionsEdit,
+            parentPrivilege: AppRoutes.itemUomConversions,
+            child: ItemUomConversionForm(editingItem: item, authBloc: authBloc),
+          );
+        },
         redirect: _protectedRouteRedirect,
       ),
       GoRoute(

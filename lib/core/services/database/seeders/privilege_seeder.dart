@@ -263,11 +263,30 @@ class PrivilegeSeeder {
         AppRoutes.itemWorkbench,
         'item_workbench',
       ),
+      //item uom conversions
       _createPrivilege(
         'Item UoM Conversions',
         'link',
         AppRoutes.itemUomConversions,
         'item_uom_conversions',
+      ),
+      _createPrivilege(
+        'Add Item UoM Conversion',
+        'button',
+        AppRoutes.itemUomConversionsCreate,
+        'add_item_uom_conversion',
+      ),
+      _createPrivilege(
+        'Edit Item UoM Conversion',
+        'button',
+        AppRoutes.itemUomConversionsEdit,
+        'edit_item_uom_conversion',
+      ),
+      _createPrivilege(
+        'Delete Item UoM Conversion',
+        'button',
+        AppRoutes.itemUomConversionsDelete,
+        'delete_item_uom_conversion',
       ),
       _createPrivilege(
         'Location Entry',

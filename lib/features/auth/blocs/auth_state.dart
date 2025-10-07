@@ -208,9 +208,7 @@ class AuthState extends Equatable {
       companyId: companyId,
       branchId: branchId,
       authenticatedAt: DateTime.now(),
-      tokenExpiryTime: DateTime.now().add(
-        const Duration(minutes: 2),
-      ), // Example
+      tokenExpiryTime: DateTime.now().add(const Duration(hours: 2)), // Example
     );
   }
 

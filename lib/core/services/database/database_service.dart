@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:argon2/argon2.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/services/database/seeders/privilege_seeder.dart';
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'dart:developer' as developer;
@@ -67,13 +68,7 @@ class LocalDatabaseService {
       CREATE TABLE udc_header (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         header_code TEXT NOT NULL,
-        description_1 TEXT NOT NULL,
-        description_2 TEXT,
-        system_code TEXT,
-        date_created INTEGER,
-        date_updated INTEGER,
-        created_by INTEGER,
-        updated_by INTEGER
+        udc_description TEXT NOT NULL
       )
     ''');
     developer.log('Created table: udc_header');
@@ -308,8 +303,36 @@ CREATE INDEX idx_items_barcode ON items_table(barcode);
 CREATE INDEX idx_items_id ON items_table(items_id);
 ''');
     developer.log('Created indexes for items_table');
+    //12. Create item unit conversions
+    await db.execute('''
+CREATE TABLE item_uom_conversions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  branch INTEGER,
+  item_number INTEGER,
+  conversion_factor REAL,
+  created_by INTEGER,
+  date_created TEXT,
+  updated_by INTEGER,
+  date_updated TEXT,
+  from_uom INTEGER,
+  to_uom INTEGER,
+  uom_structure_level INTEGER,
+  inverse_conversion REAL,
+  company INTEGER,
+  FOREIGN KEY (item_number) REFERENCES items_table(id),
+  FOREIGN KEY (branch) REFERENCES branch_table(id),
+  FOREIGN KEY (company) REFERENCES company_table(id),
+  FOREIGN KEY (from_uom) REFERENCES udc_details(id),
+  FOREIGN KEY (to_uom) REFERENCES udc_details(id)
+);
 
-    // 12. Create items in branch table
+CREATE INDEX idx_item_uom_conversions_branch ON item_uom_conversions(branch);
+CREATE INDEX idx_item_uom_conversions_item_number ON item_uom_conversions(item_number);
+CREATE INDEX idx_item_uom_conversions_company ON item_uom_conversions(company);
+''');
+    developer.log('Created table: item_uom_conversions');
+
+    // 13. Create items in branch table
     await db.execute('''
 CREATE TABLE items_in_branch (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -339,7 +362,7 @@ CREATE INDEX idx_items_in_branch_uom ON items_in_branch(unit_of_measure);
 ''');
     developer.log('Created table: items_in_branch');
 
-    // 13. Create system_constant table
+    // 14. Create system_constant table
     await db.execute('''
       CREATE TABLE system_constant (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -371,7 +394,117 @@ CREATE INDEX idx_items_in_branch_uom ON items_in_branch(unit_of_measure);
     ''');
     developer.log('Created table: system_constant');
 
-    // 6. Create sync_queue table
+    //15.create location master
+    await db.execute('''
+CREATE TABLE location_master (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  branch INTEGER,
+  code_01 TEXT,
+  code_02 TEXT,
+  code_03 TEXT,
+  code_04 TEXT,
+  code_05 TEXT,
+  code_06 TEXT,
+  code_07 TEXT,
+  code_08 TEXT,
+  code_09 TEXT,
+  code_10 TEXT,
+  created_by INTEGER,
+  date_created TEXT,
+  updated_by INTEGER,
+  date_updated TEXT,
+  company INTEGER,
+  location_description TEXT,
+  FOREIGN KEY (branch) REFERENCES branch_table(id),
+  FOREIGN KEY (created_by) REFERENCES user_table(id),
+  FOREIGN KEY (updated_by) REFERENCES user_table(id),
+  FOREIGN KEY (company) REFERENCES company_table(id)
+);
+
+CREATE INDEX idx_location_master_branch ON location_master(branch);
+CREATE INDEX idx_location_master_company ON location_master(company);
+''');
+    developer.log('Created table: location_master');
+
+    //16.create item location
+    await db.execute('''
+CREATE TABLE item_location (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_number INTEGER,
+  branch INTEGER,
+  location INTEGER,
+  quantity_on_hand  REAL,
+  date_updated INTEGER,
+  date_created INTEGER,
+  updated_by INTEGER,
+  created_by INTEGER,
+  company INTEGER,
+  FOREIGN KEY (item_number) REFERENCES items_table(id),
+  FOREIGN KEY (branch) REFERENCES branch_table(id),
+  FOREIGN KEY (location) REFERENCES location_master(id),
+  FOREIGN KEY (updated_by) REFERENCES user_table(id),
+  FOREIGN KEY (created_by) REFERENCES user_table(id),
+  FOREIGN KEY (company) REFERENCES company_table(id)
+);
+
+CREATE INDEX idx_item_location_item_number ON item_location(item_number);
+CREATE INDEX idx_item_location_branch ON item_location(branch);
+CREATE INDEX idx_item_location_location ON item_location(location);
+CREATE INDEX idx_item_location_company ON item_location(company);
+''');
+    developer.log('Created table: item_location');
+
+    //17.create lot master
+    await db.execute('''
+CREATE TABLE lot_master (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_number INTEGER,
+  lot_number INTEGER,
+  unit_price REAL,
+  quantity_available REAL,
+  company INTEGER,
+  date_effective TEXT,
+  date_expiration TEXT,
+  date_received TEXT,
+  branch INTEGER,
+  location INTEGER,
+  lot_status INTEGER,
+  batch_number_supplier TEXT,
+  FOREIGN KEY (item_number) REFERENCES items_table(id),
+  FOREIGN KEY (branch) REFERENCES branch_table(id),
+  FOREIGN KEY (company) REFERENCES company_table(id),
+  FOREIGN KEY (location) REFERENCES item_locations(id),
+  FOREIGN KEY (lot_status) REFERENCES udc_details(id)
+);
+
+CREATE INDEX idx_lot_master_item_number ON lot_master(item_number);
+CREATE INDEX idx_lot_master_branch ON lot_master(branch);
+CREATE INDEX idx_lot_master_company ON lot_master(company);
+CREATE INDEX idx_lot_master_location ON lot_master(location);
+CREATE INDEX idx_lot_master_lot_status ON lot_master(lot_status);
+''');
+    developer.log('Created table: lot_master');
+
+    //18.create item_cost_table
+    await db.execute('''
+CREATE TABLE item_cost (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_number INTEGER,
+  amount_unit_cost REAL,
+  company INTEGER,
+  user_id INTEGER,
+  date_updated INTEGER,
+  FOREIGN KEY (item_number) REFERENCES items_table(id),
+  FOREIGN KEY (user_id) REFERENCES user_table(id),
+  FOREIGN KEY (company) REFERENCES company_table(id)
+);
+
+CREATE INDEX idx_item_cost_item_number ON item_cost(item_number);
+CREATE INDEX idx_item_cost_company ON item_cost(company);
+''');
+    developer.log('Created table: item_cost');
+
+    //. Create sync_queue table
     await db.execute('''
       CREATE TABLE sync_queue (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -433,44 +566,409 @@ CREATE INDEX idx_items_in_branch_uom ON items_in_branch(unit_of_measure);
   Future<void> _insertDefaultData(Database db) async {
     developer.log('Inserting default data...');
 
-    // Insert default LOT type header
-    final headerId = await db.insert('udc_header', {
-      'header_code': 'LT',
-      'description_1': 'LOT Types',
-      'description_2': 'Different types of LOT management',
-      'system_code': 'LOT_MGMT',
-      'date_created': DateTime.now().millisecondsSinceEpoch,
-    });
-
-    // Insert default LOT types
-    final lotTypes = [
+    final List<Map<String, dynamic>> udcHeaderSeedData = [
+      {'id': 1, 'header_code': 'UM', 'udc_description': 'Unit of Measure'},
+      {'id': 2, 'header_code': 'PI', 'udc_description': 'Payment Instrument'},
       {
-        'detail_code': '01',
+        'id': 3,
+        'header_code': 'PR',
+        'udc_description': 'Purchased Receive Status',
+      },
+      {'id': 4, 'header_code': 'CN', 'udc_description': 'Countries'},
+      {'id': 5, 'header_code': 'PS', 'udc_description': 'Payment Status'},
+      {'id': 6, 'header_code': 'CT', 'udc_description': 'Color Types'},
+      {'id': 7, 'header_code': 'LS', 'udc_description': 'Lot Status'},
+      {'id': 8, 'header_code': 'TT', 'udc_description': 'Transaction Type'},
+      {'id': 9, 'header_code': 'OT', 'udc_description': 'Order Type'},
+      {'id': 10, 'header_code': 'CC', 'udc_description': 'Company Category'},
+      {'id': 11, 'header_code': 'C1', 'udc_description': 'Item Category 1'},
+      {'id': 12, 'header_code': 'C2', 'udc_description': 'Item Category 2'},
+      {'id': 13, 'header_code': 'C3', 'udc_description': 'Item Category 3'},
+      {'id': 14, 'header_code': 'C4', 'udc_description': 'Item Category 4'},
+      {'id': 15, 'header_code': 'C5', 'udc_description': 'Item Category 5'},
+      {'id': 16, 'header_code': 'C6', 'udc_description': 'Item Category 6'},
+      {'id': 17, 'header_code': 'C7', 'udc_description': 'Item Category 7'},
+      {'id': 18, 'header_code': 'C8', 'udc_description': 'Item Category 8'},
+      {'id': 19, 'header_code': 'C9', 'udc_description': 'Item Category 9'},
+      {'id': 20, 'header_code': 'C10', 'udc_description': 'Item Category 10'},
+      {'id': 21, 'header_code': 'LT', 'udc_description': 'Lot Type'},
+    ];
+
+    for (final udcHeader in udcHeaderSeedData) {
+      await db.insert('udc_header', udcHeader);
+    }
+    developer.log('udc header data inserted');
+
+    final List<Map<String, dynamic>> udcDetailsSeedData = [
+      // --- Unit of Measure (UM) ---
+      {
+        'id': 1,
+        'detail_code': 'PCS',
+        'description_1': 'Pieces',
+        'description_2': null,
+        'record_header': 1,
+        'udc_group': 'UM',
+      },
+      {
+        'id': 2,
+        'detail_code': 'KG',
+        'description_1': 'Kilogram',
+        'description_2': null,
+        'record_header': 1,
+        'udc_group': 'UM',
+      },
+      {
+        'id': 3,
+        'detail_code': 'L',
+        'description_1': 'Litre',
+        'description_2': null,
+        'record_header': 1,
+        'udc_group': 'UM',
+      },
+      {
+        'id': 4,
+        'detail_code': 'BOX',
+        'description_1': 'Box',
+        'description_2': null,
+        'record_header': 1,
+        'udc_group': 'UM',
+      },
+      {
+        'id': 5,
+        'detail_code': 'M',
+        'description_1': 'Meter',
+        'description_2': null,
+        'record_header': 1,
+        'udc_group': 'UM',
+      },
+
+      // --- Payment Instrument (PI) ---
+      {
+        'id': 6,
+        'detail_code': 'CASH',
+        'description_1': 'Cash',
+        'description_2': null,
+        'record_header': 2,
+        'udc_group': 'PI',
+      },
+      {
+        'id': 7,
+        'detail_code': 'CARD',
+        'description_1': 'Card Payment',
+        'description_2': null,
+        'record_header': 2,
+        'udc_group': 'PI',
+      },
+      {
+        'id': 8,
+        'detail_code': 'BANK',
+        'description_1': 'Bank Transfer',
+        'description_2': null,
+        'record_header': 2,
+        'udc_group': 'PI',
+      },
+      {
+        'id': 9,
+        'detail_code': 'MOBILE',
+        'description_1': 'Mobile Payment',
+        'description_2': null,
+        'record_header': 2,
+        'udc_group': 'PI',
+      },
+
+      // --- Purchased Receive Status (PR) ---
+      {
+        'id': 10,
+        'detail_code': 'NEW',
+        'description_1': 'New',
+        'description_2': null,
+        'record_header': 3,
+        'udc_group': 'PR',
+      },
+      {
+        'id': 11,
+        'detail_code': 'PARTIAL',
+        'description_1': 'Partially Received',
+        'description_2': null,
+        'record_header': 3,
+        'udc_group': 'PR',
+      },
+      {
+        'id': 12,
+        'detail_code': 'COMPLETE',
+        'description_1': 'Completely Received',
+        'description_2': null,
+        'record_header': 3,
+        'udc_group': 'PR',
+      },
+
+      // --- Countries (CN) ---
+      {
+        'id': 13,
+        'detail_code': 'ET',
+        'description_1': 'Ethiopia',
+        'description_2': null,
+        'record_header': 4,
+        'udc_group': 'CN',
+      },
+      {
+        'id': 14,
+        'detail_code': 'KE',
+        'description_1': 'Kenya',
+        'description_2': null,
+        'record_header': 4,
+        'udc_group': 'CN',
+      },
+      {
+        'id': 15,
+        'detail_code': 'US',
+        'description_1': 'United States',
+        'description_2': null,
+        'record_header': 4,
+        'udc_group': 'CN',
+      },
+      {
+        'id': 16,
+        'detail_code': 'IN',
+        'description_1': 'India',
+        'description_2': null,
+        'record_header': 4,
+        'udc_group': 'CN',
+      },
+
+      // --- Payment Status (PS) ---
+      {
+        'id': 17,
+        'detail_code': 'PENDING',
+        'description_1': 'Pending',
+        'description_2': null,
+        'record_header': 5,
+        'udc_group': 'PS',
+      },
+      {
+        'id': 18,
+        'detail_code': 'PAID',
+        'description_1': 'Paid',
+        'description_2': null,
+        'record_header': 5,
+        'udc_group': 'PS',
+      },
+      {
+        'id': 19,
+        'detail_code': 'OVERDUE',
+        'description_1': 'Overdue',
+        'description_2': null,
+        'record_header': 5,
+        'udc_group': 'PS',
+      },
+
+      // --- Color Types (CT) ---
+      {
+        'id': 20,
+        'detail_code': 'RED',
+        'description_1': 'Red',
+        'description_2': null,
+        'record_header': 6,
+        'udc_group': 'CT',
+      },
+      {
+        'id': 21,
+        'detail_code': 'BLU',
+        'description_1': 'Blue',
+        'description_2': null,
+        'record_header': 6,
+        'udc_group': 'CT',
+      },
+      {
+        'id': 22,
+        'detail_code': 'GRN',
+        'description_1': 'Green',
+        'description_2': null,
+        'record_header': 6,
+        'udc_group': 'CT',
+      },
+      {
+        'id': 23,
+        'detail_code': 'BLK',
+        'description_1': 'Black',
+        'description_2': null,
+        'record_header': 6,
+        'udc_group': 'CT',
+      },
+
+      // --- Lot Status (LS) ---
+      {
+        'id': 24,
+        'detail_code': 'ACTIVE',
+        'description_1': 'Active Lot',
+        'description_2': null,
+        'record_header': 7,
+        'udc_group': 'LS',
+      },
+      {
+        'id': 25,
+        'detail_code': 'CLOSED',
+        'description_1': 'Closed Lot',
+        'description_2': null,
+        'record_header': 7,
+        'udc_group': 'LS',
+      },
+
+      // --- Transaction Type (TT) ---
+      {
+        'id': 26,
+        'detail_code': 'SALE',
+        'description_1': 'Sales Transaction',
+        'description_2': null,
+        'record_header': 8,
+        'udc_group': 'TT',
+      },
+      {
+        'id': 27,
+        'detail_code': 'PURCHASE',
+        'description_1': 'Purchase Transaction',
+        'description_2': null,
+        'record_header': 8,
+        'udc_group': 'TT',
+      },
+      {
+        'id': 28,
+        'detail_code': 'RETURN',
+        'description_1': 'Return Transaction',
+        'description_2': null,
+        'record_header': 8,
+        'udc_group': 'TT',
+      },
+
+      // --- Order Type (OT) ---
+      {
+        'id': 29,
+        'detail_code': 'SO',
+        'description_1': 'Sales Order',
+        'description_2': null,
+        'record_header': 9,
+        'udc_group': 'OT',
+      },
+      {
+        'id': 30,
+        'detail_code': 'PO',
+        'description_1': 'Purchase Order',
+        'description_2': null,
+        'record_header': 9,
+        'udc_group': 'OT',
+      },
+
+      // --- Company Category (CC) ---
+      {
+        'id': 31,
+        'detail_code': 'SUP',
+        'description_1': 'Supplier',
+        'description_2': null,
+        'record_header': 10,
+        'udc_group': 'CC',
+      },
+      {
+        'id': 32,
+        'detail_code': 'CUS',
+        'description_1': 'Customer',
+        'description_2': null,
+        'record_header': 10,
+        'udc_group': 'CC',
+      },
+      {
+        'id': 33,
+        'detail_code': 'EMP',
+        'description_1': 'Employee',
+        'description_2': null,
+        'record_header': 10,
+        'udc_group': 'CC',
+      },
+
+      //---- Category 1 (CT1) ----
+      {
+        'id': 34,
+        'detail_code': 'CT1',
+        'description_1': 'Category 1',
+        'description_2': null,
+        'record_header': 11,
+        'udc_group': 'CT1',
+      },
+      {
+        'id': 35,
+        'detail_code': 'CT1pro',
+        'description_1': 'Category 1 pro ',
+        'description_2': null,
+        'record_header': 11,
+        'udc_group': 'CT1',
+      },
+
+      //---Category 2 (CT2)---
+      {
+        'id': 37,
+        'detail_code': 'CT2',
+        'description_1': 'Category 2',
+        'description_2': null,
+        'record_header': 12,
+        'udc_group': 'CT2',
+      },
+      {
+        'id': 38,
+        'detail_code': 'CT2pro',
+        'description_1': 'Category 2 pro',
+        'description_2': null,
+        'record_header': 12,
+        'udc_group': 'CT2',
+      },
+
+      //---Category 3 (CT3)---
+      {
+        'id': 39,
+        'detail_code': 'CT3',
+        'description_1': 'Category 3',
+        'description_2': null,
+        'record_header': 13,
+        'udc_group': 'CT3',
+      },
+      {
+        'id': 40,
+        'detail_code': 'CT3pro',
+        'description_1': 'Category 3 pro',
+        'description_2': null,
+        'record_header': 13,
+        'udc_group': 'CT3',
+      },
+
+      // --- Lot Type (LT) ---
+      {
+        'id': 41,
+        'detail_code': 'EXP',
         'description_1': 'Expiration Date',
         'description_2': 'Select items by expiration date',
-        'record_header': headerId,
-        'udc_group': 'LOT_TYPE',
+        'record_header': 21,
+        'udc_group': 'LT',
       },
       {
-        'detail_code': '02',
+        'id': 42,
+        'detail_code': 'EFF',
         'description_1': 'Effective Date',
         'description_2': 'Select items by effective date',
-        'record_header': headerId,
-        'udc_group': 'LOT_TYPE',
+        'record_header': 21,
+        'udc_group': 'LT',
       },
       {
-        'detail_code': '03',
+        'id': 43,
+        'detail_code': 'REC',
         'description_1': 'Receipt Date',
         'description_2': 'Select items by receipt date',
-        'record_header': headerId,
-        'udc_group': 'LOT_TYPE',
+        'record_header': 21,
+        'udc_group': 'LT',
       },
     ];
 
-    for (final lotType in lotTypes) {
+    for (final lotType in udcDetailsSeedData) {
       await db.insert('udc_details', lotType);
     }
-    developer.log('Inserted default LOT types');
+    developer.log('Inserted default udc headers and details');
 
     // Insert Company
     final companies = [
@@ -1071,25 +1569,19 @@ Future<List<Map<String, dynamic>>> getUdcDetailsByCode(
   }
 }
 
-Future<List<Map<String, dynamic>>> getUdcDetailsByHeaderCode(
-  String headerCode,
-) async {
+Future<List<UdcDetails>> getUdcDetailsByHeaderCode(String headerCode) async {
   final db = await LocalDatabaseService().database;
   try {
-    final results = await db.rawQuery(
-      '''
-      SELECT udc_details.* 
-      FROM udc_details 
-      INNER JOIN udc_header ON udc_details.record_header = udc_header.id 
-      WHERE udc_header.header_code = ?
-    ''',
-      [headerCode],
+    final results = await db.query(
+      'udc_details',
+      where: 'record_header = ?',
+      whereArgs: [headerCode],
     );
 
     developer.log(
       'Found ${results.length} UDC details for header: $headerCode',
     );
-    return results;
+    return results.map((e) => UdcDetails.fromJson(e)).toList();
   } catch (e) {
     developer.log('Error getting UDC details by header: $e');
     return [];
