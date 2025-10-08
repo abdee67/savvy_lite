@@ -79,7 +79,7 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard> {
   void _emailItem(String itemId) {
     // Implement email functionality
     print('Emailing: $itemId');
-    }
+  }
 
   void _exportItem(ItemInBranchModel item) {
     context.read<StockItemInBranchBloc>().add(ExportSingleItemFromBranch(item));
@@ -576,12 +576,12 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard> {
                         ),
                         _buildDetailCard(
                           title: 'Unit of Measure',
-                          value: item.unitOfMeasure ?? 'N/A',
+                          value: item.unitOfMeasure.toString(),
                           color: Colors.blue,
                         ),
                         _buildDetailCard(
                           title: 'Available Quantity',
-                          value: item.quantityAvailable.toString() ?? 'N/A',
+                          value: item.quantityAvailable.toString(),
                           color: Colors.blue,
                         ),
                       ],

@@ -98,14 +98,17 @@ class ItemUomConversionBloc
         emit(
           state.copyWith(
             status: ItemUomConversionStatus.failure,
-            message: 'UoM Structure Level is Not Correct(its already there)!',
+            message:
+                'The UoM structure levels must be consecutive (1, 2, 3...). Please correct the level.',
           ),
         );
         return;
       }
+      // ✅ Set validCell to true like Java does for successful validation
+      final validItem = event.item.copyWith(validCell: true);
 
       final db = await databaseService.database;
-      final itemMap = event.item.toMap();
+      final itemMap = validItem.toMap();
       itemMap.remove('id');
       itemMap['created_by'] = authBloc.state.userId;
       itemMap['date_created'] = DateTime.now().toIso8601String();
@@ -154,7 +157,8 @@ class ItemUomConversionBloc
         emit(
           state.copyWith(
             status: ItemUomConversionStatus.failure,
-            message: 'UoM Structure Level is Not Correct(its already there)!',
+            message:
+                'The UoM structure levels must be consecutive (1, 2, 3...). Please correct the level.',
           ),
         );
         return;
@@ -198,6 +202,59 @@ class ItemUomConversionBloc
           message: 'Failed to update UoM conversion: $e',
         ),
       );
+    }
+  }
+
+  Future<int?> _uoMByStructure(
+    int itemId,
+    int structureLevel,
+    int companyId,
+  ) async {
+    try {
+      final db = await databaseService.database;
+      final result = await db.rawQuery(
+        '''
+      SELECT from_uom 
+      FROM item_uom_conversions 
+      WHERE item_number = ? AND uom_structure_level = ? AND company = ?
+      ''',
+        [itemId, structureLevel, companyId],
+      );
+
+      if (result.isNotEmpty) {
+        return result.first['from_uom'] as int?;
+      }
+      return null;
+    } catch (e) {
+      print('uoMByStructure error: $e');
+      return null;
+    }
+  }
+
+  Future<double> _unstructuredUoMConversion(
+    int itemId,
+    int fromUomId,
+    int toUomId,
+    int companyId,
+  ) async {
+    try {
+      final db = await databaseService.database;
+      final result = await db.rawQuery(
+        '''
+      SELECT conversion_factor 
+      FROM item_uom_conversions 
+      WHERE item_number = ? AND from_uom = ? AND to_uom = ? AND company = ?
+      ''',
+        [itemId, fromUomId, toUomId, companyId],
+      );
+
+      if (result.isNotEmpty && result.first['conversion_factor'] != null) {
+        return result.first['conversion_factor'] as double;
+      }
+      return 1.0;
+    } catch (e) {
+      print('unstructuredUoMConversion error: $e');
+      return 1.0;
     }
   }
 
@@ -285,20 +342,59 @@ class ItemUomConversionBloc
   Future<bool> _checkDuplication(ItemUomConversion item) async {
     try {
       final db = await databaseService.database;
+
+      // Build WHERE clause dynamically to handle null values
+      final whereParts = <String>[];
+      final whereArgs = <dynamic>[];
+
+      // Add non-null conditions
+      if (item.itemNumber != null) {
+        whereParts.add('item_number = ?');
+        whereArgs.add(item.itemNumber);
+      } else {
+        whereParts.add('item_number IS NULL');
+      }
+
+      if (item.fromUom != null) {
+        whereParts.add('from_uom = ?');
+        whereArgs.add(item.fromUom);
+      } else {
+        whereParts.add('from_uom IS NULL');
+      }
+
+      if (item.toUom != null) {
+        whereParts.add('to_uom = ?');
+        whereArgs.add(item.toUom);
+      } else {
+        whereParts.add('to_uom IS NULL');
+      }
+
+      // Company should never be null when saving
+      if (authBloc.state.companyId != null) {
+        whereParts.add('company = ?');
+        whereArgs.add(authBloc.state.companyId);
+      } else {
+        // If company is null, we can't check duplication properly
+        return false;
+      }
+
+      // For update operations, exclude current item
+      if (item.id != null) {
+        whereParts.add('id != ?');
+        whereArgs.add(item.id);
+      }
+
+      final whereClause = whereParts.join(' AND ');
+
       final existing = await db.query(
         'item_uom_conversions',
-        where:
-            'item_number = ? AND from_uom = ? AND to_uom = ? AND company = ? AND id != ?',
-        whereArgs: [
-          item.itemNumber,
-          item.fromUom,
-          item.toUom,
-          authBloc.state.companyId,
-          item.id,
-        ],
+        where: whereClause,
+        whereArgs: whereArgs,
       );
+
       return existing.isNotEmpty;
     } catch (e) {
+      print('Duplication check error: $e');
       return false;
     }
   }
@@ -316,14 +412,14 @@ class ItemUomConversionBloc
           item.itemNumber,
           item.uomStructureLevel,
           authBloc.state.companyId,
-          item.id,
+          item.id ?? 0,
         ],
       );
 
-      // 2. Check for duplicate structure level in CREATE LIST
+      // 2. Check for duplicate in create list
       final duplicateInCreateList = state.createItems.any(
         (createItem) =>
-            createItem.tempId != item.tempId && // Different item
+            createItem.tempId != item.tempId &&
             createItem.itemNumber == item.itemNumber &&
             createItem.uomStructureLevel == item.uomStructureLevel,
       );
@@ -332,45 +428,38 @@ class ItemUomConversionBloc
         return false;
       }
 
-      // 3. Get structure levels from DATABASE
-      final allDbConversions = await db.query(
-        'item_uom_conversions',
-        where: 'item_number = ? AND company = ?',
-        whereArgs: [item.itemNumber, authBloc.state.companyId],
-      );
+      // 3. ✅ CRITICAL: Check consecutive numbering in createItems (MISSING IN YOUR CODE)
+      final createItemsWithLevels =
+          state.createItems
+              .where((createItem) => createItem.uomStructureLevel != null)
+              .toList()
+            ..sort(
+              (a, b) => (a.uomStructureLevel ?? 0).compareTo(
+                b.uomStructureLevel ?? 0,
+              ),
+            );
 
-      List<int> structureLevels = allDbConversions
-          .map((e) => e['uom_structure_level'] as int?)
-          .where((level) => level != null)
-          .cast<int>()
-          .toList();
-
-      // 4. Add structure levels from CREATE LIST (excluding current item)
-      for (final createItem in state.createItems) {
-        if (createItem.tempId !=
-                item.tempId && // Don't include the item being validated
-            createItem.uomStructureLevel != null) {
-          structureLevels.add(createItem.uomStructureLevel!);
-        }
-      }
-
-      // 5. Add current item's structure level
+      // Add current item to the list for validation
       if (item.uomStructureLevel != null) {
-        structureLevels.add(item.uomStructureLevel!);
+        createItemsWithLevels.add(item);
+        createItemsWithLevels.sort(
+          (a, b) =>
+              (a.uomStructureLevel ?? 0).compareTo(b.uomStructureLevel ?? 0),
+        );
       }
 
-      // 6. Remove duplicates and sort
-      structureLevels = structureLevels.toSet().toList()..sort();
-
-      // 7. Check if levels are consecutive starting from 1
-      for (int i = 0; i < structureLevels.length; i++) {
-        if (structureLevels[i] != i + 1) {
-          return false;
+      // Check if levels are consecutive starting from 1
+      bool isConsecutive = true;
+      for (int i = 0; i < createItemsWithLevels.length; i++) {
+        if (createItemsWithLevels[i].uomStructureLevel != i + 1) {
+          isConsecutive = false;
+          break;
         }
       }
 
-      return true;
+      return isConsecutive;
     } catch (e) {
+      print('Structure validation error: $e');
       return false;
     }
   }
@@ -468,11 +557,26 @@ class ItemUomConversionBloc
         [itemId, companyId],
       );
 
-      if (itemResult.isEmpty) return 1.0;
+      if (itemResult.isEmpty) {
+        // ✅ USE UNSTRUCTURED CONVERSION AS FALLBACK
+        return await _unstructuredUoMConversion(
+          itemId,
+          fromUomId,
+          toUomId,
+          companyId,
+        );
+      }
 
       final primaryUomId = itemResult.first['unit_of_measure'] as int?;
-      if (primaryUomId == null) return 1.0;
-
+      if (primaryUomId == null) {
+        // ✅ USE UNSTRUCTURED CONVERSION WHEN NO PRIMARY UOM
+        return await _unstructuredUoMConversion(
+          itemId,
+          fromUomId,
+          toUomId,
+          companyId,
+        );
+      }
       // Check if one of the UoMs is primary
       if (primaryUomId == fromUomId) {
         return await _fromPrimaryToOther(itemId, toUomId, companyId);
@@ -494,8 +598,15 @@ class ItemUomConversionBloc
         companyId,
       );
 
-      if (strFrom == null || strTo == null) return 1.0;
-
+      if (strFrom == null || strTo == null) {
+        // ✅ USE UNSTRUCTURED CONVERSION WHEN NO STRUCTURE LEVELS FOUND
+        return await _unstructuredUoMConversion(
+          itemId,
+          fromUomId,
+          toUomId,
+          companyId,
+        );
+      }
       // Get conversions between the two structure levels
       final conversions = await db.rawQuery(
         '''
@@ -507,7 +618,15 @@ class ItemUomConversionBloc
       ''',
         [itemId, companyId, strFrom, strTo],
       );
-
+      // If no structured conversions found, use unstructured
+      if (conversions.isEmpty) {
+        return await _unstructuredUoMConversion(
+          itemId,
+          fromUomId,
+          toUomId,
+          companyId,
+        );
+      }
       double factor = 1.0;
       for (final conversion in conversions) {
         final conversionFactor = conversion['conversion_factor'] as double?;
@@ -518,7 +637,13 @@ class ItemUomConversionBloc
 
       return factor;
     } catch (e) {
-      return 1.0;
+      // ✅ FALLBACK TO UNSTRUCTURED CONVERSION ON ERROR
+      return await _unstructuredUoMConversion(
+        itemId,
+        fromUomId,
+        toUomId,
+        companyId,
+      );
     }
   }
 

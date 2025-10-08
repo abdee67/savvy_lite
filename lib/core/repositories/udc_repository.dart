@@ -1,7 +1,7 @@
 import 'dart:developer' as developer;
 import 'package:http/http.dart' as http;
-import 'package:savvy_stock/core/models/udc_details.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 import 'package:sqflite/sqflite.dart';
 
 class UdcRepository {

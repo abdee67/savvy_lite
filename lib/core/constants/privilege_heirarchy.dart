@@ -80,6 +80,10 @@ class PrivilegeHierarchy {
 
     // Location Entry (child of Stock Dashboard)
     AppRoutes.locationEntry: AppRoutes.stockDashboard,
+    AppRoutes.locationMasterCreate: AppRoutes.locationEntry,
+    AppRoutes.locationMasterEdit: AppRoutes.locationEntry,
+    AppRoutes.locationMasterDelete: AppRoutes.locationEntry,
+
     AppRoutes.lotEntry: AppRoutes.stockDashboard,
     AppRoutes.lotColorings: AppRoutes.stockDashboard,
     AppRoutes.inventoryTransaction: AppRoutes.stockDashboard,

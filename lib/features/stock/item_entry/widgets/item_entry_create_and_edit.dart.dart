@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dart';
+import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dart'
+    hide LoadUdcData;
 import 'package:savvy_stock/core/blocs/system_constant/system_constant_state.dart';
 import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
@@ -11,6 +13,9 @@ import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dar
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_state.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/widgets/stock_qr_scanner.dart';
+import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
+import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_event.dart';
+import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_state.dart';
 
 class ItemEntryFormPage extends StatefulWidget {
   final ItemEntryModel? item;
@@ -39,7 +44,6 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
   String? _selectedTaxable;
 
   final List<String> _marginTypes = ['Flat', 'Percentage'];
-  final List<String> _uom = ['pices', 'kg', 'gggg', 'ml', 'ltr'];
   final List<String> _taxable = ['YES', 'NO'];
 
   @override
@@ -49,8 +53,10 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
     context.read<SystemConstantBloc>().add(
       LoadSystemConstantsForCompany(widget.authBloc.state.companyId!),
     );
+    context.read<UdcDetailsBloc>().add(LoadUdcDetailsByGroup('UM'));
     if (widget.item != null) {
       context.read<StockItemEntryBloc>().add(SetItemForm(widget.item!));
+      context.read<UdcDetailsBloc>().add(LoadUdcDetailsByGroup('UM'));
     }
   }
 
@@ -462,16 +468,56 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
               },
             ),
             const SizedBox(height: 16),
-            CustomDropdown(
-              labelText: 'Unit of Measure',
-              items: _uom
-                  .map((uom) => DropdownMenuItem(value: uom, child: Text(uom)))
-                  .toList(),
-              value: _selectedUom,
-              onChanged: (value) {
-                setState(() {
-                  _selectedUom = value;
-                });
+            //  UoM
+            BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
+              builder: (context, state) {
+                if (state.status == UdcDetailsStatus.loading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (state.groupCode == null || state.details.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                      'No UoM available ',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  );
+                }
+
+                // Safe employee list with null check
+                final items = state.details.toList();
+                if (items.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                      'No valid UoM found',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  );
+                }
+
+                return CustomDropdown(
+                  labelText: 'UoM *',
+                  value: _selectedUom,
+                  prefixIcon: const Icon(Iconsax.aave_aave),
+                  items: state.details.map((item) {
+                    return DropdownMenuItem<String>(
+                      value: item.description1,
+                      child: Text(item.description1),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedUom = value;
+                    });
+                  },
+                  validator: (value) {
+                    if (value == null) {
+                      return 'Please select an UoM';
+                    }
+                    return null;
+                  },
+                );
               },
             ),
             const SizedBox(height: 16),

@@ -1,7 +1,15 @@
 import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
-enum UdcDetailsStatus { initial, loading, success, failure, creating, updating }
+enum UdcDetailsStatus {
+  initial,
+  loading,
+  success,
+  failure,
+  creating,
+  updating,
+  deleting,
+}
 
 class UdcDetailsState extends Equatable {
   final UdcDetailsStatus status;

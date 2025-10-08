@@ -49,7 +49,7 @@ class _ItemUomConversionFormState extends State<ItemUomConversionForm> {
     context.read<StockItemEntryBloc>().add(
       LoadItems(widget.authBloc.state.companyId!),
     );
-    context.read<UdcDetailsBloc>().add(LoadUdcDetails('UM'));
+    context.read<UdcDetailsBloc>().add(LoadUdcDetailsByGroup('UM'));
 
     // Initialize form based on whether we're editing or creating
     if (widget.editingItem != null) {
@@ -285,7 +285,7 @@ class _ItemUomConversionFormState extends State<ItemUomConversionForm> {
                           );
                         }
 
-                        // Safe employee list with null check
+                        // Safe udc list with null check
                         final items = state.details.toList();
                         if (items.isEmpty) {
                           return const Padding(
@@ -399,7 +399,6 @@ class _ItemUomConversionFormState extends State<ItemUomConversionForm> {
                         );
                       },
                     ),
-                    const SizedBox(height: 16),
 
                     const SizedBox(height: 16),
 

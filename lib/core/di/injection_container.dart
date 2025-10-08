@@ -18,15 +18,14 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
+import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 
 final getIt = GetIt.instance;
 
 void initDependencies() {
-  // Auth Service (with fake authentication)
-  // getIt.registerLazySingleton<AuthService>(() => AuthService());
+  getIt.registerFactory<PaymentBloc>(() => PaymentBloc(getIt()));
 
-  // Auth Bloc
   getIt.registerLazySingleton<AuthBloc>(
     () => AuthBloc(databaseService: getIt(), secureStorage: getIt()),
   );
@@ -104,12 +103,13 @@ void initDependencies() {
     () => StockItemInBranchBloc(databaseService: getIt(), authBloc: getIt()),
   );
 
-  getIt.registerFactory<PaymentBloc>(() => PaymentBloc(getIt()));
-
   getIt.registerFactory<ItemUomConversionBloc>(
     () => ItemUomConversionBloc(databaseService: getIt(), authBloc: getIt()),
   );
   getIt.registerFactory<UdcDetailsBloc>(
     () => UdcDetailsBloc(databaseService: getIt(), authBloc: getIt()),
+  );
+  getIt.registerFactory<LocationMasterBloc>(
+    () => LocationMasterBloc(databaseService: getIt(), authBloc: getIt()),
   );
 }

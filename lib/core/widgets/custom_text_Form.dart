@@ -22,6 +22,7 @@ class CustomTextField extends StatefulWidget {
   final String? hintText;
   final FocusNode? focusNode;
   final bool obscureText;
+  final String? suffixText;
 
   const CustomTextField({
     super.key,
@@ -44,6 +45,7 @@ class CustomTextField extends StatefulWidget {
     this.textInputAction,
     this.focusNode,
     this.obscureText = false,
+    this.suffixText,
   });
 
   @override
@@ -130,6 +132,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
         },
         decoration: InputDecoration(
           suffixIcon: widget.suffixIcon,
+          suffixText: widget.suffixText,
           prefixIcon: widget.prefixIcon,
           labelText: widget.labelText,
           hintText: widget.hintText,

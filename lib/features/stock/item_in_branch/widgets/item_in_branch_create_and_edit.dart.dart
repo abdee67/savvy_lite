@@ -12,6 +12,9 @@ import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_e
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_state.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
+import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_event.dart';
+import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_state.dart';
 
 class ItemInBranchFormPage extends StatefulWidget {
   final ItemInBranchModel? item;
@@ -40,11 +43,10 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
   final TextEditingController _marginRateController = TextEditingController();
 
   String? _selectedMarginType;
-  String? _selectedUom;
+  int? _selectedUom;
   int? _branch;
 
   final List<String> _marginTypes = ['Flat', 'Percentage'];
-  final List<String> _uom = ['pices', 'kg', 'g', 'ml', 'ltr'];
 
   @override
   void initState() {
@@ -52,6 +54,7 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
     context.read<BranchBloc>().add(
       LoadBranchs(widget.authBloc.state.companyId!),
     );
+    context.read<UdcDetailsBloc>().add(LoadUdcDetailsByGroup('UM'));
     _initializeControllers();
     if (widget.item != null) {
       context.read<StockItemInBranchBloc>().add(
@@ -71,7 +74,7 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
       _marginRateController.text = item.marginRate?.toString() ?? '';
       _marginRateController.text = item.marginRate?.toString() ?? '';
       _selectedMarginType = item.marginType;
-      _selectedUom = item.unitOfMeasure.toString();
+      _selectedUom = item.unitOfMeasure;
       _branch = item.branch;
     }
     //for creating
@@ -83,8 +86,6 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
       _unitPriceController.text = item.unitPrice?.toString() ?? '';
       _marginRateController.text = item.marginRate?.toString() ?? '';
       _marginRateController.text = item.marginRate?.toString() ?? '';
-      _selectedMarginType = item.marginType;
-      _selectedUom = item.unitOfMeasure.toString();
     }
     //for empty(may be for creating new item)
     else {
@@ -316,6 +317,58 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
               },
             ),
             const SizedBox(height: 16),
+            BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
+              builder: (context, state) {
+                if (state.status == UdcDetailsStatus.loading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (state.details.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                      'No udc available for item to add',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  );
+                }
+
+                // Safe employee list with null check
+                final udc = state.details.toList();
+                if (udc.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                      'No valid udc found',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  );
+                }
+
+                return CustomDropdown(
+                  labelText: 'Udc *',
+                  value: _selectedUom,
+                  prefixIcon: const Icon(Iconsax.profile_circle),
+                  items: state.details.map((udc) {
+                    return DropdownMenuItem<int>(
+                      value: udc.id,
+                      child: Text('${udc.description1}'),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedUom = value;
+                    });
+                  },
+                  validator: (value) {
+                    if (value == null) {
+                      return 'Please select an udc';
+                    }
+                    return null;
+                  },
+                );
+              },
+            ),
+            const SizedBox(height: 16),
             CustomTextField(
               labelText: 'Available Quantity *',
               controller: _qunatityAvailableController,
@@ -347,22 +400,6 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
               prefixIcon: const Icon(Icons.attach_money),
             ),
             const SizedBox(height: 16),
-            CustomTextField(
-              labelText: 'Margin Rate',
-              controller: _marginRateController,
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Margin Rate is required';
-                }
-                return null;
-              },
-              onChanged: (value) {
-                _marginRateController.text = value;
-              },
-              prefixIcon: const Icon(Icons.attach_money),
-            ),
-            const SizedBox(height: 16),
             CustomDropdown(
               labelText: 'Margin Type',
               value: _selectedMarginType,
@@ -379,17 +416,20 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
               },
             ),
             const SizedBox(height: 16),
-            CustomDropdown(
-              labelText: 'Unit of Measure',
-              value: _selectedUom,
-              items: _uom.map((uom) {
-                return DropdownMenuItem<String>(value: uom, child: Text(uom));
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedUom = value;
-                });
+            CustomTextField(
+              labelText: 'Margin Rate',
+              controller: _marginRateController,
+              keyboardType: TextInputType.number,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Margin Rate is required';
+                }
+                return null;
               },
+              onChanged: (value) {
+                _marginRateController.text = value;
+              },
+              prefixIcon: const Icon(Icons.attach_money),
             ),
           ],
         ),

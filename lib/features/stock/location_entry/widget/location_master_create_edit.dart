@@ -1,0 +1,439 @@
+// features/stock/location_master/pages/location_master_create_page.dart
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
+import 'package:savvy_stock/core/widgets/custom_text_form.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
+import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
+import 'package:savvy_stock/features/branch_list/blocs/branch_list_event.dart';
+import 'package:savvy_stock/features/branch_list/blocs/branch_list_state.dart';
+import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_event.dart';
+import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_state.dart';
+import 'package:savvy_stock/features/stock/location_entry/widget/branch_dropdown.dart';
+import 'package:savvy_stock/features/stock/location_entry/widget/item_pick_list.dart';
+import 'package:savvy_stock/features/stock/location_entry/widget/location_code.dart';
+import 'package:savvy_stock/features/stock/location_entry/widget/location_toolBar.dart';
+import '../blocs/location_master_bloc.dart';
+import '../models/location_master_model.dart';
+
+class LocationMasterCreatePage extends StatefulWidget {
+  final AuthBloc authBloc;
+  final LocationMaster? editingLocation;
+  const LocationMasterCreatePage({
+    super.key,
+    required this.authBloc,
+    this.editingLocation,
+  });
+
+  @override
+  State<LocationMasterCreatePage> createState() =>
+      _LocationMasterCreatePageState();
+}
+
+class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
+  final _formKey = GlobalKey<FormState>();
+  final List<TextEditingController> _codeControllers = List.generate(
+    10,
+    (_) => TextEditingController(),
+  );
+  int? _selectedBranch;
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<BranchBloc>().add(
+      LoadBranchs(widget.authBloc.state.companyId!),
+    );
+    // Initialize with empty location
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<LocationMasterBloc>().add(
+        PrepareCreateLocation(
+          context.read<LocationMasterBloc>().state.companyId,
+        ),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _codeControllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Location Master'),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => _cancel(context),
+          ),
+        ],
+      ),
+      body: BlocConsumer<LocationMasterBloc, LocationMasterState>(
+        listener: (context, state) {
+          // Show success/error messages
+          if (state.status == LocationMasterStatus.success &&
+              state.message.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.green,
+              ),
+            );
+          } else if (state.status == LocationMasterStatus.failure &&
+              state.message.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
+            );
+          } else if (state.status == LocationMasterStatus.duplication) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+
+          // Update controllers when selected location changes
+          if (state.selected != null) {
+            _updateControllers(state.selected!);
+          }
+        },
+        builder: (context, state) {
+          return Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                // Toolbar
+                LocationToolbar(
+                  onSave: () => _saveLocation(context, state),
+                  onCancel: () => _cancel(context),
+                  isSaveEnabled:
+                      state.dualListTarget.isNotEmpty && state.selected != null,
+                ),
+
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 600),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Store and Margin Section
+                            _buildStoreAndMarginSection(context, state),
+
+                            const SizedBox(height: 16),
+
+                            // Location Codes Section
+                            LocationCodeForm(
+                              controllers: _codeControllers,
+                              onCodeChanged: (index, value) =>
+                                  _onCodeChanged(context, index, value),
+                              isFieldEnabled: _getFieldEnabledState(
+                                state.selected,
+                              ),
+                            ),
+
+                            const SizedBox(height: 16),
+                            const Divider(),
+                            const SizedBox(height: 16),
+
+                            // Items Pick List Section
+                            ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: MediaQuery.of(context).size.width * 1,
+                                maxHeight:
+                                    MediaQuery.of(context).size.height * 0.6,
+                              ),
+                              child: _buildItemsPickListSection(context, state),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildStoreAndMarginSection(
+    BuildContext context,
+    LocationMasterState state,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.all(10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Store Information',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(child: BranchDropdown()),
+              const SizedBox(width: 26),
+              // Margin Type and Rate - Conditionally shown based on system settings
+              if (_shouldShowMarginFields()) ...[
+                Expanded(child: _buildMarginTypeDropdown(context, state)),
+                const SizedBox(width: 26),
+                Expanded(child: _buildMarginRateField(context, state)),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMarginTypeDropdown(
+    BuildContext context,
+    LocationMasterState state,
+  ) {
+    return DropdownButtonFormField<String>(
+      initialValue: state.selected?.marginType,
+      decoration: const InputDecoration(
+        labelText: 'Margin Type',
+        border: OutlineInputBorder(),
+      ),
+      items: const [
+        DropdownMenuItem(value: null, child: Text('Select One')),
+        DropdownMenuItem(value: 'F', child: Text('Flat')),
+        DropdownMenuItem(value: 'P', child: Text('Percentage')),
+      ],
+      onChanged: (String? value) {
+        final updatedLocation = state.selected?.copyWith(marginType: value);
+        if (updatedLocation != null) {
+          context.read<LocationMasterBloc>().add(
+            SetSelectedLocation(updatedLocation),
+          );
+        }
+      },
+    );
+  }
+
+  Widget _buildMarginRateField(
+    BuildContext context,
+    LocationMasterState state,
+  ) {
+    return CustomTextField(
+      value: state.selected?.marginRate?.toString(),
+      labelText: 'Margin Rate',
+      suffixText: _getMarginRateSuffix(state.selected),
+      keyboardType: TextInputType.number,
+      onChanged: (value) {
+        final marginRate = double.tryParse(value);
+        final updatedLocation = state.selected?.copyWith(
+          marginRate: marginRate,
+        );
+        if (updatedLocation != null) {
+          context.read<LocationMasterBloc>().add(
+            SetSelectedLocation(updatedLocation),
+          );
+        }
+      },
+    );
+  }
+
+  String _getMarginRateSuffix(LocationMaster? location) {
+    if (location?.marginRate == null || location?.marginType == null) {
+      return '';
+    }
+    return location?.marginType == 'F' ? 'ETB' : '%';
+  }
+
+  Widget _buildItemsPickListSection(
+    BuildContext context,
+    LocationMasterState state,
+  ) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SizedBox(
+          width: constraints.maxWidth,
+          height: constraints.maxHeight * 0.6,
+          child: Container(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Items to Location Attachment',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: ItemsPickList(
+                      sourceItems: state.dualListSource,
+                      targetItems: state.dualListTarget,
+                      onSelectionChanged: (source, target) {
+                        context.read<LocationMasterBloc>().add(
+                          UpdateDualListModel(source, target),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  bool _shouldShowMarginFields() {
+    // This would come from your system settings
+    // For now, return true to show them
+    return true;
+  }
+
+  void _updateControllers(LocationMaster location) {
+    final codes = [
+      location.code01,
+      location.code02,
+      location.code03,
+      location.code04,
+      location.code05,
+      location.code06,
+      location.code07,
+      location.code08,
+      location.code09,
+      location.code10,
+    ];
+
+    for (int i = 0; i < codes.length; i++) {
+      if (i < _codeControllers.length) {
+        _codeControllers[i].text = codes[i] ?? '';
+      }
+    }
+  }
+
+  List<bool> _getFieldEnabledState(LocationMaster? location) {
+    return [
+      true, // Code 1 is always enabled
+      (location?.code01?.isNotEmpty ?? false),
+      (location?.code02?.isNotEmpty ?? false),
+      (location?.code03?.isNotEmpty ?? false),
+      (location?.code04?.isNotEmpty ?? false),
+      (location?.code05?.isNotEmpty ?? false),
+      (location?.code06?.isNotEmpty ?? false),
+      (location?.code07?.isNotEmpty ?? false),
+      (location?.code08?.isNotEmpty ?? false),
+      (location?.code09?.isNotEmpty ?? false),
+    ];
+  }
+
+  void _onCodeChanged(BuildContext context, int index, String value) {
+    final state = context.read<LocationMasterBloc>().state;
+    final currentLocation = state.selected;
+
+    if (currentLocation != null) {
+      LocationMaster updatedLocation;
+      switch (index) {
+        case 0:
+          updatedLocation = currentLocation.copyWith(code01: value);
+          break;
+        case 1:
+          updatedLocation = currentLocation.copyWith(code02: value);
+          break;
+        case 2:
+          updatedLocation = currentLocation.copyWith(code03: value);
+          break;
+        case 3:
+          updatedLocation = currentLocation.copyWith(code04: value);
+          break;
+        case 4:
+          updatedLocation = currentLocation.copyWith(code05: value);
+          break;
+        case 5:
+          updatedLocation = currentLocation.copyWith(code06: value);
+          break;
+        case 6:
+          updatedLocation = currentLocation.copyWith(code07: value);
+          break;
+        case 7:
+          updatedLocation = currentLocation.copyWith(code08: value);
+          break;
+        case 8:
+          updatedLocation = currentLocation.copyWith(code09: value);
+          break;
+        case 9:
+          updatedLocation = currentLocation.copyWith(code10: value);
+          break;
+        default:
+          updatedLocation = currentLocation;
+      }
+
+      context.read<LocationMasterBloc>().add(
+        SetSelectedLocation(updatedLocation),
+      );
+    }
+  }
+
+  void _saveLocation(BuildContext context, LocationMasterState state) {
+    if (_formKey.currentState?.validate() ?? false) {
+      if (state.selected != null && state.dualListTarget.isNotEmpty) {
+        context.read<LocationMasterBloc>().add(
+          SaveLocationMaster(state.selected!, state.dualListTarget),
+        );
+      }
+    }
+  }
+
+  void _saveAndClose(BuildContext context, LocationMasterState state) {
+    if (_formKey.currentState?.validate() ?? false) {
+      if (state.selected != null && state.dualListTarget.isNotEmpty) {
+        context.read<LocationMasterBloc>().add(
+          SaveLocationMaster(state.selected!, state.dualListTarget),
+        );
+        // Navigate back after save
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Navigator.of(context).pop();
+        });
+      }
+    }
+  }
+
+  void _saveAndAddNew(BuildContext context, LocationMasterState state) {
+    if (_formKey.currentState?.validate() ?? false) {
+      if (state.selected != null && state.dualListTarget.isNotEmpty) {
+        context.read<LocationMasterBloc>().add(
+          SaveLocationMaster(state.selected!, state.dualListTarget),
+        );
+        // Clear form for new entry
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          context.read<LocationMasterBloc>().add(ClearCreateList());
+          context.read<LocationMasterBloc>().add(
+            PrepareCreateLocation(state.companyId),
+          );
+          // Clear controllers
+          for (var controller in _codeControllers) {
+            controller.clear();
+          }
+        });
+      }
+    }
+  }
+
+  void _cancel(BuildContext context) {
+    Navigator.of(context).pop();
+  }
+}

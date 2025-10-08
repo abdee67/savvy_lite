@@ -28,6 +28,7 @@ import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_ent
 import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
+import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/repositories/system_constant_repository.dart';
@@ -42,7 +43,7 @@ Future<void> _initializeAndRunApp() async {
   try {
     await ConnectivityService().initConnectivity();
     initDependencies();
-    // await LocalDatabaseService().resetDatabase();
+    //await LocalDatabaseService().resetDatabase();
     // await LocalDatabaseService().debugTable('branch_table');
 
     if (AppConfig.isTestMode) {
@@ -51,7 +52,7 @@ Future<void> _initializeAndRunApp() async {
       developer.log('💾 Using local database only');
     }
     // Debug database tables (optional - remove in production)
-    await LocalDatabaseService().debugTable('item_uom_conversions');
+    await LocalDatabaseService().debugTable('privilege_table');
   } catch (error, stackTrace) {
     developer.log('Initialization error: $error');
     developer.log('Stack trace: $stackTrace');
@@ -222,6 +223,12 @@ class _SavvyStockState extends State<SavvyStock> {
           BlocProvider<UdcDetailsBloc>(
             create: (context) =>
                 UdcDetailsBloc(databaseService: getIt(), authBloc: _authBloc),
+          ),
+          BlocProvider<LocationMasterBloc>(
+            create: (context) => LocationMasterBloc(
+              databaseService: getIt(),
+              authBloc: _authBloc,
+            ),
           ),
         ],
         child: MaterialApp.router(

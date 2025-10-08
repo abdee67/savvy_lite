@@ -439,6 +439,8 @@ CREATE TABLE item_location (
   updated_by INTEGER,
   created_by INTEGER,
   company INTEGER,
+  margin_type TEXT,
+  margin_rate REAL,
   FOREIGN KEY (item_number) REFERENCES items_table(id),
   FOREIGN KEY (branch) REFERENCES branch_table(id),
   FOREIGN KEY (location) REFERENCES location_master(id),

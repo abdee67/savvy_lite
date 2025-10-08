@@ -10,7 +10,7 @@ class ItemInBranchModel {
   final double? unitPrice;
   final double? quantityAvailable;
   final int? company;
-  final String? unitOfMeasure;
+  final int? unitOfMeasure;
   final double? marginRate;
   final String? marginType;
 
@@ -55,7 +55,7 @@ class ItemInBranchModel {
       unitPrice: asDouble(map['unit_price']),
       quantityAvailable: asDouble(map['quantity_available']),
       company: asInt(map['company'])!,
-      unitOfMeasure: map['unit_of_measure']?.toString(),
+      unitOfMeasure: asInt(map['unit_of_measure']),
       marginRate: asDouble(map['margin_rate']),
       marginType: map['margin_type']?.toString(),
     );
@@ -82,7 +82,7 @@ class ItemInBranchModel {
     double? unitPrice,
     double? quantityAvailable,
     int? company,
-    String? unitOfMeasure,
+    int? unitOfMeasure,
     double? marginRate,
     String? marginType,
   }) {

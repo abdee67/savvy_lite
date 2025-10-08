@@ -224,6 +224,7 @@ class PrivilegeSeeder {
         AppRoutes.itemDelete,
         'delete_item',
       ),
+
       //item in branch
       _createPrivilege(
         'Item In Branch',
@@ -263,6 +264,7 @@ class PrivilegeSeeder {
         AppRoutes.itemWorkbench,
         'item_workbench',
       ),
+
       //item uom conversions
       _createPrivilege(
         'Item UoM Conversions',
@@ -288,12 +290,33 @@ class PrivilegeSeeder {
         AppRoutes.itemUomConversionsDelete,
         'delete_item_uom_conversion',
       ),
+
+      //location entry
       _createPrivilege(
         'Location Entry',
         'link',
         AppRoutes.locationEntry,
         'location_entry',
       ),
+      _createPrivilege(
+        'Location Master Create',
+        'button',
+        AppRoutes.locationMasterCreate,
+        'location_master_create',
+      ),
+      _createPrivilege(
+        'Location Master Edit',
+        'button',
+        AppRoutes.locationMasterEdit,
+        'location_master_edit',
+      ),
+      _createPrivilege(
+        'Location Master Delete',
+        'button',
+        AppRoutes.locationMasterDelete,
+        'location_master_delete',
+      ),
+
       _createPrivilege('Lot Entry', 'link', AppRoutes.lotEntry, 'lot_entry'),
       _createPrivilege(
         'Lot Colorings',

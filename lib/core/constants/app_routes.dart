@@ -90,6 +90,13 @@ class AppRoutes {
       '$itemUomConversions/delete-item-uom-conversion';
 
   static const String locationEntry = '$stock/location-entry';
+  static const String locationMasterCreate =
+      '$locationEntry/location-master-create';
+  static const String locationMasterEdit =
+      '$locationEntry/location-master-edit';
+  static const String locationMasterDelete =
+      '$locationEntry/location-master-delete';
+
   static const String lotEntry = '$stock/lot-entry';
   static const String lotColorings = '$stock/lot-colorings';
   static const String inventoryTransaction = '$stock/inventory-transaction';
