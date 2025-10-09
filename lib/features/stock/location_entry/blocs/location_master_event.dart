@@ -94,3 +94,7 @@ class LoadLocationsByBranch extends LocationMasterEvent {
 class CancelCreate extends LocationMasterEvent {}
 
 class CancelUpdate extends LocationMasterEvent {}
+
+class ClearLocations extends LocationMasterEvent {
+  const ClearLocations();
+}

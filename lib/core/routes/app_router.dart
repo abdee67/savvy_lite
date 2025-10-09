@@ -475,7 +475,10 @@ class AppRouter {
           return PrivilegeRouteGuard(
             requiredPrivilege: AppRoutes.locationMasterCreate,
             parentPrivilege: AppRoutes.locationEntry,
-            child: LocationMasterCreatePage(authBloc: authBloc),
+            child: LocationMasterCreatePage(
+              authBloc: authBloc,
+              isEditMode: false,
+            ),
           );
         },
         redirect: _protectedRouteRedirect,
@@ -491,6 +494,7 @@ class AppRouter {
             child: LocationMasterCreatePage(
               authBloc: authBloc,
               editingLocation: item,
+              isEditMode: true,
             ),
           );
         },

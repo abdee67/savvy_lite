@@ -7,12 +7,14 @@ class ItemsPickList extends StatefulWidget {
   final List<ItemInBranchModel> targetItems;
   final Function(List<ItemInBranchModel> source, List<ItemInBranchModel> target)
   onSelectionChanged;
+  final bool isEditMode;
 
   const ItemsPickList({
     super.key,
     required this.sourceItems,
     required this.targetItems,
     required this.onSelectionChanged,
+    this.isEditMode = false,
   });
 
   @override
@@ -20,157 +22,539 @@ class ItemsPickList extends StatefulWidget {
 }
 
 class _ItemsPickListState extends State<ItemsPickList> {
-  final List<ItemInBranchModel> _selectedSource = [];
-  final List<ItemInBranchModel> _selectedTarget = [];
-  final TextEditingController _sourceFilterController = TextEditingController();
-  final TextEditingController _targetFilterController = TextEditingController();
+  final List<ItemInBranchModel> _selectedItems = [];
+  final TextEditingController _searchController = TextEditingController();
 
-  List<ItemInBranchModel> get _filteredSource {
-    if (_sourceFilterController.text.isEmpty) {
+  List<ItemInBranchModel> get _filteredItems {
+    if (_searchController.text.isEmpty) {
       return widget.sourceItems;
     }
+    final query = _searchController.text.toLowerCase();
     return widget.sourceItems.where((item) {
-      return item.branchrefrence?.description?.toLowerCase().contains(
-            _sourceFilterController.text.toLowerCase(),
-          ) ??
-          false;
-    }).toList();
-  }
-
-  List<ItemInBranchModel> get _filteredTarget {
-    if (_targetFilterController.text.isEmpty) {
-      return widget.targetItems;
-    }
-    return widget.targetItems.where((item) {
-      return item.branchrefrence?.description?.toLowerCase().contains(
-            _targetFilterController.text.toLowerCase(),
-          ) ??
+      return item.branchrefrence?.description?.toLowerCase().contains(query) ??
           false;
     }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Source List
-        Expanded(
-          child: _buildListSection(
-            title: 'Available Items',
-            items: _filteredSource,
-            selectedItems: _selectedSource,
-            filterController: _sourceFilterController,
-            onSelectionChanged: (selected) {
-              setState(() {
-                _selectedSource.clear();
-                _selectedSource.addAll(selected);
-              });
-            },
-          ),
-        ),
-
-        // Transfer Buttons
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ElevatedButton(
-                onPressed: _selectedSource.isNotEmpty ? _moveToTarget : null,
-                child: const Icon(Icons.arrow_forward),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _selectedTarget.isNotEmpty ? _moveToSource : null,
-                child: const Icon(Icons.arrow_back),
-              ),
-            ],
-          ),
-        ),
-
-        // Target List
-        Expanded(
-          child: _buildListSection(
-            title: 'Assigned Items',
-            items: _filteredTarget,
-            selectedItems: _selectedTarget,
-            filterController: _targetFilterController,
-            onSelectionChanged: (selected) {
-              setState(() {
-                _selectedTarget.clear();
-                _selectedTarget.addAll(selected);
-              });
-            },
-          ),
-        ),
+        // Available items section - FIXED: Use Expanded for proper constraints
+        Expanded(child: _buildAvailableItemsSection(theme, colors)),
+        const SizedBox(height: 20),
+        // Show assigned items section in edit mode
+        if (widget.isEditMode && widget.targetItems.isNotEmpty) ...[
+          _buildAssignedItemsSection(theme, colors),
+          const SizedBox(height: 20),
+        ],
       ],
     );
   }
 
-  Widget _buildListSection({
-    required String title,
-    required List<ItemInBranchModel> items,
-    required List<ItemInBranchModel> selectedItems,
-    required TextEditingController filterController,
-    required Function(List<ItemInBranchModel>) onSelectionChanged,
-  }) {
-    return Expanded(
+  Widget _buildAssignedItemsSection(ThemeData theme, ColorScheme colors) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: filterController,
-            decoration: const InputDecoration(
-              hintText: 'Filter...',
-              border: OutlineInputBorder(),
-              isDense: true,
-            ),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(4),
+          // Section Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
               ),
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: items.length,
-                itemBuilder: (context, index) {
-                  final item = items[index];
-                  final isSelected = selectedItems.contains(item);
-                  final isDisabled = _isItemDisabled(item);
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.lock_outline, size: 20, color: Colors.grey.shade600),
+                const SizedBox(width: 8),
+                Text(
+                  'Assigned Items (Read-only)',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '${widget.targetItems.length} items',
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
 
-                  return CheckboxListTile(
-                    value: isSelected,
-                    onChanged: isDisabled
-                        ? null
-                        : (value) {
-                            final newSelection = List<ItemInBranchModel>.from(
-                              selectedItems,
-                            );
-                            if (value == true) {
-                              newSelection.add(item);
-                            } else {
-                              newSelection.remove(item);
-                            }
-                            onSelectionChanged(newSelection);
-                          },
-                    title: Text(
-                      item.branchrefrence?.description ?? 'Unknown Item',
-                      style: TextStyle(color: isDisabled ? Colors.grey : null),
-                    ),
-                    secondary: isDisabled
-                        ? const Icon(Icons.lock, color: Colors.grey, size: 16)
-                        : null,
-                  );
+          // Assigned Items List - FIXED: Use ConstrainedBox with minHeight
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 60, maxHeight: 200),
+            child: widget.targetItems.isEmpty
+                ? _buildEmptyAssignedState(theme, colors)
+                : ListView.builder(
+                    padding: const EdgeInsets.all(8),
+                    shrinkWrap: true,
+                    itemCount: widget.targetItems.length,
+                    itemBuilder: (context, index) {
+                      final item = widget.targetItems[index];
+                      return _buildAssignedItemListItem(
+                        item: item,
+                        theme: theme,
+                        colors: colors,
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyAssignedState(ThemeData theme, ColorScheme colors) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Text(
+          'No items assigned yet',
+          style: TextStyle(color: Colors.grey),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAssignedItemListItem({
+    required ItemInBranchModel item,
+    required ThemeData theme,
+    required ColorScheme colors,
+  }) {
+    final description = item.branchrefrence?.description ?? 'No Description';
+    final itemNumber = item.itemNumber?.toString() ?? 'N/A';
+    final itemCode = item.item;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300, width: 1),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade300,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.check_circle,
+            size: 20,
+            color: Colors.grey.shade600,
+          ),
+        ),
+        title: Text(
+          description,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.grey.shade600,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Item #$itemNumber',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: Colors.grey.shade500,
+              ),
+            ),
+            if (itemCode != null)
+              Text(
+                'Code: $itemCode',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: Colors.grey.shade400,
+                ),
+              ),
+          ],
+        ),
+        trailing: Icon(Icons.lock, color: Colors.grey.shade500, size: 20),
+      ),
+    );
+  }
+
+  Widget _buildAvailableItemsSection(ThemeData theme, ColorScheme colors) {
+    // FIXED: Remove the Column and use a Container with proper constraints
+    return Container(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Selection Header
+          _buildSelectionHeader(theme, colors),
+          const SizedBox(height: 16),
+
+          // Search Bar
+          _buildSearchBar(colors),
+          const SizedBox(height: 16),
+
+          // Items List Section - FIXED: Use Expanded for scrollable content
+          Flexible(
+            fit: FlexFit.tight,
+            child: _buildItemsSection(theme, colors),
+          ),
+
+          // Action Buttons - FIXED: Use SizedBox with fixed height
+          SizedBox(height: 70, child: _buildActionButtons(colors)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectionHeader(ThemeData theme, ColorScheme colors) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: colors.primary.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            widget.isEditMode
+                ? Icons.add_circle_outline
+                : Icons.inventory_2_outlined,
+            size: 20,
+            color: colors.primary,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.isEditMode ? 'Add More Items' : 'Available Items',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  '${widget.sourceItems.length} items available • ${_selectedItems.length} selected',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.onSurface.withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (_selectedItems.isNotEmpty)
+            Badge(
+              label: Text(_selectedItems.length.toString()),
+              backgroundColor: colors.primary,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar(ColorScheme colors) {
+    return TextField(
+      controller: _searchController,
+      decoration: InputDecoration(
+        hintText: 'Search items by description...',
+        prefixIcon: const Icon(Icons.search),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        suffixIcon: _searchController.text.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.clear),
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() {});
                 },
+              )
+            : null,
+      ),
+      onChanged: (_) => setState(() {}),
+    );
+  }
+
+  Widget _buildItemsSection(ThemeData theme, ColorScheme colors) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Section Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: colors.primaryContainer.withOpacity(0.3),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  widget.isEditMode
+                      ? Icons.add_box_outlined
+                      : Icons.checklist_outlined,
+                  size: 20,
+                  color: colors.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  widget.isEditMode
+                      ? 'Select Additional Items'
+                      : 'Select Items for Assignment',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: colors.primary,
+                  ),
+                ),
+                const Spacer(),
+                if (_selectedItems.isNotEmpty)
+                  Text(
+                    '${_selectedItems.length} selected',
+                    style: TextStyle(
+                      color: colors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          // Items List - FIXED: Use Expanded for proper scrolling
+          Expanded(
+            child: _filteredItems.isEmpty
+                ? _buildEmptyState(theme, colors)
+                : _buildItemsList(theme, colors),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItemsList(ThemeData theme, ColorScheme colors) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(8),
+      itemCount: _filteredItems.length,
+      itemBuilder: (context, index) {
+        final item = _filteredItems[index];
+        final isSelected = _selectedItems.contains(item);
+
+        return _buildItemListItem(
+          item: item,
+          isSelected: isSelected,
+          onTap: () => _handleItemSelection(item),
+          theme: theme,
+          colors: colors,
+        );
+      },
+    );
+  }
+
+  Widget _buildItemListItem({
+    required ItemInBranchModel item,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required ThemeData theme,
+    required ColorScheme colors,
+  }) {
+    final description = item.branchrefrence?.description ?? 'No Description';
+    final itemNumber = item.itemNumber?.toString() ?? 'N/A';
+    final itemCode = item.item;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isSelected
+            ? colors.primaryContainer.withOpacity(0.3)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isSelected ? colors.primary : Colors.grey.shade300,
+          width: isSelected ? 1.5 : 1,
+        ),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: isSelected ? colors.primary : colors.surfaceVariant,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            isSelected ? Icons.check_circle : Icons.inventory_2_outlined,
+            size: 20,
+            color: isSelected ? colors.onPrimary : colors.onSurfaceVariant,
+          ),
+        ),
+        title: Text(
+          description,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: isSelected ? colors.primary : colors.onSurface,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Item #$itemNumber',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: isSelected
+                    ? colors.primary.withOpacity(0.8)
+                    : colors.onSurface.withOpacity(0.6),
+              ),
+            ),
+            if (itemCode != null)
+              Text(
+                'Code: $itemCode',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colors.onSurface.withOpacity(0.5),
+                ),
+              ),
+          ],
+        ),
+        trailing: Icon(
+          isSelected ? Icons.remove_circle : Icons.add_circle,
+          color: isSelected ? colors.error : colors.primary,
+          size: 24,
+        ),
+        onTap: onTap,
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(ThemeData theme, ColorScheme colors) {
+    final hasSourceItems = widget.sourceItems.isNotEmpty;
+    final hasSearchQuery = _searchController.text.isNotEmpty;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              hasSearchQuery
+                  ? Icons.search_off_outlined
+                  : Icons.inventory_2_outlined,
+              size: 64,
+              color: colors.onSurface.withOpacity(0.3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              hasSearchQuery ? 'No items found' : 'No available items',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: colors.onSurface.withOpacity(0.5),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              hasSearchQuery
+                  ? 'Try adjusting your search terms'
+                  : widget.isEditMode
+                  ? 'All additional items have been assigned.'
+                  : 'All items have been assigned or there are no items to assign.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.onSurface.withOpacity(0.4),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            if (widget.isEditMode && widget.targetItems.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${widget.targetItems.length} items already assigned to this location',
+                  style: TextStyle(
+                    color: Colors.grey.shade700,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButtons(ColorScheme colors) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: _selectedItems.isNotEmpty
+                  ? () {
+                      setState(() {
+                        _selectedItems.clear();
+                      });
+                    }
+                  : null,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text('Clear Selection'),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: FilledButton(
+              onPressed: _selectedItems.isNotEmpty
+                  ? _assignSelectedItems
+                  : null,
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    widget.isEditMode
+                        ? Icons.add_task_outlined
+                        : Icons.assignment_turned_in_outlined,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(widget.isEditMode ? 'Add Items' : 'Assign Selected'),
+                ],
               ),
             ),
           ),
@@ -179,46 +563,46 @@ class _ItemsPickListState extends State<ItemsPickList> {
     );
   }
 
-  bool _isItemDisabled(ItemInBranchModel item) {
-    // This would check if the item is already assigned to this location
-    // For now, return false - you'd implement the actual check
-    return false;
+  void _handleItemSelection(ItemInBranchModel item) {
+    setState(() {
+      if (_selectedItems.contains(item)) {
+        _selectedItems.remove(item);
+      } else {
+        _selectedItems.add(item);
+      }
+    });
   }
 
-  void _moveToTarget() {
-    final newSource = List<ItemInBranchModel>.from(widget.sourceItems);
-    final newTarget = List<ItemInBranchModel>.from(widget.targetItems);
+  void _assignSelectedItems() {
+    final newSource = List<ItemInBranchModel>.from(widget.sourceItems)
+      ..removeWhere((item) => _selectedItems.contains(item));
 
-    for (final item in _selectedSource) {
-      if (newSource.contains(item)) {
-        newSource.remove(item);
-        newTarget.add(item);
-      }
-    }
+    final newTarget = List<ItemInBranchModel>.from(widget.targetItems)
+      ..addAll(_selectedItems);
 
-    _selectedSource.clear();
     widget.onSelectionChanged(newSource, newTarget);
-  }
 
-  void _moveToSource() {
-    final newSource = List<ItemInBranchModel>.from(widget.sourceItems);
-    final newTarget = List<ItemInBranchModel>.from(widget.targetItems);
+    // Clear selection after assignment
+    setState(() {
+      _selectedItems.clear();
+    });
 
-    for (final item in _selectedTarget) {
-      if (newTarget.contains(item)) {
-        newTarget.remove(item);
-        newSource.add(item);
-      }
-    }
-
-    _selectedTarget.clear();
-    widget.onSelectionChanged(newSource, newTarget);
+    // Show success feedback
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          widget.isEditMode
+              ? 'Successfully added ${_selectedItems.length} items'
+              : 'Successfully assigned ${_selectedItems.length} items',
+        ),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
   @override
   void dispose() {
-    _sourceFilterController.dispose();
-    _targetFilterController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 }

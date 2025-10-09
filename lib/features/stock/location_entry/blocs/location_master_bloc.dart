@@ -20,6 +20,9 @@ class LocationMasterBloc
     _authSubscription = authBloc.stream.listen((authState) {
       if (authState.isAuthenticated && authState.companyId != null) {
         add(LoadLocationMasters(authState.companyId!));
+      } else {
+        //clear data when logge out
+        add(const ClearLocations());
       }
     });
 
@@ -40,6 +43,14 @@ class LocationMasterBloc
     on<LoadLocationsByBranch>(_onLoadLocationsByBranch);
     on<CancelCreate>(_onCancelCreate);
     on<CancelUpdate>(_onCancelUpdate);
+    on<ClearLocations>(_onClearLocations);
+  }
+
+  Future<void> _onClearLocations(
+    ClearLocations event,
+    Emitter<LocationMasterState> emit,
+  ) async {
+    emit(const LocationMasterState()); // Reset to initial state
   }
 
   @override
@@ -52,13 +63,20 @@ class LocationMasterBloc
     LoadLocationMasters event,
     Emitter<LocationMasterState> emit,
   ) async {
+    // Prevent duplicate loads
+    if (state.status == LocationMasterStatus.loading) return;
+
+    print('🔄 BLoC: Loading locations for company ${event.companyId}');
     emit(state.copyWith(status: LocationMasterStatus.loading));
     try {
       final db = await databaseService.database;
       final locations = await db.rawQuery(
         '''
-        SELECT lm.*
+        SELECT
+        lm.*,
+        b.description as branch_name
         FROM location_master lm
+        LEFT JOIN branch_table b ON lm.branch = b.id
         WHERE lm.company = ?
         ''',
         [event.companyId],
@@ -73,7 +91,8 @@ class LocationMasterBloc
           status: LocationMasterStatus.loaded,
           items: locationList,
           filteredItems: locationList,
-          companyId: event.companyId,
+          companyId: authBloc.state.companyId,
+          message: locationList.isEmpty ? 'No locations found' : null,
         ),
       );
     } catch (e) {
@@ -92,45 +111,57 @@ class LocationMasterBloc
   ) async {
     emit(state.copyWith(status: LocationMasterStatus.creating));
     try {
-      // Check for duplication
-      final isDuplication = await _checkDuplication(event.item);
-      if (isDuplication) {
+      // Check if this is an update or create
+      final isUpdate = event.item.id != null;
+
+      if (isUpdate) {
+        // For updates, use update logic
+        await _onUpdateLocation(
+          UpdateLocationMaster(event.item, event.assignedItems),
+          emit,
+        );
+      } else {
+        // For creates, use create logic with duplication check
+        final isDuplication = await _checkDuplication(event.item);
+        if (isDuplication) {
+          emit(
+            state.copyWith(
+              status: LocationMasterStatus.duplication,
+              message: 'Location already exists for this branch',
+            ),
+          );
+          return;
+        }
+
+        final db = await databaseService.database;
+        final itemMap = _applySettings(event.item, false).toMap();
+        itemMap.remove('id');
+        itemMap['created_by'] = authBloc.state.userId;
+        itemMap['date_created'] = DateTime.now().toIso8601String();
+        itemMap['company'] = authBloc.state.companyId;
+
+        // Insert location
+        final locationId = await db.insert('location_master', itemMap);
+
+        // Save item locations assignments
+        await _saveItemLocations(locationId, event.assignedItems);
+
+        add(LoadLocationMasters(authBloc.state.companyId!));
+        add(ClearCreateList());
+
         emit(
           state.copyWith(
-            status: LocationMasterStatus.duplication,
-            message: 'Location already exists for this branch',
+            status: LocationMasterStatus.success,
+            message: 'Location added successfully',
           ),
         );
-        return;
       }
-
-      final db = await databaseService.database;
-      final itemMap = _applySettings(event.item, false).toMap();
-      itemMap.remove('id');
-      itemMap['created_by'] = authBloc.state.userId;
-      itemMap['date_created'] = DateTime.now().toIso8601String();
-      itemMap['company'] = authBloc.state.companyId;
-
-      // Insert location
-      final locationId = await db.insert('location_master', itemMap);
-
-      // Save item locations assignments
-      await _saveItemLocations(locationId, event.assignedItems);
-
-      add(LoadLocationMasters(authBloc.state.companyId!));
-      add(ClearCreateList());
-
-      emit(
-        state.copyWith(
-          status: LocationMasterStatus.success,
-          message: 'Location added successfully',
-        ),
-      );
     } catch (e) {
       emit(
         state.copyWith(
           status: LocationMasterStatus.failure,
-          message: 'Failed to create location: $e',
+          message:
+              'Failed to ${event.item.id != null ? 'update' : 'create'} location: $e',
         ),
       );
     }
@@ -252,7 +283,7 @@ class LocationMasterBloc
     // Get assigned items for this location
     final assignedItems = await db.rawQuery(
       '''
-      SELECT ib.* FROM item_locations il
+      SELECT ib.* FROM item_location il
       JOIN items_in_branch ib ON il.item_number = ib.item_number AND il.branch = ib.branch
       WHERE il.location = ? AND il.company = ?
       ''',
@@ -341,7 +372,7 @@ class LocationMasterBloc
       // Check if item location already exists
       final existing = await db.rawQuery(
         '''
-        SELECT COUNT(*) as count FROM item_locations 
+        SELECT COUNT(*) as count FROM item_location
         WHERE branch = ? AND item_number = ? AND location = ? AND company = ?
         ''',
         [item.branch, item.itemNumber, locationId, authBloc.state.companyId],
@@ -358,7 +389,7 @@ class LocationMasterBloc
           dateCreated: DateTime.now(),
         );
 
-        await db.insert('item_locations', itemLocation.toMap());
+        await db.insert('item_location', itemLocation.toMap());
       }
     }
   }
@@ -371,7 +402,7 @@ class LocationMasterBloc
 
     // Remove all existing assignments for this location
     await db.delete(
-      'item_locations',
+      'item_location',
       where: 'location = ? AND company = ?',
       whereArgs: [locationId, authBloc.state.companyId],
     );
@@ -387,7 +418,7 @@ class LocationMasterBloc
         dateCreated: DateTime.now(),
       );
 
-      await db.insert('item_locations', itemLocation.toMap());
+      await db.insert('item_location', itemLocation.toMap());
     }
   }
 
@@ -427,18 +458,22 @@ class LocationMasterBloc
   Future<bool> _checkDuplication(LocationMaster item) async {
     try {
       final db = await databaseService.database;
-      final existing = await db.rawQuery(
-        '''
+      // For updates, exclude the current item ID
+      // For creates, check against all items
+      final idCondition = item.id != null ? 'AND id != ?' : '';
+      final whereArgs = item.id != null
+          ? [
+              item.locationDescription,
+              item.branch,
+              authBloc.state.companyId,
+              item.id,
+            ]
+          : [item.locationDescription, item.branch, authBloc.state.companyId];
+
+      final existing = await db.rawQuery('''
         SELECT COUNT(*) as count FROM location_master 
-        WHERE location_description = ? AND branch = ? AND company = ? AND id != ?
-        ''',
-        [
-          item.locationDescription,
-          item.branch,
-          authBloc.state.companyId,
-          item.id ?? 0,
-        ],
-      );
+        WHERE location_description = ? AND branch = ? AND company = ? $idCondition
+        ''', whereArgs);
 
       final count = (existing.first['count'] as int?) ?? 0;
       return count > 0;
@@ -547,7 +582,7 @@ class LocationMasterBloc
 
       // First delete related item locations
       await db.delete(
-        'item_locations',
+        'item_location',
         where: 'location = ? AND company = ?',
         whereArgs: [event.item.id, companyId],
       );

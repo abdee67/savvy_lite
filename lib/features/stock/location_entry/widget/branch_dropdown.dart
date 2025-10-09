@@ -3,13 +3,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_state.dart';
+import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_bloc.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_event.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_state.dart';
 import 'package:savvy_stock/features/stock/location_entry/models/location_master_model.dart';
 
 class BranchDropdown extends StatefulWidget {
-  const BranchDropdown({super.key});
+  final bool isEditMode;
+
+  const BranchDropdown({super.key, required this.isEditMode});
 
   @override
   State<BranchDropdown> createState() => _BranchDropdownState();
@@ -51,10 +54,62 @@ class _BranchDropdownState extends State<BranchDropdown> {
     final selectedLocation = locationState.selected;
     final selectedBranchId = selectedLocation?.branch;
 
-    // Debug print to see what's happening
-    print('Selected Branch ID: $selectedBranchId');
-    print('Available branches: ${branchState.branchs.length}');
+    // Find the selected branch for display
+    final selectedBranch = branchState.branchs.firstWhere(
+      (branch) => branch.id == selectedBranchId,
+      orElse: () => Branch.empty(),
+    );
 
+    // In edit mode, show a disabled field with the branch name
+    if (widget.isEditMode) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Store*',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade400),
+              borderRadius: BorderRadius.circular(4),
+              color:
+                  Colors.grey.shade100, // Grey background to indicate disabled
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.store, color: Colors.grey, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    selectedBranch?.description ?? 'Unknown Branch',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey, // Grey text to indicate disabled
+                    ),
+                  ),
+                ),
+                const Icon(Icons.lock, color: Colors.grey, size: 16),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Branch cannot be changed in edit mode',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Create mode - normal dropdown
     return CustomDropdown<int>(
       value: selectedBranchId,
       labelText: 'Store*',
@@ -65,7 +120,7 @@ class _BranchDropdownState extends State<BranchDropdown> {
             value: branch.id,
             child: Text(branch.description ?? 'Branch ${branch.id}'),
           );
-        }),
+        }).toList(),
       ],
       onChanged: (int? newBranchId) {
         _handleBranchChange(context, locationState, newBranchId);
@@ -84,8 +139,6 @@ class _BranchDropdownState extends State<BranchDropdown> {
     LocationMasterState locationState,
     int? newBranchId,
   ) {
-    print('Branch changed to: $newBranchId');
-
     final currentLocation = locationState.selected;
     final companyId = locationState.companyId;
 

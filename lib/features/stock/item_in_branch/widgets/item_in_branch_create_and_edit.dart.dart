@@ -351,7 +351,7 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
                   items: state.details.map((udc) {
                     return DropdownMenuItem<int>(
                       value: udc.id,
-                      child: Text('${udc.description1}'),
+                      child: Text(udc.description1),
                     );
                   }).toList(),
                   onChanged: (value) {

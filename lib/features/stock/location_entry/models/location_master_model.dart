@@ -69,9 +69,10 @@ class LocationMaster extends Equatable {
       code08: map['code_08'] as String?,
       code09: map['code_09'] as String?,
       code10: map['code_10'] as String?,
+      branchName: map['branch_name'] as String?,
       marginType: map['margin_type'] as String?,
       marginRate: map['margin_rate'] as double?,
-      locationDescription: map['loaction_description'] as String,
+      locationDescription: map['location_description'] as String,
       createdBy: map['created_by'] as int?,
       dateCreated: map['date_created'] != null
           ? DateTime.tryParse(map['date_created'])
@@ -100,7 +101,7 @@ class LocationMaster extends Equatable {
       'code_10': code10,
       'margin_type': marginType,
       'margin_rate': marginRate,
-      'loacation_description': locationDescription,
+      'location_description': locationDescription,
       'created_by': createdBy,
       'date_created': dateCreated?.toIso8601String(),
       'updated_by': updatedBy,

@@ -26,7 +26,7 @@ class LocationMasterState extends Equatable {
   final LocationMaster? selected2;
   final String message;
   final String? error;
-  final int companyId;
+  final int? companyId;
 
   // Dual List Model for item assignments
   final List<ItemInBranchModel> dualListSource;
@@ -48,7 +48,7 @@ class LocationMasterState extends Equatable {
     this.selected2,
     this.message = '',
     this.error,
-    this.companyId = 0,
+    this.companyId,
     this.dualListSource = const [],
     this.dualListTarget = const [],
     this.first = 0,

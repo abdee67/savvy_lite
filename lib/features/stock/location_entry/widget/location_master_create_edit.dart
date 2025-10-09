@@ -1,12 +1,12 @@
 // features/stock/location_master/pages/location_master_create_page.dart
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_text_form.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_event.dart';
-import 'package:savvy_stock/features/branch_list/blocs/branch_list_state.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_event.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_state.dart';
 import 'package:savvy_stock/features/stock/location_entry/widget/branch_dropdown.dart';
@@ -19,10 +19,12 @@ import '../models/location_master_model.dart';
 class LocationMasterCreatePage extends StatefulWidget {
   final AuthBloc authBloc;
   final LocationMaster? editingLocation;
+  final bool isEditMode;
   const LocationMasterCreatePage({
     super.key,
     required this.authBloc,
     this.editingLocation,
+    this.isEditMode = false,
   });
 
   @override
@@ -37,6 +39,7 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
     (_) => TextEditingController(),
   );
   int? _selectedBranch;
+  StreamSubscription? subscription;
 
   @override
   void initState() {
@@ -48,7 +51,7 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<LocationMasterBloc>().add(
         PrepareCreateLocation(
-          context.read<LocationMasterBloc>().state.companyId,
+          context.read<LocationMasterBloc>().state.companyId!,
         ),
       );
     });
@@ -62,16 +65,30 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
     super.dispose();
   }
 
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Location Master'),
+        title: Text(widget.isEditMode ? 'Edit Location ' : 'Create Location'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => _cancel(context),
+          // Single Save button in AppBar
+          BlocBuilder<LocationMasterBloc, LocationMasterState>(
+            builder: (context, state) {
+              final isSaveEnabled =
+                  state.dualListTarget.isNotEmpty && state.selected != null;
+              // Determine edit mode from state if not explicitly passed
+              final isEditMode =
+                  widget.isEditMode || state.selected?.id != null;
+              return IconButton(
+                icon: const Icon(Icons.save),
+                onPressed: isSaveEnabled
+                    ? () => _saveAndAddNew(context, state)
+                    : isEditMode
+                    ? () => _saveAndClose(context, state)
+                    : null,
+                tooltip: 'Save',
+              );
+            },
           ),
         ],
       ),
@@ -113,14 +130,7 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
             key: _formKey,
             child: Column(
               children: [
-                // Toolbar
-                LocationToolbar(
-                  onSave: () => _saveLocation(context, state),
-                  onCancel: () => _cancel(context),
-                  isSaveEnabled:
-                      state.dualListTarget.isNotEmpty && state.selected != null,
-                ),
-
+                // Removed LocationToolbar widget
                 Expanded(
                   child: SingleChildScrollView(
                     child: ConstrainedBox(
@@ -131,10 +141,12 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Store and Margin Section
-                            _buildStoreAndMarginSection(context, state),
-
+                            _buildStoreAndMarginSection(
+                              context,
+                              state,
+                              widget.isEditMode,
+                            ),
                             const SizedBox(height: 16),
-
                             // Location Codes Section
                             LocationCodeForm(
                               controllers: _codeControllers,
@@ -144,9 +156,6 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
                                 state.selected,
                               ),
                             ),
-
-                            const SizedBox(height: 16),
-                            const Divider(),
                             const SizedBox(height: 16),
 
                             // Items Pick List Section
@@ -154,9 +163,13 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
                               constraints: BoxConstraints(
                                 maxWidth: MediaQuery.of(context).size.width * 1,
                                 maxHeight:
-                                    MediaQuery.of(context).size.height * 0.6,
+                                    MediaQuery.of(context).size.height * 1,
                               ),
-                              child: _buildItemsPickListSection(context, state),
+                              child: _buildItemsPickListSection(
+                                context,
+                                state,
+                                widget.isEditMode,
+                              ),
                             ),
                           ],
                         ),
@@ -175,26 +188,33 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
   Widget _buildStoreAndMarginSection(
     BuildContext context,
     LocationMasterState state,
+    bool isEditMode,
   ) {
     return Padding(
       padding: const EdgeInsets.all(10.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Store Information',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          Text(
+            isEditMode ? 'Store Information(Read Only)' : 'Store Information',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: isEditMode ? Colors.grey : null,
+            ),
           ),
           const SizedBox(height: 16),
-          Row(
+          Column(
             children: [
-              Expanded(child: BranchDropdown()),
-              const SizedBox(width: 26),
+              // Store dropdown - full width
+              BranchDropdown(isEditMode: isEditMode),
+              const SizedBox(height: 16),
+
               // Margin Type and Rate - Conditionally shown based on system settings
-              if (_shouldShowMarginFields()) ...[
-                Expanded(child: _buildMarginTypeDropdown(context, state)),
-                const SizedBox(width: 26),
-                Expanded(child: _buildMarginRateField(context, state)),
+              if (!isEditMode && _shouldShowMarginFields()) ...[
+                _buildMarginTypeDropdown(context, state),
+                const SizedBox(height: 16),
+                _buildMarginRateField(context, state),
               ],
             ],
           ),
@@ -208,10 +228,12 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
     LocationMasterState state,
   ) {
     return DropdownButtonFormField<String>(
+      isExpanded: true, // Makes the dropdown take full width
       initialValue: state.selected?.marginType,
       decoration: const InputDecoration(
         labelText: 'Margin Type',
         border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
       ),
       items: const [
         DropdownMenuItem(value: null, child: Text('Select One')),
@@ -262,12 +284,13 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
   Widget _buildItemsPickListSection(
     BuildContext context,
     LocationMasterState state,
+    bool isEditMode,
   ) {
     return LayoutBuilder(
       builder: (context, constraints) {
         return SizedBox(
           width: constraints.maxWidth,
-          height: constraints.maxHeight * 0.6,
+          height: constraints.maxHeight * 1,
           child: Container(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -288,6 +311,7 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
                           UpdateDualListModel(source, target),
                         );
                       },
+                      isEditMode: isEditMode,
                     ),
                   ),
                 ],
@@ -394,6 +418,13 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
         context.read<LocationMasterBloc>().add(
           SaveLocationMaster(state.selected!, state.dualListTarget),
         );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select items to assign to this location'),
+            backgroundColor: Colors.orange,
+          ),
+        );
       }
     }
   }
@@ -404,9 +435,15 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
         context.read<LocationMasterBloc>().add(
           SaveLocationMaster(state.selected!, state.dualListTarget),
         );
-        // Navigate back after save
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          Navigator.of(context).pop();
+
+        // Listen for success then navigate back
+        final bloc = context.read<LocationMasterBloc>();
+        subscription = bloc.stream.listen((state) {
+          if (state.status == LocationMasterStatus.success) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              Navigator.of(context).pop();
+            });
+          }
         });
       }
     }
@@ -418,22 +455,26 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
         context.read<LocationMasterBloc>().add(
           SaveLocationMaster(state.selected!, state.dualListTarget),
         );
-        // Clear form for new entry
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          context.read<LocationMasterBloc>().add(ClearCreateList());
-          context.read<LocationMasterBloc>().add(
-            PrepareCreateLocation(state.companyId),
-          );
-          // Clear controllers
-          for (var controller in _codeControllers) {
-            controller.clear();
+
+        // Listen for success then clear form for new entry
+        final bloc = context.read<LocationMasterBloc>();
+        subscription = bloc.stream.listen((state) {
+          if (state.status == LocationMasterStatus.success) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              // Clear form for new entry
+              context.read<LocationMasterBloc>().add(ClearCreateList());
+              context.read<LocationMasterBloc>().add(
+                PrepareCreateLocation(state.companyId!),
+              );
+              // Clear controllers
+              for (var controller in _codeControllers) {
+                controller.clear();
+              }
+              subscription!.cancel();
+            });
           }
         });
       }
     }
-  }
-
-  void _cancel(BuildContext context) {
-    Navigator.of(context).pop();
   }
 }
