@@ -46,11 +46,11 @@ class _ItemsPickListState extends State<ItemsPickList> {
       children: [
         // Available items section - FIXED: Use Expanded for proper constraints
         Expanded(child: _buildAvailableItemsSection(theme, colors)),
-        const SizedBox(height: 20),
+        const SizedBox(height: 10),
         // Show assigned items section in edit mode
         if (widget.isEditMode && widget.targetItems.isNotEmpty) ...[
           _buildAssignedItemsSection(theme, colors),
-          const SizedBox(height: 20),
+          const SizedBox(height: 10),
         ],
       ],
     );
@@ -140,7 +140,7 @@ class _ItemsPickListState extends State<ItemsPickList> {
     required ThemeData theme,
     required ColorScheme colors,
   }) {
-    final description = item.branchrefrence?.description ?? 'No Description';
+    final description = item.item?.itemDescription ?? 'No Description';
     final itemNumber = item.itemNumber?.toString() ?? 'N/A';
     final itemCode = item.item;
 
