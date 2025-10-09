@@ -555,9 +555,9 @@ class _UserDashboardState extends State<UserDashboard> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Show position/title if available
-        if (user.usercol != null && user.usercol!.isNotEmpty)
+        if (user.branch != null)
           Text(
-            user.usercol!,
+            user.branch!.toString(),
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey[600],

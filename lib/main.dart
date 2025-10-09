@@ -20,10 +20,16 @@ import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
+import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/invoice/blocs/invoice_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
+import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_bloc.dart';
+import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
+import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_bloc.dart';
+import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/repositories/system_constant_repository.dart';
 
@@ -37,8 +43,8 @@ Future<void> _initializeAndRunApp() async {
   try {
     await ConnectivityService().initConnectivity();
     initDependencies();
-    //  await LocalDatabaseService().resetDatabase();
-    await LocalDatabaseService().debugTable('employees');
+    //await LocalDatabaseService().resetDatabase();
+    // await LocalDatabaseService().debugTable('branch_table');
 
     if (AppConfig.isTestMode) {
       developer.log('🚀 APP RUNNING IN TEST MODE');
@@ -46,7 +52,7 @@ Future<void> _initializeAndRunApp() async {
       developer.log('💾 Using local database only');
     }
     // Debug database tables (optional - remove in production)
-    await LocalDatabaseService().debugTable('role_table');
+    await LocalDatabaseService().debugTable('location_master');
   } catch (error, stackTrace) {
     developer.log('Initialization error: $error');
     developer.log('Stack trace: $stackTrace');
@@ -190,7 +196,39 @@ class _SavvyStockState extends State<SavvyStock> {
               authBloc: _authBloc,
               udcService: getIt<UdcService>(),
               systemConstantService: getIt<SystemConstantsService>(),
-            )..add(LoadSystemConstants()),
+            )..add(LoadSystemConstants(_authBloc.state.companyId!)),
+          ),
+          BlocProvider<BranchBloc>(
+            create: (context) =>
+                BranchBloc(databaseService: getIt(), authBloc: _authBloc),
+          ),
+          BlocProvider<StockItemEntryBloc>(
+            create: (context) => StockItemEntryBloc(
+              databaseService: getIt(),
+              authBloc: _authBloc,
+            ),
+          ),
+          BlocProvider<StockItemInBranchBloc>(
+            create: (context) => StockItemInBranchBloc(
+              databaseService: getIt(),
+              authBloc: _authBloc,
+            ),
+          ),
+          BlocProvider<ItemUomConversionBloc>(
+            create: (context) => ItemUomConversionBloc(
+              databaseService: getIt(),
+              authBloc: _authBloc,
+            ),
+          ),
+          BlocProvider<UdcDetailsBloc>(
+            create: (context) =>
+                UdcDetailsBloc(databaseService: getIt(), authBloc: _authBloc),
+          ),
+          BlocProvider<LocationMasterBloc>(
+            create: (context) => LocationMasterBloc(
+              databaseService: getIt(),
+              authBloc: _authBloc,
+            ),
           ),
         ],
         child: MaterialApp.router(

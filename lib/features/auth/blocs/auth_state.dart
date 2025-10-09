@@ -24,6 +24,7 @@ class AuthState extends Equatable {
   final int? userId;
   final String? username;
   final int? companyId;
+  final int? branchId;
   final String? password;
   final List<Role> roles;
   final List<Privilege> privileges;
@@ -46,6 +47,7 @@ class AuthState extends Equatable {
     this.userId,
     this.username,
     this.companyId,
+    this.branchId,
     this.password,
     this.roles = const [],
     this.privileges = const [],
@@ -194,6 +196,7 @@ class AuthState extends Equatable {
     required List<Role> roles,
     UserWithRole? userWithRole,
     int? companyId,
+    int? branchId,
   }) {
     return AuthState(
       status: AuthStatus.authenticated,
@@ -203,10 +206,9 @@ class AuthState extends Equatable {
       roles: roles,
       userWithRole: userWithRole,
       companyId: companyId,
+      branchId: branchId,
       authenticatedAt: DateTime.now(),
-      tokenExpiryTime: DateTime.now().add(
-        const Duration(minutes: 2),
-      ), // Example
+      tokenExpiryTime: DateTime.now().add(const Duration(hours: 2)), // Example
     );
   }
 
@@ -234,6 +236,7 @@ class AuthState extends Equatable {
     int? userId,
     String? username,
     int? companyId,
+    int? branchId,
     List<Role>? roles,
     List<Privilege>? privileges,
     UserWithRole? userWithRole,
@@ -254,6 +257,7 @@ class AuthState extends Equatable {
       userId: userId ?? this.userId,
       username: username ?? this.username,
       companyId: companyId ?? this.companyId,
+      branchId: branchId ?? this.branchId,
       roles: roles ?? this.roles,
       privileges: privileges ?? this.privileges,
       userWithRole: userWithRole ?? this.userWithRole,
@@ -279,6 +283,7 @@ class AuthState extends Equatable {
     userId,
     username,
     companyId,
+    branchId,
     roles,
     privileges,
     userWithRole,

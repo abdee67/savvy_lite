@@ -4,11 +4,13 @@ import 'package:savvy_stock/features/admin/employees/blocs/employee_bloc.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_event.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_state.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 
 class EmployeeFormPage extends StatefulWidget {
   final Employee? employee;
+  final AuthBloc authBloc;
 
-  const EmployeeFormPage({super.key, this.employee});
+  const EmployeeFormPage({super.key, this.employee, required this.authBloc});
 
   @override
   State<EmployeeFormPage> createState() => _EmployeeFormPageState();
@@ -147,8 +149,8 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
         hireDate: _hireDateController.text.isEmpty
             ? null
             : _hireDateController.text,
-        company: 1, // Get from auth bloc
-        branch: 1, // Get from auth bloc
+        company: widget.authBloc.state.companyId, // Get from auth bloc
+        branch: widget.authBloc.state.branchId, // Get from auth bloc
       );
 
       if (widget.employee == null) {

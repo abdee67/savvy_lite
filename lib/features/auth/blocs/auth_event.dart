@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
-import 'package:savvy_stock/core/models/company.dart';
+import 'package:savvy_stock/features/company/models/company_model.dart';
 
 abstract class AuthEvent extends Equatable {
   const AuthEvent();

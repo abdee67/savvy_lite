@@ -24,13 +24,17 @@ class AppRoutes {
   static const String availabilityDashboard = '$availability/dashboard';
   static const String purchaseDashboard = '$purchase/dashboard';
   static const String companyDashboard = '$company/dashboard';
-  static const String branchListDashboard = '$branch/list-dashboard';
+  static const String branchListDashboard = '$branch/dashboard';
 
   // Admin Sub-Routes
   static const String privilegeManagement = '$admin/privilege-management';
   static const String roleManagement = '$admin/role-management';
   static const String employeeManagement = '$admin/employee-management';
   static const String userManagement = '$admin/user-management';
+
+  static const String createPrivilege = '$privilegeManagement/create-privilege';
+  static const String deletePrivilege = '$privilegeManagement/delete-privilege';
+  static const String editPrivilege = '$privilegeManagement/edit-privilege';
 
   // Employee Sub-Routes
   static const String employeeCreation =
@@ -59,18 +63,53 @@ class AppRoutes {
   static const String roleEdit = '$roleManagement/edit-role';
   static const String roleDelete = '$roleManagement/delete-role';
 
-  // Stock Sub-Routes
+  //////////STOCK ROUTES///////////////
   static const String itemEntry = '$stock/item-entry';
+  static const String itemCreation = '$itemEntry/add-item';
+  static const String itemEdit = '$itemEntry/edit-item';
+  static const String itemDelete = '$itemEntry/delete-item';
+  static const String itemExport = '$itemEntry/export-item';
+  static const String itemImport = '$itemEntry/import-item';
+
+  static const String itemInBranch = '$stock/item-in-branch';
+  static const String addItemToBranch = '$itemInBranch/add-item';
+  static const String editItemInBranch = '$itemInBranch/edit-item';
+  static const String deleteItemInBranch = '$itemInBranch/delete-item';
+  static const String exportItemInBranch = '$itemInBranch/export-item';
+  static const String importItemInBranch = '$itemInBranch/import-item';
+
   static const String uomManagement = '$stock/uom-management';
   static const String itemWorkbench = '$stock/item-workbench';
+
   static const String itemUomConversions = '$stock/item-uom-conversions';
+  static const String itemUomConversionsCreate =
+      '$itemUomConversions/create-item-uom-conversion';
+  static const String itemUomConversionsEdit =
+      '$itemUomConversions/edit-item-uom-conversion';
+  static const String itemUomConversionsDelete =
+      '$itemUomConversions/delete-item-uom-conversion';
+
   static const String locationEntry = '$stock/location-entry';
+  static const String locationMasterCreate =
+      '$locationEntry/location-master-create';
+  static const String locationMasterEdit =
+      '$locationEntry/location-master-edit';
+  static const String locationMasterDelete =
+      '$locationEntry/location-master-delete';
+
   static const String lotEntry = '$stock/lot-entry';
   static const String lotColorings = '$stock/lot-colorings';
   static const String inventoryTransaction = '$stock/inventory-transaction';
   static const String itemBranchEntry = '$stock/item-branch-entry';
   static const String barcodeFunction = '$stock/barcode-function';
   static const String exportFunction = '$stock/export-function';
+
+  // Branch Sub-Routes
+  static const String branchManagement = '$branch/branch-management';
+
+  static const String branchCreation = '$branchManagement/branch-creation';
+  static const String branchEdit = '$branchManagement/edit-branch';
+  static const String branchDelete = '$branchManagement/delete-branch';
 
   // Helper method to get all dashboard routes
   static List<String> get dashboardRoutes => [

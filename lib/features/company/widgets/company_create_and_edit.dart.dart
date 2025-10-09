@@ -1,0 +1,491 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:savvy_stock/features/admin/employees/blocs/employee_bloc.dart';
+import 'package:savvy_stock/features/admin/employees/blocs/employee_event.dart';
+import 'package:savvy_stock/features/admin/employees/blocs/employee_state.dart';
+import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
+
+class EmployeeFormPage extends StatefulWidget {
+  final Employee? employee;
+
+  const EmployeeFormPage({super.key, this.employee});
+
+  @override
+  State<EmployeeFormPage> createState() => _EmployeeFormPageState();
+}
+
+class _EmployeeFormPageState extends State<EmployeeFormPage> {
+  final PageController _pageController = PageController();
+  final _formKey = GlobalKey<FormState>();
+  int _currentPage = 0;
+
+  // Controllers
+  late TextEditingController _firstNameController;
+  late TextEditingController _lastNameController;
+  late TextEditingController _middleNameController;
+  late TextEditingController _employeeIdController;
+  late TextEditingController _phoneController;
+  late TextEditingController _emailController;
+  late TextEditingController _cityController;
+  late TextEditingController _addressController;
+  late TextEditingController _birthDateController;
+  late TextEditingController _hireDateController;
+
+  String? _selectedTitle;
+  String? _selectedGender;
+  final String _country = 'Ethiopia';
+
+  final List<String> _titles = ['Mr', 'Mrs', 'Ms', 'Dr', 'Prof'];
+  final List<String> _genders = ['Male', 'Female'];
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeControllers();
+    if (widget.employee != null) {
+      context.read<EmployeeBloc>().add(SetEmployeeForm(widget.employee!));
+    }
+  }
+
+  void _initializeControllers() {
+    final employee = widget.employee ?? Employee.empty();
+
+    _firstNameController = TextEditingController(text: employee.nameFirst);
+    _lastNameController = TextEditingController(text: employee.nameLast);
+    _middleNameController = TextEditingController(text: employee.nameMiddle);
+    _employeeIdController = TextEditingController(text: employee.employeeId);
+    _phoneController = TextEditingController(text: employee.phone);
+    _emailController = TextEditingController(text: employee.email);
+    _cityController = TextEditingController(text: employee.city);
+    _addressController = TextEditingController(text: employee.address);
+    _birthDateController = TextEditingController(text: employee.birthDate);
+    _hireDateController = TextEditingController(text: employee.hireDate);
+
+    _selectedTitle = employee.title;
+    _selectedGender = employee.gender;
+  }
+
+  @override
+  void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _middleNameController.dispose();
+    _employeeIdController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
+    _cityController.dispose();
+    _addressController.dispose();
+    _birthDateController.dispose();
+    _hireDateController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectDate(TextEditingController controller) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime(2100),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Theme.of(context).primaryColor,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      controller.text =
+          "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+    }
+  }
+
+  void _nextSlide() {
+    if (_formKey.currentState!.validate()) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  void _previousSlide() {
+    _pageController.previousPage(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _saveEmployee() {
+    if (_formKey.currentState!.validate()) {
+      final employee = Employee(
+        id: widget.employee?.id ?? 0,
+        employeeId: _employeeIdController.text.isEmpty
+            ? null
+            : _employeeIdController.text,
+        nameFirst: _firstNameController.text,
+        nameLast: _lastNameController.text,
+        nameMiddle: _middleNameController.text.isEmpty
+            ? ''
+            : _middleNameController.text,
+        email: _emailController.text,
+        phone: _phoneController.text,
+        title: _selectedTitle,
+        gender: _selectedGender,
+        country: _country,
+        city: _cityController.text.isEmpty ? null : _cityController.text,
+        address: _addressController.text.isEmpty
+            ? null
+            : _addressController.text,
+        birthDate: _birthDateController.text.isEmpty
+            ? null
+            : _birthDateController.text,
+        hireDate: _hireDateController.text.isEmpty
+            ? null
+            : _hireDateController.text,
+        company: 1, // Get from auth bloc
+        branch: 1, // Get from auth bloc
+      );
+
+      if (widget.employee == null) {
+        context.read<EmployeeBloc>().add(CreateEmployee(employee));
+      } else {
+        context.read<EmployeeBloc>().add(UpdateEmployee(employee));
+      }
+
+      _showSuccessDialog();
+    }
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green),
+            SizedBox(width: 8),
+            Text('Success'),
+          ],
+        ),
+        content: Text(
+          widget.employee == null
+              ? 'Employee created successfully!'
+              : 'Employee updated successfully!',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).pop();
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          widget.employee == null ? 'Create Employee' : 'Edit Employee',
+        ),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        elevation: 0,
+      ),
+      body: BlocListener<EmployeeBloc, EmployeeState>(
+        listener: (context, state) {
+          if (state.status == EmployeeStatus.failure) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message ?? 'An error occurred'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+        child: Column(
+          children: [
+            // Progress Indicator
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildProgressStep(1, 'Basic Info', _currentPage >= 0),
+                  _buildProgressStep(2, 'Details', _currentPage >= 1),
+                ],
+              ),
+            ),
+
+            // Form
+            Expanded(
+              child: Form(
+                key: _formKey,
+                child: PageView(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  onPageChanged: (page) => setState(() => _currentPage = page),
+                  children: [_buildSlide1(), _buildSlide2()],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: _buildBottomNavigation(),
+    );
+  }
+
+  Widget _buildProgressStep(int step, String label, bool isActive) {
+    return Column(
+      children: [
+        Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: isActive
+                ? Theme.of(context).primaryColor
+                : Colors.grey.shade300,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              '$step',
+              style: TextStyle(
+                color: isActive ? Colors.white : Colors.grey.shade600,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: isActive
+                ? Theme.of(context).primaryColor
+                : Colors.grey.shade600,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSlide1() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          _buildTextField(_firstNameController, 'First Name *', Icons.person),
+          const SizedBox(height: 16),
+          _buildTextField(
+            _lastNameController,
+            'Last Name *',
+            Icons.person_outline,
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            _middleNameController,
+            'Middle Name',
+            Icons.person_outlined,
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(_employeeIdController, 'Employee ID', Icons.badge),
+          const SizedBox(height: 16),
+          _buildTextField(
+            _phoneController,
+            'Phone *',
+            Icons.phone,
+            TextInputType.phone,
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            _emailController,
+            'Email *',
+            Icons.email,
+            TextInputType.emailAddress,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSlide2() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          _buildDropdown(_titles, _selectedTitle, 'Title', Icons.title, (
+            value,
+          ) {
+            setState(() => _selectedTitle = value);
+          }),
+          const SizedBox(height: 16),
+          _buildDropdown(
+            _genders,
+            _selectedGender,
+            'Gender',
+            Icons.transgender,
+            (value) {
+              setState(() => _selectedGender = value);
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildReadOnlyField('Country', _country, Icons.flag),
+          const SizedBox(height: 16),
+          _buildTextField(_cityController, 'City', Icons.location_city),
+          const SizedBox(height: 16),
+          _buildTextField(_addressController, 'Address', Icons.home),
+          const SizedBox(height: 16),
+          _buildDateField(_birthDateController, 'Birth Date'),
+          const SizedBox(height: 16),
+          _buildDateField(_hireDateController, 'Hire Date'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label,
+    IconData icon, [
+    TextInputType? keyboardType,
+    int maxLines = 1,
+  ]) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+      ),
+      validator: (value) {
+        if (label.contains('*') && (value == null || value.isEmpty)) {
+          return 'This field is required';
+        }
+        if (label.contains('Email') && value!.isNotEmpty) {
+          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+            return 'Please enter a valid email';
+          }
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildDropdown(
+    List<String> items,
+    String? value,
+    String label,
+    IconData icon,
+    Function(String?) onChanged,
+  ) {
+    return DropdownButtonFormField<String>(
+      initialValue: value,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+      ),
+      items: items.map((String value) {
+        return DropdownMenuItem<String>(value: value, child: Text(value));
+      }).toList(),
+      onChanged: onChanged,
+    );
+  }
+
+  Widget _buildReadOnlyField(String label, String value, IconData icon) {
+    return TextFormField(
+      readOnly: true,
+      initialValue: value,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.grey.shade100,
+      ),
+    );
+  }
+
+  Widget _buildDateField(TextEditingController controller, String label) {
+    return TextFormField(
+      controller: controller,
+      readOnly: true,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(Icons.calendar_today),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+      ),
+      onTap: () => _selectDate(controller),
+    );
+  }
+
+  Widget _buildBottomNavigation() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            offset: const Offset(0, -2),
+            blurRadius: 4,
+            color: Colors.black.withOpacity(0.1),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          if (_currentPage == 1)
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _previousSlide,
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text('Back'),
+              ),
+            ),
+          if (_currentPage == 1) const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: _currentPage == 0 ? _nextSlide : _saveEmployee,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                _currentPage == 0 ? 'Next' : 'Save',
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

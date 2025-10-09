@@ -11,7 +11,6 @@ import 'package:savvy_stock/features/admin/users/blocs/user_state.dart';
 import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/admin/users/models/user_with_role.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
-import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
 import 'package:sqflite/sqflite.dart';
 
 class UserBloc extends Bloc<UserEvent, UserState> {

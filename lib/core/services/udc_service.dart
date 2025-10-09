@@ -1,7 +1,7 @@
 import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
-import 'package:savvy_stock/core/models/udc_details.dart';
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 import '../repositories/udc_repository.dart';
 
 class UdcService with ChangeNotifier {

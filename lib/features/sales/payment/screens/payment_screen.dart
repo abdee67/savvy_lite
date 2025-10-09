@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
+import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_event.dart';
@@ -14,12 +17,14 @@ class PaymentScreen extends StatefulWidget {
   final List<ConfirmedItem> confirmedItems;
   final double totalAmount;
   final Customer customer;
+  final AuthBloc authBloc;
 
   const PaymentScreen({
     super.key,
     required this.confirmedItems,
     required this.totalAmount,
     required this.customer,
+    required this.authBloc,
   });
 
   @override
@@ -41,6 +46,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
         ),
       );
       bloc.add(const LoadFeeSystemConstants());
+      context.read<SystemConstantBloc>().add(
+        LoadSystemConstants(widget.authBloc.state.companyId!),
+      );
     });
   }
 
@@ -92,7 +100,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: const [PaymentDetails()],
+                children: [PaymentDetails(authBloc: widget.authBloc)],
               ),
             );
           },

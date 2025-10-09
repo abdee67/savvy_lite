@@ -161,6 +161,7 @@ class SystemConstant {
           : null,
     );
   }
+  bool get shouldAutoGenerateBarcodeForItem => generateBarcodeForItem == 'Y';
 
   SystemConstant copyWith({
     int? id,

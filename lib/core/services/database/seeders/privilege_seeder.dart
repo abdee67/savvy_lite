@@ -59,19 +59,19 @@ class PrivilegeSeeder {
       _createPrivilege(
         'Add Privilege',
         'button',
-        '/admin/privilege-management/add-privilege',
+        AppRoutes.createPrivilege,
         'add_privilege',
       ),
       _createPrivilege(
         'Edit Privilege',
         'button',
-        '/admin/privilege-management/edit-privilege',
+        AppRoutes.editPrivilege,
         'edit_privilege',
       ),
       _createPrivilege(
         'Delete Privilege',
         'button',
-        '/admin/privilege-management/delete-privilege',
+        AppRoutes.deletePrivilege,
         'delete_privilege',
       ),
 
@@ -208,7 +208,50 @@ class PrivilegeSeeder {
       ),
 
       // ==================== STOCK MODULE ====================
+      //item entry
       _createPrivilege('Item Entry', 'link', AppRoutes.itemEntry, 'item_entry'),
+
+      _createPrivilege(
+        'Add Item',
+        'button',
+        AppRoutes.itemCreation,
+        'add_item',
+      ),
+      _createPrivilege('Edit Item', 'button', AppRoutes.itemEdit, 'edit_item'),
+      _createPrivilege(
+        'Delete Item',
+        'button',
+        AppRoutes.itemDelete,
+        'delete_item',
+      ),
+
+      //item in branch
+      _createPrivilege(
+        'Item In Branch',
+        'link',
+        AppRoutes.itemInBranch,
+        'item_in_branch',
+      ),
+      _createPrivilege(
+        'Add Item In Branch',
+        'button',
+        AppRoutes.addItemToBranch,
+        'add_item_in_branch',
+      ),
+      _createPrivilege(
+        'Edit Item In Branch',
+        'button',
+        AppRoutes.editItemInBranch,
+        'edit_item_in_branch',
+      ),
+      _createPrivilege(
+        'Delete Item In Branch',
+        'button',
+        AppRoutes.deleteItemInBranch,
+        'delete_item_in_branch',
+      ),
+
+      //uom management
       _createPrivilege(
         'UoM Management',
         'link',
@@ -221,6 +264,8 @@ class PrivilegeSeeder {
         AppRoutes.itemWorkbench,
         'item_workbench',
       ),
+
+      //item uom conversions
       _createPrivilege(
         'Item UoM Conversions',
         'link',
@@ -228,11 +273,50 @@ class PrivilegeSeeder {
         'item_uom_conversions',
       ),
       _createPrivilege(
+        'Add Item UoM Conversion',
+        'button',
+        AppRoutes.itemUomConversionsCreate,
+        'add_item_uom_conversion',
+      ),
+      _createPrivilege(
+        'Edit Item UoM Conversion',
+        'button',
+        AppRoutes.itemUomConversionsEdit,
+        'edit_item_uom_conversion',
+      ),
+      _createPrivilege(
+        'Delete Item UoM Conversion',
+        'button',
+        AppRoutes.itemUomConversionsDelete,
+        'delete_item_uom_conversion',
+      ),
+
+      //location entry
+      _createPrivilege(
         'Location Entry',
         'link',
         AppRoutes.locationEntry,
         'location_entry',
       ),
+      _createPrivilege(
+        'Location Master Create',
+        'button',
+        AppRoutes.locationMasterCreate,
+        'location_master_create',
+      ),
+      _createPrivilege(
+        'Location Master Edit',
+        'button',
+        AppRoutes.locationMasterEdit,
+        'location_master_edit',
+      ),
+      _createPrivilege(
+        'Location Master Delete',
+        'button',
+        AppRoutes.locationMasterDelete,
+        'location_master_delete',
+      ),
+
       _createPrivilege('Lot Entry', 'link', AppRoutes.lotEntry, 'lot_entry'),
       _createPrivilege(
         'Lot Colorings',
@@ -263,6 +347,32 @@ class PrivilegeSeeder {
         'link',
         AppRoutes.exportFunction,
         'export_function',
+      ),
+
+      // ==================== BRANCH MODULE ====================
+      _createPrivilege(
+        'Branch Management',
+        'link',
+        AppRoutes.branchManagement,
+        'branch_management',
+      ),
+      _createPrivilege(
+        'Add Branch',
+        'button',
+        AppRoutes.branchCreation,
+        'add_branch',
+      ),
+      _createPrivilege(
+        'Edit Branch',
+        'button',
+        AppRoutes.branchEdit,
+        'edit_branch',
+      ),
+      _createPrivilege(
+        'Delete Branch',
+        'button',
+        AppRoutes.branchDelete,
+        'delete_branch',
       ),
     ];
 

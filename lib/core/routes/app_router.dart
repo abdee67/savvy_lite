@@ -7,7 +7,9 @@ import 'package:savvy_stock/core/widgets/route_guard.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
 import 'package:savvy_stock/features/admin/employees/screens/employee_dashboard.dart';
 import 'package:savvy_stock/features/admin/employees/widgets/emloyee_create_and_edit.dart.dart';
+import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart';
 import 'package:savvy_stock/features/admin/privilege/screens/privilege_dahsboard.dart';
+import 'package:savvy_stock/features/admin/privilege/widgets/privilege_form.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 import 'package:savvy_stock/features/admin/role/screens/role_dashboard.dart';
 import 'package:savvy_stock/features/admin/role/widgets/role_form.dart';
@@ -19,6 +21,9 @@ import 'package:savvy_stock/features/admin/users/widgets/user_creat_edit.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
 import 'package:savvy_stock/features/auth/screens/login_screen.dart';
+import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
+import 'package:savvy_stock/features/branch_list/screens/branch_list_dashboard.dart';
+import 'package:savvy_stock/features/branch_list/widgets/branch_list_create_and_edit.dart.dart';
 import 'package:savvy_stock/features/dashboards/screens/home_page.dart';
 import 'package:savvy_stock/features/onboarding/screens/welcome_screen.dart';
 import 'package:savvy_stock/features/onboarding/widgets/getStarted.dart';
@@ -29,6 +34,18 @@ import 'package:savvy_stock/features/sales/invoice/screens/invoice_review_screen
 import 'package:savvy_stock/features/sales/payment/screens/payment_screen.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/screens/sales_item_entry.dart';
+import 'package:savvy_stock/features/stock/item_UoM_conversions/models/item_UoM_conversions_model.dart';
+import 'package:savvy_stock/features/stock/item_UoM_conversions/screens/item_UoM_conversion_dashboard.dart';
+import 'package:savvy_stock/features/stock/item_UoM_conversions/widgets/item_UoM_conversion_create_and_edit.dart.dart';
+import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/stock/item_entry/screens/item_entry_dashboard.dart';
+import 'package:savvy_stock/features/stock/item_entry/widgets/item_entry_create_and_edit.dart.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/screens/item_in_branch_dashboard.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/widgets/item_in_branch_create_and_edit.dart.dart';
+import 'package:savvy_stock/features/stock/location_entry/models/location_master_model.dart';
+import 'package:savvy_stock/features/stock/location_entry/screens/location_master_screen.dart';
+import 'package:savvy_stock/features/stock/location_entry/widget/location_master_create_edit.dart';
 import 'package:savvy_stock/features/system_constant/screen/system_constants_screen.dart';
 
 // Import your screen files for missing routes
@@ -129,6 +146,7 @@ class AppRouter {
               confirmedItems: args['confirmedItems'] as List<ConfirmedItem>,
               totalAmount: args['totalAmount'] as double,
               customer: args['customer'] as Customer,
+              authBloc: authBloc,
             ),
           );
         },
@@ -182,6 +200,30 @@ class AppRouter {
           requiredPrivilege: AppRoutes.privilegeManagement,
           parentPrivilege: AppRoutes.adminDashboard,
           child: PrivilegeManagementScreen(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.editPrivilege,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final privilege = extra != null
+              ? extra['privilege'] as Privilege?
+              : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.editPrivilege,
+            parentPrivilege: AppRoutes.privilegeManagement,
+            child: PrivilegeForm(privilege: privilege),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.createPrivilege,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.createPrivilege,
+          parentPrivilege: AppRoutes.privilegeManagement,
+          child: PrivilegeForm(),
         ),
         redirect: _protectedRouteRedirect,
       ),
@@ -259,7 +301,7 @@ class AppRouter {
           return PrivilegeRouteGuard(
             requiredPrivilege: AppRoutes.employeeEdit,
             parentPrivilege: AppRoutes.employeeManagement,
-            child: EmployeeFormPage(employee: employee),
+            child: EmployeeFormPage(employee: employee, authBloc: authBloc),
           );
         },
         redirect: _protectedRouteRedirect,
@@ -270,7 +312,7 @@ class AppRouter {
           return PrivilegeRouteGuard(
             requiredPrivilege: AppRoutes.employeeCreation,
             parentPrivilege: AppRoutes.employeeManagement,
-            child: EmployeeFormPage(),
+            child: EmployeeFormPage(authBloc: authBloc),
           );
         },
         redirect: _protectedRouteRedirect,
@@ -283,35 +325,217 @@ class AppRouter {
           return PrivilegeRouteGuard(
             requiredPrivilege: AppRoutes.employeeDelete,
             parentPrivilege: AppRoutes.employeeManagement,
-            child: EmployeeFormPage(employee: employee),
+            child: EmployeeFormPage(employee: employee, authBloc: authBloc),
           );
         },
         redirect: _protectedRouteRedirect,
       ),
-      // Stock Routes
+      //  =======Stock Routes=======
+      // Item Entry
       GoRoute(
         path: AppRoutes.itemEntry,
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: AppRoutes.itemEntry,
           parentPrivilege: AppRoutes.stockDashboard,
-          child: const Placeholder(),
+          child: ItemEntryDashboard(authBloc: authBloc),
         ),
         redirect: _protectedRouteRedirect,
       ),
       GoRoute(
-        path: AppRoutes.uomManagement,
+        path: AppRoutes.itemCreation,
         builder: (context, state) => PrivilegeRouteGuard(
-          requiredPrivilege: AppRoutes.uomManagement,
-          parentPrivilege: AppRoutes.stockDashboard,
-          child: const Placeholder(),
+          requiredPrivilege: AppRoutes.itemCreation,
+          parentPrivilege: AppRoutes.itemEntry,
+          child: ItemEntryFormPage(authBloc: authBloc),
         ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.itemEdit,
+        builder: (context, state) {
+          final extra = state.extra;
+          final item = extra != null ? extra as ItemEntryModel? : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.itemEdit,
+            parentPrivilege: AppRoutes.itemEntry,
+            child: ItemEntryFormPage(item: item, authBloc: authBloc),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.itemDelete,
+        builder: (context, state) {
+          final extra = state.extra;
+          final item = extra != null ? extra as ItemEntryModel? : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.itemDelete,
+            parentPrivilege: AppRoutes.itemEntry,
+            child: ItemEntryFormPage(item: item, authBloc: authBloc),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      // Item In Branch
+      GoRoute(
+        path: AppRoutes.itemInBranch,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.itemInBranch,
+          parentPrivilege: AppRoutes.stockDashboard,
+          child: ItemInBranchDashboard(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.addItemToBranch,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final item = extra != null ? extra['item'] as ItemEntryModel? : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.addItemToBranch,
+            parentPrivilege: AppRoutes.itemInBranch,
+            child: ItemInBranchFormPage(itemEntry: item, authBloc: authBloc),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.editItemInBranch,
+        builder: (context, state) {
+          final extra = state.extra;
+          final item = extra != null ? extra as ItemInBranchModel? : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.editItemInBranch,
+            parentPrivilege: AppRoutes.itemInBranch,
+            child: ItemInBranchFormPage(item: item, authBloc: authBloc),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.itemDelete,
+        builder: (context, state) {
+          final extra = state.extra;
+          final item = extra != null ? extra as ItemInBranchModel? : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.itemDelete,
+            parentPrivilege: AppRoutes.itemInBranch,
+            child: ItemInBranchFormPage(item: item, authBloc: authBloc),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      // UOM Conversion
+      GoRoute(
+        path: AppRoutes.itemUomConversions,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.itemUomConversions,
+          parentPrivilege: AppRoutes.stockDashboard,
+          child: ItemUomConversionListScreen(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.itemUomConversionsCreate,
+        builder: (context, state) {
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.itemUomConversionsCreate,
+            parentPrivilege: AppRoutes.itemInBranch,
+            child: ItemUomConversionForm(authBloc: authBloc),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.itemUomConversionsEdit,
+        builder: (context, state) {
+          final extra = state.extra;
+          final item = extra != null ? extra as ItemUomConversion? : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.itemUomConversionsEdit,
+            parentPrivilege: AppRoutes.itemUomConversions,
+            child: ItemUomConversionForm(editingItem: item, authBloc: authBloc),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      //location entry
+      GoRoute(
+        path: AppRoutes.locationEntry,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.locationEntry,
+          parentPrivilege: AppRoutes.stockDashboard,
+          child: LocationMasterListPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.locationMasterCreate,
+        builder: (context, state) {
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.locationMasterCreate,
+            parentPrivilege: AppRoutes.locationEntry,
+            child: LocationMasterCreatePage(
+              authBloc: authBloc,
+              isEditMode: false,
+            ),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.locationMasterEdit,
+        builder: (context, state) {
+          final extra = state.extra;
+          final item = extra != null ? extra as LocationMaster? : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.locationMasterEdit,
+            parentPrivilege: AppRoutes.locationEntry,
+            child: LocationMasterCreatePage(
+              authBloc: authBloc,
+              editingLocation: item,
+              isEditMode: true,
+            ),
+          );
+        },
         redirect: _protectedRouteRedirect,
       ),
 
+      GoRoute(
+        path: AppRoutes.branchManagement,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.branchManagement,
+          parentPrivilege: AppRoutes.branchListDashboard,
+          child: BranchDashboard(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.branchCreation,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.branchCreation,
+          parentPrivilege: AppRoutes.branchManagement,
+          child: BranchFormPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.branchEdit,
+        builder: (context, state) {
+          final extra = state.extra;
+          final branch = extra != null ? extra as Branch? : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.branchEdit,
+            parentPrivilege: AppRoutes.branchManagement,
+            child: BranchFormPage(branch: branch, authBloc: authBloc),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
       // System Constants
       GoRoute(
         path: AppRoutes.systemConstants,
-        builder: (context, state) => const SystemConstantsScreen(),
+        builder: (context, state) => SystemConstantsScreen(authBloc: authBloc),
       ),
 
       // Unauthorized

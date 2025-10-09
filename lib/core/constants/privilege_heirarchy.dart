@@ -15,10 +15,9 @@ class PrivilegeHierarchy {
     // ==================== ADMIN MANAGEMENT ====================
     // Privilege Management (child of Admin Dashboard)
     AppRoutes.privilegeManagement: AppRoutes.adminDashboard,
-    '/admin/privilege-management/add-privilege': AppRoutes.privilegeManagement,
-    '/admin/privilege-management/edit-privilege': AppRoutes.privilegeManagement,
-    '/admin/privilege-management/delete-privilege':
-        AppRoutes.privilegeManagement,
+    AppRoutes.createPrivilege: AppRoutes.privilegeManagement,
+    AppRoutes.editPrivilege: AppRoutes.privilegeManagement,
+    AppRoutes.deletePrivilege: AppRoutes.privilegeManagement,
 
     // Role Management (child of Admin Dashboard)
     AppRoutes.roleManagement: AppRoutes.adminDashboard,
@@ -53,17 +52,50 @@ class PrivilegeHierarchy {
     '/sales/customer-dashboard/delete-customer': AppRoutes.customerEntry,
 
     // ==================== STOCK MODULE ====================
+    // Item Entry (child of Stock Dashboard)
     AppRoutes.itemEntry: AppRoutes.stockDashboard,
+    AppRoutes.itemCreation: AppRoutes.itemEntry,
+    AppRoutes.itemEdit: AppRoutes.itemEntry,
+    AppRoutes.itemDelete: AppRoutes.itemEntry,
+    AppRoutes.itemExport: AppRoutes.itemEntry,
+    AppRoutes.itemImport: AppRoutes.itemEntry,
+
+    // Item In Branch (child of Stock Dashboard)
+    AppRoutes.itemInBranch: AppRoutes.stockDashboard,
+    AppRoutes.addItemToBranch: AppRoutes.itemInBranch,
+    AppRoutes.editItemInBranch: AppRoutes.itemInBranch,
+    AppRoutes.deleteItemInBranch: AppRoutes.itemInBranch,
+    AppRoutes.exportItemInBranch: AppRoutes.itemInBranch,
+    AppRoutes.importItemInBranch: AppRoutes.itemInBranch,
+
+    // UOM Management (child of Stock Dashboard)
     AppRoutes.uomManagement: AppRoutes.stockDashboard,
     AppRoutes.itemWorkbench: AppRoutes.stockDashboard,
+
+    // Item UoM Conversions (child of Stock Dashboard)
     AppRoutes.itemUomConversions: AppRoutes.stockDashboard,
+    AppRoutes.itemUomConversionsCreate: AppRoutes.itemUomConversions,
+    AppRoutes.itemUomConversionsEdit: AppRoutes.itemUomConversions,
+    AppRoutes.itemUomConversionsDelete: AppRoutes.itemUomConversions,
+
+    // Location Entry (child of Stock Dashboard)
     AppRoutes.locationEntry: AppRoutes.stockDashboard,
+    AppRoutes.locationMasterCreate: AppRoutes.locationEntry,
+    AppRoutes.locationMasterEdit: AppRoutes.locationEntry,
+    AppRoutes.locationMasterDelete: AppRoutes.locationEntry,
+
     AppRoutes.lotEntry: AppRoutes.stockDashboard,
     AppRoutes.lotColorings: AppRoutes.stockDashboard,
     AppRoutes.inventoryTransaction: AppRoutes.stockDashboard,
     AppRoutes.itemBranchEntry: AppRoutes.stockDashboard,
     AppRoutes.barcodeFunction: AppRoutes.stockDashboard,
     AppRoutes.exportFunction: AppRoutes.stockDashboard,
+
+    // ==================== BRANCH MODULE ====================
+    AppRoutes.branchManagement: AppRoutes.branchListDashboard,
+    AppRoutes.branchCreation: AppRoutes.branchManagement,
+    AppRoutes.branchEdit: AppRoutes.branchManagement,
+    AppRoutes.branchDelete: AppRoutes.branchManagement,
   };
 
   /// Get the parent privilege for a given privilege URI

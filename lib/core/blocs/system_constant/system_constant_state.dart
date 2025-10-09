@@ -14,6 +14,7 @@ enum SystemConstantStatus {
 class SystemConstantState extends Equatable {
   final SystemConstantStatus status;
   final List<SystemConstant> systemConstants;
+  final SystemConstant? systemConstant;
   final List<SystemConstant> createItems;
   final List<SystemConstant> editItems;
   final List<SystemConstant> multiselectionItems;
@@ -29,6 +30,7 @@ class SystemConstantState extends Equatable {
   const SystemConstantState({
     this.status = SystemConstantStatus.initial,
     this.systemConstants = const [],
+    this.systemConstant,
     this.createItems = const [],
     this.editItems = const [],
     this.multiselectionItems = const [],
@@ -41,10 +43,16 @@ class SystemConstantState extends Equatable {
     this.lastSyncedAt,
     this.lotTypes = const {},
   });
+  bool get isLoading => status == SystemConstantStatus.loading;
+  bool get isSuccess => status == SystemConstantStatus.success;
+  bool get isFailure => status == SystemConstantStatus.failure;
+  bool get isSyncing => status == SystemConstantStatus.syncing;
+  bool get isOffline => status == SystemConstantStatus.offline;
 
   SystemConstantState copyWith({
     SystemConstantStatus? status,
     List<SystemConstant>? systemConstants,
+    SystemConstant? systemConstant,
     List<SystemConstant>? createItems,
     List<SystemConstant>? editItems,
     List<SystemConstant>? multiselectionItems,
@@ -78,6 +86,7 @@ class SystemConstantState extends Equatable {
   List<Object?> get props => [
     status,
     systemConstants,
+    systemConstant,
     createItems,
     editItems,
     multiselectionItems,
