@@ -36,7 +36,7 @@ import 'core/repositories/system_constant_repository.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   _initializeAndRunApp();
-  clearAllSharedPreferences();
+  //  clearAllSharedPreferences();
 }
 
 // Add error handling wrapper
@@ -65,6 +65,7 @@ Future<void> clearAllSharedPreferences() async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.clear();
 }
+
 class SavvyStock extends StatefulWidget {
   const SavvyStock({super.key});
   @override

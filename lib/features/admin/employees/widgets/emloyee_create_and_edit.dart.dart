@@ -243,7 +243,6 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNavigation(),
     );
   }
 
@@ -284,8 +283,13 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
   }
 
   Widget _buildSlide1() {
+    final screen = MediaQuery.of(context).size;
+    final bool isTablet = screen.width > 600;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.symmetric(
+        horizontal: isTablet ? 80 : 28,
+        vertical: isTablet ? 60 : 40,
+      ),
       child: Column(
         children: [
           _buildTextField(_firstNameController, 'First Name *', Icons.person),
@@ -317,14 +321,21 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
             Icons.email,
             TextInputType.emailAddress,
           ),
+          const SizedBox(height: 16),
+          _buildBottomNavigation(),
         ],
       ),
     );
   }
 
   Widget _buildSlide2() {
+    final screen = MediaQuery.of(context).size;
+    final bool isTablet = screen.width > 600;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.symmetric(
+        horizontal: isTablet ? 80 : 28,
+        vertical: isTablet ? 60 : 40,
+      ),
       child: Column(
         children: [
           _buildDropdown(_titles, _selectedTitle, 'Title', Icons.title, (
@@ -352,6 +363,8 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
           _buildDateField(_birthDateController, 'Birth Date'),
           const SizedBox(height: 16),
           _buildDateField(_hireDateController, 'Hire Date'),
+          const SizedBox(height: 16),
+          _buildBottomNavigation(),
         ],
       ),
     );
@@ -442,42 +455,41 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
   }
 
   Widget _buildBottomNavigation() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            offset: const Offset(0, -2),
-            blurRadius: 4,
-            color: Colors.black.withOpacity(0.1),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          if (_currentPage == 1)
-            Expanded(
-              child: OutlinedButton(
-                onPressed: _previousSlide,
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            ElevatedButton(
+              onPressed: () {
+                _currentPage == 0 ? Navigator.pop(context) : _previousSlide();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 60,
+                  vertical: 16,
                 ),
-                child: const Text('Back'),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                elevation: 4,
               ),
+              child: const Text('Back'),
             ),
-          if (_currentPage == 1) const SizedBox(width: 12),
-          Expanded(
-            child: ElevatedButton(
+
+            ElevatedButton(
               onPressed: _currentPage == 0 ? _nextSlide : _saveEmployee,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                backgroundColor: _currentPage == 0
+                    ? Colors.amber
+                    : Color(0xFF145888),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 60,
+                  vertical: 16,
+                ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(30),
                 ),
               ),
               child: Text(
@@ -485,8 +497,31 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
                 style: const TextStyle(color: Colors.white),
               ),
             ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Positioned(
+          bottom: 30,
+          left: 40,
+          child: Row(
+            children: [
+              _buildProgressDot(_currentPage == 0),
+              const SizedBox(width: 8),
+              _buildProgressDot(_currentPage == 1),
+            ],
           ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProgressDot(bool active) {
+    return Container(
+      width: 10,
+      height: 10,
+      decoration: BoxDecoration(
+        color: active ? Colors.amber : Colors.grey,
+        shape: BoxShape.circle,
       ),
     );
   }

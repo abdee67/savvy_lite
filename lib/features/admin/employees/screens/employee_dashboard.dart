@@ -8,6 +8,8 @@ import 'package:savvy_stock/features/admin/employees/blocs/employee_bloc.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_event.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_state.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
+import 'package:savvy_stock/features/admin/employees/widgets/detail_panel.dart'
+    hide Employee;
 import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
 import 'package:savvy_stock/features/admin/role/blocs/role_event.dart'
     hide ClearSelection;
@@ -272,7 +274,9 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
       ),
 
       // Floating Action Button for Add
-      floatingActionButton: _buildFloatingActionButton(context),
+      floatingActionButton: !_employeeDetail
+          ? _buildFloatingActionButton(context)
+          : null,
     );
   }
 
@@ -379,7 +383,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
               );
             } else {
               // Navigate to add screen
-              context.push(AppRoutes.employeeEdit);
+              context.push(AppRoutes.employeeCreation);
             }
           },
           backgroundColor: Color.fromARGB(255, 28, 66, 146),
@@ -501,7 +505,12 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
               alignment: Alignment.centerRight,
               decoration: BoxDecoration(
                 color: Colors.amber, // Changed to red for delete action
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: _employeeDetail
+                    ? BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                      )
+                    : BorderRadius.all(Radius.circular(20)),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 20),
               margin: const EdgeInsets.only(bottom: 2),
@@ -511,13 +520,18 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
 
           // Employee card
           AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
+            duration: const Duration(milliseconds: 00),
             transform: Matrix4.translationValues(offset, 0, 0),
             curve: Curves.easeOut,
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
               color: isSelected ? Colors.blue[50] : Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: _employeeDetail
+                  ? BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    )
+                  : BorderRadius.all(Radius.circular(20)),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.1),
@@ -695,6 +709,9 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
   }
 
   Widget _buildDetailPanel(Employee employee) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final useCompactLayout = screenWidth < 700;
+
     return MultiBlocProvider(
       providers: [
         BlocProvider.value(value: context.read<EmployeeBloc>()),
@@ -712,9 +729,10 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
           final isUser = _isEmployeeUser(employee);
           final userWithRole = _getUserForEmployee(employee);
           return Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
+            top: useCompactLayout ? 245 : 245,
+            bottom: useCompactLayout ? 0 : 0,
+            left: useCompactLayout ? 15 : 30,
+            right: useCompactLayout ? 15 : 30,
             child: Builder(
               builder: (context) {
                 final size = MediaQuery.of(context).size;
@@ -732,10 +750,10 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [Colors.white, Colors.grey[50]!],
+                      colors: [Colors.white, Colors.white],
                     ),
                     borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(32),
+                      top: Radius.elliptical(0, 0),
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -991,7 +1009,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Roles updated successfully'),
-              backgroundColor: Colors.green,
+              backgroundColor: Color(0xFF145888),
             ),
           );
         }
@@ -1015,7 +1033,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
                   }
                 },
           style: ElevatedButton.styleFrom(
-            backgroundColor: hasChanges ? Colors.amber : Colors.blue,
+            backgroundColor: hasChanges ? Colors.amber : Color(0xFF145888),
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(
               horizontal: isCompact ? 12 : 16,
@@ -1054,7 +1072,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
           context.read<EmployeeBloc>().add(ToggleRoleManagement(employee.id));
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blue,
+          backgroundColor: Color(0xFF145888),
           foregroundColor: Colors.white,
           padding: EdgeInsets.symmetric(
             horizontal: isCompact ? 12 : 16,
@@ -1075,7 +1093,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
         ),
 
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.green,
+          backgroundColor: Color(0xFF145888),
           foregroundColor: Colors.white,
           padding: EdgeInsets.symmetric(
             horizontal: isCompact ? 12 : 16,
@@ -1398,9 +1416,6 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     return Column(
       children: [
         // Search bar
-        _buildRoleSearchBar(isCompact),
-        const SizedBox(height: 16),
-
         Expanded(
           child: SingleChildScrollView(
             child: Column(
@@ -1420,6 +1435,8 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
                   },
                 ),
 
+                const SizedBox(height: 16),
+                _buildRoleSearchBar(isCompact),
                 const SizedBox(height: 16),
 
                 // Available Roles Section
@@ -1933,30 +1950,40 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
   }) {
     Color getBackgroundColor() {
       if (isAssigned) {
-        return Color(0xFF10b981).withOpacity(0.1); // Original assigned - green
+        return Color(0xFF145888); // Original assigned - green
       }
       if (isSelected) {
-        return Colors.amber.withOpacity(0.2); // Selected - amber
+        return Color.fromARGB(255, 54, 137, 197); // Selected - amber
       }
       if (isAssigned) {
-        return Color(0xFF10b981).withOpacity(0.05); // Assigned but blurred
+        return Color.fromARGB(
+          255,
+          54,
+          137,
+          197,
+        ).withValues(alpha: 0.05); // Assigned but blurred
       }
-      return Color(0xFF1e293b).withOpacity(0.8); // Available - blue/black
+      return Color.fromARGB(
+        255,
+        54,
+        137,
+        197,
+      ).withValues(alpha: 0.8); // Available - blue/black
     }
 
     Color getTextColor() {
       if (isAssigned) {
-        return Color(0xFF10b981); // Original assigned - green
+        return Colors.white;
       }
       if (isSelected) {
-        return Colors.amber[800]!; // Selected - amber
+        return Colors.white; // Selected - amber
       }
       return Colors.white; // Available - white
     }
 
     Color getBorderColor() {
       if (isSelected) {
-        return Colors.amber;
+        return Colors.red;
       }
       return Colors.transparent;
     }
