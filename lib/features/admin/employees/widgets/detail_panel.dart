@@ -1,102 +1,38 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:savvy_stock/features/admin/employees/blocs/employee_bloc.dart';
-import 'package:savvy_stock/features/admin/employees/blocs/employee_event.dart';
-import 'package:savvy_stock/features/admin/employees/blocs/employee_state.dart';
-import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
-import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
-import 'package:savvy_stock/features/admin/role/blocs/role_event.dart';
-import 'package:savvy_stock/features/admin/role/blocs/role_state.dart';
-import 'package:savvy_stock/features/admin/role/models/role_model.dart';
-import 'package:savvy_stock/features/admin/users/blocs/user_bloc.dart';
-import 'package:savvy_stock/features/admin/users/blocs/user_event.dart';
-import 'package:savvy_stock/features/admin/users/blocs/user_state.dart';
-import 'package:savvy_stock/features/admin/users/models/user_with_role.dart';
-import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 
-class EmployeeDetailPanel extends StatefulWidget {
-  final Employee employee;
-  final VoidCallback onClose;
-  final AuthBloc authBloc;
-  final UserBloc userBloc;
-
-  const EmployeeDetailPanel({
-    super.key,
-    required this.employee,
-    required this.onClose,
-    required this.authBloc,
-    required this.userBloc,
-  });
+class RolesAddPage01 extends StatefulWidget {
+  const RolesAddPage01({super.key});
 
   @override
-  State<EmployeeDetailPanel> createState() => _EmployeeDetailPanelState();
+  State<RolesAddPage01> createState() => _RolesAddPage01State();
 }
 
-class _EmployeeDetailPanelState extends State<EmployeeDetailPanel>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _slideAnimation;
-  late Animation<double> _opacityAnimation;
+class _RolesAddPage01State extends State<RolesAddPage01> {
+  final List<Employee> employees = [
+    Employee(
+      id: 'ESR 021',
+      name: 'Meklit Mamo',
+      role: 'Salesperson',
+      editedDate: 'April 12',
+      nationality: 'Ethiopian',
+      city: 'Addis Ababa',
+      phone: '(+251) 923 50 50 51',
+      email: 'Meklitmamushet@gmail.com',
+      address: 'Kolfe Keranio, W12',
+      hireDate: 'September 12, 2024',
+    ),
+  ];
 
-  bool _isEmployeeUser(Employee employee) {
-    final userState = context.watch<UserBloc>().state;
-    return userState.usersWithRole.any(
-      (userWithRole) => userWithRole.user.employeesId == employee.id,
-    );
-  }
+  int? expandedEmployeeIndex;
 
-  UserWithRole? _getUserForEmployee(Employee employee) {
-    final userState = context.read<UserBloc>().state;
-    final matchingUsers = userState.usersWithRole.where(
-      (userWithRole) => userWithRole.user.employeesId == employee.id,
-    );
-    if (matchingUsers.isEmpty) return null;
-    return matchingUsers.first;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    );
-
-    _slideAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
-    );
-
-    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
-    );
-
-    _animationController.forward();
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  void _closePanel() {
-    _animationController.reverse().then((_) {
-      widget.onClose();
+  void _toggleEmployee(int index) {
+    setState(() {
+      if (expandedEmployeeIndex == index) {
+        expandedEmployeeIndex = null;
+      } else {
+        expandedEmployeeIndex = index;
+      }
     });
-  }
-
-  void _toggleRoleManagement() {
-    final employeeBloc = context.read<EmployeeBloc>();
-    final state = employeeBloc.state;
-
-    if (state.isRoleManagementMode) {
-      employeeBloc.add(ToggleRoleManagement(0));
-      employeeBloc.add(ClearRoleSelection());
-    } else {
-      employeeBloc.add(ToggleRoleManagement(widget.employee.id));
-      context.read<RoleBloc>().add(LoadRoles(widget.authBloc.state.companyId!));
-    }
   }
 
   @override
@@ -104,270 +40,394 @@ class _EmployeeDetailPanelState extends State<EmployeeDetailPanel>
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isSmallScreen = screenWidth < 375;
-    final isUser = _isEmployeeUser(widget.employee);
+    final cardWidth = screenWidth * 0.85;
+    final cardSpacing = screenHeight * 0.02;
 
-    return AnimatedBuilder(
-      animation: _animationController,
-      builder: (context, child) {
-        return Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: Transform.translate(
-            offset: Offset(0, (1 - _slideAnimation.value) * screenHeight * 0.3),
-            child: Opacity(
-              opacity: _opacityAnimation.value,
-              child: Container(
-                height: screenHeight * 0.7,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-                ),
-                child: BlocBuilder<EmployeeBloc, EmployeeState>(
-                  builder: (context, state) {
-                    return _buildPanelContent(
-                      state,
-                      isUser,
-                      isSmallScreen,
-                      screenWidth,
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildPanelContent(
-    EmployeeState state,
-    bool isUser,
-    bool isSmallScreen,
-    double screenWidth,
-  ) {
-    return Column(
-      children: [
-        // Header with drag handle
-        _buildPanelHeader(state, isUser, isSmallScreen),
-
-        // Main content
-        Expanded(
-          child: state.isRoleManagementMode && isUser
-              ? _buildRoleManagementView(
-                  widget.employee,
-                  isSmallScreen,
-                  screenWidth,
-                )
-              : _buildEmployeeInfoView(
-                  widget.employee,
-                  isSmallScreen,
-                  screenWidth,
-                ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPanelHeader(
-    EmployeeState state,
-    bool isUser,
-    bool isSmallScreen,
-  ) {
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-      ),
+      width: screenWidth,
+      height: screenHeight,
+      decoration: const BoxDecoration(color: Colors.white),
       child: Column(
         children: [
-          // Drag handle
-          Container(
-            width: 40,
-            height: 4,
-            margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(
-              color: Colors.grey[400],
-              borderRadius: BorderRadius.circular(2),
+          // Header Section
+          _buildHeaderSection(isSmallScreen, screenWidth),
+
+          // Search and Add Section
+          _buildSearchSection(isSmallScreen, screenWidth),
+
+          // Employees List
+          Expanded(
+            child: ListView.separated(
+              padding: EdgeInsets.symmetric(vertical: cardSpacing),
+              itemCount: employees.length,
+              separatorBuilder: (context, index) =>
+                  SizedBox(height: cardSpacing),
+              itemBuilder: (context, index) {
+                return _buildEmployeeCard(
+                  employees[index],
+                  index,
+                  cardWidth,
+                  isSmallScreen,
+                );
+              },
             ),
-          ),
-
-          // Header content
-          Row(
-            children: [
-              // Employee avatar and basic info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.employee.id.toString(),
-                      style: TextStyle(
-                        color: const Color(0xFF887F7F),
-                        fontSize: isSmallScreen ? 12 : 14,
-                        fontStyle: FontStyle.italic,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w300,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${widget.employee.nameFirst} ${widget.employee.nameLast}',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: isSmallScreen ? 20 : 24,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    Text(
-                      widget.employee.title ?? 'Employee',
-                      style: TextStyle(
-                        color: const Color(0xFF4C3737),
-                        fontSize: isSmallScreen ? 12 : 14,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w200,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Action buttons
-              Row(
-                children: [
-                  // Edit date info
-                  Container(
-                    width: 102,
-                    child: Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(
-                            text: 'Edited on ',
-                            style: TextStyle(
-                              color: const Color(0xFF887F7F),
-                              fontSize: isSmallScreen ? 8 : 10,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w300,
-                            ),
-                          ),
-                          TextSpan(
-                            text: _getEditedDate(),
-                            style: TextStyle(
-                              color: const Color(0xFF887F7F),
-                              fontSize: isSmallScreen ? 8 : 10,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-
-                  // Main action button
-                  GestureDetector(
-                    onTap: _toggleRoleManagement,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      decoration: ShapeDecoration(
-                        color: const Color(0xFF145888),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                      child: Text(
-                        state.isRoleManagementMode
-                            ? 'See Less'
-                            : (isUser ? 'Show Roles' : 'See More'),
-                        textAlign: TextAlign.right,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: isSmallScreen ? 10 : 12,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildEmployeeInfoView(
-    Employee employee,
-    bool isSmallScreen,
-    double screenWidth,
-  ) {
-    final isUser = _isEmployeeUser(employee);
-
+  Widget _buildHeaderSection(bool isSmallScreen, double screenWidth) {
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            const Color(0xFFCBCBCB),
-            const Color(0xFFFDD105).withOpacity(0.8),
-          ],
-        ),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-      ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Basic information section
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
+      width: screenWidth,
+      padding: const EdgeInsets.only(top: 50, bottom: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          Column(
+            children: [
+              Text(
+                'EMPLOYEES',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: const Color(0xFF145888),
+                  fontSize: isSmallScreen ? 14 : 17,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w900,
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildInfoRow('Role:', employee.title ?? 'Employee'),
-                  _buildInfoRow(
-                    'Nationality:',
-                    employee.country ?? 'Ethiopian',
-                  ),
-                  _buildInfoRow('City:', employee.city ?? 'Addis Ababa'),
-                  _buildInfoRow('Phone number:', employee.phone),
-                  _buildInfoRow('Email:', employee.email),
-                  _buildInfoRow('Address:', employee.address ?? 'N/A'),
-                  _buildInfoRow('Hired on:', _formatDate(employee.hireDate)),
-                ],
+              Container(
+                width: 106,
+                height: 4,
+                decoration: BoxDecoration(color: const Color(0xFFD9D9D9)),
               ),
+            ],
+          ),
+          Text(
+            'ROLES',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: const Color(0xFF145888),
+              fontSize: isSmallScreen ? 7 : 9,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w500,
             ),
-
-            const SizedBox(height: 20),
-
-            // User status and conversion button
-            if (!isUser) _buildConvertToUserSection(employee, isSmallScreen),
-
-            // Privileges section for users
-            if (isUser) _buildPrivilegesSection(isSmallScreen),
-          ],
-        ),
+          ),
+          Text(
+            'USERS',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: const Color(0xFF145888),
+              fontSize: isSmallScreen ? 7 : 9,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildSearchSection(bool isSmallScreen, double screenWidth) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              height: 40,
+              padding: const EdgeInsets.only(left: 12, right: 8),
+              decoration: ShapeDecoration(
+                color: const Color(0xFFE6E5E5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(17),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.search, color: const Color(0xFF8E8E93), size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: 'Search',
+                        hintStyle: TextStyle(
+                          color: const Color(0xFF8E8E93),
+                          fontSize: isSmallScreen ? 14 : 17,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w400,
+                        ),
+                        border: InputBorder.none,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    width: 35,
+                    height: 35,
+                    decoration: ShapeDecoration(
+                      color: const Color(0xFFD5D5D5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'GO',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: isSmallScreen ? 10 : 12,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            width: 65,
+            height: 39,
+            decoration: ShapeDecoration(
+              color: const Color(0xFF145888),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: Center(
+              child: Text(
+                'ADD +',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: isSmallScreen ? 11 : 13,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmployeeCard(
+    Employee employee,
+    int index,
+    double cardWidth,
+    bool isSmallScreen,
+  ) {
+    final isExpanded = expandedEmployeeIndex == index;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+      width: cardWidth,
+      height: isExpanded ? 500 : 156.49,
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      child: Stack(
+        children: [
+          // Background layers (only visible when expanded)
+          if (isExpanded) ...[
+            // Gray background
+            Positioned(
+              top: 20,
+              child: Container(
+                width: cardWidth,
+                height: 144,
+                decoration: ShapeDecoration(
+                  color: const Color(0xFFCBCBCB),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(39),
+                  ),
+                ),
+              ),
+            ),
+            // Yellow background
+            Positioned(
+              top: 47,
+              child: Container(
+                width: cardWidth,
+                height: 387,
+                decoration: ShapeDecoration(
+                  color: const Color(0xFFFDD105),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(40),
+                  ),
+                ),
+              ),
+            ),
+          ],
+
+          // Main white card
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeInOut,
+            top: isExpanded ? 0 : 0,
+            child: Container(
+              width: cardWidth,
+              height: 156.49,
+              padding: const EdgeInsets.only(
+                top: 20,
+                left: 20,
+                right: 20,
+                bottom: 20,
+              ),
+              decoration: ShapeDecoration(
+                color: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(40),
+                ),
+                shadows: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              employee.id,
+                              style: TextStyle(
+                                color: const Color(0xFF887F7F),
+                                fontSize: isSmallScreen ? 12 : 14,
+                                fontStyle: FontStyle.italic,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w300,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              employee.name,
+                              style: TextStyle(
+                                color: const Color(0xFF373737),
+                                fontSize: isSmallScreen ? 20 : 24,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            Text(
+                              employee.role,
+                              style: TextStyle(
+                                color: const Color(0xFF4C3737),
+                                fontSize: isSmallScreen ? 12 : 14,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w200,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: 'Edited on ',
+                              style: TextStyle(
+                                color: const Color(0xFF887F7F),
+                                fontSize: isSmallScreen ? 8 : 10,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w300,
+                              ),
+                            ),
+                            TextSpan(
+                              text: employee.editedDate,
+                              style: TextStyle(
+                                color: const Color(0xFF887F7F),
+                                fontSize: isSmallScreen ? 8 : 10,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => _toggleEmployee(index),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: ShapeDecoration(
+                            color: const Color(0xFF145888),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          child: Text(
+                            isExpanded ? 'See Less' : 'See More',
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: isSmallScreen ? 10 : 12,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Expanded Content
+          if (isExpanded) ...[
+            Positioned(
+              top: 180,
+              left: 30,
+              right: 30,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 300),
+                opacity: isExpanded ? 1.0 : 0.0,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildDetailRow('Role:', employee.role),
+                    _buildDetailRow('Nationality:', employee.nationality),
+                    _buildDetailRow('City:', employee.city),
+                    _buildDetailRow('Phone number:', employee.phone),
+                    _buildDetailRow('Email:', employee.email),
+                    _buildDetailRow('Address:', employee.address),
+                    _buildDetailRow('Hired on:', employee.hireDate),
+
+                    const SizedBox(height: 20),
+
+                    // Privileges Section
+                    _buildPrivilegesSection(isSmallScreen),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Text.rich(
@@ -397,101 +457,53 @@ class _EmployeeDetailPanelState extends State<EmployeeDetailPanel>
     );
   }
 
-  Widget _buildConvertToUserSection(Employee employee, bool isSmallScreen) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        children: [
-          Text(
-            'This employee is not a system user',
-            style: TextStyle(
-              color: const Color(0xFF373737),
-              fontSize: isSmallScreen ? 14 : 16,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 12),
-          ElevatedButton(
-            onPressed: () {
-              // Navigate to convert to user screen
-              // context.push(AppRoutes.employeeConversionToUser, extra: {'employee': employee});
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF145888),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
-            child: Text(
-              'Convert to User',
-              style: TextStyle(
-                fontSize: isSmallScreen ? 12 : 14,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildPrivilegesSection(bool isSmallScreen) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Privileges',
-            style: TextStyle(
-              color: const Color(0xFF373737),
-              fontSize: isSmallScreen ? 16 : 18,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w700,
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Privileges',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: const Color(0xFF373737),
+            fontSize: isSmallScreen ? 14 : 16,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w700,
           ),
-          const SizedBox(height: 16),
+        ),
+        const SizedBox(height: 12),
 
-          // Privilege buttons grid
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              _buildPrivilegeButton('Report Access', isSmallScreen),
-              _buildPrivilegeButton('Main inbox', isSmallScreen),
-              _buildPrivilegeButton('Price leads', isSmallScreen),
-              _buildPrivilegeButton('Store Price', isSmallScreen),
-              _buildPrivilegeButton('Voided rec.', isSmallScreen),
-              _buildPrivilegeButton('Change profile', isSmallScreen),
-            ],
-          ),
+        // Privilege Buttons - Row 1
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildPrivilegeButton('Report Access', isSmallScreen),
+            _buildPrivilegeButton('Main inbox', isSmallScreen),
+            _buildPrivilegeButton('Price leads', isSmallScreen),
+          ],
+        ),
+        const SizedBox(height: 8),
 
-          const SizedBox(height: 20),
+        // Privilege Buttons - Row 2
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildPrivilegeButton('Store Price', isSmallScreen),
+            _buildPrivilegeButton('Voided rec.', isSmallScreen),
+            _buildPrivilegeButton('Change profile', isSmallScreen),
+          ],
+        ),
+        const SizedBox(height: 16),
 
-          // Role management section
-          _buildRoleManagementPreview(isSmallScreen),
-        ],
-      ),
+        // Role Management Section
+        _buildRoleManagementSection(isSmallScreen),
+      ],
     );
   }
 
   Widget _buildPrivilegeButton(String text, bool isSmallScreen) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: ShapeDecoration(
         color: const Color(0xFF145888),
         shape: RoundedRectangleBorder(
@@ -504,7 +516,7 @@ class _EmployeeDetailPanelState extends State<EmployeeDetailPanel>
         textAlign: TextAlign.center,
         style: TextStyle(
           color: Colors.white,
-          fontSize: isSmallScreen ? 10 : 12,
+          fontSize: isSmallScreen ? 8 : 9,
           fontFamily: 'Inter',
           fontWeight: FontWeight.w500,
         ),
@@ -512,408 +524,147 @@ class _EmployeeDetailPanelState extends State<EmployeeDetailPanel>
     );
   }
 
-  Widget _buildRoleManagementPreview(bool isSmallScreen) {
-    return BlocBuilder<UserBloc, UserState>(
-      builder: (context, userState) {
-        final userWithRole = _getUserForEmployee(widget.employee);
-        final roles = userWithRole?.roles ?? [];
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Current Roles',
-              style: TextStyle(
-                color: const Color(0xFF373737),
-                fontSize: isSmallScreen ? 14 : 16,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            if (roles.isEmpty)
-              Text(
-                'No roles assigned',
-                style: TextStyle(
-                  color: const Color(0xFF887F7F),
-                  fontSize: isSmallScreen ? 12 : 14,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w300,
-                ),
-              )
-            else
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: roles
-                    .map((role) => _buildRoleChip(role.name, isSmallScreen))
-                    .toList(),
-              ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildRoleChip(String roleName, bool isSmallScreen) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE6E5E5),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: Color(0xFF145888),
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            roleName,
-            style: TextStyle(
-              color: const Color(0xFF8E8E93),
-              fontSize: isSmallScreen ? 10 : 12,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRoleManagementView(
-    Employee employee,
-    bool isSmallScreen,
-    double screenWidth,
-  ) {
-    final userWithRole = _getUserForEmployee(employee);
-
-    return BlocBuilder<RoleBloc, RoleState>(
-      builder: (context, roleState) {
-        final assignedRoles = userWithRole?.roles ?? [];
-        final allRoles = roleState.roles;
-        final availableRoles = allRoles
-            .where((role) => !assignedRoles.any((r) => r.id == role.id))
-            .toList();
-
-        return Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                const Color(0xFFCBCBCB),
-                const Color(0xFFFDD105).withOpacity(0.8),
-              ],
-            ),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-          ),
-          child: Column(
-            children: [
-              // Security role section
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.all(20),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE6E5E5),
-                  borderRadius: BorderRadius.circular(17),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 16,
-                          height: 16,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF145888),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Security',
-                          style: TextStyle(
-                            color: const Color(0xFF8E8E93),
-                            fontSize: isSmallScreen ? 12 : 14,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Container(
-                      width: 35,
-                      height: 35,
-                      decoration: const ShapeDecoration(
-                        color: Color(0xFFFDD105),
-                        shape: OvalBorder(),
-                      ),
-                      child: const Icon(
-                        Icons.check,
-                        size: 20,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(30),
-                    ),
-                  ),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Assigned roles section
-                        _buildRoleSection(
-                          'Assigned Roles',
-                          assignedRoles,
-                          true,
-                          isSmallScreen,
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Available roles section
-                        _buildRoleSection(
-                          'Available Roles',
-                          availableRoles,
-                          false,
-                          isSmallScreen,
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Action buttons
-                        _buildRoleActionButtons(isSmallScreen),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildRoleSection(
-    String title,
-    List<Role> roles,
-    bool isAssigned,
-    bool isSmallScreen,
-  ) {
+  Widget _buildRoleManagementSection(bool isSmallScreen) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: TextStyle(
-            color: const Color(0xFF373737),
-            fontSize: isSmallScreen ? 14 : 16,
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w700,
+        // Security Role Chip
+        Container(
+          width: double.infinity,
+          height: 35,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: ShapeDecoration(
+            color: const Color(0xFFE6E5E5),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(17),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 20,
+                    height: 20,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF145888),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Security',
+                    style: TextStyle(
+                      color: const Color(0xFF8E8E93),
+                      fontSize: isSmallScreen ? 12 : 14,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                width: 35,
+                height: 35,
+                decoration: const ShapeDecoration(
+                  color: Color(0xFFFDD105),
+                  shape: CircleBorder(),
+                ),
+                child: const Icon(Icons.check, size: 20, color: Colors.black),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
 
-        if (roles.isEmpty)
-          Text(
-            'No ${title.toLowerCase()}',
-            style: TextStyle(
-              color: const Color(0xFF887F7F),
-              fontSize: isSmallScreen ? 12 : 14,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w300,
+        // Role Action Buttons - Row 1
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildRoleActionButton(
+              'change Password',
+              const Color(0xFF145888),
+              isSmallScreen,
             ),
-          )
-        else
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: roles
-                .map((role) => _buildRoleItem(role, isAssigned, isSmallScreen))
-                .toList(),
-          ),
+            _buildRoleActionButton(
+              'Access to inbox',
+              const Color(0xFFD7DDDA),
+              isSmallScreen,
+            ),
+            _buildRoleActionButton(
+              'Update price',
+              const Color(0xFF145888),
+              isSmallScreen,
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+
+        // Role Action Buttons - Row 2
+        Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            _buildRoleActionButton(
+              'Store Price',
+              const Color(0xFFD7DDDA),
+              isSmallScreen,
+            ),
+            const SizedBox(width: 12),
+            _buildRoleActionButton(
+              'Dividend markup list',
+              const Color(0xFFD7DDDA),
+              isSmallScreen,
+            ),
+          ],
+        ),
       ],
     );
   }
 
-  Widget _buildRoleItem(Role role, bool isAssigned, bool isSmallScreen) {
-    return BlocBuilder<EmployeeBloc, EmployeeState>(
-      builder: (context, state) {
-        final isSelected = state.selectedRolesForAssignment.any(
-          (r) => r.id == role.id,
-        );
-
-        return GestureDetector(
-          onTap: () {
-            context.read<EmployeeBloc>().add(SelectRoleForAssignment(role));
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? const Color(0xFFFDD105)
-                  : const Color(0xFF145888),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              role.name,
-              style: TextStyle(
-                color: isSelected ? Colors.black : Colors.white,
-                fontSize: isSmallScreen ? 10 : 12,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildRoleActionButtons(bool isSmallScreen) {
-    return BlocBuilder<EmployeeBloc, EmployeeState>(
-      builder: (context, state) {
-        final hasChanges = state.selectedRolesForAssignment.isNotEmpty;
-
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            ElevatedButton(
-              onPressed: hasChanges ? () => _saveRoleChanges() : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF145888),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-              ),
-              child: Text(
-                'Save Changes',
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 12 : 14,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: _toggleRoleManagement,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFD7DDDA),
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-              ),
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 12 : 14,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _saveRoleChanges() {
-    final userWithRole = _getUserForEmployee(widget.employee);
-    final state = context.read<EmployeeBloc>().state;
-
-    if (userWithRole?.user.id == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('No user account found')));
-      return;
-    }
-
-    final currentAssignedRoles = userWithRole!.roles;
-    final selectedRoles = state.selectedRolesForAssignment;
-
-    // Calculate final roles using toggle logic
-    final finalRoles = <Role>[];
-
-    // Keep roles that are not selected for removal
-    for (final assignedRole in currentAssignedRoles) {
-      if (!selectedRoles.any((selected) => selected.id == assignedRole.id)) {
-        finalRoles.add(assignedRole);
-      }
-    }
-
-    // Add roles that are selected but not currently assigned
-    for (final selectedRole in selectedRoles) {
-      if (!currentAssignedRoles.any(
-        (assigned) => assigned.id == selectedRole.id,
-      )) {
-        finalRoles.add(selectedRole);
-      }
-    }
-
-    widget.userBloc.add(
-      AssignRolesToUser(
-        userWithRole.user.id,
-        widget.authBloc.state.companyId!,
-        finalRoles,
-        widget.authBloc.state.userId!,
+  Widget _buildRoleActionButton(String text, Color color, bool isSmallScreen) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: ShapeDecoration(
+        color: color,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
-    );
-
-    context.read<EmployeeBloc>().add(ClearRoleSelection());
-    _toggleRoleManagement();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Role changes saved successfully'),
-        backgroundColor: Colors.green,
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: isSmallScreen ? 8 : 9,
+          fontFamily: 'Inter',
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }
+}
 
-  String _getEditedDate() {
-    // This would typically come from your employee data
-    return 'April 12'; // Placeholder
-  }
+class Employee {
+  final String id;
+  final String name;
+  final String role;
+  final String editedDate;
+  final String nationality;
+  final String city;
+  final String phone;
+  final String email;
+  final String address;
+  final String hireDate;
 
-  String _formatDate(String? dateString) {
-    if (dateString == null || dateString.isEmpty) return 'N/A';
-    try {
-      final date = DateTime.parse(dateString);
-      return '${date.day}/${date.month}/${date.year}';
-    } catch (e) {
-      return dateString;
-    }
-  }
+  Employee({
+    required this.id,
+    required this.name,
+    required this.role,
+    required this.editedDate,
+    required this.nationality,
+    required this.city,
+    required this.phone,
+    required this.email,
+    required this.address,
+    required this.hireDate,
+  });
 }
