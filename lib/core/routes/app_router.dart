@@ -30,6 +30,7 @@ import 'package:savvy_stock/features/onboarding/widgets/getStarted.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/customer/screens/customer_list.dart';
 import 'package:savvy_stock/features/sales/customer/screens/customer_screen.dart';
+import 'package:savvy_stock/features/sales/customer/widget/customer_create_edit.dart';
 import 'package:savvy_stock/features/sales/invoice/screens/invoice_review_screen.dart';
 import 'package:savvy_stock/features/sales/payment/screens/payment_screen.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
@@ -103,16 +104,41 @@ class AppRouter {
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: AppRoutes.customerEntry,
           parentPrivilege: AppRoutes.salesDashboard,
-          child: const CustomerListPage(),
+          child: CustomerListPage(authBloc: authBloc),
         ),
         redirect: _protectedRouteRedirect,
       ),
+      GoRoute(
+        path: AppRoutes.customerCreate,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.customerCreate,
+          parentPrivilege: AppRoutes.customerEntry,
+          child: CustomerCreateEdit(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.customerEdit,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final customer = extra != null
+              ? extra['customer'] as Customer?
+              : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.customerEdit,
+            parentPrivilege: AppRoutes.customerEntry,
+            child: CustomerCreateEdit(authBloc: authBloc, customer: customer),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+
       GoRoute(
         path: AppRoutes.salesCustomerInfo,
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: AppRoutes.salesCustomerInfo,
           parentPrivilege: AppRoutes.salesDashboard,
-          child: const CustomerInfoScreen(),
+          child: CustomerInfoScreen(authBloc: authBloc),
         ),
         redirect: _protectedRouteRedirect,
       ),

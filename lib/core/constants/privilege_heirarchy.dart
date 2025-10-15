@@ -47,9 +47,9 @@ class PrivilegeHierarchy {
 
     // Customer Entry (child of Sales Dashboard)
     AppRoutes.customerEntry: AppRoutes.salesDashboard,
-    '/sales/customer-dashboard/add-customer': AppRoutes.customerEntry,
-    '/sales/customer-dashboard/edit-customer': AppRoutes.customerEntry,
-    '/sales/customer-dashboard/delete-customer': AppRoutes.customerEntry,
+    AppRoutes.customerCreate: AppRoutes.customerEntry,
+    AppRoutes.customerEdit: AppRoutes.customerEntry,
+    AppRoutes.customerDelete: AppRoutes.customerEntry,
 
     // ==================== STOCK MODULE ====================
     // Item Entry (child of Stock Dashboard)
