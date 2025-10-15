@@ -10,11 +10,12 @@ import 'package:savvy_stock/features/sales/customer/widget/customer_details_fiel
 import 'package:savvy_stock/features/sales/customer/widget/customer_section.dart';
 
 class CustomerInfoScreen extends StatelessWidget {
-  const CustomerInfoScreen({super.key});
+  final AuthBloc authBloc;
+  const CustomerInfoScreen({super.key, required this.authBloc});
 
   @override
   Widget build(BuildContext context) {
-    context.read<CustomerBloc>().add(LoadCustomers());
+    context.read<CustomerBloc>().add(LoadCustomers(authBloc.state.companyId!));
     return const CustomerInfoScreenView();
   }
 }
@@ -30,12 +31,12 @@ class CustomerInfoScreenView extends StatelessWidget {
         title: const Text(
           'Customer Information',
           style: TextStyle(
-            color: Color(0xFF155888),
+            color: Colors.white,
             fontSize: 25,
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: Color(0xFF155888),
         elevation: 0,
       ),
       body: BlocConsumer<CustomerBloc, CustomerState>(
@@ -56,6 +57,7 @@ class CustomerInfoScreenView extends StatelessWidget {
               children: [
                 // Customer Bill To section
                 CustomerSection(
+                  authBloc: context.read<AuthBloc>(),
                   title: 'Customer Bill To:',
                   selectedCustomer: state.selectedBillToCustomer,
                   customers: state.customers,
@@ -89,6 +91,7 @@ class CustomerInfoScreenView extends StatelessWidget {
 
                 // Customer Ship To section
                 CustomerSection(
+                  authBloc: context.read<AuthBloc>(),
                   title: 'Customer Ship To:',
                   selectedCustomer: state.selectedShipToCustomer,
                   customers: state.customers,
@@ -139,14 +142,14 @@ class CustomerInfoScreenView extends StatelessWidget {
     final customerBloc = context.read<CustomerBloc>();
     final selectedCustomer = customerBloc.state.selectedBillToCustomer;
 
-    if (selectedCustomer.id.isEmpty) {
+    if (selectedCustomer.id == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a customer first')),
       );
       return;
     }
     print(
-      'Selected customer:${selectedCustomer.id} - ${selectedCustomer.name} - ${selectedCustomer.country}',
+      'Selected customer:${selectedCustomer.id} - ${selectedCustomer.customerName} - ${selectedCustomer.country}',
     );
     if (context.read<AuthBloc>().state.hasAccessToPrivilege(
       AppRoutes.salesItemEntry,

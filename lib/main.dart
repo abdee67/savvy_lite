@@ -13,7 +13,6 @@ import 'package:savvy_stock/core/routes/app_router.dart';
 import 'package:savvy_stock/core/services/conectitvity_service.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/core/services/system_constant/system_constant_service.dart';
-import 'package:savvy_stock/core/services/udc_service.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_bloc.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_bloc.dart';
 import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
@@ -53,7 +52,7 @@ Future<void> _initializeAndRunApp() async {
       developer.log('💾 Using local database only');
     }
     // Debug database tables (optional - remove in production)
-    await LocalDatabaseService().debugTable('location_master');
+    await LocalDatabaseService().debugTable('user_table');
   } catch (error, stackTrace) {
     developer.log('Initialization error: $error');
     developer.log('Stack trace: $stackTrace');
@@ -190,7 +189,10 @@ class _SavvyStockState extends State<SavvyStock> {
             create: (context) =>
                 RoleBloc(databaseService: getIt(), authBloc: _authBloc),
           ),
-          BlocProvider<CustomerBloc>(create: (context) => CustomerBloc()),
+          BlocProvider<CustomerBloc>(
+            create: (context) =>
+                CustomerBloc(authBloc: _authBloc, databaseService: getIt()),
+          ),
           BlocProvider<ItemEntryBloc>(create: (context) => ItemEntryBloc()),
           BlocProvider<PaymentBloc>(
             create: (context) => PaymentBloc(getIt<SystemConstantsService>()),
@@ -200,7 +202,6 @@ class _SavvyStockState extends State<SavvyStock> {
             create: (context) => SystemConstantBloc(
               systemConstantRepository: getIt<SystemConstantRepository>(),
               authBloc: _authBloc,
-              udcService: getIt<UdcService>(),
               systemConstantService: getIt<SystemConstantsService>(),
             )..add(LoadSystemConstants(_authBloc.state.companyId!)),
           ),

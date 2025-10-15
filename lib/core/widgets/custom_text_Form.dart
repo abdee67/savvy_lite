@@ -138,9 +138,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
           hintText: widget.hintText,
           alignLabelWithHint: true,
           labelStyle: TextStyle(
-            color: widget.isDarkTheme
-                ? Colors.amber
-                : const Color.fromARGB(255, 34, 102, 179),
+            color: widget.isDarkTheme ? Colors.amber : const Color(0xFF145888),
             fontSize: widget.isTablet ? 16 : 14,
           ),
           filled: true,
@@ -150,10 +148,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(widget.isTablet ? 12 : 10),
-            borderSide: const BorderSide(
-              color: Color.fromARGB(255, 35, 117, 175),
-              width: 2,
-            ),
+            borderSide: const BorderSide(color: Color(0xFF145888), width: 2),
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(widget.isTablet ? 12 : 10),

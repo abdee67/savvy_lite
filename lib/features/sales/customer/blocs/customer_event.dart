@@ -10,7 +10,13 @@ abstract class CustomerEvent extends Equatable {
   List<Object> get props => [];
 }
 
-class LoadCustomers extends CustomerEvent {}
+class LoadCustomers extends CustomerEvent {
+  final int companyId;
+  const LoadCustomers(this.companyId);
+
+  @override
+  List<Object> get props => [companyId];
+}
 
 class SelectBillToCustomer extends CustomerEvent {
   final Customer customer;
@@ -70,7 +76,43 @@ class SelectAllCustomers extends CustomerEvent {
 
 class ClearSelection extends CustomerEvent {}
 
-class DeleteSelectedCustomers extends CustomerEvent {}
+class DeleteSelectedCustomers extends CustomerEvent {
+  final List<int> selectedItems;
+  final List<Customer> deletedItems;
+  final List<int> deletedIndexes;
+
+  const DeleteSelectedCustomers({
+    required this.selectedItems,
+    required this.deletedItems,
+    required this.deletedIndexes,
+  });
+
+  @override
+  List<Object> get props => [selectedItems, deletedItems, deletedIndexes];
+}
+
+class DeleteCustomer extends CustomerEvent {
+  final int customerId;
+  final Customer deletedItem;
+  final int deletedIndex;
+
+  const DeleteCustomer({
+    required this.customerId,
+    required this.deletedItem,
+    required this.deletedIndex,
+  });
+
+  @override
+  List<Object> get props => [customerId, deletedItem, deletedIndex];
+}
+
+class SetCustomerForm extends CustomerEvent {
+  final Customer customer;
+  const SetCustomerForm(this.customer);
+
+  @override
+  List<Object> get props => [customer];
+}
 
 class UndoDelete extends CustomerEvent {
   final Customer deletedItem;

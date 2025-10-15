@@ -1,112 +1,116 @@
 import 'package:equatable/equatable.dart';
 
 class Customer extends Equatable {
-  final String id;
-  final String name;
-  final String tin;
-  final String phone;
-  final String country;
-  final String? email;
-  final String? contactName;
-  final String? title;
-  final String? phone2;
+  final int? id;
+  final int? customerId;
+  final String? customerName;
+  final String? phoneNumber;
+  final String? address;
+  final String? country;
   final String? state;
-  final String? city;
   final String? region;
-  final String? addressLine1;
-  final String? addressLine2;
-  final String? addressLine3;
-  final String? addressLine4;
-  final String? addressLine5;
+  final String? city;
+  final String? tinNumber;
+  final String? address1;
+  final String? address2;
+  final String? address3;
+  final String? address4;
+  final String? fax;
+  final String? phone2;
+  final String? contactName;
+  final String? contactTitle;
+  final int? company;
 
   const Customer({
-    required this.id,
-    required this.name,
-    required this.tin,
-    required this.phone,
-    required this.country,
-    required this.email,
-    this.contactName,
-    this.title,
-    this.phone2,
+    this.id,
+    this.customerId,
+    this.customerName,
+    this.phoneNumber,
+    this.address,
+    this.country,
     this.state,
-    this.city,
     this.region,
-    this.addressLine1,
-    this.addressLine2,
-    this.addressLine3,
-    this.addressLine4,
-    this.addressLine5,
+    this.city,
+    this.tinNumber,
+    this.address1,
+    this.address2,
+    this.address3,
+    this.address4,
+    this.fax,
+    this.phone2,
+    this.contactName,
+    this.contactTitle,
+    this.company,
   });
 
-  Customer copyWith({
-    String? id,
-    String? name,
-    String? tin,
-    String? phone,
-    String? country,
-    String? email,
-    String? contactName,
-    String? title,
-    String? phone2,
-    String? state,
-    String? city,
-    String? region,
-    String? addressLine1,
-    String? addressLine2,
-    String? addressLine3,
-    String? addressLine4,
-    String? addressLine5,
-  }) {
+  factory Customer.fromMap(Map<String, dynamic> map) {
     return Customer(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      tin: tin ?? this.tin,
-      phone: phone ?? this.phone,
-      country: country ?? this.country,
-      email: email ?? this.email,
-      contactName: contactName ?? this.contactName,
-      title: title ?? this.title,
-      phone2: phone2 ?? this.phone2,
-      state: state ?? this.state,
-      city: city ?? this.city,
-      region: region ?? this.region,
-      addressLine1: addressLine1 ?? this.addressLine1,
-      addressLine2: addressLine2 ?? this.addressLine2,
-      addressLine3: addressLine3 ?? this.addressLine3,
-      addressLine4: addressLine4 ?? this.addressLine4,
-      addressLine5: addressLine5 ?? this.addressLine5,
+      id: map['id'],
+      customerId: map['customer_id'],
+      customerName: map['customer_name'],
+      phoneNumber: map['phone_number'],
+      address: map['address'],
+      country: map['country'],
+      state: map['state'],
+      region: map['region'],
+      city: map['city'],
+      tinNumber: map['tin_number'],
+      address1: map['address1'],
+      address2: map['address2'],
+      address3: map['address3'],
+      address4: map['address4'],
+      fax: map['fax'],
+      phone2: map['phone_2'],
+      contactName: map['contact_name'],
+      contactTitle: map['contact_title'],
+      company: map['company'],
     );
   }
 
-  @override
-  List<Object?> get props => [
-    id,
-    name,
-    tin,
-    phone,
-    country,
-    email,
-    contactName,
-    title,
-    phone2,
-    state,
-    city,
-    region,
-    addressLine1,
-    addressLine2,
-    addressLine3,
-    addressLine4,
-    addressLine5,
-  ];
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'customer_id': customerId,
+      'customer_name': customerName,
+      'phone_number': phoneNumber,
+      'address': address,
+      'country': country,
+      'state': state,
+      'region': region,
+      'city': city,
+      'tin_number': tinNumber,
+      'address1': address1,
+      'address2': address2,
+      'address3': address3,
+      'address4': address4,
+      'fax': fax,
+      'phone_2': phone2,
+      'contact_name': contactName,
+      'contact_title': contactTitle,
+      'company': company,
+    };
+  }
 
   static const empty = Customer(
-    id: 'empty', // Changed from '' to 'empty'
-    name: '',
-    tin: '',
-    phone: '',
+    id: 0,
+    customerId: 0,
+    customerName: '',
+    phoneNumber: '',
+    address: '',
     country: '',
-    email: '',
+    state: '',
+    region: '',
+    city: '',
+    tinNumber: '',
+    address1: '',
+    address2: '',
+    address3: '',
+    address4: '',
+    fax: '',
+    phone2: '',
+    contactName: '',
+    contactTitle: '',
+    company: 0,
   );
 
   bool get isEmpty => id == 'empty'; // Use this for checking
@@ -118,15 +122,115 @@ class Customer extends Equatable {
 
     return other is Customer &&
         other.id == id &&
-        other.name == name &&
-        other.tin == tin &&
-        other.phone == phone &&
+        other.customerId == customerId &&
+        other.customerName == customerName &&
+        other.phoneNumber == phoneNumber &&
+        other.address == address &&
         other.country == country &&
-        other.email == email;
+        other.state == state &&
+        other.region == region &&
+        other.city == city &&
+        other.tinNumber == tinNumber &&
+        other.address1 == address1 &&
+        other.address2 == address2 &&
+        other.address3 == address3 &&
+        other.address4 == address4 &&
+        other.fax == fax &&
+        other.phone2 == phone2 &&
+        other.contactName == contactName &&
+        other.contactTitle == contactTitle &&
+        other.company == company;
   }
 
   @override
   int get hashCode {
-    return Object.hash(id, name, tin, phone, country, email);
+    return Object.hash(
+      id,
+      customerId,
+      customerName,
+      phoneNumber,
+      address,
+      country,
+      state,
+      region,
+      city,
+      tinNumber,
+      address1,
+      address2,
+      address3,
+      address4,
+      fax,
+      phone2,
+      contactName,
+      contactTitle,
+      company,
+    );
   }
+
+  Customer copyWith({
+    int? id,
+    int? customerId,
+    String? customerName,
+    String? phoneNumber,
+    String? address,
+    String? country,
+    String? state,
+    String? region,
+    String? city,
+    String? tinNumber,
+    String? address1,
+    String? address2,
+    String? address3,
+    String? address4,
+    String? fax,
+    String? phone2,
+    String? contactName,
+    String? contactTitle,
+    int? company,
+  }) {
+    return Customer(
+      id: id ?? this.id,
+      customerId: customerId ?? this.customerId,
+      customerName: customerName ?? this.customerName,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      address: address ?? this.address,
+      country: country ?? this.country,
+      state: state ?? this.state,
+      region: region ?? this.region,
+      city: city ?? this.city,
+      tinNumber: tinNumber ?? this.tinNumber,
+      address1: address1 ?? this.address1,
+      address2: address2 ?? this.address2,
+      address3: address3 ?? this.address3,
+      address4: address4 ?? this.address4,
+      fax: fax ?? this.fax,
+      phone2: phone2 ?? this.phone2,
+      contactName: contactName ?? this.contactName,
+      contactTitle: contactTitle ?? this.contactTitle,
+      company: company ?? this.company,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+    id,
+    customerId,
+    customerName,
+    phoneNumber,
+    address,
+    country,
+    state,
+    region,
+    city,
+    tinNumber,
+    address1,
+    address2,
+    address3,
+    address4,
+    fax,
+    phone2,
+    contactName,
+    contactTitle,
+    company,
+  ];
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
 
 class CustomerDetailsField extends StatefulWidget {
   final String tin;
@@ -63,30 +64,21 @@ class _CustomerDetailsFieldState extends State<CustomerDetailsField> {
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         const SizedBox(height: 8),
-        TextFormField(
+        CustomTextField(
           controller: _tinController,
-          decoration: const InputDecoration(
-            labelText: 'TIN',
-            border: OutlineInputBorder(),
-          ),
+          labelText: 'TIN',
           onChanged: (value) => _onDetailsChanged(),
         ),
         const SizedBox(height: 8),
-        TextFormField(
+        CustomTextField(
           controller: _phoneController,
-          decoration: const InputDecoration(
-            labelText: 'Phone',
-            border: OutlineInputBorder(),
-          ),
+          labelText: 'Phone',
           onChanged: (value) => _onDetailsChanged(),
         ),
         const SizedBox(height: 8),
-        TextFormField(
+        CustomTextField(
           controller: _countryController,
-          decoration: const InputDecoration(
-            labelText: 'Country',
-            border: OutlineInputBorder(),
-          ),
+          labelText: 'Country',
           onChanged: (value) => _onDetailsChanged(),
         ),
       ],

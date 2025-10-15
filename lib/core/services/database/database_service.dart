@@ -1388,6 +1388,33 @@ CREATE INDEX idx_item_cost_company ON item_cost(company);
       'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
       'updated_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
     });
+    developer.log('created system constant');
+
+    await db.execute('''
+  CREATE TABLE customer_table (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    customer_id INTEGER,
+    customer_name TEXT,
+    phone_number TEXT,
+    address TEXT,
+    country TEXT,
+    state TEXT,
+    region TEXT,
+    city TEXT,
+    tin_number TEXT,
+    address1 TEXT,
+    address2 TEXT,
+    address3 TEXT,
+    address4 TEXT,
+    fax TEXT,
+    phone_2 TEXT,
+    contact_name TEXT,
+    contact_title TEXT,
+    company INTEGER,
+    FOREIGN KEY (company) REFERENCES company_table (id) ON DELETE NO ACTION ON UPDATE NO ACTION
+  )
+''');
+    developer.log('created customer table');
 
     developer.log('✅ Sample user and related data inserted successfully.');
   }
