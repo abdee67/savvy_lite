@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
+import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_bloc.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_event.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_state.dart';
@@ -41,6 +43,7 @@ class UserManagementScreen extends StatefulWidget {
 class _UserManagementScreenState extends State<UserManagementScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
+  final _refrenceIdController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _emailController = TextEditingController();
@@ -143,10 +146,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             key: _formKey,
             child: ListView(
               children: [
-                // Header Information
-                _buildHeaderSection(),
-                const SizedBox(height: 24),
-
                 // User Information Section
                 _buildUserInfoSection(),
                 const SizedBox(height: 24),
@@ -165,58 +164,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
   }
 
-  Widget _buildHeaderSection() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                ),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                _isEditMode ? Iconsax.user_edit : Iconsax.user_add,
-                color: Colors.white,
-                size: 30,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _getHeaderTitle(),
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _getHeaderSubtitle(),
-                    style: const TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildUserInfoSection() {
-    return Card(
-      elevation: 2,
+    return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -230,176 +179,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 color: Colors.black87,
               ),
             ),
-            const SizedBox(height: 16),
-
-            // Username
-            TextFormField(
-              controller: _usernameController,
-              decoration: const InputDecoration(
-                labelText: 'Username *',
-                prefixIcon: Icon(Iconsax.user),
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter username';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Email
-            TextFormField(
-              controller: _emailController,
-              decoration: const InputDecoration(
-                labelText: 'Email *',
-                prefixIcon: Icon(Iconsax.sms),
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter email';
-                }
-                if (!value.contains('@')) {
-                  return 'Please enter a valid email';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Branch
-            BlocBuilder<BranchBloc, BranchState>(
-              builder: (context, state) {
-                if (state.branchs.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8.0),
-                    child: Text(
-                      'No branch available for user creation',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  );
-                }
-
-                // Safe employee list with null check
-                final branch = state.branchs.toList();
-                if (branch.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8.0),
-                    child: Text(
-                      'No valid branch found',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  );
-                }
-
-                return DropdownButtonFormField<int>(
-                  decoration: const InputDecoration(
-                    labelText: 'Branch *',
-                    prefixIcon: Icon(Iconsax.profile_circle),
-                    border: OutlineInputBorder(),
-                  ),
-                  initialValue: _selectBranchId,
-                  items: branch.map((branch) {
-                    return DropdownMenuItem(
-                      value: branch.id,
-                      child: Text('${branch.description}'),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectBranchId = value;
-                    });
-                  },
-                  validator: (value) {
-                    if (value == null) {
-                      return 'Please select an branch';
-                    }
-                    return null;
-                  },
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Password (only for create/conversion)
-            if (!_isEditMode)
-              Column(
-                children: [
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Password *',
-                      prefixIcon: Icon(Iconsax.lock),
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter password';
-                      }
-                      if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _confirmPasswordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Confirm Password *',
-                      prefixIcon: Icon(Iconsax.lock),
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please confirm password';
-                      }
-                      if (value != _passwordController.text) {
-                        return 'Passwords do not match';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              )
-            else
-              Column(
-                children: [
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'New Password (optional)',
-                      prefixIcon: Icon(Iconsax.lock),
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      if (value != null &&
-                          value.isNotEmpty &&
-                          value.length < 6) {
-                        return 'Password must be at least 6 characters';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Leave password field empty to keep the current password',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              ),
-
             // Employee Selection (only for create mode)
             if (_isCreateMode)
               BlocBuilder<EmployeeBloc, EmployeeState>(
@@ -428,13 +207,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     );
                   }
 
-                  return DropdownButtonFormField<int>(
-                    decoration: const InputDecoration(
-                      labelText: 'Employee *',
-                      prefixIcon: Icon(Iconsax.profile_circle),
-                      border: OutlineInputBorder(),
-                    ),
-                    initialValue: _selectedEmployeeId,
+                  return CustomDropdown<int>(
+                    labelText: 'Employee *',
+                    prefixIcon: const Icon(Iconsax.profile_circle),
+                    value: _selectedEmployeeId,
                     items: employees.map((employee) {
                       return DropdownMenuItem(
                         value: employee.id,
@@ -466,6 +242,199 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   );
                 },
               ),
+            const SizedBox(height: 16),
+
+            // Username
+            CustomTextField(
+              value: _usernameController.text,
+              onChanged: (value) {
+                setState(() {
+                  _usernameController.text = value;
+                });
+              },
+              labelText: 'Username *',
+              prefixIcon: const Icon(Iconsax.user),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter username';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Username
+            CustomTextField(
+              value: _refrenceIdController.text,
+              onChanged: (value) {
+                setState(() {
+                  _refrenceIdController.text = value;
+                });
+              },
+              labelText: 'Refrence id *',
+              prefixIcon: const Icon(Iconsax.user_octagon),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter refrence id';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Email
+            CustomTextField(
+              value: _emailController.text,
+              onChanged: (value) {
+                setState(() {
+                  _emailController.text = value;
+                });
+              },
+              labelText: 'Email *',
+              prefixIcon: const Icon(Iconsax.sms),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter email';
+                }
+                if (!value.contains('@')) {
+                  return 'Please enter a valid email';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Branch
+            BlocBuilder<BranchBloc, BranchState>(
+              builder: (context, state) {
+                if (state.branchs.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                      'No branch available for user creation',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  );
+                }
+                final branch = state.branchs.toList();
+                if (branch.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                      'No valid branch found',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  );
+                }
+                return CustomDropdown<int>(
+                  labelText: 'Branch *',
+                  prefixIcon: const Icon(Iconsax.profile_circle),
+                  value: _selectBranchId,
+                  items: branch
+                      .map(
+                        (branch) => DropdownMenuItem(
+                          value: branch.id,
+                          child: Text('${branch.description}'),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectBranchId = value;
+                    });
+                  },
+                  validator: (value) {
+                    if (value == null) {
+                      return 'Please select an branch';
+                    }
+                    return null;
+                  },
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Password (only for create/conversion)
+            if (!_isEditMode)
+              Column(
+                children: [
+                  CustomTextField(
+                    value: _passwordController.text,
+                    onChanged: (value) {
+                      setState(() {
+                        _passwordController.text = value;
+                      });
+                    },
+                    obscureText: true,
+                    prefixIcon: const Icon(Iconsax.lock),
+                    labelText: 'Password *',
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter password';
+                      }
+                      if (value.length < 6) {
+                        return 'Password must be at least 6 characters';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  CustomTextField(
+                    value: _confirmPasswordController.text,
+                    onChanged: (value) {
+                      setState(() {
+                        _confirmPasswordController.text = value;
+                      });
+                    },
+                    obscureText: true,
+                    prefixIcon: const Icon(Iconsax.lock),
+                    labelText: 'Confirm Password *',
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please confirm password';
+                      }
+                      if (value != _passwordController.text) {
+                        return 'Passwords do not match';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              )
+            else
+              Column(
+                children: [
+                  CustomTextField(
+                    value: _passwordController.text,
+                    onChanged: (value) {
+                      setState(() {
+                        _passwordController.text = value;
+                      });
+                    },
+                    obscureText: true,
+                    prefixIcon: const Icon(Iconsax.lock),
+                    labelText: 'New Password (optional)',
+                    validator: (value) {
+                      if (value != null &&
+                          value.isNotEmpty &&
+                          value.length < 6) {
+                        return 'Password must be at least 6 characters';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Leave password field empty to keep the current password',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
           ],
         ),
       ),
@@ -473,66 +442,56 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   }
 
   Widget _buildRoleManagementSection() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Role Management',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Role Search
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey[300]!),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Iconsax.search_normal,
-                    size: 20,
-                    color: Colors.grey,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      decoration: const InputDecoration(
-                        hintText: 'Search roles...',
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      onChanged: (query) {
-                        setState(() {
-                          _roleSearchQuery = query;
-                        });
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Role Management based on mode
-            if (_isEditMode)
-              _buildEditModeRoleManagement()
-            else
-              _buildCreateModeRoleManagement(),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Role Management',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
         ),
-      ),
+        const SizedBox(height: 16),
+
+        // Role Search
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+          child: Row(
+            children: [
+              const Icon(Iconsax.search_normal, size: 20, color: Colors.grey),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  decoration: const InputDecoration(
+                    hintText: 'Search roles...',
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  onChanged: (query) {
+                    setState(() {
+                      _roleSearchQuery = query;
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Role Management based on mode
+        if (_isEditMode)
+          _buildEditModeRoleManagement()
+        else
+          _buildCreateModeRoleManagement(),
+      ],
     );
   }
 
@@ -658,79 +617,62 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     // Safe roles list
     final safeRoles = roles.where((r) => r != null).toList();
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Section Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: isCurrent ? Colors.green[50] : Colors.blue[50],
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section Header
+        Row(
+          children: [
+            Icon(
+              isCurrent ? Iconsax.verify : Iconsax.user_tag,
+              size: 20,
+              color: isCurrent ? Colors.green : Colors.blue,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: isCurrent ? Colors.green[800] : Colors.blue[800],
               ),
             ),
-            child: Row(
-              children: [
-                Icon(
-                  isCurrent ? Iconsax.verify : Iconsax.user_tag,
-                  size: 20,
-                  color: isCurrent ? Colors.green : Colors.blue,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isCurrent ? Colors.green[800] : Colors.blue[800],
-                  ),
-                ),
-              ],
-            ),
-          ),
+          ],
+        ),
 
-          // Roles List
-          Container(
-            constraints: const BoxConstraints(minHeight: 120, maxHeight: 300),
-            child: safeRoles.isEmpty
-                ? const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: Text(
-                        'No roles found',
-                        style: TextStyle(color: Colors.grey),
-                      ),
+        // Roles List
+        Container(
+          constraints: const BoxConstraints(minHeight: 120, maxHeight: 300),
+          child: safeRoles.isEmpty
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Text(
+                      'No roles found',
+                      style: TextStyle(color: Colors.grey),
                     ),
-                  )
-                : ListView.builder(
-                    shrinkWrap: true,
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    itemCount: safeRoles.length,
-                    itemBuilder: (context, index) {
-                      final role = safeRoles[index];
-                      final isSelected = selectedRoles.any(
-                        (r) => r.id == role.id,
-                      );
-
-                      return _buildRoleListItem(
-                        role: role,
-                        isCurrent: isCurrent,
-                        isSelected: isSelected,
-                        onTap: () => onRoleTap(role),
-                      );
-                    },
                   ),
-          ),
-        ],
-      ),
+                )
+              : ListView.builder(
+                  shrinkWrap: true,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  itemCount: safeRoles.length,
+                  itemBuilder: (context, index) {
+                    final role = safeRoles[index];
+                    final isSelected = selectedRoles.any(
+                      (r) => r.id == role.id,
+                    );
+
+                    return _buildRoleListItem(
+                      role: role,
+                      isCurrent: isCurrent,
+                      isSelected: isSelected,
+                      onTap: () => onRoleTap(role),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 
@@ -841,6 +783,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   backgroundColor: const Color.fromARGB(255, 28, 66, 146),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
                 ),
                 child: state.isLoading
                     ? const SizedBox(
@@ -873,6 +818,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         // Update existing user
         final updatedUser = widget.user!.user.copyWith(
           userName: _usernameController.text,
+          employeesId: int.parse(_refrenceIdController.text),
           userEmail: _emailController.text,
           branch: _selectBranchId,
           updatedBy: createdBy,
