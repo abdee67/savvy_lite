@@ -8,8 +8,6 @@ import 'package:savvy_stock/features/admin/employees/blocs/employee_bloc.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_event.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_state.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
-import 'package:savvy_stock/features/admin/employees/widgets/detail_panel.dart'
-    hide Employee;
 import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
 import 'package:savvy_stock/features/admin/role/blocs/role_event.dart'
     hide ClearSelection;
@@ -35,13 +33,20 @@ class EmployeeListPage extends StatefulWidget {
   State<EmployeeListPage> createState() => _EmployeeListPageState();
 }
 
-class _EmployeeListPageState extends State<EmployeeListPage> {
+class _EmployeeListPageState extends State<EmployeeListPage>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isSelectionMode = false;
   final Map<int, double> _dragOffset = {};
   Employee? _selectedEmployee;
   bool _employeeDetail = false;
+
+  // Animation controllers
+  late AnimationController _detailAnimationController;
+  late Animation<double> _heightAnimation;
+  late Animation<double> _opacityAnimation;
+  late Animation<Offset> _slideAnimation;
 
   bool _isEmployeeUser(Employee employee) {
     final userState = context.watch<UserBloc>().state;
@@ -62,6 +67,16 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
   @override
   void initState() {
     super.initState();
+
+    // Initialize animation controller
+    _detailAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    // Set up animations
+    _setupAnimations();
+
     context.read<EmployeeBloc>().add(
       LoadEmployees(widget.authBloc.state.companyId!),
     );
@@ -69,10 +84,35 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     context.read<RoleBloc>().add(LoadRoles(widget.authBloc.state.companyId!));
   }
 
+  void _setupAnimations() {
+    _heightAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _detailAnimationController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeInOutCubic),
+      ),
+    );
+
+    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _detailAnimationController,
+        curve: const Interval(0.3, 1.0, curve: Curves.easeIn),
+      ),
+    );
+
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0.0, -0.1), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _detailAnimationController,
+            curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
+          ),
+        );
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
     _scrollController.dispose();
+    _detailAnimationController.dispose();
     super.dispose();
   }
 
@@ -95,21 +135,25 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
       _selectedEmployee = employee;
       _employeeDetail = true;
     });
+
+    // Start the animation
+    _detailAnimationController.forward(from: 0.0);
+
     context.read<RoleBloc>().add(LoadRoles(widget.authBloc.state.companyId!));
   }
 
   void _hideEmployeeDetail() {
     context.read<EmployeeBloc>().add(ClearSelection());
     context.read<EmployeeBloc>().add(ToggleRoleManagement(0));
-    setState(() {
-      _employeeDetail = false;
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) {
-          setState(() {
-            _selectedEmployee = null;
-          });
-        }
-      });
+
+    // Reverse the animation
+    _detailAnimationController.reverse().then((_) {
+      if (mounted) {
+        setState(() {
+          _employeeDetail = false;
+          _selectedEmployee = null;
+        });
+      }
     });
   }
 
@@ -238,7 +282,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Colors.grey,
       appBar: AppBar(title: const Text('Employee List')),
       body: BlocConsumer<EmployeeBloc, EmployeeState>(
         listener: (context, state) {
@@ -315,7 +359,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
       height: state.hasSelection ? 60 : 0,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.grey,
         border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
       ),
       child: state.hasSelection
@@ -372,10 +416,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
               );
             } else {
               // Navigate to add screen
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => RolesAddPage01()),
-              );
+              context.push(AppRoutes.employeeCreation);
             }
           },
           style: ElevatedButton.styleFrom(
@@ -446,7 +487,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     return Container(
       width: screenWidth,
       height: screenHeight,
-      decoration: const BoxDecoration(color: Colors.white),
+      decoration: const BoxDecoration(color: Colors.grey),
       child: ListView.separated(
         controller: _scrollController,
         padding: const EdgeInsets.all(16),
@@ -484,6 +525,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     final isExpanded = _employeeDetail == true && _selectedEmployee == employee;
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+
     // For responsiveness:
     final collapsedHeight = isCompact
         ? screenHeight *
@@ -491,17 +533,14 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
         : screenHeight * 0.14; // tablets / wide screens
 
     final expandedHeight = isCompact
-        ? screenHeight * 0.65
-        : screenHeight * 0.55;
+        ? screenHeight * 0.55
+        : screenHeight * 0.45;
     final collapsedWidth = isCompact ? screenWidth * 0.92 : screenWidth * 0.8;
 
     return GestureDetector(
       onTap: () {
         if (_isSelectionMode) {
           _toggleEmployeeSelection(employee, !isSelected);
-        } else {
-          // Single tap shows detail when not in selection mode
-          _showEmployeeDetail(employee);
         }
       },
       onLongPress: () {
@@ -519,32 +558,34 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
       onDoubleTap: () => _showEmployeeDetail(employee),
       child: AnimatedBuilder(
         animation: _scrollController,
-
         builder: (context, child) => Container(
           transform: Matrix4.translationValues(offset, 0, 0),
-
           width: collapsedWidth,
           height: isExpanded ? expandedHeight : collapsedHeight,
           child: Stack(
             children: [
-              // Background (delete indicator)
-              if (isExpanded) ...[
-                // Gray background
+              // 1. DELETE INDICATOR - Should be FIRST in Stack
+              if (!isExpanded) // Only show delete indicator when not expanded
                 Positioned.fill(
-                  top: 20,
-                  left: 30,
-                  right: 30,
                   child: Container(
-                    width: collapsedWidth,
-                    height: collapsedHeight,
-                    decoration: ShapeDecoration(
-                      color: const Color.fromARGB(255, 238, 13, 13),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(39),
-                      ),
+                    alignment: Alignment.centerRight,
+                    decoration: BoxDecoration(
+                      color: Colors.amber, // Changed to red for delete
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    margin: const EdgeInsets.only(bottom: 2),
+                    child: const Icon(
+                      Icons.delete,
+                      color: Colors.white,
+                      size: 28,
                     ),
                   ),
                 ),
+
+              // 2. BACKGROUND LAYERS (only when expanded)
+              if (isExpanded) ...[
+                // Yellow background
                 Positioned.fill(
                   top: 47,
                   child: Container(
@@ -552,183 +593,204 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
                     height: expandedHeight,
                     decoration: ShapeDecoration(
                       color: state.isRoleManagementMode
-                          ? const Color.fromARGB(255, 247, 245, 236)
-                          : const Color(0xFFFDD105),
+                          ? Colors.white
+                          : const Color(0xFFFDD105), // Fixed yellow color
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(40),
+                        borderRadius: BorderRadius.circular(30),
                       ),
                     ),
                   ),
                 ),
               ],
 
-              // Employee card
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 00),
-                top: isExpanded ? 0 : 0,
-                curve: Curves.easeOutCubic,
-                child: Container(
-                  width: collapsedWidth,
-                  height: collapsedHeight,
-                  padding: const EdgeInsets.only(
-                    top: 20,
-                    left: 20,
-                    right: 20,
-                    bottom: 20,
-                  ),
-                  decoration: ShapeDecoration(
-                    color: const Color.fromARGB(255, 238, 232, 232),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(40),
+              // 3. EMPLOYEE CARD - Should come AFTER delete indicator
+              AnimatedContainer(
+                padding: const EdgeInsets.only(top: 10, left: 10, right: 10),
+                width: collapsedWidth,
+                height: collapsedHeight,
+                duration: const Duration(milliseconds: 400),
+                transform: Matrix4.translationValues(offset, 0, 0),
+                curve: Curves.easeInOut,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.blue[50] : Colors.white,
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
-                    shadows: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+                  ],
+                  border: Border.all(
+                    color: isSelected
+                        ? const Color.fromARGB(255, 28, 66, 146)
+                        : Colors.transparent,
+                    width: 2,
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  employee.id.toString(),
-                                  style: TextStyle(
-                                    color: const Color(0xFF887F7F),
-                                    fontSize: isCompact ? 12 : 14,
-                                    fontStyle: FontStyle.italic,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w300,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  employee.fullName,
-                                  style: TextStyle(
-                                    color: const Color(0xFF373737),
-                                    fontSize: isCompact ? 20 : 24,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                Text(
-                                  employee.nameFirst,
-                                  style: TextStyle(
-                                    color: const Color(0xFF4C3737),
-                                    fontSize: isCompact ? 12 : 14,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w200,
-                                  ),
-                                ),
-                              ],
-                            ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Customer Avatar
+                        Container(
+                          margin: const EdgeInsets.only(top: 20, right: 12),
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? const Color.fromARGB(255, 28, 66, 146)
+                                : Colors.grey[200],
+                            shape: BoxShape.circle,
                           ),
-                        ],
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _buildEmployeeSubtitle(employee, isUser),
-                          // See More / See Less / Role / Main Action logic
-                          Row(
+                          child: Icon(
+                            Iconsax.profile_circle,
+                            color: isSelected ? Colors.white : Colors.grey[600],
+                            size: isCompact ? 20 : 24,
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              if (isExpanded) ...[
-                                if (state.isRoleManagementMode)
-                                  _buildRoleManagementButton(
-                                    employee,
-                                    state,
-                                    isCompact,
-                                    context,
-                                  )
-                                else
-                                  _buildMainActionButton(
-                                    employee,
-                                    isUser,
-                                    isCompact,
-                                    context,
-                                  ),
-                                const SizedBox(width: 10),
-                              ],
-                              ElevatedButton(
-                                onPressed: () => isExpanded
-                                    ? _hideEmployeeDetail()
-                                    : _showEmployeeDetail(employee),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF145888),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                ),
-                                child: Text(
-                                  isExpanded ? 'See Less' : 'See More',
-                                  textAlign: TextAlign.right,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: isCompact ? 10 : 12,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                              Text(
+                                employee.fullName,
+                                style: TextStyle(
+                                  color: const Color(0xFF373737),
+                                  fontSize: isCompact ? 20 : 24,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
+                              Text(
+                                employee.nameFirst,
+                                style: TextStyle(
+                                  color: const Color(0xFF4C3737),
+                                  fontSize: isCompact ? 12 : 14,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w200,
+                                ),
+                              ),
+                              Text(
+                                employee.phone,
+                                style: TextStyle(
+                                  color: const Color(0xFF887F7F),
+                                  fontSize: isCompact ? 12 : 14,
+                                  fontStyle: FontStyle.italic,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w300,
+                                ),
+                              ),
+                              _buildEmployeeSubtitle(employee, isUser),
                             ],
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        // See More / See Less / Role / Main Action logic
+                        Row(
+                          children: [
+                            if (isExpanded) ...[
+                              if (state.isRoleManagementMode)
+                                _buildRoleManagementButton(
+                                  employee,
+                                  state,
+                                  isCompact,
+                                  context,
+                                )
+                              else
+                                _buildMainActionButton(
+                                  employee,
+                                  isUser,
+                                  isCompact,
+                                  context,
+                                ),
+                              const SizedBox(width: 10),
+                            ],
+                            ElevatedButton(
+                              onPressed: () => isExpanded
+                                  ? _hideEmployeeDetail()
+                                  : _showEmployeeDetail(employee),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF145888),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                              ),
+                              child: Text(
+                                isExpanded ? 'See Less' : 'See More',
+                                textAlign: TextAlign.right,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: isCompact ? 10 : 12,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              // Expanded Content
-              // Replace the entire expanded content section:
-              if (isExpanded) ...[
+
+              // 4. ANIMATED EXPANDED CONTENT
+              if (isExpanded)
                 Positioned(
-                  top: collapsedHeight + 10, // Position below the main card
+                  top: collapsedHeight + 10,
                   left: 20,
                   right: 20,
-                  bottom: 20,
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 300),
-                    opacity: isExpanded ? 1.0 : 0.0,
-                    child: Container(
-                      decoration: BoxDecoration(color: Colors.transparent),
-                      child: MultiBlocProvider(
-                        providers: [
-                          BlocProvider.value(
-                            value: context.read<EmployeeBloc>(),
-                          ),
-                          BlocProvider.value(value: widget.userBloc),
-                        ],
-                        child: BlocConsumer<EmployeeBloc, EmployeeState>(
-                          listener: (context, state) {
-                            if (state.status == EmployeeStatus.success &&
-                                state.message != null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(state.message!)),
-                              );
-                            }
-                          },
-                          builder: (context, state) {
-                            return _buildContentSection(
-                              employee,
-                              state,
-                              !isCompact, // useHorizontalLayout
-                              isCompact,
-                            );
-                          },
+                  child: AnimatedBuilder(
+                    animation: _detailAnimationController,
+                    builder: (context, child) {
+                      final currentHeight =
+                          _heightAnimation.value *
+                          (expandedHeight - collapsedHeight - 20);
+                      final currentOpacity = _opacityAnimation.value;
+
+                      return SlideTransition(
+                        position: _slideAnimation,
+                        child: Container(
+                          height: currentHeight > 0 ? currentHeight : 0,
+                          decoration: BoxDecoration(color: Colors.transparent),
+                          child: Opacity(opacity: currentOpacity, child: child),
                         ),
+                      );
+                    },
+                    child: MultiBlocProvider(
+                      providers: [
+                        BlocProvider.value(value: context.read<EmployeeBloc>()),
+                        BlocProvider.value(value: widget.userBloc),
+                      ],
+                      child: BlocConsumer<EmployeeBloc, EmployeeState>(
+                        listener: (context, state) {
+                          if (state.status == EmployeeStatus.success &&
+                              state.message != null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(state.message!)),
+                            );
+                          }
+                        },
+                        builder: (context, state) {
+                          return _buildContentSection(
+                            employee,
+                            state,
+                            !isCompact, // useHorizontalLayout
+                            isCompact,
+                          );
+                        },
                       ),
                     ),
                   ),
                 ),
-              ],
             ],
           ),
         ),
@@ -1049,10 +1111,66 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
                 Iconsax.calendar_1,
                 isCompact,
               ),
+              // Action buttons row
+              Padding(
+                padding: const EdgeInsets.only(top: 16, bottom: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildActionButton(
+                      Iconsax.call,
+                      'Call',
+                      () => _callEmployee(employee.phone ?? ''),
+                      isCompact,
+                    ),
+                    _buildActionButton(
+                      Iconsax.sms,
+                      'Email',
+                      () => _emailEmployee(employee.email ?? ''),
+                      isCompact,
+                    ),
+                    _buildActionButton(
+                      Iconsax.export,
+                      'Export',
+                      () => _exportEmployee(employee),
+                      isCompact,
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildActionButton(
+    IconData icon,
+    String label,
+    VoidCallback onPressed,
+    bool isCompact,
+  ) {
+    return Column(
+      children: [
+        IconButton(
+          icon: Icon(icon, size: isCompact ? 20 : 24),
+          onPressed: onPressed,
+          style: IconButton.styleFrom(
+            backgroundColor: const Color(0xFF145888),
+            foregroundColor: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: isCompact ? 10 : 12,
+            color: const Color(0xFF373737),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 

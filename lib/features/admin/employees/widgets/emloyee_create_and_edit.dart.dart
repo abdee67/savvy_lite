@@ -200,7 +200,7 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
         title: Text(
           widget.employee == null ? 'Create Employee' : 'Edit Employee',
         ),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: Color(0xFF145888),
         elevation: 0,
       ),
       body: BlocListener<EmployeeBloc, EmployeeState>(
