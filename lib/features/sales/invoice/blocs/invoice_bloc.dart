@@ -31,6 +31,7 @@ class InvoiceBloc extends Bloc<InvoiceEvent, InvoiceState> {
           errorMessage: 'Failed to load invoice: ${error.toString()}',
         ),
       );
+      print(error.toString());
     }
   }
 

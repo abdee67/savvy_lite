@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_state.dart';
@@ -41,7 +43,7 @@ class _PaymentActionState extends State<PaymentAction> {
     }
 
     context.push(
-      '/invoice-review-screen',
+      AppRoutes.salesInvoice,
       extra: {'confirmedItems': items, 'customer': customer},
     );
   }
@@ -50,41 +52,53 @@ class _PaymentActionState extends State<PaymentAction> {
   Widget build(BuildContext context) {
     return BlocBuilder<PaymentBloc, PaymentState>(
       builder: (context, state) {
-        return Container(
-          padding: const EdgeInsets.only(top: 4, right: 4, left: 4, bottom: 0),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border(top: BorderSide(color: Colors.grey[300]!)),
-          ),
-          child: Column(
-            children: [
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: state.status == PaymentStatus.processing
-                      ? null
-                      : () => _navigateToInvoice(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF155888),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: state.status == PaymentStatus.processing
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                          'REVIEW PAYMENT',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 24,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(40),
                 ),
               ),
-            ],
-          ),
+              child: const Text(
+                'Back',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: state.status == PaymentStatus.processing
+                  ? null
+                  : () => _navigateToInvoice(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF155888),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 24,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(40),
+                ),
+              ),
+              child: state.status == PaymentStatus.processing
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text(
+                      'Review',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+            ),
+          ],
         );
       },
     );
