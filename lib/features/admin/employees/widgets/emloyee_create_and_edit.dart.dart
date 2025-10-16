@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
+import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_bloc.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_event.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_state.dart';
@@ -218,7 +220,7 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
           children: [
             // Progress Indicator
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -375,19 +377,12 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
     String label,
     IconData icon, [
     TextInputType? keyboardType,
-    int maxLines = 1,
   ]) {
-    return TextFormField(
+    return CustomTextField(
       controller: controller,
       keyboardType: keyboardType,
-      maxLines: maxLines,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        filled: true,
-        fillColor: Colors.grey.shade50,
-      ),
+      labelText: label,
+      prefixIcon: Icon(icon),
       validator: (value) {
         if (label.contains('*') && (value == null || value.isEmpty)) {
           return 'This field is required';
@@ -409,15 +404,10 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
     IconData icon,
     Function(String?) onChanged,
   ) {
-    return DropdownButtonFormField<String>(
-      initialValue: value,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        filled: true,
-        fillColor: Colors.grey.shade50,
-      ),
+    return CustomDropdown<String>(
+      value: value,
+      labelText: label,
+      prefixIcon: Icon(icon),
       items: items.map((String value) {
         return DropdownMenuItem<String>(value: value, child: Text(value));
       }).toList(),
@@ -426,30 +416,20 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
   }
 
   Widget _buildReadOnlyField(String label, String value, IconData icon) {
-    return TextFormField(
+    return CustomTextField(
       readOnly: true,
-      initialValue: value,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        filled: true,
-        fillColor: Colors.grey.shade100,
-      ),
+      value: value,
+      labelText: label,
+      prefixIcon: Icon(icon),
     );
   }
 
   Widget _buildDateField(TextEditingController controller, String label) {
-    return TextFormField(
+    return CustomTextField(
       controller: controller,
       readOnly: true,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(Icons.calendar_today),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        filled: true,
-        fillColor: Colors.grey.shade50,
-      ),
+      labelText: label,
+      prefixIcon: Icon(Icons.calendar_today),
       onTap: () => _selectDate(controller),
     );
   }
@@ -500,16 +480,13 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
           ],
         ),
         const SizedBox(height: 16),
-        Positioned(
-          bottom: 30,
-          left: 40,
-          child: Row(
-            children: [
-              _buildProgressDot(_currentPage == 0),
-              const SizedBox(width: 8),
-              _buildProgressDot(_currentPage == 1),
-            ],
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            _buildProgressDot(_currentPage == 0),
+            const SizedBox(width: 8),
+            _buildProgressDot(_currentPage == 1),
+          ],
         ),
       ],
     );

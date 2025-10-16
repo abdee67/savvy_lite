@@ -208,11 +208,6 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
 
         return Container(
           constraints: const BoxConstraints(minHeight: 200, maxHeight: 400),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[200]!),
-          ),
           child: filteredPrivileges.isEmpty
               ? const Center(
                   child: Padding(

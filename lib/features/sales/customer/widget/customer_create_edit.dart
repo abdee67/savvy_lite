@@ -207,7 +207,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
           children: [
             // Progress Indicator
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -216,7 +216,6 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
                 ],
               ),
             ),
-
             // Form
             Expanded(
               child: Form(
@@ -415,61 +414,66 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
   }
 
   Widget _buildBottomNavigation() {
-    return Column(
+    final screen = MediaQuery.of(context).size;
+    final bool isTablet = screen.width > 600;
+    return Stack(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Column(
           children: [
-            ElevatedButton(
-              onPressed: () {
-                _currentPage == 0 ? Navigator.pop(context) : _previousSlide();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 60,
-                  vertical: 16,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    _currentPage == 0
+                        ? Navigator.pop(context)
+                        : _previousSlide();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.amber,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isTablet ? 60 : 40,
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    elevation: 4,
+                  ),
+                  child: const Text('Back'),
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                elevation: 4,
-              ),
-              child: const Text('Back'),
-            ),
 
-            ElevatedButton(
-              onPressed: _currentPage == 0 ? _nextSlide : _saveCustomer,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _currentPage == 0
-                    ? Colors.amber
-                    : Color(0xFF145888),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 60,
-                  vertical: 16,
+                ElevatedButton(
+                  onPressed: _currentPage == 0 ? _nextSlide : _saveCustomer,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _currentPage == 0
+                        ? Colors.amber
+                        : Color(0xFF145888),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isTablet ? 60 : 40,
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                  child: Text(
+                    _currentPage == 0 ? 'Next' : 'Save',
+                    style: const TextStyle(color: Colors.white),
+                  ),
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
-              child: Text(
-                _currentPage == 0 ? 'Next' : 'Save',
-                style: const TextStyle(color: Colors.white),
-              ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                _buildProgressDot(_currentPage == 0),
+                const SizedBox(width: 8),
+                _buildProgressDot(_currentPage == 1),
+              ],
             ),
           ],
-        ),
-        const SizedBox(height: 16),
-        Positioned(
-          bottom: 30,
-          left: 40,
-          child: Row(
-            children: [
-              _buildProgressDot(_currentPage == 0),
-              const SizedBox(width: 8),
-              _buildProgressDot(_currentPage == 1),
-            ],
-          ),
         ),
       ],
     );

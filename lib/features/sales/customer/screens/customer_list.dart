@@ -480,7 +480,7 @@ class _CustomerListPageState extends State<CustomerListPage>
     // For responsiveness:
     final collapsedHeight = isCompact
         ? screenHeight *
-              0.18 // phones
+              0.24 // phones
         : screenHeight * 0.14; // tablets / wide screens
 
     final expandedHeight = isCompact

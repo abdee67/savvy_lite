@@ -23,6 +23,7 @@ class CustomTextField extends StatefulWidget {
   final FocusNode? focusNode;
   final bool obscureText;
   final String? suffixText;
+  final Function()? onTap;
 
   const CustomTextField({
     super.key,
@@ -46,6 +47,7 @@ class CustomTextField extends StatefulWidget {
     this.focusNode,
     this.obscureText = false,
     this.suffixText,
+    this.onTap,
   });
 
   @override
@@ -115,6 +117,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
         inputFormatters: widget.inputFormatters,
         textInputAction: widget.textInputAction,
         focusNode: widget.focusNode,
+        onTap: widget.onTap,
         style: TextStyle(
           color: widget.isDarkTheme ? Colors.white : Colors.black,
         ),

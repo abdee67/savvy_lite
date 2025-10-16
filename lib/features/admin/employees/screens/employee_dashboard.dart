@@ -529,8 +529,8 @@ class _EmployeeListPageState extends State<EmployeeListPage>
     // For responsiveness:
     final collapsedHeight = isCompact
         ? screenHeight *
-              0.18 // phones
-        : screenHeight * 0.14; // tablets / wide screens
+              0.2 // phones
+        : screenHeight * 0.12; // tablets / wide screens
 
     final expandedHeight = isCompact
         ? screenHeight * 0.55
@@ -605,7 +605,7 @@ class _EmployeeListPageState extends State<EmployeeListPage>
 
               // 3. EMPLOYEE CARD - Should come AFTER delete indicator
               AnimatedContainer(
-                padding: const EdgeInsets.only(top: 10, left: 10, right: 10),
+                padding: const EdgeInsets.only(top: 4, left: 10, right: 10),
                 width: collapsedWidth,
                 height: collapsedHeight,
                 duration: const Duration(milliseconds: 400),
@@ -663,15 +663,6 @@ class _EmployeeListPageState extends State<EmployeeListPage>
                                   fontSize: isCompact ? 20 : 24,
                                   fontFamily: 'Inter',
                                   fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              Text(
-                                employee.nameFirst,
-                                style: TextStyle(
-                                  color: const Color(0xFF4C3737),
-                                  fontSize: isCompact ? 12 : 14,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w200,
                                 ),
                               ),
                               Text(

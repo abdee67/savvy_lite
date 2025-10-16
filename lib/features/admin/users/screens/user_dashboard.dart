@@ -142,6 +142,18 @@ class _UserDashboardState extends State<UserDashboard>
     ).showSnackBar(const SnackBar(content: Text('User data exported')));
   }
 
+  void _callUser(String phone) {
+    // Implement phone call functionality
+    print('Calling: $phone');
+  }
+
+  void _emailUser(String? email) {
+    if (email != null) {
+      // Implement email functionality
+      print('Emailing: $email');
+    }
+  }
+
   void _safeDeleteUser(BuildContext context, {int? index}) {
     final bloc = context.read<UserBloc>();
     final state = bloc.state;
@@ -587,12 +599,7 @@ class _UserDashboardState extends State<UserDashboard>
 
               // 3. USER CARD - Should come AFTER delete indicator
               AnimatedContainer(
-                padding: const EdgeInsets.only(
-                  top: 10,
-                  left: 10,
-                  right: 10,
-                  bottom: 10,
-                ),
+                padding: const EdgeInsets.only(top: 5, left: 10, right: 10),
                 width: collapsedWidth,
                 height: collapsedHeight,
                 duration: const Duration(milliseconds: 400),
@@ -773,8 +780,64 @@ class _UserDashboardState extends State<UserDashboard>
             Iconsax.user,
             isCompact,
           ),
+          // Action buttons row
+          Padding(
+            padding: const EdgeInsets.only(top: 16, bottom: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildActionButton(
+                  Iconsax.call,
+                  'Call',
+                  () => _callUser(user.id.toString()),
+                  isCompact,
+                ),
+                _buildActionButton(
+                  Iconsax.sms,
+                  'Email',
+                  () => _emailUser(user.userEmail ?? ''),
+                  isCompact,
+                ),
+                _buildActionButton(
+                  Iconsax.export,
+                  'Export',
+                  () => _exportUser(user),
+                  isCompact,
+                ),
+              ],
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildActionButton(
+    IconData icon,
+    String label,
+    VoidCallback onPressed,
+    bool isCompact,
+  ) {
+    return Column(
+      children: [
+        IconButton(
+          icon: Icon(icon, size: isCompact ? 20 : 24),
+          onPressed: onPressed,
+          style: IconButton.styleFrom(
+            backgroundColor: const Color(0xFF145888),
+            foregroundColor: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: isCompact ? 10 : 12,
+            color: const Color(0xFF373737),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 

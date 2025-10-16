@@ -543,12 +543,7 @@ class _RoleDashboardState extends State<RoleDashboard>
 
               // 3. ROLE CARD - Should come AFTER delete indicator
               AnimatedContainer(
-                padding: const EdgeInsets.only(
-                  top: 10,
-                  left: 10,
-                  right: 10,
-                  bottom: 10,
-                ),
+                padding: const EdgeInsets.only(top: 10, left: 10, right: 10),
                 width: collapsedWidth,
                 height: collapsedHeight,
                 duration: const Duration(milliseconds: 400),
@@ -606,7 +601,7 @@ class _RoleDashboardState extends State<RoleDashboard>
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 2),
                             ],
                           ),
                         ),
