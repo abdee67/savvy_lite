@@ -8,7 +8,6 @@ import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_event.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_state.dart';
-import 'package:savvy_stock/features/sales/payment/widget/payment_action.dart';
 import 'package:savvy_stock/features/sales/payment/widget/payment_details.dart';
 import 'package:savvy_stock/features/sales/payment/widget/payment_method.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';

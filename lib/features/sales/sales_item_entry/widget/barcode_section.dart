@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:qr_code_scanner_plus/qr_code_scanner_plus.dart';
+import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_event.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_state.dart';
@@ -42,10 +43,6 @@ class _BarcodeSectionState extends State<BarcodeSection> {
 
   Widget _buildScannerScreen() {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Barcode Scanner'),
-        backgroundColor: const Color(0xFF155888),
-      ),
       body: Column(
         children: <Widget>[
           Expanded(flex: 4, child: _buildQrView(context)),
@@ -158,30 +155,33 @@ class _BarcodeSectionState extends State<BarcodeSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Barcode Scanner',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
-                child: TextFormField(
+                child: CustomTextField(
                   controller: _barcodeController,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30.0),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 14,
-                    ),
-                    hintText: 'Enter 12 or 13 digits barcode',
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _barcodeController.clear();
-                      },
+                  labelText: 'Barcode',
+                  hintText: 'Enter 12 or 13 digits barcode',
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => _buildScannerScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.camera_alt),
+                    style: ButtonStyle(
+                      backgroundColor: WidgetStatePropertyAll<Color>(
+                        Color(0xFF155888),
+                      ),
+                      foregroundColor: WidgetStatePropertyAll<Color>(
+                        Colors.white,
+                      ),
+                      padding: WidgetStatePropertyAll<EdgeInsetsGeometry>(
+                        EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      ),
                     ),
                   ),
                   keyboardType: TextInputType.number,
@@ -194,23 +194,6 @@ class _BarcodeSectionState extends State<BarcodeSection> {
                 ),
               ),
               const SizedBox(width: 10),
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => _buildScannerScreen(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.camera_alt),
-                label: const Text('Scan'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF155888),
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                ),
-              ),
             ],
           ),
         ],

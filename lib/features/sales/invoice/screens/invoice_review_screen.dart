@@ -29,13 +29,6 @@ class InvoiceReviewScreen extends StatelessWidget {
     final confirmedItems = itemEntryBloc.state.confirmedItems;
     final paymentState = paymentBloc.state;
 
-    if (customer == null) {
-      debugPrint('Error: No customer selected');
-      return const Scaffold(
-        body: Center(child: Text('Error: No customer selected')),
-      );
-    }
-
     if (confirmedItems.isEmpty) {
       debugPrint('Error: No items in the order');
       return const Scaffold(
