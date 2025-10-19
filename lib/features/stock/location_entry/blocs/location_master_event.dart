@@ -98,3 +98,8 @@ class CancelUpdate extends LocationMasterEvent {}
 class ClearLocations extends LocationMasterEvent {
   const ClearLocations();
 }
+
+class SearchLocations extends LocationMasterEvent {
+  final String query;
+  const SearchLocations(this.query);
+}

@@ -46,7 +46,7 @@ import 'package:savvy_stock/features/stock/item_in_branch/screens/item_in_branch
 import 'package:savvy_stock/features/stock/item_in_branch/widgets/item_in_branch_create_and_edit.dart.dart';
 import 'package:savvy_stock/features/stock/location_entry/models/location_master_model.dart';
 import 'package:savvy_stock/features/stock/location_entry/screens/location_master_screen.dart';
-import 'package:savvy_stock/features/stock/location_entry/widget/location_master_create_edit.dart';
+import 'package:savvy_stock/features/stock/location_entry/screens/location_master_create_edit.dart';
 import 'package:savvy_stock/features/system_constant/screen/system_constants_screen.dart';
 
 // Import your screen files for missing routes

@@ -27,6 +27,10 @@ class LocationMasterState extends Equatable {
   final String message;
   final String? error;
   final int? companyId;
+  final List<LocationMaster> locations;
+  final List<LocationMaster> filteredLocations;
+  final List<LocationMaster> selectedLocations;
+  final String searchQuery;
 
   // Dual List Model for item assignments
   final List<ItemInBranchModel> dualListSource;
@@ -49,6 +53,10 @@ class LocationMasterState extends Equatable {
     this.message = '',
     this.error,
     this.companyId,
+    this.locations = const [],
+    this.filteredLocations = const [],
+    this.selectedLocations = const [],
+    this.searchQuery = '',
     this.dualListSource = const [],
     this.dualListTarget = const [],
     this.first = 0,
@@ -68,6 +76,10 @@ class LocationMasterState extends Equatable {
     String? message,
     String? error,
     int? companyId,
+    List<LocationMaster>? locations,
+    List<LocationMaster>? filteredLocations,
+    List<LocationMaster>? selectedLocations,
+    String? searchQuery,
     List<ItemInBranchModel>? dualListSource,
     List<ItemInBranchModel>? dualListTarget,
     int? first,
@@ -86,6 +98,10 @@ class LocationMasterState extends Equatable {
       message: message ?? this.message,
       error: error ?? this.error,
       companyId: companyId ?? this.companyId,
+      locations: locations ?? this.locations,
+      filteredLocations: filteredLocations ?? this.filteredLocations,
+      selectedLocations: selectedLocations ?? this.selectedLocations,
+      searchQuery: searchQuery ?? this.searchQuery,
       dualListSource: dualListSource ?? this.dualListSource,
       dualListTarget: dualListTarget ?? this.dualListTarget,
       first: first ?? this.first,
@@ -110,5 +126,9 @@ class LocationMasterState extends Equatable {
     dualListTarget,
     first,
     dataName,
+    locations,
+    filteredLocations,
+    selectedLocations,
+    searchQuery,
   ];
 }

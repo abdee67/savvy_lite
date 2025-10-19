@@ -1,5 +1,6 @@
 // features/stock/location_master/widgets/items_pick_list.dart
 import 'package:flutter/material.dart';
+import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 
 class ItemsPickList extends StatefulWidget {
@@ -198,38 +199,29 @@ class _ItemsPickListState extends State<ItemsPickList> {
 
   Widget _buildAvailableItemsSection(ThemeData theme, ColorScheme colors) {
     // FIXED: Remove the Column and use a Container with proper constraints
-    return Container(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Selection Header
-          _buildSelectionHeader(theme, colors),
-          const SizedBox(height: 16),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Selection Header
+        _buildSelectionHeader(theme, colors),
+        const SizedBox(height: 16),
 
-          // Search Bar
-          _buildSearchBar(colors),
-          const SizedBox(height: 16),
+        // Search Bar
+        _buildSearchBar(colors),
+        const SizedBox(height: 16),
 
-          // Items List Section - FIXED: Use Expanded for scrollable content
-          Flexible(
-            fit: FlexFit.tight,
-            child: _buildItemsSection(theme, colors),
-          ),
+        // Items List Section - FIXED: Use Expanded for scrollable content
+        Flexible(fit: FlexFit.tight, child: _buildItemsSection(theme, colors)),
 
-          // Action Buttons - FIXED: Use SizedBox with fixed height
-          SizedBox(height: 70, child: _buildActionButtons(colors)),
-        ],
-      ),
+        // Action Buttons - FIXED: Use SizedBox with fixed height
+        SizedBox(height: 70, child: _buildActionButtons(colors)),
+      ],
     );
   }
 
   Widget _buildSelectionHeader(ThemeData theme, ColorScheme colors) {
-    return Container(
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: colors.primary.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-      ),
       child: Row(
         children: [
           Icon(
@@ -270,87 +262,77 @@ class _ItemsPickListState extends State<ItemsPickList> {
   }
 
   Widget _buildSearchBar(ColorScheme colors) {
-    return TextField(
+    return CustomTextField(
       controller: _searchController,
-      decoration: InputDecoration(
-        hintText: 'Search items by description...',
-        prefixIcon: const Icon(Icons.search),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        suffixIcon: _searchController.text.isNotEmpty
-            ? IconButton(
-                icon: const Icon(Icons.clear),
-                onPressed: () {
-                  _searchController.clear();
-                  setState(() {});
-                },
-              )
-            : null,
-      ),
+      labelText: 'Search items by description...',
+      prefixIcon: const Icon(Icons.search),
+      suffixIcon: _searchController.text.isNotEmpty
+          ? IconButton(
+              icon: const Icon(Icons.clear),
+              onPressed: () {
+                _searchController.clear();
+                setState(() {});
+              },
+            )
+          : null,
       onChanged: (_) => setState(() {}),
     );
   }
 
   Widget _buildItemsSection(ThemeData theme, ColorScheme colors) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Section Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: colors.primaryContainer.withOpacity(0.3),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Section Header
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: colors.primaryContainer.withOpacity(0.3),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(12),
+              topRight: Radius.circular(12),
             ),
-            child: Row(
-              children: [
-                Icon(
-                  widget.isEditMode
-                      ? Icons.add_box_outlined
-                      : Icons.checklist_outlined,
-                  size: 20,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                widget.isEditMode
+                    ? Icons.add_box_outlined
+                    : Icons.checklist_outlined,
+                size: 20,
+                color: colors.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                widget.isEditMode
+                    ? 'Select Additional Items'
+                    : 'Select Items for Assignment',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                   color: colors.primary,
                 ),
-                const SizedBox(width: 8),
+              ),
+              const Spacer(),
+              if (_selectedItems.isNotEmpty)
                 Text(
-                  widget.isEditMode
-                      ? 'Select Additional Items'
-                      : 'Select Items for Assignment',
+                  '${_selectedItems.length} selected',
                   style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
                     color: colors.primary,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const Spacer(),
-                if (_selectedItems.isNotEmpty)
-                  Text(
-                    '${_selectedItems.length} selected',
-                    style: TextStyle(
-                      color: colors.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-              ],
-            ),
+            ],
           ),
+        ),
 
-          // Items List - FIXED: Use Expanded for proper scrolling
-          Expanded(
-            child: _filteredItems.isEmpty
-                ? _buildEmptyState(theme, colors)
-                : _buildItemsList(theme, colors),
-          ),
-        ],
-      ),
+        // Items List - FIXED: Use Expanded for proper scrolling
+        Expanded(
+          child: _filteredItems.isEmpty
+              ? _buildEmptyState(theme, colors)
+              : _buildItemsList(theme, colors),
+        ),
+      ],
     );
   }
 

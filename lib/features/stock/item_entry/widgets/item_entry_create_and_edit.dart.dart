@@ -204,7 +204,8 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.item == null ? 'Create Item' : 'Edit Item'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: const Color(0xFF155888),
+        foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: MultiBlocListener(
@@ -239,6 +240,7 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
             _buildBarcodeInfo(),
             Expanded(child: _buildForm()),
             _buildBottomNavigation(),
+            const SizedBox(height: 16),
           ],
         ),
       ),
@@ -433,24 +435,9 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
               prefixIcon: const Icon(Icons.inventory_2),
             ),
             const SizedBox(height: 16),
-            CustomTextField(
-              labelText: 'Margin Rate',
-              controller: _marginRateController,
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Margin Rate is required';
-                }
-                return null;
-              },
-              onChanged: (value) {
-                _marginRateController.text = value;
-              },
-              prefixIcon: const Icon(Icons.trending_up),
-            ),
-            const SizedBox(height: 16),
             CustomDropdown(
               labelText: 'Margin Type',
+              prefixIcon: const Icon(Iconsax.aave_aave),
               items: _marginTypes
                   .map(
                     (marginType) => DropdownMenuItem(
@@ -465,6 +452,22 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
                   _selectedMarginType = value;
                 });
               },
+            ),
+            const SizedBox(height: 16),
+            CustomTextField(
+              labelText: 'Margin Rate',
+              controller: _marginRateController,
+              keyboardType: TextInputType.number,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Margin Rate is required';
+                }
+                return null;
+              },
+              onChanged: (value) {
+                _marginRateController.text = value;
+              },
+              prefixIcon: const Icon(Icons.trending_up),
             ),
             const SizedBox(height: 16),
             //  UoM
@@ -543,35 +546,35 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
   }
 
   Widget _buildBottomNavigation() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            offset: const Offset(0, -2),
-            blurRadius: 4,
-            color: Colors.black.withOpacity(0.1),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: ElevatedButton(
-              onPressed: _saveItem,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text('Save', style: TextStyle(color: Colors.white)),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        IconButton(
+          icon: const Icon(Iconsax.backward),
+          style: IconButton.styleFrom(
+            backgroundColor: Colors.amber,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
           ),
-        ],
-      ),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        ElevatedButton(
+          onPressed: _saveItem,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color(0xFF155888),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+          child: const Text('Save', style: TextStyle(color: Colors.white)),
+        ),
+      ],
     );
   }
 }

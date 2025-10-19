@@ -18,24 +18,70 @@ class ItemInBranchDashboard extends StatefulWidget {
   State<ItemInBranchDashboard> createState() => _ItemInBranchDashboardState();
 }
 
-class _ItemInBranchDashboardState extends State<ItemInBranchDashboard> {
+class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isSelectionMode = false;
   final Map<int, double> _dragOffset = {};
 
+  // Animation controllers for detail panel
+  late AnimationController _detailAnimationController;
+  late Animation<double> _heightAnimation;
+  late Animation<double> _opacityAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  // Detail panel state
+  ItemInBranchModel? _selectedItem;
+  bool _itemDetail = false;
+
   @override
   void initState() {
     super.initState();
+
+    // Initialize animation controller
+    _detailAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    // Set up animations
+    _setupAnimations();
+
     context.read<StockItemInBranchBloc>().add(
       LoadItemsFromBranch(widget.authBloc.state.companyId!),
     );
+  }
+
+  void _setupAnimations() {
+    _heightAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _detailAnimationController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeInOutCubic),
+      ),
+    );
+
+    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _detailAnimationController,
+        curve: const Interval(0.3, 1.0, curve: Curves.easeIn),
+      ),
+    );
+
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0.0, -0.1), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _detailAnimationController,
+            curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
+          ),
+        );
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     _scrollController.dispose();
+    _detailAnimationController.dispose();
     super.dispose();
   }
 
@@ -55,13 +101,25 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard> {
   }
 
   void _showItemDetail(ItemInBranchModel item) {
-    if (!_isSelectionMode) {
-      context.read<StockItemInBranchBloc>().add(ShowItemDetailFromBranch(item));
-    }
+    setState(() {
+      _selectedItem = item;
+      _itemDetail = true;
+    });
+
+    // Start the animation
+    _detailAnimationController.forward(from: 0.0);
   }
 
   void _hideItemDetail() {
-    context.read<StockItemInBranchBloc>().add(HideItemDetailFromBranch());
+    // Reverse the animation
+    _detailAnimationController.reverse().then((_) {
+      if (mounted) {
+        setState(() {
+          _itemDetail = false;
+          _selectedItem = null;
+        });
+      }
+    });
   }
 
   void _clearSelection() {
@@ -194,7 +252,7 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Colors.grey,
       appBar: AppBar(
         title: const Text('Item In Branch Management'),
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
@@ -221,44 +279,52 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard> {
                   _buildSearchBar(),
                   _buildActionButtons(state),
 
-                  // Role List
-                  Expanded(child: _buildRoleList(state)),
+                  // Item List
+                  Expanded(child: _buildItemList(state)),
                 ],
               ),
-              if (state.showDetailPanel && state.itemDetail != null)
-                _buildDetailPanel(state.itemDetail!),
             ],
           );
         },
       ),
-      // Floating Action Button for Add
-      floatingActionButton:
-          BlocBuilder<StockItemInBranchBloc, ItemInBranchState>(
-            builder: (context, state) {
-              if (state.showDetailPanel) {
-                return const SizedBox.shrink();
-              }
-              return FloatingActionButton(
-                onPressed: () {
-                  if (state.canEdit && state.selectedItems.isNotEmpty) {
-                    // Navigate to edit screen with selected customer
-                    final customer = state.selectedItems.first;
-                    _navigateToEditScreen(customer);
-                  } else {
-                    // Navigate to add screen
-                    _navigateToAddScreen();
-                  }
-                },
-                backgroundColor: Color.fromARGB(255, 28, 66, 146),
-                child: Icon(
-                  state.canEdit && state.selectedItems.isNotEmpty
-                      ? Icons.edit
-                      : Icons.add,
-                  color: Colors.white,
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search by item number or branch...',
+                prefixIcon: const Icon(Iconsax.search_normal, size: 20),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Iconsax.close_circle, size: 20),
+                        onPressed: _clearSearch,
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
                 ),
-              );
-            },
+                filled: true,
+                fillColor: Colors.grey[100],
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+              onChanged: _handleSearch,
+            ),
           ),
+          const SizedBox(width: 12),
+          _buildFloatingActionButton(context),
+        ],
+      ),
     );
   }
 
@@ -268,7 +334,7 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard> {
       height: state.hasSelection ? 60 : 0,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.grey,
         border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
       ),
       child: state.hasSelection
@@ -295,7 +361,7 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard> {
                       final item = state.selectedItems.first;
                       _navigateToEditScreen(item);
                     },
-                    tooltip: 'Edit branch',
+                    tooltip: 'Edit item',
                   ),
                 IconButton(
                   icon: const Icon(Iconsax.close_circle),
@@ -308,47 +374,42 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard> {
     );
   }
 
-  Widget _buildSearchBar() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+  Widget _buildFloatingActionButton(BuildContext context) {
+    return BlocBuilder<StockItemInBranchBloc, ItemInBranchState>(
+      builder: (context, state) {
+        return ElevatedButton(
+          onPressed: () {
+            if (state.canEdit && state.selectedItems.isNotEmpty) {
+              // Navigate to edit screen with selected item
+              final item = state.selectedItems.first;
+              _navigateToEditScreen(item);
+            } else {
+              // Navigate to add screen
+              _navigateToAddScreen();
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color.fromARGB(255, 28, 66, 146),
+            shape: const CircleBorder(),
           ),
-        ],
-      ),
-      child: TextField(
-        controller: _searchController,
-        decoration: InputDecoration(
-          hintText: 'Search by branch description or address...',
-          prefixIcon: const Icon(Iconsax.search_normal, size: 20),
-          suffixIcon: _searchController.text.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Iconsax.close_circle, size: 20),
-                  onPressed: _clearSearch,
-                )
-              : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
+          child: Icon(
+            state.canEdit && state.selectedItems.isNotEmpty
+                ? Icons.edit
+                : Icons.add,
+            color: Colors.white,
           ),
-          filled: true,
-          fillColor: Colors.grey[100],
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
-          ),
-        ),
-        onChanged: _handleSearch,
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildRoleList(ItemInBranchState state) {
+  Widget _buildItemList(ItemInBranchState state) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenWidth < 700;
+    final cardSpacing = screenHeight * 0.02;
+    final cardWidth = isSmallScreen ? screenWidth * 0.85 : screenWidth * 0.8;
+
     if (state.status == ItemInBranchStatus.loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -381,11 +442,11 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Iconsax.user_tag, size: 64, color: Colors.grey),
+            const Icon(Iconsax.box, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
             Text(
               state.searchQuery.isEmpty
-                  ? 'No roles found'
+                  ? 'No items found'
                   : 'No results for "${state.searchQuery}"',
               style: const TextStyle(color: Colors.grey, fontSize: 16),
             ),
@@ -394,40 +455,57 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard> {
       );
     }
 
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.all(16),
-      itemCount: state.filteredItems.length,
-      itemBuilder: (context, index) {
-        final item = state.filteredItems[index];
-        final isSelected = state.selectedItems.contains(item);
-        final screenWidth = MediaQuery.of(context).size.width;
-        final useCompactLayout = screenWidth < 700;
+    return Container(
+      width: screenWidth,
+      height: screenHeight,
+      decoration: const BoxDecoration(color: Colors.grey),
+      child: ListView.separated(
+        controller: _scrollController,
+        padding: const EdgeInsets.all(16),
+        itemCount: state.filteredItems.length,
+        separatorBuilder: (context, index) => SizedBox(height: cardSpacing),
+        itemBuilder: (context, index) {
+          final item = state.filteredItems[index];
+          final isSelected = state.selectedItems.contains(item);
 
-        return _buildItemInBranchListItem(
-          item,
-          state,
-          isSelected,
-          index,
-          useCompactLayout,
-        );
-      },
+          return _buildItemListItem(
+            item,
+            isSelected,
+            state,
+            index,
+            isSmallScreen,
+            cardWidth,
+          );
+        },
+      ),
     );
   }
 
-  Widget _buildItemInBranchListItem(
+  Widget _buildItemListItem(
     ItemInBranchModel item,
-    ItemInBranchState state,
     bool isSelected,
+    ItemInBranchState state,
     int index,
     bool isCompact,
+    double cardWidth,
   ) {
     final offset = _dragOffset[index] ?? 0.0;
+    final isExpanded = _itemDetail == true && _selectedItem == item;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    // Responsive sizing based on screen size
+    final collapsedHeight = _getCollapsedHeight(screenWidth, screenHeight);
+    final expandedHeight = _getExpandedHeight(screenWidth, screenHeight);
+    final collapsedWidth = _getCardWidth(screenWidth);
 
     return GestureDetector(
       onTap: () {
         if (_isSelectionMode) {
           _toggleItemInBranchSelection(item, !isSelected);
+        } else {
+          // Single tap shows detail when not in selection mode
+          _showItemDetail(item);
         }
       },
       onLongPress: () {
@@ -443,283 +521,377 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard> {
           _onHorizontalDragUpdate(index, details),
       onHorizontalDragEnd: (details) =>
           _onHorizontalDragEnd(context, index, details),
-      child: Stack(
-        children: [
-          // Background (delete indicator)
-          Positioned.fill(
-            child: Container(
-              alignment: Alignment.centerRight,
-              decoration: BoxDecoration(
-                color: Colors.amber,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              margin: const EdgeInsets.only(bottom: 2),
-              child: const Icon(Icons.delete, color: Colors.white, size: 28),
-            ),
-          ),
+      child: AnimatedBuilder(
+        animation: _scrollController,
+        builder: (context, child) => Container(
+          transform: Matrix4.translationValues(offset, 0, 0),
+          width: collapsedWidth,
+          height: isExpanded ? expandedHeight : collapsedHeight,
+          child: Stack(
+            children: [
+              // 1. DELETE INDICATOR - Should be FIRST in Stack
+              if (!isExpanded) // Only show delete indicator when not expanded
+                Positioned.fill(
+                  child: Container(
+                    alignment: Alignment.centerRight,
+                    decoration: BoxDecoration(
+                      color: Colors.amber,
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    margin: const EdgeInsets.only(bottom: 2),
+                    child: const Icon(
+                      Icons.delete,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                ),
 
-          // Role card
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            transform: Matrix4.translationValues(offset, 0, 0),
-            curve: Curves.easeOut,
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: isSelected ? Colors.blue[50] : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+              // 2. BACKGROUND LAYERS (only when expanded)
+              if (isExpanded) ...[
+                // Yellow background
+                Positioned.fill(
+                  top: 47,
+                  child: Container(
+                    width: collapsedWidth,
+                    height: expandedHeight,
+                    decoration: ShapeDecoration(
+                      color: const Color(0xFFFDD105), // Fixed yellow color
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                  ),
                 ),
               ],
-              border: Border.all(
-                color: isSelected
-                    ? const Color.fromARGB(255, 28, 66, 146)
-                    : Colors.transparent,
-                width: 2,
-              ),
-            ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.all(16),
-              leading: _buildItemInBranchAvatar(item, isSelected, isCompact),
-              title: Text(
-                item.itemNumber.toString(),
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+              // 3. ITEM CARD - Should come AFTER delete indicator
+              AnimatedContainer(
+                padding: const EdgeInsets.only(
+                  top: 10,
+                  left: 10,
+                  right: 10,
+                  bottom: 10,
                 ),
-              ),
-              trailing: _buildItemInBranchTrailing(item),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailPanel(ItemInBranchModel item) {
-    return Positioned(
-      bottom: 0,
-      left: 0,
-      right: 0,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeOut,
-        height: MediaQuery.of(context).size.height * 0.65, // responsive height
-        decoration: BoxDecoration(
-          color: Colors.grey[50],
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.25),
-              blurRadius: 12,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            // Header
-            _buildHeader(),
-
-            // Content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Item Title
-                    Text(
-                      item.itemNumber.toString(),
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1C4292),
-                      ),
-                      textAlign: TextAlign.center,
+                //width: collapsedWidth,
+                height: collapsedHeight,
+                duration: const Duration(milliseconds: 400),
+                transform: Matrix4.translationValues(offset, 0, 0),
+                curve: Curves.easeInOut,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.blue[50] : Colors.white,
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
-                    const SizedBox(height: 26),
-                    // Detail grid
-                    Wrap(
-                      spacing: 16,
-                      runSpacing: 16,
+                  ],
+                  border: Border.all(
+                    color: isSelected
+                        ? const Color.fromARGB(255, 28, 66, 146)
+                        : Colors.transparent,
+                    width: 2,
+                  ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildDetailCard(
-                          title: 'Item Number',
-                          value: item.itemNumber.toString(),
-                          color: Colors.blue,
+                        // Item Avatar
+                        _buildItemAvatar(item, isSelected, isCompact),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Item #${item.itemNumber}',
+                                style: TextStyle(
+                                  color: const Color(0xFF373737),
+                                  fontSize: _getTitleFontSize(screenWidth),
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              Text(
+                                'Branch: ${item.branchrefrence?.referenceId ?? 'N/A'}',
+                                style: TextStyle(
+                                  color: const Color(0xFF887F7F),
+                                  fontSize: _getSubtitleFontSize(screenWidth),
+                                  fontStyle: FontStyle.italic,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w300,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              // Stock and price info
+                              Row(
+                                children: [
+                                  // Available Quantity
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue[50],
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: Colors.blue[200]!,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'Qty: ${item.quantityAvailable}',
+                                      style: TextStyle(
+                                        fontSize: _getBadgeFontSize(
+                                          screenWidth,
+                                        ),
+                                        color: Colors.blue[800],
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  // Unit Price
+                                  if (item.unitPrice != null)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green[50],
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: Colors.green[200]!,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '\$${item.unitPrice!.toStringAsFixed(2)}',
+                                        style: TextStyle(
+                                          fontSize: _getBadgeFontSize(
+                                            screenWidth,
+                                          ),
+                                          color: Colors.green[800],
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                        _buildDetailCard(
-                          title: 'Branch',
-                          value:
-                              item.branchrefrence?.referenceId.toString() ?? '',
-                          color: Colors.blue,
-                        ),
-                        _buildDetailCard(
-                          title: 'Margin Rate',
-                          value: item.marginRate.toString(),
-                          color: Colors.blue,
-                        ),
-                        _buildDetailCard(
-                          title: 'Unit Price',
-                          value: item.unitPrice.toString(),
-                          color: Colors.blue,
-                        ),
-                        _buildDetailCard(
-                          title: 'Margin Type',
-                          value: item.marginType ?? 'N/A',
-                          color: Colors.blue,
-                        ),
-                        _buildDetailCard(
-                          title: 'Unit of Measure',
-                          value: item.unitOfMeasure.toString(),
-                          color: Colors.blue,
-                        ),
-                        _buildDetailCard(
-                          title: 'Available Quantity',
-                          value: item.quantityAvailable.toString(),
-                          color: Colors.blue,
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        // See More / See Less button
+                        ElevatedButton(
+                          onPressed: () => isExpanded
+                              ? _hideItemDetail()
+                              : _showItemDetail(item),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF145888),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            padding: _getButtonPadding(screenWidth),
+                          ),
+                          child: Text(
+                            isExpanded ? 'See Less' : 'See More',
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: _getButtonFontSize(screenWidth),
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ],
                 ),
               ),
-            ),
 
-            // Actions
-            _buildActionBar(item),
-          ],
+              // 4. ANIMATED EXPANDED CONTENT
+              if (isExpanded)
+                Positioned(
+                  top: collapsedHeight + 10,
+                  left: 20,
+                  right: 20,
+                  child: AnimatedBuilder(
+                    animation: _detailAnimationController,
+                    builder: (context, child) {
+                      final currentHeight =
+                          _heightAnimation.value *
+                          (expandedHeight - collapsedHeight - 20);
+                      final currentOpacity = _opacityAnimation.value;
+
+                      return SlideTransition(
+                        position: _slideAnimation,
+                        child: Container(
+                          height: currentHeight > 0 ? currentHeight : 0,
+                          decoration: BoxDecoration(color: Colors.transparent),
+                          child: Opacity(opacity: currentOpacity, child: child),
+                        ),
+                      );
+                    },
+                    child: _buildItemDetailContent(item, screenWidth),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // Header with drag handle + close
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.only(top: 10, bottom: 8),
-      decoration: const BoxDecoration(
-        color: Color(0xFF1C4292),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+  Widget _buildItemDetailContent(ItemInBranchModel item, double screenWidth) {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
       child: Column(
         children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.white54,
-              borderRadius: BorderRadius.circular(2),
-            ),
+          _buildItemInfoItem(
+            'Item ID : ',
+            item.id.toString(),
+            Iconsax.card,
+            screenWidth,
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              const SizedBox(width: 16),
-              const Icon(Icons.inventory_2, color: Colors.white, size: 24),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  'Item In Branch Details',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+          _buildItemInfoItem(
+            'Item Number : ',
+            item.itemNumber.toString(),
+            Iconsax.box,
+            screenWidth,
+          ),
+          _buildItemInfoItem(
+            'Branch : ',
+            item.branchrefrence?.referenceId?.toString() ?? 'N/A',
+            Iconsax.building,
+            screenWidth,
+          ),
+          _buildItemInfoItem(
+            'Unit Price : ',
+            item.unitPrice != null
+                ? '\$${item.unitPrice!.toStringAsFixed(2)}'
+                : 'N/A',
+            Iconsax.dollar_circle,
+            screenWidth,
+          ),
+          _buildItemInfoItem(
+            'Margin Rate : ',
+            item.marginRate?.toStringAsFixed(2) ?? 'N/A',
+            Iconsax.percentage_circle,
+            screenWidth,
+          ),
+          _buildItemInfoItem(
+            'Margin Type : ',
+            item.marginType ?? 'N/A',
+            Iconsax.chart,
+            screenWidth,
+          ),
+          _buildItemInfoItem(
+            'Unit of Measure : ',
+            item.unitOfMeasure?.toString() ?? 'N/A',
+            Iconsax.rulerpen,
+            screenWidth,
+          ),
+          _buildItemInfoItem(
+            'Available Quantity : ',
+            item.quantityAvailable?.toString() ?? 'N/A',
+            Iconsax.notification_status_copy,
+            screenWidth,
+          ),
+
+          // Action buttons row
+          Padding(
+            padding: EdgeInsets.only(top: 16, bottom: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildActionButton(
+                  Iconsax.edit,
+                  'Edit',
+                  () => _navigateToEditScreen(item),
+                  screenWidth,
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close, color: Colors.white),
-                onPressed: _hideItemDetail,
-              ),
-            ],
+                _buildActionButton(
+                  Iconsax.export,
+                  'Export',
+                  () => _exportItem(item),
+                  screenWidth,
+                ),
+                _buildActionButton(
+                  Iconsax.trash,
+                  'Delete',
+                  () => _safeDelete(context),
+                  screenWidth,
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  // Detail card style
-  Widget _buildDetailCard({
-    required String title,
-    required String value,
-    required Color color,
-  }) {
-    return Container(
-      width:
-          (MediaQuery.of(context).size.width / 2) - 30, // responsive 2-column
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
+  Widget _buildItemInfoItem(
+    String label,
+    String value,
+    IconData icon,
+    double screenWidth,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Colors.black54,
+          Container(
+            width: _getIconSize(screenWidth),
+            height: _getIconSize(screenWidth),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              size: _getIconInnerSize(screenWidth),
+              color: Colors.grey[600],
             ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: color,
+          SizedBox(width: _getSpacing(screenWidth)),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: label,
+                    style: TextStyle(
+                      color: const Color(0xFF373737),
+                      fontSize: _getDetailLabelFontSize(screenWidth),
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  TextSpan(
+                    text: value,
+                    style: TextStyle(
+                      color: const Color(0xFF373737),
+                      fontSize: _getDetailValueFontSize(screenWidth),
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Bottom action bar
-  Widget _buildActionBar(ItemInBranchModel item) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      decoration: const BoxDecoration(
-        color: Color(0xFF1C4292),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildActionButton(
-            Icons.edit,
-            'Edit',
-            Colors.amber,
-            () => _navigateToEditScreen(item),
-          ),
-          _buildActionButton(
-            Icons.share,
-            'Share',
-            Colors.green,
-            () => _exportItem(item),
-          ),
-          _buildActionButton(
-            Icons.delete,
-            'Delete',
-            Colors.red,
-            () => _safeDelete(context),
           ),
         ],
       ),
@@ -729,27 +901,25 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard> {
   Widget _buildActionButton(
     IconData icon,
     String label,
-    Color color,
     VoidCallback onPressed,
+    double screenWidth,
   ) {
     return Column(
       children: [
-        Container(
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: IconButton(
-            icon: Icon(icon, color: color),
-            onPressed: onPressed,
+        IconButton(
+          icon: Icon(icon, size: _getActionIconSize(screenWidth)),
+          onPressed: onPressed,
+          style: IconButton.styleFrom(
+            backgroundColor: const Color(0xFF145888),
+            foregroundColor: Colors.white,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
-            color: color,
+            fontSize: _getActionLabelFontSize(screenWidth),
+            color: const Color(0xFF373737),
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -757,67 +927,141 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard> {
     );
   }
 
-  Widget _buildItemInBranchAvatar(
+  Widget _buildItemAvatar(
     ItemInBranchModel item,
     bool isSelected,
     bool isCompact,
   ) {
+    final Color backgroundColor;
+    final Color iconColor;
+
+    if (isSelected) {
+      backgroundColor = const Color.fromARGB(255, 28, 66, 146);
+      iconColor = Colors.white;
+    } else {
+      backgroundColor = Colors.grey[200]!;
+      iconColor = Colors.grey[600]!;
+    }
+
     return Container(
       width: 48,
       height: 48,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-        ),
-        shape: BoxShape.circle,
-      ),
-      child: Icon(
-        Iconsax.user_tag,
-        color: Colors.white,
-        size: isCompact ? 20 : 24,
-      ),
+      decoration: BoxDecoration(color: backgroundColor, shape: BoxShape.circle),
+      child: Icon(Iconsax.box, color: iconColor, size: isCompact ? 20 : 24),
     );
   }
 
-  Widget _buildItemInBranchTrailing(ItemInBranchModel item) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        // Taxable status badge
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: item.item?.taxable == 'Y'
-                ? Colors.red.withOpacity(0.1)
-                : Colors.green.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: item.item?.taxable == 'Y' ? Colors.red : Colors.green,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                item.item?.taxable == 'Y' ? Icons.receipt : Icons.money_off,
-                size: 12,
-                color: item.item?.taxable == 'Y' ? Colors.red : Colors.green,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                item.item?.taxable == 'Y' ? 'Taxable' : 'Non-Tax',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: item.item?.taxable == 'Y' ? Colors.red : Colors.green,
-                  fontFamily: 'Roboto',
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
+  // Responsive helper methods
+  double _getCollapsedHeight(double screenWidth, double screenHeight) {
+    if (screenWidth < 360) return screenHeight * 0.22; // Very small phones
+    if (screenWidth < 400) return screenHeight * 0.20; // Small phones
+    if (screenWidth < 700) return screenHeight * 0.18; // Medium phones
+    return screenHeight * 0.14; // Tablets and larger
+  }
+
+  double _getExpandedHeight(double screenWidth, double screenHeight) {
+    if (screenWidth < 360) return screenHeight * 0.65; // Very small phones
+    if (screenWidth < 400) return screenHeight * 0.60; // Small phones
+    if (screenWidth < 700) return screenHeight * 0.55; // Medium phones
+    return screenHeight * 0.45; // Tablets and larger
+  }
+
+  double _getCardWidth(double screenWidth) {
+    if (screenWidth < 360) return screenWidth * 0.92; // Very small phones
+    if (screenWidth < 400) return screenWidth * 0.90; // Small phones
+    if (screenWidth < 700) return screenWidth * 0.85; // Medium phones
+    return screenWidth * 0.8; // Tablets and larger
+  }
+
+  double _getTitleFontSize(double screenWidth) {
+    if (screenWidth < 360) return 18; // Very small phones
+    if (screenWidth < 400) return 19; // Small phones
+    if (screenWidth < 700) return 20; // Medium phones
+    return 24; // Tablets and larger
+  }
+
+  double _getSubtitleFontSize(double screenWidth) {
+    if (screenWidth < 360) return 10; // Very small phones
+    if (screenWidth < 400) return 11; // Small phones
+    if (screenWidth < 700) return 12; // Medium phones
+    return 14; // Tablets and larger
+  }
+
+  double _getBadgeFontSize(double screenWidth) {
+    if (screenWidth < 360) return 9; // Very small phones
+    if (screenWidth < 400) return 9; // Small phones
+    if (screenWidth < 700) return 10; // Medium phones
+    return 10; // Tablets and larger
+  }
+
+  double _getInfoFontSize(double screenWidth) {
+    if (screenWidth < 360) return 10; // Very small phones
+    if (screenWidth < 400) return 11; // Small phones
+    if (screenWidth < 700) return 12; // Medium phones
+    return 14; // Tablets and larger
+  }
+
+  double _getButtonFontSize(double screenWidth) {
+    if (screenWidth < 360) return 9; // Very small phones
+    if (screenWidth < 400) return 9; // Small phones
+    if (screenWidth < 700) return 10; // Medium phones
+    return 12; // Tablets and larger
+  }
+
+  EdgeInsets _getButtonPadding(double screenWidth) {
+    if (screenWidth < 360) {
+      return const EdgeInsets.symmetric(horizontal: 12, vertical: 6);
+    }
+    if (screenWidth < 400) {
+      return const EdgeInsets.symmetric(horizontal: 14, vertical: 7);
+    }
+    if (screenWidth < 700) {
+      return const EdgeInsets.symmetric(horizontal: 16, vertical: 8);
+    }
+    return const EdgeInsets.symmetric(horizontal: 20, vertical: 10);
+  }
+
+  double _getIconSize(double screenWidth) {
+    if (screenWidth < 360) return 28; // Very small phones
+    if (screenWidth < 400) return 30; // Small phones
+    return 32; // Medium phones and larger
+  }
+
+  double _getIconInnerSize(double screenWidth) {
+    if (screenWidth < 360) return 14; // Very small phones
+    if (screenWidth < 400) return 15; // Small phones
+    return 16; // Medium phones and larger
+  }
+
+  double _getSpacing(double screenWidth) {
+    if (screenWidth < 360) return 8; // Very small phones
+    if (screenWidth < 400) return 10; // Small phones
+    return 12; // Medium phones and larger
+  }
+
+  double _getDetailLabelFontSize(double screenWidth) {
+    if (screenWidth < 360) return 11; // Very small phones
+    if (screenWidth < 400) return 12; // Small phones
+    return 13; // Medium phones and larger
+  }
+
+  double _getDetailValueFontSize(double screenWidth) {
+    if (screenWidth < 360) return 11; // Very small phones
+    if (screenWidth < 400) return 12; // Small phones
+    return 13; // Medium phones and larger
+  }
+
+  double _getActionIconSize(double screenWidth) {
+    if (screenWidth < 360) return 18; // Very small phones
+    if (screenWidth < 400) return 19; // Small phones
+    if (screenWidth < 700) return 20; // Medium phones
+    return 24; // Tablets and larger
+  }
+
+  double _getActionLabelFontSize(double screenWidth) {
+    if (screenWidth < 360) return 9; // Very small phones
+    if (screenWidth < 400) return 9; // Small phones
+    if (screenWidth < 700) return 10; // Medium phones
+    return 12; // Tablets and larger
   }
 }
