@@ -1,143 +1,186 @@
+// features/stock/lot_master/blocs/lot_master_event.dart
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
-import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_receiver_model.dart';
+import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 @immutable
-abstract class ItemEntryEvent extends Equatable {
-  const ItemEntryEvent();
+abstract class LotMasterEvent extends Equatable {
+  const LotMasterEvent();
 
   @override
   List<Object> get props => [];
 }
 
-class LoadItems extends ItemEntryEvent {
+class LoadLotMasters extends LotMasterEvent {
   final int companyId;
-  const LoadItems(this.companyId);
+  const LoadLotMasters(this.companyId);
 
   @override
   List<Object> get props => [companyId];
 }
 
-class CreateItem extends ItemEntryEvent {
-  final ItemEntryModel item;
-  const CreateItem(this.item);
+class FilterLotMasters extends LotMasterEvent {
+  final int? itemId;
+  final DateTime? expStart;
+  final DateTime? expEnd;
+  final int? locationId;
+  final int? statusId;
 
-  @override
-  List<Object> get props => [item];
-}
-
-class UpdateItem extends ItemEntryEvent {
-  final ItemEntryModel item;
-  const UpdateItem(this.item);
-
-  @override
-  List<Object> get props => [item];
-}
-
-class DeleteItem extends ItemEntryEvent {
-  final int itemId;
-  final ItemEntryModel deletedItem;
-  final int deletedIndex;
-
-  const DeleteItem({
-    required this.itemId,
-    required this.deletedItem,
-    required this.deletedIndex,
+  const FilterLotMasters({
+    this.itemId,
+    this.expStart,
+    this.expEnd,
+    this.locationId,
+    this.statusId,
   });
 
   @override
-  List<Object> get props => [itemId, deletedItem, deletedIndex];
+  List<Object> get props => [
+    itemId ?? Object(),
+    expStart ?? Object(),
+    expEnd ?? Object(),
+    locationId ?? Object(),
+    statusId ?? Object(),
+  ];
 }
 
-class SearchItems extends ItemEntryEvent {
-  final String query;
-  const SearchItems(this.query);
+class ResetLotFilter extends LotMasterEvent {}
+
+class SaveLotMaster extends LotMasterEvent {
+  final LotMaster item;
+  final String? transactionType;
+  final int? transactionNumber;
+  final String? remark;
+  const SaveLotMaster(
+    this.item, {
+    this.transactionType = 'A',
+    this.transactionNumber,
+    this.remark,
+  });
 
   @override
-  List<Object> get props => [query];
+  List<Object> get props => [
+    item,
+    transactionType ?? Object(),
+    transactionNumber ?? Object(),
+    remark ?? Object(),
+  ];
 }
 
-class SelectItem extends ItemEntryEvent {
-  final ItemEntryModel item;
-  final bool isSelected;
-  const SelectItem(this.item, this.isSelected);
+class UpdateLotMaster extends LotMasterEvent {
+  final LotMaster item;
+  final String? transactionType;
+  final int? transactionNumber;
+  final String? remark;
+  const UpdateLotMaster(
+    this.item, {
+    this.transactionType = 'A',
+    this.transactionNumber,
+    this.remark,
+  });
 
   @override
-  List<Object> get props => [item, isSelected];
+  List<Object> get props => [
+    item,
+    transactionType ?? Object(),
+    transactionNumber ?? Object(),
+    remark ?? Object(),
+  ];
 }
 
-class SelectAllItems extends ItemEntryEvent {
-  final List<ItemEntryModel> items;
-  const SelectAllItems(this.items);
+class DeleteLotMaster extends LotMasterEvent {
+  final LotMaster item;
+  const DeleteLotMaster(this.item);
+
+  @override
+  List<Object> get props => [item];
+}
+
+class DeleteMultipleLotMasters extends LotMasterEvent {
+  final List<LotMaster> items;
+  const DeleteMultipleLotMasters(this.items);
 
   @override
   List<Object> get props => [items];
 }
 
-class ClearSelection extends ItemEntryEvent {
-  const ClearSelection();
+class SearchLotMasters extends LotMasterEvent {
+  final String query;
+  const SearchLotMasters(this.query);
 
   @override
-  List<Object> get props => [];
+  List<Object> get props => [query];
 }
 
-class SetItemForm extends ItemEntryEvent {
-  final ItemEntryModel item;
-  const SetItemForm(this.item);
+class PrepareCreateLot extends LotMasterEvent {
+  final int companyId;
+  const PrepareCreateLot(this.companyId);
 
   @override
-  List<Object> get props => [item];
+  List<Object> get props => [companyId];
 }
 
-class DeleteSelectedItems extends ItemEntryEvent {
-  final List<int> selectedItems;
-  final List<ItemEntryModel> deletedItems;
-  final List<int> deletedIndexes;
-
-  const DeleteSelectedItems({
-    required this.selectedItems,
-    required this.deletedItems,
-    required this.deletedIndexes,
-  });
-
-  @override
-  List<Object> get props => [selectedItems, deletedItems, deletedIndexes];
-}
-
-class UndoDelete extends ItemEntryEvent {
-  final List<ItemEntryModel> deletedItems;
-  final List<int> deletedIndexes;
-
-  const UndoDelete({required this.deletedItems, required this.deletedIndexes});
-
-  @override
-  List<Object> get props => [deletedItems, deletedIndexes];
-}
-
-class ShowItemDetail extends ItemEntryEvent {
-  final ItemEntryModel item;
-  const ShowItemDetail(this.item);
+class PrepareCopyLot extends LotMasterEvent {
+  final LotMaster item;
+  const PrepareCopyLot(this.item);
 
   @override
   List<Object> get props => [item];
 }
 
-class HideItemDetail extends ItemEntryEvent {
-  const HideItemDetail();
-}
-
-class ExportItem extends ItemEntryEvent {
-  final List<ItemEntryModel> itemsToExport;
-  const ExportItem(this.itemsToExport);
+class PrepareEditLot extends LotMasterEvent {
+  final LotMaster item;
+  const PrepareEditLot(this.item);
 
   @override
-  List<Object> get props => [itemsToExport];
+  List<Object> get props => [item];
 }
 
-class ExportSingleItem extends ItemEntryEvent {
-  final ItemEntryModel itemToExport;
-  const ExportSingleItem(this.itemToExport);
+class SetSelectedLot extends LotMasterEvent {
+  final LotMaster? item;
+  const SetSelectedLot(this.item);
 
   @override
-  List<Object> get props => [itemToExport];
+  List<Object> get props => [item ?? Object()];
+}
+
+class SetMultiSelectionLots extends LotMasterEvent {
+  final List<LotMaster> items;
+  const SetMultiSelectionLots(this.items);
+
+  @override
+  List<Object> get props => [items];
+}
+
+class AddToCreateList extends LotMasterEvent {
+  final LotMaster item;
+  const AddToCreateList(this.item);
+
+  @override
+  List<Object> get props => [item];
+}
+
+class RemoveFromCreateList extends LotMasterEvent {
+  final LotMaster item;
+  const RemoveFromCreateList(this.item);
+
+  @override
+  List<Object> get props => [item];
+}
+
+class ClearCreateList extends LotMasterEvent {}
+
+class AutoCreateLotForPO extends LotMasterEvent {
+  final PurchaseOrderReceiverModel por;
+  final int transactionNumber;
+  const AutoCreateLotForPO(this.por, this.transactionNumber);
+}
+
+class CalculateLotStatus extends LotMasterEvent {
+  final LotMaster item;
+  final UdcDetails? lotTypeUdcDetail;
+  const CalculateLotStatus(this.item, this.lotTypeUdcDetail);
 }

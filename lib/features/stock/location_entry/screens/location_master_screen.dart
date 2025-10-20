@@ -259,7 +259,7 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
       location.code09,
       location.code10,
     ];
-    return codes.where((code) => code != null && code!.isNotEmpty).length;
+    return codes.where((code) => code != null && code.isNotEmpty).length;
   }
 
   // Helper method to get non-empty location codes
