@@ -85,7 +85,7 @@ class _BranchDropdownState extends State<BranchDropdown> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    selectedBranch?.description ?? 'Unknown Branch',
+                    selectedBranch.description ?? 'Unknown Branch',
                     style: const TextStyle(
                       fontSize: 16,
                       color: Colors.grey, // Grey text to indicate disabled
@@ -120,7 +120,7 @@ class _BranchDropdownState extends State<BranchDropdown> {
             value: branch.id,
             child: Text(branch.description ?? 'Branch ${branch.id}'),
           );
-        }).toList(),
+        }),
       ],
       onChanged: (int? newBranchId) {
         _handleBranchChange(context, locationState, newBranchId);

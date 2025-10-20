@@ -141,7 +141,7 @@ class _ItemsPickListState extends State<ItemsPickList> {
     required ColorScheme colors,
   }) {
     final description = item.item?.itemDescription ?? 'No Description';
-    final itemNumber = item.itemNumber?.toString() ?? 'N/A';
+    final itemNumber = item.itemNumber.toString() ?? 'N/A';
     final itemCode = item.item;
 
     return Container(
@@ -381,7 +381,7 @@ class _ItemsPickListState extends State<ItemsPickList> {
     required ColorScheme colors,
   }) {
     final description = item.branchrefrence?.description ?? 'No Description';
-    final itemNumber = item.itemNumber?.toString() ?? 'N/A';
+    final itemNumber = item.itemNumber.toString() ?? 'N/A';
     final itemCode = item.item;
 
     return Container(
@@ -402,7 +402,7 @@ class _ItemsPickListState extends State<ItemsPickList> {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: isSelected ? colors.primary : colors.surfaceVariant,
+            color: isSelected ? colors.primary : colors.surfaceContainerHighest,
             shape: BoxShape.circle,
           ),
           child: Icon(
