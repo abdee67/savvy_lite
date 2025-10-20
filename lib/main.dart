@@ -13,7 +13,6 @@ import 'package:savvy_stock/core/routes/app_router.dart';
 import 'package:savvy_stock/core/services/conectitvity_service.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/core/services/system_constant/system_constant_service.dart';
-import 'package:savvy_stock/core/services/udc_service.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_bloc.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_bloc.dart';
 import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
@@ -36,7 +35,7 @@ import 'core/repositories/system_constant_repository.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   _initializeAndRunApp();
-  clearAllSharedPreferences();
+  //  clearAllSharedPreferences();
 }
 
 // Add error handling wrapper
@@ -65,6 +64,7 @@ Future<void> clearAllSharedPreferences() async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.clear();
 }
+
 class SavvyStock extends StatefulWidget {
   const SavvyStock({super.key});
   @override
@@ -189,7 +189,10 @@ class _SavvyStockState extends State<SavvyStock> {
             create: (context) =>
                 RoleBloc(databaseService: getIt(), authBloc: _authBloc),
           ),
-          BlocProvider<CustomerBloc>(create: (context) => CustomerBloc()),
+          BlocProvider<CustomerBloc>(
+            create: (context) =>
+                CustomerBloc(authBloc: _authBloc, databaseService: getIt()),
+          ),
           BlocProvider<ItemEntryBloc>(create: (context) => ItemEntryBloc()),
           BlocProvider<PaymentBloc>(
             create: (context) => PaymentBloc(getIt<SystemConstantsService>()),
@@ -199,7 +202,6 @@ class _SavvyStockState extends State<SavvyStock> {
             create: (context) => SystemConstantBloc(
               systemConstantRepository: getIt<SystemConstantRepository>(),
               authBloc: _authBloc,
-              udcService: getIt<UdcService>(),
               systemConstantService: getIt<SystemConstantsService>(),
             )..add(LoadSystemConstants(_authBloc.state.companyId!)),
           ),

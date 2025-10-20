@@ -22,7 +22,6 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     on<CancelPayment>(_onCancelPayment);
     on<ResetPayment>(_onResetPayment);
     on<LoadFeeSystemConstants>(_onLoadFeeSystemConstants);
-    on<WaitForSystemConstants>(_onWaitForSystemConstants);
 
     // Listen to system constants changes properly
     _systemConstantsSubscription = _systemConstantsService.systemConstantsStream
@@ -55,20 +54,6 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
       emit(
         state.copyWith(
           systemConstantsError: 'Failed to load system constants: $e',
-        ),
-      );
-    }
-  }
-
-  void _onWaitForSystemConstants(
-    WaitForSystemConstants event,
-    Emitter<PaymentState> emit,
-  ) {
-    if (!_isSystemConstantsLoaded) {
-      emit(
-        state.copyWith(
-          status: PaymentStatus.loading,
-          systemConstantsError: 'Waititng for system constants to  load...',
         ),
       );
     }

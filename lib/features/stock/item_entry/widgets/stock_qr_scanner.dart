@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_state.dart';
 import 'package:savvy_stock/features/stock/item_entry/widgets/qr_scanner.dart';
@@ -64,33 +65,26 @@ class _StockItemQRScannerState extends State<StockItemQRScanner> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Barcode',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
-                child: TextFormField(
+                child: CustomTextField(
                   controller: widget.barcodeController,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30.0),
+                  labelText: 'Barcode',
+                  hintText: 'Enter 12 or 13 digit barcode',
+                  prefixIcon: const Icon(Icons.qr_code),
+                  suffixIcon: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF155888),
+                      borderRadius: BorderRadius.circular(30),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                    hintText: 'Enter 12 or 13 digit barcode',
-                    prefixIcon: const Icon(Icons.qr_code),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        widget.barcodeController.clear();
-                      },
+                    child: IconButton(
+                      onPressed: _openScanner,
+                      icon: const Icon(Icons.camera_alt, color: Colors.white),
+                      tooltip: 'Scan Barcode',
                     ),
                   ),
+
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   onChanged: (value) {
@@ -99,18 +93,6 @@ class _StockItemQRScannerState extends State<StockItemQRScanner> {
                       widget.onBarcodeScanned(value);
                     }
                   },
-                ),
-              ),
-              const SizedBox(width: 12),
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF155888),
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: IconButton(
-                  onPressed: _openScanner,
-                  icon: const Icon(Icons.camera_alt, color: Colors.white),
-                  tooltip: 'Scan Barcode',
                 ),
               ),
             ],

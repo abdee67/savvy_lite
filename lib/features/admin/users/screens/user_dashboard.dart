@@ -27,23 +27,69 @@ class UserDashboard extends StatefulWidget {
   State<UserDashboard> createState() => _UserDashboardState();
 }
 
-class _UserDashboardState extends State<UserDashboard> {
+class _UserDashboardState extends State<UserDashboard>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isSelectionMode = false;
   final Map<int, double> _dragOffset = {};
 
+  // Animation controllers for detail panel
+  late AnimationController _detailAnimationController;
+  late Animation<double> _heightAnimation;
+  late Animation<double> _opacityAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  // Detail panel state
+  UserModel? _selectedUser;
+  bool _userDetail = false;
+
   @override
   void initState() {
     super.initState();
+
+    // Initialize animation controller
+    _detailAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    // Set up animations
+    _setupAnimations();
+
     context.read<UserBloc>().add(LoadUsers(widget.authBloc.state.companyId!));
     context.read<RoleBloc>().add(LoadRoles(widget.authBloc.state.companyId!));
+  }
+
+  void _setupAnimations() {
+    _heightAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _detailAnimationController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeInOutCubic),
+      ),
+    );
+
+    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _detailAnimationController,
+        curve: const Interval(0.3, 1.0, curve: Curves.easeIn),
+      ),
+    );
+
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0.0, -0.1), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _detailAnimationController,
+            curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
+          ),
+        );
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     _scrollController.dispose();
+    _detailAnimationController.dispose();
     super.dispose();
   }
 
@@ -67,11 +113,45 @@ class _UserDashboardState extends State<UserDashboard> {
     context.read<UserBloc>().add(SelectUser(user, selected));
   }
 
+  void _showUserDetail(UserModel user) {
+    setState(() {
+      _selectedUser = user;
+      _userDetail = true;
+    });
+
+    // Start the animation
+    _detailAnimationController.forward(from: 0.0);
+  }
+
+  void _hideUserDetail() {
+    // Reverse the animation
+    _detailAnimationController.reverse().then((_) {
+      if (mounted) {
+        setState(() {
+          _userDetail = false;
+          _selectedUser = null;
+        });
+      }
+    });
+  }
+
   void _exportUser(UserModel user) {
     context.read<UserBloc>().add(ExportSingleUser(user));
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('User data exported')));
+  }
+
+  void _callUser(String phone) {
+    // Implement phone call functionality
+    print('Calling: $phone');
+  }
+
+  void _emailUser(String? email) {
+    if (email != null) {
+      // Implement email functionality
+      print('Emailing: $email');
+    }
   }
 
   void _safeDeleteUser(BuildContext context, {int? index}) {
@@ -204,7 +284,7 @@ class _UserDashboardState extends State<UserDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Colors.grey,
       appBar: AppBar(title: const Text('User List')),
       body: BlocConsumer<UserBloc, UserState>(
         listener: (context, state) {
@@ -234,48 +314,43 @@ class _UserDashboardState extends State<UserDashboard> {
           );
         },
       ),
-
-      // Floating Action Button for Add
-      floatingActionButton: _buildFloatingActionButton(context),
     );
   }
 
   Widget _buildSearchBar() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search by username or email...',
+                prefixIcon: const Icon(Iconsax.search_normal, size: 20),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Iconsax.close_circle, size: 20),
+                        onPressed: _clearSearch,
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Colors.grey[50],
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+              onChanged: _handleSearch,
+            ),
           ),
+          const SizedBox(width: 12),
+          _buildFloatingActionButton(context),
         ],
-      ),
-      child: TextField(
-        controller: _searchController,
-        decoration: InputDecoration(
-          hintText: 'Search by name or email...',
-          prefixIcon: const Icon(Iconsax.search_normal, size: 20),
-          suffixIcon: _searchController.text.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Iconsax.close_circle, size: 20),
-                  onPressed: _clearSearch,
-                )
-              : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          filled: true,
-          fillColor: Colors.grey[100],
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
-          ),
-        ),
-        onChanged: _handleSearch,
       ),
     );
   }
@@ -286,7 +361,7 @@ class _UserDashboardState extends State<UserDashboard> {
       height: state.hasSelection ? 60 : 0,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.grey,
         border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
       ),
       child: state.hasSelection
@@ -329,7 +404,7 @@ class _UserDashboardState extends State<UserDashboard> {
   Widget _buildFloatingActionButton(BuildContext context) {
     return BlocBuilder<UserBloc, UserState>(
       builder: (context, state) {
-        return FloatingActionButton(
+        return ElevatedButton(
           onPressed: () {
             if (state.canEdit) {
               // Navigate to edit screen with selected user
@@ -340,7 +415,10 @@ class _UserDashboardState extends State<UserDashboard> {
               _navigateToAddScreen();
             }
           },
-          backgroundColor: Color.fromARGB(255, 28, 66, 146),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color.fromARGB(255, 28, 66, 146),
+            shape: const CircleBorder(),
+          ),
           child: Icon(
             state.canEdit ? Icons.edit : Icons.add,
             color: Colors.white,
@@ -351,6 +429,12 @@ class _UserDashboardState extends State<UserDashboard> {
   }
 
   Widget _buildUserList(UserState state) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenWidth < 700;
+    final cardSpacing = screenHeight * 0.02;
+    final cardWidth = isSmallScreen ? screenWidth * 0.85 : screenWidth * 0.8;
+
     if (state.status == UserStatus.loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -396,24 +480,29 @@ class _UserDashboardState extends State<UserDashboard> {
       );
     }
 
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.all(16),
-      itemCount: state.filteredUsers.length,
-      itemBuilder: (context, index) {
-        final user = state.filteredUsers[index];
-        final isSelected = state.selectedUsers.contains(user);
-        final screenWidth = MediaQuery.of(context).size.width;
-        final useCompactLayout = screenWidth < 700;
+    return Container(
+      width: screenWidth,
+      height: screenHeight,
+      decoration: const BoxDecoration(color: Colors.grey),
+      child: ListView.separated(
+        controller: _scrollController,
+        padding: const EdgeInsets.all(16),
+        itemCount: state.filteredUsers.length,
+        separatorBuilder: (context, index) => SizedBox(height: cardSpacing),
+        itemBuilder: (context, index) {
+          final user = state.filteredUsers[index];
+          final isSelected = state.selectedUsers.contains(user);
 
-        return _buildUserListItem(
-          user,
-          isSelected,
-          state,
-          index,
-          useCompactLayout,
-        );
-      },
+          return _buildUserListItem(
+            user,
+            isSelected,
+            state,
+            index,
+            isSmallScreen,
+            cardWidth,
+          );
+        },
+      ),
     );
   }
 
@@ -423,13 +512,31 @@ class _UserDashboardState extends State<UserDashboard> {
     UserState state,
     int index,
     bool isCompact,
+    double cardWidth,
   ) {
     final offset = _dragOffset[index] ?? 0.0;
+    final isExpanded = _userDetail == true && _selectedUser == user;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    // For responsiveness:
+    final collapsedHeight = isCompact
+        ? screenHeight *
+              0.18 // phones
+        : screenHeight * 0.14; // tablets / wide screens
+
+    final expandedHeight = isCompact
+        ? screenHeight * 0.45
+        : screenHeight * 0.35;
+    final collapsedWidth = isCompact ? screenWidth * 0.92 : screenWidth * 0.8;
 
     return GestureDetector(
       onTap: () {
         if (_isSelectionMode) {
           _toggleUserSelection(user, !isSelected);
+        } else {
+          // Single tap shows detail when not in selection mode
+          _showUserDetail(user);
         }
       },
       onLongPress: () {
@@ -444,57 +551,341 @@ class _UserDashboardState extends State<UserDashboard> {
           _onHorizontalDragUpdate(index, details),
       onHorizontalDragEnd: (details) =>
           _onHorizontalDragEnd(context, index, details),
-      child: Stack(
-        children: [
-          // Background (delete indicator)
-          Positioned.fill(
-            child: Container(
-              alignment: Alignment.centerRight,
-              decoration: BoxDecoration(
-                color: Colors.amber, // Changed to red for delete action
-                borderRadius: BorderRadius.circular(16),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              margin: const EdgeInsets.only(bottom: 2),
-              child: const Icon(Icons.delete, color: Colors.white, size: 28),
-            ),
-          ),
+      onDoubleTap: () => _showUserDetail(user),
+      child: AnimatedBuilder(
+        animation: _scrollController,
+        builder: (context, child) => Container(
+          transform: Matrix4.translationValues(offset, 0, 0),
+          width: collapsedWidth,
+          height: isExpanded ? expandedHeight : collapsedHeight,
+          child: Stack(
+            children: [
+              // 1. DELETE INDICATOR - Should be FIRST in Stack
+              if (!isExpanded) // Only show delete indicator when not expanded
+                Positioned.fill(
+                  child: Container(
+                    alignment: Alignment.centerRight,
+                    decoration: BoxDecoration(
+                      color: Colors.amber,
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    margin: const EdgeInsets.only(bottom: 2),
+                    child: const Icon(
+                      Icons.delete,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                ),
 
-          // user card
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            transform: Matrix4.translationValues(offset, 0, 0),
-            curve: Curves.easeOut,
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: isSelected ? Colors.blue[50] : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+              // 2. BACKGROUND LAYERS (only when expanded)
+              if (isExpanded) ...[
+                // Yellow background
+                Positioned.fill(
+                  top: 47,
+                  child: Container(
+                    width: collapsedWidth,
+                    height: expandedHeight,
+                    decoration: ShapeDecoration(
+                      color: const Color(0xFFFDD105), // Fixed yellow color
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                  ),
                 ),
               ],
-              border: Border.all(
-                color: isSelected
-                    ? const Color.fromARGB(255, 28, 66, 146)
-                    : Colors.transparent,
-                width: 2,
-              ),
-            ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.all(16),
-              leading: _buildUserAvatar(user, isSelected, isCompact),
-              title: Text(
-                '${user.userName}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+
+              // 3. USER CARD - Should come AFTER delete indicator
+              AnimatedContainer(
+                padding: const EdgeInsets.only(top: 5, left: 10, right: 10),
+                width: collapsedWidth,
+                height: collapsedHeight,
+                duration: const Duration(milliseconds: 400),
+                transform: Matrix4.translationValues(offset, 0, 0),
+                curve: Curves.easeInOut,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.blue[50] : Colors.white,
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: isSelected
+                        ? const Color.fromARGB(255, 28, 66, 146)
+                        : Colors.transparent,
+                    width: 2,
+                  ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // User Avatar
+                        _buildUserAvatar(user, isSelected, isCompact),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user.userName!,
+                                style: TextStyle(
+                                  color: const Color(0xFF373737),
+                                  fontSize: isCompact ? 20 : 24,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              Text(
+                                user.userEmail!,
+                                style: TextStyle(
+                                  color: const Color(0xFF887F7F),
+                                  fontSize: isCompact ? 12 : 14,
+                                  fontStyle: FontStyle.italic,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w300,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // User status badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.green[200]!),
+                          ),
+                          child: Text(
+                            'System User',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.green[800],
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        // See More / See Less button
+                        ElevatedButton(
+                          onPressed: () => isExpanded
+                              ? _hideUserDetail()
+                              : _showUserDetail(user),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF145888),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          child: Text(
+                            isExpanded ? 'See Less' : 'See More',
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: isCompact ? 10 : 12,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              subtitle: _buildUserSubtitle(user),
-              trailing: _buildUserTrailing(isSelected),
+
+              // 4. ANIMATED EXPANDED CONTENT
+              if (isExpanded)
+                Positioned(
+                  top: collapsedHeight + 10,
+                  left: 20,
+                  right: 20,
+                  child: AnimatedBuilder(
+                    animation: _detailAnimationController,
+                    builder: (context, child) {
+                      final currentHeight =
+                          _heightAnimation.value *
+                          (expandedHeight - collapsedHeight - 20);
+                      final currentOpacity = _opacityAnimation.value;
+
+                      return SlideTransition(
+                        position: _slideAnimation,
+                        child: Container(
+                          height: currentHeight > 0 ? currentHeight : 0,
+                          decoration: BoxDecoration(color: Colors.transparent),
+                          child: Opacity(opacity: currentOpacity, child: child),
+                        ),
+                      );
+                    },
+                    child: _buildUserDetailContent(user, isCompact),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUserDetailContent(UserModel user, bool isCompact) {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        children: [
+          _buildUserInfoItem(
+            'User ID : ',
+            user.employeesId.toString(),
+            Iconsax.card,
+            isCompact,
+          ),
+          _buildUserInfoItem(
+            'Username : ',
+            user.userName!,
+            Iconsax.profile_circle,
+            isCompact,
+          ),
+          _buildUserInfoItem(
+            'Email : ',
+            user.userEmail!,
+            Iconsax.sms,
+            isCompact,
+          ),
+          _buildUserInfoItem(
+            'Status : ',
+            user.status!,
+            Iconsax.verify,
+            isCompact,
+          ),
+          _buildUserInfoItem(
+            'User Type : ',
+            user.type!,
+            Iconsax.user,
+            isCompact,
+          ),
+          // Action buttons row
+          Padding(
+            padding: const EdgeInsets.only(top: 16, bottom: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildActionButton(
+                  Iconsax.call,
+                  'Call',
+                  () => _callUser(user.id.toString()),
+                  isCompact,
+                ),
+                _buildActionButton(
+                  Iconsax.sms,
+                  'Email',
+                  () => _emailUser(user.userEmail ?? ''),
+                  isCompact,
+                ),
+                _buildActionButton(
+                  Iconsax.export,
+                  'Export',
+                  () => _exportUser(user),
+                  isCompact,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton(
+    IconData icon,
+    String label,
+    VoidCallback onPressed,
+    bool isCompact,
+  ) {
+    return Column(
+      children: [
+        IconButton(
+          icon: Icon(icon, size: isCompact ? 20 : 24),
+          onPressed: onPressed,
+          style: IconButton.styleFrom(
+            backgroundColor: const Color(0xFF145888),
+            foregroundColor: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: isCompact ? 10 : 12,
+            color: const Color(0xFF373737),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUserInfoItem(
+    String label,
+    String value,
+    IconData icon,
+    bool isCompact,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 16, color: Colors.grey[600]),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: label,
+                    style: const TextStyle(
+                      color: Color(0xFF373737),
+                      fontSize: 13,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  TextSpan(
+                    text: value,
+                    style: const TextStyle(
+                      color: Color(0xFF373737),
+                      fontSize: 13,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -504,7 +895,7 @@ class _UserDashboardState extends State<UserDashboard> {
 
   // Separate method for user avatar
   Widget _buildUserAvatar(UserModel user, bool isSelected, bool isCompact) {
-    // Define colors based on user status
+    // Define colors based on selection
     final Color backgroundColor;
     final Color iconColor;
 
@@ -542,73 +933,10 @@ class _UserDashboardState extends State<UserDashboard> {
               color: Colors.white,
               shape: BoxShape.circle,
             ),
-            child: Icon(Iconsax.verify, size: 12, color: Colors.green),
+            child: const Icon(Iconsax.verify, size: 12, color: Colors.green),
           ),
         ),
       ],
     );
-  }
-
-  // Separate method for user subtitle
-  Widget _buildUserSubtitle(UserModel user) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Show position/title if available
-        if (user.branch != null)
-          Text(
-            user.branch!.toString(),
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        Text(
-          user.id.toString(),
-          style: const TextStyle(fontSize: 12),
-          overflow: TextOverflow.ellipsis,
-        ),
-
-        // Contact information
-        Text(
-          '📧 ${user.userEmail}',
-          style: const TextStyle(fontSize: 12),
-          overflow: TextOverflow.ellipsis,
-        ),
-
-        // User status badge
-        Container(
-          margin: const EdgeInsets.only(top: 4),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(
-            color: Colors.green[50],
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.green[200]!),
-          ),
-          child: Text(
-            'System User',
-            style: TextStyle(
-              fontSize: 10,
-              color: Colors.green[800],
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // Separate method for trailing widget
-  Widget _buildUserTrailing(bool isSelected) {
-    if (isSelected) {
-      return const Icon(
-        Iconsax.tick_circle,
-        color: Color.fromARGB(255, 28, 66, 146),
-      );
-    }
-
-    // Show user type indicator when not selected
-    return Icon(Iconsax.user, color: Colors.green, size: 20);
   }
 }

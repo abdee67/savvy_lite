@@ -19,22 +19,68 @@ class RoleDashboard extends StatefulWidget {
   State<RoleDashboard> createState() => _RoleDashboardState();
 }
 
-class _RoleDashboardState extends State<RoleDashboard> {
+class _RoleDashboardState extends State<RoleDashboard>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isSelectionMode = false;
   final Map<int, double> _dragOffset = {};
 
+  // Animation controllers for detail panel
+  late AnimationController _detailAnimationController;
+  late Animation<double> _heightAnimation;
+  late Animation<double> _opacityAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  // Detail panel state
+  Role? _selectedRole;
+  bool _roleDetail = false;
+
   @override
   void initState() {
     super.initState();
+
+    // Initialize animation controller
+    _detailAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    // Set up animations
+    _setupAnimations();
+
     context.read<RoleBloc>().add(LoadRoles(widget.authBloc.state.companyId!));
+  }
+
+  void _setupAnimations() {
+    _heightAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _detailAnimationController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeInOutCubic),
+      ),
+    );
+
+    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _detailAnimationController,
+        curve: const Interval(0.3, 1.0, curve: Curves.easeIn),
+      ),
+    );
+
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0.0, -0.1), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _detailAnimationController,
+            curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
+          ),
+        );
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     _scrollController.dispose();
+    _detailAnimationController.dispose();
     super.dispose();
   }
 
@@ -49,6 +95,28 @@ class _RoleDashboardState extends State<RoleDashboard> {
 
   void _toggleRoleSelection(Role role, bool selected) {
     context.read<RoleBloc>().add(SelectRole(role, selected));
+  }
+
+  void _showRoleDetail(Role role) {
+    setState(() {
+      _selectedRole = role;
+      _roleDetail = true;
+    });
+
+    // Start the animation
+    _detailAnimationController.forward(from: 0.0);
+  }
+
+  void _hideRoleDetail() {
+    // Reverse the animation
+    _detailAnimationController.reverse().then((_) {
+      if (mounted) {
+        setState(() {
+          _roleDetail = false;
+          _selectedRole = null;
+        });
+      }
+    });
   }
 
   void _clearSelection() {
@@ -148,7 +216,7 @@ class _RoleDashboardState extends State<RoleDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Colors.grey,
       appBar: AppBar(
         title: const Text('Role Management'),
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
@@ -174,22 +242,59 @@ class _RoleDashboardState extends State<RoleDashboard> {
           }
         },
         builder: (context, state) {
-          return Column(
+          return Stack(
             children: [
-              // Search Bar
-              _buildSearchBar(),
-              _buildActionButtons(state),
+              Column(
+                children: [
+                  // Search Bar
+                  _buildSearchBar(),
+                  _buildActionButtons(state),
 
-              // Role List
-              Expanded(child: _buildRoleList(state)),
+                  // Role List
+                  Expanded(child: _buildRoleList(state)),
+                ],
+              ),
             ],
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _navigateToAddScreen,
-        backgroundColor: const Color.fromARGB(255, 28, 66, 146),
-        child: const Icon(Icons.add, color: Colors.white),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search by role name or description...',
+                prefixIcon: const Icon(Iconsax.search_normal, size: 20),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Iconsax.close_circle, size: 20),
+                        onPressed: _clearSearch,
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Colors.grey[100],
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+              onChanged: _handleSearch,
+            ),
+          ),
+          const SizedBox(width: 12),
+          _buildFloatingActionButton(context),
+        ],
       ),
     );
   }
@@ -200,7 +305,7 @@ class _RoleDashboardState extends State<RoleDashboard> {
       height: state.hasSelection ? 60 : 0,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.grey,
         border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
       ),
       child: state.hasSelection
@@ -240,47 +345,40 @@ class _RoleDashboardState extends State<RoleDashboard> {
     );
   }
 
-  Widget _buildSearchBar() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+  Widget _buildFloatingActionButton(BuildContext context) {
+    return BlocBuilder<RoleBloc, RoleState>(
+      builder: (context, state) {
+        return ElevatedButton(
+          onPressed: () {
+            if (state.canEdit) {
+              // Navigate to edit screen with selected role
+              final role = state.selectedRoles.first;
+              _navigateToEditScreen(role);
+            } else {
+              // Navigate to add screen
+              _navigateToAddScreen();
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color.fromARGB(255, 28, 66, 146),
+            shape: const CircleBorder(),
           ),
-        ],
-      ),
-      child: TextField(
-        controller: _searchController,
-        decoration: InputDecoration(
-          hintText: 'Search by role name or description...',
-          prefixIcon: const Icon(Iconsax.search_normal, size: 20),
-          suffixIcon: _searchController.text.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Iconsax.close_circle, size: 20),
-                  onPressed: _clearSearch,
-                )
-              : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
+          child: Icon(
+            state.canEdit ? Icons.edit : Icons.add,
+            color: Colors.white,
           ),
-          filled: true,
-          fillColor: Colors.grey[100],
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
-          ),
-        ),
-        onChanged: _handleSearch,
-      ),
+        );
+      },
     );
   }
 
   Widget _buildRoleList(RoleState state) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenWidth < 700;
+    final cardSpacing = screenHeight * 0.02;
+    final cardWidth = isSmallScreen ? screenWidth * 0.85 : screenWidth * 0.8;
+
     if (state.status == RoleStatus.loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -326,40 +424,63 @@ class _RoleDashboardState extends State<RoleDashboard> {
       );
     }
 
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.all(16),
-      itemCount: state.filteredRoles.length,
-      itemBuilder: (context, index) {
-        final role = state.filteredRoles[index];
-        final isSelected = state.selectedRoles.contains(role);
-        final screenWidth = MediaQuery.of(context).size.width;
-        final useCompactLayout = screenWidth < 700;
+    return Container(
+      width: screenWidth,
+      height: screenHeight,
+      decoration: const BoxDecoration(color: Colors.grey),
+      child: ListView.separated(
+        controller: _scrollController,
+        padding: const EdgeInsets.all(16),
+        itemCount: state.filteredRoles.length,
+        separatorBuilder: (context, index) => SizedBox(height: cardSpacing),
+        itemBuilder: (context, index) {
+          final role = state.filteredRoles[index];
+          final isSelected = state.selectedRoles.contains(role);
 
-        return _buildRoleListItem(
-          role,
-          state,
-          isSelected,
-          index,
-          useCompactLayout,
-        );
-      },
+          return _buildRoleListItem(
+            role,
+            isSelected,
+            state,
+            index,
+            isSmallScreen,
+            cardWidth,
+          );
+        },
+      ),
     );
   }
 
   Widget _buildRoleListItem(
     Role role,
-    RoleState state,
     bool isSelected,
+    RoleState state,
     int index,
     bool isCompact,
+    double cardWidth,
   ) {
     final offset = _dragOffset[index] ?? 0.0;
+    final isExpanded = _roleDetail == true && _selectedRole == role;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    // For responsiveness:
+    final collapsedHeight = isCompact
+        ? screenHeight *
+              0.18 // phones
+        : screenHeight * 0.14; // tablets / wide screens
+
+    final expandedHeight = isCompact
+        ? screenHeight * 0.45
+        : screenHeight * 0.35;
+    final collapsedWidth = isCompact ? screenWidth * 0.92 : screenWidth * 0.8;
 
     return GestureDetector(
       onTap: () {
         if (_isSelectionMode) {
           _toggleRoleSelection(role, !isSelected);
+        } else {
+          // Single tap shows detail when not in selection mode
+          _showRoleDetail(role);
         }
       },
       onLongPress: () {
@@ -370,62 +491,378 @@ class _RoleDashboardState extends State<RoleDashboard> {
         }
         _toggleRoleSelection(role, !isSelected);
       },
-      onDoubleTap: () => _navigateToEditScreen(role),
+      onDoubleTap: () => _showRoleDetail(role),
       onHorizontalDragUpdate: (details) =>
           _onHorizontalDragUpdate(index, details),
       onHorizontalDragEnd: (details) =>
           _onHorizontalDragEnd(context, index, details),
-      child: Stack(
-        children: [
-          // Background (delete indicator)
-          Positioned.fill(
-            child: Container(
-              alignment: Alignment.centerRight,
-              decoration: BoxDecoration(
-                color: Colors.amber,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              margin: const EdgeInsets.only(bottom: 2),
-              child: const Icon(Icons.delete, color: Colors.white, size: 28),
-            ),
-          ),
+      child: AnimatedBuilder(
+        animation: _scrollController,
+        builder: (context, child) => Container(
+          transform: Matrix4.translationValues(offset, 0, 0),
+          width: collapsedWidth,
+          height: isExpanded ? expandedHeight : collapsedHeight,
+          child: Stack(
+            children: [
+              // 1. DELETE INDICATOR - Should be FIRST in Stack
+              if (!isExpanded) // Only show delete indicator when not expanded
+                Positioned.fill(
+                  child: Container(
+                    alignment: Alignment.centerRight,
+                    decoration: BoxDecoration(
+                      color: Colors.amber,
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    margin: const EdgeInsets.only(bottom: 2),
+                    child: const Icon(
+                      Icons.delete,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                ),
 
-          // Role card
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            transform: Matrix4.translationValues(offset, 0, 0),
-            curve: Curves.easeOut,
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: isSelected ? Colors.blue[50] : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+              // 2. BACKGROUND LAYERS (only when expanded)
+              if (isExpanded) ...[
+                // Yellow background
+                Positioned.fill(
+                  top: 47,
+                  child: Container(
+                    width: collapsedWidth,
+                    height: expandedHeight,
+                    decoration: ShapeDecoration(
+                      color: const Color(0xFFFDD105), // Fixed yellow color
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                  ),
                 ),
               ],
-              border: Border.all(
-                color: isSelected
-                    ? const Color.fromARGB(255, 28, 66, 146)
-                    : Colors.transparent,
-                width: 2,
-              ),
-            ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.all(16),
-              leading: _buildRoleAvatar(role, isSelected, isCompact),
-              title: Text(
-                role.name,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+
+              // 3. ROLE CARD - Should come AFTER delete indicator
+              AnimatedContainer(
+                padding: const EdgeInsets.only(top: 10, left: 10, right: 10),
+                width: collapsedWidth,
+                height: collapsedHeight,
+                duration: const Duration(milliseconds: 400),
+                transform: Matrix4.translationValues(offset, 0, 0),
+                curve: Curves.easeInOut,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.blue[50] : Colors.white,
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: isSelected
+                        ? const Color(0xFF145888)
+                        : Colors.transparent,
+                    width: 2,
+                  ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Role Avatar
+                        _buildRoleAvatar(role, isSelected, isCompact),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                role.name,
+                                style: TextStyle(
+                                  color: const Color(0xFF373737),
+                                  fontSize: isCompact ? 20 : 24,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              Text(
+                                role.description,
+                                style: TextStyle(
+                                  color: const Color(0xFF887F7F),
+                                  fontSize: isCompact ? 12 : 14,
+                                  fontStyle: FontStyle.italic,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w300,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Privilege count badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.blue[200]!),
+                          ),
+                          child: Text(
+                            '${role.privileges.length} privileges',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: const Color(0xFF145888),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        // See More / See Less button
+                        ElevatedButton(
+                          onPressed: () => isExpanded
+                              ? _hideRoleDetail()
+                              : _showRoleDetail(role),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF145888),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          child: Text(
+                            isExpanded ? 'See Less' : 'See More',
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: isCompact ? 10 : 12,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              subtitle: _buildRoleSubtitle(role),
-              trailing: _buildRoleTrailing(role),
+
+              // 4. ANIMATED EXPANDED CONTENT
+              if (isExpanded)
+                Positioned(
+                  top: collapsedHeight + 10,
+                  left: 20,
+                  right: 20,
+                  child: AnimatedBuilder(
+                    animation: _detailAnimationController,
+                    builder: (context, child) {
+                      final currentHeight =
+                          _heightAnimation.value *
+                          (expandedHeight - collapsedHeight - 20);
+                      final currentOpacity = _opacityAnimation.value;
+
+                      return SlideTransition(
+                        position: _slideAnimation,
+                        child: Container(
+                          height: currentHeight > 0 ? currentHeight : 0,
+                          decoration: BoxDecoration(color: Colors.transparent),
+                          child: Opacity(opacity: currentOpacity, child: child),
+                        ),
+                      );
+                    },
+                    child: _buildRoleDetailContent(role, isCompact),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRoleDetailContent(Role role, bool isCompact) {
+    // Get up to 5 privileges
+    final displayedPrivileges = role.privileges.take(5).toList();
+    final hasMorePrivileges = role.privileges.length > 5;
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        children: [
+          _buildRoleInfoItem(
+            'Role ID : ',
+            role.id.toString(),
+            Iconsax.card,
+            isCompact,
+          ),
+          _buildRoleInfoItem(
+            'Role Name : ',
+            role.name,
+            Iconsax.user_tag,
+            isCompact,
+          ),
+          _buildRoleInfoItem(
+            'Description : ',
+            role.description,
+            Iconsax.document_text,
+            isCompact,
+          ),
+          _buildRoleInfoItem(
+            'Total Privileges : ',
+            '${role.privileges.length}',
+            Iconsax.security_user,
+            isCompact,
+          ),
+
+          // Privileges section
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Iconsax.shield_tick,
+                    size: 16,
+                    color: Colors.grey,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Privileges : ',
+                        style: TextStyle(
+                          color: Color(0xFF373737),
+                          fontSize: 13,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // Display privileges as chips
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: [
+                          ...displayedPrivileges.map(
+                            (privilege) => Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.blue[50],
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.blue[200]!),
+                              ),
+                              child: Text(
+                                privilege.name,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.blue[800],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (hasMorePrivileges)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.orange[50],
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.orange[200]!),
+                              ),
+                              child: Text(
+                                '+${role.privileges.length - 5} more',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.orange[800],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRoleInfoItem(
+    String label,
+    String value,
+    IconData icon,
+    bool isCompact,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 16, color: Colors.grey[600]),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: label,
+                    style: const TextStyle(
+                      color: Color(0xFF373737),
+                      fontSize: 13,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  TextSpan(
+                    text: value,
+                    style: const TextStyle(
+                      color: Color(0xFF373737),
+                      fontSize: 13,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -434,55 +871,26 @@ class _RoleDashboardState extends State<RoleDashboard> {
   }
 
   Widget _buildRoleAvatar(Role role, bool isSelected, bool isCompact) {
+    final Color backgroundColor;
+    final Color iconColor;
+
+    if (isSelected) {
+      backgroundColor = const Color.fromARGB(255, 28, 66, 146);
+      iconColor = Colors.white;
+    } else {
+      backgroundColor = Colors.grey[200]!;
+      iconColor = Colors.grey[600]!;
+    }
+
     return Container(
       width: 48,
       height: 48,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-        ),
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: backgroundColor, shape: BoxShape.circle),
       child: Icon(
         Iconsax.user_tag,
-        color: Colors.white,
+        color: iconColor,
         size: isCompact ? 20 : 24,
       ),
     );
-  }
-
-  Widget _buildRoleSubtitle(Role role) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          role.description,
-          style: const TextStyle(fontSize: 14),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(
-            color: Colors.blue[50],
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.blue[200]!),
-          ),
-          child: Text(
-            '${role.privileges.length} privileges',
-            style: TextStyle(
-              fontSize: 10,
-              color: Colors.blue[800],
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRoleTrailing(Role role) {
-    return const Icon(Iconsax.arrow_right_3, color: Colors.grey, size: 20);
   }
 }

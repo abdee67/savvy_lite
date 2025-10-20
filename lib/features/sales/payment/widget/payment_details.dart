@@ -23,8 +23,6 @@ class PaymentDetails extends StatefulWidget {
 class _PaymentDetailsState extends State<PaymentDetails> {
   final NumberFormat _currencyFormat = NumberFormat('#,##0.00');
   final TextEditingController _discountController = TextEditingController();
-  final SystemConstantsService _systemConstantsService =
-      getIt<SystemConstantsService>();
   bool _discountEnabled = false;
   bool _systemConstantsLoaded = false;
 
@@ -42,9 +40,6 @@ class _PaymentDetailsState extends State<PaymentDetails> {
         context.read<SystemConstantBloc>().add(
           LoadSystemConstants(widget.authBloc.state.companyId!),
         );
-      } else {
-        // Wait for system constants
-        context.read<PaymentBloc>().add(const WaitForSystemConstants());
       }
     });
   }
@@ -71,9 +66,6 @@ class _PaymentDetailsState extends State<PaymentDetails> {
         _systemConstantsLoaded = true;
       });
       context.read<PaymentBloc>().add(const LoadFeeSystemConstants());
-    } else {
-      // Wait for system constants
-      context.read<PaymentBloc>().add(const WaitForSystemConstants());
     }
   }
 
@@ -156,7 +148,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline, color: Colors.orange, size: 48),
+          Icon(Icons.error_outline, color: Colors.amber, size: 48),
           SizedBox(height: 16),
           Text(
             'Configuration Error',
@@ -165,7 +157,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
           SizedBox(height: 8),
           Text(
             error,
-            style: TextStyle(color: Colors.orange),
+            style: TextStyle(color: Colors.amber),
             textAlign: TextAlign.center,
           ),
           SizedBox(height: 16),
@@ -188,24 +180,12 @@ class _PaymentDetailsState extends State<PaymentDetails> {
 
     return SingleChildScrollView(
       child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          color: Theme.of(context).colorScheme.surface,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
         padding: EdgeInsets.all(padding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (state.systemConstantsError != null)
               _buildSystemConstantsWarning(state.systemConstantsError!),
-            _buildSectionTitle('Payment Details', context),
             const SizedBox(height: 16),
             _buildReadOnlyField(
               context,
@@ -213,9 +193,9 @@ class _PaymentDetailsState extends State<PaymentDetails> {
               _currencyFormat.format(state.subtotal),
               icon: Icons.shopping_cart,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
             _buildDiscountField(context, state, isSmallScreen),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             _buildWithholdingField(
               context,
               state,
@@ -224,7 +204,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
               state.withholdingInitial,
               isSmallScreen,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             _buildTaxField(context, state, state.vatRate),
             const SizedBox(height: 16),
             const Divider(height: 1),
@@ -243,18 +223,18 @@ class _PaymentDetailsState extends State<PaymentDetails> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.1),
+        color: Colors.amber.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.orange),
+        border: Border.all(color: Colors.amber),
       ),
       child: Row(
         children: [
-          const Icon(Icons.warning, color: Colors.orange, size: 20),
+          const Icon(Icons.warning, color: Colors.amber, size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               error,
-              style: const TextStyle(color: Colors.orange, fontSize: 12),
+              style: const TextStyle(color: Colors.amber, fontSize: 12),
             ),
           ),
         ],
@@ -269,7 +249,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
   ) {
     return _buildReadOnlyField(
       context,
-      'Tax (${(vatRate).toStringAsFixed(1)}%)',
+      'Tax (${vatRate.toStringAsFixed(1)}%)',
       _currencyFormat.format(state.taxAmount),
       icon: Icons.receipt,
       subtitle: 'VAT rate from system configuration',
@@ -322,66 +302,110 @@ class _PaymentDetailsState extends State<PaymentDetails> {
       _discountController.text = state.discountAmount.toString();
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+    final theme = Theme.of(context);
+    final borderColor = _discountEnabled
+        ? theme.colorScheme.primary
+        : const Color(0xFF1C1C1C);
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _discountEnabled = !_discountEnabled;
+          if (!_discountEnabled) {
+            _discountController.clear();
+            _updateTaxAndFees(discountAmount: 0);
+          }
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        height: 45,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: borderColor, width: 1),
+        ),
+        child: Row(
           children: [
+            const Icon(Icons.discount),
+
+            /// Discount text field (editable only when enabled)
             Expanded(
-              child: Text(
-                'Discount',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+              child: IgnorePointer(
+                ignoring: !_discountEnabled,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 200),
+                  opacity: _discountEnabled ? 1.0 : 0.6,
+                  child: TextField(
+                    controller: _discountController,
+                    textAlign: TextAlign.center,
+                    enabled: _discountEnabled,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      fillColor: Colors.grey[100],
+                      border: InputBorder.none,
+                      hintText: _discountEnabled
+                          ? 'Discount(0.00)'
+                          : 'Discount(----)',
+                      hintStyle: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    onChanged: (value) {
+                      _updateTaxAndFees(
+                        discountAmount: double.tryParse(value) ?? 0,
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
-            SizedBox(width: isSmallScreen ? 4 : 8),
-            Text(
-              _discountEnabled ? 'Enabled' : 'Disabled',
-              style: TextStyle(
+
+            /// Animated toggle knob
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              width: 36,
+              height: 20,
+              margin: const EdgeInsets.only(left: 10),
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                border: Border.all(color: borderColor, width: 1),
+                borderRadius: BorderRadius.circular(12),
                 color: _discountEnabled
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                fontSize: isSmallScreen ? 12 : 14,
+                    ? theme.colorScheme.primary
+                    : Colors.grey[100],
               ),
-            ),
-            SizedBox(width: isSmallScreen ? 4 : 8),
-            Transform.scale(
-              scale: isSmallScreen ? 0.8 : 1.0,
-              child: Switch(
-                value: _discountEnabled,
-                onChanged: (enabled) {
-                  setState(() {
-                    _discountEnabled = enabled;
-                    if (!enabled) {
-                      _discountController.clear();
-                      _updateTaxAndFees(discountAmount: 0);
-                    }
-                  });
-                },
-                activeThumbColor: Theme.of(context).colorScheme.primary,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              child: AnimatedAlign(
+                duration: const Duration(milliseconds: 250),
+                alignment: _discountEnabled
+                    ? Alignment.centerRight
+                    : Alignment.centerLeft,
+                curve: Curves.easeInOut,
+                child: Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _discountEnabled ? Colors.white : Colors.grey[700],
+                  ),
+                ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 200),
-          child: _discountEnabled
-              ? CustomTextField(
-                  controller: _discountController,
-                  labelText: 'Enter discount amount',
-                  enabled: _discountEnabled,
-                  keyboardType: TextInputType.numberWithOptions(decimal: true),
-                  onChanged: (value) => _updateTaxAndFees(
-                    discountAmount: double.tryParse(value) ?? 0,
-                  ),
-                  prefixIcon: const Icon(Icons.discount, size: 20),
-                )
-              : const SizedBox.shrink(),
-        ),
-      ],
+      ),
     );
   }
 
@@ -393,153 +417,156 @@ class _PaymentDetailsState extends State<PaymentDetails> {
     double withholdingInitial,
     bool isSmallScreen,
   ) {
+    final theme = Theme.of(context);
+    final isWithholdingEnabled = state.isWithholdingEnabled;
     final isWithholdingApplied =
         state.canApplyWithholding && state.isWithholdingEnabled;
-    final withholdingAmount = _currencyFormat.format(state.withholdingAmount);
-    final withholdingText = isWithholdingApplied
-        ? '$withholdingAmount ($withholdingRate%)'
-        : state.isWithholdingEnabled && !canApplyWithholding
+
+    final borderColor = isWithholdingApplied
+        ? theme.colorScheme.primary
+        : isWithholdingEnabled
+        ? theme.colorScheme.primary
+        : const Color(0xFF1C1C1C);
+
+    final withholdingAmountText = isWithholdingApplied
+        ? _currencyFormat.format(state.withholdingAmount)
+        : '----';
+
+    final withholdingDisplayText = isWithholdingApplied
+        ? '$withholdingAmountText (${withholdingRate.toStringAsFixed(1)}%)'
+        : isWithholdingEnabled && !canApplyWithholding
         ? 'Not applicable'
-        : '0.00';
+        : 'Withholding(----)';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Withholding Tax',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+        GestureDetector(
+          onTap: () {
+            context.read<PaymentBloc>().add(
+              UpdateTaxAndFees(
+                subtotal: state.subtotal,
+                discountAmount: state.discountAmount,
+                isWithholdingEnabled: !isWithholdingEnabled,
               ),
+            );
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            height: 45,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(color: borderColor, width: 1),
             ),
-            SizedBox(width: isSmallScreen ? 4 : 8),
-            Text(
-              isWithholdingApplied
-                  ? 'Applied'
-                  : state.isWithholdingEnabled
-                  ? canApplyWithholding
-                        ? 'Applied'
-                        : 'Will apply'
-                  : 'Disabled',
-              style: TextStyle(
-                color: isWithholdingApplied
-                    ? Theme.of(context).colorScheme.primary
-                    : state.isWithholdingEnabled
-                    ? Colors.orange
-                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                fontSize: isSmallScreen ? 12 : 14,
-              ),
-            ),
-            SizedBox(width: isSmallScreen ? 4 : 8),
-            Transform.scale(
-              scale: isSmallScreen ? 0.8 : 1.0,
-              child: Switch(
-                value: state.isWithholdingEnabled,
-                onChanged: (enabled) {
-                  context.read<PaymentBloc>().add(
-                    UpdateTaxAndFees(
-                      subtotal: state.subtotal,
-                      discountAmount: state.discountAmount,
-                      isWithholdingEnabled: enabled,
-                    ),
-                  );
-                },
-                activeThumbColor: isWithholdingApplied
-                    ? Theme.of(context).colorScheme.primary
-                    : Colors.orange,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(
-            color: isWithholdingApplied
-                ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                : state.isWithholdingEnabled
-                ? Colors.orange.withOpacity(0.1)
-                : Theme.of(
-                    context,
-                  ).colorScheme.surfaceContainerHighest.withOpacity(0.5),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isWithholdingApplied
-                  ? Theme.of(context).colorScheme.primary.withOpacity(0.3)
-                  : state.isWithholdingEnabled
-                  ? Colors.orange.withOpacity(0.3)
-                  : Theme.of(context).colorScheme.outline.withOpacity(0.3),
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.account_balance,
-                size: 20,
-                color: isWithholdingApplied
-                    ? Theme.of(context).colorScheme.primary
-                    : state.isWithholdingEnabled
-                    ? Colors.orange
-                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      withholdingText,
-                      style: TextStyle(
-                        fontSize: isSmallScreen ? 14 : 16,
-                        color: isWithholdingApplied
-                            ? Theme.of(context).colorScheme.primary
-                            : state.isWithholdingEnabled
-                            ? Colors.orange
-                            : Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withOpacity(0.7),
-                        fontWeight: isWithholdingApplied
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
-                    ),
-                    if (isWithholdingApplied)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4.0),
-                        child: Text(
-                          '${(state.withholdingRate).toStringAsFixed(1)}% of subtotal',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.primary.withOpacity(0.7),
+            child: Row(
+              children: [
+                const Icon(Icons.account_balance, size: 20),
+
+                /// Withholding display (not editable but reactive)
+                Expanded(
+                  child: IgnorePointer(
+                    ignoring: !isWithholdingEnabled,
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 200),
+                      opacity: isWithholdingEnabled ? 1.0 : 0.6,
+                      child: TextField(
+                        enabled: isWithholdingEnabled,
+                        controller: TextEditingController(
+                          text: withholdingDisplayText,
+                        ),
+                        readOnly: true,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          fillColor: Colors.grey[100],
+                          border: InputBorder.none,
+                          hintText: 'Withholding(----)',
+                          hintStyle: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
-                  ],
+                    ),
+                  ),
                 ),
-              ),
-            ],
+
+                /// Animated toggle knob (matches discount field)
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeInOut,
+                  width: 36,
+                  height: 20,
+                  margin: const EdgeInsets.only(left: 10),
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: borderColor, width: 1),
+                    borderRadius: BorderRadius.circular(12),
+                    color: isWithholdingApplied
+                        ? theme.colorScheme.primary
+                        : isWithholdingEnabled
+                        ? theme.colorScheme.primary
+                        : Colors.grey[100],
+                  ),
+                  child: AnimatedAlign(
+                    duration: const Duration(milliseconds: 250),
+                    alignment: isWithholdingEnabled
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
+                    curve: Curves.easeInOut,
+                    child: Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isWithholdingEnabled
+                            ? Colors.white
+                            : Colors.grey[700],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        if (state.isWithholdingEnabled)
+
+        const SizedBox(height: 8),
+
+        /// Status text below the field
+        Text(
+          isWithholdingApplied
+              ? 'Withholding tax is applied to this transaction'
+              : isWithholdingEnabled && !canApplyWithholding
+              ? 'Subtotal must exceed \$${withholdingInitial.toStringAsFixed(2)} to apply withholding'
+              : 'Withholding tax is disabled',
+          style: TextStyle(
+            fontSize: 12,
+            color: isWithholdingApplied
+                ? theme.colorScheme.primary
+                : isWithholdingEnabled && !canApplyWithholding
+                ? Colors.amber[800]
+                : theme.colorScheme.onSurface.withOpacity(0.6),
+            fontStyle: isWithholdingApplied || isWithholdingEnabled
+                ? FontStyle.italic
+                : FontStyle.normal,
+          ),
+        ),
+
+        if (isWithholdingApplied)
           Padding(
-            padding: const EdgeInsets.only(top: 8.0),
+            padding: const EdgeInsets.only(top: 4.0),
             child: Text(
-              canApplyWithholding
-                  ? 'Withholding tax is applied to this transaction'
-                  : 'Subtotal must exceed \$${state.withholdingInitial} to apply withholding',
-              style: TextStyle(
-                fontSize: 12,
-                color: canApplyWithholding
-                    ? Theme.of(context).colorScheme.primary
-                    : Colors.orange,
-                fontStyle: FontStyle.italic,
-              ),
+              '${withholdingRate.toStringAsFixed(1)}% of subtotal',
+              style: TextStyle(fontSize: 12, color: Colors.grey[700]),
             ),
           ),
       ],
@@ -551,18 +578,18 @@ class _PaymentDetailsState extends State<PaymentDetails> {
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.1),
+        color: Colors.amber.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+        border: Border.all(color: Colors.amber.withOpacity(0.3)),
       ),
       child: Row(
         children: [
-          Icon(Iconsax.information_copy, color: Colors.orange[700], size: 20),
+          Icon(Iconsax.information_copy, color: Colors.amber, size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               'Withholding is enabled but cannot be applied because subtotal is below \$${_currencyFormat.format(state.withholdingInitial)}',
-              style: TextStyle(fontSize: 12, color: Colors.orange[800]),
+              style: TextStyle(fontSize: 12, color: Colors.amber),
             ),
           ),
         ],
@@ -580,19 +607,19 @@ class _PaymentDetailsState extends State<PaymentDetails> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        CustomTextField(
+          labelText: label,
+          value: value,
+          readOnly: true,
+          prefixIcon: Icon(icon),
+        ),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
             if (subtitle != null)
               Text(
                 subtitle,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                style: TextStyle(
                   color: Theme.of(
                     context,
                   ).colorScheme.onSurface.withOpacity(0.6),
@@ -600,84 +627,16 @@ class _PaymentDetailsState extends State<PaymentDetails> {
               ),
           ],
         ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(
-            color: Theme.of(
-              context,
-            ).colorScheme.surfaceContainerHighest.withOpacity(0.4),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
-            ),
-          ),
-          child: Row(
-            children: [
-              if (icon != null) ...[
-                Icon(
-                  icon,
-                  size: 20,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withOpacity(0.6),
-                ),
-                const SizedBox(width: 12),
-              ],
-              Expanded(
-                child: Text(
-                  value,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }
 
   Widget _buildTotalField(BuildContext context, String label, double value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.payment,
-                size: 24,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  _currencyFormat.format(value),
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+    return CustomTextField(
+      labelText: label,
+      value: _currencyFormat.format(value),
+      readOnly: true,
+      prefixIcon: Icon(Icons.payment),
     );
   }
 }

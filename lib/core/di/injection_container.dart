@@ -6,7 +6,6 @@ import 'package:savvy_stock/core/repositories/system_constant_repository.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/core/services/system_constant/system_constant_service.dart';
-import 'package:savvy_stock/core/services/udc_service.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_bloc.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_bloc.dart';
 import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
@@ -79,13 +78,10 @@ void initDependencies() {
     () => SystemConstantsService(getIt()),
   );
 
-  getIt.registerLazySingleton<UdcService>(() => UdcService(getIt()));
-
   // BLoCs
   getIt.registerFactory<SystemConstantBloc>(
     () => SystemConstantBloc(
       systemConstantRepository: getIt(),
-      udcService: getIt(),
       authBloc: getIt(),
       systemConstantService: getIt(),
     ),

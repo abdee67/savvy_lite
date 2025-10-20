@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_event.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_state.dart';
+import 'package:savvy_stock/features/sales/payment/widget/payment_action.dart';
 
 class PaymentMethod extends StatefulWidget {
   const PaymentMethod({super.key});
@@ -55,14 +57,24 @@ class _PaymentMethodState extends State<PaymentMethod> {
     final bloc = context.read<PaymentBloc>();
     final currentState = bloc.state;
 
+    // Preserve the existing payment term
+    final paymentTerm = _paymentTermController.text.isNotEmpty
+        ? _paymentTermController.text
+        : currentState.paymentTerm;
+
     bloc.add(
       UpdatePaymentDetails(
         paymentType: currentState.paymentType,
         paymentMethod: currentState.paymentMethod,
         paymentInstrument: instrument,
-        paymentTerm: currentState.paymentTerm,
+        paymentTerm: paymentTerm,
       ),
     );
+
+    // Ensure the controller is in sync with the state
+    if (_paymentTermController.text != paymentTerm) {
+      _paymentTermController.text = paymentTerm;
+    }
   }
 
   void _updatePaymentTerm(BuildContext context, String term) {
@@ -81,8 +93,14 @@ class _PaymentMethodState extends State<PaymentMethod> {
 
   @override
   Widget build(BuildContext context) {
-    final isSmallScreen = MediaQuery.of(context).size.width < 600;
-    final padding = isSmallScreen ? 16 : 24;
+    final isSmallScreen = MediaQuery.of(context).size.width < 700;
+    final isMediumScreen = MediaQuery.of(context).size.width < 1024;
+    final padding = isSmallScreen
+        ? 16
+        : isMediumScreen
+        ? 24
+        : 32;
+
     return BlocConsumer<PaymentBloc, PaymentState>(
       listener: (context, state) {
         // Sync controller with state changes from other sources
@@ -94,10 +112,22 @@ class _PaymentMethodState extends State<PaymentMethod> {
         final isCreditSelected = state.paymentType == 'Credit';
 
         return Container(
-          width: double.infinity,
+          constraints: BoxConstraints(
+            maxWidth: double.infinity,
+            minHeight: isSmallScreen
+                ? 250
+                : isMediumScreen
+                ? 330
+                : 400,
+            maxHeight: isSmallScreen
+                ? 350
+                : isMediumScreen
+                ? 400
+                : 450,
+          ),
           padding: EdgeInsets.all(padding.toDouble()),
           decoration: BoxDecoration(
-            color: const Color(0xFF1E3A5C),
+            color: Colors.grey,
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(20),
               topRight: Radius.circular(20),
@@ -120,7 +150,11 @@ class _PaymentMethodState extends State<PaymentMethod> {
                 _buildPaymentTypeSelector(context, state),
                 const SizedBox(height: 16),
                 if (isCreditSelected) ...[
-                  _buildPaymentTermField(context, state),
+                  _buildPaymentTermField(
+                    context,
+                    _paymentTermController,
+                    state,
+                  ),
                   const SizedBox(height: 16),
                 ],
                 _buildPaymentInstrumentDropdown(context, state),
@@ -128,8 +162,10 @@ class _PaymentMethodState extends State<PaymentMethod> {
                 if (state.paymentInstrument.isNotEmpty)
                   Text(
                     _getInstrumentDescription(state.paymentInstrument),
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
                   ),
+                const SizedBox(height: 16),
+                const PaymentAction(),
               ],
             ),
           ),
@@ -138,27 +174,67 @@ class _PaymentMethodState extends State<PaymentMethod> {
     );
   }
 
-  Widget _buildPaymentTermField(BuildContext context, PaymentState state) {
+  Widget _buildPaymentTermField(
+    BuildContext context,
+    TextEditingController controller,
+    PaymentState state,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CustomTextField(
-          controller: _paymentTermController,
-          labelText: 'Enter Due date on receipt',
-          hintText: 'Enter payment terms',
-          focusNode: FocusNode(debugLabel: 'Payment Term'),
-          onChanged: (value) => _updatePaymentTerm(context, value),
-          textInputAction: TextInputAction.done,
-          suffixIcon: const Icon(Icons.calendar_today, size: 20),
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Payment term is required for credit';
-            }
-            return null;
-          },
+        GestureDetector(
+          onTap: () => _selectDate(controller),
+          child: AbsorbPointer(
+            child: CustomTextField(
+              controller: controller,
+              labelText: 'Enter Due date on receipt',
+              hintText: 'Select date',
+              focusNode: FocusNode(
+                debugLabel: 'Payment Term',
+                canRequestFocus: false,
+              ),
+              textInputAction: TextInputAction.done,
+              prefixIcon: const Icon(Icons.calendar_today, size: 20),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Payment term is required for credit';
+                }
+                return null;
+              },
+            ),
+          ),
         ),
       ],
     );
+  }
+
+  Future<void> _selectDate(TextEditingController controller) async {
+    // Dismiss keyboard if it's showing
+    FocusScope.of(context).unfocus();
+
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: controller.text.isNotEmpty
+          ? DateTime.tryParse(controller.text) ?? DateTime.now()
+          : DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime(2100),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Theme.of(context).primaryColor,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      controller.text =
+          "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+    }
   }
 
   Widget _buildPaymentInstrumentDropdown(
@@ -190,53 +266,32 @@ class _PaymentMethodState extends State<PaymentMethod> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: DropdownButtonFormField<String>(
-            initialValue:
-                state.paymentInstrument.isNotEmpty &&
-                    availableInstruments.contains(state.paymentInstrument)
-                ? state.paymentInstrument
-                : availableInstruments.first,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please select a payment instrument';
-              }
-              return null;
-            },
-            borderRadius: BorderRadius.circular(8),
-            menuMaxHeight: 200,
-            decoration: InputDecoration(
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
+        CustomDropdown<String>(
+          labelText: 'Payment Instrument',
+          value:
+              state.paymentInstrument.isNotEmpty &&
+                  availableInstruments.contains(state.paymentInstrument)
+              ? state.paymentInstrument
+              : availableInstruments.first,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please select a payment instrument';
+            }
+            return null;
+          },
+          prefixIcon: Icon(Icons.money_off),
+          items: availableInstruments.map((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(
+                value,
+                style: const TextStyle(color: Color(0xFF1E3A5C)),
               ),
-              filled: true,
-              fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 4,
-              ),
-            ),
-            style: const TextStyle(color: Color(0xFF1E3A5C), fontSize: 16),
-            dropdownColor: Colors.white,
-            icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF1E3A5C)),
-            items: availableInstruments.map((String value) {
-              return DropdownMenuItem<String>(
-                value: value,
-                child: Text(
-                  value,
-                  style: const TextStyle(color: Color(0xFF1E3A5C)),
-                ),
-              );
-            }).toList(),
-            onChanged: (String? newValue) {
-              _updatePaymentInstrument(context, newValue);
-            },
-          ),
+            );
+          }).toList(),
+          onChanged: (String? newValue) {
+            _updatePaymentInstrument(context, newValue);
+          },
         ),
       ],
     );
@@ -248,12 +303,9 @@ class _PaymentMethodState extends State<PaymentMethod> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Wrap(
-          alignment: WrapAlignment.center,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          direction: Axis.horizontal,
-          spacing: 10,
-          runSpacing: 10,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: paymentTypes.map((type) {
             final isSelected = state.paymentType == type;
             return ChoiceChip(
@@ -269,12 +321,7 @@ class _PaymentMethodState extends State<PaymentMethod> {
               selectedColor: Colors.amber,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
-                side: BorderSide(
-                  color: isSelected
-                      ? const Color(0xFF2A4B7C)
-                      : Colors.grey[300]!,
-                  width: 1,
-                ),
+                side: BorderSide(width: 1),
               ),
             );
           }).toList(),

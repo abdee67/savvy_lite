@@ -190,20 +190,20 @@ class PrivilegeSeeder {
       ),
       _createPrivilege(
         'Add Customer',
-        'button',
-        '/sales/customer-dashboard/add-customer',
+        'link',
+        AppRoutes.customerCreate,
         'add_customer',
       ),
       _createPrivilege(
         'Edit Customer',
-        'button',
-        '/sales/customer-dashboard/edit-customer',
+        'link',
+        AppRoutes.customerEdit,
         'edit_customer',
       ),
       _createPrivilege(
         'Delete Customer',
         'button',
-        '/sales/customer-dashboard/delete-customer',
+        AppRoutes.customerDelete,
         'delete_customer',
       ),
 
