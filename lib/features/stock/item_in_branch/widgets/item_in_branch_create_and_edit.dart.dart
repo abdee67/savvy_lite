@@ -211,7 +211,7 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
         title: Text(
           widget.item == null ? 'Add Item to Branch' : 'Edit Item in Branch',
         ),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: const Color(0xFF155888),
         elevation: 0,
       ),
       body: BlocListener<StockItemInBranchBloc, ItemInBranchState>(
@@ -347,7 +347,7 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
                 return CustomDropdown(
                   labelText: 'Udc *',
                   value: _selectedUom,
-                  prefixIcon: const Icon(Iconsax.profile_circle),
+                  prefixIcon: const Icon(Iconsax.bag_tick_2),
                   items: state.details.map((udc) {
                     return DropdownMenuItem<int>(
                       value: udc.id,
@@ -402,6 +402,7 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
             const SizedBox(height: 16),
             CustomDropdown(
               labelText: 'Margin Type',
+              prefixIcon: const Icon(Iconsax.aave_aave),
               value: _selectedMarginType,
               items: _marginTypes.map((marginType) {
                 return DropdownMenuItem<String>(
@@ -438,41 +439,41 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
   }
 
   Widget _buildBottomNavigation() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            offset: const Offset(0, -2),
-            blurRadius: 4,
-            color: Colors.black.withOpacity(0.1),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: ElevatedButton(
-              onPressed: () =>
-                  _saveItem(context.read<StockItemInBranchBloc>().state),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: Text(
-                widget.item == null
-                    ? 'Add Item to Branch'
-                    : 'Update Item in Branch',
-                style: const TextStyle(color: Colors.white),
-              ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        IconButton(
+          icon: const Icon(Iconsax.backward),
+          style: IconButton.styleFrom(
+            backgroundColor: Colors.amber,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
           ),
-        ],
-      ),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        ElevatedButton(
+          onPressed: () =>
+              _saveItem(context.read<StockItemInBranchBloc>().state),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color(0xFF155888),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+          child: Text(
+            widget.item == null
+                ? 'Add Item to Branch'
+                : 'Update Item in Branch',
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+      ],
     );
   }
 }

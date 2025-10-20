@@ -1,10 +1,25 @@
+import 'dart:async';
+
 import 'package:bloc/bloc.dart';
+import 'package:savvy_stock/core/services/database/database_service.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_event.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_state.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 
 class CustomerBloc extends Bloc<CustomerEvent, CustomerState> {
-  CustomerBloc() : super(const CustomerState()) {
+  final LocalDatabaseService databaseService;
+  final AuthBloc authBloc;
+  StreamSubscription? _authSubscription;
+
+  CustomerBloc({required this.databaseService, required this.authBloc})
+    : super(const CustomerState()) {
+    // Listen to auth state changes
+    _authSubscription = authBloc.stream.listen((authState) {
+      if (authState.isAuthenticated && authState.companyId != null) {
+        add(LoadCustomers(authState.companyId!));
+      }
+    });
     on<LoadCustomers>(_onLoadCustomers);
     on<SelectBillToCustomer>(_onSelectBillToCustomer);
     on<SelectShipToCustomer>(_onSelectShipToCustomer);
@@ -14,12 +29,19 @@ class CustomerBloc extends Bloc<CustomerEvent, CustomerState> {
     on<SelectCustomer>(_onSelectCustomer);
     on<SelectAllCustomers>(_onSelectAllCustomers);
     on<DeleteSelectedCustomers>(_onDeleteSelectedCustomers);
+    on<DeleteCustomer>(_onDeleteCustomer);
     on<UndoDelete>(_onUndoDelete);
     on<ShowCustomerDetail>(_onShowCustomerDetail);
     on<HideCustomerDetail>(_onHideCustomerDetail);
     on<UpdateCustomer>(_onUpdateCustomer);
     on<ExportCustomer>(_onExportCustomer);
     on<SearchCustomers>(_onSearchCustomers);
+    on<SetCustomerForm>(_onSetCustomerForm);
+  }
+  @override
+  Future<void> close() {
+    _authSubscription?.cancel();
+    return super.close();
   }
 
   Future<void> _onLoadCustomers(
@@ -31,173 +53,24 @@ class CustomerBloc extends Bloc<CustomerEvent, CustomerState> {
     try {
       // Simulate API call or database fetch
       await Future.delayed(const Duration(milliseconds: 500));
+      final db = await databaseService.database;
+      final customers = await db.query(
+        'customer_table',
+        where: 'company = ?',
+        whereArgs: [event.companyId],
+      );
 
-      final customers = [
-        const Customer(
-          id: '1',
-          name: 'John Doe',
-          tin: '123456789',
-          phone: '555-1234',
-          country: 'USA',
-          email: 'john.doe@example.com',
-          city: 'New York',
-          state: 'New York',
-          region: 'New York',
-          addressLine1: '123 Main St',
-          addressLine2: 'Suite 456',
-          addressLine3: 'Apt 789',
-          addressLine4: 'Building 101',
-          addressLine5: 'Floor 2',
-          contactName: 'John Doe',
-          title: 'Mr.',
-          phone2: '555-1234',
-        ),
-        const Customer(
-          id: '2',
-          name: 'Jane Smith',
-          tin: '987654321',
-          phone: '555-5678',
-          country: 'Canada',
-          email: 'jane.smith@example.com',
-          city: 'Toronto',
-          state: 'Ontario',
-          region: 'Toronto',
-          addressLine1: '456 Elm St',
-          addressLine2: 'Suite 789',
-          addressLine3: 'Bldg 202',
-          addressLine4: 'Floor 3',
-          addressLine5: 'Room 4',
-          contactName: 'Jane Smith',
-          title: 'Ms.',
-          phone2: '555-5678',
-        ),
-        const Customer(
-          id: '3',
-          name: 'Jane Smith',
-          tin: '987654321',
-          phone: '555-5678',
-          country: 'Canada',
-          email: 'jane.smith@example.com',
-          city: 'Toronto',
-          state: 'Ontario',
-          region: 'Toronto',
-          addressLine1: '456 Elm St',
-          addressLine2: 'Suite 789',
-          addressLine3: 'Bldg 202',
-          addressLine4: 'Floor 3',
-          addressLine5: 'Room 4',
-          contactName: 'Jane Smith',
-          title: 'Ms.',
-          phone2: '555-5678',
-        ),
-        const Customer(
-          id: '4',
-          name: 'Jane Smith',
-          tin: '987654321',
-          phone: '555-5678',
-          country: 'Canada',
-          email: 'jane.smith@example.com',
-          city: 'Toronto',
-          state: 'Ontario',
-          region: 'Toronto',
-          addressLine1: '456 Elm St',
-          addressLine2: 'Suite 789',
-          addressLine3: 'Bldg 202',
-          addressLine4: 'Floor 3',
-          addressLine5: 'Room 4',
-          contactName: 'Jane Smith',
-          title: 'Ms.',
-          phone2: '555-5678',
-        ),
-        const Customer(
-          id: '5',
-          name: 'Jane Smith',
-          tin: '987654321',
-          phone: '555-5678',
-          country: 'Canada',
-          email: 'jane.smith@example.com',
-          city: 'Toronto',
-          state: 'Ontario',
-          region: 'Toronto',
-          addressLine1: '456 Elm St',
-          addressLine2: 'Suite 789',
-          addressLine3: 'Bldg 202',
-          addressLine4: 'Floor 3',
-          addressLine5: 'Room 4',
-          contactName: 'Jane Smith',
-          title: 'Ms.',
-          phone2: '555-5678',
-        ),
-        const Customer(
-          id: '6',
-          name: 'Jane Smith',
-          tin: '987654321',
-          phone: '555-5678',
-          country: 'Canada',
-          email: 'jane.smith@example.com',
-          city: 'Toronto',
-          state: 'Ontario',
-          region: 'Toronto',
-          addressLine1: '456 Elm St',
-          addressLine2: 'Suite 789',
-          addressLine3: 'Bldg 202',
-          addressLine4: 'Floor 3',
-          addressLine5: 'Room 4',
-          contactName: 'Jane Smith',
-          title: 'Ms.',
-          phone2: '555-5678',
-        ),
-        const Customer(
-          id: '7',
-          name: 'Jane Smith',
-          tin: '987654321',
-          phone: '555-5678',
-          country: 'Canada',
-          email: 'jane.smith@example.com',
-          city: 'Toronto',
-          state: 'Ontario',
-          region: 'Toronto',
-          addressLine1: '456 Elm St',
-          addressLine2: 'Suite 789',
-          addressLine3: 'Bldg 202',
-          addressLine4: 'Floor 3',
-          addressLine5: 'Room 4',
-          contactName: 'Jane Smith',
-          title: 'Ms.',
-          phone2: '555-5678',
-        ),
-        const Customer(
-          id: '8',
-          name: 'Jane Smith',
-          tin: '987654321',
-          phone: '555-5678',
-          country: 'Canada',
-          email: 'jane.smith@example.com',
-          city: 'Toronto',
-          state: 'Ontario',
-          region: 'Toronto',
-          addressLine1: '456 Elm St',
-          addressLine2: 'Suite 789',
-          addressLine3: 'Bldg 202',
-          addressLine4: 'Floor 3',
-          addressLine5: 'Room 4',
-          contactName: 'Jane Smith',
-          title: 'Ms.',
-          phone2: '555-5678',
-        ),
-      ];
+      final customerList = customers.map((e) => Customer.fromMap(e)).toList();
 
       emit(
         state.copyWith(
           status: CustomerStatus.success,
-          customers: customers,
-          filteredCustomers: customers,
+          customers: customerList,
+          filteredCustomers: customerList,
+          companyId: event.companyId,
+          searchQuery: '',
+          errorMessage: 'Customers loaded successfully',
           selectedCustomers: [],
-          selectedBillToCustomer: customers.first,
-          selectedShipToCustomer: customers.first,
-          tin: customers.first.tin,
-          phone: customers.first.phone,
-          country: customers.first.country,
         ),
       );
     } catch (error) {
@@ -220,8 +93,8 @@ class CustomerBloc extends Bloc<CustomerEvent, CustomerState> {
         selectedBillToCustomer: event.customer,
         selectedShipToCustomer:
             event.customer, // Auto-fill ship to same as bill to
-        tin: event.customer.tin,
-        phone: event.customer.phone,
+        tin: event.customer.tinNumber,
+        phone: event.customer.phoneNumber,
         country: event.customer.country,
       ),
     );
@@ -234,21 +107,89 @@ class CustomerBloc extends Bloc<CustomerEvent, CustomerState> {
     emit(state.copyWith(selectedShipToCustomer: event.customer));
   }
 
-  void _onAddCustomer(AddCustomer event, Emitter<CustomerState> emit) {
-    final updatedCustomers = List<Customer>.from(state.customers)
-      ..add(event.customer);
-
+  Future<void> _onAddCustomer(
+    AddCustomer event,
+    Emitter<CustomerState> emit,
+  ) async {
     emit(
       state.copyWith(
-        customers: updatedCustomers,
-        selectedBillToCustomer: event.customer,
-        selectedShipToCustomer: event.customer,
-        tin: event.customer.tin,
-        phone: event.customer.phone,
-        country: event.customer.country,
-        filteredCustomers: updatedCustomers,
+        status: CustomerStatus.creating,
+        errorMessage: 'Creating customer...',
       ),
     );
+    try {
+      final db = await databaseService.database;
+      final customerMap = event.customer.toMap();
+
+      // Remove ID for auto increment
+      customerMap.remove('id');
+
+      // Add company ID from auth
+      customerMap['company'] = authBloc.state.companyId;
+
+      await db.insert('customer_table', customerMap);
+
+      // Reload customers
+      add(LoadCustomers(authBloc.state.companyId!));
+
+      emit(
+        state.copyWith(
+          status: CustomerStatus.success,
+          errorMessage: 'Customer created successfully',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: CustomerStatus.failure,
+          errorMessage: 'Failed to create customer: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onDeleteCustomer(
+    DeleteCustomer event,
+    Emitter<CustomerState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        status: CustomerStatus.deleting,
+        errorMessage: 'Deleting customer...',
+      ),
+    );
+    try {
+      final db = await databaseService.database;
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) {
+        emit(
+          state.copyWith(
+            status: CustomerStatus.failure,
+            errorMessage: 'Authentication error: Company ID not found',
+          ),
+        );
+        return;
+      }
+      await db.delete(
+        'customer_table',
+        where: 'id = ? AND company = ?',
+        whereArgs: [event.customerId, companyId],
+      );
+      add(LoadCustomers(companyId));
+      emit(
+        state.copyWith(
+          status: CustomerStatus.success,
+          errorMessage: 'Customer deleted successfully',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: CustomerStatus.failure,
+          errorMessage: 'Failed to delete customer: $e',
+        ),
+      );
+    }
   }
 
   void _onClearSelection(ClearSelection event, Emitter<CustomerState> emit) {
@@ -292,10 +233,10 @@ class CustomerBloc extends Bloc<CustomerEvent, CustomerState> {
     }
 
     final filtered = state.customers.where((customer) {
-      return customer.name.toLowerCase().contains(query) ||
-          customer.contactName?.toLowerCase().contains(query) == true ||
-          customer.phone.toLowerCase().contains(query) ||
-          customer.email?.toLowerCase().contains(query) == true;
+      return customer.customerName!.toLowerCase().contains(query) ||
+          customer.contactName!.toLowerCase().contains(query) == true ||
+          customer.phoneNumber!.toLowerCase().contains(query) ||
+          customer.address!.toLowerCase().contains(query) == true;
     }).toList();
 
     emit(
@@ -327,25 +268,59 @@ class CustomerBloc extends Bloc<CustomerEvent, CustomerState> {
     emit(state.copyWith(selectedCustomers: selectedCustomers));
   }
 
-  void _onDeleteSelectedCustomers(
+  Future<void> _onDeleteSelectedCustomers(
     DeleteSelectedCustomers event,
     Emitter<CustomerState> emit,
-  ) {
-    final remainingCustomers = state.customers
-        .where((customer) => !state.selectedCustomers.contains(customer))
-        .toList();
-
-    final remainingFiltered = state.filteredCustomers
-        .where((customer) => !state.selectedCustomers.contains(customer))
-        .toList();
-
+  ) async {
     emit(
       state.copyWith(
-        customers: remainingCustomers,
-        filteredCustomers: remainingFiltered,
-        selectedCustomers: [],
+        status: CustomerStatus.deleting,
+        errorMessage: 'Deleting customers...',
       ),
     );
+    try {
+      final db = await databaseService.database;
+      final companyId = authBloc.state.companyId;
+      final placeholders = List.filled(
+        event.selectedItems.length,
+        '?',
+      ).join(',');
+      final whereArgs = [...event.selectedItems, companyId];
+      await db.delete(
+        'customer_table',
+        where: 'id IN ($placeholders) AND company = ?',
+        whereArgs: whereArgs,
+      );
+      final remainingCustomers = state.customers
+          .where((customer) => !state.selectedCustomers.contains(customer))
+          .toList();
+
+      final remainingFiltered = state.filteredCustomers
+          .where((customer) => !state.selectedCustomers.contains(customer))
+          .toList();
+
+      emit(
+        state.copyWith(
+          customers: remainingCustomers,
+          filteredCustomers: remainingFiltered,
+          selectedCustomers: [],
+        ),
+      );
+      add(LoadCustomers(authBloc.state.companyId!));
+      emit(
+        state.copyWith(
+          status: CustomerStatus.success,
+          errorMessage: 'Customers deleted successfully',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: CustomerStatus.failure,
+          errorMessage: 'Failed to delete customers: $e',
+        ),
+      );
+    }
   }
 
   void _onUndoDelete(UndoDelete event, Emitter<CustomerState> emit) {
@@ -368,27 +343,51 @@ class CustomerBloc extends Bloc<CustomerEvent, CustomerState> {
     emit(state.copyWith(showDetailPanel: false));
   }
 
-  void _onUpdateCustomer(UpdateCustomer event, Emitter<CustomerState> emit) {
-    final updatedCustomers = state.customers
-        .map(
-          (customer) =>
-              customer.id == event.customer.id ? event.customer : customer,
-        )
-        .toList();
-
-    final updatedFiltered = state.filteredCustomers
-        .map(
-          (customer) =>
-              customer.id == event.customer.id ? event.customer : customer,
-        )
-        .toList();
-
+  Future<void> _onUpdateCustomer(
+    UpdateCustomer event,
+    Emitter<CustomerState> emit,
+  ) async {
     emit(
       state.copyWith(
-        customers: updatedCustomers,
-        filteredCustomers: updatedFiltered,
+        status: CustomerStatus.updating,
+        errorMessage: 'Updating customer...',
       ),
     );
+    try {
+      final db = await databaseService.database;
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) {
+        emit(
+          state.copyWith(
+            status: CustomerStatus.failure,
+            errorMessage: 'Authentication error: Company ID not found',
+          ),
+        );
+        return;
+      }
+      final customerMap = event.customer.toMap();
+      customerMap['company'] = companyId;
+      await db.update(
+        'customer_table',
+        customerMap,
+        where: 'id = ? AND company = ?',
+        whereArgs: [event.customer.id, companyId],
+      );
+      add(LoadCustomers(companyId));
+      emit(
+        state.copyWith(
+          status: CustomerStatus.success,
+          errorMessage: 'Customer updated successfully',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: CustomerStatus.failure,
+          errorMessage: 'Failed to update customer: $e',
+        ),
+      );
+    }
   }
 
   void _onExportCustomer(ExportCustomer event, Emitter<CustomerState> emit) {
@@ -398,6 +397,10 @@ class CustomerBloc extends Bloc<CustomerEvent, CustomerState> {
         filteredCustomers: state.filteredCustomers,
       ),
     );
+  }
+
+  void _onSetCustomerForm(SetCustomerForm event, Emitter<CustomerState> emit) {
+    emit(state.copyWith(customerForm: event.customer));
   }
 
   Customer get selectedBillToCustomer => state.selectedBillToCustomer;

@@ -52,6 +52,9 @@ class AppRoutes {
 
   // Sales Sub-Routes
   static const String customerEntry = '$sales/customer-dashboard';
+  static const String customerCreate = '$customerEntry/customer-create';
+  static const String customerEdit = '$customerEntry/customer-edit';
+  static const String customerDelete = '$customerEntry/customer-delete';
 
   static const String salesCustomerInfo = '$salesDashboard/sales-customer-info';
   static const String salesItemEntry = '$salesCustomerInfo/sales-item-entry';

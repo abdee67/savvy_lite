@@ -18,8 +18,31 @@ class SalesItemEntryForm extends StatefulWidget {
   State<SalesItemEntryForm> createState() => _SalesItemEntryFormState();
 }
 
-class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
+class _SalesItemEntryFormState extends State<SalesItemEntryForm>
+    with SingleTickerProviderStateMixin {
   final List<GlobalKey<FormState>> _formKeys = [];
+
+  late AnimationController _animController;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _slideAnimation = Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
+        .animate(
+          CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
+        );
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,10 +50,19 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
       builder: (context, state) {
         final selectedItem = state.selectedItems[widget.index];
         final availableStores = _getAvailableStoresForItem(selectedItem.item);
+
+        // Sync animation with useBarcode
+        if (state.useBarcode) {
+          _animController.forward();
+        } else {
+          _animController.reverse();
+        }
+
         if (widget.index >= _formKeys.length) {
-          // Ensure form key exists
           _formKeys.add(GlobalKey<FormState>());
         }
+
+        final theme = Theme.of(context);
 
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
@@ -40,7 +72,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Item selection
+                /// --- ITEM SELECTION ---
                 CustomTableDropdown<Item>(
                   title: 'Item',
                   items: state.uniqueItems,
@@ -64,7 +96,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
                 ),
                 const SizedBox(height: 16),
 
-                // Store selection or Out of Stock message
+                /// --- STORE SELECTION ---
                 if (selectedItem.item != null) ...[
                   if (selectedItem.isOutOfStock)
                     Text(
@@ -114,7 +146,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
                 ],
                 const SizedBox(height: 16),
 
-                // Quantity input
+                /// --- QUANTITY INPUT ---
                 CustomTextField(
                   labelText: 'Quantity',
                   keyboardType: TextInputType.number,
@@ -126,9 +158,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
                     }
 
                     final quantity = double.tryParse(value);
-                    if (quantity == null) {
-                      return 'Please enter a valid number';
-                    }
+                    if (quantity == null) return 'Please enter a valid number';
 
                     final storeAvailability = selectedItem.store?.availability;
                     if (storeAvailability != null &&
@@ -147,7 +177,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
                 ),
                 const SizedBox(height: 16),
 
-                // Read-only fields
+                /// --- READ-ONLY FIELDS ---
                 CustomTextField(
                   labelText: 'UoM',
                   value: selectedItem.item?.uom ?? '',
@@ -173,24 +203,50 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
                 ),
                 const SizedBox(height: 16),
 
-                // Barcode toggle
+                /// --- BARCODE SECTION ---
                 Row(
                   children: [
-                    Checkbox(
-                      value: state.useBarcode,
-                      onChanged: (value) {
-                        context.read<ItemEntryBloc>().add(
-                          ToggleBarcode(useBarcode: value ?? false),
-                        );
-                      },
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Color(0xFF155888),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Checkbox(
+                        fillColor: WidgetStatePropertyAll<Color>(
+                          Color(0xFF155888),
+                        ),
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(20)),
+                        ),
+                        checkColor: Colors.white,
+
+                        value: state.useBarcode,
+                        onChanged: (value) {
+                          context.read<ItemEntryBloc>().add(
+                            ToggleBarcode(useBarcode: value ?? false),
+                          );
+                        },
+                      ),
                     ),
-                    const Text('Use Barcode'),
+                    if (!state.useBarcode) const Text('Barcode'),
+                    const SizedBox(width: 2),
+
+                    /// Animated barcode field (slide in/out)
+                    Expanded(
+                      child: ClipRect(
+                        child: SlideTransition(
+                          position: _slideAnimation,
+                          child: state.useBarcode
+                              ? const Padding(
+                                  padding: EdgeInsets.only(top: 8.0),
+                                  child: BarcodeSection(),
+                                )
+                              : const SizedBox.shrink(),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 10),
-
-                // Barcode section
-                if (state.useBarcode) const BarcodeSection(),
               ],
             ),
           ),
@@ -201,7 +257,6 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
 
   List<ItemInStore> _getAvailableStoresForItem(Item? item) {
     if (item == null) return [];
-
     return context
         .read<ItemEntryBloc>()
         .state

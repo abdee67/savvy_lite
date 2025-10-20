@@ -1,3 +1,4 @@
+// features/stock/location_master/pages/location_master_list_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -5,150 +6,160 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/utils/ui_helper.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
-import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
-import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
-import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_state.dart';
-import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_event.dart';
+import '../blocs/lot_master_bloc.dart';
+import '../models/lot_master_model.dart';
 
-class ItemEntryDashboard extends StatefulWidget {
+class LotMasterListPage extends StatefulWidget {
   final AuthBloc authBloc;
-  const ItemEntryDashboard({super.key, required this.authBloc});
+
+  const LotMasterListPage({super.key, required this.authBloc});
 
   @override
-  State<ItemEntryDashboard> createState() => _ItemEntryDashboardState();
+  State<LotMasterListPage> createState() => _LotMasterListPageState();
 }
 
-class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
+class _LotMasterListPageState extends State<LotMasterListPage>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isSelectionMode = false;
   final Map<int, double> _dragOffset = {};
+  final List<LotMaster> _selectedLocations = [];
+
+  // Animation controllers for detail panel
+  late AnimationController _detailAnimationController;
+  late Animation<double> _heightAnimation;
+  late Animation<double> _opacityAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  // Detail panel state
+  LotMaster? _selectedLocation;
+  bool _locationDetail = false;
 
   @override
   void initState() {
     super.initState();
-    context.read<StockItemEntryBloc>().add(
-      LoadItems(widget.authBloc.state.companyId!),
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadLocations();
+    });
+
+    // Initialize animation controller
+    _detailAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
     );
+
+    // Set up animations
+    _setupAnimations();
+
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  void _setupAnimations() {
+    _heightAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _detailAnimationController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeInOutCubic),
+      ),
+    );
+
+    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _detailAnimationController,
+        curve: const Interval(0.3, 1.0, curve: Curves.easeIn),
+      ),
+    );
+
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0.0, -0.1), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _detailAnimationController,
+            curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
+          ),
+        );
+  }
+
+  void _loadLocations() {
+    final companyId = widget.authBloc.state.companyId;
+    if (companyId != null) {
+      context.read<LotMasterBloc>().add(LoadLotMasters(companyId));
+    } else {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) _loadLocations();
+      });
+    }
+  }
+
+  void _handleSearch(String query) {
+    context.read<LotMasterBloc>().add(FilterLotMasters(query));
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    context.read<LotMasterBloc>().add(FilterLotMasters(''));
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     _scrollController.dispose();
+    _detailAnimationController.dispose();
     super.dispose();
   }
 
-  void _handleSearch(String query) {
-    context.read<StockItemEntryBloc>().add(SearchItems(query));
+  void _onSearchChanged() {
+    setState(() {});
   }
 
-  void _clearSearch() {
-    _searchController.clear();
-    context.read<StockItemEntryBloc>().add(SearchItems(''));
-  }
-
-  void _toggleItemEntryModelSelection(ItemEntryModel items, bool selected) {
-    context.read<StockItemEntryBloc>().add(SelectItem(items, selected));
-  }
-
-  void _showItemDetail(ItemEntryModel item) {
-    if (!_isSelectionMode) {
-      context.read<StockItemEntryBloc>().add(ShowItemDetail(item));
-    }
-  }
-
-  void _hideItemDetail() {
-    context.read<StockItemEntryBloc>().add(HideItemDetail());
-  }
-
-  void _clearSelection() {
-    context.read<StockItemEntryBloc>().add(ClearSelection());
+  void _toggleSelectionMode() {
     setState(() {
-      _isSelectionMode = false;
+      _isSelectionMode = !_isSelectionMode;
+      if (!_isSelectionMode) {
+        _selectedLocations.clear();
+      }
     });
   }
 
-  void _callItem(String itemId) {
-    // Implement phone call functionality
-    print('Calling: $itemId');
+  void _toggleLocationSelection(LotMaster location) {
+    setState(() {
+      if (_selectedLocations.contains(location)) {
+        _selectedLocations.remove(location);
+      } else {
+        _selectedLocations.add(location);
+      }
+    });
   }
 
-  void _emailItem(String itemId) {
-    // Implement email functionality
-    print('Emailing: $itemId');
+  void _showLocationDetail(LotMaster location) {
+    setState(() {
+      _selectedLocation = location;
+      _locationDetail = true;
+    });
+
+    // Start the animation
+    _detailAnimationController.forward(from: 0.0);
   }
 
-  void _exportItem(ItemEntryModel item) {
-    context.read<StockItemEntryBloc>().add(ExportSingleItem(item));
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Item data exported')));
+  void _hideLocationDetail() {
+    // Reverse the animation
+    _detailAnimationController.reverse().then((_) {
+      if (mounted) {
+        setState(() {
+          _locationDetail = false;
+          _selectedLocation = null;
+        });
+        _detailAnimationController.reset();
+      }
+    });
   }
 
-  void _navigateToEditScreen(ItemEntryModel item) {
-    context.push(AppRoutes.itemEdit, extra: item);
-  }
-
-  void _navigateToAddScreen() {
-    context.push(AppRoutes.itemCreation);
-  }
-
-  void _safeDelete(BuildContext context, {int? index}) {
-    final bloc = context.read<StockItemEntryBloc>();
-    final state = bloc.state;
-
-    // CASE 1: Multiple users
-    if (state.selectedItems.isNotEmpty) {
-      final itemsToDelete = state.selectedItems;
-
-      showDeleteDialog(
-        context,
-        title: 'Delete selected items?',
-        content:
-            'Are you sure you want to delete ${itemsToDelete.length} Items?',
-        onConfirm: () {
-          final ids = itemsToDelete.map((e) => e.id).toList();
-          final deletedIndexes = itemsToDelete
-              .map((emp) => state.items.indexOf(emp))
-              .toList();
-          bloc.add(
-            DeleteSelectedItems(
-              selectedItems: ids,
-              deletedItems: itemsToDelete,
-              deletedIndexes: deletedIndexes,
-            ),
-          );
-        },
-      );
-      return;
-    }
-
-    // CASE 2: Single branch by index
-    if (index == null || index < 0 || index >= state.filteredItems.length) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cannot delete item. Invalid index.')),
-      );
-      return;
-    }
-
-    final itemToDelete = state.filteredItems[index];
-
-    showDeleteDialog(
-      context,
-      title: 'Delete "${itemToDelete.itemDescription}"?',
-      content:
-          'Are you sure you want to delete "${itemToDelete.itemDescription}"?',
-      onConfirm: () {
-        bloc.add(
-          DeleteItem(
-            deletedItem: itemToDelete,
-            deletedIndex: index,
-            itemId: itemToDelete.id,
-          ),
-        );
-      },
-    );
+  void _clearSelection() {
+    setState(() {
+      _selectedLocations.clear();
+      _isSelectionMode = false;
+    });
   }
 
   void _onHorizontalDragUpdate(int index, DragUpdateDetails details) {
@@ -190,25 +201,119 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
     }
   }
 
+  void _safeDelete(BuildContext context, {int? index}) {
+    final bloc = context.read<LotMasterBloc>();
+    final state = bloc.state;
+
+    if (_selectedLocations.isNotEmpty) {
+      final itemsToDelete = _selectedLocations;
+      showDeleteDialog(
+        context,
+        title: 'Delete selected locations?',
+        content:
+            'Are you sure you want to delete ${itemsToDelete.length} locations?',
+        onConfirm: () {
+          for (final location in itemsToDelete) {
+            bloc.add(DeleteLotMaster(location));
+          }
+          _clearSelection();
+          _refreshList(context);
+        },
+      );
+      return;
+    }
+
+    if (index == null || index < 0 || index >= state.items.length) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot delete location. Invalid index.')),
+      );
+      return;
+    }
+
+    final itemToDelete = state.items[index];
+    showDeleteDialog(
+      context,
+      title: 'Delete "${itemToDelete.locationDescription}"?',
+      content:
+          'Are you sure you want to delete "${itemToDelete.locationDescription}"?',
+      onConfirm: () {
+        bloc.add(DeleteLotMaster(itemToDelete));
+        _refreshList(context);
+      },
+    );
+  }
+
+  // Helper method to count assigned location codes
+  int _getAssignedCodesCount(LotMaster location) {
+    final codes = [
+      location.code01,
+      location.code02,
+      location.code03,
+      location.code04,
+      location.code05,
+      location.code06,
+      location.code07,
+      location.code08,
+      location.code09,
+      location.code10,
+    ];
+    return codes.where((code) => code != null && code.isNotEmpty).length;
+  }
+
+  // Helper method to get non-empty location codes
+  List<String> _getNonEmptyCodes(LotMaster location) {
+    final codes = [
+      if (location.code01 != null && location.code01!.isNotEmpty)
+        location.code01!,
+      if (location.code02 != null && location.code02!.isNotEmpty)
+        location.code02!,
+      if (location.code03 != null && location.code03!.isNotEmpty)
+        location.code03!,
+      if (location.code04 != null && location.code04!.isNotEmpty)
+        location.code04!,
+      if (location.code05 != null && location.code05!.isNotEmpty)
+        location.code05!,
+      if (location.code06 != null && location.code06!.isNotEmpty)
+        location.code06!,
+      if (location.code07 != null && location.code07!.isNotEmpty)
+        location.code07!,
+      if (location.code08 != null && location.code08!.isNotEmpty)
+        location.code08!,
+      if (location.code09 != null && location.code09!.isNotEmpty)
+        location.code09!,
+      if (location.code10 != null && location.code10!.isNotEmpty)
+        location.code10!,
+    ];
+    return codes;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Colors.grey,
       appBar: AppBar(
-        title: const Text('ItemEntry Management'),
+        title: const Text('Location Master'),
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Iconsax.refresh_circle),
+            onPressed: () {
+              _loadLocations();
+            },
+          ),
+        ],
       ),
-      body: BlocConsumer<StockItemEntryBloc, ItemEntryState>(
+      body: BlocConsumer<LotMasterBloc, LotMasterState>(
         listener: (context, state) {
-          if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
-            setState(() {
-              _isSelectionMode = true;
-            });
-          } else if (state.selectedItems.isEmpty && _isSelectionMode) {
-            setState(() {
-              _isSelectionMode = false;
-            });
+          if (state.status == LotMasterStatus.failure &&
+              state.message.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
+            );
           }
         },
         builder: (context, state) {
@@ -219,81 +324,90 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
                   // Search Bar
                   _buildSearchBar(),
                   _buildActionButtons(state),
-
-                  // Role List
-                  Expanded(child: _buildRoleList(state)),
+                  // Location List
+                  Expanded(child: _buildLocationList(state)),
                 ],
               ),
-              if (state.showDetailPanel && state.itemDetail != null)
-                _buildDetailPanel(state.itemDetail!),
             ],
-          );
-        },
-      ),
-      // Floating Action Button for Add
-      floatingActionButton: BlocBuilder<StockItemEntryBloc, ItemEntryState>(
-        builder: (context, state) {
-          if (state.showDetailPanel) {
-            return const SizedBox.shrink();
-          }
-          return FloatingActionButton(
-            onPressed: () {
-              if (state.canEdit && state.selectedItems.isNotEmpty) {
-                // Navigate to edit screen with selected customer
-                final customer = state.selectedItems.first;
-                _navigateToEditScreen(customer);
-              } else {
-                // Navigate to add screen
-                _navigateToAddScreen();
-              }
-            },
-            backgroundColor: Color.fromARGB(255, 28, 66, 146),
-            child: Icon(
-              state.canEdit && state.selectedItems.isNotEmpty
-                  ? Icons.edit
-                  : Icons.add,
-              color: Colors.white,
-            ),
           );
         },
       ),
     );
   }
 
-  Widget _buildActionButtons(ItemEntryState state) {
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search by location name or branch...',
+                prefixIcon: const Icon(Iconsax.search_normal, size: 20),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Iconsax.close_circle, size: 20),
+                        onPressed: _clearSearch,
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Colors.grey[100],
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+              onChanged: _handleSearch,
+            ),
+          ),
+          const SizedBox(width: 12),
+          _buildFloatingActionButton(context),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtons(LotMasterState state) {
+    final hasSelection = _selectedLocations.isNotEmpty;
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      height: state.hasSelection ? 60 : 0,
+      height: hasSelection ? 60 : 0,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.grey,
         border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
       ),
-      child: state.hasSelection
+      child: hasSelection
           ? Row(
               children: [
                 Text(
-                  '${state.selectedItems.length} selected',
+                  '${_selectedLocations.length} selected',
                   style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
                 const Spacer(),
-                if (state.canDelete)
-                  IconButton(
-                    icon: const Icon(Iconsax.trash, color: Colors.red),
-                    onPressed: () => _safeDelete(context),
-                    tooltip: 'Delete selected',
-                  ),
-                if (state.canEdit)
+                IconButton(
+                  icon: const Icon(Iconsax.trash, color: Colors.red),
+                  onPressed: () => _safeDelete(context),
+                  tooltip: 'Delete selected',
+                ),
+                if (_selectedLocations.length == 1)
                   IconButton(
                     icon: const Icon(
                       Iconsax.edit,
                       color: Color.fromARGB(255, 28, 66, 146),
                     ),
                     onPressed: () {
-                      final item = state.selectedItems.first;
-                      _navigateToEditScreen(item);
+                      final location = _selectedLocations.first;
+                      _navigateToEditScreen(location);
                     },
-                    tooltip: 'Edit branch',
+                    tooltip: 'Edit location',
                   ),
                 IconButton(
                   icon: const Icon(Iconsax.close_circle),
@@ -306,52 +420,45 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
     );
   }
 
-  Widget _buildSearchBar() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+  Widget _buildFloatingActionButton(BuildContext context) {
+    return BlocBuilder<LotMasterBloc, LotMasterState>(
+      builder: (context, state) {
+        return ElevatedButton(
+          onPressed: () {
+            if (_selectedLocations.isNotEmpty) {
+              // Navigate to edit screen with selected location
+              final location = _selectedLocations.first;
+              _navigateToEditScreen(location);
+            } else {
+              // Navigate to add screen
+              _navigateToCreateScreen();
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color.fromARGB(255, 28, 66, 146),
+            shape: const CircleBorder(),
           ),
-        ],
-      ),
-      child: TextField(
-        controller: _searchController,
-        decoration: InputDecoration(
-          hintText: 'Search by branch description or address...',
-          prefixIcon: const Icon(Iconsax.search_normal, size: 20),
-          suffixIcon: _searchController.text.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Iconsax.close_circle, size: 20),
-                  onPressed: _clearSearch,
-                )
-              : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
+          child: Icon(
+            _selectedLocations.isNotEmpty ? Icons.edit : Icons.add,
+            color: Colors.white,
           ),
-          filled: true,
-          fillColor: Colors.grey[100],
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
-          ),
-        ),
-        onChanged: _handleSearch,
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildRoleList(ItemEntryState state) {
-    if (state.status == ItemEntryStatus.loading) {
+  Widget _buildLocationList(LotMasterState state) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenWidth < 700;
+    final cardSpacing = screenHeight * 0.02;
+    final cardWidth = isSmallScreen ? screenWidth * 0.85 : screenWidth * 0.8;
+
+    if (state.status == LotMasterStatus.loading && state.items.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (state.status == ItemEntryStatus.failure) {
+    if (state.status == LotMasterStatus.failure && state.items.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -359,14 +466,14 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
             const Icon(Icons.error_outline, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
             Text(
-              state.message ?? 'Failed to load Items',
+              state.message.isEmpty
+                  ? 'Failed to load locations'
+                  : state.message,
               style: const TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => context.read<StockItemEntryBloc>().add(
-                LoadItems(widget.authBloc.state.companyId!),
-              ),
+              onPressed: () => _refreshList(context),
               child: const Text('Retry'),
             ),
           ],
@@ -374,17 +481,19 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
       );
     }
 
-    if (state.filteredItems.isEmpty) {
+    final filteredLocations = state.filteredItems;
+
+    if (filteredLocations.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Iconsax.user_tag, size: 64, color: Colors.grey),
+            const Icon(Iconsax.location, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
             Text(
-              state.searchQuery.isEmpty
-                  ? 'No roles found'
-                  : 'No results for "${state.searchQuery}"',
+              _searchController.text.isEmpty
+                  ? 'No locations found'
+                  : 'No results for "${_searchController.text}"',
               style: const TextStyle(color: Colors.grey, fontSize: 16),
             ),
           ],
@@ -392,40 +501,64 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
       );
     }
 
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.all(16),
-      itemCount: state.filteredItems.length,
-      itemBuilder: (context, index) {
-        final item = state.filteredItems[index];
-        final isSelected = state.selectedItems.contains(item);
-        final screenWidth = MediaQuery.of(context).size.width;
-        final useCompactLayout = screenWidth < 700;
+    return Container(
+      width: screenWidth,
+      height: screenHeight,
+      decoration: const BoxDecoration(color: Colors.grey),
+      child: ListView.separated(
+        controller: _scrollController,
+        padding: const EdgeInsets.all(16),
+        itemCount: filteredLocations.length,
+        separatorBuilder: (context, index) => SizedBox(height: cardSpacing),
+        itemBuilder: (context, index) {
+          final location = filteredLocations[index];
+          final isSelected = _selectedLocations.contains(location);
 
-        return _buildItemEntryModelListItem(
-          item,
-          state,
-          isSelected,
-          index,
-          useCompactLayout,
-        );
-      },
+          return _buildLocationListItem(
+            location,
+            isSelected,
+            state,
+            index,
+            isSmallScreen,
+            cardWidth,
+          );
+        },
+      ),
     );
   }
 
-  Widget _buildItemEntryModelListItem(
-    ItemEntryModel item,
-    ItemEntryState state,
+  Widget _buildLocationListItem(
+    LotMaster location,
     bool isSelected,
+    LotMasterState state,
     int index,
     bool isCompact,
+    double cardWidth,
   ) {
     final offset = _dragOffset[index] ?? 0.0;
+    final isExpanded = _locationDetail == true && _selectedLocation == location;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    // For responsiveness:
+    final collapsedHeight = isCompact
+        ? screenHeight * 0.18
+        : screenHeight * 0.14;
+
+    final expandedHeight = isCompact
+        ? screenHeight * 0.55
+        : screenHeight * 0.45;
+    final collapsedWidth = isCompact ? screenWidth * 0.92 : screenWidth * 0.8;
+
+    final assignedCodesCount = _getAssignedCodesCount(location);
 
     return GestureDetector(
       onTap: () {
         if (_isSelectionMode) {
-          _toggleItemEntryModelSelection(item, !isSelected);
+          _toggleLocationSelection(location);
+        } else {
+          // Single tap shows detail when not in selection mode
+          _showLocationDetail(location);
         }
       },
       onLongPress: () {
@@ -434,322 +567,424 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
             _isSelectionMode = true;
           });
         }
-        _toggleItemEntryModelSelection(item, !isSelected);
+        _toggleLocationSelection(location);
       },
-      onDoubleTap: () => _showItemDetail(item),
       onHorizontalDragUpdate: (details) =>
           _onHorizontalDragUpdate(index, details),
       onHorizontalDragEnd: (details) =>
           _onHorizontalDragEnd(context, index, details),
-      child: Stack(
-        children: [
-          // Background (delete indicator)
-          Positioned.fill(
-            child: Container(
-              alignment: Alignment.centerRight,
-              decoration: BoxDecoration(
-                color: Colors.amber,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              margin: const EdgeInsets.only(bottom: 2),
-              child: const Icon(Icons.delete, color: Colors.white, size: 28),
-            ),
-          ),
+      onDoubleTap: () => _showLocationDetail(location),
+      child: AnimatedBuilder(
+        animation: _scrollController,
+        builder: (context, child) => Container(
+          transform: Matrix4.translationValues(offset, 0, 0),
+          width: collapsedWidth,
+          height: isExpanded ? expandedHeight : collapsedHeight,
+          child: Stack(
+            children: [
+              // 1. DELETE INDICATOR - Should be FIRST in Stack
+              if (!isExpanded)
+                Positioned.fill(
+                  child: Container(
+                    alignment: Alignment.centerRight,
+                    decoration: BoxDecoration(
+                      color: Colors.amber,
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    margin: const EdgeInsets.only(bottom: 2),
+                    child: const Icon(
+                      Icons.delete,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                ),
 
-          // Role card
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            transform: Matrix4.translationValues(offset, 0, 0),
-            curve: Curves.easeOut,
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: isSelected ? Colors.blue[50] : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+              // 2. BACKGROUND LAYERS (only when expanded)
+              if (isExpanded) ...[
+                Positioned.fill(
+                  top: 47,
+                  child: Container(
+                    width: collapsedWidth,
+                    height: expandedHeight,
+                    decoration: ShapeDecoration(
+                      color: const Color(0xFFFDD105),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                  ),
                 ),
               ],
-              border: Border.all(
-                color: isSelected
-                    ? const Color.fromARGB(255, 28, 66, 146)
-                    : Colors.transparent,
-                width: 2,
-              ),
-            ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.all(16),
-              leading: _buildItemEntryModelAvatar(item, isSelected, isCompact),
-              title: Text(
-                item.itemDescription!,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+
+              // 3. LOCATION CARD
+              AnimatedContainer(
+                padding: const EdgeInsets.only(
+                  top: 10,
+                  left: 10,
+                  right: 10,
+                  bottom: 10,
                 ),
-              ),
-              trailing: _buildItemEntryModelTrailing(item),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailPanel(ItemEntryModel item) {
-    return Positioned(
-      bottom: 0,
-      left: 0,
-      right: 0,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeOut,
-        height: MediaQuery.of(context).size.height * 0.65, // responsive height
-        decoration: BoxDecoration(
-          color: Colors.grey[50],
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.25),
-              blurRadius: 12,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            // Header
-            _buildHeader(item),
-
-            // Content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
+                width: collapsedWidth,
+                height: collapsedHeight,
+                duration: const Duration(milliseconds: 400),
+                transform: Matrix4.translationValues(offset, 0, 0),
+                curve: Curves.easeInOut,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.blue[50] : Colors.white,
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: isSelected
+                        ? const Color.fromARGB(255, 28, 66, 146)
+                        : Colors.transparent,
+                    width: 2,
+                  ),
+                ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Item Title
-                    Text(
-                      item.itemDescription ?? 'No Description',
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1C4292),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Item ID: ${item.itemsId ?? 'N/A'}',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        color: Colors.black54,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Detail grid
-                    Wrap(
-                      spacing: 16,
-                      runSpacing: 16,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildDetailCard(
-                          title: 'Barcode',
-                          value: item.barcode ?? 'N/A',
-                          color: Colors.blue,
+                        // Location Avatar
+                        _buildLocationAvatar(location, isSelected, isCompact),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                location.branchName ?? 'Unnamed branch',
+                                style: TextStyle(
+                                  color: const Color(0xFF373737),
+                                  fontSize: isCompact ? 20 : 24,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              Text(
+                                'Margin Type: ${(location.marginType == 'F' ? 'Flat' : 'Percentage')}',
+                                style: TextStyle(
+                                  color: const Color(0xFF887F7F),
+                                  fontSize: isCompact ? 12 : 14,
+                                  fontStyle: FontStyle.italic,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w300,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              // Location codes count badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue[50],
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.blue[200]!),
+                                ),
+                                child: Text(
+                                  '$assignedCodesCount location codes',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: const Color(0xFF145888),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        _buildDetailCard(
-                          title: 'Unit Price',
-                          value: item.unitPrice != null
-                              ? '\$${item.unitPrice!.toStringAsFixed(2)}'
-                              : 'N/A',
-                          color: Colors.blue,
-                        ),
-                        _buildDetailCard(
-                          title: 'Margin Rate',
-                          value: item.marginRate?.toStringAsFixed(2) ?? 'N/A',
-                          color: Colors.blue,
-                        ),
-                        _buildDetailCard(
-                          title: 'Margin Type',
-                          value: item.marginType ?? 'N/A',
-                          color: Colors.blue,
-                        ),
-                        _buildDetailCard(
-                          title: 'Unit of Measure',
-                          value: item.unitOfMeasure ?? 'N/A',
-                          color: Colors.blue,
-                        ),
-                        _buildDetailCard(
-                          title: 'Reorder Point',
-                          value: item.reorderPoint?.toStringAsFixed(2) ?? 'N/A',
-                          color: Colors.blue,
-                        ),
-                        _buildDetailCard(
-                          title: 'Taxable',
-                          value: item.taxable == 'Y' ? 'Yes' : 'No',
-                          color: item.taxable == 'Y'
-                              ? Colors.red
-                              : Colors.green,
-                        ),
-                        _buildDetailCard(
-                          title: 'Status',
-                          value: 'Active',
-                          color: Colors.blue,
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        // See More / See Less button
+                        ElevatedButton(
+                          onPressed: () => isExpanded
+                              ? _hideLocationDetail()
+                              : _showLocationDetail(location),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF145888),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          child: Text(
+                            isExpanded ? 'See Less' : 'See More',
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: isCompact ? 10 : 12,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ],
                 ),
               ),
-            ),
 
-            // Actions
-            _buildActionBar(item),
-          ],
+              // 4. ANIMATED EXPANDED CONTENT
+              if (isExpanded)
+                Positioned(
+                  top: collapsedHeight + 10,
+                  left: 20,
+                  right: 20,
+                  child: AnimatedBuilder(
+                    animation: _detailAnimationController,
+                    builder: (context, child) {
+                      final currentHeight =
+                          _heightAnimation.value *
+                          (expandedHeight - collapsedHeight - 20);
+                      final currentOpacity = _opacityAnimation.value;
+
+                      return SlideTransition(
+                        position: _slideAnimation,
+                        child: Container(
+                          height: currentHeight > 0 ? currentHeight : 0,
+                          decoration: BoxDecoration(color: Colors.transparent),
+                          child: Opacity(opacity: currentOpacity, child: child),
+                        ),
+                      );
+                    },
+                    child: _buildLocationDetailContent(location, isCompact),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // Header with drag handle + close
-  Widget _buildHeader(ItemEntryModel item) {
-    return Container(
-      padding: const EdgeInsets.only(top: 10, bottom: 8),
-      decoration: const BoxDecoration(
-        color: Color(0xFF1C4292),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+  Widget _buildLocationDetailContent(LotMaster location, bool isCompact) {
+    final assignedCodesCount = _getAssignedCodesCount(location);
+    final nonEmptyCodes = _getNonEmptyCodes(location);
+    final displayedCodes = nonEmptyCodes.take(5).toList();
+    final hasMoreCodes = nonEmptyCodes.length > 5;
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
       child: Column(
         children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.white54,
-              borderRadius: BorderRadius.circular(2),
-            ),
+          _buildLocationInfoItem(
+            'Location ID : ',
+            location.id.toString(),
+            Iconsax.card,
+            isCompact,
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              const SizedBox(width: 16),
-              const Icon(Icons.inventory_2, color: Colors.white, size: 24),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  'Item Details',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+          _buildLocationInfoItem(
+            'Branch : ',
+            location.branchName ?? 'Unknown Branch',
+            Iconsax.building,
+            isCompact,
+          ),
+          _buildLocationInfoItem(
+            'Total Location Codes : ',
+            '$assignedCodesCount',
+            Iconsax.code,
+            isCompact,
+          ),
+
+          // Location Codes Section
+          if (nonEmptyCodes.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Iconsax.code,
+                      size: 16,
+                      color: Colors.grey,
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Location Codes : ',
+                          style: TextStyle(
+                            color: Color(0xFF373737),
+                            fontSize: 13,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        // Display location codes as chips
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            ...displayedCodes.map(
+                              (code) => Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue[50],
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: Colors.blue[200]!),
+                                ),
+                                child: Text(
+                                  code,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.blue[800],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            if (hasMoreCodes)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange[50],
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: Colors.orange[200]!,
+                                  ),
+                                ),
+                                child: Text(
+                                  '+${nonEmptyCodes.length - 5} more',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.orange[800],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              ElevatedButton(
-                onPressed: () => context.push(
-                  AppRoutes.addItemToBranch,
-                  extra: {'item': item},
+            ),
+
+          if (location.marginType != null)
+            _buildLocationInfoItem(
+              'Margin Type : ',
+              location.marginType == 'F' ? 'Flat' : 'Percentage',
+              Iconsax.chart,
+              isCompact,
+            ),
+          if (location.marginRate != null)
+            _buildLocationInfoItem(
+              'Margin Rate : ',
+              '${location.marginRate}${location.marginType == 'F' ? ' ETB' : '%'}',
+              Iconsax.dollar_circle,
+              isCompact,
+            ),
+
+          // Action buttons row
+          Padding(
+            padding: const EdgeInsets.only(top: 16, bottom: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildActionButton(
+                  Iconsax.edit,
+                  'Edit',
+                  () => _navigateToEditScreen(location),
+                  isCompact,
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                _buildActionButton(
+                  Iconsax.export,
+                  'Export',
+                  () => _exportLocation(location),
+                  isCompact,
                 ),
-                child: const Text(
-                  'Add to branch',
-                  style: TextStyle(color: Colors.white),
+                _buildActionButton(
+                  Iconsax.trash,
+                  'Delete',
+                  () => _safeDelete(context),
+                  isCompact,
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close, color: Colors.white),
-                onPressed: _hideItemDetail,
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  // Detail card style
-  Widget _buildDetailCard({
-    required String title,
-    required String value,
-    required Color color,
-  }) {
-    return Container(
-      width:
-          (MediaQuery.of(context).size.width / 2) - 30, // responsive 2-column
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
+  Widget _buildLocationInfoItem(
+    String label,
+    String value,
+    IconData icon,
+    bool isCompact,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Colors.black54,
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              shape: BoxShape.circle,
             ),
+            child: Icon(icon, size: 16, color: Colors.grey[600]),
           ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: color,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: label,
+                    style: const TextStyle(
+                      color: Color(0xFF373737),
+                      fontSize: 13,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  TextSpan(
+                    text: value,
+                    style: const TextStyle(
+                      color: Color(0xFF373737),
+                      fontSize: 13,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Bottom action bar
-  Widget _buildActionBar(ItemEntryModel item) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      decoration: const BoxDecoration(
-        color: Color(0xFF1C4292),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildActionButton(
-            Icons.edit,
-            'Edit',
-            Colors.amber,
-            () => _navigateToEditScreen(item),
-          ),
-          _buildActionButton(
-            Icons.share,
-            'Share',
-            Colors.green,
-            () => _exportItem(item),
-          ),
-          _buildActionButton(
-            Icons.delete,
-            'Delete',
-            Colors.red,
-            () => _safeDelete(context),
           ),
         ],
       ),
@@ -759,27 +994,25 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
   Widget _buildActionButton(
     IconData icon,
     String label,
-    Color color,
     VoidCallback onPressed,
+    bool isCompact,
   ) {
     return Column(
       children: [
-        Container(
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: IconButton(
-            icon: Icon(icon, color: color),
-            onPressed: onPressed,
+        IconButton(
+          icon: Icon(icon, size: isCompact ? 20 : 24),
+          onPressed: onPressed,
+          style: IconButton.styleFrom(
+            backgroundColor: const Color(0xFF145888),
+            foregroundColor: Colors.white,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
-            color: color,
+            fontSize: isCompact ? 10 : 12,
+            color: const Color(0xFF373737),
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -787,67 +1020,58 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
     );
   }
 
-  Widget _buildItemEntryModelAvatar(
-    ItemEntryModel item,
+  Widget _buildLocationAvatar(
+    LotMaster location,
     bool isSelected,
     bool isCompact,
   ) {
+    final Color backgroundColor;
+    final Color iconColor;
+
+    if (isSelected) {
+      backgroundColor = const Color.fromARGB(255, 28, 66, 146);
+      iconColor = Colors.white;
+    } else {
+      backgroundColor = Colors.grey[200]!;
+      iconColor = Colors.grey[600]!;
+    }
+
     return Container(
       width: 48,
       height: 48,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-        ),
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: backgroundColor, shape: BoxShape.circle),
       child: Icon(
-        Iconsax.user_tag,
-        color: Colors.white,
+        Iconsax.location,
+        color: iconColor,
         size: isCompact ? 20 : 24,
       ),
     );
   }
 
-  Widget _buildItemEntryModelTrailing(ItemEntryModel item) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        // Taxable status badge
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: item.taxable == 'Y'
-                ? Colors.red.withOpacity(0.1)
-                : Colors.green.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: item.taxable == 'Y' ? Colors.red : Colors.green,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                item.taxable == 'Y' ? Icons.receipt : Icons.money_off,
-                size: 12,
-                color: item.taxable == 'Y' ? Colors.red : Colors.green,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                item.taxable == 'Y' ? 'Taxable' : 'Non-Tax',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: item.taxable == 'Y' ? Colors.red : Colors.green,
-                  fontFamily: 'Roboto',
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
+  void _navigateToCreateScreen() {
+    final companyId = widget.authBloc.state.companyId;
+    if (companyId != null) {
+      context.read<LotMasterBloc>().add(PrepareCreateLocation(companyId));
+      context.push(AppRoutes.LotMasterCreate);
+    }
+  }
+
+  void _navigateToEditScreen(LotMaster location) {
+    context.read<LotMasterBloc>().add(PrepareEditLocation(location));
+    context.push(AppRoutes.LotMasterEdit, extra: location);
+  }
+
+  void _refreshList(BuildContext context) {
+    final companyId = widget.authBloc.state.companyId;
+    if (companyId != null) {
+      context.read<LotMasterBloc>().add(LoadLotMasters(companyId));
+    }
+  }
+
+  void _exportLocation(LotMaster location) {
+    // Implement export functionality
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Location data exported')));
   }
 }

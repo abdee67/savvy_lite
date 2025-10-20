@@ -16,6 +16,7 @@ class UdcDetailsBloc extends Bloc<UdcDetailsEvent, UdcDetailsState> {
     on<DeleteSelectedUdcDetails>(_onDeleteSelectedUdcDetails);
     on<CreateUdcDetail>(_onCreateUdcDetail);
     on<UpdateUdcDetail>(_onUpdateUdcDetail);
+    on<DeleteSelectedUdcDetails>(_onDeleteSelectedUdcDetails);
   }
 
   Future<void> _onLoadUdcDetailsByGroup(

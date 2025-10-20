@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
-import 'package:simple_login/trial%20form_1.dart';
+import 'package:savvy_stock/features/onboarding/screens/welcome_screen.dart';
 
 class TrialOptionScreen extends StatefulWidget {
   const TrialOptionScreen({super.key});
@@ -26,21 +26,19 @@ class _TrialOptionScreenState extends State<TrialOptionScreen>
       duration: const Duration(milliseconds: 600),
     );
     _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
-
   }
 
-void _togglePanel() {
-  if (isExpanded) {
-    _controller.reverse();
-    setState(() => _showNextPage = false);
-  } else {
-    _controller.forward();
-    Future.delayed(const Duration(milliseconds: 400), () {
-      if (mounted) setState(() => _showNextPage = true);
-    });
+  void _togglePanel() {
+    if (isExpanded) {
+      _controller.reverse();
+      setState(() => _showNextPage = false);
+    } else {
+      _controller.forward();
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (mounted) setState(() => _showNextPage = true);
+      });
+    }
   }
-}
-
 
   void _onVerticalDrag(DragEndDetails details) {
     if (details.primaryVelocity! < -100 && !_showNextPage) {
@@ -76,7 +74,8 @@ void _togglePanel() {
           animation: _animation,
           builder: (context, child) {
             // Calculate offset so white sheet is always visible at bottom
-            final double offset = screenSize.height * 0.2 * (1 - _animation.value);
+            final double offset =
+                screenSize.height * 0.2 * (1 - _animation.value);
 
             return Stack(
               alignment: Alignment.center,
@@ -148,10 +147,7 @@ void _togglePanel() {
                         const Text(
                           'Includes 1 branch + up to 5 users',
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                          ),
+                          style: TextStyle(color: Colors.white70, fontSize: 12),
                         ),
                       ],
                     ),
@@ -198,18 +194,21 @@ void _togglePanel() {
                           top: Radius.circular(30),
                         ),
                       ),
-                        child: FloatingActionButton(
-                backgroundColor: Colors.amber,
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const TrialSetupPage(),
-                    ),
-                  );
-                },
-                child: const Icon(Icons.keyboard_arrow_up, color: Colors.black),
-              ),
+                      child: FloatingActionButton(
+                        backgroundColor: Colors.amber,
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const OnboardingScreen(),
+                            ),
+                          );
+                        },
+                        child: const Icon(
+                          Icons.keyboard_arrow_up,
+                          color: Colors.black,
+                        ),
+                      ),
                     ),
                   ),
 
@@ -232,40 +231,43 @@ void _togglePanel() {
     );
   }
 
-Widget _buildAmberButton() {
-  // The button height shrinks as animation moves toward the top
-  final double height = 100 - (50 * _animation.value);
-  final double borderRadius = 20 - (5 * _animation.value);
+  Widget _buildAmberButton() {
+    // The button height shrinks as animation moves toward the top
+    final double height = 100 - (50 * _animation.value);
+    final double borderRadius = 20 - (5 * _animation.value);
 
-  return GestureDetector(
-    onTap: _togglePanel,
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      width: 50,
-      height: height,
-      decoration: BoxDecoration(
-        color: Color.lerp(Colors.amber.shade400, Colors.amber.shade200, _animation.value),
-        borderRadius: BorderRadius.circular(borderRadius),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.amber.withOpacity(0.4),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return GestureDetector(
+      onTap: _togglePanel,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        width: 50,
+        height: height,
+        decoration: BoxDecoration(
+          color: Color.lerp(
+            Colors.amber.shade400,
+            Colors.amber.shade200,
+            _animation.value,
           ),
-        ],
-      ),
-      child: Transform.rotate(
-        angle: _showNextPage ? math.pi : 0,
-        child: Icon(
-          Icons.keyboard_double_arrow_up_rounded,
-          color: Colors.blueGrey.shade900,
-          size: 34,
+          borderRadius: BorderRadius.circular(borderRadius),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.amber.withOpacity(0.4),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Transform.rotate(
+          angle: _showNextPage ? math.pi : 0,
+          child: Icon(
+            Icons.keyboard_double_arrow_up_rounded,
+            color: Colors.blueGrey.shade900,
+            size: 34,
+          ),
         ),
       ),
-    ),
-  );
-}
-
+    );
+  }
 
   // 🔹 Trial Screen Content
   Widget _buildTrialContent() {
@@ -286,13 +288,7 @@ Widget _buildAmberButton() {
                   fontWeight: FontWeight.w900,
                 ),
               ),
-              Text(
-                'here',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 18,
-                ),
-              ),
+              Text('here', style: TextStyle(color: Colors.black, fontSize: 18)),
             ],
           ),
           const SizedBox(height: 24),
@@ -317,8 +313,10 @@ Widget _buildAmberButton() {
                   dropdownColor: Colors.blueGrey.shade900,
                   value: 'Company',
                   underline: const SizedBox(),
-                  icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                      color: Colors.white),
+                  icon: const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: Colors.white,
+                  ),
                   items: const [
                     DropdownMenuItem(
                       value: 'Company',
@@ -354,7 +352,6 @@ Widget _buildAmberButton() {
       ),
     );
   }
-
 
   @override
   void dispose() {

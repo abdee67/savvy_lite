@@ -33,13 +33,20 @@ class EmployeeListPage extends StatefulWidget {
   State<EmployeeListPage> createState() => _EmployeeListPageState();
 }
 
-class _EmployeeListPageState extends State<EmployeeListPage> {
+class _EmployeeListPageState extends State<EmployeeListPage>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isSelectionMode = false;
   final Map<int, double> _dragOffset = {};
   Employee? _selectedEmployee;
   bool _employeeDetail = false;
+
+  // Animation controllers
+  late AnimationController _detailAnimationController;
+  late Animation<double> _heightAnimation;
+  late Animation<double> _opacityAnimation;
+  late Animation<Offset> _slideAnimation;
 
   bool _isEmployeeUser(Employee employee) {
     final userState = context.watch<UserBloc>().state;
@@ -60,6 +67,16 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
   @override
   void initState() {
     super.initState();
+
+    // Initialize animation controller
+    _detailAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    // Set up animations
+    _setupAnimations();
+
     context.read<EmployeeBloc>().add(
       LoadEmployees(widget.authBloc.state.companyId!),
     );
@@ -67,10 +84,35 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     context.read<RoleBloc>().add(LoadRoles(widget.authBloc.state.companyId!));
   }
 
+  void _setupAnimations() {
+    _heightAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _detailAnimationController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeInOutCubic),
+      ),
+    );
+
+    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _detailAnimationController,
+        curve: const Interval(0.3, 1.0, curve: Curves.easeIn),
+      ),
+    );
+
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0.0, -0.1), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _detailAnimationController,
+            curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
+          ),
+        );
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
     _scrollController.dispose();
+    _detailAnimationController.dispose();
     super.dispose();
   }
 
@@ -93,21 +135,25 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
       _selectedEmployee = employee;
       _employeeDetail = true;
     });
+
+    // Start the animation
+    _detailAnimationController.forward(from: 0.0);
+
     context.read<RoleBloc>().add(LoadRoles(widget.authBloc.state.companyId!));
   }
 
   void _hideEmployeeDetail() {
     context.read<EmployeeBloc>().add(ClearSelection());
     context.read<EmployeeBloc>().add(ToggleRoleManagement(0));
-    setState(() {
-      _employeeDetail = false;
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) {
-          setState(() {
-            _selectedEmployee = null;
-          });
-        }
-      });
+
+    // Reverse the animation
+    _detailAnimationController.reverse().then((_) {
+      if (mounted) {
+        setState(() {
+          _employeeDetail = false;
+          _selectedEmployee = null;
+        });
+      }
     });
   }
 
@@ -236,7 +282,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Colors.grey,
       appBar: AppBar(title: const Text('Employee List')),
       body: BlocConsumer<EmployeeBloc, EmployeeState>(
         listener: (context, state) {
@@ -262,56 +308,47 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
                   Expanded(child: _buildEmployeeList(state)),
                 ],
               ),
-
-              // Detail Panel
-              if (_employeeDetail && _selectedEmployee != null)
-                _buildDetailPanel(_selectedEmployee!),
             ],
           );
         },
       ),
-
-      // Floating Action Button for Add
-      floatingActionButton: _buildFloatingActionButton(context),
     );
   }
 
   Widget _buildSearchBar() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search by name, phone, or email...',
+                prefixIcon: const Icon(Iconsax.search_normal, size: 20),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Iconsax.close_circle, size: 20),
+                        onPressed: _clearSearch,
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Colors.grey[100],
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+              onChanged: _handleSearch,
+            ),
           ),
+          const SizedBox(width: 12),
+          _buildFloatingActionButton(context),
         ],
-      ),
-      child: TextField(
-        controller: _searchController,
-        decoration: InputDecoration(
-          hintText: 'Search by name, phone, or email...',
-          prefixIcon: const Icon(Iconsax.search_normal, size: 20),
-          suffixIcon: _searchController.text.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Iconsax.close_circle, size: 20),
-                  onPressed: _clearSearch,
-                )
-              : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          filled: true,
-          fillColor: Colors.grey[100],
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
-          ),
-        ),
-        onChanged: _handleSearch,
       ),
     );
   }
@@ -322,7 +359,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
       height: state.hasSelection ? 60 : 0,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.grey,
         border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
       ),
       child: state.hasSelection
@@ -368,7 +405,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
   Widget _buildFloatingActionButton(BuildContext context) {
     return BlocBuilder<EmployeeBloc, EmployeeState>(
       builder: (context, state) {
-        return FloatingActionButton(
+        return ElevatedButton(
           onPressed: () {
             if (state.canEdit) {
               // Navigate to edit screen with selected employee
@@ -379,10 +416,13 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
               );
             } else {
               // Navigate to add screen
-              context.push(AppRoutes.employeeEdit);
+              context.push(AppRoutes.employeeCreation);
             }
           },
-          backgroundColor: Color.fromARGB(255, 28, 66, 146),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color.fromARGB(255, 28, 66, 146),
+            shape: const CircleBorder(),
+          ),
           child: Icon(
             state.canEdit ? Icons.edit : Icons.add,
             color: Colors.white,
@@ -393,6 +433,12 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
   }
 
   Widget _buildEmployeeList(EmployeeState state) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenWidth < 700;
+    final cardSpacing = screenHeight * 0.02;
+    final cardWidth = isSmallScreen ? screenWidth * 0.85 : screenWidth * 0.8;
+
     if (state.status == EmployeeStatus.loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -438,26 +484,31 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
       );
     }
 
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.all(16),
-      itemCount: state.filteredEmployees.length,
-      itemBuilder: (context, index) {
-        final employee = state.filteredEmployees[index];
-        final isSelected = state.selectedEmployees.contains(employee);
-        final isUser = _isEmployeeUser(employee);
-        final screenWidth = MediaQuery.of(context).size.width;
-        final useCompactLayout = screenWidth < 700;
+    return Container(
+      width: screenWidth,
+      height: screenHeight,
+      decoration: const BoxDecoration(color: Colors.grey),
+      child: ListView.separated(
+        controller: _scrollController,
+        padding: const EdgeInsets.all(16),
+        itemCount: state.filteredEmployees.length,
+        separatorBuilder: (context, index) => SizedBox(height: cardSpacing),
+        itemBuilder: (context, index) {
+          final employee = state.filteredEmployees[index];
+          final isSelected = state.selectedEmployees.contains(employee);
+          final isUser = _isEmployeeUser(employee);
 
-        return _buildEmployeeListItem(
-          employee,
-          isSelected,
-          state,
-          index,
-          isUser,
-          useCompactLayout,
-        );
-      },
+          return _buildEmployeeListItem(
+            employee,
+            isSelected,
+            state,
+            index,
+            isUser,
+            isSmallScreen,
+            cardWidth,
+          );
+        },
+      ),
     );
   }
 
@@ -468,16 +519,28 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     int index,
     bool isUser,
     bool isCompact,
+    double cardWidth,
   ) {
     final offset = _dragOffset[index] ?? 0.0;
+    final isExpanded = _employeeDetail == true && _selectedEmployee == employee;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    // For responsiveness:
+    final collapsedHeight = isCompact
+        ? screenHeight *
+              0.2 // phones
+        : screenHeight * 0.12; // tablets / wide screens
+
+    final expandedHeight = isCompact
+        ? screenHeight * 0.55
+        : screenHeight * 0.45;
+    final collapsedWidth = isCompact ? screenWidth * 0.92 : screenWidth * 0.8;
 
     return GestureDetector(
       onTap: () {
         if (_isSelectionMode) {
           _toggleEmployeeSelection(employee, !isSelected);
-        } else {
-          // Single tap shows detail when not in selection mode
-          _showEmployeeDetail(employee);
         }
       },
       onLongPress: () {
@@ -493,122 +556,236 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
       onHorizontalDragEnd: (details) =>
           _onHorizontalDragEnd(context, index, details),
       onDoubleTap: () => _showEmployeeDetail(employee),
-      child: Stack(
-        children: [
-          // Background (delete indicator)
-          Positioned.fill(
-            child: Container(
-              alignment: Alignment.centerRight,
-              decoration: BoxDecoration(
-                color: Colors.amber, // Changed to red for delete action
-                borderRadius: BorderRadius.circular(16),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              margin: const EdgeInsets.only(bottom: 2),
-              child: const Icon(Icons.delete, color: Colors.white, size: 28),
-            ),
-          ),
+      child: AnimatedBuilder(
+        animation: _scrollController,
+        builder: (context, child) => Container(
+          transform: Matrix4.translationValues(offset, 0, 0),
+          width: collapsedWidth,
+          height: isExpanded ? expandedHeight : collapsedHeight,
+          child: Stack(
+            children: [
+              // 1. DELETE INDICATOR - Should be FIRST in Stack
+              if (!isExpanded) // Only show delete indicator when not expanded
+                Positioned.fill(
+                  child: Container(
+                    alignment: Alignment.centerRight,
+                    decoration: BoxDecoration(
+                      color: Colors.amber, // Changed to red for delete
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    margin: const EdgeInsets.only(bottom: 2),
+                    child: const Icon(
+                      Icons.delete,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                ),
 
-          // Employee card
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            transform: Matrix4.translationValues(offset, 0, 0),
-            curve: Curves.easeOut,
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: isSelected ? Colors.blue[50] : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+              // 2. BACKGROUND LAYERS (only when expanded)
+              if (isExpanded) ...[
+                // Yellow background
+                Positioned.fill(
+                  top: 47,
+                  child: Container(
+                    width: collapsedWidth,
+                    height: expandedHeight,
+                    decoration: ShapeDecoration(
+                      color: state.isRoleManagementMode
+                          ? Colors.white
+                          : const Color(0xFFFDD105), // Fixed yellow color
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                  ),
                 ),
               ],
-              border: Border.all(
-                color: isSelected
-                    ? const Color.fromARGB(255, 28, 66, 146)
-                    : Colors.transparent,
-                width: 2,
-              ),
-            ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.all(16),
-              leading: _buildEmployeeAvatar(
-                employee,
-                isSelected,
-                isUser,
-                isCompact,
-              ),
-              title: Text(
-                '${employee.nameFirst} ${employee.nameLast}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+
+              // 3. EMPLOYEE CARD - Should come AFTER delete indicator
+              AnimatedContainer(
+                padding: const EdgeInsets.only(top: 4, left: 10, right: 10),
+                width: collapsedWidth,
+                height: collapsedHeight,
+                duration: const Duration(milliseconds: 400),
+                transform: Matrix4.translationValues(offset, 0, 0),
+                curve: Curves.easeInOut,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.blue[50] : Colors.white,
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: isSelected
+                        ? const Color.fromARGB(255, 28, 66, 146)
+                        : Colors.transparent,
+                    width: 2,
+                  ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Customer Avatar
+                        Container(
+                          margin: const EdgeInsets.only(top: 20, right: 12),
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? const Color.fromARGB(255, 28, 66, 146)
+                                : Colors.grey[200],
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Iconsax.profile_circle,
+                            color: isSelected ? Colors.white : Colors.grey[600],
+                            size: isCompact ? 20 : 24,
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                employee.fullName,
+                                style: TextStyle(
+                                  color: const Color(0xFF373737),
+                                  fontSize: isCompact ? 20 : 24,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              Text(
+                                employee.phone,
+                                style: TextStyle(
+                                  color: const Color(0xFF887F7F),
+                                  fontSize: isCompact ? 12 : 14,
+                                  fontStyle: FontStyle.italic,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w300,
+                                ),
+                              ),
+                              _buildEmployeeSubtitle(employee, isUser),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        // See More / See Less / Role / Main Action logic
+                        Row(
+                          children: [
+                            if (isExpanded) ...[
+                              if (state.isRoleManagementMode)
+                                _buildRoleManagementButton(
+                                  employee,
+                                  state,
+                                  isCompact,
+                                  context,
+                                )
+                              else
+                                _buildMainActionButton(
+                                  employee,
+                                  isUser,
+                                  isCompact,
+                                  context,
+                                ),
+                              const SizedBox(width: 10),
+                            ],
+                            ElevatedButton(
+                              onPressed: () => isExpanded
+                                  ? _hideEmployeeDetail()
+                                  : _showEmployeeDetail(employee),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF145888),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                              ),
+                              child: Text(
+                                isExpanded ? 'See Less' : 'See More',
+                                textAlign: TextAlign.right,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: isCompact ? 10 : 12,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              subtitle: _buildEmployeeSubtitle(employee, isUser),
-              trailing: _buildEmployeeTrailing(isSelected, isUser),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  // Separate method for employee avatar
-  Widget _buildEmployeeAvatar(
-    Employee employee,
-    bool isSelected,
-    bool isUser,
-    bool isCompact,
-  ) {
-    // Define colors based on user status
-    final Color backgroundColor;
-    final Color iconColor;
+              // 4. ANIMATED EXPANDED CONTENT
+              if (isExpanded)
+                Positioned(
+                  top: collapsedHeight + 10,
+                  left: 20,
+                  right: 20,
+                  child: AnimatedBuilder(
+                    animation: _detailAnimationController,
+                    builder: (context, child) {
+                      final currentHeight =
+                          _heightAnimation.value *
+                          (expandedHeight - collapsedHeight - 20);
+                      final currentOpacity = _opacityAnimation.value;
 
-    if (isSelected) {
-      backgroundColor = const Color.fromARGB(255, 28, 66, 146);
-      iconColor = Colors.white;
-    } else if (isUser) {
-      backgroundColor = Colors.green;
-      iconColor = Colors.white;
-    } else {
-      backgroundColor = Colors.grey[200]!;
-      iconColor = Colors.grey[600]!;
-    }
-
-    return Stack(
-      children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            Iconsax.profile_circle,
-            color: iconColor,
-            size: isCompact ? 20 : 24,
+                      return SlideTransition(
+                        position: _slideAnimation,
+                        child: Container(
+                          height: currentHeight > 0 ? currentHeight : 0,
+                          decoration: BoxDecoration(color: Colors.transparent),
+                          child: Opacity(opacity: currentOpacity, child: child),
+                        ),
+                      );
+                    },
+                    child: MultiBlocProvider(
+                      providers: [
+                        BlocProvider.value(value: context.read<EmployeeBloc>()),
+                        BlocProvider.value(value: widget.userBloc),
+                      ],
+                      child: BlocConsumer<EmployeeBloc, EmployeeState>(
+                        listener: (context, state) {
+                          if (state.status == EmployeeStatus.success &&
+                              state.message != null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(state.message!)),
+                            );
+                          }
+                        },
+                        builder: (context, state) {
+                          return _buildContentSection(
+                            employee,
+                            state,
+                            !isCompact, // useHorizontalLayout
+                            isCompact,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
-        // User status badge
-        if (isUser)
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: Container(
-              width: 16,
-              height: 16,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Iconsax.verify, size: 12, color: Colors.green),
-            ),
-          ),
-      ],
+      ),
     );
   }
 
@@ -617,25 +794,6 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Show position/title if available
-        if (employee.title != null && employee.title!.isNotEmpty)
-          Text(
-            employee.title!,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-
-        // Contact information
-        Text('📞 ${employee.phone}', style: const TextStyle(fontSize: 12)),
-        Text(
-          '📧 ${employee.email}',
-          style: const TextStyle(fontSize: 12),
-          overflow: TextOverflow.ellipsis,
-        ),
-
         // User status badge
         if (isUser)
           Container(
@@ -677,112 +835,6 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     );
   }
 
-  // Separate method for trailing widget
-  Widget _buildEmployeeTrailing(bool isSelected, bool isUser) {
-    if (isSelected) {
-      return const Icon(
-        Iconsax.tick_circle,
-        color: Color.fromARGB(255, 28, 66, 146),
-      );
-    }
-
-    // Show user type indicator when not selected
-    return Icon(
-      isUser ? Iconsax.user : Iconsax.profile_2user,
-      color: isUser ? Colors.green : Colors.grey[400],
-      size: 20,
-    );
-  }
-
-  Widget _buildDetailPanel(Employee employee) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider.value(value: context.read<EmployeeBloc>()),
-        BlocProvider.value(value: widget.userBloc), // Use the passed UserBloc
-      ],
-      child: BlocConsumer<EmployeeBloc, EmployeeState>(
-        listener: (context, state) {
-          if (state.status == EmployeeStatus.success && state.message != null) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(state.message!)));
-          }
-        },
-        builder: (context, state) {
-          final isUser = _isEmployeeUser(employee);
-          final userWithRole = _getUserForEmployee(employee);
-          return Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Builder(
-              builder: (context) {
-                final size = MediaQuery.of(context).size;
-                final screenWidth = size.width;
-                final screenHeight = size.height;
-                final panelHeight = screenHeight * 0.7; // finite height
-                final useHorizontalLayout = screenWidth > 700;
-                final useCompactLayout = screenWidth < 700;
-
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 400),
-                  curve: Curves.easeOut,
-                  height: panelHeight,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Colors.white, Colors.grey[50]!],
-                    ),
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(32),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.25),
-                        blurRadius: 32,
-                        offset: const Offset(0, -8),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      // Header Section
-                      _buildDetailHeader(
-                        employee,
-                        state,
-                        userWithRole,
-                        isUser,
-                        useCompactLayout,
-                      ),
-
-                      // Content Section
-                      Expanded(
-                        child: Padding(
-                          padding: EdgeInsets.all(useCompactLayout ? 12 : 20),
-                          child: _buildContentSection(
-                            employee,
-                            state,
-                            useHorizontalLayout,
-                            useCompactLayout,
-                          ),
-                        ),
-                      ),
-
-                      // Footer Actions
-                      // if (!state.isRoleManagementMode)
-                      //  _buildDetailFooter(employee, useCompactLayout),
-                    ],
-                  ),
-                );
-              },
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   // Add this new method:
   Widget _buildContentSection(
     Employee employee,
@@ -807,173 +859,6 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     }
   }
 
-  Widget _buildDetailHeader(
-    Employee employee,
-    EmployeeState state,
-    UserWithRole? userWithRole,
-    bool isUser,
-    bool isCompact,
-  ) {
-    final roleNames =
-        userWithRole?.roles.map((r) => r.name).join(', ') ?? 'No roles';
-
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: isCompact ? 16 : 20,
-        vertical: isCompact ? 8 : 12,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Drag handle
-          Container(
-            width: isCompact ? 40 : 60,
-            height: 4,
-            margin: EdgeInsets.only(bottom: isCompact ? 4 : 8),
-            decoration: BoxDecoration(
-              color: Colors.grey[400],
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-
-          // Header content
-          Row(
-            children: [
-              // Avatar and basic info
-              Expanded(
-                child: Row(
-                  children: [
-                    // Avatar with user status indicator
-                    Stack(
-                      children: [
-                        Container(
-                          width: isCompact ? 40 : 50,
-                          height: isCompact ? 40 : 50,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: isUser
-                                  ? [Color(0xFF10b981), Color(0xFF059669)]
-                                  : [Color(0xFF667eea), Color(0xFF764ba2)],
-                            ),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Text(
-                              '${employee.nameFirst[0]}${employee.nameLast[0]}',
-                              style: TextStyle(
-                                fontSize: isCompact ? 14 : 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (isUser)
-                          Positioned(
-                            right: 0,
-                            bottom: 0,
-                            child: Container(
-                              width: isCompact ? 12 : 16,
-                              height: isCompact ? 12 : 16,
-                              decoration: BoxDecoration(
-                                color: Colors.green,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 2,
-                                ),
-                              ),
-                              child: Icon(
-                                Icons.check,
-                                size: isCompact ? 8 : 10,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-
-                    SizedBox(width: isCompact ? 8 : 12),
-
-                    // Name and user status
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${employee.nameFirst} ${employee.nameLast}',
-                            style: TextStyle(
-                              fontSize: isCompact ? 16 : 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            isUser ? 'System User' : 'Employee Only',
-                            style: TextStyle(
-                              fontSize: isCompact ? 12 : 14,
-                              color: isUser ? Colors.green : Colors.orange,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Action button - ONLY show role management for users
-              if (state.isRoleManagementMode)
-                _buildRoleManagementButton(employee, state, isCompact, context)
-              else
-                _buildMainActionButton(employee, isUser, isCompact, context),
-
-              SizedBox(width: 8),
-
-              // Close button
-              Container(
-                width: isCompact ? 32 : 36,
-                height: isCompact ? 32 : 36,
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: Icon(Icons.close, size: isCompact ? 16 : 18),
-                  onPressed: _hideEmployeeDetail,
-                  padding: EdgeInsets.zero,
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   // Separate method for role management button
   Widget _buildRoleManagementButton(
     Employee employee,
@@ -991,7 +876,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Roles updated successfully'),
-              backgroundColor: Colors.green,
+              backgroundColor: Color(0xFF145888),
             ),
           );
         }
@@ -1015,7 +900,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
                   }
                 },
           style: ElevatedButton.styleFrom(
-            backgroundColor: hasChanges ? Colors.amber : Colors.blue,
+            backgroundColor: hasChanges ? Colors.amber : Color(0xFF145888),
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(
               horizontal: isCompact ? 12 : 16,
@@ -1054,7 +939,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
           context.read<EmployeeBloc>().add(ToggleRoleManagement(employee.id));
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blue,
+          backgroundColor: Color(0xFF145888),
           foregroundColor: Colors.white,
           padding: EdgeInsets.symmetric(
             horizontal: isCompact ? 12 : 16,
@@ -1075,7 +960,7 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
         ),
 
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.green,
+          backgroundColor: Color(0xFF145888),
           foregroundColor: Colors.white,
           padding: EdgeInsets.symmetric(
             horizontal: isCompact ? 12 : 16,
@@ -1162,169 +1047,122 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     bool useHorizontal,
     bool isCompact,
   ) {
-    if (useHorizontal) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Column(
         children: [
-          // Personal Information
-          Expanded(
-            child: _buildInfoSection(
-              title: 'Personal Information',
-              icon: Iconsax.profile_circle,
-              color: Color(0xFF667eea),
-              isCompact: isCompact,
-              children: [
+          Column(
+            children: [
+              _buildInfoItem(
+                'ID : ',
+                employee.id.toString(),
+                Iconsax.card,
+                isCompact,
+              ),
+              _buildInfoItem(
+                'Employee ID : ',
+                employee.employeeId ?? 'N/A',
+                Iconsax.card,
+                isCompact,
+              ),
+              _buildInfoItem(
+                'First Name : ',
+                employee.nameFirst,
+                Iconsax.user,
+                isCompact,
+              ),
+              _buildInfoItem(
+                'Last Name : ',
+                employee.nameLast,
+                Iconsax.user,
+                isCompact,
+              ),
+              if (employee.nameMiddle.isNotEmpty)
                 _buildInfoItem(
-                  'ID',
-                  employee.id.toString(),
-                  Iconsax.card,
-                  isCompact,
-                ),
-                _buildInfoItem(
-                  'Employee ID',
-                  employee.employeeId ?? 'N/A',
-                  Iconsax.card,
-                  isCompact,
-                ),
-                _buildInfoItem(
-                  'First Name',
-                  employee.nameFirst,
+                  'Middle Name : ',
+                  employee.nameMiddle,
                   Iconsax.user,
                   isCompact,
                 ),
-                _buildInfoItem(
-                  'Last Name',
-                  employee.nameLast,
-                  Iconsax.user,
-                  isCompact,
+              _buildInfoItem(
+                'Email : ',
+                employee.email,
+                Iconsax.sms,
+                isCompact,
+              ),
+              _buildInfoItem(
+                'Phone : ',
+                employee.phone,
+                Iconsax.call,
+                isCompact,
+              ),
+              _buildInfoItem(
+                'Hire Date : ',
+                _formatDate(employee.hireDate),
+                Iconsax.calendar_1,
+                isCompact,
+              ),
+              // Action buttons row
+              Padding(
+                padding: const EdgeInsets.only(top: 16, bottom: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildActionButton(
+                      Iconsax.call,
+                      'Call',
+                      () => _callEmployee(employee.phone ?? ''),
+                      isCompact,
+                    ),
+                    _buildActionButton(
+                      Iconsax.sms,
+                      'Email',
+                      () => _emailEmployee(employee.email ?? ''),
+                      isCompact,
+                    ),
+                    _buildActionButton(
+                      Iconsax.export,
+                      'Export',
+                      () => _exportEmployee(employee),
+                      isCompact,
+                    ),
+                  ],
                 ),
-                if (employee.nameMiddle.isNotEmpty)
-                  _buildInfoItem(
-                    'Middle Name',
-                    employee.nameMiddle,
-                    Iconsax.user,
-                    isCompact,
-                  ),
-                _buildInfoItem(
-                  'Gender',
-                  employee.gender ?? 'Not specified',
-                  Iconsax.people,
-                  isCompact,
-                ),
-                _buildInfoItem(
-                  'Birth Date',
-                  _formatDate(employee.birthDate),
-                  Iconsax.calendar,
-                  isCompact,
-                ),
-              ],
-            ),
-          ),
-          SizedBox(width: isCompact ? 12 : 20),
-          // Contact Information
-          Expanded(
-            child: _buildInfoSection(
-              title: 'Contact Information',
-              icon: Iconsax.call,
-              color: Color(0xFFf093fb),
-              isCompact: isCompact,
-              children: [
-                _buildInfoItem('Email', employee.email, Iconsax.sms, isCompact),
-                _buildInfoItem(
-                  'Phone',
-                  employee.phone,
-                  Iconsax.call,
-                  isCompact,
-                ),
-                _buildInfoItem(
-                  'Country',
-                  employee.country ?? 'Ethiopia',
-                  Iconsax.location,
-                  isCompact,
-                ),
-                _buildInfoItem(
-                  'City',
-                  employee.city ?? 'N/A',
-                  Iconsax.buildings,
-                  isCompact,
-                ),
-                _buildInfoItem(
-                  'Address',
-                  employee.address ?? 'N/A',
-                  Iconsax.home,
-                  isCompact,
-                ),
-                _buildInfoItem(
-                  'Hire Date',
-                  _formatDate(employee.hireDate),
-                  Iconsax.calendar_1,
-                  isCompact,
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
-      );
-    } else {
-      return SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildInfoSection(
-              title: 'Employee Information',
-              icon: Iconsax.profile_circle,
-              color: Color(0xFF667eea),
-              isCompact: isCompact,
-              children: [
-                _buildInfoItem(
-                  'ID',
-                  employee.id.toString(),
-                  Iconsax.card,
-                  isCompact,
-                ),
-                _buildInfoItem(
-                  'Employee ID',
-                  employee.employeeId ?? 'N/A',
-                  Iconsax.card,
-                  isCompact,
-                ),
-                _buildInfoItem(
-                  'First Name',
-                  employee.nameFirst,
-                  Iconsax.user,
-                  isCompact,
-                ),
-                _buildInfoItem(
-                  'Last Name',
-                  employee.nameLast,
-                  Iconsax.user,
-                  isCompact,
-                ),
-                if (employee.nameMiddle.isNotEmpty)
-                  _buildInfoItem(
-                    'Middle Name',
-                    employee.nameMiddle,
-                    Iconsax.user,
-                    isCompact,
-                  ),
-                _buildInfoItem('Email', employee.email, Iconsax.sms, isCompact),
-                _buildInfoItem(
-                  'Phone',
-                  employee.phone,
-                  Iconsax.call,
-                  isCompact,
-                ),
-                _buildInfoItem(
-                  'Hire Date',
-                  _formatDate(employee.hireDate),
-                  Iconsax.calendar_1,
-                  isCompact,
-                ),
-              ],
-            ),
-          ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton(
+    IconData icon,
+    String label,
+    VoidCallback onPressed,
+    bool isCompact,
+  ) {
+    return Column(
+      children: [
+        IconButton(
+          icon: Icon(icon, size: isCompact ? 20 : 24),
+          onPressed: onPressed,
+          style: IconButton.styleFrom(
+            backgroundColor: const Color(0xFF145888),
+            foregroundColor: Colors.white,
+          ),
         ),
-      );
-    }
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: isCompact ? 10 : 12,
+            color: const Color(0xFF373737),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
   }
 
   // Replace your entire _buildRoleManagementView method with this:
@@ -1398,11 +1236,9 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     return Column(
       children: [
         // Search bar
-        _buildRoleSearchBar(isCompact),
-        const SizedBox(height: 16),
-
         Expanded(
           child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
             child: Column(
               children: [
                 // Assigned Roles Section
@@ -1420,7 +1256,9 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
                   },
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 6),
+                _buildRoleSearchBar(isCompact),
+                const SizedBox(height: 6),
 
                 // Available Roles Section
                 _buildRoleSection(
@@ -1497,336 +1335,132 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
         .where((role) => currentAssignedRoles.any((r) => r.id == role.id))
         .toList();
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.amber[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.amber[300]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.amber[100],
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header
+        Row(
+          children: [
+            const Icon(Iconsax.info_circle, color: Colors.amber, size: 16),
+            const SizedBox(width: 8),
+            Text(
+              'Changes to Save (${selectedRoles.length})',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.amber,
+                fontSize: 14,
               ),
             ),
-            child: Row(
-              children: [
-                const Icon(Iconsax.info_circle, color: Colors.amber),
-                const SizedBox(width: 8),
+          ],
+        ),
+
+        // Content
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Roles to Add - Dynamic wrapping
+              if (rolesToAdd.isNotEmpty) ...[
                 Text(
-                  'Changes to Save (${selectedRoles.length})',
-                  style: const TextStyle(
+                  'Adding (${rolesToAdd.length}):',
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.amber,
+                    color: Colors.green[800],
+                    fontSize: isCompact ? 12 : 14,
                   ),
                 ),
+                const SizedBox(height: 8),
+                _buildDynamicRolesWrap(rolesToAdd, true, isCompact),
+                const SizedBox(height: 12),
               ],
-            ),
+
+              // Roles to Remove - Dynamic wrapping
+              if (rolesToRemove.isNotEmpty) ...[
+                Text(
+                  'Removing (${rolesToRemove.length}):',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red[800],
+                    fontSize: isCompact ? 12 : 14,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _buildDynamicRolesWrap(rolesToRemove, false, isCompact),
+              ],
+            ],
           ),
-
-          // Roles to Add
-          if (rolesToAdd.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Adding (${rolesToAdd.length}):',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green[800],
-                      fontSize: 12,
-                    ),
-                  ),
-                  Wrap(
-                    spacing: 8,
-                    children: rolesToAdd
-                        .map(
-                          (role) => Chip(
-                            label: Text(role.name),
-                            backgroundColor: Colors.green[100],
-                            labelStyle: TextStyle(
-                              color: Colors.green[800],
-                              fontSize: 12,
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ],
-              ),
-            ),
-          ],
-
-          // Roles to Remove
-          if (rolesToRemove.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Removing (${rolesToRemove.length}):',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red[800],
-                      fontSize: 12,
-                    ),
-                  ),
-                  Wrap(
-                    spacing: 8,
-                    children: rolesToRemove
-                        .map(
-                          (role) => Chip(
-                            label: Text(role.name),
-                            backgroundColor: Colors.red[100],
-                            labelStyle: TextStyle(
-                              color: Colors.red[800],
-                              fontSize: 12,
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _buildVerticalRoleManagement(
-    List<Role> assignedRoles,
-    List<Role> availableRoles,
-    EmployeeState state,
-    Employee employee,
-    UserWithRole? userWithRole,
+  // Dynamic wrapping based on available width
+  Widget _buildDynamicRolesWrap(
+    List<Role> roles,
+    bool isAdding,
     bool isCompact,
   ) {
-    // For the User Roles section: show permanently assigned roles + temporarily selected roles
-    final userRolesToShow = [
-      ...assignedRoles.where(
-        (role) => !state.selectedRolesForAssignment.any(
-          (selected) => selected.id == role.id,
-        ),
-      ),
-    ];
+    final screenWidth = MediaQuery.of(context).size.width;
 
-    // For the Available Roles section: show available roles excluding temporarily selected ones
-    final availableRolesToShow = availableRoles
-        .where(
-          (role) => !state.selectedRolesForAssignment.any(
-            (selected) => selected.id == role.id,
-          ),
-        )
-        .toList();
+    // Calculate items per row based on screen width
+    int getItemsPerRow() {
+      if (screenWidth < 400) return 2; // Very small screens: 2 per row
+      if (screenWidth < 600) return 3; // Small screens: 3 per row
+      if (screenWidth < 900) return 4; // Medium screens: 4 per row
+      return 5; // Large screens: 5 per row
+    }
 
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          _buildRoleSection(
-            title: 'Current User Roles',
-            roles: userRolesToShow,
-            isAssigned: true,
-            isCompact: isCompact,
-            selectedRoles: state.selectedRolesForAssignment,
-            onRoleTap: (role) {
-              // Tapping on assigned role: remove it (move to available)
-              context.read<EmployeeBloc>().add(SelectRoleForAssignment(role));
-            },
-          ),
-          SizedBox(height: 16),
-          _buildRoleSection(
-            title: 'Available Roles ',
-            roles: availableRolesToShow,
-            isAssigned: false,
-            isCompact: isCompact,
-            selectedRoles: state.selectedRolesForAssignment,
-            onRoleTap: (role) {
-              // Tapping on available role: select it (will appear in user roles temporarily)
-              context.read<EmployeeBloc>().add(SelectRoleForAssignment(role));
-            },
-          ),
+    final itemsPerRow = getItemsPerRow();
+    final itemWidth =
+        (screenWidth - 48 - (8 * (itemsPerRow - 1))) / itemsPerRow;
 
-          // Show temporarily selected roles in a separate section or as part of user roles
-          if (state.selectedRolesForAssignment.isNotEmpty) ...[
-            SizedBox(height: 16),
-            _buildRolesToAssignSection(
-              roles: state.selectedRolesForAssignment,
-              currentAssignedRoles: assignedRoles,
-              isCompact: isCompact,
-              onRemove: (role) {
-                context.read<EmployeeBloc>().add(
-                  DeselectRoleForAssignment(role),
-                );
-              },
-            ),
-          ],
-        ],
-      ),
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.start,
+      children: roles.map((role) {
+        return SizedBox(
+          width: itemWidth.clamp(100, 200), // Clamp between min and max
+          child: _buildRolePreviewItem(role, isAdding, isCompact),
+        );
+      }).toList(),
     );
   }
 
-  Widget _buildRolesToAssignSection({
-    required List<Role> roles,
-    required List<Role> currentAssignedRoles,
-    required bool isCompact,
-    required ValueChanged<Role> onRemove,
-  }) {
-    // Calculate what the final role assignment will look like
-    final finalRoles = [
-      ...currentAssignedRoles.where(
-        (role) => !roles.any((r) => r.id == role.id),
-      ),
-      ...roles,
-    ];
-
+  // Individual role preview item
+  Widget _buildRolePreviewItem(Role role, bool isAdding, bool isCompact) {
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.amber[50],
-        borderRadius: BorderRadius.circular(isCompact ? 12 : 16),
-        border: Border.all(color: Colors.amber[300]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Section header
-          Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: isCompact ? 12 : 16,
-              vertical: isCompact ? 8 : 12,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.amber.withOpacity(0.2),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(isCompact ? 12 : 16),
-                topRight: Radius.circular(isCompact ? 12 : 16),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Iconsax.edit,
-                  size: isCompact ? 16 : 20,
-                  color: Colors.amber[800],
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Roles to Assign (${roles.length})',
-                        style: TextStyle(
-                          fontSize: isCompact ? 14 : 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.amber[800],
-                        ),
-                      ),
-                      Text(
-                        'Final roles: ${finalRoles.length} total',
-                        style: TextStyle(
-                          fontSize: isCompact ? 12 : 14,
-                          color: Colors.amber[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Roles to assign list
-          Container(
-            constraints: BoxConstraints(minHeight: isCompact ? 60 : 80),
-            child: ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: roles.length,
-              itemBuilder: (context, index) {
-                final role = roles[index];
-                final isAdding = !currentAssignedRoles.any(
-                  (r) => r.id == role.id,
-                );
-
-                return _buildRoleToAssignItem(
-                  role: role,
-                  isAdding: isAdding,
-                  onRemove: () => onRemove(role),
-                  isCompact: isCompact,
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRoleToAssignItem({
-    required Role role,
-    required bool isAdding,
-    required VoidCallback onRemove,
-    required bool isCompact,
-  }) {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: isCompact ? 8 : 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: isAdding ? Colors.green[50] : Colors.orange[50],
-        borderRadius: BorderRadius.circular(8),
+        color: isAdding ? Colors.green[100] : Colors.red[100],
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isAdding ? Colors.green[300]! : Colors.orange[300]!,
+          color: isAdding ? Colors.green[300]! : Colors.red[300]!,
         ),
       ),
-      child: ListTile(
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: isCompact ? 8 : 12,
-          vertical: 4,
-        ),
-        leading: Container(
-          width: isCompact ? 32 : 40,
-          height: isCompact ? 32 : 40,
-          decoration: BoxDecoration(
-            color: isAdding ? Colors.green[100]! : Colors.orange[100]!,
-            shape: BoxShape.circle,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            isAdding ? Iconsax.add_circle : Iconsax.minus_cirlce,
+            size: 14,
+            color: isAdding ? Colors.green[800] : Colors.red[800],
           ),
-          child: Icon(
-            isAdding ? Iconsax.add_circle : Iconsax.refresh,
-            size: isCompact ? 16 : 20,
-            color: isAdding ? Colors.green : Colors.orange,
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              role.name,
+              style: TextStyle(
+                color: isAdding ? Colors.green[800] : Colors.red[800],
+                fontSize: isCompact ? 11 : 12,
+                fontWeight: FontWeight.w500,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
-        ),
-        title: Text(
-          role.name,
-          style: TextStyle(
-            fontSize: isCompact ? 14 : 16,
-            fontWeight: FontWeight.w600,
-            color: isAdding ? Colors.green[800] : Colors.orange[800],
-          ),
-        ),
-        subtitle: Text(
-          isAdding ? 'Adding new role' : 'Replacing existing role',
-          style: TextStyle(
-            fontSize: isCompact ? 12 : 14,
-            color: isAdding ? Colors.green[600] : Colors.orange[600],
-          ),
-        ),
-        trailing: IconButton(
-          icon: Icon(Iconsax.close_circle, size: isCompact ? 16 : 20),
-          color: Colors.red,
-          onPressed: onRemove,
-        ),
-        onTap: onRemove,
+        ],
       ),
     );
   }
@@ -1839,88 +1473,101 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     required List<Role> selectedRoles,
     required ValueChanged<Role> onRoleTap,
   }) {
-    // For assigned roles section, show count of permanently assigned + temporarily selected
-    final effectiveRoleCount = isAssigned
-        ? roles.length + selectedRoles.length
-        : roles.length;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(isCompact ? 12 : 16),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Section header
-          Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: isCompact ? 12 : 16,
-              vertical: isCompact ? 8 : 12,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section header
+        Row(
+          children: [
+            Icon(
+              isAssigned ? Iconsax.verify : Iconsax.add_circle,
+              size: isCompact ? 16 : 20,
+              color: isAssigned ? Color(0xFF10b981) : Color(0xFF3b82f6),
             ),
-            decoration: BoxDecoration(
-              color: isAssigned
-                  ? Color(0xFF10b981).withOpacity(0.1)
-                  : Color(0xFF3b82f6).withOpacity(0.1),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(isCompact ? 12 : 16),
-                topRight: Radius.circular(isCompact ? 12 : 16),
+            SizedBox(width: 8),
+            Text(
+              '$title (${roles.length})',
+              style: TextStyle(
+                fontSize: isCompact ? 14 : 16,
+                fontWeight: FontWeight.bold,
+                color: isAssigned ? Color(0xFF10b981) : Color(0xFF3b82f6),
               ),
             ),
-            child: Row(
-              children: [
-                Icon(
-                  isAssigned ? Iconsax.verify : Iconsax.add_circle,
-                  size: isCompact ? 16 : 20,
-                  color: isAssigned ? Color(0xFF10b981) : Color(0xFF3b82f6),
-                ),
-                SizedBox(width: 8),
-                Text(
-                  '$title ($effectiveRoleCount)',
-                  style: TextStyle(
-                    fontSize: isCompact ? 14 : 16,
-                    fontWeight: FontWeight.bold,
-                    color: isAssigned ? Color(0xFF10b981) : Color(0xFF3b82f6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Roles list
-          Container(
-            constraints: BoxConstraints(minHeight: isCompact ? 120 : 200),
-            child: roles.isEmpty && (!isAssigned || selectedRoles.isEmpty)
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Text(
-                        isAssigned ? 'No roles assigned' : 'No available roles',
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
+          ],
+        ),
+
+        // Roles as horizontal row
+        Container(
+          padding: EdgeInsets.all(isCompact ? 12 : 16),
+          child: roles.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      isAssigned ? 'No roles assigned' : 'No available roles',
+                      style: TextStyle(color: Colors.grey[600]),
                     ),
-                  )
-                : ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: roles.length,
-                    itemBuilder: (context, index) {
-                      final role = roles[index];
-                      final isSelected = selectedRoles.any(
-                        (r) => r.id == role.id,
-                      );
-                      return _buildRoleItem(
-                        role: role,
-                        isAssigned: isAssigned,
-                        isSelected: isSelected,
-                        onRoleTap: () => onRoleTap(role),
-                        isCompact: isCompact,
-                      );
-                    },
                   ),
+                )
+              : _buildDynamicRoleItemsWrap(
+                  roles: roles,
+                  isAssigned: isAssigned,
+                  selectedRoles: selectedRoles,
+                  isCompact: isCompact,
+                  onRoleTap: onRoleTap,
+                ),
+        ),
+      ],
+    );
+  }
+
+  // Dynamic role items wrapping
+  Widget _buildDynamicRoleItemsWrap({
+    required List<Role> roles,
+    required bool isAssigned,
+    required List<Role> selectedRoles,
+    required bool isCompact,
+    required ValueChanged<Role> onRoleTap,
+  }) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // Calculate items per row based on screen width
+    int getItemsPerRow() {
+      if (screenWidth < 400) return 2; // Very small screens: 2 per row
+      if (screenWidth < 600) return 3; // Small screens: 3 per row
+      if (screenWidth < 900) return 4; // Medium screens: 4 per row
+      return 5; // Large screens: 5 per row
+    }
+
+    final itemsPerRow = getItemsPerRow();
+    final itemWidth =
+        (screenWidth - 48 - (8 * (itemsPerRow - 1))) / itemsPerRow;
+
+    return Wrap(
+      spacing: 8, // Horizontal space between items
+      runSpacing: 8, // Vertical space between lines
+      alignment: WrapAlignment.start,
+      children: roles.map((role) {
+        return Container(
+          constraints: BoxConstraints(
+            minWidth: itemWidth.clamp(
+              130,
+              200,
+            ), // Minimum width for each role item
+            maxWidth: itemWidth.clamp(
+              150,
+              200,
+            ), // Maximum width for each role item
           ),
-        ],
-      ),
+          child: _buildRoleItem(
+            role: role,
+            isAssigned: isAssigned,
+            isSelected: selectedRoles.any((r) => r.id == role.id),
+            isCompact: isCompact,
+            onRoleTap: () => onRoleTap(role),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -1931,155 +1578,58 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
     required bool isCompact,
     required bool isSelected,
   }) {
+    // Colors based on Figma design
     Color getBackgroundColor() {
-      if (isAssigned) {
-        return Color(0xFF10b981).withOpacity(0.1); // Original assigned - green
-      }
       if (isSelected) {
-        return Colors.amber.withOpacity(0.2); // Selected - amber
+        return const Color(0xFFFDD105); // Selected - yellow
       }
       if (isAssigned) {
-        return Color(0xFF10b981).withOpacity(0.05); // Assigned but blurred
+        return const Color(0xFF145888); // Assigned - blue
       }
-      return Color(0xFF1e293b).withOpacity(0.8); // Available - blue/black
+      return const Color(0xFFD7DDDA); // Available - gray
     }
 
     Color getTextColor() {
-      if (isAssigned) {
-        return Color(0xFF10b981); // Original assigned - green
-      }
       if (isSelected) {
-        return Colors.amber[800]!; // Selected - amber
+        return Colors.black; // Yellow background needs black text
       }
-      return Colors.white; // Available - white
+      return Colors.white; // Blue and gray backgrounds need white text
     }
 
-    Color getBorderColor() {
-      if (isSelected) {
-        return Colors.amber;
-      }
-      return Colors.transparent;
-    }
-
-    String getActionText() {
-      if (isAssigned) {
-        return 'Tap to remove';
-      }
-      return 'Tap to assign';
-    }
-
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: isCompact ? 8 : 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: getBackgroundColor(),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: getBorderColor()),
-      ),
-      child: ListTile(
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: isCompact ? 8 : 12,
-          vertical: 4,
-        ),
-        leading: Container(
-          width: isCompact ? 32 : 40,
-          height: isCompact ? 32 : 40,
-          decoration: BoxDecoration(
-            color: getTextColor().withOpacity(0.1),
-            shape: BoxShape.circle,
+    return GestureDetector(
+      onTap: onRoleTap,
+      child: Container(
+        margin: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: ShapeDecoration(
+          color: getBackgroundColor(),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              width: isSelected ? 1 : 0,
+              color: isSelected ? const Color(0xFFFFE468) : Colors.transparent,
+            ),
           ),
-          child: Icon(
-            isAssigned ? Iconsax.verify : Iconsax.user_tag,
-            size: isCompact ? 16 : 20,
-            color: getTextColor(),
-          ),
+          shadows: isSelected
+              ? [
+                  BoxShadow(
+                    color: Color(0x3F000000),
+                    blurRadius: 3,
+                    offset: Offset(1, 1),
+                    spreadRadius: 0,
+                  ),
+                ]
+              : [],
         ),
-        title: Text(
+        child: Text(
           role.name,
           style: TextStyle(
-            fontSize: isCompact ? 14 : 16,
-            fontWeight: FontWeight.w600,
+            fontSize: isCompact ? 12 : 14,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w500,
             color: getTextColor(),
           ),
         ),
-        subtitle: Text(
-          getActionText(),
-          style: TextStyle(
-            fontSize: isCompact ? 12 : 14,
-            color: getTextColor().withOpacity(0.7),
-          ),
-        ),
-        onTap: onRoleTap,
-        trailing: Icon(
-          isAssigned ? Iconsax.arrow_swap_horizontal : Iconsax.add_circle,
-          color: Colors.amber,
-          size: isCompact ? 16 : 20,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoSection({
-    required String title,
-    required IconData icon,
-    required Color color,
-    required bool isCompact,
-    required List<Widget> children,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(color: Colors.grey[100]!, width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Section header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, size: 16, color: Colors.white),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Section content
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(children: children),
-          ),
-        ],
       ),
     );
   }
@@ -2106,30 +1656,29 @@ class _EmployeeListPageState extends State<EmployeeListPage> {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey[600],
-                    letterSpacing: 0.5,
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: label,
+                    style: const TextStyle(
+                      color: Color(0xFF373737),
+                      fontSize: 13,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+                  TextSpan(
+                    text: value,
+                    style: const TextStyle(
+                      color: Color(0xFF373737),
+                      fontSize: 13,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],

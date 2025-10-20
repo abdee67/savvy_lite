@@ -29,12 +29,12 @@ class ItemEntryState extends Equatable {
     this.errorMessage,
     this.totalAmount = 0,
     this.customer = const Customer(
-      id: '',
-      name: '',
-      tin: '',
-      phone: '',
+      id: 0,
+      customerId: 0,
+      customerName: '',
+      tinNumber: '',
+      phoneNumber: '',
       country: '',
-      email: '',
     ),
     this.selectedConfirmedItemIndices = const [],
   });

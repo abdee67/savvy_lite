@@ -44,6 +44,7 @@ class LocationMasterBloc
     on<CancelCreate>(_onCancelCreate);
     on<CancelUpdate>(_onCancelUpdate);
     on<ClearLocations>(_onClearLocations);
+    on<SearchLocations>(_onSearchLocations);
   }
 
   Future<void> _onClearLocations(
@@ -617,5 +618,39 @@ class LocationMasterBloc
         .map((e) => e.tempId ?? 0)
         .reduce((a, b) => a > b ? a : b);
     return maxTempId + 1;
+  }
+
+  void _onSearchLocations(
+    SearchLocations event,
+    Emitter<LocationMasterState> emit,
+  ) {
+    final query = event.query.toLowerCase().trim();
+
+    if (query.isEmpty) {
+      emit(
+        state.copyWith(
+          filteredLocations: state.locations,
+          selectedLocations: [],
+          searchQuery: '',
+          status: LocationMasterStatus.success,
+        ),
+      );
+      return;
+    }
+    emit(
+      state.copyWith(
+        filteredLocations: state.locations.where((location) {
+          return location.locationDescription?.toLowerCase().contains(query) ==
+                  true ||
+              location.branchName?.toLowerCase().contains(query) == true ||
+              location.code01?.toLowerCase().contains(query) == true ||
+              location.code02?.toLowerCase().contains(query) == true ||
+              location.code03?.toLowerCase().contains(query) == true;
+        }).toList(),
+        selectedLocations: [],
+        searchQuery: query,
+        status: LocationMasterStatus.success,
+      ),
+    );
   }
 }

@@ -2,7 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
+import 'package:savvy_stock/core/utils/ui_helper.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_event.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_state.dart';
@@ -19,85 +21,98 @@ class LocationMasterListPage extends StatefulWidget {
   State<LocationMasterListPage> createState() => _LocationMasterListPageState();
 }
 
-class _LocationMasterListPageState extends State<LocationMasterListPage> {
+class _LocationMasterListPageState extends State<LocationMasterListPage>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
-  List<LocationMaster> _filteredLocations = [];
-  final List<LocationMaster> _selectedLocations = [];
-  Map<String, List<LocationMaster>> _groupedLocations = {};
-  final Map<String, bool> _expandedGroups = {};
-  ViewMode _currentViewMode = ViewMode.list;
+  final ScrollController _scrollController = ScrollController();
   bool _isSelectionMode = false;
-  bool _initialLoadCompleted = false;
+  final Map<int, double> _dragOffset = {};
+  final List<LocationMaster> _selectedLocations = [];
+
+  // Animation controllers for detail panel
+  late AnimationController _detailAnimationController;
+  late Animation<double> _heightAnimation;
+  late Animation<double> _opacityAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  // Detail panel state
+  LocationMaster? _selectedLocation;
+  bool _locationDetail = false;
 
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(_onSearchChanged);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadLocations();
     });
+
+    // Initialize animation controller
+    _detailAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    // Set up animations
+    _setupAnimations();
+
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  void _setupAnimations() {
+    _heightAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _detailAnimationController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeInOutCubic),
+      ),
+    );
+
+    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _detailAnimationController,
+        curve: const Interval(0.3, 1.0, curve: Curves.easeIn),
+      ),
+    );
+
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0.0, -0.1), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _detailAnimationController,
+            curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
+          ),
+        );
   }
 
   void _loadLocations() {
-    if (_initialLoadCompleted) return;
-
     final companyId = widget.authBloc.state.companyId;
     if (companyId != null) {
-      print('🔄 Initial load triggered - Company ID: $companyId');
       context.read<LocationMasterBloc>().add(LoadLocationMasters(companyId));
-      _initialLoadCompleted = true;
     } else {
-      print('⚠️ Company ID not available yet, waiting...');
-      // Retry after a short delay
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) _loadLocations();
       });
     }
   }
 
+  void _handleSearch(String query) {
+    context.read<LocationMasterBloc>().add(SearchLocations(query));
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    context.read<LocationMasterBloc>().add(SearchLocations(''));
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
+    _detailAnimationController.dispose();
     super.dispose();
   }
 
   void _onSearchChanged() {
-    setState(() {
-      _filterLocations();
-    });
-  }
-
-  void _filterLocations() {
-    final state = context.read<LocationMasterBloc>().state;
-    final searchTerm = _searchController.text.toLowerCase();
-
-    if (searchTerm.isEmpty) {
-      _filteredLocations = state.items;
-    } else {
-      _filteredLocations = state.items.where((location) {
-        return location.locationDescription?.toLowerCase().contains(
-                  searchTerm,
-                ) ==
-                true ||
-            location.branchName?.toLowerCase().contains(searchTerm) == true ||
-            location.code01?.toLowerCase().contains(searchTerm) == true ||
-            location.code02?.toLowerCase().contains(searchTerm) == true ||
-            location.code03?.toLowerCase().contains(searchTerm) == true;
-      }).toList();
-    }
-    _groupLocations();
-  }
-
-  void _groupLocations() {
-    _groupedLocations = {};
-    for (final location in _filteredLocations) {
-      final branchName = location.branchName ?? 'Unknown Branch';
-      if (!_groupedLocations.containsKey(branchName)) {
-        _groupedLocations[branchName] = [];
-        _expandedGroups[branchName] = true;
-      }
-      _groupedLocations[branchName]!.add(location);
-    }
+    setState(() {});
   }
 
   void _toggleSelectionMode() {
@@ -105,7 +120,6 @@ class _LocationMasterListPageState extends State<LocationMasterListPage> {
       _isSelectionMode = !_isSelectionMode;
       if (!_isSelectionMode) {
         _selectedLocations.clear();
-        context.read<LocationMasterBloc>().add(const SetSelectedLocation(null));
       }
     });
   }
@@ -120,753 +134,946 @@ class _LocationMasterListPageState extends State<LocationMasterListPage> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: _buildAppBar(context),
-      body: _buildBody(context),
-      floatingActionButton: _isSelectionMode
-          ? null
-          : _buildFloatingActionButton(context),
+  void _showLocationDetail(LocationMaster location) {
+    setState(() {
+      _selectedLocation = location;
+      _locationDetail = true;
+    });
+
+    // Start the animation
+    _detailAnimationController.forward(from: 0.0);
+  }
+
+  void _hideLocationDetail() {
+    // Reverse the animation
+    _detailAnimationController.reverse().then((_) {
+      if (mounted) {
+        setState(() {
+          _locationDetail = false;
+          _selectedLocation = null;
+        });
+        _detailAnimationController.reset();
+      }
+    });
+  }
+
+  void _clearSelection() {
+    setState(() {
+      _selectedLocations.clear();
+      _isSelectionMode = false;
+    });
+  }
+
+  void _onHorizontalDragUpdate(int index, DragUpdateDetails details) {
+    setState(() {
+      final current = _dragOffset[index] ?? 0;
+      var newOffset = current + details.delta.dx;
+
+      // only allow left swipe
+      if (newOffset > 0) newOffset = 0;
+      _dragOffset[index] = newOffset;
+    });
+  }
+
+  void _onHorizontalDragEnd(
+    BuildContext context,
+    int index,
+    DragEndDetails details,
+  ) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final threshold = screenWidth * 0.3;
+    final current = _dragOffset[index] ?? 0;
+    if (current.abs() > threshold) {
+      // Swipe far enough → delete
+      setState(() {
+        _dragOffset[index] = -screenWidth;
+      });
+
+      Future.delayed(const Duration(milliseconds: 300), () {
+        _safeDelete(context, index: index);
+        setState(() {
+          _dragOffset.remove(index);
+        });
+      });
+    } else {
+      // Not far enough → snap back
+      setState(() {
+        _dragOffset[index] = 0.0;
+      });
+    }
+  }
+
+  void _safeDelete(BuildContext context, {int? index}) {
+    final bloc = context.read<LocationMasterBloc>();
+    final state = bloc.state;
+
+    if (_selectedLocations.isNotEmpty) {
+      final itemsToDelete = _selectedLocations;
+      showDeleteDialog(
+        context,
+        title: 'Delete selected locations?',
+        content:
+            'Are you sure you want to delete ${itemsToDelete.length} locations?',
+        onConfirm: () {
+          for (final location in itemsToDelete) {
+            bloc.add(DeleteLocationMaster(location));
+          }
+          _clearSelection();
+          _refreshList(context);
+        },
+      );
+      return;
+    }
+
+    if (index == null || index < 0 || index >= state.items.length) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot delete location. Invalid index.')),
+      );
+      return;
+    }
+
+    final itemToDelete = state.items[index];
+    showDeleteDialog(
+      context,
+      title: 'Delete "${itemToDelete.locationDescription}"?',
+      content:
+          'Are you sure you want to delete "${itemToDelete.locationDescription}"?',
+      onConfirm: () {
+        bloc.add(DeleteLocationMaster(itemToDelete));
+        _refreshList(context);
+      },
     );
   }
 
-  AppBar _buildAppBar(BuildContext context) {
-    final state = context.read<LocationMasterBloc>().state;
-    final hasSelection = _isSelectionMode && _selectedLocations.isNotEmpty;
-    final isWide = MediaQuery.of(context).size.width > 600;
-    final theme = Theme.of(context);
-
-    final List<Widget> mainActions = [
-      if (!_isSelectionMode)
-        IconButton(
-          icon: Icon(
-            _currentViewMode == ViewMode.list ? Icons.grid_view : Icons.list,
-          ),
-          onPressed: () {
-            setState(() {
-              _currentViewMode = _currentViewMode == ViewMode.list
-                  ? ViewMode.grid
-                  : ViewMode.list;
-            });
-          },
-          tooltip: _currentViewMode == ViewMode.list
-              ? 'Grid View'
-              : 'List View',
-        ),
-      if (!_isSelectionMode && state.items.isNotEmpty)
-        IconButton(
-          icon: const Icon(Icons.check_box_outlined),
-          onPressed: _toggleSelectionMode,
-          tooltip: 'Select Multiple',
-        ),
-      if (hasSelection && _selectedLocations.length == 1)
-        IconButton(
-          icon: const Icon(Icons.edit),
-          onPressed: () => _navigateToEdit(context, _selectedLocations.first),
-          tooltip: 'Edit Selected',
-        ),
-      if (hasSelection)
-        IconButton(
-          icon: const Icon(Icons.delete_outline),
-          onPressed: () => _showDeleteDialog(context, _selectedLocations),
-          tooltip: 'Delete Selected',
-        ),
-      IconButton(
-        icon: const Icon(Icons.refresh),
-        onPressed: () => _refreshList(context),
-        tooltip: 'Refresh',
-      ),
-      if (!_isSelectionMode && state.items.isNotEmpty)
-        ExportMenu(onExport: (format) => _exportData(context, format)),
+  // Helper method to count assigned location codes
+  int _getAssignedCodesCount(LocationMaster location) {
+    final codes = [
+      location.code01,
+      location.code02,
+      location.code03,
+      location.code04,
+      location.code05,
+      location.code06,
+      location.code07,
+      location.code08,
+      location.code09,
+      location.code10,
     ];
+    return codes.where((code) => code != null && code.isNotEmpty).length;
+  }
 
-    return AppBar(
-      elevation: 0.5,
-      backgroundColor: theme.colorScheme.onPrimaryContainer,
-      foregroundColor: theme.colorScheme.inversePrimary,
-      centerTitle: !isWide,
-      leading: _isSelectionMode
-          ? IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: _toggleSelectionMode,
-              tooltip: 'Cancel Selection',
-            )
-          : null,
-      title: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        switchInCurve: Curves.easeOutBack,
-        switchOutCurve: Curves.easeIn,
-        transitionBuilder: (Widget child, Animation<double> animation) {
-          return FadeTransition(
-            opacity: animation,
-            child: ScaleTransition(
-              scale: Tween<double>(begin: 0.95, end: 1.0).animate(animation),
-              child: child,
-            ),
-          );
-        },
-        child: _isSelectionMode
-            ? Text(
-                key: const ValueKey('selectionTitle'),
-                '${_selectedLocations.length} selected',
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              )
-            : const Text(
-                key: ValueKey('defaultTitle'),
-                'Location Master',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-      ),
-      actions: [
-        if (isWide)
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            transitionBuilder: (child, animation) =>
-                FadeTransition(opacity: animation, child: child),
-            child: Row(
-              key: ValueKey(_isSelectionMode),
-              mainAxisSize: MainAxisSize.min,
-              children: mainActions,
-            ),
-          )
-        else
-          PopupMenuButton<int>(
-            key: ValueKey(_isSelectionMode),
-            icon: const Icon(Icons.more_vert),
-            tooltip: 'Menu',
-            itemBuilder: (context) => [
-              if (!_isSelectionMode)
-                PopupMenuItem(
-                  value: 1,
-                  child: Text(
-                    _currentViewMode == ViewMode.list
-                        ? 'Switch to Grid View'
-                        : 'Switch to List View',
-                  ),
-                ),
-              if (!_isSelectionMode && state.items.isNotEmpty)
-                const PopupMenuItem(value: 2, child: Text('Select Multiple')),
-              if (hasSelection && _selectedLocations.length == 1)
-                const PopupMenuItem(value: 3, child: Text('Edit Selected')),
-              if (hasSelection)
-                const PopupMenuItem(value: 4, child: Text('Delete Selected')),
-              const PopupMenuItem(value: 5, child: Text('Refresh')),
-              if (!_isSelectionMode && state.items.isNotEmpty)
-                const PopupMenuItem(value: 6, child: Text('Export')),
-            ],
-            onSelected: (value) {
-              switch (value) {
-                case 1:
-                  setState(() {
-                    _currentViewMode = _currentViewMode == ViewMode.list
-                        ? ViewMode.grid
-                        : ViewMode.list;
-                  });
-                  break;
-                case 2:
-                  _toggleSelectionMode();
-                  break;
-                case 3:
-                  _navigateToEdit(context, _selectedLocations.first);
-                  break;
-                case 4:
-                  _showDeleteDialog(context, _selectedLocations);
-                  break;
-                case 5:
-                  _refreshList(context);
-                  break;
-                case 6:
-                  _exportData(context, ExportFormat.csv);
-                  break;
-              }
+  // Helper method to get non-empty location codes
+  List<String> _getNonEmptyCodes(LocationMaster location) {
+    final codes = [
+      if (location.code01 != null && location.code01!.isNotEmpty)
+        location.code01!,
+      if (location.code02 != null && location.code02!.isNotEmpty)
+        location.code02!,
+      if (location.code03 != null && location.code03!.isNotEmpty)
+        location.code03!,
+      if (location.code04 != null && location.code04!.isNotEmpty)
+        location.code04!,
+      if (location.code05 != null && location.code05!.isNotEmpty)
+        location.code05!,
+      if (location.code06 != null && location.code06!.isNotEmpty)
+        location.code06!,
+      if (location.code07 != null && location.code07!.isNotEmpty)
+        location.code07!,
+      if (location.code08 != null && location.code08!.isNotEmpty)
+        location.code08!,
+      if (location.code09 != null && location.code09!.isNotEmpty)
+        location.code09!,
+      if (location.code10 != null && location.code10!.isNotEmpty)
+        location.code10!,
+    ];
+    return codes;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey,
+      appBar: AppBar(
+        title: const Text('Location Master'),
+        backgroundColor: const Color.fromARGB(255, 28, 66, 146),
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Iconsax.refresh_circle),
+            onPressed: () {
+              _loadLocations();
             },
           ),
-      ],
+        ],
+      ),
+      body: BlocConsumer<LocationMasterBloc, LocationMasterState>(
+        listener: (context, state) {
+          if (state.status == LocationMasterStatus.failure &&
+              state.message.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+        builder: (context, state) {
+          return Stack(
+            children: [
+              Column(
+                children: [
+                  // Search Bar
+                  _buildSearchBar(),
+                  _buildActionButtons(state),
+                  // Location List
+                  Expanded(child: _buildLocationList(state)),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search by location name or branch...',
+                prefixIcon: const Icon(Iconsax.search_normal, size: 20),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Iconsax.close_circle, size: 20),
+                        onPressed: _clearSearch,
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Colors.grey[100],
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+              onChanged: _handleSearch,
+            ),
+          ),
+          const SizedBox(width: 12),
+          _buildFloatingActionButton(context),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtons(LocationMasterState state) {
+    final hasSelection = _selectedLocations.isNotEmpty;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      height: hasSelection ? 60 : 0,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.grey,
+        border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+      ),
+      child: hasSelection
+          ? Row(
+              children: [
+                Text(
+                  '${_selectedLocations.length} selected',
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Iconsax.trash, color: Colors.red),
+                  onPressed: () => _safeDelete(context),
+                  tooltip: 'Delete selected',
+                ),
+                if (_selectedLocations.length == 1)
+                  IconButton(
+                    icon: const Icon(
+                      Iconsax.edit,
+                      color: Color.fromARGB(255, 28, 66, 146),
+                    ),
+                    onPressed: () {
+                      final location = _selectedLocations.first;
+                      _navigateToEditScreen(location);
+                    },
+                    tooltip: 'Edit location',
+                  ),
+                IconButton(
+                  icon: const Icon(Iconsax.close_circle),
+                  onPressed: () => _clearSelection(),
+                  tooltip: 'Clear selection',
+                ),
+              ],
+            )
+          : const SizedBox.shrink(),
     );
   }
 
   Widget _buildFloatingActionButton(BuildContext context) {
-    return FloatingActionButton(
-      onPressed: () => _navigateToCreate(context),
-      child: const Icon(Icons.add),
-    );
-  }
-
-  Widget _buildBody(BuildContext context) {
-    return BlocConsumer<LocationMasterBloc, LocationMasterState>(
-      listener: (context, state) {
-        if (state.status == LocationMasterStatus.failure &&
-            state.message.isNotEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
-          );
-        }
-
-        // Update filtered data when state changes
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _filterLocations();
-        });
-
-        // Load data if company ID becomes available and we haven't loaded yet
-        if (state.companyId != 0 &&
-            state.items.isEmpty &&
-            !_initialLoadCompleted) {
-          print('🔄 Company ID available in BLoC state, loading locations...');
-          context.read<LocationMasterBloc>().add(
-            LoadLocationMasters(state.companyId!),
-          );
-          _initialLoadCompleted = true;
-        }
-      },
+    return BlocBuilder<LocationMasterBloc, LocationMasterState>(
       builder: (context, state) {
-        if (state.status == LocationMasterStatus.loading &&
-            state.items.isEmpty) {
-          return const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Loading locations...'),
-              ],
-            ),
-          );
-        }
-
-        // Show error state
-        if (state.status == LocationMasterStatus.failure &&
-            state.items.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                const SizedBox(height: 16),
-                const Text(
-                  'Failed to load locations',
-                  style: TextStyle(fontSize: 18, color: Colors.red),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  state.message,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.grey),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () => _refreshList(context),
-                  child: const Text('Retry'),
-                ),
-              ],
-            ),
-          );
-        }
-
-        if (state.items.isEmpty &&
-            state.status != LocationMasterStatus.loading) {
-          return _buildEmptyState(state);
-        }
-
-        return Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              // Search Bar
-              _buildSearchBar(),
-              const SizedBox(height: 16),
-
-              // Status Info
-              _buildStatusInfo(state),
-
-              const SizedBox(height: 16),
-
-              // View Mode Content
-              Expanded(
-                child: _currentViewMode == ViewMode.list
-                    ? _buildListView(state)
-                    : _buildGridView(state),
-              ),
-            ],
+        return ElevatedButton(
+          onPressed: () {
+            if (_selectedLocations.isNotEmpty) {
+              // Navigate to edit screen with selected location
+              final location = _selectedLocations.first;
+              _navigateToEditScreen(location);
+            } else {
+              // Navigate to add screen
+              _navigateToCreateScreen();
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color.fromARGB(255, 28, 66, 146),
+            shape: const CircleBorder(),
+          ),
+          child: Icon(
+            _selectedLocations.isNotEmpty ? Icons.edit : Icons.add,
+            color: Colors.white,
           ),
         );
       },
     );
   }
 
-  Widget _buildStatusInfo(LocationMasterState state) {
-    return Container(
-      padding: const EdgeInsets.all(8.0),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'Total: ${state.items.length} • Filtered: ${_filteredLocations.length}',
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
-          ),
-          if (state.status == LocationMasterStatus.loading)
-            const Row(
-              children: [
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                SizedBox(width: 4),
-                Text(
-                  'Loading...',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
-            ),
-        ],
-      ),
-    );
-  }
+  Widget _buildLocationList(LocationMasterState state) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenWidth < 700;
+    final cardSpacing = screenHeight * 0.02;
+    final cardWidth = isSmallScreen ? screenWidth * 0.85 : screenWidth * 0.8;
 
-  Widget _buildSearchBar() {
-    return TextField(
-      controller: _searchController,
-      decoration: InputDecoration(
-        hintText: 'Search locations...',
-        prefixIcon: const Icon(Icons.search),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        suffixIcon: _searchController.text.isNotEmpty
-            ? IconButton(
-                icon: const Icon(Icons.clear),
-                onPressed: () {
-                  _searchController.clear();
-                  setState(() {});
-                },
-              )
-            : null,
-      ),
-    );
-  }
+    if (state.status == LocationMasterStatus.loading && state.items.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-  Widget _buildListView(LocationMasterState state) {
-    return ListView.builder(
-      itemCount: _groupedLocations.length,
-      itemBuilder: (context, groupIndex) {
-        final branchName = _groupedLocations.keys.elementAt(groupIndex);
-        final locations = _groupedLocations[branchName]!;
-        final isExpanded = _expandedGroups[branchName] ?? true;
-
-        return _buildBranchSection(branchName, locations, isExpanded, state);
-      },
-    );
-  }
-
-  Widget _buildBranchSection(
-    String branchName,
-    List<LocationMaster> locations,
-    bool isExpanded,
-    LocationMasterState state,
-  ) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        children: [
-          // Branch Header
-          ListTile(
-            leading: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.store,
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
-                size: 20,
-              ),
+    if (state.status == LocationMasterStatus.failure && state.items.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text(
+              state.message.isEmpty
+                  ? 'Failed to load locations'
+                  : state.message,
+              style: const TextStyle(color: Colors.grey),
             ),
-            title: Text(
-              branchName,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            subtitle: Text(
-              '${locations.length} location${locations.length == 1 ? '' : 's'}',
-            ),
-            trailing: IconButton(
-              icon: Icon(isExpanded ? Icons.expand_less : Icons.expand_more),
-              onPressed: () {
-                setState(() {
-                  _expandedGroups[branchName] = !isExpanded;
-                });
-              },
-            ),
-            onTap: () {
-              setState(() {
-                _expandedGroups[branchName] = !isExpanded;
-              });
-            },
-          ),
-
-          // Locations List
-          if (isExpanded) ...[
-            const Divider(height: 1),
-            ...locations.map(
-              (location) => _buildLocationListItem(location, state),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => _refreshList(context),
+              child: const Text('Retry'),
             ),
           ],
-        ],
+        ),
+      );
+    }
+
+    final filteredLocations = state.filteredItems;
+
+    if (filteredLocations.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Iconsax.location, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text(
+              _searchController.text.isEmpty
+                  ? 'No locations found'
+                  : 'No results for "${_searchController.text}"',
+              style: const TextStyle(color: Colors.grey, fontSize: 16),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      width: screenWidth,
+      height: screenHeight,
+      decoration: const BoxDecoration(color: Colors.grey),
+      child: ListView.separated(
+        controller: _scrollController,
+        padding: const EdgeInsets.all(16),
+        itemCount: filteredLocations.length,
+        separatorBuilder: (context, index) => SizedBox(height: cardSpacing),
+        itemBuilder: (context, index) {
+          final location = filteredLocations[index];
+          final isSelected = _selectedLocations.contains(location);
+
+          return _buildLocationListItem(
+            location,
+            isSelected,
+            state,
+            index,
+            isSmallScreen,
+            cardWidth,
+          );
+        },
       ),
     );
   }
 
   Widget _buildLocationListItem(
     LocationMaster location,
+    bool isSelected,
     LocationMasterState state,
+    int index,
+    bool isCompact,
+    double cardWidth,
   ) {
-    final isSelected = _isSelectionMode
-        ? _selectedLocations.contains(location)
-        : state.selected?.id == location.id;
+    final offset = _dragOffset[index] ?? 0.0;
+    final isExpanded = _locationDetail == true && _selectedLocation == location;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
 
-    return ListTile(
-      leading: _isSelectionMode
-          ? Checkbox(
-              value: isSelected,
-              onChanged: (value) => _toggleLocationSelection(location),
-            )
-          : Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.location_on,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                size: 20,
-              ),
-            ),
-      title: Text(
-        location.locationDescription ?? 'Unnamed Location',
-        style: TextStyle(
-          fontWeight: FontWeight.w500,
-          color: isSelected ? Theme.of(context).colorScheme.primary : null,
-        ),
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (location.code01 != null && location.code01!.isNotEmpty)
-            Text('Code 1: ${location.code01!}'),
-          if (location.code02 != null && location.code02!.isNotEmpty)
-            Text('Code 2: ${location.code02!}'),
-          if (location.code03 != null && location.code03!.isNotEmpty)
-            Text('Code 3: ${location.code03!}'),
-        ],
-      ),
-      trailing: _isSelectionMode
-          ? null
-          : IconButton(
-              icon: const Icon(Icons.arrow_forward_ios, size: 16),
-              onPressed: () => _navigateToEdit(context, location),
-            ),
+    // For responsiveness:
+    final collapsedHeight = isCompact
+        ? screenHeight * 0.18
+        : screenHeight * 0.14;
+
+    final expandedHeight = isCompact
+        ? screenHeight * 0.55
+        : screenHeight * 0.45;
+    final collapsedWidth = isCompact ? screenWidth * 0.92 : screenWidth * 0.8;
+
+    final assignedCodesCount = _getAssignedCodesCount(location);
+
+    return GestureDetector(
       onTap: () {
         if (_isSelectionMode) {
           _toggleLocationSelection(location);
         } else {
-          context.read<LocationMasterBloc>().add(SetSelectedLocation(location));
-          _navigateToEdit(context, location);
+          // Single tap shows detail when not in selection mode
+          _showLocationDetail(location);
         }
       },
       onLongPress: () {
         if (!_isSelectionMode) {
-          _toggleSelectionMode();
-          _toggleLocationSelection(location);
+          setState(() {
+            _isSelectionMode = true;
+          });
         }
+        _toggleLocationSelection(location);
       },
-    );
-  }
+      onHorizontalDragUpdate: (details) =>
+          _onHorizontalDragUpdate(index, details),
+      onHorizontalDragEnd: (details) =>
+          _onHorizontalDragEnd(context, index, details),
+      onDoubleTap: () => _showLocationDetail(location),
+      child: AnimatedBuilder(
+        animation: _scrollController,
+        builder: (context, child) => Container(
+          transform: Matrix4.translationValues(offset, 0, 0),
+          width: collapsedWidth,
+          height: isExpanded ? expandedHeight : collapsedHeight,
+          child: Stack(
+            children: [
+              // 1. DELETE INDICATOR - Should be FIRST in Stack
+              if (!isExpanded)
+                Positioned.fill(
+                  child: Container(
+                    alignment: Alignment.centerRight,
+                    decoration: BoxDecoration(
+                      color: Colors.amber,
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    margin: const EdgeInsets.only(bottom: 2),
+                    child: const Icon(
+                      Icons.delete,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                ),
 
-  Widget _buildGridView(LocationMasterState state) {
-    return GridView.builder(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 1.2,
+              // 2. BACKGROUND LAYERS (only when expanded)
+              if (isExpanded) ...[
+                Positioned.fill(
+                  top: 47,
+                  child: Container(
+                    width: collapsedWidth,
+                    height: expandedHeight,
+                    decoration: ShapeDecoration(
+                      color: const Color(0xFFFDD105),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+
+              // 3. LOCATION CARD
+              AnimatedContainer(
+                padding: const EdgeInsets.only(
+                  top: 10,
+                  left: 10,
+                  right: 10,
+                  bottom: 10,
+                ),
+                width: collapsedWidth,
+                height: collapsedHeight,
+                duration: const Duration(milliseconds: 400),
+                transform: Matrix4.translationValues(offset, 0, 0),
+                curve: Curves.easeInOut,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.blue[50] : Colors.white,
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: isSelected
+                        ? const Color.fromARGB(255, 28, 66, 146)
+                        : Colors.transparent,
+                    width: 2,
+                  ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Location Avatar
+                        _buildLocationAvatar(location, isSelected, isCompact),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                location.branchName ?? 'Unnamed branch',
+                                style: TextStyle(
+                                  color: const Color(0xFF373737),
+                                  fontSize: isCompact ? 20 : 24,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              Text(
+                                'Margin Type: ${(location.marginType == 'F' ? 'Flat' : 'Percentage')}',
+                                style: TextStyle(
+                                  color: const Color(0xFF887F7F),
+                                  fontSize: isCompact ? 12 : 14,
+                                  fontStyle: FontStyle.italic,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w300,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              // Location codes count badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue[50],
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.blue[200]!),
+                                ),
+                                child: Text(
+                                  '$assignedCodesCount location codes',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: const Color(0xFF145888),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        // See More / See Less button
+                        ElevatedButton(
+                          onPressed: () => isExpanded
+                              ? _hideLocationDetail()
+                              : _showLocationDetail(location),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF145888),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          child: Text(
+                            isExpanded ? 'See Less' : 'See More',
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: isCompact ? 10 : 12,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // 4. ANIMATED EXPANDED CONTENT
+              if (isExpanded)
+                Positioned(
+                  top: collapsedHeight + 10,
+                  left: 20,
+                  right: 20,
+                  child: AnimatedBuilder(
+                    animation: _detailAnimationController,
+                    builder: (context, child) {
+                      final currentHeight =
+                          _heightAnimation.value *
+                          (expandedHeight - collapsedHeight - 20);
+                      final currentOpacity = _opacityAnimation.value;
+
+                      return SlideTransition(
+                        position: _slideAnimation,
+                        child: Container(
+                          height: currentHeight > 0 ? currentHeight : 0,
+                          decoration: BoxDecoration(color: Colors.transparent),
+                          child: Opacity(opacity: currentOpacity, child: child),
+                        ),
+                      );
+                    },
+                    child: _buildLocationDetailContent(location, isCompact),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
-      itemCount: _filteredLocations.length,
-      itemBuilder: (context, index) {
-        final location = _filteredLocations[index];
-        final isSelected = _isSelectionMode
-            ? _selectedLocations.contains(location)
-            : state.selected?.id == location.id;
-
-        return _buildLocationGridItem(location, isSelected, state);
-      },
     );
   }
 
-  Widget _buildLocationGridItem(
-    LocationMaster location,
-    bool isSelected,
-    LocationMasterState state,
-  ) {
-    return Card(
-      elevation: 2,
-      color: isSelected ? Theme.of(context).colorScheme.primaryContainer : null,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          if (_isSelectionMode) {
-            _toggleLocationSelection(location);
-          } else {
-            context.read<LocationMasterBloc>().add(
-              SetSelectedLocation(location),
-            );
-            _navigateToEdit(context, location);
-          }
-        },
-        onLongPress: () {
-          if (!_isSelectionMode) {
-            _toggleSelectionMode();
-            _toggleLocationSelection(location);
-          }
-        },
-        child: Stack(
-          children: [
+  Widget _buildLocationDetailContent(LocationMaster location, bool isCompact) {
+    final assignedCodesCount = _getAssignedCodesCount(location);
+    final nonEmptyCodes = _getNonEmptyCodes(location);
+    final displayedCodes = nonEmptyCodes.take(5).toList();
+    final hasMoreCodes = nonEmptyCodes.length > 5;
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        children: [
+          _buildLocationInfoItem(
+            'Location ID : ',
+            location.id.toString(),
+            Iconsax.card,
+            isCompact,
+          ),
+          _buildLocationInfoItem(
+            'Branch : ',
+            location.branchName ?? 'Unknown Branch',
+            Iconsax.building,
+            isCompact,
+          ),
+          _buildLocationInfoItem(
+            'Total Location Codes : ',
+            '$assignedCodesCount',
+            Iconsax.code,
+            isCompact,
+          ),
+
+          // Location Codes Section
+          if (nonEmptyCodes.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Location Icon
                   Container(
-                    width: 20,
-                    height: 20,
+                    width: 32,
+                    height: 32,
                     decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.surfaceContainerHighest,
+                      color: Colors.grey[50],
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
-                      Icons.location_on,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      size: 20,
+                    child: const Icon(
+                      Iconsax.code,
+                      size: 16,
+                      color: Colors.grey,
                     ),
                   ),
-                  const SizedBox(height: 12),
-
-                  // Location Name
-                  Text(
-                    location.branchName ?? 'Unknown Branch',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Location Codes : ',
+                          style: TextStyle(
+                            color: Color(0xFF373737),
+                            fontSize: 13,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        // Display location codes as chips
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            ...displayedCodes.map(
+                              (code) => Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue[50],
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: Colors.blue[200]!),
+                                ),
+                                child: Text(
+                                  code,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.blue[800],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            if (hasMoreCodes)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange[50],
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: Colors.orange[200]!,
+                                  ),
+                                ),
+                                child: Text(
+                                  '+${nonEmptyCodes.length - 5} more',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.orange[800],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
-
-                  const SizedBox(height: 8),
-
-                  // Branch Name
-                  Text(
-                    location.locationDescription ?? 'Unnamed',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withOpacity(0.6),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-
-                  const Spacer(),
-
-                  // Codes
-                  if (location.code01 != null && location.code01!.isNotEmpty)
-                    Text(
-                      'Code: ${location.code01!}',
-                      style: const TextStyle(fontSize: 11),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
                 ],
               ),
             ),
 
-            // Selection Checkbox
-            if (_isSelectionMode)
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Checkbox(
-                  value: isSelected,
-                  onChanged: (value) => _toggleLocationSelection(location),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
+          if (location.marginType != null)
+            _buildLocationInfoItem(
+              'Margin Type : ',
+              location.marginType == 'F' ? 'Flat' : 'Percentage',
+              Iconsax.chart,
+              isCompact,
+            ),
+          if (location.marginRate != null)
+            _buildLocationInfoItem(
+              'Margin Rate : ',
+              '${location.marginRate}${location.marginType == 'F' ? ' ETB' : '%'}',
+              Iconsax.dollar_circle,
+              isCompact,
+            ),
 
-  Widget _buildEmptyState(LocationMasterState state) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.location_off_outlined,
-            size: 80,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No Locations Found',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+          // Action buttons row
+          Padding(
+            padding: const EdgeInsets.only(top: 16, bottom: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildActionButton(
+                  Iconsax.edit,
+                  'Edit',
+                  () => _navigateToEditScreen(location),
+                  isCompact,
+                ),
+                _buildActionButton(
+                  Iconsax.export,
+                  'Export',
+                  () => _exportLocation(location),
+                  isCompact,
+                ),
+                _buildActionButton(
+                  Iconsax.trash,
+                  'Delete',
+                  () => _safeDelete(context),
+                  isCompact,
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Get started by creating your first location',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
-            ),
-          ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: () => _navigateToCreate(context),
-            icon: const Icon(Icons.add),
-            label: const Text('Create First Location'),
           ),
         ],
       ),
     );
   }
 
-  // Navigation Methods
-  void _navigateToCreate(BuildContext context) {
+  Widget _buildLocationInfoItem(
+    String label,
+    String value,
+    IconData icon,
+    bool isCompact,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 16, color: Colors.grey[600]),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: label,
+                    style: const TextStyle(
+                      color: Color(0xFF373737),
+                      fontSize: 13,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  TextSpan(
+                    text: value,
+                    style: const TextStyle(
+                      color: Color(0xFF373737),
+                      fontSize: 13,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton(
+    IconData icon,
+    String label,
+    VoidCallback onPressed,
+    bool isCompact,
+  ) {
+    return Column(
+      children: [
+        IconButton(
+          icon: Icon(icon, size: isCompact ? 20 : 24),
+          onPressed: onPressed,
+          style: IconButton.styleFrom(
+            backgroundColor: const Color(0xFF145888),
+            foregroundColor: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: isCompact ? 10 : 12,
+            color: const Color(0xFF373737),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLocationAvatar(
+    LocationMaster location,
+    bool isSelected,
+    bool isCompact,
+  ) {
+    final Color backgroundColor;
+    final Color iconColor;
+
+    if (isSelected) {
+      backgroundColor = const Color.fromARGB(255, 28, 66, 146);
+      iconColor = Colors.white;
+    } else {
+      backgroundColor = Colors.grey[200]!;
+      iconColor = Colors.grey[600]!;
+    }
+
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(color: backgroundColor, shape: BoxShape.circle),
+      child: Icon(
+        Iconsax.location,
+        color: iconColor,
+        size: isCompact ? 20 : 24,
+      ),
+    );
+  }
+
+  void _navigateToCreateScreen() {
     final companyId = widget.authBloc.state.companyId;
     if (companyId != null) {
       context.read<LocationMasterBloc>().add(PrepareCreateLocation(companyId));
       context.push(AppRoutes.locationMasterCreate);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Cannot create: No company context'),
-          backgroundColor: Colors.orange,
-        ),
-      );
     }
   }
 
-  void _navigateToEdit(BuildContext context, LocationMaster? location) {
-    if (location != null) {
-      context.read<LocationMasterBloc>().add(PrepareEditLocation(location));
-      context.push(AppRoutes.locationMasterEdit, extra: location);
-    }
-  }
-
-  void _showDeleteDialog(BuildContext context, List<LocationMaster> locations) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.warning_amber, color: Colors.orange),
-            SizedBox(width: 8),
-            Text('Delete Locations'),
-          ],
-        ),
-        content: Text(
-          locations.length == 1
-              ? 'Are you sure you want to delete "${locations.first.locationDescription}"?'
-              : 'Are you sure you want to delete ${locations.length} locations?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              for (final location in locations) {
-                context.read<LocationMasterBloc>().add(
-                  DeleteLocationMaster(location),
-                );
-                context.read<LocationMasterBloc>().add(
-                  LoadLocationMasters(widget.authBloc.state.companyId!),
-                );
-              }
-              _toggleSelectionMode();
-              Navigator.of(context).pop();
-              _refreshList(context);
-            },
-            child: Text(
-              'Delete${locations.length > 1 ? ' ${locations.length}' : ''}',
-            ),
-          ),
-        ],
-      ),
-    );
+  void _navigateToEditScreen(LocationMaster location) {
+    context.read<LocationMasterBloc>().add(PrepareEditLocation(location));
+    context.push(AppRoutes.locationMasterEdit, extra: location);
   }
 
   void _refreshList(BuildContext context) {
     final companyId = widget.authBloc.state.companyId;
     if (companyId != null) {
-      print('🔄 Manual refresh triggered');
       context.read<LocationMasterBloc>().add(LoadLocationMasters(companyId));
-    } else {
-      print('❌ Cannot refresh: No company ID available');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Cannot refresh: No company context'),
-          backgroundColor: Colors.orange,
-        ),
-      );
     }
   }
 
-  void _exportData(BuildContext context, ExportFormat format) {
-    final state = context.read<LocationMasterBloc>().state;
-    final data = state.items;
-
-    switch (format) {
-      case ExportFormat.xlsx:
-        _exportToExcel(data);
-        break;
-      case ExportFormat.csv:
-        _exportToCsv(data);
-        break;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Exported ${data.length} locations to ${format.name.toUpperCase()}',
-        ),
-        backgroundColor: Colors.green,
-      ),
-    );
-  }
-
-  void _exportToExcel(List<LocationMaster> data) {
-    // Implement Excel export
-  }
-
-  void _exportToCsv(List<LocationMaster> data) {
-    // Implement CSV export
+  void _exportLocation(LocationMaster location) {
+    // Implement export functionality
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Location data exported')));
   }
 }
-
-// Add this enum for view modes
-enum ViewMode { list, grid }
-
-// Remove the old LocationListToolbar widget since we've integrated its functionality into the app bar

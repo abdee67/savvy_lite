@@ -4,7 +4,6 @@ import 'package:bloc/bloc.dart';
 import 'package:savvy_stock/core/errors/exceptions.dart';
 import 'package:savvy_stock/core/models/system_constant.dart';
 import 'package:savvy_stock/core/repositories/system_constant_repository.dart';
-import 'package:savvy_stock/core/services/udc_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'system_constant_event.dart';
 import 'system_constant_state.dart';
@@ -14,7 +13,6 @@ class SystemConstantBloc
     extends Bloc<SystemConstantEvent, SystemConstantState> {
   final SystemConstantRepository systemConstantRepository;
   //final AuthService authService;
-  final UdcService udcService;
   Timer? _syncTimer;
   final SystemConstantsService systemConstantService;
   final AuthBloc authBloc;
@@ -22,7 +20,6 @@ class SystemConstantBloc
   SystemConstantBloc({
     required this.systemConstantRepository,
     // required this.authService,
-    required this.udcService,
     required this.systemConstantService,
     required this.authBloc,
   }) : super(const SystemConstantState()) {
@@ -43,10 +40,8 @@ class SystemConstantBloc
     on<SyncSystemConstants>(_onSyncSystemConstants);
     on<PullSystemConstants>(_onPullSystemConstants);
     on<RetryFailedOperations>(_onRetryFailedOperations);
-    on<LoadUdcData>(_onLoadUdcData);
 
     // Load data immediately when bloc is created
-    add(const LoadUdcData());
     add(LoadSystemConstants(authBloc.state.companyId!));
     // Start periodic sync (every 5 minutes)
     _startSyncTimer();
@@ -96,32 +91,6 @@ class SystemConstantBloc
           errorMessage: 'Failed to load system constants: ${e.toString()}',
         ),
       );
-    }
-  }
-
-  Future<void> _onLoadUdcData(
-    LoadUdcData event,
-    Emitter<SystemConstantState> emit,
-  ) async {
-    try {
-      emit(state.copyWith(status: SystemConstantStatus.loading));
-      await udcService.loadLotTypes();
-
-      // Get the map after loading is complete
-      final lotTypesMap = udcService.getLotTypesMap();
-
-      emit(
-        state.copyWith(
-          lotTypes: lotTypesMap,
-          status: SystemConstantStatus.success,
-        ),
-      );
-
-      developer.log('Loaded ${lotTypesMap.length} lot types');
-    } catch (e) {
-      developer.log('Failed to load UDC data: $e');
-      // Don't fail the whole state, just log the error
-      emit(state.copyWith(status: SystemConstantStatus.success));
     }
   }
 
@@ -426,7 +395,6 @@ class SystemConstantBloc
   ) async {
     try {
       // Load UDC data first
-      add(const LoadUdcData());
 
       final companyId = authBloc.state.companyId;
 

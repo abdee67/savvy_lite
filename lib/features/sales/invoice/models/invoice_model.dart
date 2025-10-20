@@ -57,22 +57,22 @@ class CustomerInfo extends Equatable {
 
   factory CustomerInfo.fromCustomer(Customer customer) {
     // Build address from available fields
-    String address = customer.country;
+    String address = customer.country!;
     if (customer.city != null && customer.city!.isNotEmpty) {
       address = '${customer.city}, $address';
     }
-    if (customer.addressLine1 != null && customer.addressLine1!.isNotEmpty) {
-      address = '${customer.addressLine1}, $address';
+    if (customer.address1 != null && customer.address1!.isNotEmpty) {
+      address = '${customer.address1}, $address';
     }
     if (customer.state != null && customer.state!.isNotEmpty) {
       address = '${customer.state}, $address';
     }
 
     return CustomerInfo(
-      name: customer.name,
-      tin: customer.tin,
+      name: customer.customerName!,
+      tin: customer.tinNumber!,
       address: address,
-      phone: customer.phone,
+      phone: customer.phoneNumber!,
     );
   }
 

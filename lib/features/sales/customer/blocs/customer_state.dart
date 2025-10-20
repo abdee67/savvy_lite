@@ -1,7 +1,16 @@
 import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 
-enum CustomerStatus { initial, loading, success, failure, searching }
+enum CustomerStatus {
+  initial,
+  loading,
+  creating,
+  updating,
+  deleting,
+  success,
+  failure,
+  searching,
+}
 
 class CustomerState extends Equatable {
   final CustomerStatus status;
@@ -17,8 +26,11 @@ class CustomerState extends Equatable {
   final String phone;
   final String country;
   final String? errorMessage;
+  final int? companyId;
+  final Customer? customerForm;
 
   const CustomerState({
+    this.companyId,
     this.status = CustomerStatus.initial,
     this.customers = const [],
     this.selectedBillToCustomer = Customer.empty,
@@ -32,6 +44,7 @@ class CustomerState extends Equatable {
     this.phone = '',
     this.country = '',
     this.errorMessage,
+    this.customerForm,
   });
 
   CustomerState copyWith({
@@ -47,7 +60,9 @@ class CustomerState extends Equatable {
     List<Customer>? selectedCustomers,
     String? searchQuery,
     bool? showDetailPanel,
+    int? companyId,
     Customer? customerDetail,
+    Customer? customerForm,
   }) {
     return CustomerState(
       status: status ?? this.status,
@@ -65,6 +80,8 @@ class CustomerState extends Equatable {
       searchQuery: searchQuery ?? this.searchQuery,
       showDetailPanel: showDetailPanel ?? this.showDetailPanel,
       customerDetail: customerDetail ?? this.customerDetail,
+      companyId: companyId ?? this.companyId,
+      customerForm: customerForm ?? this.customerForm,
     );
   }
 
@@ -90,5 +107,7 @@ class CustomerState extends Equatable {
     searchQuery,
     showDetailPanel,
     customerDetail,
+    companyId,
+    customerForm,
   ];
 }

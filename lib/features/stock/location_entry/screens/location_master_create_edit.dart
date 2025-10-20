@@ -290,7 +290,7 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
       builder: (context, constraints) {
         return SizedBox(
           width: constraints.maxWidth,
-          height: constraints.maxHeight * 1,
+          height: MediaQuery.of(context).size.height * 0.7,
           child: Container(
             child: Padding(
               padding: const EdgeInsets.all(16.0),

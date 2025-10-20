@@ -506,6 +506,229 @@ CREATE INDEX idx_item_cost_company ON item_cost(company);
 ''');
     developer.log('Created table: item_cost');
 
+    //19.create supplier table
+    await db.execute('''
+  CREATE TABLE supplier_table (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    supplier_name TEXT,
+    city TEXT,
+    region TEXT,
+    state TEXT,
+    country TEXT,
+    phone_no_1 TEXT,
+    phone_no_2 TEXT,
+    address_line TEXT,
+    email TEXT,
+    company INTEGER,
+    created_by INTEGER,
+    date_created TEXT,
+    user_id INTEGER,
+    date_updated TEXT,
+    tin_number TEXT,
+    contact_person TEXT,
+    contact_title TEXT,
+    FOREIGN KEY (company) REFERENCES company_table (id),
+    FOREIGN KEY (created_by) REFERENCES user_table (id),
+    FOREIGN KEY (user_id) REFERENCES user_table (id)
+  );
+
+CREATE INDEX idx_supplier_table_company ON supplier_table(company);
+CREATE INDEX idx_supplier_table_created_by ON supplier_table(created_by);
+CREATE INDEX idx_supplier_table_user_id ON supplier_table(user_id);
+''');
+
+    developer.log('Created table: supplier_table');
+
+    //20.create purchase_order_header table
+    await db.execute('''
+  CREATE TABLE purchase_order_header (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    supplier_id INTEGER,
+    date_transation TEXT,
+    date_delivery TEXT,
+    po_receive_status INTEGER,
+    company INTEGER,
+    taxable_amount REAL,
+    tax_amount REAL,
+    amount_withhold REAL,
+    amount_discount REAL,
+    amount_gross REAL,
+    amount_other_costs REAL,
+    amount_grand_total_cost REAL,
+    payment_status INTEGER,
+    payment_instrument INTEGER,
+    user_id INTEGER,
+    date_updated TEXT,
+    amount_open_credit REAL,
+    order_number INTEGER,
+    payment_term INTEGER,
+    order_type INTEGER,
+    credit_due_date TEXT,
+    FOREIGN KEY (supplier_id) REFERENCES supplier_table (id),
+    FOREIGN KEY (company) REFERENCES company_table (id),
+    FOREIGN KEY (po_receive_status) REFERENCES udc_details (id),
+    FOREIGN KEY (payment_status) REFERENCES udc_details (id),
+    FOREIGN KEY (payment_instrument) REFERENCES udc_details (id),
+    FOREIGN KEY (order_type) REFERENCES udc_details (id),
+    FOREIGN KEY (user_id) REFERENCES user_table (id)
+  );
+
+CREATE INDEX idx_purchase_order_header_supplier_id ON purchase_order_header(supplier_id);
+CREATE INDEX idx_purchase_order_header_company ON purchase_order_header(company);
+CREATE INDEX idx_purchase_order_header_po_receive_status ON purchase_order_header(po_receive_status);
+CREATE INDEX idx_purchase_order_header_payment_status ON purchase_order_header(payment_status);
+CREATE INDEX idx_purchase_order_header_payment_instrument ON purchase_order_header(payment_instrument);
+CREATE INDEX idx_purchase_order_header_order_type ON purchase_order_header(order_type);
+CREATE INDEX idx_purchase_order_header_user_id ON purchase_order_header(user_id);
+''');
+
+    developer.log('Created table: purchase_order_header');
+
+    //21.create purchase_order_details table
+    await db.execute('''
+  CREATE TABLE purchase_order_detail (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    po_header INTEGER,
+    item_number INTEGER,
+    po_receive_status INTEGER,
+    quantity_transaction REAL,
+    unit_cost REAL,
+    amount_extended_cost REAL,
+    quantity_open REAL,
+    amount_open REAL,
+    quantity_recieved REAL,
+    amount_received REAL,
+    date_received TEXT,
+    date_delivery TEXT,
+    company INTEGER,
+    user_id INTEGER,
+    date_updated TEXT,
+    date_effective TEXT,
+    date_expiration TEXT,
+    unit_of_measure INTEGER,
+    batch_number_supplier TEXT,
+    FOREIGN KEY (po_header) REFERENCES purchase_order_header (id),
+    FOREIGN KEY (company) REFERENCES company_table (id),
+    FOREIGN KEY (item_number) REFERENCES items_table (id),
+    FOREIGN KEY (unit_of_measure) REFERENCES udc_details (id)
+  );
+
+CREATE INDEX idx_purchase_order_detail_po_header ON purchase_order_detail(po_header);
+CREATE INDEX idx_purchase_order_detail_item_number ON purchase_order_detail(item_number);
+CREATE INDEX idx_purchase_order_detail_unit_of_measure ON purchase_order_detail(unit_of_measure);
+''');
+
+    developer.log('Created table: purchase_order_detail');
+
+    //22.create purchase_order_reciever table
+    await db.execute('''
+  CREATE TABLE purchase_order_receiver (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    po_detail INTEGER,
+    item_number INTEGER,
+    quantity_transaction REAL,
+    unit_cost REAL,
+    amount_extended_cost REAL,
+    quantity_open REAL,
+    amount_open REAL,
+    quantity_recieved REAL,
+    amount_received REAL,
+    date_received TEXT,
+    company INTEGER,
+    user_id INTEGER,
+    date_updated TEXT,
+    branch_recieved INTEGER,
+    date_effective TEXT,
+    date_expiration TEXT,
+    location INTEGER,
+    unit_of_measure INTEGER,
+    batch_number_supplier TEXT,
+    FOREIGN KEY (po_detail) REFERENCES purchase_order_detail (id),
+    FOREIGN KEY (branch_recieved) REFERENCES branch_table (id),
+    FOREIGN KEY (company) REFERENCES company_table (id),
+    FOREIGN KEY (item_number) REFERENCES items_table (id),
+    FOREIGN KEY (location) REFERENCES item_locations (id),
+    FOREIGN KEY (unit_of_measure) REFERENCES udc_details (id)
+  );
+
+CREATE INDEX idx_purchase_order_receiver_po_detail ON purchase_order_receiver(po_detail);
+CREATE INDEX idx_purchase_order_receiver_item_number ON purchase_order_receiver(item_number);
+CREATE INDEX idx_purchase_order_receiver_unit_of_measure ON purchase_order_receiver(unit_of_measure);
+''');
+
+    developer.log('Created table: purchase_order_receiver');
+
+    //23.create item_transactions table
+    await db.execute('''
+  CREATE TABLE item_transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_location INTEGER,
+    created_by INTEGER,
+    date_created TEXT,
+    quantity_transaction REAL,
+    remark TEXT,
+    company INTEGER,
+    lot_number INTEGER,
+    transaction_type INTEGER,
+    item_branch INTEGER,
+    transaction_number INTEGER,
+    item_number INTEGER,
+    lot_status INTEGER,
+    branch INTEGER,
+    supplier INTEGER,
+    customer INTEGER,
+    order_type INTEGER,
+    unit_of_measure INTEGER,
+    before_store_quantity_available REAL,
+    unit_cost REAL,
+    amount_cost REAL,
+    before_amount_cost REAL,
+    FOREIGN KEY (item_location) REFERENCES item_locations (id) ON UPDATE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES user_table (id) ON UPDATE CASCADE,
+    FOREIGN KEY (company) REFERENCES company_table (id) ON UPDATE CASCADE,
+    FOREIGN KEY (lot_number) REFERENCES lot_master (id),
+    FOREIGN KEY (transaction_type) REFERENCES udc_details (id),
+    FOREIGN KEY (item_branch) REFERENCES items_in_branch (id),
+    FOREIGN KEY (item_number) REFERENCES items_table (id),
+    FOREIGN KEY (lot_status) REFERENCES udc_details (id),
+    FOREIGN KEY (branch) REFERENCES branch_table (id),
+    FOREIGN KEY (supplier) REFERENCES supplier_table (id),
+    FOREIGN KEY (customer) REFERENCES customer_table (id),
+    FOREIGN KEY (order_type) REFERENCES udc_details (id),
+    FOREIGN KEY (unit_of_measure) REFERENCES udc_details (id)
+  );
+
+CREATE INDEX idx_item_transactions_item_location ON item_transactions(item_location);
+CREATE INDEX idx_item_transactions_created_by ON item_transactions(created_by);
+CREATE INDEX idx_item_transactions_company ON item_transactions(company);
+CREATE INDEX idx_item_transactions_lot_number ON item_transactions(lot_number);
+CREATE INDEX idx_item_transactions_transaction_type ON item_transactions(transaction_type);
+CREATE INDEX idx_item_transactions_item_branch ON item_transactions(item_branch);
+CREATE INDEX idx_item_transactions_item_number ON item_transactions(item_number);
+CREATE INDEX idx_item_transactions_lot_status ON item_transactions(lot_status);
+CREATE INDEX idx_item_transactions_branch ON item_transactions(branch);
+CREATE INDEX idx_item_transactions_supplier ON item_transactions(supplier);
+CREATE INDEX idx_item_transactions_customer ON item_transactions(customer);
+CREATE INDEX idx_item_transactions_order_type ON item_transactions(order_type);
+CREATE INDEX idx_item_transactions_unit_of_measure ON item_transactions(unit_of_measure);
+''');
+    developer.log('Created table: item_transactions');
+
+    //24. create next number table
+    await db.execute('''
+  CREATE TABLE next_number (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    next_number_code TEXT NOT NULL,
+    next_number_description TEXT NOT NULL,
+    next_number INTEGER NOT NULL DEFAULT 1,
+    company INTEGER,
+    FOREIGN KEY (company) REFERENCES company_table (id)
+  );
+
+CREATE INDEX idx_next_number_company ON next_number(company);
+''');
+    developer.log('Created table: next_number');
+
     //. Create sync_queue table
     await db.execute('''
       CREATE TABLE sync_queue (
@@ -1388,6 +1611,33 @@ CREATE INDEX idx_item_cost_company ON item_cost(company);
       'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
       'updated_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
     });
+    developer.log('created system constant');
+
+    await db.execute('''
+  CREATE TABLE customer_table (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    customer_id INTEGER,
+    customer_name TEXT,
+    phone_number TEXT,
+    address TEXT,
+    country TEXT,
+    state TEXT,
+    region TEXT,
+    city TEXT,
+    tin_number TEXT,
+    address1 TEXT,
+    address2 TEXT,
+    address3 TEXT,
+    address4 TEXT,
+    fax TEXT,
+    phone_2 TEXT,
+    contact_name TEXT,
+    contact_title TEXT,
+    company INTEGER,
+    FOREIGN KEY (company) REFERENCES company_table (id) ON DELETE NO ACTION ON UPDATE NO ACTION
+  )
+''');
+    developer.log('created customer table');
 
     developer.log('✅ Sample user and related data inserted successfully.');
   }

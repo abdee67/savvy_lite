@@ -16,12 +16,15 @@ class UdcRepository {
   });
 
   // Get UDC details by code (offline-first)
-  Future<List<UdcDetails>> getUdcDetailsByCode(String detailCode) async {
+  Future<List<UdcDetails>> getUdcDetailsByCode(
+    String detailCode,
+    String headerCode,
+  ) async {
     try {
-      return await getLocalUdcDetailsByCode(detailCode);
+      return await getLocalUdcDetailsByCode(detailCode, headerCode);
     } catch (e) {
       developer.log('Unexpected error, trying local database: $e');
-      return await getLocalUdcDetailsByCode(detailCode);
+      return await getLocalUdcDetailsByCode(detailCode, headerCode);
     }
   }
 
@@ -34,14 +37,36 @@ class UdcRepository {
     }
   }
 
+  Future<UdcDetails?> getUdcDetailById(int? id) async {
+    if (id == null) return null;
+    try {
+      final db = await localDatabaseService.database;
+      final result = await db.rawQuery(
+        '''
+      SELECT * FROM udc_details 
+      WHERE id = ?
+    ''',
+        [id],
+      );
+
+      return result.isNotEmpty ? UdcDetails.fromJson(result.first) : null;
+    } catch (e) {
+      developer.log('Error getting local UDC detail: $e');
+      return null;
+    }
+  }
+
   // Local database operations
-  Future<List<UdcDetails>> getLocalUdcDetailsByCode(String detailCode) async {
+  Future<List<UdcDetails>> getLocalUdcDetailsByCode(
+    String detailCode,
+    String headerCode,
+  ) async {
     final db = await localDatabaseService.database;
     try {
       final List<Map<String, dynamic>> maps = await db.query(
         'udc_details',
-        where: 'detail_code = ?',
-        whereArgs: [detailCode],
+        where: 'detail_code = ? AND record_header = ?',
+        whereArgs: [detailCode, headerCode],
       );
       developer.log('Found ${maps.length} UDC details for code: $detailCode');
       return maps.map((map) => UdcDetails.fromJson(map)).toList();

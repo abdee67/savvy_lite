@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_bloc.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_event.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_state.dart';
@@ -64,10 +65,6 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
           key: _formKey,
           child: ListView(
             children: [
-              // Header Section
-              _buildHeaderSection(),
-              const SizedBox(height: 24),
-
               // Role Information Section
               _buildRoleInfoSection(),
               const SizedBox(height: 24),
@@ -85,172 +82,104 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
     );
   }
 
-  Widget _buildHeaderSection() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                ),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                _isEditMode ? Iconsax.user_tag : Iconsax.user_tag,
-                color: Colors.white,
-                size: 30,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _isEditMode ? 'Edit Role' : 'Create New Role',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _isEditMode
-                        ? 'Update role information and privileges'
-                        : 'Add new role to the system',
-                    style: const TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildRoleInfoSection() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Role Information',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Role Name
-            TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Role Name *',
-                prefixIcon: Icon(Iconsax.user_tag),
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter role name';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Description
-            TextFormField(
-              controller: _descriptionController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Description *',
-                prefixIcon: Icon(Iconsax.note_text),
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter description';
-                }
-                return null;
-              },
-            ),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Role Information',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
         ),
-      ),
+        const SizedBox(height: 16),
+
+        // Role Name
+        CustomTextField(
+          controller: _nameController,
+          labelText: 'Role Name *',
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please enter role name';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 16),
+
+        // Description
+        TextFormField(
+          controller: _descriptionController,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            labelText: 'Description *',
+            prefixIcon: Icon(Iconsax.note_text),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+              borderSide: BorderSide(color: Color(0xFF145888), width: 1),
+            ),
+          ),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please enter description';
+            }
+            return null;
+          },
+        ),
+      ],
     );
   }
 
   Widget _buildPrivilegeManagementSection() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Privilege Management',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Privilege Search
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey[300]!),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Iconsax.search_normal,
-                    size: 20,
-                    color: Colors.grey,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      decoration: const InputDecoration(
-                        hintText: 'Search privileges...',
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      onChanged: (query) {
-                        setState(() {
-                          _privilegeSearchQuery = query;
-                        });
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Privilege List
-            _buildPrivilegeList(),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Privilege Management',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
         ),
-      ),
+        const SizedBox(height: 16),
+
+        // Privilege Search
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+          child: Row(
+            children: [
+              const Icon(Iconsax.search_normal, size: 20, color: Colors.grey),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  decoration: const InputDecoration(
+                    hintText: 'Search privileges...',
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  onChanged: (query) {
+                    setState(() {
+                      _privilegeSearchQuery = query;
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Privilege List
+        _buildPrivilegeList(),
+      ],
     );
   }
 
@@ -279,11 +208,6 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
 
         return Container(
           constraints: const BoxConstraints(minHeight: 200, maxHeight: 400),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[200]!),
-          ),
           child: filteredPrivileges.isEmpty
               ? const Center(
                   child: Padding(
@@ -328,20 +252,20 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: isSelected ? Colors.amber[100]! : Colors.grey[100]!,
+            color: isSelected ? Colors.amber : Colors.grey[100]!,
             shape: BoxShape.circle,
           ),
           child: Icon(
             isSelected ? Iconsax.verify : Iconsax.shield_security,
             size: 20,
-            color: isSelected ? Colors.amber[800]! : Colors.grey[600]!,
+            color: isSelected ? Colors.white : Color(0xFF145888),
           ),
         ),
         title: Text(
           privilege.name,
           style: TextStyle(
             fontWeight: FontWeight.w600,
-            color: isSelected ? Colors.amber[800] : Colors.black87,
+            color: isSelected ? Colors.amber : Colors.black87,
           ),
         ),
         subtitle: Column(
@@ -350,14 +274,14 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
             Text(
               privilege.uri,
               style: TextStyle(
-                color: isSelected ? Colors.amber[600] : Colors.grey[600],
+                color: isSelected ? Colors.amber : Colors.grey[600],
                 fontSize: 12,
               ),
             ),
             Text(
               privilege.description,
               style: TextStyle(
-                color: isSelected ? Colors.amber[600] : Colors.grey[600],
+                color: isSelected ? Colors.amber : Colors.grey[600],
                 fontSize: 12,
               ),
               maxLines: 2,
@@ -367,7 +291,7 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
         ),
         trailing: Icon(
           isSelected ? Iconsax.tick_circle : Iconsax.add_circle,
-          color: isSelected ? Colors.amber : Colors.blue,
+          color: isSelected ? Colors.amber : Color(0xFF145888),
           size: 20,
         ),
         onTap: () {
@@ -413,6 +337,9 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
                   backgroundColor: const Color.fromARGB(255, 28, 66, 146),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
                 ),
                 child: state.status == RoleStatus.loading
                     ? const SizedBox(
