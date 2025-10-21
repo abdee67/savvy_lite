@@ -9,6 +9,7 @@ import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dar
 import 'package:savvy_stock/core/config/app_config.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/di/injection_container.dart';
+import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/routes/app_router.dart';
 import 'package:savvy_stock/core/services/conectitvity_service.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
@@ -20,6 +21,7 @@ import 'package:savvy_stock/features/admin/users/blocs/user_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
+import 'package:savvy_stock/features/next_number/bloc/next_number_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/invoice/blocs/invoice_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
@@ -27,7 +29,10 @@ import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_ent
 import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
+import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_bloc.dart';
+import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_bloc.dart';
+import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/repositories/system_constant_repository.dart';
@@ -43,7 +48,7 @@ Future<void> _initializeAndRunApp() async {
   try {
     await ConnectivityService().initConnectivity();
     initDependencies();
-    //await LocalDatabaseService().resetDatabase();
+    await LocalDatabaseService().resetDatabase();
     // await LocalDatabaseService().debugTable('branch_table');
 
     if (AppConfig.isTestMode) {
@@ -79,12 +84,16 @@ class _SavvyStockState extends State<SavvyStock> {
   late GoRouter _router;
   late AuthBloc _authBloc;
   late UserBloc _userBloc;
+  late UdcRepository _udcRepository;
+  late SystemConstantBloc _systemConstantBloc;
+  late NextNumberBloc _nextNumberBloc;
 
   @override
   void initState() {
     super.initState();
     _authBloc = getIt<AuthBloc>();
     _userBloc = getIt<UserBloc>();
+    _udcRepository = getIt<UdcRepository>();
     _initializeApp();
   }
 
@@ -103,6 +112,7 @@ class _SavvyStockState extends State<SavvyStock> {
         showOnboarding: showOnboarding,
         authBloc: _authBloc,
         userBloc: _userBloc,
+        udcRepository: _udcRepository,
       ).router;
     } catch (e) {
       setState(() {
@@ -235,6 +245,25 @@ class _SavvyStockState extends State<SavvyStock> {
             create: (context) => LocationMasterBloc(
               databaseService: getIt(),
               authBloc: _authBloc,
+            ),
+          ),
+          BlocProvider<NextNumberBloc>(
+            create: (context) =>
+                NextNumberBloc(databaseService: getIt(), authBloc: _authBloc),
+          ),
+          BlocProvider<StockItemLocationBloc>(
+            create: (context) => StockItemLocationBloc(
+              databaseService: getIt(),
+              authBloc: _authBloc,
+            ),
+          ),
+          BlocProvider<LotMasterBloc>(
+            create: (context) => LotMasterBloc(
+              databaseService: getIt(),
+              authBloc: _authBloc,
+              udcRepository: _udcRepository,
+              systemConstantBloc: _systemConstantBloc,
+              nextNumberBloc: _nextNumberBloc,
             ),
           ),
         ],

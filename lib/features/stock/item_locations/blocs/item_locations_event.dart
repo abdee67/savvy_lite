@@ -1,16 +1,16 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
-import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
 
 @immutable
-abstract class ItemEntryEvent extends Equatable {
-  const ItemEntryEvent();
+abstract class ItemLocationsEvent extends Equatable {
+  const ItemLocationsEvent();
 
   @override
   List<Object> get props => [];
 }
 
-class LoadItems extends ItemEntryEvent {
+class LoadItems extends ItemLocationsEvent {
   final int companyId;
   const LoadItems(this.companyId);
 
@@ -18,25 +18,39 @@ class LoadItems extends ItemEntryEvent {
   List<Object> get props => [companyId];
 }
 
-class CreateItem extends ItemEntryEvent {
-  final ItemEntryModel item;
+class LoadItemLocationsByBranchAndItem extends ItemLocationsEvent {
+  final int branchId;
+  final int itemId;
+  final int companyId;
+  const LoadItemLocationsByBranchAndItem({
+    required this.branchId,
+    required this.itemId,
+    required this.companyId,
+  });
+
+  @override
+  List<Object> get props => [branchId, itemId];
+}
+
+class CreateItem extends ItemLocationsEvent {
+  final ItemLocation item;
   const CreateItem(this.item);
 
   @override
   List<Object> get props => [item];
 }
 
-class UpdateItem extends ItemEntryEvent {
-  final ItemEntryModel item;
+class UpdateItem extends ItemLocationsEvent {
+  final ItemLocation item;
   const UpdateItem(this.item);
 
   @override
   List<Object> get props => [item];
 }
 
-class DeleteItem extends ItemEntryEvent {
+class DeleteItem extends ItemLocationsEvent {
   final int itemId;
-  final ItemEntryModel deletedItem;
+  final ItemLocation deletedItem;
   final int deletedIndex;
 
   const DeleteItem({
@@ -49,7 +63,7 @@ class DeleteItem extends ItemEntryEvent {
   List<Object> get props => [itemId, deletedItem, deletedIndex];
 }
 
-class SearchItems extends ItemEntryEvent {
+class SearchItems extends ItemLocationsEvent {
   final String query;
   const SearchItems(this.query);
 
@@ -57,8 +71,8 @@ class SearchItems extends ItemEntryEvent {
   List<Object> get props => [query];
 }
 
-class SelectItem extends ItemEntryEvent {
-  final ItemEntryModel item;
+class SelectItem extends ItemLocationsEvent {
+  final ItemLocation item;
   final bool isSelected;
   const SelectItem(this.item, this.isSelected);
 
@@ -66,32 +80,24 @@ class SelectItem extends ItemEntryEvent {
   List<Object> get props => [item, isSelected];
 }
 
-class SelectAllItems extends ItemEntryEvent {
-  final List<ItemEntryModel> items;
+class SelectAllItems extends ItemLocationsEvent {
+  final List<ItemLocation> items;
   const SelectAllItems(this.items);
 
   @override
   List<Object> get props => [items];
 }
 
-class ClearSelection extends ItemEntryEvent {
+class ClearSelection extends ItemLocationsEvent {
   const ClearSelection();
 
   @override
   List<Object> get props => [];
 }
 
-class SetItemForm extends ItemEntryEvent {
-  final ItemEntryModel item;
-  const SetItemForm(this.item);
-
-  @override
-  List<Object> get props => [item];
-}
-
-class DeleteSelectedItems extends ItemEntryEvent {
+class DeleteSelectedItems extends ItemLocationsEvent {
   final List<int> selectedItems;
-  final List<ItemEntryModel> deletedItems;
+  final List<ItemLocation> deletedItems;
   final List<int> deletedIndexes;
 
   const DeleteSelectedItems({
@@ -102,42 +108,4 @@ class DeleteSelectedItems extends ItemEntryEvent {
 
   @override
   List<Object> get props => [selectedItems, deletedItems, deletedIndexes];
-}
-
-class UndoDelete extends ItemEntryEvent {
-  final List<ItemEntryModel> deletedItems;
-  final List<int> deletedIndexes;
-
-  const UndoDelete({required this.deletedItems, required this.deletedIndexes});
-
-  @override
-  List<Object> get props => [deletedItems, deletedIndexes];
-}
-
-class ShowItemDetail extends ItemEntryEvent {
-  final ItemEntryModel item;
-  const ShowItemDetail(this.item);
-
-  @override
-  List<Object> get props => [item];
-}
-
-class HideItemDetail extends ItemEntryEvent {
-  const HideItemDetail();
-}
-
-class ExportItem extends ItemEntryEvent {
-  final List<ItemEntryModel> itemsToExport;
-  const ExportItem(this.itemsToExport);
-
-  @override
-  List<Object> get props => [itemsToExport];
-}
-
-class ExportSingleItem extends ItemEntryEvent {
-  final ItemEntryModel itemToExport;
-  const ExportSingleItem(this.itemToExport);
-
-  @override
-  List<Object> get props => [itemToExport];
 }

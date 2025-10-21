@@ -1024,7 +1024,7 @@ CREATE INDEX idx_next_number_company ON next_number(company);
       // --- Lot Status (LS) ---
       {
         'id': 24,
-        'detail_code': 'ACTIVE',
+        'detail_code': 'A',
         'description_1': 'Active Lot',
         'description_2': null,
         'record_header': 7,
@@ -1032,8 +1032,17 @@ CREATE INDEX idx_next_number_company ON next_number(company);
       },
       {
         'id': 25,
-        'detail_code': 'CLOSED',
-        'description_1': 'Closed Lot',
+        'detail_code': 'D',
+        'description_1': 'Damaged Lot',
+        'description_2': null,
+        'record_header': 7,
+        'udc_group': 'LS',
+      },
+
+      {
+        'id': 26,
+        'detail_code': 'E',
+        'description_1': 'Expired Lot',
         'description_2': null,
         'record_header': 7,
         'udc_group': 'LS',
@@ -1041,7 +1050,7 @@ CREATE INDEX idx_next_number_company ON next_number(company);
 
       // --- Transaction Type (TT) ---
       {
-        'id': 26,
+        'id': 27,
         'detail_code': 'SALE',
         'description_1': 'Sales Transaction',
         'description_2': null,
@@ -1049,7 +1058,7 @@ CREATE INDEX idx_next_number_company ON next_number(company);
         'udc_group': 'TT',
       },
       {
-        'id': 27,
+        'id': 28,
         'detail_code': 'PURCHASE',
         'description_1': 'Purchase Transaction',
         'description_2': null,
@@ -1057,7 +1066,7 @@ CREATE INDEX idx_next_number_company ON next_number(company);
         'udc_group': 'TT',
       },
       {
-        'id': 28,
+        'id': 29,
         'detail_code': 'RETURN',
         'description_1': 'Return Transaction',
         'description_2': null,
@@ -1067,7 +1076,7 @@ CREATE INDEX idx_next_number_company ON next_number(company);
 
       // --- Order Type (OT) ---
       {
-        'id': 29,
+        'id': 30,
         'detail_code': 'SO',
         'description_1': 'Sales Order',
         'description_2': null,
@@ -1075,7 +1084,7 @@ CREATE INDEX idx_next_number_company ON next_number(company);
         'udc_group': 'OT',
       },
       {
-        'id': 30,
+        'id': 31,
         'detail_code': 'PO',
         'description_1': 'Purchase Order',
         'description_2': null,
@@ -1085,7 +1094,7 @@ CREATE INDEX idx_next_number_company ON next_number(company);
 
       // --- Company Category (CC) ---
       {
-        'id': 31,
+        'id': 32,
         'detail_code': 'SUP',
         'description_1': 'Supplier',
         'description_2': null,
@@ -1093,7 +1102,7 @@ CREATE INDEX idx_next_number_company ON next_number(company);
         'udc_group': 'CC',
       },
       {
-        'id': 32,
+        'id': 33,
         'detail_code': 'CUS',
         'description_1': 'Customer',
         'description_2': null,
@@ -1101,7 +1110,7 @@ CREATE INDEX idx_next_number_company ON next_number(company);
         'udc_group': 'CC',
       },
       {
-        'id': 33,
+        'id': 34,
         'detail_code': 'EMP',
         'description_1': 'Employee',
         'description_2': null,
@@ -1111,7 +1120,7 @@ CREATE INDEX idx_next_number_company ON next_number(company);
 
       //---- Category 1 (CT1) ----
       {
-        'id': 34,
+        'id': 35,
         'detail_code': 'CT1',
         'description_1': 'Category 1',
         'description_2': null,
@@ -1119,7 +1128,7 @@ CREATE INDEX idx_next_number_company ON next_number(company);
         'udc_group': 'CT1',
       },
       {
-        'id': 35,
+        'id': 36,
         'detail_code': 'CT1pro',
         'description_1': 'Category 1 pro ',
         'description_2': null,

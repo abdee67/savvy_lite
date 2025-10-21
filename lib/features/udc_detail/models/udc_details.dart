@@ -15,6 +15,17 @@ class UdcDetails {
     this.udcGroup,
   });
 
+  factory UdcDetails.empty() {
+    return UdcDetails(
+      id: 0,
+      detailCode: '',
+      description1: '',
+      description2: '',
+      recordHeader: 0,
+      udcGroup: '',
+    );
+  }
+
   factory UdcDetails.fromJson(Map<String, dynamic> json) {
     return UdcDetails(
       id: json['id'],

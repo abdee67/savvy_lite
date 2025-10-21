@@ -4,8 +4,6 @@ import 'package:bloc/bloc.dart';
 import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
-import 'package:savvy_stock/core/services/database/database_service.dart';
-import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/next_number/bloc/next_number_bloc.dart';
 import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_receiver_model.dart';
@@ -44,15 +42,13 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
     on<DeleteLotMaster>(_onDeleteLot);
     on<DeleteMultipleLotMasters>(_onDeleteMultipleLotMasters);
     on<PrepareCreateLot>(_onPrepareCreate);
-    on<PrepareCopyLot>(_onPrepareCopy);
     on<PrepareEditLot>(_onPrepareEdit);
-    on<SetSelectedLot>(_onSetSelected);
-    on<SetMultiSelectionLots>(_onSetMultiSelection);
-    on<AddToCreateList>(_onAddToCreateList);
-    on<RemoveFromCreateList>(_onRemoveFromCreateList);
-    on<ClearCreateList>(_onClearCreateList);
+    on<SelecteLot>(_onSelecteLot);
+    on<SelectMultiSelectionLots>(_onSelectMultiSelectionLots);
+    on<ClearSelection>(_onClearSelection);
     on<AutoCreateLotForPO>(_onAutoCreateLotForPO);
     on<CalculateLotStatus>(_onCalculateLotStatus);
+    on<ClaculateMultipleLotStatus>(_onClaculateMultipleLotStatus);
   }
 
   @override
@@ -89,12 +85,23 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
       );
 
       final lotList = lots.map((p) => LotMaster.fromMap(p)).toList();
+      // Auto-calculate status for all loaded lots
+      final systemConstant = systemConstantBloc.state.selected;
+      final lotTypeUdcDetail = await _getLotTypeUdcDetail(
+        systemConstant?.lotType,
+      );
 
+      final updatedLotList = <LotMaster>[];
+      for (final lot in lotList) {
+        final newStatus = await _calculateLotStatus(lot, lotTypeUdcDetail);
+        final updatedLot = lot.copyWith(lotStatus: newStatus);
+        updatedLotList.add(updatedLot);
+      }
       emit(
         state.copyWith(
           status: LotMasterStatus.loaded,
-          items: lotList,
-          filteredItems: lotList,
+          items: updatedLotList,
+          filteredItems: updatedLotList,
           companyId: authBloc.state.companyId,
         ),
       );
@@ -292,7 +299,6 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
       }
 
       add(LoadLotMasters(authBloc.state.companyId!));
-      add(ClearCreateList());
     } catch (e) {
       emit(
         state.copyWith(
@@ -418,16 +424,38 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
     if (lotType != 'R') {
       if (difference <= 0) {
         // Expired status
-        return await _getUdcDetailId('LS', 'E');
+        return await getUdcDetailId('LS', 'E');
       } else {
         // Active status (if current status is expired, keep it expired)
-        return (item.lotStatus == await _getUdcDetailId('LS', 'E'))
+        return (item.lotStatus == await getUdcDetailId('LS', 'E'))
             ? item.lotStatus
-            : await _getUdcDetailId('LS', 'A');
+            : await getUdcDetailId('LS', 'A');
       }
     } else {
       // For received type, default to active
-      return item.lotStatus ?? await _getUdcDetailId('LS', 'A');
+      return item.lotStatus ?? await getUdcDetailId('LS', 'A');
+    }
+  }
+
+  // method to calculate status for multiple lots
+  Future<void> _recalculateAllLotStatus(Emitter<LotMasterState> emit) async {
+    try {
+      final systemConstant = systemConstantBloc.state.selected;
+      final lotTypeUdcDetail = await _getLotTypeUdcDetail(
+        systemConstant?.lotType,
+      );
+
+      final updatedItems = <LotMaster>[];
+
+      for (final lot in state.items) {
+        final newStatus = await _calculateLotStatus(lot, lotTypeUdcDetail);
+        final updatedLot = lot.copyWith(lotStatus: newStatus);
+        updatedItems.add(updatedLot);
+      }
+
+      emit(state.copyWith(items: updatedItems, filteredItems: updatedItems));
+    } catch (e) {
+      print('Error recalculating all lot status: $e');
     }
   }
 
@@ -449,6 +477,13 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
     } catch (e) {
       print('Error calculating lot status: $e');
     }
+  }
+
+  Future<void> _onClaculateMultipleLotStatus(
+    ClaculateMultipleLotStatus event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    await _recalculateAllLotStatus(emit);
   }
 
   Future<void> _updateItemLocationQuantity(
@@ -555,7 +590,7 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
     return await nextNumberBloc.generateFormattedNumber('LM');
   }
 
-  Future<int?> _getUdcDetailId(String headerCode, String detailCode) async {
+  Future<int?> getUdcDetailId(String headerCode, String detailCode) async {
     final db = await databaseService.database;
     final result = await db.rawQuery(
       '''
@@ -579,7 +614,6 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
     Emitter<LotMasterState> emit,
   ) async {
     final createItems = <LotMaster>[];
-
     final selected = LotMaster(company: event.companyId);
 
     createItems.add(selected);
@@ -589,23 +623,6 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
         createItems: createItems,
         selected: selected,
         selected2: LotMaster(company: authBloc.state.companyId),
-      ),
-    );
-  }
-
-  Future<void> _onPrepareCopy(
-    PrepareCopyLot event,
-    Emitter<LotMasterState> emit,
-  ) async {
-    final copiedLot = event.item.copyWith(
-      id: null,
-      lotNumber: int.parse(await _generateLotNumber()),
-    );
-
-    emit(
-      state.copyWith(
-        createItems: [...state.createItems, copiedLot],
-        selected: copiedLot,
       ),
     );
   }
@@ -845,51 +862,36 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
   }
 
   // Simple state update handlers
-  Future<void> _onSetSelected(
-    SetSelectedLot event,
+  Future<void> _onSelecteLot(
+    SelecteLot event,
     Emitter<LotMasterState> emit,
   ) async {
-    emit(state.copyWith(selected: event.item));
+    final selectedItems = List<LotMaster>.from(state.selectedItems);
+    if (event.isSelecting) {
+      selectedItems.add(event.item!);
+    } else {
+      selectedItems.removeWhere((item) => event.item!.id == item.id);
+    }
+    emit(state.copyWith(selectedItems: selectedItems));
   }
 
-  Future<void> _onSetMultiSelection(
-    SetMultiSelectionLots event,
+  Future<void> _onSelectMultiSelectionLots(
+    SelectMultiSelectionLots event,
     Emitter<LotMasterState> emit,
   ) async {
-    emit(state.copyWith(multiSelectionItems: event.items));
+    if (state.selectedItems.length == event.items.length) {
+      // If all are selected, clear selection
+      emit(state.copyWith(selectedItems: []));
+    } else {
+      // Select all
+      emit(state.copyWith(selectedItems: List.from(event.items)));
+    }
   }
 
-  Future<void> _onAddToCreateList(
-    AddToCreateList event,
+  Future<void> _onClearSelection(
+    ClearSelection event,
     Emitter<LotMasterState> emit,
   ) async {
-    final newItem = event.item.copyWith();
-
-    emit(
-      state.copyWith(
-        createItems: [...state.createItems, newItem],
-        selected1: newItem,
-      ),
-    );
-  }
-
-  Future<void> _onRemoveFromCreateList(
-    RemoveFromCreateList event,
-    Emitter<LotMasterState> emit,
-  ) async {
-    final updatedCreateItems = state.createItems
-        .where((item) => item.id != event.item.id)
-        .toList();
-
-    emit(state.copyWith(createItems: updatedCreateItems));
-  }
-
-  Future<void> _onClearCreateList(
-    ClearCreateList event,
-    Emitter<LotMasterState> emit,
-  ) async {
-    emit(
-      state.copyWith(createItems: const [], selected: null, selected1: null),
-    );
+    emit(state.copyWith(selectedItems: []));
   }
 }

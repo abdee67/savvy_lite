@@ -317,7 +317,17 @@ class PrivilegeSeeder {
         'location_master_delete',
       ),
 
+      //lot entry
       _createPrivilege('Lot Entry', 'link', AppRoutes.lotEntry, 'lot_entry'),
+      _createPrivilege('Add Lot', 'link', AppRoutes.lotCreation, 'add_lot'),
+      _createPrivilege('Edit Lot', 'link', AppRoutes.lotEdit, 'edit_lot'),
+      _createPrivilege(
+        'Delete Lot',
+        'button',
+        AppRoutes.lotDelete,
+        'delete_lot',
+      ),
+
       _createPrivilege(
         'Lot Colorings',
         'link',

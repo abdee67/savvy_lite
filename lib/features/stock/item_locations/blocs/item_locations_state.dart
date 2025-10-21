@@ -1,7 +1,8 @@
 import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
 
-enum ItemEntryStatus {
+enum ItemLocationsStatus {
   initial,
   loading,
   searching,
@@ -13,43 +14,45 @@ enum ItemEntryStatus {
   exporting,
 }
 
-enum ItemEntryDetailStatus { hidden, showing, editing }
+enum ItemLocationsDetailStatus { hidden, showing, editing }
 
-class ItemEntryState extends Equatable {
-  final ItemEntryStatus status;
+class ItemLocationsState extends Equatable {
+  final ItemLocationsStatus status;
   final String? message;
   final int? itemId;
+  final int? branchId;
   final int? companyId;
-  final List<ItemEntryModel> items;
-  final List<ItemEntryModel> filteredItems;
+  final List<ItemLocation> items;
+  final List<ItemLocation> filteredItems;
   final String searchQuery;
-  final List<ItemEntryModel> selectedItems;
-  final ItemEntryModel? itemForm;
+  final List<ItemLocation> selectedItems;
+  final ItemLocation? itemForm;
 
-  final ItemEntryDetailStatus detailStatus;
-  final ItemEntryModel? itemDetail;
+  final ItemLocationsDetailStatus detailStatus;
+  final ItemLocation? itemDetail;
 
-  final List<ItemEntryModel> recentlyDeleted;
+  final List<ItemLocation> recentlyDeleted;
   final List<int> recentlyDeletedIndexes;
 
   final bool isExporting;
   final bool showDetailPanel;
-  final List<ItemEntryModel> exportedItems; //export multiple Branchs
-  final ItemEntryModel? exportedItem; //export single Branch
+  final List<ItemLocation> exportedItems; //export multiple Branchs
+  final ItemLocation? exportedItem; //export single Branch
 
   // Role management state
 
-  const ItemEntryState({
-    this.status = ItemEntryStatus.initial,
+  const ItemLocationsState({
+    this.status = ItemLocationsStatus.initial,
     this.message,
     this.itemId,
+    this.branchId,
     this.companyId,
     this.items = const [],
     this.filteredItems = const [],
     this.searchQuery = '',
     this.selectedItems = const [],
     this.itemForm,
-    this.detailStatus = ItemEntryDetailStatus.hidden,
+    this.detailStatus = ItemLocationsDetailStatus.hidden,
     this.itemDetail,
     this.recentlyDeleted = const [],
     this.recentlyDeletedIndexes = const [],
@@ -60,16 +63,16 @@ class ItemEntryState extends Equatable {
   });
 
   // --- Helper Getters ---
-  bool get isLoading => status == ItemEntryStatus.loading;
-  bool get isSuccess => status == ItemEntryStatus.success;
-  bool get isFailure => status == ItemEntryStatus.failure;
-  bool get isCreating => status == ItemEntryStatus.creating;
-  bool get isUpdating => status == ItemEntryStatus.updating;
-  bool get isDeleting => status == ItemEntryStatus.deleting;
-  bool get isExportingData => status == ItemEntryStatus.exporting;
+  bool get isLoading => status == ItemLocationsStatus.loading;
+  bool get isSuccess => status == ItemLocationsStatus.success;
+  bool get isFailure => status == ItemLocationsStatus.failure;
+  bool get isCreating => status == ItemLocationsStatus.creating;
+  bool get isUpdating => status == ItemLocationsStatus.updating;
+  bool get isDeleting => status == ItemLocationsStatus.deleting;
+  bool get isExportingData => status == ItemLocationsStatus.exporting;
 
-  bool get isDetailVisible => detailStatus != ItemEntryDetailStatus.hidden;
-  bool get isDetailEditing => detailStatus == ItemEntryDetailStatus.editing;
+  bool get isDetailVisible => detailStatus != ItemLocationsDetailStatus.hidden;
+  bool get isDetailEditing => detailStatus == ItemLocationsDetailStatus.editing;
 
   bool get hasItems => items.isNotEmpty;
   bool get hasFilteredItems => filteredItems.isNotEmpty;
@@ -81,29 +84,31 @@ class ItemEntryState extends Equatable {
   bool get hasRecentDeletions => recentlyDeleted.isNotEmpty;
 
   // --- CopyWith for immutability ---
-  ItemEntryState copyWith({
-    ItemEntryStatus? status,
+  ItemLocationsState copyWith({
+    ItemLocationsStatus? status,
     String? message,
     int? itemId,
+    int? branchId,
     int? companyId,
-    List<ItemEntryModel>? items,
-    List<ItemEntryModel>? filteredItems,
+    List<ItemLocation>? items,
+    List<ItemLocation>? filteredItems,
     String? searchQuery,
-    List<ItemEntryModel>? selectedItems,
-    ItemEntryModel? itemForm,
-    ItemEntryDetailStatus? detailStatus,
-    ItemEntryModel? itemDetail,
-    List<ItemEntryModel>? recentlyDeleted,
+    List<ItemLocation>? selectedItems,
+    ItemLocation? itemForm,
+    ItemLocationsDetailStatus? detailStatus,
+    ItemLocation? itemDetail,
+    List<ItemLocation>? recentlyDeleted,
     List<int>? recentlyDeletedIndexes,
     bool? isExporting,
     bool? showDetailPanel,
-    List<ItemEntryModel>? exportedItems,
-    ItemEntryModel? exportedItem,
+    List<ItemLocation>? exportedItems,
+    ItemLocation? exportedItem,
   }) {
-    return ItemEntryState(
+    return ItemLocationsState(
       status: status ?? this.status,
       message: message ?? this.message,
       itemId: itemId ?? this.itemId,
+      branchId: branchId ?? this.branchId,
       companyId: companyId ?? this.companyId,
       items: items ?? this.items,
       filteredItems: filteredItems ?? this.filteredItems,
@@ -127,6 +132,7 @@ class ItemEntryState extends Equatable {
     status,
     message,
     itemId,
+    branchId,
     companyId,
     items,
     filteredItems,

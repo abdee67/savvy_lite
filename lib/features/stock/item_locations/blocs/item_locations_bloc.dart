@@ -5,17 +5,18 @@ import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
-import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
-import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_state.dart';
-import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_event.dart';
+import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_state.dart';
+import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
 
-class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
+class StockItemLocationBloc
+    extends Bloc<ItemLocationsEvent, ItemLocationsState> {
   final LocalDatabaseService databaseService;
   final AuthBloc authBloc;
   StreamSubscription? _authSubscription;
 
-  StockItemEntryBloc({required this.databaseService, required this.authBloc})
-    : super(const ItemEntryState()) {
+  StockItemLocationBloc({required this.databaseService, required this.authBloc})
+    : super(const ItemLocationsState()) {
     // Listen to auth state changes
     _authSubscription = authBloc.stream.listen((authState) {
       if (authState.isAuthenticated && authState.companyId != null) {
@@ -23,6 +24,7 @@ class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
       }
     });
     on<LoadItems>(_onLoadItems);
+    on<LoadItemLocationsByBranchAndItem>(_onLoadItemLocationsByBranchAndItem);
     on<CreateItem>(_onCreateItem);
     on<UpdateItem>(_onUpdateItem);
     on<DeleteItem>(_onDeleteItem);
@@ -31,11 +33,6 @@ class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
     on<SelectAllItems>(_onSelectAllItemEntrys);
     on<ClearSelection>(_onClearSelection);
     on<DeleteSelectedItems>(_onDeleteSelectedItemEntrys);
-    on<ShowItemDetail>(_onShowItemEntryDetail);
-    on<HideItemDetail>(_onHideItemEntryDetail);
-    on<ExportItem>(_onExportItemEntry);
-    on<ExportSingleItem>(_onExportSingleItemEntry);
-    on<SetItemForm>(_onSetItemEntryForm);
   }
 
   @override
@@ -46,34 +43,70 @@ class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
 
   Future<void> _onLoadItems(
     LoadItems event,
-    Emitter<ItemEntryState> emit,
+    Emitter<ItemLocationsState> emit,
   ) async {
-    emit(ItemEntryState(status: ItemEntryStatus.loading));
+    emit(ItemLocationsState(status: ItemLocationsStatus.loading));
     try {
       final db = await databaseService.database;
       final items = await db.query(
-        'items_table',
+        'item_location',
         where: 'company = ?',
         whereArgs: [event.companyId],
       );
 
-      final itemList = items.map((p) => ItemEntryModel.fromMap(p)).toList();
+      final itemList = items.map((p) => ItemLocation.fromMap(p)).toList();
 
       emit(
-        ItemEntryState(
-          status: ItemEntryStatus.success,
+        ItemLocationsState(
+          status: ItemLocationsStatus.success,
           items: itemList,
           filteredItems: itemList,
           searchQuery: '',
-          detailStatus: ItemEntryDetailStatus.hidden,
+          detailStatus: ItemLocationsDetailStatus.hidden,
           companyId: event.companyId,
           selectedItems: [],
         ),
       );
     } catch (e) {
       emit(
-        ItemEntryState(
-          status: ItemEntryStatus.failure,
+        ItemLocationsState(
+          status: ItemLocationsStatus.failure,
+          message: 'Failed to load Items: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onLoadItemLocationsByBranchAndItem(
+    LoadItemLocationsByBranchAndItem event,
+    Emitter<ItemLocationsState> emit,
+  ) async {
+    emit(ItemLocationsState(status: ItemLocationsStatus.loading));
+    try {
+      final db = await databaseService.database;
+      final items = await db.query(
+        'item_location',
+        where: 'company = ? AND branch_id = ? AND item_id = ?',
+        whereArgs: [event.companyId, event.branchId, event.itemId],
+      );
+
+      final itemList = items.map((p) => ItemLocation.fromMap(p)).toList();
+
+      emit(
+        ItemLocationsState(
+          status: ItemLocationsStatus.success,
+          items: itemList,
+          filteredItems: itemList,
+          searchQuery: '',
+          detailStatus: ItemLocationsDetailStatus.hidden,
+          companyId: event.companyId,
+          selectedItems: [],
+        ),
+      );
+    } catch (e) {
+      emit(
+        ItemLocationsState(
+          status: ItemLocationsStatus.failure,
           message: 'Failed to load Items: $e',
         ),
       );
@@ -82,11 +115,11 @@ class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
 
   Future<void> _onCreateItem(
     CreateItem event,
-    Emitter<ItemEntryState> emit,
+    Emitter<ItemLocationsState> emit,
   ) async {
     emit(
       state.copyWith(
-        status: ItemEntryStatus.creating,
+        status: ItemLocationsStatus.creating,
         message: 'Creating Item...',
       ),
     );
@@ -100,18 +133,18 @@ class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
       //add creation metadata
       itemMap['company'] = authBloc.state.companyId;
 
-      await db.insert('items_table', itemMap);
+      await db.insert('item_location', itemMap);
       add(LoadItems(authBloc.state.companyId!));
       emit(
         state.copyWith(
-          status: ItemEntryStatus.success,
+          status: ItemLocationsStatus.success,
           message: 'Item created successfully',
         ),
       );
     } catch (e) {
       emit(
-        ItemEntryState(
-          status: ItemEntryStatus.failure,
+        ItemLocationsState(
+          status: ItemLocationsStatus.failure,
           message: 'Failed to create Item: $e',
         ),
       );
@@ -120,11 +153,11 @@ class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
 
   Future<void> _onUpdateItem(
     UpdateItem event,
-    Emitter<ItemEntryState> emit,
+    Emitter<ItemLocationsState> emit,
   ) async {
     emit(
       state.copyWith(
-        status: ItemEntryStatus.updating,
+        status: ItemLocationsStatus.updating,
         message: 'Updating Item...',
       ),
     );
@@ -136,7 +169,7 @@ class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
       if (companyId == null) {
         emit(
           state.copyWith(
-            status: ItemEntryStatus.failure,
+            status: ItemLocationsStatus.failure,
             message: 'Authentication error: Company ID not found',
           ),
         );
@@ -159,14 +192,14 @@ class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
 
       emit(
         state.copyWith(
-          status: ItemEntryStatus.success,
+          status: ItemLocationsStatus.success,
           message: 'Item updated successfully',
         ),
       );
     } catch (e) {
       emit(
         state.copyWith(
-          status: ItemEntryStatus.failure,
+          status: ItemLocationsStatus.failure,
           message: 'Failed to update ItemEntry: $e',
         ),
       );
@@ -175,10 +208,13 @@ class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
 
   Future<void> _onDeleteItem(
     DeleteItem event,
-    Emitter<ItemEntryState> emit,
+    Emitter<ItemLocationsState> emit,
   ) async {
     emit(
-      state.copyWith(status: ItemEntryStatus.deleting, message: 'Deleting..'),
+      state.copyWith(
+        status: ItemLocationsStatus.deleting,
+        message: 'Deleting..',
+      ),
     );
     try {
       final db = await databaseService.database;
@@ -187,9 +223,9 @@ class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
         where: 'id = ? AND company = ?',
         whereArgs: [event.itemId, authBloc.state.companyId],
       );
-      final updateItemEntrys = List<ItemEntryModel>.from(state.items)
+      final updateItemEntrys = List<ItemLocation>.from(state.items)
         ..removeWhere((p) => p.id == event.itemId);
-      final updateFilteredItemEntrys = List<ItemEntryModel>.from(
+      final updateFilteredItemEntrys = List<ItemLocation>.from(
         state.filteredItems,
       )..removeWhere((p) => p.id == event.itemId);
       emit(
@@ -207,19 +243,22 @@ class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
       add(LoadItems(authBloc.state.companyId!));
     } catch (e) {
       emit(
-        ItemEntryState(
-          status: ItemEntryStatus.failure,
+        ItemLocationsState(
+          status: ItemLocationsStatus.failure,
           message: 'Failed to delete Item: $e',
         ),
       );
     }
   }
 
-  void _onClearSelection(ClearSelection event, Emitter<ItemEntryState> emit) {
+  void _onClearSelection(
+    ClearSelection event,
+    Emitter<ItemLocationsState> emit,
+  ) {
     emit(state.copyWith(selectedItems: []));
   }
 
-  void _onSearchItem(SearchItems event, Emitter<ItemEntryState> emit) {
+  void _onSearchItem(SearchItems event, Emitter<ItemLocationsState> emit) {
     final query = event.query.toLowerCase().trim();
 
     if (query.isEmpty) {
@@ -228,16 +267,15 @@ class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
           filteredItems: state.items,
           selectedItems: [],
           searchQuery: '',
-          status: ItemEntryStatus.success,
+          status: ItemLocationsStatus.success,
         ),
       );
       return;
     }
 
     final filtered = state.items.where((item) {
-      return item.barcode!.toLowerCase().contains(query) ||
-          item.itemDescription!.toLowerCase().contains(query) ||
-          item.itemsId!.toLowerCase().contains(query);
+      return item.location!.toString().toLowerCase().contains(query) ||
+          item.itemNumber!.toString().toLowerCase().contains(query);
     }).toList();
 
     emit(
@@ -245,13 +283,13 @@ class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
         filteredItems: filtered,
         searchQuery: query,
         selectedItems: [],
-        status: ItemEntryStatus.searching,
+        status: ItemLocationsStatus.searching,
       ),
     );
   }
 
-  void _onSelectItem(SelectItem event, Emitter<ItemEntryState> emit) {
-    final selectedItems = List<ItemEntryModel>.from(state.selectedItems);
+  void _onSelectItem(SelectItem event, Emitter<ItemLocationsState> emit) {
+    final selectedItems = List<ItemLocation>.from(state.selectedItems);
     if (event.isSelected) {
       selectedItems.add(event.item);
     } else {
@@ -262,7 +300,7 @@ class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
 
   void _onSelectAllItemEntrys(
     SelectAllItems event,
-    Emitter<ItemEntryState> emit,
+    Emitter<ItemLocationsState> emit,
   ) {
     if (state.selectedItems.length == event.items.length) {
       // If all are selected, clear selection
@@ -273,13 +311,9 @@ class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
     }
   }
 
-  void _onSetItemEntryForm(SetItemForm event, Emitter<ItemEntryState> emit) {
-    emit(state.copyWith(itemForm: event.item));
-  }
-
   void _onDeleteSelectedItemEntrys(
     DeleteSelectedItems event,
-    Emitter<ItemEntryState> emit,
+    Emitter<ItemLocationsState> emit,
   ) async {
     try {
       final db = await databaseService.database;
@@ -316,72 +350,11 @@ class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
       add(LoadItems(authBloc.state.companyId!));
     } catch (e) {
       emit(
-        ItemEntryState(
-          status: ItemEntryStatus.failure,
+        ItemLocationsState(
+          status: ItemLocationsStatus.failure,
           message: 'Failed to delete selected Items: $e',
         ),
       );
     }
-  }
-
-  void _onShowItemEntryDetail(
-    ShowItemDetail event,
-    Emitter<ItemEntryState> emit,
-  ) {
-    emit(
-      state.copyWith(
-        itemDetail: event.item,
-        detailStatus: ItemEntryDetailStatus.showing,
-        showDetailPanel: true,
-      ),
-    );
-  }
-
-  void _onHideItemEntryDetail(
-    HideItemDetail event,
-    Emitter<ItemEntryState> emit,
-  ) {
-    emit(
-      state.copyWith(
-        detailStatus: ItemEntryDetailStatus.hidden,
-        itemDetail: null,
-        showDetailPanel: false,
-      ),
-    );
-  }
-
-  void _onExportItemEntry(ExportItem event, Emitter<ItemEntryState> emit) {
-    emit(state.copyWith(status: ItemEntryStatus.exporting, isExporting: true));
-
-    // Simulate export process
-    Future.delayed(const Duration(seconds: 2), () {
-      emit(
-        state.copyWith(
-          status: ItemEntryStatus.success,
-          isExporting: false,
-          exportedItems: event.itemsToExport,
-          message: 'Exported ${event.itemsToExport.length} items successfully',
-        ),
-      );
-    });
-  }
-
-  void _onExportSingleItemEntry(
-    ExportSingleItem event,
-    Emitter<ItemEntryState> emit,
-  ) {
-    emit(state.copyWith(status: ItemEntryStatus.exporting, isExporting: true));
-
-    // Simulate export process
-    Future.delayed(const Duration(seconds: 2), () {
-      emit(
-        state.copyWith(
-          status: ItemEntryStatus.success,
-          isExporting: false,
-          exportedItem: event.itemToExport,
-          message: 'Exported ${event.itemToExport} items successfully',
-        ),
-      );
-    });
   }
 }

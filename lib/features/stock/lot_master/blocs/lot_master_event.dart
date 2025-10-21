@@ -101,6 +101,7 @@ class DeleteLotMaster extends LotMasterEvent {
 
 class DeleteMultipleLotMasters extends LotMasterEvent {
   final List<LotMaster> items;
+
   const DeleteMultipleLotMasters(this.items);
 
   @override
@@ -139,20 +140,25 @@ class PrepareEditLot extends LotMasterEvent {
   List<Object> get props => [item];
 }
 
-class SetSelectedLot extends LotMasterEvent {
+class SelecteLot extends LotMasterEvent {
   final LotMaster? item;
-  const SetSelectedLot(this.item);
+  final bool isSelecting;
+  const SelecteLot(this.item, this.isSelecting);
 
   @override
-  List<Object> get props => [item ?? Object()];
+  List<Object> get props => [item ?? Object(), isSelecting];
 }
 
-class SetMultiSelectionLots extends LotMasterEvent {
+class SelectMultiSelectionLots extends LotMasterEvent {
   final List<LotMaster> items;
-  const SetMultiSelectionLots(this.items);
+  const SelectMultiSelectionLots(this.items);
 
   @override
   List<Object> get props => [items];
+}
+
+class ClearSelection extends LotMasterEvent {
+  const ClearSelection();
 }
 
 class AddToCreateList extends LotMasterEvent {
@@ -171,8 +177,6 @@ class RemoveFromCreateList extends LotMasterEvent {
   List<Object> get props => [item];
 }
 
-class ClearCreateList extends LotMasterEvent {}
-
 class AutoCreateLotForPO extends LotMasterEvent {
   final PurchaseOrderReceiverModel por;
   final int transactionNumber;
@@ -183,4 +187,8 @@ class CalculateLotStatus extends LotMasterEvent {
   final LotMaster item;
   final UdcDetails? lotTypeUdcDetail;
   const CalculateLotStatus(this.item, this.lotTypeUdcDetail);
+}
+
+class ClaculateMultipleLotStatus extends LotMasterEvent {
+  const ClaculateMultipleLotStatus();
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/errors/unauthorized_screen.dart';
+import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/widgets/route_guard.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
 import 'package:savvy_stock/features/admin/employees/screens/employee_dashboard.dart';
@@ -47,6 +48,9 @@ import 'package:savvy_stock/features/stock/item_in_branch/widgets/item_in_branch
 import 'package:savvy_stock/features/stock/location_entry/models/location_master_model.dart';
 import 'package:savvy_stock/features/stock/location_entry/screens/location_master_screen.dart';
 import 'package:savvy_stock/features/stock/location_entry/screens/location_master_create_edit.dart';
+import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
+import 'package:savvy_stock/features/stock/lot_master/screens/lot_master_dashboard.dart';
+import 'package:savvy_stock/features/stock/lot_master/widgets/lot_master_create_and_edit.dart.dart';
 import 'package:savvy_stock/features/system_constant/screen/system_constants_screen.dart';
 
 // Import your screen files for missing routes
@@ -57,12 +61,14 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 class AppRouter {
   final AuthBloc authBloc;
+  final UdcRepository udcRepository;
   final UserBloc userBloc;
   final bool showOnboarding;
   AppRouter({
     required this.showOnboarding,
     required this.authBloc,
     required this.userBloc,
+    required this.udcRepository,
   });
 
   late final GoRouter router = GoRouter(
@@ -522,6 +528,44 @@ class AppRouter {
               editingLocation: item,
               isEditMode: true,
             ),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+
+      //lot entry
+      GoRoute(
+        path: AppRoutes.lotEntry,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.lotEntry,
+          parentPrivilege: AppRoutes.stockDashboard,
+          child: LotMasterDashboard(
+            authBloc: authBloc,
+            udcRepository: udcRepository,
+          ),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.lotCreation,
+        builder: (context, state) {
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.lotCreation,
+            parentPrivilege: AppRoutes.lotEntry,
+            child: LotMasterFormPage(authBloc: authBloc),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.lotEdit,
+        builder: (context, state) {
+          final extra = state.extra;
+          final item = extra != null ? extra as LotMaster? : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.lotEdit,
+            parentPrivilege: AppRoutes.lotEntry,
+            child: LotMasterFormPage(authBloc: authBloc, lot: item),
           );
         },
         redirect: _protectedRouteRedirect,

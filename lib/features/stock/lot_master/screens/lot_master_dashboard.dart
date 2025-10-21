@@ -1,31 +1,37 @@
-// features/stock/location_master/pages/location_master_list_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
+import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/utils/ui_helper.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
+import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
+import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_event.dart';
-import '../blocs/lot_master_bloc.dart';
-import '../models/lot_master_model.dart';
+import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_state.dart';
+import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 
-class LotMasterListPage extends StatefulWidget {
+class LotMasterDashboard extends StatefulWidget {
   final AuthBloc authBloc;
-
-  const LotMasterListPage({super.key, required this.authBloc});
+  final UdcRepository udcRepository;
+  const LotMasterDashboard({
+    super.key,
+    required this.authBloc,
+    required this.udcRepository,
+  });
 
   @override
-  State<LotMasterListPage> createState() => _LotMasterListPageState();
+  State<LotMasterDashboard> createState() => _LotMasterDashboardState();
 }
 
-class _LotMasterListPageState extends State<LotMasterListPage>
+class _LotMasterDashboardState extends State<LotMasterDashboard>
     with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isSelectionMode = false;
   final Map<int, double> _dragOffset = {};
-  final List<LotMaster> _selectedLocations = [];
 
   // Animation controllers for detail panel
   late AnimationController _detailAnimationController;
@@ -33,28 +39,29 @@ class _LotMasterListPageState extends State<LotMasterListPage>
   late Animation<double> _opacityAnimation;
   late Animation<Offset> _slideAnimation;
 
-  // Detail panel state
-  LotMaster? _selectedLocation;
-  bool _locationDetail = false;
+  //  Detail panel state
+  LotMaster? _selectedLot;
+  List<LotMaster> _selectedLots = [];
+  bool _lotDetail = false;
+  List<Branch> _branches = [];
 
   @override
   void initState() {
     super.initState();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadLocations();
-    });
-
-    // Initialize animation controller
+    //Initialize animation controller
     _detailAnimationController = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
 
-    // Set up animations
+    //   Set up animations
     _setupAnimations();
 
-    _searchController.addListener(_onSearchChanged);
+    context.read<LotMasterBloc>().add(
+      LoadLotMasters(widget.authBloc.state.companyId!),
+    );
+    context.read<LotMasterBloc>().add(ClaculateMultipleLotStatus());
   }
 
   void _setupAnimations() {
@@ -81,26 +88,6 @@ class _LotMasterListPageState extends State<LotMasterListPage>
         );
   }
 
-  void _loadLocations() {
-    final companyId = widget.authBloc.state.companyId;
-    if (companyId != null) {
-      context.read<LotMasterBloc>().add(LoadLotMasters(companyId));
-    } else {
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) _loadLocations();
-      });
-    }
-  }
-
-  void _handleSearch(String query) {
-    context.read<LotMasterBloc>().add(FilterLotMasters(query));
-  }
-
-  void _clearSearch() {
-    _searchController.clear();
-    context.read<LotMasterBloc>().add(FilterLotMasters(''));
-  }
-
   @override
   void dispose() {
     _searchController.dispose();
@@ -109,57 +96,107 @@ class _LotMasterListPageState extends State<LotMasterListPage>
     super.dispose();
   }
 
-  void _onSearchChanged() {
-    setState(() {});
+  void _handleSearch(String query) {
+    context.read<LotMasterBloc>().add(SearchLotMasters(query));
   }
 
-  void _toggleSelectionMode() {
-    setState(() {
-      _isSelectionMode = !_isSelectionMode;
-      if (!_isSelectionMode) {
-        _selectedLocations.clear();
-      }
-    });
+  void _clearSearch() {
+    _searchController.clear();
+    context.read<LotMasterBloc>().add(SearchLotMasters(''));
   }
 
-  void _toggleLocationSelection(LotMaster location) {
-    setState(() {
-      if (_selectedLocations.contains(location)) {
-        _selectedLocations.remove(location);
-      } else {
-        _selectedLocations.add(location);
-      }
-    });
+  void _toggleLotSelection(LotMaster lot, bool selected) {
+    // You might need to add a SelectLot event in your bloc
+    context.read<LotMasterBloc>().add(SelecteLot(lot, selected));
   }
 
-  void _showLocationDetail(LotMaster location) {
+  void _showLotDetail(LotMaster lot) {
     setState(() {
-      _selectedLocation = location;
-      _locationDetail = true;
+      _selectedLot = lot;
+      _lotDetail = true;
     });
 
-    // Start the animation
+    //Start the animation
     _detailAnimationController.forward(from: 0.0);
   }
 
-  void _hideLocationDetail() {
+  void _hideLotDetail() {
     // Reverse the animation
     _detailAnimationController.reverse().then((_) {
       if (mounted) {
         setState(() {
-          _locationDetail = false;
-          _selectedLocation = null;
+          _lotDetail = false;
+          _selectedLot = null;
         });
-        _detailAnimationController.reset();
       }
     });
   }
 
   void _clearSelection() {
+    context.read<LotMasterBloc>().add(ClearSelection());
     setState(() {
-      _selectedLocations.clear();
       _isSelectionMode = false;
     });
+  }
+
+  void _exportLot(LotMaster lot) {
+    // Implement export functionality
+    print('Exporting lot: ${lot.lotNumber}');
+  }
+
+  void _navigateToEditScreen(LotMaster lot) {
+    context.read<LotMasterBloc>().add(PrepareEditLot(lot));
+    context.push(AppRoutes.lotEdit, extra: lot);
+  }
+
+  void _navigateToAddScreen() {
+    context.read<LotMasterBloc>().add(
+      PrepareCreateLot(widget.authBloc.state.companyId!),
+    );
+    context.push(AppRoutes.lotCreation);
+  }
+
+  void _safeDelete(BuildContext context, {int? index}) {
+    final bloc = context.read<LotMasterBloc>();
+    final state = bloc.state;
+
+    //CASE 1: Multiple lots
+    if (state.multiSelectionItems.isNotEmpty) {
+      final lotsToDelete = state.multiSelectionItems;
+      showDeleteDialog(
+        context,
+        title: 'Delete selected lots?',
+        content: 'Are you sure you want to delete ${lotsToDelete.length} lots?',
+        onConfirm: () {
+          final ids = lotsToDelete.map((e) => e.id).toList();
+          final deletedIndexes = lotsToDelete
+              .map((lot) => state.items.indexOf(lot))
+              .toList();
+          bloc.add(DeleteMultipleLotMasters(lotsToDelete));
+        },
+      );
+      return;
+    }
+
+    // CASE 2: Single lot by index
+    if (index == null || index < 0 || index >= state.filteredItems.length) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot delete lot. Invalid index.')),
+      );
+      return;
+    }
+
+    final lotToDelete = state.filteredItems[index];
+
+    showDeleteDialog(
+      context,
+      title: 'Delete Lot ${lotToDelete.lotNumber}?',
+      content:
+          'Are you sure you want to delete lot "${lotToDelete.lotNumber}"?',
+      onConfirm: () {
+        bloc.add(DeleteLotMaster(lotToDelete));
+      },
+    );
   }
 
   void _onHorizontalDragUpdate(int index, DragUpdateDetails details) {
@@ -194,97 +231,37 @@ class _LotMasterListPageState extends State<LotMasterListPage>
         });
       });
     } else {
-      // Not far enough → snap back
+      //Not far enough → snap back
       setState(() {
         _dragOffset[index] = 0.0;
       });
     }
   }
 
-  void _safeDelete(BuildContext context, {int? index}) {
-    final bloc = context.read<LotMasterBloc>();
-    final state = bloc.state;
-
-    if (_selectedLocations.isNotEmpty) {
-      final itemsToDelete = _selectedLocations;
-      showDeleteDialog(
-        context,
-        title: 'Delete selected locations?',
-        content:
-            'Are you sure you want to delete ${itemsToDelete.length} locations?',
-        onConfirm: () {
-          for (final location in itemsToDelete) {
-            bloc.add(DeleteLotMaster(location));
-          }
-          _clearSelection();
-          _refreshList(context);
-        },
-      );
-      return;
+  String _getStatusBadgeText(String? statusCode) {
+    switch (statusCode?.toUpperCase()) {
+      case 'A':
+        return 'Active';
+      case 'E':
+        return 'Expired';
+      case 'I':
+        return 'Inactive';
+      default:
+        return 'Unknown';
     }
-
-    if (index == null || index < 0 || index >= state.items.length) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cannot delete location. Invalid index.')),
-      );
-      return;
-    }
-
-    final itemToDelete = state.items[index];
-    showDeleteDialog(
-      context,
-      title: 'Delete "${itemToDelete.locationDescription}"?',
-      content:
-          'Are you sure you want to delete "${itemToDelete.locationDescription}"?',
-      onConfirm: () {
-        bloc.add(DeleteLotMaster(itemToDelete));
-        _refreshList(context);
-      },
-    );
   }
 
-  // Helper method to count assigned location codes
-  int _getAssignedCodesCount(LotMaster location) {
-    final codes = [
-      location.code01,
-      location.code02,
-      location.code03,
-      location.code04,
-      location.code05,
-      location.code06,
-      location.code07,
-      location.code08,
-      location.code09,
-      location.code10,
-    ];
-    return codes.where((code) => code != null && code.isNotEmpty).length;
-  }
-
-  // Helper method to get non-empty location codes
-  List<String> _getNonEmptyCodes(LotMaster location) {
-    final codes = [
-      if (location.code01 != null && location.code01!.isNotEmpty)
-        location.code01!,
-      if (location.code02 != null && location.code02!.isNotEmpty)
-        location.code02!,
-      if (location.code03 != null && location.code03!.isNotEmpty)
-        location.code03!,
-      if (location.code04 != null && location.code04!.isNotEmpty)
-        location.code04!,
-      if (location.code05 != null && location.code05!.isNotEmpty)
-        location.code05!,
-      if (location.code06 != null && location.code06!.isNotEmpty)
-        location.code06!,
-      if (location.code07 != null && location.code07!.isNotEmpty)
-        location.code07!,
-      if (location.code08 != null && location.code08!.isNotEmpty)
-        location.code08!,
-      if (location.code09 != null && location.code09!.isNotEmpty)
-        location.code09!,
-      if (location.code10 != null && location.code10!.isNotEmpty)
-        location.code10!,
-    ];
-    return codes;
+  Color _getStatusBadgeColor(String? statusCode) {
+    switch (statusCode?.toUpperCase()) {
+      case 'A':
+        return Colors.green;
+      case 'E':
+        return Colors.red;
+      case 'I':
+        return Colors.orange;
+      default:
+        return Colors.grey;
+    }
   }
 
   @override
@@ -292,28 +269,20 @@ class _LotMasterListPageState extends State<LotMasterListPage>
     return Scaffold(
       backgroundColor: Colors.grey,
       appBar: AppBar(
-        title: const Text('Location Master'),
+        title: const Text('Lot Master'),
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Iconsax.refresh_circle),
-            onPressed: () {
-              _loadLocations();
-            },
-          ),
-        ],
       ),
       body: BlocConsumer<LotMasterBloc, LotMasterState>(
         listener: (context, state) {
-          if (state.status == LotMasterStatus.failure &&
-              state.message.isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
-            );
+          if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
+            setState(() {
+              _isSelectionMode = true;
+            });
+          } else if (state.selectedItems.isEmpty && _isSelectionMode) {
+            setState(() {
+              _isSelectionMode = false;
+            });
           }
         },
         builder: (context, state) {
@@ -321,11 +290,12 @@ class _LotMasterListPageState extends State<LotMasterListPage>
             children: [
               Column(
                 children: [
-                  // Search Bar
+                  //  Search Bar
                   _buildSearchBar(),
                   _buildActionButtons(state),
-                  // Location List
-                  Expanded(child: _buildLocationList(state)),
+
+                  //Lot List
+                  Expanded(child: _buildLotList(state)),
                 ],
               ),
             ],
@@ -344,7 +314,7 @@ class _LotMasterListPageState extends State<LotMasterListPage>
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search by location name or branch...',
+                hintText: 'Search by lot number or supplier batch...',
                 prefixIcon: const Icon(Iconsax.search_normal, size: 20),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
@@ -366,6 +336,14 @@ class _LotMasterListPageState extends State<LotMasterListPage>
               onChanged: _handleSearch,
             ),
           ),
+          const SizedBox(width: 8),
+          // Add refresh/calculate button
+          IconButton(
+            icon: const Icon(Iconsax.calculator),
+            onPressed: _calculateAllLotStatus,
+            tooltip: 'Recalculate all lot status',
+            style: IconButton.styleFrom(backgroundColor: Colors.blue[50]),
+          ),
           const SizedBox(width: 12),
           _buildFloatingActionButton(context),
         ],
@@ -374,7 +352,7 @@ class _LotMasterListPageState extends State<LotMasterListPage>
   }
 
   Widget _buildActionButtons(LotMasterState state) {
-    final hasSelection = _selectedLocations.isNotEmpty;
+    final hasSelection = _selectedLots.isNotEmpty;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -388,26 +366,31 @@ class _LotMasterListPageState extends State<LotMasterListPage>
           ? Row(
               children: [
                 Text(
-                  '${_selectedLocations.length} selected',
+                  '${_selectedLots.length} selected',
                   style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
                 const Spacer(),
+                IconButton(
+                  icon: const Icon(Iconsax.calculator, color: Colors.blue),
+                  onPressed: _calculateAllLotStatus,
+                  tooltip: 'Recalculate status for selected',
+                ),
                 IconButton(
                   icon: const Icon(Iconsax.trash, color: Colors.red),
                   onPressed: () => _safeDelete(context),
                   tooltip: 'Delete selected',
                 ),
-                if (_selectedLocations.length == 1)
+                if (_selectedLots.length == 1)
                   IconButton(
                     icon: const Icon(
                       Iconsax.edit,
                       color: Color.fromARGB(255, 28, 66, 146),
                     ),
                     onPressed: () {
-                      final location = _selectedLocations.first;
-                      _navigateToEditScreen(location);
+                      final lot = _selectedLots.first;
+                      _navigateToEditScreen(lot);
                     },
-                    tooltip: 'Edit location',
+                    tooltip: 'Edit lot',
                   ),
                 IconButton(
                   icon: const Icon(Iconsax.close_circle),
@@ -425,40 +408,35 @@ class _LotMasterListPageState extends State<LotMasterListPage>
       builder: (context, state) {
         return ElevatedButton(
           onPressed: () {
-            if (_selectedLocations.isNotEmpty) {
-              // Navigate to edit screen with selected location
-              final location = _selectedLocations.first;
-              _navigateToEditScreen(location);
+            if (state.canEdit && state.selectedItems.isNotEmpty) {
+              final lot = state.selectedItems.first;
+              _navigateToEditScreen(lot);
             } else {
-              // Navigate to add screen
-              _navigateToCreateScreen();
+              _navigateToAddScreen();
             }
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color.fromARGB(255, 28, 66, 146),
             shape: const CircleBorder(),
           ),
-          child: Icon(
-            _selectedLocations.isNotEmpty ? Icons.edit : Icons.add,
-            color: Colors.white,
-          ),
+          child: const Icon(Icons.add, color: Colors.white),
         );
       },
     );
   }
 
-  Widget _buildLocationList(LotMasterState state) {
+  Widget _buildLotList(LotMasterState state) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isSmallScreen = screenWidth < 700;
     final cardSpacing = screenHeight * 0.02;
     final cardWidth = isSmallScreen ? screenWidth * 0.85 : screenWidth * 0.8;
 
-    if (state.status == LotMasterStatus.loading && state.items.isEmpty) {
+    if (state.status == LotMasterStatus.loading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (state.status == LotMasterStatus.failure && state.items.isEmpty) {
+    if (state.status == LotMasterStatus.failure) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -466,14 +444,14 @@ class _LotMasterListPageState extends State<LotMasterListPage>
             const Icon(Icons.error_outline, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
             Text(
-              state.message.isEmpty
-                  ? 'Failed to load locations'
-                  : state.message,
+              state.message ?? 'Failed to load lots',
               style: const TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => _refreshList(context),
+              onPressed: () => context.read<LotMasterBloc>().add(
+                LoadLotMasters(widget.authBloc.state.companyId!),
+              ),
               child: const Text('Retry'),
             ),
           ],
@@ -481,19 +459,17 @@ class _LotMasterListPageState extends State<LotMasterListPage>
       );
     }
 
-    final filteredLocations = state.filteredItems;
-
-    if (filteredLocations.isEmpty) {
+    if (state.filteredItems.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Iconsax.location, size: 64, color: Colors.grey),
+            const Icon(Iconsax.box_1, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
             Text(
-              _searchController.text.isEmpty
-                  ? 'No locations found'
-                  : 'No results for "${_searchController.text}"',
+              state.searchQuery.isEmpty
+                  ? 'No lots found'
+                  : 'No results for "${state.searchQuery}"',
               style: const TextStyle(color: Colors.grey, fontSize: 16),
             ),
           ],
@@ -508,14 +484,14 @@ class _LotMasterListPageState extends State<LotMasterListPage>
       child: ListView.separated(
         controller: _scrollController,
         padding: const EdgeInsets.all(16),
-        itemCount: filteredLocations.length,
+        itemCount: state.filteredItems.length,
         separatorBuilder: (context, index) => SizedBox(height: cardSpacing),
         itemBuilder: (context, index) {
-          final location = filteredLocations[index];
-          final isSelected = _selectedLocations.contains(location);
+          final lot = state.filteredItems[index];
+          final isSelected = state.selectedItems.contains(lot);
 
-          return _buildLocationListItem(
-            location,
+          return _buildLotListItem(
+            lot,
             isSelected,
             state,
             index,
@@ -527,8 +503,8 @@ class _LotMasterListPageState extends State<LotMasterListPage>
     );
   }
 
-  Widget _buildLocationListItem(
-    LotMaster location,
+  Widget _buildLotListItem(
+    LotMaster lot,
     bool isSelected,
     LotMasterState state,
     int index,
@@ -536,7 +512,7 @@ class _LotMasterListPageState extends State<LotMasterListPage>
     double cardWidth,
   ) {
     final offset = _dragOffset[index] ?? 0.0;
-    final isExpanded = _locationDetail == true && _selectedLocation == location;
+    final isExpanded = _lotDetail == true && _selectedLot == lot;
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
@@ -544,21 +520,17 @@ class _LotMasterListPageState extends State<LotMasterListPage>
     final collapsedHeight = isCompact
         ? screenHeight * 0.18
         : screenHeight * 0.14;
-
     final expandedHeight = isCompact
         ? screenHeight * 0.55
         : screenHeight * 0.45;
     final collapsedWidth = isCompact ? screenWidth * 0.92 : screenWidth * 0.8;
 
-    final assignedCodesCount = _getAssignedCodesCount(location);
-
     return GestureDetector(
       onTap: () {
         if (_isSelectionMode) {
-          _toggleLocationSelection(location);
+          _toggleLotSelection(lot, !isSelected);
         } else {
-          // Single tap shows detail when not in selection mode
-          _showLocationDetail(location);
+          _showLotDetail(lot);
         }
       },
       onLongPress: () {
@@ -567,13 +539,13 @@ class _LotMasterListPageState extends State<LotMasterListPage>
             _isSelectionMode = true;
           });
         }
-        _toggleLocationSelection(location);
+        _toggleLotSelection(lot, !isSelected);
       },
+      onDoubleTap: () => _showLotDetail(lot),
       onHorizontalDragUpdate: (details) =>
           _onHorizontalDragUpdate(index, details),
       onHorizontalDragEnd: (details) =>
           _onHorizontalDragEnd(context, index, details),
-      onDoubleTap: () => _showLocationDetail(location),
       child: AnimatedBuilder(
         animation: _scrollController,
         builder: (context, child) => Container(
@@ -582,7 +554,7 @@ class _LotMasterListPageState extends State<LotMasterListPage>
           height: isExpanded ? expandedHeight : collapsedHeight,
           child: Stack(
             children: [
-              // 1. DELETE INDICATOR - Should be FIRST in Stack
+              // 1. DELETE INDICATOR
               if (!isExpanded)
                 Positioned.fill(
                   child: Container(
@@ -618,7 +590,7 @@ class _LotMasterListPageState extends State<LotMasterListPage>
                 ),
               ],
 
-              // 3. LOCATION CARD
+              // 3. LOT CARD
               AnimatedContainer(
                 padding: const EdgeInsets.only(
                   top: 10,
@@ -655,24 +627,58 @@ class _LotMasterListPageState extends State<LotMasterListPage>
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Location Avatar
-                        _buildLocationAvatar(location, isSelected, isCompact),
+                        // Lot Avatar
+                        _buildLotAvatar(lot, isSelected, isCompact),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                location.branchName ?? 'Unnamed branch',
-                                style: TextStyle(
-                                  color: const Color(0xFF373737),
-                                  fontSize: isCompact ? 20 : 24,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w800,
-                                ),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Lot #${lot.lotNumber ?? 'N/A'}',
+                                    style: TextStyle(
+                                      color: const Color(0xFF373737),
+                                      fontSize: isCompact ? 20 : 24,
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: _getStatusBadgeColor(
+                                        lot.statusCode,
+                                      ).withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: _getStatusBadgeColor(
+                                          lot.statusCode,
+                                        ),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      _getStatusBadgeText(lot.statusCode),
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: _getStatusBadgeColor(
+                                          lot.statusCode,
+                                        ),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
+
                               Text(
-                                'Margin Type: ${(location.marginType == 'F' ? 'Flat' : 'Percentage')}',
+                                lot.batchNumberSupplier ?? 'No Supplier Batch',
                                 style: TextStyle(
                                   color: const Color(0xFF887F7F),
                                   fontSize: isCompact ? 12 : 14,
@@ -682,25 +688,55 @@ class _LotMasterListPageState extends State<LotMasterListPage>
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              // Location codes count badge
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue[50],
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.blue[200]!),
-                                ),
-                                child: Text(
-                                  '$assignedCodesCount location codes',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: const Color(0xFF145888),
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                              // Date information
+                              Row(
+                                children: [
+                                  if (lot.dateEffective != null)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue[50],
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: Colors.blue[200]!,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Effective: ${_formatDate(lot.dateEffective!)}',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.blue[800],
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  const SizedBox(width: 8),
+                                  if (lot.dateExpiration != null)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange[50],
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: Colors.orange[200]!,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Expires: ${_formatDate(lot.dateExpiration!)}',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.orange[800],
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                             ],
                           ),
@@ -710,11 +746,32 @@ class _LotMasterListPageState extends State<LotMasterListPage>
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
+                        // Quantity badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green[50],
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.green[200]!),
+                          ),
+                          child: Text(
+                            'Qty: ${lot.quantityAvailable?.toStringAsFixed(2) ?? '0.00'}',
+                            style: TextStyle(
+                              color: Colors.green[800],
+                              fontSize: isCompact ? 10 : 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
                         // See More / See Less button
                         ElevatedButton(
                           onPressed: () => isExpanded
-                              ? _hideLocationDetail()
-                              : _showLocationDetail(location),
+                              ? _hideLotDetail()
+                              : _showLotDetail(lot),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF145888),
                             shape: RoundedRectangleBorder(
@@ -761,7 +818,7 @@ class _LotMasterListPageState extends State<LotMasterListPage>
                         ),
                       );
                     },
-                    child: _buildLocationDetailContent(location, isCompact),
+                    child: _buildLotDetailContent(lot, isCompact),
                   ),
                 ),
             ],
@@ -771,141 +828,86 @@ class _LotMasterListPageState extends State<LotMasterListPage>
     );
   }
 
-  Widget _buildLocationDetailContent(LotMaster location, bool isCompact) {
-    final assignedCodesCount = _getAssignedCodesCount(location);
-    final nonEmptyCodes = _getNonEmptyCodes(location);
-    final displayedCodes = nonEmptyCodes.take(5).toList();
-    final hasMoreCodes = nonEmptyCodes.length > 5;
+  String _getBranchName(int branchId) {
+    final branch = _branches.firstWhere((branch) => branch.id == branchId);
+    return branch.description!;
+  }
 
+  Widget _buildLotDetailContent(LotMaster lot, bool isCompact) {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       child: Column(
         children: [
-          _buildLocationInfoItem(
-            'Location ID : ',
-            location.id.toString(),
-            Iconsax.card,
+          _buildLotInfoItem(
+            'Lot Number : ',
+            lot.lotNumber?.toString() ?? 'N/A',
+            Iconsax.tag,
             isCompact,
           ),
-          _buildLocationInfoItem(
+          _buildLotInfoItem(
             'Branch : ',
-            location.branchName ?? 'Unknown Branch',
+            _getBranchName(lot.branch!),
             Iconsax.building,
             isCompact,
           ),
-          _buildLocationInfoItem(
-            'Total Location Codes : ',
-            '$assignedCodesCount',
-            Iconsax.code,
+          _buildLotInfoItem(
+            'Item Number : ',
+            lot.itemNumber?.toString() ?? 'N/A',
+            Iconsax.box,
             isCompact,
           ),
-
-          // Location Codes Section
-          if (nonEmptyCodes.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Iconsax.code,
-                      size: 16,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Location Codes : ',
-                          style: TextStyle(
-                            color: Color(0xFF373737),
-                            fontSize: 13,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        // Display location codes as chips
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 6,
-                          children: [
-                            ...displayedCodes.map(
-                              (code) => Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue[50],
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: Colors.blue[200]!),
-                                ),
-                                child: Text(
-                                  code,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.blue[800],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            if (hasMoreCodes)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange[50],
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: Colors.orange[200]!,
-                                  ),
-                                ),
-                                child: Text(
-                                  '+${nonEmptyCodes.length - 5} more',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.orange[800],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-          if (location.marginType != null)
-            _buildLocationInfoItem(
-              'Margin Type : ',
-              location.marginType == 'F' ? 'Flat' : 'Percentage',
-              Iconsax.chart,
-              isCompact,
-            ),
-          if (location.marginRate != null)
-            _buildLocationInfoItem(
-              'Margin Rate : ',
-              '${location.marginRate}${location.marginType == 'F' ? ' ETB' : '%'}',
-              Iconsax.dollar_circle,
-              isCompact,
-            ),
+          _buildLotInfoItem(
+            'Location : ',
+            lot.location.toString() ?? 'N/A',
+            Iconsax.location,
+            isCompact,
+          ),
+          _buildLotInfoItem(
+            'Unit Price : ',
+            lot.unitPrice != null
+                ? '\$${lot.unitPrice!.toStringAsFixed(2)}'
+                : 'N/A',
+            Iconsax.dollar_circle,
+            isCompact,
+          ),
+          _buildLotInfoItem(
+            'Quantity Available : ',
+            lot.quantityAvailable?.toStringAsFixed(2) ?? '0.00',
+            Iconsax.weight,
+            isCompact,
+          ),
+          _buildLotInfoItem(
+            'Supplier Batch : ',
+            lot.batchNumberSupplier ?? 'N/A',
+            Iconsax.barcode,
+            isCompact,
+          ),
+          _buildLotInfoItem(
+            'Effective Date : ',
+            lot.dateEffective != null ? _formatDate(lot.dateEffective!) : 'N/A',
+            Iconsax.calendar_1,
+            isCompact,
+          ),
+          _buildLotInfoItem(
+            'Expiration Date : ',
+            lot.dateExpiration != null
+                ? _formatDate(lot.dateExpiration!)
+                : 'N/A',
+            Iconsax.calendar_tick,
+            isCompact,
+          ),
+          _buildLotInfoItem(
+            'Received Date : ',
+            lot.dateReceived != null ? _formatDate(lot.dateReceived!) : 'N/A',
+            Iconsax.calendar_add,
+            isCompact,
+          ),
+          _buildLotInfoItem(
+            'Lot Status : ',
+            _getStatusBadgeText(lot.lotStatus.toString()),
+            Iconsax.activity,
+            isCompact,
+          ),
 
           // Action buttons row
           Padding(
@@ -916,19 +918,19 @@ class _LotMasterListPageState extends State<LotMasterListPage>
                 _buildActionButton(
                   Iconsax.edit,
                   'Edit',
-                  () => _navigateToEditScreen(location),
+                  () => _navigateToEditScreen(lot),
                   isCompact,
                 ),
                 _buildActionButton(
                   Iconsax.export,
                   'Export',
-                  () => _exportLocation(location),
+                  () => _exportLot(lot),
                   isCompact,
                 ),
                 _buildActionButton(
-                  Iconsax.trash,
-                  'Delete',
-                  () => _safeDelete(context),
+                  Iconsax.calculator,
+                  'Status',
+                  () => _calculateSingleLotStatus(lot),
                   isCompact,
                 ),
               ],
@@ -939,7 +941,33 @@ class _LotMasterListPageState extends State<LotMasterListPage>
     );
   }
 
-  Widget _buildLocationInfoItem(
+  void _calculateSingleLotStatus(LotMaster lot) async {
+    final systemConstant = context.read<SystemConstantBloc>().state.selected;
+    final lotTypeUdcDetail = await widget.udcRepository.getUdcDetailById(
+      systemConstant?.lotType,
+    );
+    context.read<LotMasterBloc>().add(
+      CalculateLotStatus(lot, lotTypeUdcDetail),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Recalculating status for Lot ${lot.lotNumber}...'),
+        backgroundColor: Colors.blue,
+      ),
+    );
+  }
+
+  void _calculateAllLotStatus() {
+    context.read<LotMasterBloc>().add(ClaculateMultipleLotStatus());
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Recalculating all lot status...'),
+        backgroundColor: Colors.blue,
+      ),
+    );
+  }
+
+  Widget _buildLotInfoItem(
     String label,
     String value,
     IconData icon,
@@ -1020,11 +1048,7 @@ class _LotMasterListPageState extends State<LotMasterListPage>
     );
   }
 
-  Widget _buildLocationAvatar(
-    LotMaster location,
-    bool isSelected,
-    bool isCompact,
-  ) {
+  Widget _buildLotAvatar(LotMaster lot, bool isSelected, bool isCompact) {
     final Color backgroundColor;
     final Color iconColor;
 
@@ -1040,38 +1064,11 @@ class _LotMasterListPageState extends State<LotMasterListPage>
       width: 48,
       height: 48,
       decoration: BoxDecoration(color: backgroundColor, shape: BoxShape.circle),
-      child: Icon(
-        Iconsax.location,
-        color: iconColor,
-        size: isCompact ? 20 : 24,
-      ),
+      child: Icon(Iconsax.box_1, color: iconColor, size: isCompact ? 20 : 24),
     );
   }
 
-  void _navigateToCreateScreen() {
-    final companyId = widget.authBloc.state.companyId;
-    if (companyId != null) {
-      context.read<LotMasterBloc>().add(PrepareCreateLocation(companyId));
-      context.push(AppRoutes.LotMasterCreate);
-    }
-  }
-
-  void _navigateToEditScreen(LotMaster location) {
-    context.read<LotMasterBloc>().add(PrepareEditLocation(location));
-    context.push(AppRoutes.LotMasterEdit, extra: location);
-  }
-
-  void _refreshList(BuildContext context) {
-    final companyId = widget.authBloc.state.companyId;
-    if (companyId != null) {
-      context.read<LotMasterBloc>().add(LoadLotMasters(companyId));
-    }
-  }
-
-  void _exportLocation(LotMaster location) {
-    // Implement export functionality
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Location data exported')));
+  String _formatDate(DateTime date) {
+    return '${date.month}/${date.day}/${date.year}';
   }
 }
