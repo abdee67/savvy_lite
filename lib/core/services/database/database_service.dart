@@ -475,7 +475,7 @@ CREATE TABLE lot_master (
   FOREIGN KEY (item_number) REFERENCES items_table(id),
   FOREIGN KEY (branch) REFERENCES branch_table(id),
   FOREIGN KEY (company) REFERENCES company_table(id),
-  FOREIGN KEY (location) REFERENCES item_locations(id),
+  FOREIGN KEY (location) REFERENCES item_location(id),
   FOREIGN KEY (lot_status) REFERENCES udc_details(id)
 );
 
@@ -647,7 +647,7 @@ CREATE INDEX idx_purchase_order_detail_unit_of_measure ON purchase_order_detail(
     FOREIGN KEY (branch_recieved) REFERENCES branch_table (id),
     FOREIGN KEY (company) REFERENCES company_table (id),
     FOREIGN KEY (item_number) REFERENCES items_table (id),
-    FOREIGN KEY (location) REFERENCES item_locations (id),
+    FOREIGN KEY (location) REFERENCES item_location (id),
     FOREIGN KEY (unit_of_measure) REFERENCES udc_details (id)
   );
 
@@ -683,7 +683,7 @@ CREATE INDEX idx_purchase_order_receiver_unit_of_measure ON purchase_order_recei
     unit_cost REAL,
     amount_cost REAL,
     before_amount_cost REAL,
-    FOREIGN KEY (item_location) REFERENCES item_locations (id) ON UPDATE CASCADE,
+    FOREIGN KEY (item_location) REFERENCES item_location (id) ON UPDATE CASCADE,
     FOREIGN KEY (created_by) REFERENCES user_table (id) ON UPDATE CASCADE,
     FOREIGN KEY (company) REFERENCES company_table (id) ON UPDATE CASCADE,
     FOREIGN KEY (lot_number) REFERENCES lot_master (id),

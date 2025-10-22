@@ -61,14 +61,12 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 class AppRouter {
   final AuthBloc authBloc;
-  final UdcRepository udcRepository;
   final UserBloc userBloc;
   final bool showOnboarding;
   AppRouter({
     required this.showOnboarding,
     required this.authBloc,
     required this.userBloc,
-    required this.udcRepository,
   });
 
   late final GoRouter router = GoRouter(
@@ -539,10 +537,7 @@ class AppRouter {
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: AppRoutes.lotEntry,
           parentPrivilege: AppRoutes.stockDashboard,
-          child: LotMasterDashboard(
-            authBloc: authBloc,
-            udcRepository: udcRepository,
-          ),
+          child: LotMasterDashboard(authBloc: authBloc),
         ),
         redirect: _protectedRouteRedirect,
       ),

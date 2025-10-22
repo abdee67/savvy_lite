@@ -169,6 +169,10 @@ class AddToCreateList extends LotMasterEvent {
   List<Object> get props => [item];
 }
 
+class RegenerateLotNumber extends LotMasterEvent {
+  const RegenerateLotNumber();
+}
+
 class RemoveFromCreateList extends LotMasterEvent {
   final LotMaster item;
   const RemoveFromCreateList(this.item);

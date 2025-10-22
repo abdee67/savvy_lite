@@ -122,7 +122,6 @@ void initDependencies() {
       databaseService: getIt(),
       authBloc: getIt(),
       systemConstantBloc: getIt(),
-      udcRepository: getIt(),
       nextNumberBloc: getIt(),
     ),
   );

@@ -19,6 +19,11 @@ import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_b
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_event.dart'
     hide LoadItems;
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_state.dart';
+import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
+import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_bloc.dart';
+import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_event.dart';
+import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_state.dart';
+import 'package:savvy_stock/features/stock/location_entry/models/location_master_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_event.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_state.dart';
@@ -46,6 +51,16 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
   final TextEditingController _unitPriceController = TextEditingController();
   final TextEditingController _supplierBatchController =
       TextEditingController();
+  final TextEditingController _availableQuantityController =
+      TextEditingController();
+
+  // Date controllers
+  final TextEditingController _effectiveDateController =
+      TextEditingController();
+  final TextEditingController _expirationDateController =
+      TextEditingController();
+
+  final TextEditingController _lotNumberController = TextEditingController();
 
   // Dropdown values
   int? _selectedBranch;
@@ -60,7 +75,7 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
 
   // Available data
   List<ItemInBranchModel> _branchItems = [];
-  List<dynamic> _itemLocations = [];
+  List<ItemLocation> _itemLocations = [];
   double _availableQuantity = 0.0;
   int? _itemUom;
 
@@ -72,9 +87,11 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
     context.read<BranchBloc>().add(
       LoadBranchs(widget.authBloc.state.companyId!),
     );
-    context.read<UdcDetailsBloc>().add(
-      LoadUdcDetailsByGroup('LS'),
-    ); // Lot Status
+    context.read<UdcDetailsBloc>().add(LoadAllUdcDetails()); // Unit of Measure
+
+    // Initialize controllers
+    _availableQuantityController.text = '0.0';
+    _quantityAvailableController.text = '0.0';
 
     _initializeForm();
   }
@@ -85,7 +102,9 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
       final lot = widget.lot!;
 
       _selectedBranch = lot.branch;
+      _setupLotNumberListener();
       _selectedItem = lot.itemNumber;
+      _selectedLocation = lot.location;
       _effectiveDate = lot.dateEffective;
       _expirationDate = lot.dateExpiration;
       _selectedLotStatus = lot.lotStatus;
@@ -94,10 +113,16 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
           lot.quantityAvailable?.toString() ?? '0.0';
       _unitPriceController.text = lot.unitPrice?.toString() ?? '';
 
+      // Update date controllers
+      _updateDateControllers();
+
       // Load items for the selected branch
       if (lot.branch != null) {
         context.read<StockItemInBranchBloc>().add(
-          LoadItemsFromBranch(lot.branch!),
+          LoadItemsFromBranch(
+            widget.authBloc.state.companyId!,
+            branchId: lot.branch!,
+          ),
         );
       }
 
@@ -117,55 +142,59 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
     }
   }
 
+  void _updateDateControllers() {
+    _effectiveDateController.text = _effectiveDate != null
+        ? '${_effectiveDate!.day.toString().padLeft(2, '0')}/${_effectiveDate!.month.toString().padLeft(2, '0')}/${_effectiveDate!.year}'
+        : '';
+
+    _expirationDateController.text = _expirationDate != null
+        ? '${_expirationDate!.day.toString().padLeft(2, '0')}/${_expirationDate!.month.toString().padLeft(2, '0')}/${_expirationDate!.year}'
+        : '';
+  }
+
+  void _setupLotNumberListener() {
+    context.read<LotMasterBloc>().stream.listen((state) {
+      if (state.selected?.lotNumber != null) {
+        _lotNumberController.text = state.selected!.lotNumber.toString();
+      }
+    });
+  }
+
   void _onBranchChanged(int? branchId) {
     setState(() {
       _selectedBranch = branchId;
       _selectedItem = null;
       _selectedLocation = null;
+      _selectedUom = null;
       _branchItems = [];
       _itemLocations = [];
       _availableQuantity = 0.0;
-      _itemUom = null;
+      _availableQuantityController.text = '0.0';
+      _quantityAvailableController.text = '0.0';
+      _unitPriceController.clear();
     });
 
     if (branchId != null) {
       // Load items for selected branch
-      context.read<StockItemInBranchBloc>().add(LoadItemsFromBranch(branchId));
-    }
-  }
-
-  String _getItemDescription(int? itemId) {
-    if (itemId == null) return '';
-
-    // You might want to get this from your item entry bloc
-    // For now, we'll return a placeholder
-    final itemInBranch = _branchItems.firstWhere(
-      (item) => item.itemNumber == itemId,
-      orElse: () => ItemInBranchModel.empty(),
-    );
-
-    // load item descriptions from item_entry bloc
-    final itemEntryBloc = context.read<StockItemEntryBloc>();
-    itemEntryBloc.add(LoadItems(widget.authBloc.state.companyId!));
-
-    final itemEntryState = itemEntryBloc.state;
-    if (itemEntryState.status == ItemEntryStatus.success) {
-      final item = itemEntryState.items.firstWhere(
-        (item) => item.id == itemId,
-        orElse: () => ItemEntryModel.empty(),
+      context.read<StockItemInBranchBloc>().add(
+        LoadItemsFromBranch(
+          widget.authBloc.state.companyId!,
+          branchId: branchId,
+        ),
       );
-      return item.itemDescription ?? 'Item $itemId';
     }
-
-    return 'Item $itemId';
   }
 
   void _onItemChanged(int? itemId) {
     setState(() {
       _selectedItem = itemId;
       _selectedLocation = null;
+      _selectedUom = null;
       _itemLocations = [];
       _availableQuantity = 0.0;
+      _availableQuantityController.text = '0.0';
+      _quantityAvailableController.text = '0.0';
+      _unitPriceController.clear();
     });
 
     if (_selectedBranch != null && itemId != null) {
@@ -184,13 +213,19 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
         orElse: () => ItemInBranchModel.empty(),
       );
 
-      if (itemInBranch.itemNumber != null) {
-        setState(() {
-          _itemUom = itemInBranch.unitOfMeasure;
-          _availableQuantity = itemInBranch.quantityAvailable ?? 0.0;
-          _unitPriceController.text = itemInBranch.unitPrice?.toString() ?? '';
-        });
-      }
+      setState(() {
+        _itemUom = itemInBranch.unitOfMeasure;
+        _selectedUom = itemInBranch.unitOfMeasure;
+        _availableQuantity = itemInBranch.quantityAvailable ?? 0.0;
+        _availableQuantityController.text = _availableQuantity.toStringAsFixed(
+          2,
+        );
+        _unitPriceController.text = itemInBranch.unitPrice?.toString() ?? '';
+      });
+
+      print(
+        '🔄 Item selected - UOM: $_itemUom, Available Qty: $_availableQuantity',
+      );
     }
   }
 
@@ -198,19 +233,6 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
     setState(() {
       _selectedLocation = locationId;
     });
-
-    // Update available quantity based on location
-    if (locationId != null) {
-      final location = _itemLocations.firstWhere(
-        (loc) => loc['id'] == locationId,
-        orElse: () => {'quantity_on_hand': 0.0},
-      );
-
-      setState(() {
-        _availableQuantity =
-            (location['quantity_on_hand'] as num?)?.toDouble() ?? 0.0;
-      });
-    }
   }
 
   void _selectEffectiveDate() async {
@@ -224,6 +246,7 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
     if (picked != null) {
       setState(() {
         _effectiveDate = picked;
+        _updateDateControllers();
       });
     }
   }
@@ -240,7 +263,23 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
     if (picked != null) {
       setState(() {
         _expirationDate = picked;
+        _updateDateControllers();
       });
+    }
+  }
+
+  void _regenerateLotNumber() {
+    final companyId = widget.authBloc.state.companyId;
+    if (companyId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Company ID not found. Please login again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    } else {
+      context.read<LotMasterBloc>().add(RegenerateLotNumber());
     }
   }
 
@@ -249,16 +288,14 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
     return double.tryParse(value.trim());
   }
 
-  int? _parseInt(String value) {
-    if (value.trim().isEmpty) return null;
-    return int.tryParse(value.trim());
-  }
-
   @override
   void dispose() {
     _quantityAvailableController.dispose();
     _unitPriceController.dispose();
     _supplierBatchController.dispose();
+    _availableQuantityController.dispose();
+    _effectiveDateController.dispose();
+    _expirationDateController.dispose();
     super.dispose();
   }
 
@@ -267,10 +304,12 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
       if (_selectedBranch == null ||
           _selectedItem == null ||
           _selectedLocation == null ||
-          _selectedLotStatus == null) {
+          _lotNumberController.text.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please fill all required fields'),
+            content: Text(
+              'Please select branch, item, location and lot number',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -278,8 +317,9 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
       }
 
       final lot = LotMaster(
-        id: widget.lot?.id ?? 0,
+        id: widget.lot?.id,
         company: widget.authBloc.state.companyId,
+        lotNumber: int.parse(_lotNumberController.text.trim()),
         branch: _selectedBranch!,
         itemNumber: _selectedItem!,
         location: _selectedLocation!,
@@ -289,12 +329,11 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
         unitPrice: _parseDouble(_unitPriceController.text.trim()),
         dateEffective: _effectiveDate,
         dateExpiration: _expirationDate,
-        lotStatus: _selectedLotStatus!,
+        lotStatus: _selectedLotStatus,
         batchNumberSupplier: _supplierBatchController.text.trim().isEmpty
             ? null
             : _supplierBatchController.text.trim(),
-        // unitOfMeasure: _itemUom,
-        dateReceived: DateTime.now(), // Current date for received
+        dateReceived: DateTime.now(),
       );
 
       if (widget.lot == null) {
@@ -314,7 +353,7 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
             lot,
             transactionType: 'U', // Update
             transactionNumber: null,
-            remark: 'Lot updated',
+            remark: 'Lot updated manually',
           ),
         );
       }
@@ -363,6 +402,19 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
         listeners: [
           BlocListener<LotMasterBloc, LotMasterState>(
             listener: (context, state) {
+              // Update lot number when it's generated or changed
+              if (state.selected?.lotNumber != null &&
+                  (() {
+                    final txt = _lotNumberController.text.trim();
+                    final current = int.tryParse(txt);
+                    return current == null ||
+                        state.selected!.lotNumber != current;
+                  })()) {
+                setState(() {
+                  _lotNumberController.text = state.selected!.lotNumber
+                      .toString();
+                });
+              }
               if (state.status == LotMasterStatus.success) {
                 _showSuccessDialog();
               } else if (state.status == LotMasterStatus.failure) {
@@ -381,6 +433,7 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
                 setState(() {
                   _branchItems = state.items;
                 });
+                print('📦 Loaded ${_branchItems.length} items for branch');
               }
             },
           ),
@@ -390,11 +443,17 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
                 setState(() {
                   _itemLocations = state.items;
                 });
+                print('📍 Loaded ${_itemLocations.length} locations for item');
               }
             },
           ),
         ],
-        child: Column(children: [_buildForm(), _buildBottomNavigation()]),
+        child: Column(
+          children: [
+            Expanded(child: _buildForm()),
+            _buildBottomNavigation(),
+          ],
+        ),
       ),
     );
   }
@@ -406,6 +465,27 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
+            // Lot Number Field (read-only for create, editable for edit if needed)
+            CustomTextField(
+              labelText: 'Lot Number *',
+              controller: _lotNumberController,
+              readOnly: widget.lot == null, // Read-only for new lots
+              prefixIcon: const Icon(Iconsax.tag),
+              suffixIcon: widget.lot == null
+                  ? IconButton(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: _regenerateLotNumber,
+                      tooltip: 'Generate New Lot Number',
+                    )
+                  : null,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Lot number is required';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
             // Branch Dropdown
             BlocBuilder<BranchBloc, BranchState>(
               builder: (context, state) {
@@ -425,9 +505,7 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
                   }).toList(),
                   onChanged: _onBranchChanged,
                   validator: (value) {
-                    if (value == null) {
-                      return 'Please select a branch';
-                    }
+                    if (value == null) return 'Please select a branch';
                     return null;
                   },
                 );
@@ -435,7 +513,7 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
             ),
             const SizedBox(height: 16),
 
-            // Item Dropdown (depends on selected branch)
+            // Item Dropdown
             BlocBuilder<StockItemInBranchBloc, ItemInBranchState>(
               builder: (context, state) {
                 if (_selectedBranch == null) {
@@ -444,7 +522,6 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
                     value: null,
                     prefixIcon: Icon(Iconsax.box),
                     items: [],
-                    onChanged: null,
                     hintText: 'Please select a branch first',
                   );
                 }
@@ -458,18 +535,24 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
                   value: _selectedItem,
                   prefixIcon: const Icon(Iconsax.box),
                   items: _branchItems.map((item) {
+                    // Load item descriptions from item entry
+                    final itemEntryBloc = context.read<StockItemEntryBloc>();
+                    final itemEntryState = itemEntryBloc.state;
+                    final itemDescription =
+                        itemEntryState.items
+                            .where((entry) => entry.id == item.itemNumber)
+                            .firstOrNull
+                            ?.itemDescription ??
+                        'Item ${item.itemNumber}';
+
                     return DropdownMenuItem<int>(
                       value: item.itemNumber,
-                      child: Text(
-                        '${item.itemNumber} - ${_getItemDescription(item.itemNumber)}',
-                      ),
+                      child: Text(itemDescription),
                     );
                   }).toList(),
                   onChanged: _onItemChanged,
                   validator: (value) {
-                    if (value == null) {
-                      return 'Please select an item';
-                    }
+                    if (value == null) return 'Please select an item';
                     return null;
                   },
                 );
@@ -477,7 +560,7 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
             ),
             const SizedBox(height: 16),
 
-            // Location Dropdown (depends on selected branch and item)
+            // Location Dropdown
             BlocBuilder<StockItemLocationBloc, ItemLocationsState>(
               builder: (context, state) {
                 if (_selectedBranch == null || _selectedItem == null) {
@@ -486,7 +569,6 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
                     value: null,
                     prefixIcon: Icon(Iconsax.location),
                     items: [],
-                    onChanged: null,
                     hintText: 'Please select branch and item first',
                   );
                 }
@@ -500,18 +582,25 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
                   value: _selectedLocation,
                   prefixIcon: const Icon(Iconsax.location),
                   items: _itemLocations.map((location) {
+                    // Load location names from location master
+                    final locationMasterBloc = context
+                        .read<LocationMasterBloc>();
+                    final locationMasterState = locationMasterBloc.state;
+                    final locationName =
+                        locationMasterState.items
+                            .where((loc) => loc.id == location.location)
+                            .firstOrNull
+                            ?.locationDescription ??
+                        'Location ${location.location}';
+
                     return DropdownMenuItem<int>(
-                      value: location['id'] as int,
-                      child: Text(
-                        location['location_name'] ?? 'Unknown Location',
-                      ),
+                      value: location.location,
+                      child: Text(locationName),
                     );
                   }).toList(),
                   onChanged: _onLocationChanged,
                   validator: (value) {
-                    if (value == null) {
-                      return 'Please select a location';
-                    }
+                    if (value == null) return 'Please select a location';
                     return null;
                   },
                 );
@@ -519,87 +608,52 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
             ),
             const SizedBox(height: 16),
 
-            // UOM Field (read-only, from selected item)
+            // UOM Field
             BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
               builder: (context, state) {
-                if (state.status == UdcDetailsStatus.loading) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+                final uomItems = state.details
+                    .where((udc) => udc.udcGroup == 'UM')
+                    .toList();
 
                 return CustomDropdown(
                   labelText: 'Unit of Measure',
                   value: _selectedUom,
                   prefixIcon: const Icon(Iconsax.rulerpen),
-                  items: state.details.where((udc) => udc.udcGroup == 'UM').map(
-                    (udc) {
-                      return DropdownMenuItem<int>(
-                        value: udc.id,
-                        child: Text(udc.description1),
-                      );
-                    },
-                  ).toList(),
+                  items: uomItems.map((udc) {
+                    return DropdownMenuItem<int>(
+                      value: udc.id,
+                      child: Text(udc.description1),
+                    );
+                  }).toList(),
                   onChanged: (value) {
                     setState(() {
                       _selectedUom = value;
                     });
-                  },
-                  validator: (value) {
-                    if (value == null) {
-                      return 'Please select unit of measure';
-                    }
-                    return null;
                   },
                 );
               },
             ),
             const SizedBox(height: 16),
 
-            // Available Quantity Field (read-only, from selected item/location)
+            // Available Quantity Field
             CustomTextField(
               labelText: 'Available Quantity in Location',
-              controller: TextEditingController(
-                text: _availableQuantity.toStringAsFixed(2),
-              ),
+              controller: _availableQuantityController,
               readOnly: true,
               prefixIcon: const Icon(Iconsax.weight),
             ),
             const SizedBox(height: 16),
-
-            // Quantity Available for Lot
-            CustomTextField(
-              labelText: 'Lot Quantity *',
-              controller: _quantityAvailableController,
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Lot quantity is required';
-                }
-                final quantity = _parseDouble(value);
-                if (quantity == null || quantity <= 0) {
-                  return 'Please enter a valid quantity';
-                }
-                if (quantity > _availableQuantity) {
-                  return 'Quantity cannot exceed available quantity ($_availableQuantity)';
-                }
-                return null;
-              },
-              prefixIcon: const Icon(Iconsax.weight_1),
-            ),
-            const SizedBox(height: 16),
-
             // Unit Price
             CustomTextField(
               labelText: 'Unit Price',
               controller: _unitPriceController,
               keyboardType: TextInputType.number,
               validator: (value) {
-                if (value == null || value.isEmpty) {
+                if (value == null || value.isEmpty)
                   return 'Unit price is required';
-                }
                 final price = _parseDouble(value);
-                if (price == null || price < 0) {
+                if (price == null || price < 0)
                   return 'Please enter a valid price';
-                }
                 return null;
               },
               prefixIcon: const Icon(Iconsax.dollar_circle),
@@ -607,75 +661,54 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
             const SizedBox(height: 16),
 
             // Effective Date
-            GestureDetector(
-              onTap: _selectEffectiveDate,
-              child: CustomTextField(
-                labelText: 'Effective Date',
-                controller: TextEditingController(
-                  text: _effectiveDate != null
-                      ? '${_effectiveDate!.month}/${_effectiveDate!.day}/${_effectiveDate!.year}'
-                      : '',
-                ),
-                readOnly: true,
-                prefixIcon: const Icon(Iconsax.calendar_1),
-                suffixIcon: IconButton(
-                  icon: const Icon(Iconsax.calendar),
-                  onPressed: _selectEffectiveDate,
-                ),
+            CustomTextField(
+              labelText: 'Effective Date',
+              controller: _effectiveDateController,
+              readOnly: true,
+              prefixIcon: const Icon(Iconsax.calendar_1),
+              suffixIcon: IconButton(
+                icon: const Icon(Iconsax.calendar),
+                onPressed: _selectEffectiveDate,
               ),
+              onTap: _selectEffectiveDate,
             ),
             const SizedBox(height: 16),
 
             // Expiration Date
-            GestureDetector(
-              onTap: _selectExpirationDate,
-              child: CustomTextField(
-                labelText: 'Expiration Date',
-                controller: TextEditingController(
-                  text: _expirationDate != null
-                      ? '${_expirationDate!.month}/${_expirationDate!.day}/${_expirationDate!.year}'
-                      : '',
-                ),
-                readOnly: true,
-                prefixIcon: const Icon(Iconsax.calendar_tick),
-                suffixIcon: IconButton(
-                  icon: const Icon(Iconsax.calendar),
-                  onPressed: _selectExpirationDate,
-                ),
+            CustomTextField(
+              labelText: 'Expiration Date',
+              controller: _expirationDateController,
+              readOnly: true,
+              prefixIcon: const Icon(Iconsax.calendar_tick),
+              suffixIcon: IconButton(
+                icon: const Icon(Iconsax.calendar),
+                onPressed: _selectExpirationDate,
               ),
+              onTap: _selectExpirationDate,
             ),
             const SizedBox(height: 16),
 
             // Lot Status Dropdown
             BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
               builder: (context, state) {
-                if (state.status == UdcDetailsStatus.loading) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+                final lotStatusItems = state.details
+                    .where((udc) => udc.udcGroup == 'LS')
+                    .toList();
 
                 return CustomDropdown(
-                  labelText: 'Lot Status *',
+                  labelText: 'Lot Status',
                   value: _selectedLotStatus,
                   prefixIcon: const Icon(Iconsax.activity),
-                  items: state.details
-                      .where((udc) => udc.detailCode == 'LS')
-                      .map((udc) {
-                        return DropdownMenuItem<int>(
-                          value: udc.id,
-                          child: Text(udc.description1),
-                        );
-                      })
-                      .toList(),
+                  items: lotStatusItems.map((udc) {
+                    return DropdownMenuItem<int>(
+                      value: udc.id,
+                      child: Text(udc.description1),
+                    );
+                  }).toList(),
                   onChanged: (value) {
                     setState(() {
                       _selectedLotStatus = value;
                     });
-                  },
-                  validator: (value) {
-                    if (value == null) {
-                      return 'Please select lot status';
-                    }
-                    return null;
                   },
                 );
               },
@@ -695,37 +728,42 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
   }
 
   Widget _buildBottomNavigation() {
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          IconButton(
-            icon: const Icon(Iconsax.backward),
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.amber,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
-            onPressed: () {
-              Navigator.pop(context);
-            },
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            offset: const Offset(0, -2),
+            blurRadius: 4,
+            color: Colors.black.withOpacity(0.1),
           ),
-          ElevatedButton(
-            onPressed: _saveLot,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF155888),
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => Navigator.pop(context),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                side: BorderSide(color: Theme.of(context).primaryColor),
               ),
+              child: const Text('Cancel'),
             ),
-            child: Text(
-              widget.lot == null ? 'Create Lot' : 'Update Lot',
-              style: const TextStyle(color: Colors.white),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: _saveLot,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF155888),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              child: Text(
+                widget.lot == null ? 'Create Lot' : 'Update Lot',
+                style: const TextStyle(color: Colors.white),
+              ),
             ),
           ),
         ],

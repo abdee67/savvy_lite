@@ -30,7 +30,6 @@ import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_c
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_bloc.dart';
-import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
@@ -48,7 +47,7 @@ Future<void> _initializeAndRunApp() async {
   try {
     await ConnectivityService().initConnectivity();
     initDependencies();
-    await LocalDatabaseService().resetDatabase();
+    //await LocalDatabaseService().resetDatabase();
     // await LocalDatabaseService().debugTable('branch_table');
 
     if (AppConfig.isTestMode) {
@@ -57,7 +56,7 @@ Future<void> _initializeAndRunApp() async {
       developer.log('💾 Using local database only');
     }
     // Debug database tables (optional - remove in production)
-    await LocalDatabaseService().debugTable('location_master');
+    await LocalDatabaseService().debugTable('lot_master');
   } catch (error, stackTrace) {
     developer.log('Initialization error: $error');
     developer.log('Stack trace: $stackTrace');
@@ -84,16 +83,16 @@ class _SavvyStockState extends State<SavvyStock> {
   late GoRouter _router;
   late AuthBloc _authBloc;
   late UserBloc _userBloc;
-  late UdcRepository _udcRepository;
-  late SystemConstantBloc _systemConstantBloc;
   late NextNumberBloc _nextNumberBloc;
+  late SystemConstantBloc _systemConstantBloc;
 
   @override
   void initState() {
     super.initState();
     _authBloc = getIt<AuthBloc>();
     _userBloc = getIt<UserBloc>();
-    _udcRepository = getIt<UdcRepository>();
+    _nextNumberBloc = getIt<NextNumberBloc>();
+    _systemConstantBloc = getIt<SystemConstantBloc>();
     _initializeApp();
   }
 
@@ -112,7 +111,6 @@ class _SavvyStockState extends State<SavvyStock> {
         showOnboarding: showOnboarding,
         authBloc: _authBloc,
         userBloc: _userBloc,
-        udcRepository: _udcRepository,
       ).router;
     } catch (e) {
       setState(() {
@@ -261,7 +259,6 @@ class _SavvyStockState extends State<SavvyStock> {
             create: (context) => LotMasterBloc(
               databaseService: getIt(),
               authBloc: _authBloc,
-              udcRepository: _udcRepository,
               systemConstantBloc: _systemConstantBloc,
               nextNumberBloc: _nextNumberBloc,
             ),

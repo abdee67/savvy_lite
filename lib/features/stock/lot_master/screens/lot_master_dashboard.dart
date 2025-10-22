@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
+import 'package:savvy_stock/core/di/injection_container.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/utils/ui_helper.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -15,12 +16,7 @@ import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.da
 
 class LotMasterDashboard extends StatefulWidget {
   final AuthBloc authBloc;
-  final UdcRepository udcRepository;
-  const LotMasterDashboard({
-    super.key,
-    required this.authBloc,
-    required this.udcRepository,
-  });
+  const LotMasterDashboard({super.key, required this.authBloc});
 
   @override
   State<LotMasterDashboard> createState() => _LotMasterDashboardState();
@@ -41,9 +37,11 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
 
   //  Detail panel state
   LotMaster? _selectedLot;
-  List<LotMaster> _selectedLots = [];
+  final List<LotMaster> _selectedLots = [];
   bool _lotDetail = false;
-  List<Branch> _branches = [];
+
+  final List<Branch> _branches = [];
+  final UdcRepository _udcRepository = getIt<UdcRepository>();
 
   @override
   void initState() {
@@ -144,16 +142,24 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     print('Exporting lot: ${lot.lotNumber}');
   }
 
+  void _navigateToCreateScreen() {
+    final companyId = context.read<AuthBloc>().state.companyId;
+    if (companyId != null) {
+      context.read<LotMasterBloc>().add(PrepareCreateLot(companyId));
+      context.push(AppRoutes.lotCreation);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Company ID not found. Please login again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   void _navigateToEditScreen(LotMaster lot) {
     context.read<LotMasterBloc>().add(PrepareEditLot(lot));
     context.push(AppRoutes.lotEdit, extra: lot);
-  }
-
-  void _navigateToAddScreen() {
-    context.read<LotMasterBloc>().add(
-      PrepareCreateLot(widget.authBloc.state.companyId!),
-    );
-    context.push(AppRoutes.lotCreation);
   }
 
   void _safeDelete(BuildContext context, {int? index}) {
@@ -412,7 +418,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
               final lot = state.selectedItems.first;
               _navigateToEditScreen(lot);
             } else {
-              _navigateToAddScreen();
+              _navigateToCreateScreen();
             }
           },
           style: ElevatedButton.styleFrom(
@@ -943,7 +949,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
 
   void _calculateSingleLotStatus(LotMaster lot) async {
     final systemConstant = context.read<SystemConstantBloc>().state.selected;
-    final lotTypeUdcDetail = await widget.udcRepository.getUdcDetailById(
+    final lotTypeUdcDetail = await _udcRepository.getUdcDetailById(
       systemConstant?.lotType,
     );
     context.read<LotMasterBloc>().add(

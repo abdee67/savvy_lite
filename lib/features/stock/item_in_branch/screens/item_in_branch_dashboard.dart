@@ -5,10 +5,19 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/utils/ui_helper.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
+import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
+import 'package:savvy_stock/features/branch_list/blocs/branch_list_event.dart';
+import 'package:savvy_stock/features/branch_list/blocs/branch_list_state.dart';
+import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
+import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_event.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_state.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
+
+import '../../item_entry/blocs/item_entry_bloc.dart';
+import '../../item_entry/blocs/item_entry_event.dart';
+import '../../item_entry/blocs/item_entry_state.dart';
 
 class ItemInBranchDashboard extends StatefulWidget {
   final AuthBloc authBloc;
@@ -247,6 +256,42 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
         _dragOffset[index] = 0.0;
       });
     }
+  }
+
+  String _getItemDescription(int? itemId) {
+    if (itemId == null) return '';
+    // load item descriptions from item_entry bloc
+    final itemEntryBloc = context.read<StockItemEntryBloc>();
+    itemEntryBloc.add(LoadItems(widget.authBloc.state.companyId!));
+
+    final itemEntryState = itemEntryBloc.state;
+    if (itemEntryState.status == ItemEntryStatus.success) {
+      final item = itemEntryState.items.firstWhere(
+        (item) => item.id == itemId,
+        orElse: () => ItemEntryModel.empty(),
+      );
+      return item.itemDescription ?? 'Item $itemId';
+    }
+
+    return 'Item $itemId';
+  }
+
+  String _getItemBranch(int? branchId) {
+    if (branchId == null) return '';
+    // load item branch from branch bloc
+    final branchBloc = context.read<BranchBloc>();
+    branchBloc.add(LoadBranchs(widget.authBloc.state.companyId!));
+
+    final branchState = branchBloc.state;
+    if (branchState.status == BranchStatus.success) {
+      final item = branchState.branchs.firstWhere(
+        (item) => item.id == branchId,
+        orElse: () => Branch.empty(),
+      );
+      return item.description ?? 'Branch $branchId';
+    }
+
+    return 'Branch $branchId';
   }
 
   @override
@@ -498,6 +543,8 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
     final collapsedHeight = _getCollapsedHeight(screenWidth, screenHeight);
     final expandedHeight = _getExpandedHeight(screenWidth, screenHeight);
     final collapsedWidth = _getCardWidth(screenWidth);
+    final itemDescription = _getItemDescription(item.itemNumber);
+    final branch = _getItemBranch(item.branch);
 
     return GestureDetector(
       onTap: () {
@@ -610,7 +657,7 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Item #${item.itemNumber}',
+                                itemDescription,
                                 style: TextStyle(
                                   color: const Color(0xFF373737),
                                   fontSize: _getTitleFontSize(screenWidth),
@@ -619,7 +666,7 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
                                 ),
                               ),
                               Text(
-                                'Branch: ${item.branchrefrence?.referenceId ?? 'N/A'}',
+                                branch,
                                 style: TextStyle(
                                   color: const Color(0xFF887F7F),
                                   fontSize: _getSubtitleFontSize(screenWidth),
@@ -773,7 +820,7 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
           ),
           _buildItemInfoItem(
             'Branch : ',
-            item.branchrefrence?.referenceId?.toString() ?? 'N/A',
+            _getItemBranch(item.branch),
             Iconsax.building,
             screenWidth,
           ),

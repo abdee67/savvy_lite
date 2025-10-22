@@ -84,10 +84,18 @@ class StockItemLocationBloc
     emit(ItemLocationsState(status: ItemLocationsStatus.loading));
     try {
       final db = await databaseService.database;
-      final items = await db.query(
-        'item_location',
-        where: 'company = ? AND branch_id = ? AND item_id = ?',
-        whereArgs: [event.companyId, event.branchId, event.itemId],
+      final items = await db.rawQuery(
+        '''SELECT il.*,
+             lm.location_description,
+             it.item_description,
+             b.description as branch_name
+      FROM item_location il
+      LEFT JOIN location_master lm ON il.location = lm.id
+      LEFT JOIN items_table it ON il.item_number = it.id
+      LEFT JOIN branch_table b ON il.branch = b.id
+      WHERE il.company = ? AND il.branch = ? AND il.item_number = ?
+        ''',
+        [event.companyId, event.branchId, event.itemId],
       );
 
       final itemList = items.map((p) => ItemLocation.fromMap(p)).toList();
@@ -104,6 +112,7 @@ class StockItemLocationBloc
         ),
       );
     } catch (e) {
+      print('Error loading item location: $e');
       emit(
         ItemLocationsState(
           status: ItemLocationsStatus.failure,

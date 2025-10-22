@@ -664,7 +664,8 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                location.branchName ?? 'Unnamed branch',
+                                location.locationDescription ??
+                                    'Unnamed location',
                                 style: TextStyle(
                                   color: const Color(0xFF373737),
                                   fontSize: isCompact ? 20 : 24,
@@ -673,13 +674,18 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
                                 ),
                               ),
                               Text(
-                                'Margin Type: ${(location.marginType == 'F' ? 'Flat' : 'Percentage')}',
+                                location.branchName ?? 'Unnamed branch',
                                 style: TextStyle(
-                                  color: const Color(0xFF887F7F),
+                                  color: const Color.fromARGB(
+                                    255,
+                                    107,
+                                    104,
+                                    104,
+                                  ),
                                   fontSize: isCompact ? 12 : 14,
                                   fontStyle: FontStyle.italic,
                                   fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w300,
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
                               const SizedBox(height: 8),

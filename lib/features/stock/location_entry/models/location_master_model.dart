@@ -55,6 +55,34 @@ class LocationMaster extends Equatable {
     this.validCell,
   });
 
+  factory LocationMaster.empty() {
+    return LocationMaster(
+      id: null,
+      branch: null,
+      code01: null,
+      code02: null,
+      code03: null,
+      code04: null,
+      code05: null,
+      code06: null,
+      code07: null,
+      code08: null,
+      code09: null,
+      code10: null,
+      branchName: null,
+      marginType: null,
+      marginRate: null,
+      locationDescription: null,
+      createdBy: null,
+      dateCreated: null,
+      updatedBy: null,
+      dateUpdated: null,
+      company: null,
+      tempId: null,
+      validCell: null,
+    );
+  }
+
   factory LocationMaster.fromMap(Map<String, dynamic> map) {
     return LocationMaster(
       id: map['id'] as int?,
