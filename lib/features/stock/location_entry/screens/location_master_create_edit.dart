@@ -306,6 +306,7 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
                     child: ItemsPickList(
                       sourceItems: state.dualListSource,
                       targetItems: state.dualListTarget,
+                      authBloc: context.read<AuthBloc>(),
                       onSelectionChanged: (source, target) {
                         context.read<LocationMasterBloc>().add(
                           UpdateDualListModel(source, target),

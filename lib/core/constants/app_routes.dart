@@ -101,6 +101,10 @@ class AppRoutes {
       '$locationEntry/location-master-delete';
 
   static const String lotEntry = '$stock/lot-entry';
+  static const String lotCreation = '$lotEntry/lot-creation';
+  static const String lotEdit = '$lotEntry/lot-edit';
+  static const String lotDelete = '$lotEntry/lot-delete';
+
   static const String lotColorings = '$stock/lot-colorings';
   static const String inventoryTransaction = '$stock/inventory-transaction';
   static const String itemBranchEntry = '$stock/item-branch-entry';

@@ -52,6 +52,11 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     try {
       final db = await databaseService.database;
       // Load branch items with joins to get item and branch details
+      final hasBranchFilter = event.branchId != null;
+      final whereClause = hasBranchFilter
+          ? 'WHERE ib.company = ? AND ib.branch = ?'
+          : 'WHERE ib.company = ?';
+
       final branchItems = await db.rawQuery(
         '''
         SELECT ib.*, 
@@ -60,9 +65,11 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
         FROM items_in_branch ib
         LEFT JOIN items_table i ON ib.item_number = i.id
         LEFT JOIN branch_table b ON ib.branch = b.id
-        WHERE ib.company = ?
+        $whereClause
       ''',
-        [event.companyId],
+        hasBranchFilter
+            ? [event.companyId, event.branchId]
+            : [event.companyId],
       );
 
       final itemList = branchItems

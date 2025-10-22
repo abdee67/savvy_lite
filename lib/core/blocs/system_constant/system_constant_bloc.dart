@@ -42,9 +42,9 @@ class SystemConstantBloc
     on<RetryFailedOperations>(_onRetryFailedOperations);
 
     // Load data immediately when bloc is created
-    add(LoadSystemConstants(authBloc.state.companyId!));
+    // add(LoadSystemConstants(authBloc.state.companyId!));
     // Start periodic sync (every 5 minutes)
-    _startSyncTimer();
+    // _startSyncTimer();
   }
 
   void _startSyncTimer() {

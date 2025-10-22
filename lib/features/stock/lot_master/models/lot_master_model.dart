@@ -31,6 +31,8 @@ class LotMaster extends Equatable {
     this.batchNumberSupplier,
   });
 
+  String get statusCode => lotStatus.toString();
+
   factory LotMaster.fromMap(Map<String, dynamic> map) {
     return LotMaster(
       id: map['id'] as int?,

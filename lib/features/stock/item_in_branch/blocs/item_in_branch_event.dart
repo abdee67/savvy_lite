@@ -12,10 +12,11 @@ abstract class ItemInBranchEvent extends Equatable {
 
 class LoadItemsFromBranch extends ItemInBranchEvent {
   final int companyId;
-  const LoadItemsFromBranch(this.companyId);
+  final int? branchId;
+  const LoadItemsFromBranch(this.companyId, {this.branchId});
 
   @override
-  List<Object> get props => [companyId];
+  List<Object> get props => [companyId, branchId ?? -1];
 }
 
 class AddItemToBranch extends ItemInBranchEvent {

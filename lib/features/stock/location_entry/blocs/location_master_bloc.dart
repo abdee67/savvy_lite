@@ -337,8 +337,12 @@ class LocationMasterBloc
       final db = await databaseService.database;
       final locations = await db.rawQuery(
         '''
-        SELECT * FROM location_master 
-        WHERE branch = ? AND company = ?
+       SELECT lm.*,
+             b.description as branch_name
+      FROM location_master lm
+      LEFT JOIN branch_table b ON lm.branch = b.id
+      WHERE lm.branch = ? AND lm.company = ?
+      ORDER BY lm.location_description
         ''',
         [event.branchId, authBloc.state.companyId],
       );
@@ -346,11 +350,18 @@ class LocationMasterBloc
       final locationList = locations
           .map((e) => LocationMaster.fromMap(e))
           .toList();
+      print(
+        '📍 Loaded ${locationList.length} locations for branch $event.branchId',
+      ); // Debug log
 
       emit(
         state.copyWith(
           status: LocationMasterStatus.loaded,
           filteredItems: locationList,
+          items: locationList,
+          message: locationList.isEmpty
+              ? 'No locations found for this branch'
+              : null,
         ),
       );
     } catch (e) {
@@ -385,9 +396,12 @@ class LocationMasterBloc
           branch: item.branch,
           itemNumber: item.itemNumber,
           location: locationId,
-          company: authBloc.state.companyId,
-          createdBy: authBloc.state.userId,
+          quantityOnHand: item.quantityAvailable,
+          dateUpdated: DateTime.now(),
           dateCreated: DateTime.now(),
+          updatedBy: authBloc.state.userId,
+          createdBy: authBloc.state.userId,
+          company: authBloc.state.companyId,
         );
 
         await db.insert('item_location', itemLocation.toMap());
@@ -414,9 +428,12 @@ class LocationMasterBloc
         branch: item.branch,
         itemNumber: item.itemNumber,
         location: locationId,
-        company: authBloc.state.companyId,
-        createdBy: authBloc.state.userId,
+        quantityOnHand: item.quantityAvailable,
+        dateUpdated: DateTime.now(),
         dateCreated: DateTime.now(),
+        updatedBy: authBloc.state.userId,
+        createdBy: authBloc.state.userId,
+        company: authBloc.state.companyId,
       );
 
       await db.insert('item_location', itemLocation.toMap());

@@ -1,11 +1,19 @@
 // features/stock/location_master/widgets/items_pick_list.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
+import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
+
+import '../../item_entry/blocs/item_entry_bloc.dart';
+import '../../item_entry/blocs/item_entry_event.dart';
+import '../../item_entry/blocs/item_entry_state.dart';
 
 class ItemsPickList extends StatefulWidget {
   final List<ItemInBranchModel> sourceItems;
   final List<ItemInBranchModel> targetItems;
+  final AuthBloc authBloc;
   final Function(List<ItemInBranchModel> source, List<ItemInBranchModel> target)
   onSelectionChanged;
   final bool isEditMode;
@@ -14,6 +22,7 @@ class ItemsPickList extends StatefulWidget {
     super.key,
     required this.sourceItems,
     required this.targetItems,
+    required this.authBloc,
     required this.onSelectionChanged,
     this.isEditMode = false,
   });
@@ -355,6 +364,24 @@ class _ItemsPickListState extends State<ItemsPickList> {
     );
   }
 
+  String _getItemDescription(int? itemId) {
+    if (itemId == null) return '';
+    // load item descriptions from item_entry bloc
+    final itemEntryBloc = context.read<StockItemEntryBloc>();
+    itemEntryBloc.add(LoadItems(widget.authBloc.state.companyId!));
+
+    final itemEntryState = itemEntryBloc.state;
+    if (itemEntryState.status == ItemEntryStatus.success) {
+      final item = itemEntryState.items.firstWhere(
+        (item) => item.id == itemId,
+        orElse: () => ItemEntryModel.empty(),
+      );
+      return item.itemDescription ?? 'Item $itemId';
+    }
+
+    return 'Item $itemId';
+  }
+
   Widget _buildItemListItem({
     required ItemInBranchModel item,
     required bool isSelected,
@@ -362,8 +389,8 @@ class _ItemsPickListState extends State<ItemsPickList> {
     required ThemeData theme,
     required ColorScheme colors,
   }) {
-    final description = item.branchrefrence?.description ?? 'No Description';
-    final itemNumber = item.itemNumber.toString() ?? 'N/A';
+    final description = _getItemDescription(item.itemNumber);
+    final itemNumber = item.itemNumber.toString();
     final itemCode = item.item;
 
     return Container(
