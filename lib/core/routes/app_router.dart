@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/errors/unauthorized_screen.dart';
-import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/widgets/route_guard.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
 import 'package:savvy_stock/features/admin/employees/screens/employee_dashboard.dart';
@@ -48,6 +47,9 @@ import 'package:savvy_stock/features/stock/item_in_branch/widgets/item_in_branch
 import 'package:savvy_stock/features/stock/location_entry/models/location_master_model.dart';
 import 'package:savvy_stock/features/stock/location_entry/screens/location_master_screen.dart';
 import 'package:savvy_stock/features/stock/location_entry/screens/location_master_create_edit.dart';
+import 'package:savvy_stock/features/stock/lot_coloring/model/lot_coloring_model.dart';
+import 'package:savvy_stock/features/stock/lot_coloring/screens/lot_colorings_screen.dart';
+import 'package:savvy_stock/features/stock/lot_coloring/widgets/lot_coloring_form.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/screens/lot_master_dashboard.dart';
 import 'package:savvy_stock/features/stock/lot_master/widgets/lot_master_create_and_edit.dart.dart';
@@ -561,6 +563,44 @@ class AppRouter {
             requiredPrivilege: AppRoutes.lotEdit,
             parentPrivilege: AppRoutes.lotEntry,
             child: LotMasterFormPage(authBloc: authBloc, lot: item),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+
+      //lot colorings
+      GoRoute(
+        path: AppRoutes.lotColorings,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.lotColorings,
+          parentPrivilege: AppRoutes.stockDashboard,
+          child: LotExpirationColorsDashboard(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.lotColoringCreate,
+        builder: (context, state) {
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.lotColoringCreate,
+            parentPrivilege: AppRoutes.lotColorings,
+            child: LotExpirationColorsFormPage(authBloc: authBloc),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.lotColoringEdit,
+        builder: (context, state) {
+          final extra = state.extra;
+          final item = extra != null ? extra as LotExpirationColor? : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.lotColoringEdit,
+            parentPrivilege: AppRoutes.lotColorings,
+            child: LotExpirationColorsFormPage(
+              authBloc: authBloc,
+              existingColoring: item,
+            ),
           );
         },
         redirect: _protectedRouteRedirect,

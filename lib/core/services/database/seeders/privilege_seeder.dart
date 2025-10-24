@@ -328,12 +328,32 @@ class PrivilegeSeeder {
         'delete_lot',
       ),
 
+      //lot colorings
       _createPrivilege(
         'Lot Colorings',
         'link',
         AppRoutes.lotColorings,
         'lot_colorings',
       ),
+      _createPrivilege(
+        'Add Lot Colorings',
+        'button',
+        AppRoutes.lotColoringCreate,
+        'add_lot_colorings',
+      ),
+      _createPrivilege(
+        'Edit Lot Colorings',
+        'button',
+        AppRoutes.lotColoringEdit,
+        'edit_lot_colorings',
+      ),
+      _createPrivilege(
+        'Delete Lot Colorings',
+        'button',
+        AppRoutes.lotColoringDelete,
+        'delete_lot_colorings',
+      ),
+
       _createPrivilege(
         'Inventory Transaction',
         'link',

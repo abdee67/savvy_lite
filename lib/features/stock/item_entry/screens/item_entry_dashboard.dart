@@ -496,7 +496,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
     // For responsiveness:
     final collapsedHeight = isCompact
         ? screenHeight *
-              0.18 // phones
+              0.22 // phones
         : screenHeight * 0.14; // tablets / wide screens
 
     final expandedHeight = isCompact
@@ -573,12 +573,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
 
               // 3. ITEM CARD - Should come AFTER delete indicator
               AnimatedContainer(
-                padding: const EdgeInsets.only(
-                  top: 10,
-                  left: 10,
-                  right: 10,
-                  bottom: 10,
-                ),
+                padding: const EdgeInsets.only(top: 10, left: 10, right: 10),
                 width: collapsedWidth,
                 height: collapsedHeight,
                 duration: const Duration(milliseconds: 400),

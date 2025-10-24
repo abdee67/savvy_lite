@@ -729,6 +729,28 @@ CREATE INDEX idx_next_number_company ON next_number(company);
 ''');
     developer.log('Created table: next_number');
 
+    //25. create lot_coloring table
+    await db.execute('''
+  CREATE TABLE lot_expiration_colors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_number INTEGER,
+    branch INTEGER,
+    days_maximum INTEGER,
+    color_type INTEGER,
+    company INTEGER,
+    description TEXT,
+    days_minimum INTEGER,
+    active_for_sales_flag TEXT DEFAULT 'Y',
+    lot_exp_level TEXT,
+    FOREIGN KEY (item_number) REFERENCES items_table (id),
+    FOREIGN KEY (branch) REFERENCES branch_table (id),
+    FOREIGN KEY (color_type) REFERENCES udc_details (id),
+    FOREIGN KEY (company) REFERENCES company_table (id)
+  );
+  CREATE INDEX idx_lot_expiration_colors_company ON lot_expiration_colors(company);
+''');
+    developer.log('Created table: lot_expiration_colors');
+
     //. Create sync_queue table
     await db.execute('''
       CREATE TABLE sync_queue (
@@ -1175,7 +1197,7 @@ CREATE INDEX idx_next_number_company ON next_number(company);
       // --- Lot Type (LT) ---
       {
         'id': 41,
-        'detail_code': 'EXP',
+        'detail_code': 'X',
         'description_1': 'Expiration Date',
         'description_2': 'Select items by expiration date',
         'record_header': 21,
@@ -1183,7 +1205,7 @@ CREATE INDEX idx_next_number_company ON next_number(company);
       },
       {
         'id': 42,
-        'detail_code': 'EFF',
+        'detail_code': 'F',
         'description_1': 'Effective Date',
         'description_2': 'Select items by effective date',
         'record_header': 21,
@@ -1191,7 +1213,7 @@ CREATE INDEX idx_next_number_company ON next_number(company);
       },
       {
         'id': 43,
-        'detail_code': 'REC',
+        'detail_code': 'R',
         'description_1': 'Receipt Date',
         'description_2': 'Select items by receipt date',
         'record_header': 21,

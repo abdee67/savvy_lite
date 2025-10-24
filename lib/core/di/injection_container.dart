@@ -20,6 +20,7 @@ import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_bloc.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_bloc.dart';
+import 'package:savvy_stock/features/stock/lot_coloring/bloc/lot_coloring_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 
@@ -123,6 +124,14 @@ void initDependencies() {
       authBloc: getIt(),
       systemConstantBloc: getIt(),
       nextNumberBloc: getIt(),
+      lotExpirationColorsBloc: getIt(),
+    ),
+  );
+  getIt.registerFactory<LotExpirationColorsBloc>(
+    () => LotExpirationColorsBloc(
+      databaseService: getIt(),
+      authBloc: getIt(),
+      systemConstantBloc: getIt(),
     ),
   );
 }
