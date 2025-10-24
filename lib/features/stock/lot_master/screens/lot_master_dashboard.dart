@@ -8,11 +8,20 @@ import 'package:savvy_stock/core/di/injection_container.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/utils/ui_helper.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
+import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
+import 'package:savvy_stock/features/branch_list/blocs/branch_list_event.dart'
+    hide ClearSelection;
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
+import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart'
+    hide ClearSelection;
+import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_event.dart';
+import 'package:savvy_stock/features/stock/lot_coloring/model/lot_coloring_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_event.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_state.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
+import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
+import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_bloc.dart';
 
 class LotMasterDashboard extends StatefulWidget {
   final AuthBloc authBloc;
@@ -60,6 +69,15 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
       LoadLotMasters(widget.authBloc.state.companyId!),
     );
     context.read<LotMasterBloc>().add(ClaculateMultipleLotStatus());
+    context.read<BranchBloc>().add(
+      LoadBranchs(widget.authBloc.state.companyId!),
+    );
+    context.read<StockItemEntryBloc>().add(
+      LoadItems(widget.authBloc.state.companyId!),
+    );
+    context.read<LocationMasterBloc>().add(
+      LoadLocationMasters(widget.authBloc.state.companyId!),
+    );
   }
 
   void _setupAnimations() {
@@ -162,6 +180,41 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     context.push(AppRoutes.lotEdit, extra: lot);
   }
 
+  String _getBranchName(int branchId) {
+    final branchBloc = context.read<BranchBloc>();
+    final branchState = branchBloc.state;
+    final branchDescription =
+        branchState.branchs
+            .where((entry) => entry.id == branchId)
+            .firstOrNull
+            ?.description ??
+        'Branch $branchId';
+    return branchDescription;
+  }
+
+  String _getItemName(int itemId) {
+    final itemBloc = context.read<StockItemEntryBloc>();
+    final itemDescription =
+        itemBloc.state.items
+            .where((entry) => entry.id == itemId)
+            .firstOrNull
+            ?.itemDescription ??
+        'Item $itemId';
+    return itemDescription;
+  }
+
+  String _getLocationName(int locationId) {
+    final locationBloc = context.read<LocationMasterBloc>();
+    final locationState = locationBloc.state;
+    final locationName =
+        locationState.locations
+            .where((entry) => entry.id == locationId)
+            .firstOrNull
+            ?.locationDescription ??
+        'Branch $locationId';
+    return locationName;
+  }
+
   void _safeDelete(BuildContext context, {int? index}) {
     final bloc = context.read<LotMasterBloc>();
     final state = bloc.state;
@@ -244,28 +297,74 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     }
   }
 
-  String _getStatusBadgeText(String? statusCode) {
-    switch (statusCode?.toUpperCase()) {
-      case 'A':
-        return 'Active';
-      case 'E':
-        return 'Expired';
-      case 'I':
-        return 'Inactive';
-      default:
-        return 'Unknown';
+  // Enhanced status methods
+  String _getStatusBadgeText(LotMaster lot) {
+    // Use status description if available, otherwise fall back to code
+    if (lot.statusDescription != null && lot.statusDescription!.isNotEmpty) {
+      return lot.statusDescription!;
     }
+
+    // Fallback to status code mapping
+    if (lot.statusCode != null && lot.statusCode!.isNotEmpty) {
+      switch (lot.statusCode?.toUpperCase()) {
+        case 'A':
+          return 'Active';
+        case 'E':
+          return 'Expired';
+        case 'I':
+          return 'Inactive';
+        case 'D':
+          return 'Damaged';
+        case 'H':
+          return 'On Hold';
+        default:
+          return lot.statusCode!; //return code if we dont recognize it
+      }
+    }
+
+    return 'Unknown';
   }
 
-  Color _getStatusBadgeColor(String? statusCode) {
-    switch (statusCode?.toUpperCase()) {
-      case 'A':
-        return Colors.green;
-      case 'E':
+  Color _getColorFromType(LotExpirationColor? color) {
+    if (color == null) return Colors.transparent;
+    if ((color.colorTypeCode == null || color.colorTypeCode!.isEmpty) &&
+        (color.colorTypeName == null || color.colorTypeName!.isEmpty)) {
+      return Colors.transparent;
+    }
+    switch (color.colorTypeCode?.toUpperCase()) {
+      case 'RED':
         return Colors.red;
-      case 'I':
+      case 'BLU':
+        return Colors.blue;
+      case 'GRN':
+        return Colors.green;
+      case 'BLK':
+        return Colors.black;
+      case 'YEL':
+      case 'YLW':
+        return Colors.yellow.shade700;
+      case 'ORG':
         return Colors.orange;
+      case 'PRP':
+      case 'PUR':
+        return Colors.purple;
+      case 'GRY':
+      case 'GRE':
+        return Colors.grey;
+      case 'BRN':
+        return Colors.brown;
       default:
+        // Fallback: infer from colorTypeName text
+        final name = color.colorTypeName?.toLowerCase() ?? '';
+        if (name.contains('red')) return Colors.red;
+        if (name.contains('blue')) return Colors.blue;
+        if (name.contains('green')) return Colors.green;
+        if (name.contains('black')) return Colors.black;
+        if (name.contains('yellow')) return Colors.yellow.shade700;
+        if (name.contains('orange')) return Colors.orange;
+        if (name.contains('purple') || name.contains('violet')) return Colors.purple;
+        if (name.contains('brown')) return Colors.brown;
+        if (name.contains('grey') || name.contains('gray')) return Colors.grey;
         return Colors.grey;
     }
   }
@@ -524,7 +623,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
 
     // For responsiveness:
     final collapsedHeight = isCompact
-        ? screenHeight * 0.18
+        ? screenHeight * 0.22
         : screenHeight * 0.14;
     final expandedHeight = isCompact
         ? screenHeight * 0.55
@@ -598,12 +697,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
 
               // 3. LOT CARD
               AnimatedContainer(
-                padding: const EdgeInsets.only(
-                  top: 10,
-                  left: 10,
-                  right: 10,
-                  bottom: 10,
-                ),
+                padding: const EdgeInsets.only(top: 10, left: 10, right: 10),
                 width: collapsedWidth,
                 height: collapsedHeight,
                 duration: const Duration(milliseconds: 400),
@@ -611,7 +705,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                 curve: Curves.easeInOut,
                 margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
-                  color: isSelected ? Colors.blue[50] : Colors.white,
+                  color: _getColorFromType(lot.tempColorType),
                   borderRadius: BorderRadius.circular(30),
                   boxShadow: [
                     BoxShadow(
@@ -620,12 +714,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                       offset: const Offset(0, 2),
                     ),
                   ],
-                  border: Border.all(
-                    color: isSelected
-                        ? const Color.fromARGB(255, 28, 66, 146)
-                        : Colors.transparent,
-                    width: 2,
-                  ),
+                  border: Border.all(color: Colors.transparent, width: 2),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -659,91 +748,102 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                                       vertical: 2,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: _getStatusBadgeColor(
-                                        lot.statusCode,
-                                      ).withOpacity(0.2),
+                                      color: Colors.blue[50],
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
-                                        color: _getStatusBadgeColor(
-                                          lot.statusCode,
-                                        ),
+                                        color: Colors.blue[200]!,
                                       ),
                                     ),
-                                    child: Text(
-                                      _getStatusBadgeText(lot.statusCode),
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: _getStatusBadgeColor(
-                                          lot.statusCode,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.circle,
+                                          size: 14,
+                                          color: Colors.blue,
                                         ),
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          _getStatusBadgeText(lot),
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.blue,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
                               ),
-
-                              Text(
-                                lot.batchNumberSupplier ?? 'No Supplier Batch',
-                                style: TextStyle(
-                                  color: const Color(0xFF887F7F),
-                                  fontSize: isCompact ? 12 : 14,
-                                  fontStyle: FontStyle.italic,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w300,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
                               // Date information
-                              Row(
-                                children: [
-                                  if (lot.dateEffective != null)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
+                              if (lot.dateEffective != null)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Colors.blue.withOpacity(0.3),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Iconsax.calendar_1,
+                                        size: 12,
+                                        color: Colors.blue,
                                       ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue[50],
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: Colors.blue[200]!,
-                                        ),
-                                      ),
-                                      child: Text(
+                                      const SizedBox(width: 4),
+                                      Text(
                                         'Effective: ${_formatDate(lot.dateEffective!)}',
                                         style: TextStyle(
                                           fontSize: 10,
-                                          color: Colors.blue[800],
-                                          fontWeight: FontWeight.bold,
+                                          color: Colors.blue,
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
+                                    ],
+                                  ),
+                                ),
+                              const SizedBox(height: 2),
+                              if (lot.dateExpiration != null)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Colors.blue.withOpacity(0.3),
                                     ),
-                                  const SizedBox(width: 8),
-                                  if (lot.dateExpiration != null)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Iconsax.calendar_tick,
+                                        size: 12,
+                                        color: Colors.blue,
                                       ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.orange[50],
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: Colors.orange[200]!,
-                                        ),
-                                      ),
-                                      child: Text(
+                                      const SizedBox(width: 4),
+                                      Text(
                                         'Expires: ${_formatDate(lot.dateExpiration!)}',
                                         style: TextStyle(
                                           fontSize: 10,
-                                          color: Colors.orange[800],
-                                          fontWeight: FontWeight.bold,
+                                          color: Colors.blue,
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
-                                    ),
-                                ],
-                              ),
+                                    ],
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -752,24 +852,37 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        // Quantity badge
+                        // UPDATED: Quantity badge with status color
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
-                            vertical: 4,
+                            vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.green[50],
+                            color: Colors.blue.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.green[200]!),
-                          ),
-                          child: Text(
-                            'Qty: ${lot.quantityAvailable?.toStringAsFixed(2) ?? '0.00'}',
-                            style: TextStyle(
-                              color: Colors.green[800],
-                              fontSize: isCompact ? 10 : 12,
-                              fontWeight: FontWeight.bold,
+                            border: Border.all(
+                              color: Colors.blue.withOpacity(0.3),
                             ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Iconsax.weight,
+                                size: 14,
+                                color: Colors.blue,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Qty: ${lot.quantityAvailable?.toStringAsFixed(2) ?? '0.00'}',
+                                style: TextStyle(
+                                  color: Colors.blue,
+                                  fontSize: isCompact ? 10 : 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -834,11 +947,6 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     );
   }
 
-  String _getBranchName(int branchId) {
-    final branch = _branches.firstWhere((branch) => branch.id == branchId);
-    return branch.description!;
-  }
-
   Widget _buildLotDetailContent(LotMaster lot, bool isCompact) {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -858,13 +966,13 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
           ),
           _buildLotInfoItem(
             'Item Number : ',
-            lot.itemNumber?.toString() ?? 'N/A',
+            _getItemName(lot.itemNumber!),
             Iconsax.box,
             isCompact,
           ),
           _buildLotInfoItem(
             'Location : ',
-            lot.location.toString() ?? 'N/A',
+            _getLocationName(lot.location!),
             Iconsax.location,
             isCompact,
           ),
@@ -910,7 +1018,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
           ),
           _buildLotInfoItem(
             'Lot Status : ',
-            _getStatusBadgeText(lot.lotStatus.toString()),
+            _getStatusBadgeText(lot),
             Iconsax.activity,
             isCompact,
           ),
@@ -988,10 +1096,11 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: Colors.grey[50],
+              color: Colors.blue.withOpacity(0.2),
               shape: BoxShape.circle,
+              border: Border.all(color: Colors.blue.withOpacity(0.2), width: 2),
             ),
-            child: Icon(icon, size: 16, color: Colors.grey[600]),
+            child: Icon(icon, size: 16, color: Colors.blue),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1009,8 +1118,8 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                   ),
                   TextSpan(
                     text: value,
-                    style: const TextStyle(
-                      color: Color(0xFF373737),
+                    style: TextStyle(
+                      color: Colors.blue,
                       fontSize: 13,
                       fontFamily: 'Inter',
                       fontWeight: FontWeight.w400,
@@ -1062,15 +1171,19 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
       backgroundColor = const Color.fromARGB(255, 28, 66, 146);
       iconColor = Colors.white;
     } else {
-      backgroundColor = Colors.grey[200]!;
-      iconColor = Colors.grey[600]!;
+      backgroundColor = Colors.blue.withOpacity(0.2);
+      iconColor = Colors.blue;
     }
 
     return Container(
       width: 48,
       height: 48,
-      decoration: BoxDecoration(color: backgroundColor, shape: BoxShape.circle),
-      child: Icon(Iconsax.box_1, color: iconColor, size: isCompact ? 20 : 24),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.blue.withOpacity(0.5), width: 2),
+      ),
+      child: Icon(Iconsax.tag, color: iconColor, size: isCompact ? 20 : 24),
     );
   }
 
