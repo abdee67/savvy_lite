@@ -9,8 +9,6 @@ import 'package:savvy_stock/features/branch_list/blocs/branch_list_event.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_state.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
-import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_state.dart';
-import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_event.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_state.dart';
@@ -21,9 +19,6 @@ import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_e
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_state.dart';
 import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_bloc.dart';
-import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_event.dart';
-import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_state.dart';
-import 'package:savvy_stock/features/stock/location_entry/models/location_master_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_event.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_state.dart';
@@ -46,8 +41,6 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
   final _formKey = GlobalKey<FormState>();
 
   // Controllers
-  final TextEditingController _quantityAvailableController =
-      TextEditingController();
   final TextEditingController _unitPriceController = TextEditingController();
   final TextEditingController _supplierBatchController =
       TextEditingController();
@@ -87,11 +80,19 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
     context.read<BranchBloc>().add(
       LoadBranchs(widget.authBloc.state.companyId!),
     );
-    context.read<UdcDetailsBloc>().add(LoadAllUdcDetails()); // Unit of Measure
+    context.read<UdcDetailsBloc>().add(
+      LoadAllUdcDetails(),
+    ); // for Unit of Measure and lot status
+
+    context.read<StockItemInBranchBloc>().add(
+      LoadItemsFromBranch(widget.authBloc.state.companyId!),
+    );
+    context.read<StockItemEntryBloc>().add(
+      LoadItems(widget.authBloc.state.companyId!),
+    );
 
     // Initialize controllers
     _availableQuantityController.text = '0.0';
-    _quantityAvailableController.text = '0.0';
 
     _initializeForm();
   }
@@ -109,7 +110,7 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
       _expirationDate = lot.dateExpiration;
       _selectedLotStatus = lot.lotStatus;
       _supplierBatchController.text = lot.batchNumberSupplier ?? '';
-      _quantityAvailableController.text =
+      _availableQuantityController.text =
           lot.quantityAvailable?.toString() ?? '0.0';
       _unitPriceController.text = lot.unitPrice?.toString() ?? '';
 
@@ -138,7 +139,7 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
       }
     } else {
       // For creating - set default values
-      _quantityAvailableController.text = '0.0';
+      _availableQuantityController.text = '0.0';
     }
   }
 
@@ -170,7 +171,6 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
       _itemLocations = [];
       _availableQuantity = 0.0;
       _availableQuantityController.text = '0.0';
-      _quantityAvailableController.text = '0.0';
       _unitPriceController.clear();
     });
 
@@ -193,7 +193,6 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
       _itemLocations = [];
       _availableQuantity = 0.0;
       _availableQuantityController.text = '0.0';
-      _quantityAvailableController.text = '0.0';
       _unitPriceController.clear();
     });
 
@@ -290,7 +289,6 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
 
   @override
   void dispose() {
-    _quantityAvailableController.dispose();
     _unitPriceController.dispose();
     _supplierBatchController.dispose();
     _availableQuantityController.dispose();
@@ -324,7 +322,7 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
         itemNumber: _selectedItem!,
         location: _selectedLocation!,
         quantityAvailable: _parseDouble(
-          _quantityAvailableController.text.trim(),
+          _availableQuantityController.text.trim(),
         ),
         unitPrice: _parseDouble(_unitPriceController.text.trim()),
         dateEffective: _effectiveDate,
@@ -649,11 +647,13 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
               controller: _unitPriceController,
               keyboardType: TextInputType.number,
               validator: (value) {
-                if (value == null || value.isEmpty)
+                if (value == null || value.isEmpty) {
                   return 'Unit price is required';
+                }
                 final price = _parseDouble(value);
-                if (price == null || price < 0)
+                if (price == null || price < 0) {
                   return 'Please enter a valid price';
+                }
                 return null;
               },
               prefixIcon: const Icon(Iconsax.dollar_circle),

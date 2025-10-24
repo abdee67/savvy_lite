@@ -1,6 +1,6 @@
-import 'package:equatable/equatable.dart';
+import 'package:savvy_stock/features/stock/lot_coloring/model/lot_coloring_model.dart';
 
-class LotMaster extends Equatable {
+class LotMaster {
   final int? id;
   final int? itemNumber;
   final int? lotNumber;
@@ -15,7 +15,11 @@ class LotMaster extends Equatable {
   final int? lotStatus;
   final String? batchNumberSupplier;
 
-  const LotMaster({
+  final String? statusCode; //A, E, I
+  final String? statusDescription; //Active, Expired, Inactive
+  LotExpirationColor? tempColorType;
+
+  LotMaster({
     this.id,
     this.itemNumber,
     this.lotNumber,
@@ -29,9 +33,10 @@ class LotMaster extends Equatable {
     this.location,
     this.lotStatus,
     this.batchNumberSupplier,
+    this.statusCode,
+    this.statusDescription,
+    this.tempColorType,
   });
-
-  String get statusCode => lotStatus.toString();
 
   factory LotMaster.fromMap(Map<String, dynamic> map) {
     return LotMaster(
@@ -58,6 +63,10 @@ class LotMaster extends Equatable {
       location: map['location'] as int?,
       lotStatus: map['lot_status'] as int?,
       batchNumberSupplier: map['batch_number_supplier'] as String?,
+      //FROM JOINS
+      statusCode: map['status_code'] as String?, //A, E, I
+      statusDescription:
+          map['status_description'] as String?, //Active, Expired, Inactive
     );
   }
 
@@ -93,6 +102,9 @@ class LotMaster extends Equatable {
     int? location,
     int? lotStatus,
     String? batchNumberSupplier,
+    String? statusCode,
+    String? statusDescription,
+    LotExpirationColor? tempColorType,
   }) {
     return LotMaster(
       id: id ?? this.id,
@@ -108,6 +120,9 @@ class LotMaster extends Equatable {
       location: location ?? this.location,
       lotStatus: lotStatus ?? this.lotStatus,
       batchNumberSupplier: batchNumberSupplier ?? this.batchNumberSupplier,
+      statusCode: statusCode ?? this.statusCode,
+      statusDescription: statusDescription ?? this.statusDescription,
+      tempColorType: tempColorType ?? this.tempColorType,
     );
   }
 
@@ -126,5 +141,8 @@ class LotMaster extends Equatable {
     location,
     lotStatus,
     batchNumberSupplier,
+    statusCode,
+    statusDescription,
+    tempColorType,
   ];
 }
