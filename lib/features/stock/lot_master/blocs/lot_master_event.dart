@@ -196,3 +196,7 @@ class CalculateLotStatus extends LotMasterEvent {
 class ClaculateMultipleLotStatus extends LotMasterEvent {
   const ClaculateMultipleLotStatus();
 }
+
+class CalculateLotColors extends LotMasterEvent {
+  const CalculateLotColors();
+}

@@ -3,11 +3,12 @@ import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
 import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
-import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/next_number/bloc/next_number_bloc.dart';
 import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_receiver_model.dart';
+import 'package:savvy_stock/features/stock/lot_coloring/bloc/lot_coloring_bloc.dart';
+import 'package:savvy_stock/features/stock/lot_coloring/model/lot_coloring_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_event.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_state.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
@@ -18,18 +19,26 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
   final AuthBloc authBloc;
   final SystemConstantBloc systemConstantBloc;
   final NextNumberBloc nextNumberBloc;
+  final LotExpirationColorsBloc lotExpirationColorsBloc;
   StreamSubscription? _authSubscription;
+  StreamSubscription? _systemConstantSubscription;
 
   LotMasterBloc({
     required this.databaseService,
     required this.authBloc,
     required this.systemConstantBloc,
     required this.nextNumberBloc,
+    required this.lotExpirationColorsBloc,
   }) : super(const LotMasterState()) {
     _authSubscription = authBloc.stream.listen((authState) {
       if (authState.isAuthenticated && authState.companyId != null) {
         add(LoadLotMasters(authState.companyId!));
       }
+    });
+
+    // Recompute lot colors when system constants change (e.g., lot_type becomes available)
+    _systemConstantSubscription = systemConstantBloc.stream.listen((scState) {
+      add(CalculateLotColors());
     });
 
     on<LoadLotMasters>(_onLoadLots);
@@ -49,11 +58,13 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
     on<AutoCreateLotForPO>(_onAutoCreateLotForPO);
     on<CalculateLotStatus>(_onCalculateLotStatus);
     on<ClaculateMultipleLotStatus>(_onClaculateMultipleLotStatus);
+    on<CalculateLotColors>(_onCalculateLotColors);
   }
 
   @override
   Future<void> close() {
     _authSubscription?.cancel();
+    _systemConstantSubscription?.cancel();
     return super.close();
   }
 
@@ -70,13 +81,13 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
                it.items_id as item_id,
                it.item_description,
                b.description as branch_name,
-               il.location,
+               loc.location_description,
                ud.detail_code as status_code,
                ud.description_1 as status_description
         FROM lot_master lm
         LEFT JOIN items_table it ON lm.item_number = it.id
         LEFT JOIN branch_table b ON lm.branch = b.id
-        LEFT JOIN item_location il ON lm.location = il.id
+        LEFT JOIN location_master loc ON lm.location = loc.id
         LEFT JOIN udc_details ud ON lm.lot_status = ud.id
         WHERE lm.company = ?
         ORDER BY it.item_description
@@ -85,23 +96,15 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
       );
 
       final lotList = lots.map((p) => LotMaster.fromMap(p)).toList();
-      // Auto-calculate status for all loaded lots
-      final systemConstant = systemConstantBloc.state.selected;
-      final lotTypeUdcDetail = await _getLotTypeUdcDetail(
-        systemConstant?.lotType,
-      );
 
-      final updatedLotList = <LotMaster>[];
-      for (final lot in lotList) {
-        final newStatus = await _calculateLotStatus(lot, lotTypeUdcDetail);
-        final updatedLot = lot.copyWith(lotStatus: newStatus);
-        updatedLotList.add(updatedLot);
-      }
+      // Calculate colors for all lots dynamically
+      final lotsWithColors = await _calculateColorsForLots(lotList);
+
       emit(
         state.copyWith(
           status: LotMasterStatus.loaded,
-          items: updatedLotList,
-          filteredItems: updatedLotList,
+          items: lotsWithColors,
+          filteredItems: lotsWithColors,
           companyId: authBloc.state.companyId,
         ),
       );
@@ -113,6 +116,118 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
         ),
       );
     }
+  }
+
+  Future<List<LotMaster>> _calculateColorsForLots(List<LotMaster> lots) async {
+    final updatedLots = <LotMaster>[];
+
+    for (final lot in lots) {
+      final colorType = await _getLotColorType(lot);
+      final updatedLot = lot.copyWith();
+      // Store color type in memory only (not in database)
+      updatedLot.tempColorType = colorType;
+      updatedLots.add(updatedLot);
+    }
+
+    return updatedLots;
+  }
+
+  Future<LotExpirationColor?> _getLotColorType(LotMaster lot) async {
+    try {
+      final color = await lotExpirationColorsBloc.getLotColorType(
+        lot.branch,
+        lot.itemNumber,
+        lot.dateExpiration,
+        lot.dateEffective,
+        lot.dateReceived,
+      );
+      return color;
+    } catch (e) {
+      print('Error calculating lot color: $e');
+      return null;
+    }
+  }
+
+  Future<void> _onCalculateLotColors(
+    CalculateLotColors event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    try {
+      final updatedItems = await _calculateColorsForLots(state.items);
+      final updatedFilteredItems = await _calculateColorsForLots(
+        state.filteredItems,
+      );
+
+      emit(
+        state.copyWith(
+          items: updatedItems,
+          filteredItems: updatedFilteredItems,
+        ),
+      );
+    } catch (e) {
+      print('Error calculating lot colors: $e');
+    }
+  }
+
+  // Add temp color calculation to existing methods
+  Future<void> _onCalculateLotStatus(
+    CalculateLotStatus event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    try {
+      final lotStatus = await _calculateLotStatus(
+        event.item,
+        event.lotTypeUdcDetail,
+      );
+      final updatedItem = event.item.copyWith(lotStatus: lotStatus);
+
+      // Also recalculate color when status changes
+      final colorType = await _getLotColorType(updatedItem);
+      updatedItem.tempColorType = colorType;
+
+      // Update the selected item in state
+      if (state.selected?.id == event.item.id) {
+        emit(state.copyWith(selected: updatedItem));
+      }
+
+      // Update in items list
+      final updatedItems = state.items.map((item) {
+        if (item.id == event.item.id) {
+          return updatedItem;
+        }
+        return item;
+      }).toList();
+
+      final updatedFilteredItems = state.filteredItems.map((item) {
+        if (item.id == event.item.id) {
+          return updatedItem;
+        }
+        return item;
+      }).toList();
+
+      emit(
+        state.copyWith(
+          items: updatedItems,
+          filteredItems: updatedFilteredItems,
+        ),
+      );
+    } catch (e) {
+      print('Error calculating lot status: $e');
+    }
+  }
+
+  // ... REST OF YOUR EXISTING LOT MASTER BLOC METHODS REMAIN THE SAME
+  // _onFilterLots, _onResetFilter, _onSearchLotMasters, _onSaveLot, etc.
+  // Only adding the color-related methods above
+
+  // Helper method to get color for UI
+  Future<LotExpirationColor?> getLotColorTypeForUI(LotMaster lot) async {
+    // If we already calculated it, use the temp value
+    if (lot.tempColorType != null) {
+      return lot.tempColorType;
+    }
+    // Otherwise calculate it fresh
+    return await _getLotColorType(lot);
   }
 
   Future<void> _onFilterLots(
@@ -151,7 +266,8 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
                i.item_description as item_description,
                b.description as branch_name,
                loc.location_description,
-               ls.detail_description as status_description
+               ls.detail_code as status_code,
+               ls.description_1 as status_description
         FROM lot_master lm
         LEFT JOIN items_table i ON lm.item_number = i.id
         LEFT JOIN branch_table b ON lm.branch = b.id
@@ -162,10 +278,11 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
       ''', whereArgs);
 
       final filteredList = lots.map((p) => LotMaster.fromMap(p)).toList();
+      final lotsWithColors = await _calculateColorsForLots(filteredList);
 
       emit(
         state.copyWith(
-          filteredItems: filteredList,
+          filteredItems: lotsWithColors,
           filterItemId: event.itemId,
           filterExpStart: event.expStart,
           filterExpEnd: event.expEnd,
@@ -383,9 +500,9 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
 
     DateTime? targetDate;
 
-    if (lotType == 'X') {
+    if (lotType == 'E') {
       targetDate = item.dateExpiration;
-    } else if (lotType == 'F') {
+    } else if (lotType == 'A') {
       targetDate = item.dateEffective;
     } else if (lotType == 'R') {
       targetDate = item.dateReceived;
@@ -428,29 +545,14 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
         updatedItems.add(updatedLot);
       }
 
-      emit(state.copyWith(items: updatedItems, filteredItems: updatedItems));
+      // After status updates, recompute colors so UI has fresh tempColorType
+      final itemsWithColors = await _calculateColorsForLots(updatedItems);
+
+      emit(
+        state.copyWith(items: itemsWithColors, filteredItems: itemsWithColors),
+      );
     } catch (e) {
       print('Error recalculating all lot status: $e');
-    }
-  }
-
-  Future<void> _onCalculateLotStatus(
-    CalculateLotStatus event,
-    Emitter<LotMasterState> emit,
-  ) async {
-    try {
-      final lotStatus = await _calculateLotStatus(
-        event.item,
-        event.lotTypeUdcDetail,
-      );
-      final updatedItem = event.item.copyWith(lotStatus: lotStatus);
-
-      // Update the selected item in state
-      if (state.selected?.id == event.item.id) {
-        emit(state.copyWith(selected: updatedItem));
-      }
-    } catch (e) {
-      print('Error calculating lot status: $e');
     }
   }
 
