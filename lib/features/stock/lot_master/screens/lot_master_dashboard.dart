@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
+import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/di/injection_container.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
@@ -15,6 +16,7 @@ import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart'
     hide ClearSelection;
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_event.dart';
+import 'package:savvy_stock/features/stock/lot_coloring/bloc/lot_coloring_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/model/lot_coloring_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_event.dart';
@@ -65,6 +67,11 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     //   Set up animations
     _setupAnimations();
 
+    // Load system constants
+    context.read<SystemConstantBloc>().add(
+      LoadSystemConstants(widget.authBloc.state.companyId!),
+    );
+
     context.read<LotMasterBloc>().add(
       LoadLotMasters(widget.authBloc.state.companyId!),
     );
@@ -78,6 +85,15 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     context.read<LocationMasterBloc>().add(
       LoadLocationMasters(widget.authBloc.state.companyId!),
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _debugSystemConstants();
+      _debugSystemConstantBloc();
+      if (context.read<LotMasterBloc>().state.items.isNotEmpty) {
+        _debugLotColorCalculation(
+          context.read<LotMasterBloc>().state.items.first,
+        );
+      }
+    });
   }
 
   void _setupAnimations() {
@@ -326,12 +342,15 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
   }
 
   Color _getColorFromType(LotExpirationColor? color) {
-    if (color == null) return Colors.transparent;
-    if ((color.colorTypeCode == null || color.colorTypeCode!.isEmpty) &&
-        (color.colorTypeName == null || color.colorTypeName!.isEmpty)) {
-      return Colors.transparent;
-    }
-    switch (color.colorTypeCode?.toUpperCase()) {
+    if (color == null) return Colors.grey.shade200;
+
+    final code = (color.colorTypeCode ?? '').trim().toUpperCase();
+    final name = (color.colorTypeName ?? '').trim().toLowerCase();
+
+    print('🎨 Color Mapping - Code: $code, Name: $name');
+
+    // Map based on your UDC data
+    switch (code) {
       case 'RED':
         return Colors.red;
       case 'BLU':
@@ -342,32 +361,121 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
         return Colors.black;
       case 'YEL':
       case 'YLW':
-        return Colors.yellow.shade700;
+        return Colors.yellow;
       case 'ORG':
         return Colors.orange;
-      case 'PRP':
-      case 'PUR':
-        return Colors.purple;
       case 'GRY':
-      case 'GRE':
         return Colors.grey;
-      case 'BRN':
-        return Colors.brown;
+      case 'OV':
+        return const Color.fromARGB(255, 14, 90, 4);
+
       default:
-        // Fallback: infer from colorTypeName text
-        final name = color.colorTypeName?.toLowerCase() ?? '';
+        // Fallback to name matching
         if (name.contains('red')) return Colors.red;
         if (name.contains('blue')) return Colors.blue;
         if (name.contains('green')) return Colors.green;
-        if (name.contains('black')) return Colors.black;
-        if (name.contains('yellow')) return Colors.yellow.shade700;
+        if (name.contains('yellow')) return Colors.yellow;
         if (name.contains('orange')) return Colors.orange;
-        if (name.contains('purple') || name.contains('violet')) return Colors.purple;
-        if (name.contains('brown')) return Colors.brown;
-        if (name.contains('grey') || name.contains('gray')) return Colors.grey;
-        return Colors.grey;
+        if (name.contains('black')) return Colors.black;
+
+        return Colors.grey.shade200;
     }
   }
+
+  void _debugLotColorCalculation(LotMaster lot) async {
+    final systemConstant = context.read<SystemConstantBloc>().state.selected;
+    final lotTypeUdcDetail = await _udcRepository.getUdcDetailById(
+      systemConstant?.lotType,
+    );
+    final lotType = lotTypeUdcDetail?.detailCode.toUpperCase();
+
+    final color = await context.read<LotExpirationColorsBloc>().getLotColorType(
+      lot.branch,
+      lot.itemNumber,
+      lot.dateExpiration,
+      lot.dateEffective,
+      lot.dateReceived,
+    );
+
+    // Use the method from LotExpirationColorsBloc
+    final daysDifference = context
+        .read<LotExpirationColorsBloc>()
+        .calculateDaysDifference(
+          lot.dateExpiration,
+          lot.dateEffective,
+          lot.dateReceived,
+          lotType,
+        );
+
+    print('''
+🎯 DEBUG LOT COLOR CALCULATION:
+  Lot: ${lot.lotNumber}
+  Lot Type: $lotType (${lotTypeUdcDetail?.description1})
+  Branch: ${lot.branch}
+  Item: ${lot.itemNumber}
+  Expiration: ${lot.dateExpiration}
+  Effective: ${lot.dateEffective} 
+  Received: ${lot.dateReceived}
+  Calculated Color: ${color?.colorTypeName} (${color?.colorTypeCode})
+  Days Difference: $daysDifference
+''');
+  }
+
+  void _debugSystemConstants() async {
+    try {
+      final systemConstant = context.read<SystemConstantBloc>().state.selected;
+      print('''
+🔧 SYSTEM CONSTANT DEBUG:
+  Company ID: ${widget.authBloc.state.companyId}
+  System Constant ID: ${systemConstant?.id}
+  Lot Type ID: ${systemConstant?.lotType}
+  Apply Lot Mgmt: ${systemConstant?.applyLotMgm}
+  Is Synced: ${systemConstant?.isSynced}
+''');
+
+      if (systemConstant?.lotType != null) {
+        final lotTypeUdc = await _udcRepository.getUdcDetailById(
+          systemConstant?.lotType,
+        );
+        print(
+          '  Lot Type UDC: ${lotTypeUdc?.detailCode} - ${lotTypeUdc?.description1}',
+        );
+      } else {
+        print('  ❌ Lot Type is NULL in system constant');
+
+        // Check if system constant is loaded at all
+        final systemConstantState = context.read<SystemConstantBloc>().state;
+        print(
+          '  System Constant State: ${systemConstantState.systemConstants.length} constants loaded',
+        );
+        print(
+          '  Selected System Constant: ${systemConstantState.selected?.toJson()}',
+        );
+      }
+    } catch (e) {
+      print('❌ Error debugging system constants: $e');
+    }
+  }
+
+  // Call this in your initState or build method
+  // WidgetsBinding.instance.addPostFrameCallback((_) => _debugSystemConstants());
+  void _debugSystemConstantBloc() {
+    final systemConstantState = context.read<SystemConstantBloc>().state;
+    final systemConstant = systemConstantState.selected;
+
+    print('''
+🔍 SYSTEM CONSTANT BLOC STATE DEBUG:
+  Status: ${systemConstantState.status}
+  Constants Loaded: ${systemConstantState.systemConstants.length}
+  Selected Constant: ${systemConstant?.id}
+  Selected Lot Type: ${systemConstant?.lotType}
+  Has Selected: ${systemConstantState.selected != null}
+  State: ${systemConstantState.toString()}
+''');
+  }
+
+  // Call this in your build method
+  // WidgetsBinding.instance.addPostFrameCallback((_) => _debugSystemConstantBloc());
 
   @override
   Widget build(BuildContext context) {
@@ -390,16 +498,17 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
             });
           }
         },
+
         builder: (context, state) {
           return Stack(
             children: [
               Column(
                 children: [
-                  //  Search Bar
+                  // Search Bar
                   _buildSearchBar(),
                   _buildActionButtons(state),
 
-                  //Lot List
+                  // Lot List
                   Expanded(child: _buildLotList(state)),
                 ],
               ),
@@ -549,7 +658,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
             const Icon(Icons.error_outline, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
             Text(
-              state.message ?? 'Failed to load lots',
+              state.message.isNotEmpty ? state.message : 'Failed to load lots',
               style: const TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 16),
@@ -786,9 +895,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                                   decoration: BoxDecoration(
                                     color: Colors.blue.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: Colors.blue.withOpacity(0.3),
-                                    ),
+                                    border: Border.all(color: Colors.blue),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -820,9 +927,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                                   decoration: BoxDecoration(
                                     color: Colors.blue.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: Colors.blue.withOpacity(0.3),
-                                    ),
+                                    border: Border.all(color: Colors.blue),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -861,9 +966,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                           decoration: BoxDecoration(
                             color: Colors.blue.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.blue.withOpacity(0.3),
-                            ),
+                            border: Border.all(color: Colors.blue),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,

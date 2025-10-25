@@ -339,8 +339,9 @@ class _LotExpirationColorsDashboardState
   }
 
   Color _getColorFromType(LotExpirationColor color) {
-    if (color.colorTypeCode == null && color.colorTypeName!.isEmpty)
+    if (color.colorTypeCode == null && color.colorTypeName!.isEmpty) {
       return Colors.transparent;
+    }
     switch (color.colorTypeCode?.toUpperCase()) {
       case 'RED':
         return Colors.red;

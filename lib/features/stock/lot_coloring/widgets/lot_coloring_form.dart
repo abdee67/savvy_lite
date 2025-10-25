@@ -74,6 +74,67 @@ class _LotExpirationColorsFormPageState
     }
   }
 
+  void _suggestNextRange() {
+    // Determine existing ranges for selected level/scope
+    final bloc = context.read<LotExpirationColorsBloc>();
+    final existing = bloc.state.items.where((i) {
+      if (i.lotExpLevel != _selectedLevel) return false;
+      switch (_selectedLevel) {
+        case '1':
+          return i.branch == null && i.itemNumber == null;
+        case '2':
+          return i.branch == _selectedBranch && i.itemNumber == null;
+        case '3':
+          return i.itemNumber == _selectedItem && i.branch == null;
+        case '4':
+          return i.branch == _selectedBranch && i.itemNumber == _selectedItem;
+        default:
+          return false;
+      }
+    }).toList();
+
+    int suggestedMax;
+    if (existing.isEmpty) {
+      // No existing ranges: default suggestion
+      suggestedMax = 9999;
+    } else {
+      // Find the smallest daysMinimum among existing ranges and suggest its - 1
+      final mins = existing.map((e) => e.daysMinimum ?? 0).toList();
+      final minOfMins = mins.reduce((v, e) => v < e ? v : e);
+      suggestedMax = minOfMins - 1;
+    }
+
+    // If there's an existing empty range (missing min or max), fill its max with suggestion
+    final idxToFill = _colorRanges.indexWhere((r) => r.daysMaximum == null || r.daysMinimum == null);
+    if (idxToFill != -1) {
+      setState(() {
+        final r = _colorRanges[idxToFill];
+        r.daysMaximum = suggestedMax;
+        // keep daysMinimum as-is (user should fill it if missing)
+      });
+    } else {
+      // Create a new pre-filled range with suggested max; user can adjust min/type
+      setState(() {
+        _colorRanges.add(LotExpirationColor(
+          tempId: DateTime.now().millisecondsSinceEpoch,
+          company: widget.authBloc.state.companyId!,
+          daysMinimum: null,
+          daysMaximum: suggestedMax,
+          colorType: null,
+          description: '',
+          activeForSalesFlag: 'Y',
+        ));
+      });
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Suggested max days: $suggestedMax (you can edit before saving)'),
+        backgroundColor: Colors.blue,
+      ),
+    );
+  }
+
   void _onBranchChanged(int? branchId) {
     setState(() {
       _selectedBranch = branchId;
@@ -138,6 +199,66 @@ class _LotExpirationColorsFormPageState
     }
 
     final bloc = context.read<LotExpirationColorsBloc>();
+
+    // Before saving validate that the ranges across this level/scope are consecutive
+    // Combine existing ranges in DB for this level/scope with the ranges being saved now
+    final existing = bloc.state.items.where((i) {
+      if (i.lotExpLevel != _selectedLevel) return false;
+      switch (_selectedLevel) {
+        case '1':
+          return i.branch == null && i.itemNumber == null;
+        case '2':
+          return i.branch == _selectedBranch && i.itemNumber == null;
+        case '3':
+          return i.itemNumber == _selectedItem && i.branch == null;
+        case '4':
+          return i.branch == _selectedBranch && i.itemNumber == _selectedItem;
+        default:
+          return false;
+      }
+    }).toList();
+
+    final combined = <LotExpirationColor>[];
+    combined.addAll(existing);
+    // Add copies of new ranges so tempId differs
+    combined.addAll(_colorRanges.map((c) => c.copyWith()));
+
+    bool validateAdjacency(List<LotExpirationColor> colors) {
+      if (colors.length <= 1) return true;
+
+      final sortedByMaxDesc = List<LotExpirationColor>.from(colors)
+        ..sort((a, b) => (b.daysMaximum ?? 0).compareTo(a.daysMaximum ?? 0));
+
+      for (int i = 0; i < sortedByMaxDesc.length - 1; i++) {
+        final prev = sortedByMaxDesc[i];
+        final next = sortedByMaxDesc[i + 1];
+
+        final prevMin = prev.daysMinimum;
+        final nextMax = next.daysMaximum;
+
+        if (prevMin == null || nextMax == null) return false;
+
+        // Overlap check
+        if (prev.daysMaximum != null && next.daysMinimum != null) {
+          if (prev.daysMaximum! >= next.daysMinimum!) return false;
+        }
+
+        // Enforce adjacency
+        if (nextMax != prevMin - 1) return false;
+      }
+
+      return true;
+    }
+
+    if (!validateAdjacency(combined)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ranges must be consecutive and non-overlapping for the selected level/scope'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     for (final c in _colorRanges) {
       final newColor = c.copyWith(
@@ -311,6 +432,22 @@ class _LotExpirationColorsFormPageState
             children: [
               Expanded(
                 child: CustomTextField(
+                  labelText: 'Max Days *',
+                  keyboardType: TextInputType.number,
+                  value: range.daysMaximum?.toString() ?? '',
+                  onChanged: (v) => range.daysMaximum = int.tryParse(v),
+                  validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                  suffixIcon:  IconButton(
+            icon: const Icon(Iconsax.radar),
+            onPressed: _suggestNextRange,
+            tooltip: 'Suggest Next',
+            color: Color(0xFF155888),
+          ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: CustomTextField(
                   labelText: 'Min Days *',
                   keyboardType: TextInputType.number,
                   value: range.daysMinimum?.toString() ?? '',
@@ -318,16 +455,7 @@ class _LotExpirationColorsFormPageState
                   validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: CustomTextField(
-                  labelText: 'Max Days *',
-                  keyboardType: TextInputType.number,
-                  value: range.daysMaximum?.toString() ?? '',
-                  onChanged: (v) => range.daysMaximum = int.tryParse(v),
-                  validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                ),
-              ),
+              
             ],
           ),
           const SizedBox(height: 12),
@@ -369,6 +497,12 @@ class _LotExpirationColorsFormPageState
                   ),
                   const Text('Active'),
                 ],
+              ),
+
+              IconButton(
+                icon: const Icon(Iconsax.trash, size: 20, color: Colors.red),
+                onPressed: () => _removeRange(range),
+                tooltip: 'Remove range',
               ),
             ],
           ),

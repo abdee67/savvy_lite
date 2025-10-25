@@ -37,24 +37,24 @@ class UdcRepository {
     }
   }
 
-  Future<UdcDetails?> getUdcDetailById(int? id) async {
-    if (id == null) return null;
-    try {
-      final db = await localDatabaseService.database;
-      final result = await db.rawQuery(
-        '''
+Future<UdcDetails?> getUdcDetailById(int? id) async {
+  if (id == null) return null;
+  try {
+    final db = await localDatabaseService.database;
+    final result = await db.rawQuery(
+      '''
       SELECT * FROM udc_details 
       WHERE id = ?
     ''',
-        [id],
-      );
+      [id],
+    );
 
-      return result.isNotEmpty ? UdcDetails.fromJson(result.first) : null;
-    } catch (e) {
-      developer.log('Error getting local UDC detail: $e');
-      return null;
-    }
+    return result.isNotEmpty ? UdcDetails.fromJson(result.first) : null;
+  } catch (e) {
+    developer.log('Error getting local UDC detail: $e');
+    return null;
   }
+}
 
   // Local database operations
   Future<List<UdcDetails>> getLocalUdcDetailsByCode(
