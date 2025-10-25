@@ -79,12 +79,15 @@ class SystemConstantBloc
       emit(
         state.copyWith(
           status: SystemConstantStatus.success,
-          systemConstants: allConstants,
+          systemConstants: [companyConstants],
+          selected: companyConstants,
           errorMessage: null,
           unsyncedCount: unSyncedCount,
         ),
       );
+           print('✅ SystemConstantBloc: State updated with lot_type: ${companyConstants.lotType}');
     } catch (e) {
+      developer.log('Error loading system constants: $e');
       emit(
         state.copyWith(
           status: SystemConstantStatus.failure,
