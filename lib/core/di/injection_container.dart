@@ -83,7 +83,9 @@ void initDependencies() {
   );
 
   // BLoCs
-  getIt.registerFactory<SystemConstantBloc>(
+  // System constants should be shared across the app. Register as a singleton so
+  // all blocs/services that depend on it use the same instance.
+  getIt.registerLazySingleton<SystemConstantBloc>(
     () => SystemConstantBloc(
       systemConstantRepository: getIt(),
       authBloc: getIt(),

@@ -56,7 +56,7 @@ Future<void> _initializeAndRunApp() async {
       developer.log('💾 Using local database only');
     }
     // Debug database tables (optional - remove in production)
-    await LocalDatabaseService().debugTable('lot_expiration_colors');
+    await LocalDatabaseService().debugTable('udc_header');
   } catch (error, stackTrace) {
     developer.log('Initialization error: $error');
     developer.log('Stack trace: $stackTrace');
@@ -95,6 +95,19 @@ class _SavvyStockState extends State<SavvyStock> {
     _nextNumberBloc = getIt<NextNumberBloc>();
     _systemConstantBloc = getIt<SystemConstantBloc>();
     _lotExpirationColorsBloc = getIt<LotExpirationColorsBloc>();
+    // Ensure system constants are loaded when companyId becomes available.
+    final cid = _authBloc.state.companyId;
+    if (cid != null) {
+      _systemConstantBloc.add(LoadSystemConstants(cid));
+    } else {
+      // Listen once for the companyId and load constants when available.
+      _authBloc.stream.listen((s) {
+        if (s.companyId != null) {
+          _systemConstantBloc.add(LoadSystemConstants(s.companyId!));
+        }
+      });
+    }
+
     _initializeApp();
   }
 
@@ -208,12 +221,11 @@ class _SavvyStockState extends State<SavvyStock> {
             create: (context) => PaymentBloc(getIt<SystemConstantsService>()),
           ),
           BlocProvider<InvoiceBloc>(create: (context) => InvoiceBloc()),
-          BlocProvider<SystemConstantBloc>(
-            create: (context) => SystemConstantBloc(
-              systemConstantRepository: getIt<SystemConstantRepository>(),
-              authBloc: _authBloc,
-              systemConstantService: getIt<SystemConstantsService>(),
-            )..add(LoadSystemConstants(_authBloc.state.companyId!)),
+          // Use the singleton from the DI container so everyone shares the same
+          // SystemConstantBloc instance (prevents multiple instances with
+          // differing states which broke color calculation).
+          BlocProvider<SystemConstantBloc>.value(
+            value: getIt<SystemConstantBloc>(),
           ),
           BlocProvider<BranchBloc>(
             create: (context) =>
