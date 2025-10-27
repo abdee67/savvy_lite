@@ -359,8 +359,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
         return Colors.green;
       case 'BLK':
         return Colors.black;
-      case 'YEL':
-      case 'YLW':
+      case 'YL':
         return Colors.yellow;
       case 'ORG':
         return Colors.orange;
@@ -368,6 +367,11 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
         return Colors.grey;
       case 'OV':
         return const Color.fromARGB(255, 14, 90, 4);
+      case 'PRPL':
+        return Colors.purple;
+      case 'LM':
+        return Colors.lime;
+      
 
       default:
         // Fallback to name matching

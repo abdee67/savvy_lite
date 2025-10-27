@@ -238,10 +238,7 @@ class _LotExpirationColorsFormPageState
 
         if (prevMin == null || nextMax == null) return false;
 
-        // Overlap check
-        if (prev.daysMaximum != null && next.daysMinimum != null) {
-          if (prev.daysMaximum! >= next.daysMinimum!) return false;
-        }
+        
 
         // Enforce adjacency
         if (nextMax != prevMin - 1) return false;

@@ -699,7 +699,7 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
                       udcState.details.where((d) => d.id == lotTypeId);
                   if (matches.isNotEmpty) lotTypeUdc = matches.first;
                 }
-                final lotTypeCode = lotTypeUdc?.detailCode?.toUpperCase();
+                final lotTypeCode = lotTypeUdc?.detailCode.toUpperCase();
 
                 // If lot type is Effective (F) -> show only Effective Date
                 if (lotTypeCode == 'F') {

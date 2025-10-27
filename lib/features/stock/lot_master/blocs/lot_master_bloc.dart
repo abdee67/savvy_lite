@@ -108,7 +108,7 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
           companyId: authBloc.state.companyId,
         ),
       );
-      
+
       // Debug system constants
       await _debugSystemConstants();
     } catch (e) {
@@ -121,10 +121,10 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
     }
   }
 
-Future<void> _debugSystemConstants() async {
-  try {
-    final systemConstant = systemConstantBloc.state.selected;
-    print('''
+  Future<void> _debugSystemConstants() async {
+    try {
+      final systemConstant = systemConstantBloc.state.selected;
+      print('''
 🔧 SYSTEM CONSTANT DEBUG:
   Company ID: ${authBloc.state.companyId}
   System Constant ID: ${systemConstant?.id}
@@ -133,19 +133,21 @@ Future<void> _debugSystemConstants() async {
   Is Synced: ${systemConstant?.isSynced}
 ''');
 
-    if (systemConstant?.lotType != null) {
-      final lotTypeUdc = await _getLotTypeUdcDetail(systemConstant?.lotType);
-      print('  Lot Type UDC: ${lotTypeUdc?.detailCode} - ${lotTypeUdc?.description1}');
-    } else {
-      print('  ❌ Lot Type is NULL in system constant');
+      if (systemConstant?.lotType != null) {
+        final lotTypeUdc = await _getLotTypeUdcDetail(systemConstant?.lotType);
+        print(
+          '  Lot Type UDC: ${lotTypeUdc?.detailCode} - ${lotTypeUdc?.description1}',
+        );
+      } else {
+        print('  ❌ Lot Type is NULL in system constant');
+      }
+    } catch (e) {
+      print('❌ Error debugging system constants: $e');
     }
-  } catch (e) {
-    print('❌ Error debugging system constants: $e');
   }
-}
 
-// Call this in your _onLoadLots method
-// await _debugSystemConstants();
+  // Call this in your _onLoadLots method
+  // await _debugSystemConstants();
 
   Future<List<LotMaster>> _calculateColorsForLots(List<LotMaster> lots) async {
     final updatedLots = <LotMaster>[];
@@ -397,7 +399,9 @@ Future<void> _debugSystemConstants() async {
       }
 
       // Calculate lot status only when Apply Lot Management is enabled
-      final lotStatus = applyLot ? await _calculateLotStatus(event.item, lotTypeUdc) : null;
+      final lotStatus = applyLot
+          ? await _calculateLotStatus(event.item, lotTypeUdc)
+          : null;
       final itemWithStatus = event.item.copyWith(lotStatus: lotStatus);
 
       final db = await databaseService.database;
@@ -421,6 +425,9 @@ Future<void> _debugSystemConstants() async {
           itemWithStatus.quantityAvailable!,
         );
       }
+      print(
+        'item transaction and other tables are updated: ${itemWithStatus.quantityAvailable}',
+      );
 
       // For create flow, we've already inserted. If inventory update wasn't applicable,
       // we still return success without attempting an update branch that expects an id.
@@ -476,10 +483,12 @@ Future<void> _debugSystemConstants() async {
 
       final previousQty = previousLot?.quantityAvailable ?? 0.0;
 
-  // Calculate lot status only when lot management is enabled
-  final applyLot = systemConstant?.applyLotMgmBoolean == true;
-  final lotStatus = applyLot ? await _calculateLotStatus(event.item, lotTypeUdcDetail) : null;
-  final itemWithStatus = event.item.copyWith(lotStatus: lotStatus);
+      // Calculate lot status only when lot management is enabled
+      final applyLot = systemConstant?.applyLotMgmBoolean == true;
+      final lotStatus = applyLot
+          ? await _calculateLotStatus(event.item, lotTypeUdcDetail)
+          : null;
+      final itemWithStatus = event.item.copyWith(lotStatus: lotStatus);
 
       final itemMap = _applySettings(itemWithStatus, true).toMap();
 
@@ -521,17 +530,17 @@ Future<void> _debugSystemConstants() async {
     }
   }
 
-bool _validateLotDates(LotMaster item, String? lotType) {
-  // FIXED: Use correct lot type codes
-  if (lotType == null || lotType.toUpperCase() == 'X') {
-    return item.dateExpiration != null;
-  } else if (lotType.toUpperCase() == 'F') {
-    return item.dateEffective != null;
-  } else if (lotType.toUpperCase() == 'R') {
-    return item.dateReceived != null;
+  bool _validateLotDates(LotMaster item, String? lotType) {
+    // FIXED: Use correct lot type codes
+    if (lotType == null || lotType.toUpperCase() == 'X') {
+      return item.dateExpiration != null;
+    } else if (lotType.toUpperCase() == 'F') {
+      return item.dateEffective != null;
+    } else if (lotType.toUpperCase() == 'R') {
+      return item.dateReceived != null;
+    }
+    return false;
   }
-  return false;
-}
 
   Future<int?> _calculateLotStatus(
     LotMaster item,
@@ -706,34 +715,34 @@ bool _validateLotDates(LotMaster item, String? lotType) {
     await db.insert('item_transactions', itemTransactionMap);
   }
 
-  Future<String> _generateLotNumber() async {
+  Future<int> _generateLotNumber() async {
     // Use the NextNumberBloc to generate formatted lot number
     return await nextNumberBloc.generateFormattedNumber('LM');
   }
 
- Future<int?> getUdcDetailId(String headerCode, String detailCode) async {
-  try {
-    final db = await databaseService.database;
-    final result = await db.rawQuery(
-      '''
+  Future<int?> getUdcDetailId(String headerCode, String detailCode) async {
+    try {
+      final db = await databaseService.database;
+      final result = await db.rawQuery(
+        '''
       SELECT ud.id FROM udc_details ud
       JOIN udc_header uh ON ud.record_header = uh.id
-      WHERE uh.header_code = ? AND ud.detail_code = ? AND ud.company = ?
+      WHERE uh.header_code = ? AND ud.detail_code = ?
       ''',
-      [headerCode, detailCode, authBloc.state.companyId],
-    );
+        [headerCode, detailCode],
+      );
 
-    if (result.isNotEmpty) {
-      return result.first['id'] as int?;
+      if (result.isNotEmpty) {
+        return result.first['id'] as int?;
+      }
+
+      print('❌ No UDC found for header: $headerCode, detail: $detailCode');
+      return null;
+    } catch (e) {
+      print('❌ Error getting UDC detail ID: $e');
+      return null;
     }
-    
-    print('❌ No UDC found for header: $headerCode, detail: $detailCode');
-    return null;
-  } catch (e) {
-    print('❌ Error getting UDC detail ID: $e');
-    return null;
   }
-}
 
   Future<UdcDetails?> getUdcDetailById(int? id) async {
     if (id == null) return null;
@@ -766,7 +775,7 @@ bool _validateLotDates(LotMaster item, String? lotType) {
       final lotNumber = await _generateLotNumber();
       emit(
         state.copyWith(
-          selected: state.selected?.copyWith(lotNumber: int.parse(lotNumber)),
+          selected: state.selected?.copyWith(lotNumber: lotNumber),
         ),
       );
     } catch (e) {
@@ -786,7 +795,7 @@ bool _validateLotDates(LotMaster item, String? lotType) {
       final createItems = <LotMaster>[];
       final selected = LotMaster(
         company: event.companyId,
-        lotNumber: int.parse(lotNumber),
+        lotNumber: lotNumber,
       );
 
       createItems.add(selected);
@@ -852,7 +861,7 @@ bool _validateLotDates(LotMaster item, String? lotType) {
       final quantity = factor * (por.quantityRecieved! ?? 0.0);
 
       final newLot = LotMaster(
-        lotNumber: int.parse(lotNumber),
+        lotNumber: lotNumber,
         company: authBloc.state.companyId,
         branch: por.branchRecieved!,
         itemNumber: por.itemNumber!,
@@ -905,20 +914,20 @@ bool _validateLotDates(LotMaster item, String? lotType) {
     }
   }
 
-bool _validatePurchaseOrderDates(
-  PurchaseOrderReceiverModel por,
-  String? lotType,
-) {
-  // FIXED: Use correct lot type codes
-  if (lotType == null || lotType.toUpperCase() == 'X') {
-    return por.dateExpiration != null;
-  } else if (lotType.toUpperCase() == 'F') {
-    return por.dateEffective != null;
-  } else if (lotType.toUpperCase() == 'R') {
-    return por.dateReceived != null;
+  bool _validatePurchaseOrderDates(
+    PurchaseOrderReceiverModel por,
+    String? lotType,
+  ) {
+    // FIXED: Use correct lot type codes
+    if (lotType == null || lotType.toUpperCase() == 'X') {
+      return por.dateExpiration != null;
+    } else if (lotType.toUpperCase() == 'F') {
+      return por.dateEffective != null;
+    } else if (lotType.toUpperCase() == 'R') {
+      return por.dateReceived != null;
+    }
+    return false;
   }
-  return false;
-}
 
   Future<int?> _getItemBranchUoM(int itemNumber, int branch) async {
     final db = await databaseService.database;
