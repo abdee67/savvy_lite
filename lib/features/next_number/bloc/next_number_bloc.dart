@@ -422,9 +422,9 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
   }
 
   // Public method to generate formatted numbers (like "LM000001")
-  Future<String> generateFormattedNumber(String code) async {
+  Future<int> generateFormattedNumber(String code) async {
     final number = await _generateNumber(code);
-    return number.toString();
+    return number;
   }
 
   Future<int> _generateNumber(String code) async {
