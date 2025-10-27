@@ -173,7 +173,7 @@ class LotExpirationColorsBloc
       );
 
       final existingColors = existingForScope.map((m) => LotExpirationColor.fromMap(m)).toList();
-      final combined = <LotExpirationColor>[]..addAll(existingColors)..add(event.color);
+      final combined = <LotExpirationColor>[...existingColors, event.color];
       final rangesValid = await _validateRanges(combined);
       if (!rangesValid) {
         emit(state.copyWith(
@@ -601,10 +601,7 @@ class LotExpirationColorsBloc
       // Both ends must be present to validate adjacency
       if (prevMin == null || nextMax == null) return false;
 
-      // Check overlap (should not overlap)
-      if (prev.daysMaximum != null && next.daysMinimum != null) {
-        if (prev.daysMaximum! >= next.daysMinimum!) return false;
-      }
+   
 
       // Enforce consecutive boundary: nextMax == prevMin - 1
       if (nextMax != prevMin - 1) return false;

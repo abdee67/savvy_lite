@@ -338,12 +338,14 @@ class _LotExpirationColorsDashboardState
     }
   }
 
-  Color _getColorFromType(LotExpirationColor color) {
-    if (color.colorTypeCode == null && color.colorTypeName!.isEmpty) {
-      return Colors.transparent;
-    }
-    switch (color.colorTypeCode?.toUpperCase()) {
-      case 'RED':
+  Color _getColorFromType(LotExpirationColor? color) {
+    if (color == null) return Colors.grey.shade200;
+
+    final code = (color.colorTypeCode ?? '').trim().toUpperCase();
+    final name = (color.colorTypeName ?? '').trim().toLowerCase();
+
+    switch (code) {
+       case 'RED':
         return Colors.red;
       case 'BLU':
         return Colors.blue;
@@ -351,8 +353,30 @@ class _LotExpirationColorsDashboardState
         return Colors.green;
       case 'BLK':
         return Colors.black;
-      default:
+      case 'YL':
+        return Colors.yellow;
+      case 'ORG':
+        return Colors.orange;
+      case 'GRY':
         return Colors.grey;
+      case 'OV':
+        return const Color.fromARGB(255, 14, 90, 4);
+      case 'PRPL':
+        return Colors.purple;
+      case 'LM':
+        return Colors.lime;
+      
+
+      default:
+        // Fallback to name matching
+        if (name.contains('red')) return Colors.red;
+        if (name.contains('blue')) return Colors.blue;
+        if (name.contains('green')) return Colors.green;
+        if (name.contains('yellow')) return Colors.yellow;
+        if (name.contains('orange')) return Colors.orange;
+        if (name.contains('black')) return Colors.black;
+
+        return Colors.grey.shade200;
     }
   }
 
