@@ -235,7 +235,11 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
             );
           }
         },
-        child: Column(children: [_buildForm(), _buildBottomNavigation()]),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Column(children: [_buildForm(), _buildBottomNavigation()]),
+          ),
+        ),
       ),
     );
   }

@@ -729,6 +729,28 @@ CREATE INDEX idx_next_number_company ON next_number(company);
 ''');
     developer.log('Created table: next_number');
 
+    //25. create lot_coloring table
+    await db.execute('''
+  CREATE TABLE lot_expiration_colors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_number INTEGER,
+    branch INTEGER,
+    days_maximum INTEGER,
+    color_type INTEGER,
+    company INTEGER,
+    description TEXT,
+    days_minimum INTEGER,
+    active_for_sales_flag TEXT DEFAULT 'Y',
+    lot_exp_level TEXT,
+    FOREIGN KEY (item_number) REFERENCES items_table (id),
+    FOREIGN KEY (branch) REFERENCES branch_table (id),
+    FOREIGN KEY (color_type) REFERENCES udc_details (id),
+    FOREIGN KEY (company) REFERENCES company_table (id)
+  );
+  CREATE INDEX idx_lot_expiration_colors_company ON lot_expiration_colors(company);
+''');
+    developer.log('Created table: lot_expiration_colors');
+
     //. Create sync_queue table
     await db.execute('''
       CREATE TABLE sync_queue (
@@ -1020,6 +1042,102 @@ CREATE INDEX idx_next_number_company ON next_number(company);
         'record_header': 6,
         'udc_group': 'CT',
       },
+      {
+        'id': 371,
+        'detail_code': 'ORG',
+        'description_1': 'Orange',
+        'description_2': null,
+        'record_header': 6,
+        'udc_group': 'CT',
+      },
+      {
+        'id': 372,
+        'detail_code': 'GRY',
+        'description_1': 'Gray',
+        'description_2': null,
+        'record_header': 6,
+        'udc_group': 'CT',
+      },
+      {
+        'id': 374,
+        'detail_code': 'LM',
+        'description_1': 'Lime',
+        'description_2': null,
+        'record_header': 6,
+        'udc_group': 'CT',
+      },
+      {
+        'id': 375,
+        'detail_code': 'OV',
+        'description_1': 'Olive',
+        'description_2': null,
+        'record_header': 6,
+        'udc_group': 'CT',
+      },
+      {
+        'id': 376,
+        'detail_code': 'YL',
+        'description_1': 'Yellow',
+        'description_2': null,
+        'record_header': 6,
+        'udc_group': 'CT',
+      },
+      {
+        'id': 377,
+        'detail_code': 'PRPL',
+        'description_1': 'Purple',
+        'description_2': null,
+        'record_header': 6,
+        'udc_group': 'CT',
+      },
+      {
+        'id': 378,
+        'detail_code': 'FC',
+        'description_1': 'Fuchsia',
+        'description_2': null,
+        'record_header': 6,
+        'udc_group': 'CT',
+      },
+      {
+        'id': 379,
+        'detail_code': 'NV',
+        'description_1': 'Navy',
+        'description_2': null,
+        'record_header': 6,
+        'udc_group': 'CT',
+      },
+      {
+        'id': 381,
+        'detail_code': 'TL',
+        'description_1': 'Teal',
+        'description_2': null,
+        'record_header': 6,
+        'udc_group': 'CT',
+      },
+      {
+        'id': 382,
+        'detail_code': 'AQUA',
+        'description_1': 'Aqua',
+        'description_2': null,
+        'record_header': 6,
+        'udc_group': 'CT',
+      },
+      {
+        'id': 383,
+        'detail_code': 'BRW',
+        'description_1': 'Brown',
+        'description_2': null,
+        'record_header': 6,
+        'udc_group': 'CT',
+      },
+      {
+        'id': 384,
+        'detail_code': 'CH',
+        'description_1': 'Chartreuse',
+        'description_2': null,
+        'record_header': 6,
+        'udc_group': 'CT',
+      },
 
       // --- Lot Status (LS) ---
       {
@@ -1175,7 +1293,7 @@ CREATE INDEX idx_next_number_company ON next_number(company);
       // --- Lot Type (LT) ---
       {
         'id': 41,
-        'detail_code': 'EXP',
+        'detail_code': 'X',
         'description_1': 'Expiration Date',
         'description_2': 'Select items by expiration date',
         'record_header': 21,
@@ -1183,7 +1301,7 @@ CREATE INDEX idx_next_number_company ON next_number(company);
       },
       {
         'id': 42,
-        'detail_code': 'EFF',
+        'detail_code': 'F',
         'description_1': 'Effective Date',
         'description_2': 'Select items by effective date',
         'record_header': 21,
@@ -1191,7 +1309,7 @@ CREATE INDEX idx_next_number_company ON next_number(company);
       },
       {
         'id': 43,
-        'detail_code': 'REC',
+        'detail_code': 'R',
         'description_1': 'Receipt Date',
         'description_2': 'Select items by receipt date',
         'record_header': 21,

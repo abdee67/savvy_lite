@@ -84,12 +84,18 @@ class PrivilegeHierarchy {
     AppRoutes.locationMasterEdit: AppRoutes.locationEntry,
     AppRoutes.locationMasterDelete: AppRoutes.locationEntry,
 
+    //lot entry
     AppRoutes.lotEntry: AppRoutes.stockDashboard,
     AppRoutes.lotCreation: AppRoutes.lotEntry,
     AppRoutes.lotEdit: AppRoutes.lotEntry,
     AppRoutes.lotDelete: AppRoutes.lotEntry,
 
+    //lot coloring
     AppRoutes.lotColorings: AppRoutes.stockDashboard,
+    AppRoutes.lotColoringCreate: AppRoutes.lotColorings,
+    AppRoutes.lotColoringEdit: AppRoutes.lotColorings,
+    AppRoutes.lotColoringDelete: AppRoutes.lotColorings,
+
     AppRoutes.inventoryTransaction: AppRoutes.stockDashboard,
     AppRoutes.itemBranchEntry: AppRoutes.stockDashboard,
     AppRoutes.barcodeFunction: AppRoutes.stockDashboard,

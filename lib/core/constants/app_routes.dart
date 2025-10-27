@@ -106,6 +106,10 @@ class AppRoutes {
   static const String lotDelete = '$lotEntry/lot-delete';
 
   static const String lotColorings = '$stock/lot-colorings';
+  static const String lotColoringCreate = '$lotColorings/lot-coloring-create';
+  static const String lotColoringEdit = '$lotColorings/lot-coloring-edit';
+  static const String lotColoringDelete = '$lotColorings/lot-coloring-delete';
+
   static const String inventoryTransaction = '$stock/inventory-transaction';
   static const String itemBranchEntry = '$stock/item-branch-entry';
   static const String barcodeFunction = '$stock/barcode-function';

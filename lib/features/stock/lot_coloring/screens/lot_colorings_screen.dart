@@ -1,40 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dart';
-import 'package:savvy_stock/core/constants/app_routes.dart';
-import 'package:savvy_stock/core/di/injection_container.dart';
-import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/utils/ui_helper.dart';
+import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_event.dart'
     hide ClearSelection;
-import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
+import 'package:savvy_stock/features/branch_list/blocs/branch_list_state.dart';
+import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart'
     hide ClearSelection;
-import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_event.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/bloc/lot_coloring_bloc.dart';
+import 'package:savvy_stock/features/stock/lot_coloring/bloc/lot_coloring_event.dart';
+import 'package:savvy_stock/features/stock/lot_coloring/bloc/lot_coloring_state.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/model/lot_coloring_model.dart';
-import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_bloc.dart';
-import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_event.dart';
-import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_state.dart';
-import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
-import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
-import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_bloc.dart';
+import 'package:savvy_stock/features/stock/lot_coloring/widgets/lot_coloring_form.dart';
 
-class LotMasterDashboard extends StatefulWidget {
+import '../../item_entry/blocs/item_entry_state.dart';
+
+class LotExpirationColorsDashboard extends StatefulWidget {
   final AuthBloc authBloc;
-  const LotMasterDashboard({super.key, required this.authBloc});
+
+  const LotExpirationColorsDashboard({super.key, required this.authBloc});
 
   @override
-  State<LotMasterDashboard> createState() => _LotMasterDashboardState();
+  State<LotExpirationColorsDashboard> createState() =>
+      _LotExpirationColorsDashboardState();
 }
 
-class _LotMasterDashboardState extends State<LotMasterDashboard>
-    with SingleTickerProviderStateMixin {
+class _LotExpirationColorsDashboardState
+    extends State<LotExpirationColorsDashboard>
+    with TickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isSelectionMode = false;
@@ -47,12 +44,14 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
   late Animation<Offset> _slideAnimation;
 
   //  Detail panel state
-  LotMaster? _selectedLot;
-  final List<LotMaster> _selectedLots = [];
-  bool _lotDetail = false;
+  LotExpirationColor? _selectedColor;
+  final List<LotExpirationColor> _selectedColors = [];
+  bool _colorDetail = false;
 
-  final List<Branch> _branches = [];
-  final UdcRepository _udcRepository = getIt<UdcRepository>();
+  // Level selection
+  String? _selectedLevel;
+  int? _selectedBranch;
+  int? _selectedItem;
 
   @override
   void initState() {
@@ -67,33 +66,16 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     //   Set up animations
     _setupAnimations();
 
-    // Load system constants
-    context.read<SystemConstantBloc>().add(
-      LoadSystemConstants(widget.authBloc.state.companyId!),
-    );
-
-    context.read<LotMasterBloc>().add(
-      LoadLotMasters(widget.authBloc.state.companyId!),
-    );
-    context.read<LotMasterBloc>().add(ClaculateMultipleLotStatus());
+    // Load initial data
     context.read<BranchBloc>().add(
       LoadBranchs(widget.authBloc.state.companyId!),
     );
     context.read<StockItemEntryBloc>().add(
       LoadItems(widget.authBloc.state.companyId!),
     );
-    context.read<LocationMasterBloc>().add(
-      LoadLocationMasters(widget.authBloc.state.companyId!),
+    context.read<LotExpirationColorsBloc>().add(
+      LoadLotExpirationColors(widget.authBloc.state.companyId!),
     );
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _debugSystemConstants();
-      _debugSystemConstantBloc();
-      if (context.read<LotMasterBloc>().state.items.isNotEmpty) {
-        _debugLotColorCalculation(
-          context.read<LotMasterBloc>().state.items.first,
-        );
-      }
-    });
   }
 
   void _setupAnimations() {
@@ -120,32 +102,61 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
         );
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _scrollController.dispose();
-    _detailAnimationController.dispose();
-    super.dispose();
+  void _onLevelChanged(String? level) {
+    setState(() {
+      _selectedLevel = level;
+      _selectedBranch = null;
+      _selectedItem = null;
+    });
+
+    _applyFilters();
+  }
+
+  void _onBranchChanged(int? branchId) {
+    setState(() {
+      _selectedBranch = branchId;
+    });
+    _applyFilters();
+  }
+
+  void _onItemChanged(int? itemId) {
+    setState(() {
+      _selectedItem = itemId;
+    });
+    _applyFilters();
+  }
+
+  void _applyFilters() {
+    context.read<LotExpirationColorsBloc>().add(
+      FilterLotExpirationColors(
+        level: _selectedLevel,
+        branchId: _selectedBranch,
+        itemId: _selectedItem,
+      ),
+    );
   }
 
   void _handleSearch(String query) {
-    context.read<LotMasterBloc>().add(SearchLotMasters(query));
+    context.read<LotExpirationColorsBloc>().add(
+      SearchLotExpirationColors(query),
+    );
   }
 
   void _clearSearch() {
     _searchController.clear();
-    context.read<LotMasterBloc>().add(SearchLotMasters(''));
+    context.read<LotExpirationColorsBloc>().add(SearchLotExpirationColors(''));
   }
 
-  void _toggleLotSelection(LotMaster lot, bool selected) {
-    // You might need to add a SelectLot event in your bloc
-    context.read<LotMasterBloc>().add(SelecteLot(lot, selected));
+  void _toggleColorSelection(LotExpirationColor color, bool selected) {
+    context.read<LotExpirationColorsBloc>().add(
+      SelectLotExpirationColor(color, selected),
+    );
   }
 
-  void _showLotDetail(LotMaster lot) {
+  void _showLotDetail(LotExpirationColor color) {
     setState(() {
-      _selectedLot = lot;
-      _lotDetail = true;
+      _selectedColor = color;
+      _colorDetail = true;
     });
 
     //Start the animation
@@ -157,97 +168,78 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     _detailAnimationController.reverse().then((_) {
       if (mounted) {
         setState(() {
-          _lotDetail = false;
-          _selectedLot = null;
+          _colorDetail = false;
+          _selectedColor = null;
         });
       }
     });
   }
 
   void _clearSelection() {
-    context.read<LotMasterBloc>().add(ClearSelection());
+    context.read<LotExpirationColorsBloc>().add(ClearSelection());
     setState(() {
       _isSelectionMode = false;
     });
   }
 
-  void _exportLot(LotMaster lot) {
+  void _exportLot(LotExpirationColor color) {
     // Implement export functionality
-    print('Exporting lot: ${lot.lotNumber}');
+    print('Exporting lot: ${color.colorType}');
   }
 
   void _navigateToCreateScreen() {
-    final companyId = context.read<AuthBloc>().state.companyId;
-    if (companyId != null) {
-      context.read<LotMasterBloc>().add(PrepareCreateLot(companyId));
-      context.push(AppRoutes.lotCreation);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Company ID not found. Please login again.'),
-          backgroundColor: Colors.red,
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            LotExpirationColorsFormPage(authBloc: widget.authBloc),
+      ),
+    );
+  }
+
+  void _navigateToEditScreen(LotExpirationColor color) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LotExpirationColorsFormPage(
+          authBloc: widget.authBloc,
+          existingColoring: color,
         ),
-      );
-    }
+      ),
+    );
   }
 
-  void _navigateToEditScreen(LotMaster lot) {
-    context.read<LotMasterBloc>().add(PrepareEditLot(lot));
-    context.push(AppRoutes.lotEdit, extra: lot);
-  }
-
-  String _getBranchName(int branchId) {
-    final branchBloc = context.read<BranchBloc>();
-    final branchState = branchBloc.state;
-    final branchDescription =
-        branchState.branchs
-            .where((entry) => entry.id == branchId)
-            .firstOrNull
-            ?.description ??
-        'Branch $branchId';
-    return branchDescription;
-  }
-
-  String _getItemName(int itemId) {
-    final itemBloc = context.read<StockItemEntryBloc>();
-    final itemDescription =
-        itemBloc.state.items
-            .where((entry) => entry.id == itemId)
-            .firstOrNull
-            ?.itemDescription ??
-        'Item $itemId';
-    return itemDescription;
-  }
-
-  String _getLocationName(int locationId) {
-    final locationBloc = context.read<LocationMasterBloc>();
-    final locationState = locationBloc.state;
-    final locationName =
-        locationState.locations
-            .where((entry) => entry.id == locationId)
-            .firstOrNull
-            ?.locationDescription ??
-        'Branch $locationId';
-    return locationName;
+  void _deleteColor(LotExpirationColor color) {
+    showDeleteDialog(
+      context,
+      title: 'Delete Color Configuration?',
+      content: 'Are you sure you want to delete this color configuration?',
+      onConfirm: () {
+        context.read<LotExpirationColorsBloc>().add(
+          DeleteLotExpirationColors(color),
+        );
+      },
+    );
   }
 
   void _safeDelete(BuildContext context, {int? index}) {
-    final bloc = context.read<LotMasterBloc>();
+    final bloc = context.read<LotExpirationColorsBloc>();
     final state = bloc.state;
 
     //CASE 1: Multiple lots
-    if (state.multiSelectionItems.isNotEmpty) {
-      final lotsToDelete = state.multiSelectionItems;
+    if (state.selectedItems.isNotEmpty) {
+      final colorsToDelete = state.selectedItems;
       showDeleteDialog(
         context,
-        title: 'Delete selected lots?',
-        content: 'Are you sure you want to delete ${lotsToDelete.length} lots?',
+        title: 'Delete selected lot colors?',
+        content:
+            'Are you sure you want to delete ${colorsToDelete.length} lot colors?',
         onConfirm: () {
-          final ids = lotsToDelete.map((e) => e.id).toList();
-          final deletedIndexes = lotsToDelete
+          final ids = colorsToDelete.map((e) => e.id).toList();
+          final deletedIndexes = colorsToDelete
               .map((lot) => state.items.indexOf(lot))
               .toList();
-          bloc.add(DeleteMultipleLotMasters(lotsToDelete));
+          bloc.add(DeleteMultipleLotExpirationColors(colorsToDelete));
         },
       );
       return;
@@ -261,15 +253,15 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
       return;
     }
 
-    final lotToDelete = state.filteredItems[index];
+    final colorToDelete = state.filteredItems[index];
 
     showDeleteDialog(
       context,
-      title: 'Delete Lot ${lotToDelete.lotNumber}?',
+      title: 'Delete Lot ${colorToDelete.colorType}?',
       content:
-          'Are you sure you want to delete lot "${lotToDelete.lotNumber}"?',
+          'Are you sure you want to delete lot "${colorToDelete.colorType}"?',
       onConfirm: () {
-        bloc.add(DeleteLotMaster(lotToDelete));
+        bloc.add(DeleteLotExpirationColors(colorToDelete));
       },
     );
   }
@@ -313,44 +305,44 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     }
   }
 
-  // Enhanced status methods
-  String _getStatusBadgeText(LotMaster lot) {
-    // Use status description if available, otherwise fall back to code
-    if (lot.statusDescription != null && lot.statusDescription!.isNotEmpty) {
-      return lot.statusDescription!;
+  String _getLevelDescription(String? level) {
+    switch (level) {
+      case '1':
+        return 'Company Level';
+      case '2':
+        return 'Store Level';
+      case '3':
+        return 'Item Level';
+      case '4':
+        return 'Item Store Level';
+      default:
+        return 'Unknown Level';
     }
-
-    // Fallback to status code mapping
-    if (lot.statusCode != null && lot.statusCode!.isNotEmpty) {
-      switch (lot.statusCode?.toUpperCase()) {
-        case 'A':
-          return 'Active';
-        case 'E':
-          return 'Expired';
-        case 'I':
-          return 'Inactive';
-        case 'D':
-          return 'Damaged';
-        case 'H':
-          return 'On Hold';
-        default:
-          return lot.statusCode!; //return code if we dont recognize it
-      }
-    }
-
-    return 'Unknown';
   }
 
-  Color _getColorFromType(LotExpirationColor? color) {
-    if (color == null) return Colors.grey.shade200;
+  String _getColorTypeName(LotExpirationColor color) {
+    if (color.colorTypeCode != null && color.colorTypeName!.isNotEmpty) {
+      return color.colorTypeName!;
+    }
+    switch (color.colorTypeCode?.toUpperCase()) {
+      case 'RED':
+        return 'Red';
+      case 'BLU':
+        return 'Blue';
+      case 'GRN':
+        return 'Green';
+      case 'BLK':
+        return 'Black';
+      default:
+        return 'Unknown';
+    }
+  }
 
-    final code = (color.colorTypeCode ?? '').trim().toUpperCase();
-    final name = (color.colorTypeName ?? '').trim().toLowerCase();
-
-    print('🎨 Color Mapping - Code: $code, Name: $name');
-
-    // Map based on your UDC data
-    switch (code) {
+  Color _getColorFromType(LotExpirationColor color) {
+    if (color.colorTypeCode == null && color.colorTypeName!.isEmpty) {
+      return Colors.transparent;
+    }
+    switch (color.colorTypeCode?.toUpperCase()) {
       case 'RED':
         return Colors.red;
       case 'BLU':
@@ -359,134 +351,44 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
         return Colors.green;
       case 'BLK':
         return Colors.black;
-      case 'YEL':
-      case 'YLW':
-        return Colors.yellow;
-      case 'ORG':
-        return Colors.orange;
-      case 'GRY':
-        return Colors.grey;
-      case 'OV':
-        return const Color.fromARGB(255, 14, 90, 4);
-
       default:
-        // Fallback to name matching
-        if (name.contains('red')) return Colors.red;
-        if (name.contains('blue')) return Colors.blue;
-        if (name.contains('green')) return Colors.green;
-        if (name.contains('yellow')) return Colors.yellow;
-        if (name.contains('orange')) return Colors.orange;
-        if (name.contains('black')) return Colors.black;
-
-        return Colors.grey.shade200;
+        return Colors.grey;
     }
   }
 
-  void _debugLotColorCalculation(LotMaster lot) async {
-    final systemConstant = context.read<SystemConstantBloc>().state.selected;
-    final lotTypeUdcDetail = await _udcRepository.getUdcDetailById(
-      systemConstant?.lotType,
-    );
-    final lotType = lotTypeUdcDetail?.detailCode.toUpperCase();
-
-    final color = await context.read<LotExpirationColorsBloc>().getLotColorType(
-      lot.branch,
-      lot.itemNumber,
-      lot.dateExpiration,
-      lot.dateEffective,
-      lot.dateReceived,
-    );
-
-    // Use the method from LotExpirationColorsBloc
-    final daysDifference = context
-        .read<LotExpirationColorsBloc>()
-        .calculateDaysDifference(
-          lot.dateExpiration,
-          lot.dateEffective,
-          lot.dateReceived,
-          lotType,
-        );
-
-    print('''
-🎯 DEBUG LOT COLOR CALCULATION:
-  Lot: ${lot.lotNumber}
-  Lot Type: $lotType (${lotTypeUdcDetail?.description1})
-  Branch: ${lot.branch}
-  Item: ${lot.itemNumber}
-  Expiration: ${lot.dateExpiration}
-  Effective: ${lot.dateEffective} 
-  Received: ${lot.dateReceived}
-  Calculated Color: ${color?.colorTypeName} (${color?.colorTypeCode})
-  Days Difference: $daysDifference
-''');
+  String _getBranchName(int branchId) {
+    final branchBloc = context.read<BranchBloc>();
+    final branchState = branchBloc.state;
+    final branchDescription =
+        branchState.branchs
+            .where((entry) => entry.id == branchId)
+            .firstOrNull
+            ?.description ??
+        'Branch $branchId';
+    return branchDescription;
   }
 
-  void _debugSystemConstants() async {
-    try {
-      final systemConstant = context.read<SystemConstantBloc>().state.selected;
-      print('''
-🔧 SYSTEM CONSTANT DEBUG:
-  Company ID: ${widget.authBloc.state.companyId}
-  System Constant ID: ${systemConstant?.id}
-  Lot Type ID: ${systemConstant?.lotType}
-  Apply Lot Mgmt: ${systemConstant?.applyLotMgm}
-  Is Synced: ${systemConstant?.isSynced}
-''');
-
-      if (systemConstant?.lotType != null) {
-        final lotTypeUdc = await _udcRepository.getUdcDetailById(
-          systemConstant?.lotType,
-        );
-        print(
-          '  Lot Type UDC: ${lotTypeUdc?.detailCode} - ${lotTypeUdc?.description1}',
-        );
-      } else {
-        print('  ❌ Lot Type is NULL in system constant');
-
-        // Check if system constant is loaded at all
-        final systemConstantState = context.read<SystemConstantBloc>().state;
-        print(
-          '  System Constant State: ${systemConstantState.systemConstants.length} constants loaded',
-        );
-        print(
-          '  Selected System Constant: ${systemConstantState.selected?.toJson()}',
-        );
-      }
-    } catch (e) {
-      print('❌ Error debugging system constants: $e');
-    }
+  String _getItemName(int itemId) {
+    final itemBloc = context.read<StockItemEntryBloc>();
+    final itemDescription =
+        itemBloc.state.items
+            .where((entry) => entry.id == itemId)
+            .firstOrNull
+            ?.itemDescription ??
+        'Item $itemId';
+    return itemDescription;
   }
-
-  // Call this in your initState or build method
-  // WidgetsBinding.instance.addPostFrameCallback((_) => _debugSystemConstants());
-  void _debugSystemConstantBloc() {
-    final systemConstantState = context.read<SystemConstantBloc>().state;
-    final systemConstant = systemConstantState.selected;
-
-    print('''
-🔍 SYSTEM CONSTANT BLOC STATE DEBUG:
-  Status: ${systemConstantState.status}
-  Constants Loaded: ${systemConstantState.systemConstants.length}
-  Selected Constant: ${systemConstant?.id}
-  Selected Lot Type: ${systemConstant?.lotType}
-  Has Selected: ${systemConstantState.selected != null}
-  State: ${systemConstantState.toString()}
-''');
-  }
-
-  // Call this in your build method
-  // WidgetsBinding.instance.addPostFrameCallback((_) => _debugSystemConstantBloc());
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey,
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text('Lot Master'),
+        title: const Text('Lot Expiration Colors'),
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
       ),
-      body: BlocConsumer<LotMasterBloc, LotMasterState>(
+      body: BlocConsumer<LotExpirationColorsBloc, LotExpirationColorsState>(
         listener: (context, state) {
           if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
             setState(() {
@@ -498,18 +400,18 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
             });
           }
         },
-
         builder: (context, state) {
           return Stack(
             children: [
               Column(
                 children: [
-                  // Search Bar
                   _buildSearchBar(),
-                  _buildActionButtons(state),
+                  // Filter Section
+                  _buildFilterSection(),
 
-                  // Lot List
-                  Expanded(child: _buildLotList(state)),
+                  _buildActionButtons(state),
+                  // Color List
+                  Expanded(child: _buildColorList(state)),
                 ],
               ),
             ],
@@ -550,14 +452,6 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
               onChanged: _handleSearch,
             ),
           ),
-          const SizedBox(width: 8),
-          // Add refresh/calculate button
-          IconButton(
-            icon: const Icon(Iconsax.calculator),
-            onPressed: _calculateAllLotStatus,
-            tooltip: 'Recalculate all lot status',
-            style: IconButton.styleFrom(backgroundColor: Colors.blue[50]),
-          ),
           const SizedBox(width: 12),
           _buildFloatingActionButton(context),
         ],
@@ -565,8 +459,8 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     );
   }
 
-  Widget _buildActionButtons(LotMasterState state) {
-    final hasSelection = _selectedLots.isNotEmpty;
+  Widget _buildActionButtons(LotExpirationColorsState state) {
+    final hasSelection = _selectedColors.isNotEmpty;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -580,28 +474,23 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
           ? Row(
               children: [
                 Text(
-                  '${_selectedLots.length} selected',
+                  '${_selectedColors.length} selected',
                   style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
                 const Spacer(),
-                IconButton(
-                  icon: const Icon(Iconsax.calculator, color: Colors.blue),
-                  onPressed: _calculateAllLotStatus,
-                  tooltip: 'Recalculate status for selected',
-                ),
                 IconButton(
                   icon: const Icon(Iconsax.trash, color: Colors.red),
                   onPressed: () => _safeDelete(context),
                   tooltip: 'Delete selected',
                 ),
-                if (_selectedLots.length == 1)
+                if (_selectedColors.length == 1)
                   IconButton(
                     icon: const Icon(
                       Iconsax.edit,
                       color: Color.fromARGB(255, 28, 66, 146),
                     ),
                     onPressed: () {
-                      final lot = _selectedLots.first;
+                      final lot = _selectedColors.first;
                       _navigateToEditScreen(lot);
                     },
                     tooltip: 'Edit lot',
@@ -618,7 +507,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
   }
 
   Widget _buildFloatingActionButton(BuildContext context) {
-    return BlocBuilder<LotMasterBloc, LotMasterState>(
+    return BlocBuilder<LotExpirationColorsBloc, LotExpirationColorsState>(
       builder: (context, state) {
         return ElevatedButton(
           onPressed: () {
@@ -639,18 +528,88 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     );
   }
 
-  Widget _buildLotList(LotMasterState state) {
+  Widget _buildFilterSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
+      ),
+      child: Column(
+        children: [
+          // Level Dropdown
+          CustomDropdown(
+            labelText: 'Filter by Level',
+            value: _selectedLevel,
+            items: const [
+              DropdownMenuItem(value: '1', child: Text('Company Level')),
+              DropdownMenuItem(value: '2', child: Text('Store Level')),
+              DropdownMenuItem(value: '3', child: Text('Item Level')),
+              DropdownMenuItem(value: '4', child: Text('Item Store Level')),
+            ],
+            onChanged: _onLevelChanged,
+          ),
+          const SizedBox(height: 12),
+
+          // Branch Dropdown (for Level 2 and 4)
+          if (_selectedLevel != null &&
+              (_selectedLevel == '2' || _selectedLevel == '4'))
+            Column(
+              children: [
+                BlocBuilder<BranchBloc, BranchState>(
+                  builder: (context, state) {
+                    return CustomDropdown(
+                      labelText: 'Store',
+                      value: _selectedBranch,
+                      items: state.branchs.map((branch) {
+                        return DropdownMenuItem<int>(
+                          value: branch.id,
+                          child: Text(branch.description ?? 'Unknown Branch'),
+                        );
+                      }).toList(),
+                      onChanged: _onBranchChanged,
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+
+          // Item Dropdown (for Level 3 and 4)
+          if (_selectedLevel != null &&
+              (_selectedLevel == '3' || _selectedLevel == '4'))
+            BlocBuilder<StockItemEntryBloc, ItemEntryState>(
+              builder: (context, state) {
+                return CustomDropdown(
+                  labelText: 'Item Number',
+                  value: _selectedItem,
+                  items: state.filteredItems.map((item) {
+                    return DropdownMenuItem<int>(
+                      value: item.id,
+                      child: Text('${item.itemDescription} (${item.itemsId})'),
+                    );
+                  }).toList(),
+                  onChanged: _onItemChanged,
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildColorList(LotExpirationColorsState state) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isSmallScreen = screenWidth < 700;
     final cardSpacing = screenHeight * 0.02;
-    final cardWidth = isSmallScreen ? screenWidth * 0.85 : screenWidth * 0.8;
+    final cardWidth = isSmallScreen ? screenWidth * 0.92 : screenWidth * 0.8;
 
-    if (state.status == LotMasterStatus.loading) {
+    if (state.status == LotExpirationColorsStatus.loading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (state.status == LotMasterStatus.failure) {
+    if (state.status == LotExpirationColorsStatus.failure) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -658,15 +617,8 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
             const Icon(Icons.error_outline, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
             Text(
-              state.message.isNotEmpty ? state.message : 'Failed to load lots',
+              state.message ?? 'Failed to load color configurations',
               style: const TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => context.read<LotMasterBloc>().add(
-                LoadLotMasters(widget.authBloc.state.companyId!),
-              ),
-              child: const Text('Retry'),
             ),
           ],
         ),
@@ -678,12 +630,12 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Iconsax.box_1, size: 64, color: Colors.grey),
+            const Icon(Iconsax.colorfilter, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
             Text(
-              state.searchQuery.isEmpty
-                  ? 'No lots found'
-                  : 'No results for "${state.searchQuery}"',
+              _selectedLevel == null
+                  ? 'No color configurations found'
+                  : 'No configurations for ${_getLevelDescription(_selectedLevel)}',
               style: const TextStyle(color: Colors.grey, fontSize: 16),
             ),
           ],
@@ -696,16 +648,14 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
       height: screenHeight,
       decoration: const BoxDecoration(color: Colors.grey),
       child: ListView.separated(
-        controller: _scrollController,
         padding: const EdgeInsets.all(16),
         itemCount: state.filteredItems.length,
         separatorBuilder: (context, index) => SizedBox(height: cardSpacing),
         itemBuilder: (context, index) {
-          final lot = state.filteredItems[index];
-          final isSelected = state.selectedItems.contains(lot);
-
-          return _buildLotListItem(
-            lot,
+          final color = state.filteredItems[index];
+          final isSelected = state.selectedItems.contains(color);
+          return _buildColorCard(
+            color,
             isSelected,
             state,
             index,
@@ -717,16 +667,16 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     );
   }
 
-  Widget _buildLotListItem(
-    LotMaster lot,
+  Widget _buildColorCard(
+    LotExpirationColor color,
     bool isSelected,
-    LotMasterState state,
+    LotExpirationColorsState state,
     int index,
     bool isCompact,
     double cardWidth,
   ) {
     final offset = _dragOffset[index] ?? 0.0;
-    final isExpanded = _lotDetail == true && _selectedLot == lot;
+    final isExpanded = _colorDetail == true && _selectedColor == color;
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
@@ -742,9 +692,9 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     return GestureDetector(
       onTap: () {
         if (_isSelectionMode) {
-          _toggleLotSelection(lot, !isSelected);
+          _toggleColorSelection(color, !isSelected);
         } else {
-          _showLotDetail(lot);
+          _showLotDetail(color);
         }
       },
       onLongPress: () {
@@ -753,9 +703,9 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
             _isSelectionMode = true;
           });
         }
-        _toggleLotSelection(lot, !isSelected);
+        _toggleColorSelection(color, !isSelected);
       },
-      onDoubleTap: () => _showLotDetail(lot),
+      onDoubleTap: () => _showLotDetail(color),
       onHorizontalDragUpdate: (details) =>
           _onHorizontalDragUpdate(index, details),
       onHorizontalDragEnd: (details) =>
@@ -814,7 +764,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                 curve: Curves.easeInOut,
                 margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
-                  color: _getColorFromType(lot.tempColorType),
+                  color: _getColorFromType(color),
                   borderRadius: BorderRadius.circular(30),
                   boxShadow: [
                     BoxShadow(
@@ -832,7 +782,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Lot Avatar
-                        _buildLotAvatar(lot, isSelected, isCompact),
+                        _buildLotAvatar(color, isSelected, isCompact),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -843,9 +793,16 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Lot #${lot.lotNumber ?? 'N/A'}',
+                                    _getLevelDescription(
+                                      color.lotExpLevel?.toString() ?? 'N/A',
+                                    ),
                                     style: TextStyle(
-                                      color: const Color(0xFF373737),
+                                      color: const Color.fromARGB(
+                                        255,
+                                        99,
+                                        97,
+                                        97,
+                                      ),
                                       fontSize: isCompact ? 20 : 24,
                                       fontFamily: 'Inter',
                                       fontWeight: FontWeight.w800,
@@ -873,7 +830,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
-                                          _getStatusBadgeText(lot),
+                                          _getColorTypeName(color),
                                           style: TextStyle(
                                             fontSize: 10,
                                             color: Colors.blue,
@@ -886,7 +843,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                                 ],
                               ),
                               // Date information
-                              if (lot.dateEffective != null)
+                              if (color.daysMinimum != null)
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 8,
@@ -895,7 +852,9 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                                   decoration: BoxDecoration(
                                     color: Colors.blue.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.blue),
+                                    border: Border.all(
+                                      color: Colors.blue.withOpacity(0.3),
+                                    ),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -907,7 +866,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                                       ),
                                       const SizedBox(width: 4),
                                       Text(
-                                        'Effective: ${_formatDate(lot.dateEffective!)}',
+                                        'Max: ${color.daysMaximum!}',
                                         style: TextStyle(
                                           fontSize: 10,
                                           color: Colors.blue,
@@ -918,7 +877,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                                   ),
                                 ),
                               const SizedBox(height: 2),
-                              if (lot.dateExpiration != null)
+                              if (color.daysMaximum != null)
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 8,
@@ -927,7 +886,9 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                                   decoration: BoxDecoration(
                                     color: Colors.blue.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.blue),
+                                    border: Border.all(
+                                      color: Colors.blue.withOpacity(0.3),
+                                    ),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -939,7 +900,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                                       ),
                                       const SizedBox(width: 4),
                                       Text(
-                                        'Expires: ${_formatDate(lot.dateExpiration!)}',
+                                        'Min: ${color.daysMinimum!}',
                                         style: TextStyle(
                                           fontSize: 10,
                                           color: Colors.blue,
@@ -966,7 +927,9 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                           decoration: BoxDecoration(
                             color: Colors.blue.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.blue),
+                            border: Border.all(
+                              color: Colors.blue.withOpacity(0.3),
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -978,7 +941,9 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                'Qty: ${lot.quantityAvailable?.toStringAsFixed(2) ?? '0.00'}',
+                                color.activeForSalesFlag == 'Y'
+                                    ? 'Active'
+                                    : 'Inactive',
                                 style: TextStyle(
                                   color: Colors.blue,
                                   fontSize: isCompact ? 10 : 12,
@@ -993,7 +958,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                         ElevatedButton(
                           onPressed: () => isExpanded
                               ? _hideLotDetail()
-                              : _showLotDetail(lot),
+                              : _showLotDetail(color),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF145888),
                             shape: RoundedRectangleBorder(
@@ -1040,7 +1005,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                         ),
                       );
                     },
-                    child: _buildLotDetailContent(lot, isCompact),
+                    child: _buildLotDetailContent(color, isCompact),
                   ),
                 ),
             ],
@@ -1050,82 +1015,61 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     );
   }
 
-  Widget _buildLotDetailContent(LotMaster lot, bool isCompact) {
+  Widget _buildLotDetailContent(LotExpirationColor color, bool isCompact) {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       child: Column(
         children: [
           _buildLotInfoItem(
-            'Lot Number : ',
-            lot.lotNumber?.toString() ?? 'N/A',
+            'Level Type : ',
+            _getLevelDescription(color.lotExpLevel?.toString() ?? 'N/A'),
             Iconsax.tag,
             isCompact,
           ),
           _buildLotInfoItem(
-            'Branch : ',
-            _getBranchName(lot.branch!),
-            Iconsax.building,
+            'Description : ',
+            color.description ?? 'N/A',
+            Iconsax.info_circle,
             isCompact,
           ),
           _buildLotInfoItem(
-            'Item Number : ',
-            _getItemName(lot.itemNumber!),
-            Iconsax.box,
+            'Color : ',
+            _getColorTypeName(color),
+            Iconsax.colorfilter,
             isCompact,
           ),
+          if (color.branch != null)
+            _buildLotInfoItem(
+              'Branch : ',
+              _getBranchName(color.branch!),
+              Iconsax.building,
+              isCompact,
+            ),
+          if (color.itemNumber != null)
+            _buildLotInfoItem(
+              'Item : ',
+              _getItemName(color.itemNumber!),
+              Iconsax.box,
+              isCompact,
+            ),
           _buildLotInfoItem(
-            'Location : ',
-            _getLocationName(lot.location!),
-            Iconsax.location,
-            isCompact,
-          ),
-          _buildLotInfoItem(
-            'Unit Price : ',
-            lot.unitPrice != null
-                ? '\$${lot.unitPrice!.toStringAsFixed(2)}'
-                : 'N/A',
-            Iconsax.dollar_circle,
-            isCompact,
-          ),
-          _buildLotInfoItem(
-            'Quantity Available : ',
-            lot.quantityAvailable?.toStringAsFixed(2) ?? '0.00',
-            Iconsax.weight,
-            isCompact,
-          ),
-          _buildLotInfoItem(
-            'Supplier Batch : ',
-            lot.batchNumberSupplier ?? 'N/A',
-            Iconsax.barcode,
-            isCompact,
-          ),
-          _buildLotInfoItem(
-            'Effective Date : ',
-            lot.dateEffective != null ? _formatDate(lot.dateEffective!) : 'N/A',
+            'Minimum Days : ',
+            color.daysMinimum?.toString() ?? 'N/A',
             Iconsax.calendar_1,
             isCompact,
           ),
           _buildLotInfoItem(
-            'Expiration Date : ',
-            lot.dateExpiration != null
-                ? _formatDate(lot.dateExpiration!)
-                : 'N/A',
-            Iconsax.calendar_tick,
+            'Maximum Days : ',
+            color.daysMaximum?.toString() ?? 'N/A',
+            Iconsax.calendar_1,
             isCompact,
           ),
           _buildLotInfoItem(
-            'Received Date : ',
-            lot.dateReceived != null ? _formatDate(lot.dateReceived!) : 'N/A',
-            Iconsax.calendar_add,
+            'Satus Type : ',
+            color.activeForSalesFlag == 'Y' ? 'Active' : 'Inactive',
+            Iconsax.tag,
             isCompact,
           ),
-          _buildLotInfoItem(
-            'Lot Status : ',
-            _getStatusBadgeText(lot),
-            Iconsax.activity,
-            isCompact,
-          ),
-
           // Action buttons row
           Padding(
             padding: const EdgeInsets.only(top: 16, bottom: 8),
@@ -1135,51 +1079,19 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                 _buildActionButton(
                   Iconsax.edit,
                   'Edit',
-                  () => _navigateToEditScreen(lot),
+                  () => _navigateToEditScreen(color),
                   isCompact,
                 ),
                 _buildActionButton(
                   Iconsax.export,
                   'Export',
-                  () => _exportLot(lot),
-                  isCompact,
-                ),
-                _buildActionButton(
-                  Iconsax.calculator,
-                  'Status',
-                  () => _calculateSingleLotStatus(lot),
+                  () => _exportLot(color),
                   isCompact,
                 ),
               ],
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  void _calculateSingleLotStatus(LotMaster lot) async {
-    final systemConstant = context.read<SystemConstantBloc>().state.selected;
-    final lotTypeUdcDetail = await _udcRepository.getUdcDetailById(
-      systemConstant?.lotType,
-    );
-    context.read<LotMasterBloc>().add(
-      CalculateLotStatus(lot, lotTypeUdcDetail),
-    );
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Recalculating status for Lot ${lot.lotNumber}...'),
-        backgroundColor: Colors.blue,
-      ),
-    );
-  }
-
-  void _calculateAllLotStatus() {
-    context.read<LotMasterBloc>().add(ClaculateMultipleLotStatus());
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Recalculating all lot status...'),
-        backgroundColor: Colors.blue,
       ),
     );
   }
@@ -1266,7 +1178,11 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     );
   }
 
-  Widget _buildLotAvatar(LotMaster lot, bool isSelected, bool isCompact) {
+  Widget _buildLotAvatar(
+    LotExpirationColor color,
+    bool isSelected,
+    bool isCompact,
+  ) {
     final Color backgroundColor;
     final Color iconColor;
 
@@ -1288,9 +1204,5 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
       ),
       child: Icon(Iconsax.tag, color: iconColor, size: isCompact ? 20 : 24),
     );
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.month}/${date.day}/${date.year}';
   }
 }

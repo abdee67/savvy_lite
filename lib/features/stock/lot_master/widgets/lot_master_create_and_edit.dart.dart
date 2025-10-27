@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
+import 'package:savvy_stock/core/blocs/system_constant/system_constant_state.dart';
 import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -9,8 +11,6 @@ import 'package:savvy_stock/features/branch_list/blocs/branch_list_event.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_state.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
-import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_state.dart';
-import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_event.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_state.dart';
@@ -21,9 +21,6 @@ import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_e
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_state.dart';
 import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_bloc.dart';
-import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_event.dart';
-import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_state.dart';
-import 'package:savvy_stock/features/stock/location_entry/models/location_master_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_event.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_state.dart';
@@ -31,6 +28,7 @@ import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.da
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_event.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_state.dart';
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class LotMasterFormPage extends StatefulWidget {
   final LotMaster? lot;
@@ -46,8 +44,6 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
   final _formKey = GlobalKey<FormState>();
 
   // Controllers
-  final TextEditingController _quantityAvailableController =
-      TextEditingController();
   final TextEditingController _unitPriceController = TextEditingController();
   final TextEditingController _supplierBatchController =
       TextEditingController();
@@ -59,6 +55,8 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
       TextEditingController();
   final TextEditingController _expirationDateController =
       TextEditingController();
+  final TextEditingController _receivedDateController =
+    TextEditingController();
 
   final TextEditingController _lotNumberController = TextEditingController();
 
@@ -72,6 +70,7 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
   // Date values
   DateTime? _effectiveDate;
   DateTime? _expirationDate;
+  DateTime? _receivedDate;
 
   // Available data
   List<ItemInBranchModel> _branchItems = [];
@@ -87,11 +86,19 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
     context.read<BranchBloc>().add(
       LoadBranchs(widget.authBloc.state.companyId!),
     );
-    context.read<UdcDetailsBloc>().add(LoadAllUdcDetails()); // Unit of Measure
+    context.read<UdcDetailsBloc>().add(
+      LoadAllUdcDetails(),
+    ); // for Unit of Measure and lot status
+
+    context.read<StockItemInBranchBloc>().add(
+      LoadItemsFromBranch(widget.authBloc.state.companyId!),
+    );
+    context.read<StockItemEntryBloc>().add(
+      LoadItems(widget.authBloc.state.companyId!),
+    );
 
     // Initialize controllers
     _availableQuantityController.text = '0.0';
-    _quantityAvailableController.text = '0.0';
 
     _initializeForm();
   }
@@ -107,9 +114,10 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
       _selectedLocation = lot.location;
       _effectiveDate = lot.dateEffective;
       _expirationDate = lot.dateExpiration;
+  _receivedDate = lot.dateReceived;
       _selectedLotStatus = lot.lotStatus;
       _supplierBatchController.text = lot.batchNumberSupplier ?? '';
-      _quantityAvailableController.text =
+      _availableQuantityController.text =
           lot.quantityAvailable?.toString() ?? '0.0';
       _unitPriceController.text = lot.unitPrice?.toString() ?? '';
 
@@ -138,18 +146,22 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
       }
     } else {
       // For creating - set default values
-      _quantityAvailableController.text = '0.0';
+      _availableQuantityController.text = '0.0';
     }
   }
 
   void _updateDateControllers() {
     _effectiveDateController.text = _effectiveDate != null
-        ? '${_effectiveDate!.day.toString().padLeft(2, '0')}/${_effectiveDate!.month.toString().padLeft(2, '0')}/${_effectiveDate!.year}'
+        ? '${_effectiveDate!.month.toString().padLeft(2, '0')}/${_effectiveDate!.day.toString().padLeft(2, '0')}/${_effectiveDate!.year}'
         : '';
 
     _expirationDateController.text = _expirationDate != null
-        ? '${_expirationDate!.day.toString().padLeft(2, '0')}/${_expirationDate!.month.toString().padLeft(2, '0')}/${_expirationDate!.year}'
+        ? '${_expirationDate!.month.toString().padLeft(2, '0')}/${_expirationDate!.day.toString().padLeft(2, '0')}/${_expirationDate!.year}'
         : '';
+
+  _receivedDateController.text = _receivedDate != null
+    ? '${_receivedDate!.month.toString().padLeft(2, '0')}/${_receivedDate!.day.toString().padLeft(2, '0')}/${_receivedDate!.year}'
+    : '';
   }
 
   void _setupLotNumberListener() {
@@ -170,7 +182,6 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
       _itemLocations = [];
       _availableQuantity = 0.0;
       _availableQuantityController.text = '0.0';
-      _quantityAvailableController.text = '0.0';
       _unitPriceController.clear();
     });
 
@@ -193,7 +204,6 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
       _itemLocations = [];
       _availableQuantity = 0.0;
       _availableQuantityController.text = '0.0';
-      _quantityAvailableController.text = '0.0';
       _unitPriceController.clear();
     });
 
@@ -268,6 +278,22 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
     }
   }
 
+  void _selectReceivedDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _receivedDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _receivedDate = picked;
+        _updateDateControllers();
+      });
+    }
+  }
+
   void _regenerateLotNumber() {
     final companyId = widget.authBloc.state.companyId;
     if (companyId == null) {
@@ -290,12 +316,12 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
 
   @override
   void dispose() {
-    _quantityAvailableController.dispose();
     _unitPriceController.dispose();
     _supplierBatchController.dispose();
     _availableQuantityController.dispose();
     _effectiveDateController.dispose();
     _expirationDateController.dispose();
+    _receivedDateController.dispose();
     super.dispose();
   }
 
@@ -324,7 +350,7 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
         itemNumber: _selectedItem!,
         location: _selectedLocation!,
         quantityAvailable: _parseDouble(
-          _quantityAvailableController.text.trim(),
+          _availableQuantityController.text.trim(),
         ),
         unitPrice: _parseDouble(_unitPriceController.text.trim()),
         dateEffective: _effectiveDate,
@@ -333,7 +359,7 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
         batchNumberSupplier: _supplierBatchController.text.trim().isEmpty
             ? null
             : _supplierBatchController.text.trim(),
-        dateReceived: DateTime.now(),
+        dateReceived: _receivedDate ?? DateTime.now(),
       );
 
       if (widget.lot == null) {
@@ -649,44 +675,123 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
               controller: _unitPriceController,
               keyboardType: TextInputType.number,
               validator: (value) {
-                if (value == null || value.isEmpty)
+                if (value == null || value.isEmpty) {
                   return 'Unit price is required';
+                }
                 final price = _parseDouble(value);
-                if (price == null || price < 0)
+                if (price == null || price < 0) {
                   return 'Please enter a valid price';
+                }
                 return null;
               },
               prefixIcon: const Icon(Iconsax.dollar_circle),
             ),
             const SizedBox(height: 16),
 
-            // Effective Date
-            CustomTextField(
-              labelText: 'Effective Date',
-              controller: _effectiveDateController,
-              readOnly: true,
-              prefixIcon: const Icon(Iconsax.calendar_1),
-              suffixIcon: IconButton(
-                icon: const Icon(Iconsax.calendar),
-                onPressed: _selectEffectiveDate,
-              ),
-              onTap: _selectEffectiveDate,
-            ),
-            const SizedBox(height: 16),
+            // Date fields shown based on system constant lot type
+            BlocBuilder<SystemConstantBloc, SystemConstantState>(
+              builder: (context, sysState) {
+                final lotTypeId = sysState.selected?.lotType;
+                final udcState = context.watch<UdcDetailsBloc>().state;
+                UdcDetails? lotTypeUdc;
+                if (lotTypeId != null) {
+                  final matches =
+                      udcState.details.where((d) => d.id == lotTypeId);
+                  if (matches.isNotEmpty) lotTypeUdc = matches.first;
+                }
+                final lotTypeCode = lotTypeUdc?.detailCode?.toUpperCase();
 
-            // Expiration Date
-            CustomTextField(
-              labelText: 'Expiration Date',
-              controller: _expirationDateController,
-              readOnly: true,
-              prefixIcon: const Icon(Iconsax.calendar_tick),
-              suffixIcon: IconButton(
-                icon: const Icon(Iconsax.calendar),
-                onPressed: _selectExpirationDate,
-              ),
-              onTap: _selectExpirationDate,
+                // If lot type is Effective (F) -> show only Effective Date
+                if (lotTypeCode == 'F') {
+                  return Column(
+                    children: [
+                      CustomTextField(
+                        labelText: 'Effective Date',
+                        controller: _effectiveDateController,
+                        readOnly: true,
+                        prefixIcon: const Icon(Iconsax.calendar_1),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Iconsax.calendar),
+                          onPressed: _selectEffectiveDate,
+                        ),
+                        onTap: _selectEffectiveDate,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  );
+                }
+
+                // If lot type is Expiration (X) -> show only Expiration Date
+                if (lotTypeCode == 'X') {
+                  return Column(
+                    children: [
+                      CustomTextField(
+                        labelText: 'Expiration Date',
+                        controller: _expirationDateController,
+                        readOnly: true,
+                        prefixIcon: const Icon(Iconsax.calendar_tick),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Iconsax.calendar),
+                          onPressed: _selectExpirationDate,
+                        ),
+                        onTap: _selectExpirationDate,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  );
+                }
+
+                // If lot type is Receipt (R) -> show only Received Date
+                if (lotTypeCode == 'R') {
+                  return Column(
+                    children: [
+                      CustomTextField(
+                        labelText: 'Received Date',
+                        controller: _receivedDateController,
+                        readOnly: true,
+                        prefixIcon: const Icon(Iconsax.calendar),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Iconsax.calendar),
+                          onPressed: _selectReceivedDate,
+                        ),
+                        onTap: _selectReceivedDate,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  );
+                }
+
+                // Default: show Effective and Expiration
+                return Column(
+                  children: [
+                    CustomTextField(
+                      labelText: 'Effective Date',
+                      controller: _effectiveDateController,
+                      readOnly: true,
+                      prefixIcon: const Icon(Iconsax.calendar_1),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Iconsax.calendar),
+                        onPressed: _selectEffectiveDate,
+                      ),
+                      onTap: _selectEffectiveDate,
+                    ),
+                    const SizedBox(height: 16),
+                    CustomTextField(
+                      labelText: 'Expiration Date',
+                      controller: _expirationDateController,
+                      readOnly: true,
+                      prefixIcon: const Icon(Iconsax.calendar_tick),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Iconsax.calendar),
+                        onPressed: _selectExpirationDate,
+                      ),
+                      onTap: _selectExpirationDate,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                );
+              },
             ),
-            const SizedBox(height: 16),
 
             // Lot Status Dropdown
             BlocBuilder<UdcDetailsBloc, UdcDetailsState>(

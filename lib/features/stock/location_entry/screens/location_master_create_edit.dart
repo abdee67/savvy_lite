@@ -290,33 +290,31 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
       builder: (context, constraints) {
         return SizedBox(
           width: constraints.maxWidth,
-          height: MediaQuery.of(context).size.height * 0.7,
-          child: Container(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Items to Location Attachment',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          height: MediaQuery.of(context).size.height * 0.8,
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Items to Location Attachment',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: ItemsPickList(
+                    sourceItems: state.dualListSource,
+                    targetItems: state.dualListTarget,
+                    authBloc: context.read<AuthBloc>(),
+                    onSelectionChanged: (source, target) {
+                      context.read<LocationMasterBloc>().add(
+                        UpdateDualListModel(source, target),
+                      );
+                    },
+                    isEditMode: isEditMode,
                   ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: ItemsPickList(
-                      sourceItems: state.dualListSource,
-                      targetItems: state.dualListTarget,
-                      authBloc: context.read<AuthBloc>(),
-                      onSelectionChanged: (source, target) {
-                        context.read<LocationMasterBloc>().add(
-                          UpdateDualListModel(source, target),
-                        );
-                      },
-                      isEditMode: isEditMode,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         );
