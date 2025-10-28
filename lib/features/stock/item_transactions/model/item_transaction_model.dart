@@ -3,7 +3,7 @@ import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 import 'package:savvy_stock/features/company/models/company_model.dart';
 import 'package:savvy_stock/features/purchase/supplier/models/supplier_model.dart';
-import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
+import 'package:savvy_stock/features/stock/inventory_transaction_entry/models/inventory_transaction_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
@@ -38,7 +38,7 @@ class ItemTransactionModel {
   final int? itemLocationsTo;
 
   // Foreign key relationships
-  final ItemTransactionModel? location;
+  final ItemLocation? location;
   final LotMaster? lot;
   final ItemInBranchModel? itemBranchDetail;
   final ItemEntryModel? item;
@@ -117,7 +117,7 @@ class ItemTransactionModel {
     int? tempId,
     bool? adjustToIncrease,
     int? itemLocationsTo,
-    ItemTransactionModel? location,
+    ItemLocation? location,
     LotMaster? lot,
     ItemInBranchModel? itemBranchDetail,
     ItemEntryModel? item,
@@ -149,8 +149,7 @@ class ItemTransactionModel {
       customer: customer ?? this.customer,
       orderType: orderType ?? this.orderType,
       unitOfMeasure: unitOfMeasure ?? this.unitOfMeasure,
-      beforeStoreQuantityAvailable:
-          beforeStoreQuantityAvailable ?? this.beforeStoreQuantityAvailable,
+      beforeStoreQuantityAvailable: beforeStoreQuantityAvailable ?? this.beforeStoreQuantityAvailable,
       unitCost: unitCost ?? this.unitCost,
       amountCost: amountCost ?? this.amountCost,
       beforeAmountCost: beforeAmountCost ?? this.beforeAmountCost,
@@ -162,8 +161,7 @@ class ItemTransactionModel {
       itemBranchDetail: itemBranchDetail ?? this.itemBranchDetail,
       item: item ?? this.item,
       branchDetail: branchDetail ?? this.branchDetail,
-      transactionTypeDetail:
-          transactionTypeDetail ?? this.transactionTypeDetail,
+      transactionTypeDetail: transactionTypeDetail ?? this.transactionTypeDetail,
       lotStatusDetail: lotStatusDetail ?? this.lotStatusDetail,
       orderTypeDetail: orderTypeDetail ?? this.orderTypeDetail,
       unitOfMeasureDetail: unitOfMeasureDetail ?? this.unitOfMeasureDetail,
@@ -220,8 +218,7 @@ class ItemTransactionModel {
       customer: map['customer'],
       orderType: map['order_type'],
       unitOfMeasure: map['unit_of_measure'],
-      beforeStoreQuantityAvailable:
-          map['before_store_quantity_available']?.toDouble() ?? 0.0,
+      beforeStoreQuantityAvailable: map['before_store_quantity_available']?.toDouble() ?? 0.0,
       unitCost: map['unit_cost']?.toDouble() ?? 0.0,
       amountCost: map['amount_cost']?.toDouble() ?? 0.0,
       beforeAmountCost: map['before_amount_cost']?.toDouble() ?? 0.0,
@@ -229,13 +226,11 @@ class ItemTransactionModel {
   }
 
   // Helper method to load relationships
-  Future<ItemTransactionModel> loadRelationships(
-    LocalDatabaseService databaseService,
-  ) async {
+  Future<ItemTransactionModel> loadRelationships(LocalDatabaseService databaseService) async {
     final db = await databaseService.database;
-
+    
     // Load location
-    ItemTransactionModel? location;
+    ItemLocation? location;
     if (itemLocation != null) {
       final locationData = await db.query(
         'item_location',
@@ -243,7 +238,7 @@ class ItemTransactionModel {
         whereArgs: [itemLocation],
       );
       if (locationData.isNotEmpty) {
-        location = ItemTransactionModel.fromMap(locationData.first);
+        location = ItemLocation.fromMap(locationData.first);
       }
     }
 
@@ -273,6 +268,19 @@ class ItemTransactionModel {
       }
     }
 
+    // Load item
+    ItemEntryModel? item;
+    if (itemNumber != null) {
+      final itemData = await db.query(
+        'item_entry',
+        where: 'id = ?',
+        whereArgs: [itemNumber],
+      );
+      if (itemData.isNotEmpty) {
+        item = ItemEntryModel.fromMap(itemData.first);
+      }
+    }
+
     // Load transaction type
     UdcDetails? transactionTypeDetail;
     if (transactionType != null) {
@@ -285,11 +293,13 @@ class ItemTransactionModel {
         transactionTypeDetail = UdcDetails.fromJson(transactionTypeData.first);
       }
     }
+    //
 
     return copyWith(
       location: location,
       lot: lot,
       itemBranchDetail: itemBranchDetail,
+      item: item,
       transactionTypeDetail: transactionTypeDetail,
     );
   }
