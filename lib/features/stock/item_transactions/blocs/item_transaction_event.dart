@@ -27,6 +27,14 @@ class LoadItemTransactions extends ItemTransactionsEvent {
 
 class PrepareCreate extends ItemTransactionsEvent {}
 
+class CreateItemTransaction extends ItemTransactionsEvent {
+  final ItemTransactionModel transaction;
+  const CreateItemTransaction(this.transaction);
+
+  @override
+  List<Object?> get props => [transaction];
+}
+
 class PrepareCreateInEdit extends ItemTransactionsEvent {}
 
 class PrepareEdit extends ItemTransactionsEvent {
@@ -48,12 +56,26 @@ class PrepareCopy extends ItemTransactionsEvent {
 }
 
 class SaveItemTransaction extends ItemTransactionsEvent {
-  final ItemTransactionModel transaction;
+  final List<ItemTransactionModel> transactions ;
 
-  const SaveItemTransaction(this.transaction);
+  const SaveItemTransaction(this.transactions);
 
   @override
-  List<Object?> get props => [transaction];
+  List<Object?> get props => [transactions];
+}
+
+class SaveRowTransaction extends ItemTransactionsEvent {
+  const SaveRowTransaction();
+
+  @override
+  List<Object?> get props => [];
+}
+
+class SaveInEdit extends ItemTransactionsEvent {
+  const SaveInEdit();
+
+  @override
+  List<Object?> get props => [];
 }
 
 class UpdateItemTransaction extends ItemTransactionsEvent {
@@ -137,21 +159,26 @@ class CreateStockCardTransaction extends ItemTransactionsEvent {
       ];
 }
 
+class ExecuteInventoryTransaction extends ItemTransactionsEvent {
+  final ItemTransactionModel masterTransaction;
+  final List<ItemTransactionModel> detailTransactions;
+  const ExecuteInventoryTransaction({
+    required this.masterTransaction,
+    required this.detailTransactions,
+  });
+}
+
 class CalculateOpeningAmount extends ItemTransactionsEvent {
   final int itemId;
-  final int branchId;
-  final DateTime fromDate;
-  final DateTime toDate;
-
+  final int? branchId;
+  final DateTime dateFrom;
+  final DateTime dateThru;
   const CalculateOpeningAmount({
     required this.itemId,
-    required this.branchId,
-    required this.fromDate,
-    required this.toDate,
+    this.branchId,
+    required this.dateFrom,
+    required this.dateThru,
   });
-
-  @override
-  List<Object?> get props => [itemId, branchId, fromDate, toDate];
 }
 
 class SaveAndClose extends ItemTransactionsEvent {
@@ -161,6 +188,10 @@ class SaveAndClose extends ItemTransactionsEvent {
 
   @override
   List<Object?> get props => [route];
+}
+
+class GetTotalOpening extends ItemTransactionsEvent {
+  const GetTotalOpening();
 }
 
 class SaveAndAddNew extends ItemTransactionsEvent {

@@ -8,7 +8,7 @@ class ItemInBranchModel {
   final ItemEntryModel? item;
   final int branch;
   final double? unitPrice;
-  final double? quantityAvailable;
+   double? quantityAvailable;
   final int? company;
   final int? unitOfMeasure;
   final double? marginRate;

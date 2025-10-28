@@ -1,4 +1,7 @@
-class PurchaseOrderHeaderModel {
+import 'package:equatable/equatable.dart';
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
+
+class PurchaseOrderHeaderModel extends Equatable {
   final int? id;
   final int? supplierId;
   final String? dateTransaction;
@@ -22,7 +25,12 @@ class PurchaseOrderHeaderModel {
   final int? orderType;
   final String? creditDueDate;
 
-  PurchaseOrderHeaderModel({
+  final UdcDetails? paymentStatusRef;
+  final UdcDetails? paymentInstrumentRef;
+  final UdcDetails? orderTypeRef;
+
+
+  const PurchaseOrderHeaderModel({
     this.id,
     this.supplierId,
     this.dateTransaction,
@@ -45,6 +53,9 @@ class PurchaseOrderHeaderModel {
     this.paymentTerm,
     this.orderType,
     this.creditDueDate,
+    this.paymentStatusRef,
+    this.paymentInstrumentRef,
+    this.orderTypeRef,
   });
 
   factory PurchaseOrderHeaderModel.fromMap(Map<String, dynamic> map) {
@@ -71,6 +82,9 @@ class PurchaseOrderHeaderModel {
       paymentTerm: map['payment_term'],
       orderType: map['order_type'],
       creditDueDate: map['credit_due_date'],
+      paymentStatusRef: UdcDetails.fromJson(map['payment_status_ref']),
+      paymentInstrumentRef: UdcDetails.fromJson(map['payment_instrument_ref']),
+      orderTypeRef: UdcDetails.fromJson(map['order_type_ref']),
     );
   }
 
@@ -100,4 +114,29 @@ class PurchaseOrderHeaderModel {
       'credit_due_date': creditDueDate,
     };
   }
+  @override
+  List<Object?> get props => [
+        id,
+        supplierId,
+        dateTransaction,
+        dateDelivery,
+        poReceiveStatus,
+        company,
+        taxableAmount,
+        taxAmount,
+        amountWithhold,
+        amountDiscount,
+        amountGross,
+        amountOtherCosts,
+        amountGrandTotalCost,
+        paymentStatus,
+        paymentInstrument,
+        userId,
+        dateUpdated,
+        amountOpenCredit,
+        orderNumber,
+        paymentTerm,
+        orderType,
+        creditDueDate,
+      ];
 }

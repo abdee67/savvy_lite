@@ -6,7 +6,9 @@ import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/next_number/bloc/next_number_bloc.dart';
 import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_receiver_model.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/models/sales_order_detail.dart';
+import 'package:savvy_stock/features/stock/item_cost/blocs/item_cost_bloc.dart';
+import 'package:savvy_stock/features/stock/item_cost/models/item_cost_model.dart';
+import 'package:savvy_stock/features/stock/sales_order_detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
@@ -17,7 +19,7 @@ import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_bloc.dart
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 
-class ItemTransactionModelRepository {
+class ItemTransactionRepository {
   final LocalDatabaseService databaseService;
   final AuthBloc authBloc;
   final SystemConstantBloc systemConstantBloc;
@@ -27,9 +29,9 @@ class ItemTransactionModelRepository {
   final StockItemLocationBloc itemLocationsController;
   final LotMasterBloc lotMasterController;
   final ItemUomConversionBloc itemUomConversionsController;
-  final ItemCostTableController itemCostTableController;
+  final ItemCostBloc itemCostTableController;
 
-  ItemTransactionModelRepository({
+  ItemTransactionRepository({
     required this.databaseService,
     required this.authBloc,
     required this.systemConstantBloc,
@@ -52,7 +54,7 @@ class ItemTransactionModelRepository {
     required String? remark,
     required double qty,
     required PurchaseOrderReceiverModel? por,
-    required SalesOrderItem? soD,
+    required SalesOrderDetail? soD,
   }) async {
     try {
       if (ib != null || loc != null || lm != null) {
@@ -137,8 +139,8 @@ class ItemTransactionModelRepository {
 
     // Set transaction number
     int? trNumber = por != null
-        ? por.poDetail?.poHeader?.orderNumber
-        : (soD != null ? soD.salesOrderHeaderId?.orderNumber : trNo);
+        ? por.poDetailRef?.orderNumber
+        : (soD != null ? soD.orderHeader?.orderNumber : trNo);
 
     trNumber ??= await nextNumberBloc.generateFormattedNumber('TN');
 
@@ -150,8 +152,8 @@ class ItemTransactionModelRepository {
     ItemTransactionModel finalTransaction = transactionWithNumber;
     if (por != null) {
       finalTransaction = finalTransaction.copyWith(
-        supplier: por.poDetail?.poHeader?.supplierId?.id,
-        orderType: por.poDetail?.poHeader?.orderType?.id,
+        supplier: por.poDetailRef?.supplierId,
+        orderType: por.poDetailRef?.orderType,
       );
     }
     if (soD != null) {
@@ -183,10 +185,11 @@ class ItemTransactionModelRepository {
 
     final qtyAvInStore = (ib.quantityAvailable ?? 0.0) + (factor * qty).abs();
 
-    final itemCost = await itemCostTableController.itemCostTableByItem(
-      ib.itemNumber,
+    final itemCost = itemCostTableController.state.items.firstWhere(
+      (element) => element.itemNumber == ib.itemNumber,
+      orElse: () => ItemCost.empty(),
     );
-    final unitCost = itemCost?.amountUnitCost ?? 0.0;
+    final unitCost = itemCost.amountUnitCost ?? 0.0;
 
     final factorP = await itemUomConversionsController.fromOtherToPrimary(
       ib.itemNumber,
@@ -244,31 +247,30 @@ class ItemTransactionModelRepository {
     );
 
     // Get item branch
-    final itemInBranchModelList = await itemInBranchModelController
-        .itemsAvailableSelectOneByItemAndBranch(loc.itemNumber!, loc.branch!);
-
-    final ib = itemInBranchModelList.isNotEmpty
-        ? itemInBranchModelList.first
-        : null;
+    final ib = itemInBranchModelController.state.items.firstWhere(
+      (element) =>
+          element.itemNumber == loc.itemNumber && element.branch == loc.branch,
+      orElse: () => ItemInBranchModel.empty(),
+    );
 
     // Set transaction number
     int? trNumber = por != null
-        ? por.poDetail?.poHeader?.orderNumber
-        : (soD != null ? soD.salesOrderHeaderId?.orderNumber : trNo);
+        ? por.poDetailRef?.orderNumber
+        : (soD != null ? soD.orderHeader?.orderNumber : trNo);
 
     trNumber ??= await nextNumberBloc.generateFormattedNumber('TN');
 
     final transactionWithNumber = updatedTransaction.copyWith(
       transactionNumber: trNumber,
-      itemBranch: ib?.id,
+      itemBranch: ib.id,
     );
 
     // Set supplier/customer and order type
     ItemTransactionModel finalTransaction = transactionWithNumber;
     if (por != null) {
       finalTransaction = finalTransaction.copyWith(
-        supplier: por.poDetail?.poHeader?.supplierId?.id,
-        orderType: por.poDetail?.poHeader?.orderType?.id,
+        supplier: por.poDetailRef?.supplierId,
+        orderType: por.poDetailRef?.orderType,
       );
     }
     if (soD != null) {
@@ -291,17 +293,17 @@ class ItemTransactionModelRepository {
     final uom = await _getItemBranchUoM(loc.itemNumber!, loc.branch!);
     final factor = await itemUomConversionsController.fromOtherToAnother(
       loc.itemNumber!,
-      ib?.unitOfMeasure?.id ?? uom!,
+      ib.unitOfMeasure ?? uom!,
       finalTransaction.unitOfMeasure!,
       authBloc.state.companyId!,
     );
 
-    final qtyAvInStore = (ib?.quantityAvailable ?? 0.0) + (factor * qty).abs();
+    final qtyAvInStore = (ib.quantityAvailable ?? 0.0) + (factor * qty).abs();
 
-    final itemCost = await itemCostTableController.itemCostTableByItem(
-      loc.itemNumber!,
-    );
-    final unitCost = itemCost?.amountUnitCost ?? 0.0;
+    final unitCost =  itemCostTableController.state.items.firstWhere(
+      (element) => element.itemNumber == loc.itemNumber,
+      orElse: () => ItemCost.empty(),
+    ).amountUnitCost;
 
     final factorP = await itemUomConversionsController.fromOtherToPrimary(
       loc.itemNumber!,
@@ -310,7 +312,7 @@ class ItemTransactionModelRepository {
     );
 
     final qTrn = (factorP * qty).abs();
-    final amountCost = qTrn * unitCost;
+    final amountCost = qTrn * unitCost!;
 
     final qBfrTrn = (factorP * qtyAvInStore).abs();
     final beforeAmountCost = qBfrTrn * unitCost;
@@ -361,31 +363,29 @@ class ItemTransactionModelRepository {
     );
 
     // Get item branch
-    final itemInBranchModelList = await itemInBranchModelController
-        .itemsAvailableSelectOneByItemAndBranch(lm.itemNumber!, lm.branch!);
-
-    final ib = itemInBranchModelList.isNotEmpty
-        ? itemInBranchModelList.first
-        : null;
-
+    final ib = itemInBranchModelController.state.selectedItems.firstWhere(
+      (element) =>
+          element.itemNumber == lm.itemNumber && element.branch == lm.branch,
+      orElse: () => ItemInBranchModel.empty(),
+    );
     // Set transaction number
     int? trNumber = por != null
-        ? por.poDetail?.poHeader?.orderNumber
+        ? por.poDetailRef?.orderNumber
         : (soD != null ? soD.orderHeader?.orderNumber : trNo);
 
     trNumber ??= await nextNumberBloc.generateFormattedNumber('TN');
 
     final transactionWithNumber = updatedTransaction.copyWith(
       transactionNumber: trNumber,
-      itemBranch: ib?.id,
+      itemBranch: ib.id,
     );
 
     // Set supplier/customer and order type
     ItemTransactionModel finalTransaction = transactionWithNumber;
     if (por != null) {
       finalTransaction = finalTransaction.copyWith(
-        supplier: por.poDetail?.poHeader?.supplierId?.id,
-        orderType: por.poDetail?.poHeader?.orderType?.id,
+        supplier: por.poDetailRef?.supplierId,
+        orderType: por.poDetailRef?.orderType,
       );
     }
     if (soD != null) {
@@ -405,12 +405,13 @@ class ItemTransactionModelRepository {
     );
 
     // Calculate quantities and costs
-    final qtyAvInStore = ib?.quantityAvailable ?? 0.0;
+    final qtyAvInStore = ib.quantityAvailable ?? 0.0;
 
-    final itemCost = await itemCostTableController.itemCostTableByItem(
-      lm.itemNumber!,
+    final itemCost =  itemCostTableController.state.items.firstWhere(
+      (element) => element.itemNumber == lm.itemNumber,
+      orElse: () => ItemCost.empty(),
     );
-    final unitCost = itemCost?.amountUnitCost ?? 0.0;
+    final unitCost = itemCost.amountUnitCost ?? 0.0;
 
     final factorP = await itemUomConversionsController.fromOtherToPrimary(
       lm.itemNumber!,
@@ -524,22 +525,25 @@ class ItemTransactionModelRepository {
     ItemTransactionModel masterTransaction,
     String incDec,
   ) async {
-    final itemInBranchModelList = await itemInBranchModelController
-        .itemsAvailableSelectOneByItemAndBranch(
+    final itemInBranchModelList =  itemInBranchModelController
+        .state.items.where((element) => element.itemNumber == item.itemNumber).toList();(
           item.itemNumber!,
           masterTransaction.branch!,
         );
 
     if (itemInBranchModelList.isNotEmpty) {
-      final ib = itemInBranchModelList.first;
+      final ib = itemInBranchModelList.firstWhere(
+        (element) => element.itemNumber == item.itemNumber,
+      );
       final uom = await _getItemBranchUoM(
         item.itemNumber!,
         masterTransaction.branch!,
       );
       final factor = await itemUomConversionsController.fromOtherToAnother(
         item.itemNumber!,
-        ib.unitOfMeasure!.id!,
+        ib.unitOfMeasure ?? uom!,
         item.unitOfMeasure!,
+        authBloc.state.companyId!,
       );
 
       final qb = ib.quantityAvailable ?? 0.0;
@@ -555,7 +559,7 @@ class ItemTransactionModelRepository {
         ib.quantityAvailable = qb - qI;
       }
 
-      await itemInBranchModelController.saveInEdit(
+      await itemInBranchModelController.state.saveInRow(
         ib,
         'A',
         masterTransaction.remark,
@@ -657,7 +661,7 @@ class ItemTransactionModelRepository {
     bool applyLotMgmt,
   ) async {
     // Similar implementation for issue transactions
-    // ... (would follow same pattern as adjustment)
+    
     return true;
   }
 
@@ -760,14 +764,16 @@ class ItemTransactionModelRepository {
 
         if (transactions.isEmpty) {
           // Take current available
-          final itemCost = await itemCostTableController.itemCostTableByItem(
-            itemId,
+          final itemCost = itemCostTableController.state.items.firstWhere(
+             (element) => element.itemNumber == itemId,
+            orElse: () => ItemCost.empty(),
           );
           final factor = await itemUomConversionsController.fromOtherToPrimary(
             itemId,
-            ib?.unitOfMeasure?.id ?? 0,
+            ib?.unitOfMeasure ?? 0,
+            authBloc.state.companyId!,
           );
-          final unitCost = itemCost?.amountUnitCost ?? 0.0;
+          final unitCost = itemCost.amountUnitCost ?? 0.0;
           qOpen = (factor * unitCost).abs();
         } else {
           qOpen = transactions.isNotEmpty
@@ -790,7 +796,7 @@ class ItemTransactionModelRepository {
             [
               authBloc.state.companyId!,
               itemId,
-              ib.branch!.id,
+              ib.branch,
               fromDateTime.toIso8601String(),
               thruDateTime.toIso8601String(),
             ],
@@ -807,7 +813,7 @@ class ItemTransactionModelRepository {
               [
                 authBloc.state.companyId!,
                 itemId,
-                ib.branch!.id,
+                ib.branch,
                 fromDateTime.toIso8601String(),
               ],
             );
@@ -824,19 +830,21 @@ class ItemTransactionModelRepository {
               [
                 authBloc.state.companyId!,
                 itemId,
-                ib.branch!.id,
+                ib.branch,
                 thruDateTime.toIso8601String(),
               ],
             );
           }
 
           if (transactions.isEmpty) {
-            final itemCost = await itemCostTableController.itemCostTableByItem(
-              itemId,
+            final itemCost = await itemCostTableController.state.items.firstWhere(
+              (element) => element.itemNumber == itemId,
+              orElse: () => ItemCost.empty(),
             );
             final factor = await itemUomConversionsController
-                .fromOtherToPrimary(itemId, ib.unitOfMeasure!.id!);
-            final unitCost = itemCost?.amountUnitCost ?? 0.0;
+                .fromOtherToPrimary(itemId, ib.unitOfMeasure!,
+                    authBloc.state.companyId!);
+            final unitCost = itemCost.amountUnitCost ?? 0.0;
             qOpen += (factor * unitCost).abs();
           } else {
             qOpen += transactions.isNotEmpty

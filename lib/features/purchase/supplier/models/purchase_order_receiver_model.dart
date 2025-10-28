@@ -1,4 +1,7 @@
-class PurchaseOrderReceiverModel {
+import 'package:equatable/equatable.dart';
+import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_header_model.dart';
+
+class PurchaseOrderReceiverModel extends Equatable {
   final int? id;
   final int? poDetail;
   final int? itemNumber;
@@ -20,7 +23,13 @@ class PurchaseOrderReceiverModel {
   final int? unitOfMeasure;
   final String? batchNumberSupplier;
 
-  PurchaseOrderReceiverModel({
+  final PurchaseOrderHeaderModel? poDetailRef;
+  
+
+
+
+
+const PurchaseOrderReceiverModel({
     this.id,
     this.poDetail,
     this.itemNumber,
@@ -41,6 +50,7 @@ class PurchaseOrderReceiverModel {
     this.location,
     this.unitOfMeasure,
     this.batchNumberSupplier,
+    this.poDetailRef,
   });
 
   factory PurchaseOrderReceiverModel.fromMap(Map<String, dynamic> map) {
@@ -73,6 +83,19 @@ class PurchaseOrderReceiverModel {
       location: map['location'],
       unitOfMeasure: map['unit_of_measure'],
       batchNumberSupplier: map['batch_number_supplier'],
+      poDetailRef: map['po_detail_ref'] != null
+          ? PurchaseOrderHeaderModel.fromMap({
+              'id': map['po_detail_ref']['id'],
+              'supplier_id': map['po_detail_ref']['supplier_id'],
+              'date_transation': map['po_detail_ref']['date_transation'],
+              'date_delivery': map['po_detail_ref']['date_delivery'],
+              'po_receive_status': map['po_detail_ref']['po_receive_status'],
+              'payment_status': map['po_detail_ref']['payment_status'],
+              'order_number': map['po_detail_ref']['order_number'],
+              'order_type': map['po_detail_ref']['order_type'],
+          
+  })
+          : null,
     );
   }
 
@@ -100,4 +123,28 @@ class PurchaseOrderReceiverModel {
       'batch_number_supplier': batchNumberSupplier,
     };
   }
+
+  @override
+  List<Object?> get props => [
+        id,
+        poDetail,
+        itemNumber,
+        quantityTransaction,
+        unitCost,
+        amountExtendedCost,
+        quantityOpen,
+        amountOpen,
+        quantityRecieved,
+        amountReceived,
+        dateReceived,
+        company,
+        userId,
+        dateUpdated,
+        branchRecieved,
+        dateEffective,
+        dateExpiration,
+        location,
+        unitOfMeasure,
+        batchNumberSupplier,
+      ];
 }

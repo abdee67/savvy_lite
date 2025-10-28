@@ -5,7 +5,7 @@ class LotMaster {
   final int? itemNumber;
   final int? lotNumber;
   final double? unitPrice;
-  final double? quantityAvailable;
+   double? quantityAvailable;
   final int? company;
   final DateTime? dateEffective;
   final DateTime? dateExpiration;

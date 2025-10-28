@@ -511,7 +511,7 @@ class ItemUomConversionBloc
   ) async {
     emit(state.copyWith(status: ItemUomConversionStatus.converting));
     try {
-      final factor = await _fromOtherToAnother(
+      final factor = await fromOtherToAnother(
         event.itemId,
         event.fromUomId,
         event.toUomId,
@@ -535,7 +535,7 @@ class ItemUomConversionBloc
     }
   }
 
-  Future<double> _fromOtherToAnother(
+  Future<double> fromOtherToAnother(
     int itemId,
     int fromUomId,
     int toUomId,
@@ -579,9 +579,9 @@ class ItemUomConversionBloc
       }
       // Check if one of the UoMs is primary
       if (primaryUomId == fromUomId) {
-        return await _fromPrimaryToOther(itemId, toUomId, companyId);
+        return await fromPrimaryToOther(itemId, toUomId, companyId);
       } else if (primaryUomId == toUomId) {
-        return await _fromOtherToPrimary(itemId, fromUomId, companyId);
+        return await fromOtherToPrimary(itemId, fromUomId, companyId);
       }
 
       // Get structure levels for both UoMs
@@ -647,16 +647,16 @@ class ItemUomConversionBloc
     }
   }
 
-  Future<double> _fromPrimaryToOther(
+  Future<double> fromPrimaryToOther(
     int itemId,
     int toUomId,
     int companyId,
   ) async {
-    final factor = await _fromOtherToPrimary(itemId, toUomId, companyId);
+    final factor = await fromOtherToPrimary(itemId, toUomId, companyId);
     return factor != 1.0 ? 1.0 / factor : 1.0;
   }
 
-  Future<double> _fromOtherToPrimary(
+  Future<double> fromOtherToPrimary(
     int itemId,
     int fromUomId,
     int companyId,

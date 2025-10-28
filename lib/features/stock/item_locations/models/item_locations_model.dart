@@ -1,9 +1,9 @@
 import 'package:equatable/equatable.dart';
 
-class ItemLocation extends Equatable {
+class ItemLocation  {
   // Primary Fields
   final int? id; // INTEGER PRIMARY KEY AUTOINCREMENT
-  final double? quantityOnHand; // REAL
+   double? quantityOnHand; // REAL
 
   // Relational IDs (Foreign Keys)
   final int? itemNumber; // INTEGER (FK to items_table)
@@ -17,7 +17,7 @@ class ItemLocation extends Equatable {
   final int? updatedBy; // INTEGER (FK to user_table)
   final int? createdBy; // INTEGER (FK to user_table)
 
-  const ItemLocation({
+   ItemLocation({
     this.id,
     this.quantityOnHand,
     this.itemNumber,

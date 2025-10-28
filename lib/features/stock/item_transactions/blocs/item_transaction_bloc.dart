@@ -1,32 +1,54 @@
 import 'dart:async';
 import 'package:bloc/bloc.dart';
+import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
+import 'package:savvy_stock/features/next_number/bloc/next_number_bloc.dart';
+import 'package:savvy_stock/features/sales/repositories/sales_repository.dart';
+import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
+import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_transactions/blocs/item_transaction_event.dart';
 import 'package:savvy_stock/features/stock/item_transactions/blocs/item_transaction_state.dart';
 import 'package:savvy_stock/features/stock/item_transactions/model/item_transaction_model.dart';
+import 'package:savvy_stock/features/stock/item_transactions/repo/item_transaction_repo.dart';
+import 'package:savvy_stock/features/stock/sales_order_header/bloc/sales_order_header_bloc.dart';
+import 'package:savvy_stock/features/stock/sales_order_header/repo/sales_order_header_repo.dart';
 
 class ItemTransactionsBloc
     extends Bloc<ItemTransactionsEvent, ItemTransactionsState> {
-  final LocalDatabaseService databaseService;
+  final ItemTransactionRepository repository;
   final AuthBloc authBloc;
+  final SystemConstantBloc systemConstantBloc;
+  final NextNumberBloc nextNumberBloc;
+  final StockItemEntryBloc itemsTableController;
+  final SalesOrderHeaderBloc salesOrderHeaderController;
   StreamSubscription? _authSubscription;
 
   ItemTransactionsBloc({
-    required this.databaseService,
+    required this.salesOrderHeaderController,
     required this.authBloc,
+    required this.systemConstantBloc,
+    required this.nextNumberBloc,
+    required this.itemsTableController,
+    required this.repository,
   }) : super(const ItemTransactionsState()) {
     _authSubscription = authBloc.stream.listen((authState) {
       if (authState.isAuthenticated && authState.companyId != null) {
-        add(LoadItemTransactions(
-          companyId: authState.companyId!,
-          branchId: authState.branchId,
-        ));
+        add(
+          LoadItemTransactions(
+            companyId: authState.companyId!,
+            branchId: authState.branchId,
+          ),
+        );
       }
     });
 
     on<LoadItemTransactions>(_onLoadTransactions);
     on<SaveItemTransaction>(_onSaveTransaction);
+    on<SaveRowTransaction>(_onSaveRow);
+    on<CreateItemTransaction>(_onCreateTransaction);
+    on<SaveAndClose>(_onSaveAndClose);
+    on<SaveAndAddNew>(_onSaveAndAddNew);
     on<UpdateItemTransaction>(_onUpdateTransaction);
     on<DeleteItemTransaction>(_onDeleteTransaction);
     on<DeleteMultipleItemTransactions>(_onDeleteMultipleTransactions);
@@ -35,13 +57,11 @@ class ItemTransactionsBloc
     on<SelectMultipleItemTransactions>(_onSelectMultipleTransactions);
     on<ClearSelection>(_onClearSelection);
     on<PrepareCreate>(_onPrepareCreate);
-    on<PrepareCreateInEdit>(_onPrepareCreateInEdit);
     on<PrepareEdit>(_onPrepareEdit);
-    on<PrepareCopy>(_onPrepareCopy);
-    on<CreateStockCardTransaction>(_onCreateStockCard);
+    on<ExecuteInventoryTransaction>(_onExecuteInventoryTransaction);
     on<CalculateOpeningAmount>(_onCalculateOpeningAmount);
-    on<SaveAndClose>(_onSaveAndClose);
-    on<SaveAndAddNew>(_onSaveAndAddNew);
+    on<GetTotalOpening>(_onGetTotalOpening);
+
     on<CancelCreate>(_onCancelCreate);
     on<CancelUpdate>(_onCancelUpdate);
     on<Discard>(_onDiscard);
@@ -51,52 +71,25 @@ class ItemTransactionsBloc
     LoadItemTransactions event,
     Emitter<ItemTransactionsState> emit,
   ) async {
+    emit(state.copyWith(status: ItemTransactionsStatus.loading));
     try {
-      emit(state.copyWith(status: ItemTransactionsStatus.loading));
-      
-      final db = await databaseService.database;
-      final transactions = await db.rawQuery('''
-        SELECT t.*, 
-               b.name as branch_name,
-               i.description as item_description,
-               l.name as location_name,
-               lot.description as lot_description
-        FROM item_transactions t
-        LEFT JOIN branch_table b ON t.branch = b.id
-        LEFT JOIN items_table i ON t.item_number = i.id
-        LEFT JOIN item_locations l ON t.item_location = l.id
-        LEFT JOIN lot_master lot ON t.lot_number = lot.id
-        WHERE t.company = ? ${event.branchId != null ? 'AND t.branch = ?' : ''}
-        ORDER BY t.date_created DESC
-      ''', [
+      final transactions = await repository.getTransactionsByCompany(
         event.companyId,
-        if (event.branchId != null) event.branchId,
-      ]);
-
-      final items = transactions
-          .map((map) => ItemTransactionModel.fromMap(map))
-          .toList();
-
-      // Calculate totals
-      double totalQuantity = 0;
-      double totalCost = 0;
-      for (var item in items) {
-        totalQuantity += item.quantityTransaction ?? 0;
-        totalCost += (item.amountCost ?? 0);
-      }
-
-      emit(state.copyWith(
-        status: ItemTransactionsStatus.loaded,
-        items: items,
-        filteredItems: items,
-        totalQuantity: totalQuantity,
-        totalCost: totalCost,
-      ));
+      );
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.loaded,
+          transactions: transactions,
+          filteredTransactions: transactions,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        status: ItemTransactionsStatus.failure,
-        message: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.error,
+          error: 'Failed to load transactions: $e',
+        ),
+      );
     }
   }
 
@@ -104,29 +97,66 @@ class ItemTransactionsBloc
     SaveItemTransaction event,
     Emitter<ItemTransactionsState> emit,
   ) async {
+    emit(state.copyWith(status: ItemTransactionsStatus.saving));
     try {
-      emit(state.copyWith(status: ItemTransactionsStatus.saving));
+      final batch = <Future>[];
+      for (final transaction in event.transactions) {
+        if (transaction.id == null) {
+          batch.add(repository.createTransaction(transaction));
+        } else {
+          batch.add(repository.updateTransaction(transaction));
+        }
+      }
+      await Future.wait(batch);
 
-      final db = await databaseService.database;
-      await db.insert(
-        'item_transactions',
-        event.transaction.toMap(),
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.success,
+          successmessage: 'Saved',
+          createItems: const [],
+          editItems: const [],
+        ),
       );
-
-      add(LoadItemTransactions(
-        companyId: event.transaction.company!,
-        branchId: event.transaction.branch,
-      ));
-
-      emit(state.copyWith(
-        status: ItemTransactionsStatus.success,
-        message: 'Transaction saved successfully',
-      ));
+      add(LoadItemTransactions(companyId: authBloc.state.companyId!));
     } catch (e) {
-      emit(state.copyWith(
-        status: ItemTransactionsStatus.failure,
-        message: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.error,
+          error: 'Failed to save transactions: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onSaveRow(
+    SaveRowTransaction event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    emit(state.copyWith(status: ItemTransactionsStatus.saving));
+    try {
+      final batch = <Future>[];
+      for (final transaction in state.editItems) {
+        if (transaction.id == null) {
+          batch.add(repository.createTransaction(transaction));
+        } else {
+          batch.add(repository.updateTransaction(transaction));
+        }
+      }
+      await Future.wait(batch);
+
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.success,
+          successmessage: 'Saved',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.error,
+          error: 'Failed to save row: $e',
+        ),
+      );
     }
   }
 
@@ -134,31 +164,28 @@ class ItemTransactionsBloc
     UpdateItemTransaction event,
     Emitter<ItemTransactionsState> emit,
   ) async {
+    emit(state.copyWith(status: ItemTransactionsStatus.updating));
     try {
-      emit(state.copyWith(status: ItemTransactionsStatus.saving));
-
-      final db = await databaseService.database;
-      await db.update(
-        'item_transactions',
-        event.transaction.toMap(),
-        where: 'id = ?',
-        whereArgs: [event.transaction.id],
+      await repository.updateTransaction(event.transaction);
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.success,
+          successmessage: 'Transaction updated successfully',
+        ),
       );
-
-      add(LoadItemTransactions(
-        companyId: event.transaction.company!,
-        branchId: event.transaction.branch,
-      ));
-
-      emit(state.copyWith(
-        status: ItemTransactionsStatus.success,
-        message: 'Transaction updated successfully',
-      ));
+      add(
+        LoadItemTransactions(
+          companyId: event.transaction.company!,
+          branchId: event.transaction.branch,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        status: ItemTransactionsStatus.failure,
-        message: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.error,
+          error: 'Failed to update transaction: ${e.toString()}',
+        ),
+      );
     }
   }
 
@@ -166,30 +193,30 @@ class ItemTransactionsBloc
     DeleteItemTransaction event,
     Emitter<ItemTransactionsState> emit,
   ) async {
+    emit(state.copyWith(status: ItemTransactionsStatus.deleting));
+
     try {
-      emit(state.copyWith(status: ItemTransactionsStatus.deleting));
-
-      final db = await databaseService.database;
-      await db.delete(
-        'item_transactions',
-        where: 'id = ?',
-        whereArgs: [event.transaction.id],
+      await repository.deleteTransaction(event.transaction.id!);
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.success,
+          successmessage: 'Transaction deleted successfully',
+          selectedItems: [],
+        ),
       );
-
-      add(LoadItemTransactions(
-        companyId: event.transaction.company!,
-        branchId: event.transaction.branch,
-      ));
-
-      emit(state.copyWith(
-        status: ItemTransactionsStatus.success,
-        message: 'Transaction deleted successfully',
-      ));
+      add(
+        LoadItemTransactions(
+          companyId: event.transaction.company!,
+          branchId: event.transaction.branch,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        status: ItemTransactionsStatus.failure,
-        message: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.error,
+          error: e.toString(),
+        ),
+      );
     }
   }
 
@@ -197,36 +224,27 @@ class ItemTransactionsBloc
     DeleteMultipleItemTransactions event,
     Emitter<ItemTransactionsState> emit,
   ) async {
+    emit(state.copyWith(status: ItemTransactionsStatus.deleting));
     try {
-      emit(state.copyWith(status: ItemTransactionsStatus.deleting));
+      await repository.deleteTransactions(event.transactions);
 
-      final db = await databaseService.database;
-      final batch = db.batch();
-      for (var transaction in event.transactions) {
-        batch.delete(
-          'item_transactions',
-          where: 'id = ?',
-          whereArgs: [transaction.id],
-        );
-      }
-      await batch.commit();
-
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.success,
+          successmessage: 'Transactions deleted successfully',
+          selectedItems: [],
+        ),
+      );
       if (event.transactions.isNotEmpty) {
-        add(LoadItemTransactions(
-          companyId: event.transactions.first.company!,
-          branchId: event.transactions.first.branch,
-        ));
+        add(LoadItemTransactions(companyId: event.transactions.first.company!));
       }
-
-      emit(state.copyWith(
-        status: ItemTransactionsStatus.success,
-        message: 'Transactions deleted successfully',
-      ));
     } catch (e) {
-      emit(state.copyWith(
-        status: ItemTransactionsStatus.failure,
-        message: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.error,
+          error: e.toString(),
+        ),
+      );
     }
   }
 
@@ -237,8 +255,9 @@ class ItemTransactionsBloc
     final query = event.query.toLowerCase();
     final filters = event.filters;
 
-    var filtered = state.items.where((transaction) {
-      bool matchesSearch = query.isEmpty ||
+    var filtered = state.transactions.where((transaction) {
+      bool matchesSearch =
+          query.isEmpty ||
           transaction.remark?.toLowerCase().contains(query) == true ||
           transaction.transactionNumber?.toString().contains(query) == true;
 
@@ -279,151 +298,135 @@ class ItemTransactionsBloc
       totalCost += (item.amountCost ?? 0);
     }
 
-    emit(state.copyWith(
-      filteredItems: filtered,
-      searchQuery: query,
-      filters: filters,
-      totalQuantity: totalQuantity,
-      totalCost: totalCost,
-    ));
+    emit(
+      state.copyWith(
+        filteredTransactions: filtered,
+        searchQuery: query,
+        filters: filters,
+        totalQuantity: totalQuantity,
+        totalCost: totalCost,
+      ),
+    );
   }
 
   void _onSelectTransaction(
     SelectItemTransaction event,
     Emitter<ItemTransactionsState> emit,
   ) {
-    final isAlreadySelected = state.selectedItems
-        .any((item) => item.id == event.transaction.id);
+    final isAlreadySelected = state.selectedItems.any(
+      (item) => item.id == event.transaction.id,
+    );
 
     final updatedSelection = isAlreadySelected
         ? state.selectedItems
-            .where((item) => item.id != event.transaction.id)
-            .toList()
+              .where((item) => item.id != event.transaction.id)
+              .toList()
         : [...state.selectedItems, event.transaction];
 
-    emit(state.copyWith(
-      selectedItems: updatedSelection,
-      isSelectionMode: updatedSelection.isNotEmpty,
-    ));
+    emit(
+      state.copyWith(
+        selectedItems: updatedSelection,
+        isSelectionMode: updatedSelection.isNotEmpty,
+      ),
+    );
   }
 
   void _onSelectMultipleTransactions(
     SelectMultipleItemTransactions event,
     Emitter<ItemTransactionsState> emit,
   ) {
-    emit(state.copyWith(
-      selectedItems: event.transactions,
-      isSelectionMode: event.transactions.isNotEmpty,
-    ));
+    emit(
+      state.copyWith(
+        selectedItems: event.transactions,
+        isSelectionMode: event.transactions.isNotEmpty,
+      ),
+    );
   }
 
   void _onClearSelection(
     ClearSelection event,
     Emitter<ItemTransactionsState> emit,
   ) {
-    emit(state.copyWith(
-      selectedItems: [],
-      isSelectionMode: false,
-    ));
+    emit(state.copyWith(selectedItems: [], isSelectionMode: false));
   }
 
-  void _onPrepareCreate(
+  Future<void> _onPrepareCreate(
     PrepareCreate event,
-    Emitter<ItemTransactionsState> emit,
-  ) {
-    final newTransaction = ItemTransactionModel(
-      dateCreated: DateTime.now(),
-      company: authBloc.state.companyId,
-      branch: authBloc.state.branchId,
-    );
-    emit(state.copyWith(
-      selected: newTransaction,
-      createItems: [...state.createItems, newTransaction],
-    ));
-  }
-
-  void _onPrepareCreateInEdit(
-    PrepareCreateInEdit event,
-    Emitter<ItemTransactionsState> emit,
-  ) {
-    final newTransaction = ItemTransactionModel(
-      dateCreated: DateTime.now(),
-      company: authBloc.state.companyId,
-      branch: authBloc.state.branchId,
-    );
-    emit(state.copyWith(
-      editingItem: newTransaction,
-      editItems: [...state.editItems, newTransaction],
-    ));
-  }
-
-  void _onPrepareEdit(
-    PrepareEdit event,
-    Emitter<ItemTransactionsState> emit,
-  ) {
-    emit(state.copyWith(
-      editingItem: event.transaction,
-      editItems: [event.transaction],
-    ));
-  }
-
-  void _onPrepareCopy(
-    PrepareCopy event,
-    Emitter<ItemTransactionsState> emit,
-  ) {
-    final copy = ItemTransactionModel(
-      itemNumber: event.transaction.itemNumber,
-      branch: event.transaction.branch,
-      company: event.transaction.company,
-      transactionType: event.transaction.transactionType,
-      quantityTransaction: event.transaction.quantityTransaction,
-      unitCost: event.transaction.unitCost,
-      dateCreated: DateTime.now(),
-    );
-    emit(state.copyWith(
-      selected: copy,
-      isDuplicate: true,
-    ));
-  }
-
-  Future<void> _onCreateStockCard(
-    CreateStockCardTransaction event,
     Emitter<ItemTransactionsState> emit,
   ) async {
     try {
-      emit(state.copyWith(status: ItemTransactionsStatus.saving));
+      final user = authBloc.state.userId;
+      if (user == null || authBloc.state.companyId == null) {
+        throw Exception('User not authenticated');
+      }
 
-      final db = await databaseService.database;
-      final transaction = ItemTransactionModel(
-        itemLocation: event.locationId,
-        itemBranch: event.itemBranchId,
-        lotNumber: event.lotId,
-        transactionType: int.tryParse(event.transactionType),
-        transactionNumber: event.transactionNumber,
-        quantityTransaction: event.quantity,
-        remark: event.remark,
-        dateCreated: DateTime.now(),
-        company: authBloc.state.companyId,
-        branch: authBloc.state.branchId,
-        createdBy: authBloc.state.userId,
+      final createItems = <ItemTransactionModel>[];
+      final tempId = 1;
+      final transactionNumber = await nextNumberBloc.generateFormattedNumber(
+        'TN',
       );
 
-      await db.insert('item_transactions', transaction.toMap());
+      final selected = ItemTransactionModel(
+        transactionNumber: transactionNumber,
+        dateCreated: DateTime.now(),
+        quantityTransaction: 0.0,
+        beforeStoreQuantityAvailable: 0.0,
+        unitCost: 0.0,
+        amountCost: 0.0,
+        beforeAmountCost: 0.0,
+        company: authBloc.state.companyId,
+        createdBy: user,
+        tempId: tempId,
+      );
+      createItems.add(selected);
 
-      add(LoadItemTransactions(
-        companyId: authBloc.state.companyId!,
-        branchId: authBloc.state.branchId,
-      ));
-
-      emit(state.copyWith(
-        status: ItemTransactionsStatus.success,
-        message: 'Stock card created successfully',
-      ));
+      emit(state.copyWith(createItems: createItems, selected: selected));
     } catch (e) {
-      emit(state.copyWith(
-        status: ItemTransactionsStatus.failure,
-        message: e.toString(),
-      ));
+      emit(state.copyWith(error: 'Failed to prepare create: $e'));
+    }
+  }
+
+  Future<void> _onPrepareEdit(
+    PrepareEdit event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    try {
+      final editItems = <ItemTransactionModel>[event.transaction];
+      emit(state.copyWith(editItems: editItems, selected: event.transaction));
+    } catch (e) {
+      emit(state.copyWith(error: 'Failed to prepare edit: $e'));
+    }
+  }
+
+  Future<void> _onExecuteInventoryTransaction(
+    ExecuteInventoryTransaction event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    emit(state.copyWith(status: ItemTransactionsStatus.processing));
+    try {
+      await repository.executeInventoryTransactions(
+        masterTransaction: event.masterTransaction,
+        detailTransactions: event.detailTransactions,
+      );
+
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.success,
+          successmessage: 'Transaction successfully created!',
+        ),
+      );
+
+      // Refresh data
+      if (authBloc.state.companyId != null) {
+        add(LoadItemTransactions(companyId: authBloc.state.companyId!));
+      }
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.error,
+          error: 'Error occurred, please contact vendor!',
+        ),
+      );
     }
   }
 
@@ -432,34 +435,66 @@ class ItemTransactionsBloc
     Emitter<ItemTransactionsState> emit,
   ) async {
     try {
-      emit(state.copyWith(status: ItemTransactionsStatus.loading));
+      final openingAmount = await repository.calculateOpeningAmount(
+        itemId: event.itemId,
+        branchId: event.branchId,
+        dateFrom: event.dateFrom,
+        dateThru: event.dateThru,
+      );
 
-      final db = await databaseService.database;
-      final result = await db.rawQuery('''
-        SELECT SUM(quantity_transaction * unit_cost) as opening_amount
-        FROM item_transactions
-        WHERE item_number = ? 
-        AND branch = ?
-        AND date_created >= ?
-        AND date_created <= ?
-      ''', [
-        event.itemId,
-        event.branchId,
-        event.fromDate.toIso8601String(),
-        event.toDate.toIso8601String(),
-      ]);
-
-      final openingAmount = result.first['opening_amount'] as double? ?? 0.0;
-
-      emit(state.copyWith(
-        status: ItemTransactionsStatus.loaded,
-        openingBalance: openingAmount,
-      ));
+      emit(state.copyWith(openingAmount: openingAmount));
     } catch (e) {
-      emit(state.copyWith(
-        status: ItemTransactionsStatus.failure,
-        message: e.toString(),
-      ));
+      emit(state.copyWith(error: 'Failed to calculate opening amount: $e'));
+    }
+  }
+
+  Future<void> _onGetTotalOpening(
+    GetTotalOpening event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    try {
+      double totalOpening = 0.0;
+      final items = itemsTableController.state.items;
+      final startDate = salesOrderHeaderController.state.startDateForSales;
+      final thruDate = salesOrderHeaderController.state.thruDateForSales;
+
+      for (final item in items) {
+        final opening = await repository.calculateOpeningAmount(
+          itemId: item.id,
+          branchId: null,
+          dateFrom: startDate!,
+          dateThru: thruDate!,
+        );
+        totalOpening += opening;
+      }
+
+      emit(state.copyWith(totlaAmount: totalOpening));
+    } catch (e) {
+      emit(state.copyWith(error: 'Failed to calculate total opening: $e'));
+    }
+  }
+
+  Future<void> _onCreateTransaction(
+    CreateItemTransaction event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    emit(state.copyWith(status: ItemTransactionsStatus.creating));
+    try {
+      await repository.createTransaction(event.transaction);
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.success,
+          successmessage: 'Transaction created successfully',
+        ),
+      );
+      add(LoadItemTransactions(companyId: authBloc.state.companyId!));
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.error,
+          error: 'Failed to create transaction: $e',
+        ),
+      );
     }
   }
 
@@ -467,20 +502,28 @@ class ItemTransactionsBloc
     SaveAndClose event,
     Emitter<ItemTransactionsState> emit,
   ) async {
+    emit(state.copyWith(status: ItemTransactionsStatus.saving));
     try {
-      await _saveCurrentTransaction();
-      emit(state.copyWith(
-        selected: null,
-        editingItem: null,
-        createItems: [],
-        editItems: [],
-      ));
+      await _onCreateTransaction(
+        CreateItemTransaction(state.createItems.first),
+        emit,
+      );
+      emit(
+        state.copyWith(
+          selected: null,
+          editingItem: null,
+          createItems: [],
+          editItems: [],
+        ),
+      );
       // Navigation should be handled in the UI
     } catch (e) {
-      emit(state.copyWith(
-        status: ItemTransactionsStatus.failure,
-        message: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.failure,
+          successmessage: e.toString(),
+        ),
+      );
     }
   }
 
@@ -489,71 +532,61 @@ class ItemTransactionsBloc
     Emitter<ItemTransactionsState> emit,
   ) async {
     try {
-      await _saveCurrentTransaction();
+      await _onCreateTransaction(
+        CreateItemTransaction(state.createItems.first),
+        emit,
+      );
+      ();
       add(PrepareCreate());
       // Navigation should be handled in the UI
     } catch (e) {
-      emit(state.copyWith(
-        status: ItemTransactionsStatus.failure,
-        message: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.failure,
+          successmessage: e.toString(),
+        ),
+      );
     }
   }
 
-  void _onCancelCreate(
+  Future<void> _onCancelCreate(
     CancelCreate event,
     Emitter<ItemTransactionsState> emit,
-  ) {
-    emit(state.copyWith(
-      selected: null,
-      createItems: [],
-    ));
+  ) async {
+    emit(state.copyWith(selected: null, createItems: [], transactions: []));
   }
 
   void _onCancelUpdate(
     CancelUpdate event,
     Emitter<ItemTransactionsState> emit,
   ) {
-    emit(state.copyWith(
-      editingItem: null,
-      editItems: [],
-    ));
+    emit(state.copyWith(editingItem: null, editItems: []));
   }
 
-  void _onDiscard(
+  Future<void> _onDiscard(
     Discard event,
     Emitter<ItemTransactionsState> emit,
-  ) {
-    emit(state.copyWith(
-      selected: null,
-      editingItem: null,
-      createItems: [],
-      editItems: [],
-      selectedItems: [],
-      isSelectionMode: false,
-    ));
-  }
+  ) async {
+    try {
+      // Remove items that have been created but not saved
+      final itemsToDelete = state.createItems
+          .where((item) => item.id != null)
+          .toList();
+      if (itemsToDelete.isNotEmpty) {
+        await repository.deleteTransactions(itemsToDelete);
+      }
 
-  Future<void> _saveCurrentTransaction() async {
-    final db = await databaseService.database;
-    final transaction = state.selected ?? state.editingItem;
-    if (transaction == null) return;
-
-    if (transaction.id == null) {
-      await db.insert('item_transactions', transaction.toMap());
-    } else {
-      await db.update(
-        'item_transactions',
-        transaction.toMap(),
-        where: 'id = ?',
-        whereArgs: [transaction.id],
+      emit(
+        state.copyWith(
+          selected: null,
+          createItems: const [],
+          transactions: const [],
+          successmessage: 'All records are removed',
+        ),
       );
+    } catch (e) {
+      emit(state.copyWith(error: 'Failed to discard transactions: $e'));
     }
-
-    add(LoadItemTransactions(
-      companyId: transaction.company!,
-      branchId: transaction.branch,
-    ));
   }
 
   @override

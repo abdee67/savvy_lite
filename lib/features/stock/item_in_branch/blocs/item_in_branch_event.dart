@@ -145,3 +145,60 @@ class ExportSingleItemFromBranch extends ItemInBranchEvent {
   @override
   List<Object> get props => [itemToExport];
 }
+// Advanced operation events
+class LoadItemBranchByItemAndBranch extends ItemInBranchEvent {
+  final int itemNumber;
+  final int branchId;
+
+  LoadItemBranchByItemAndBranch(this.itemNumber, this.branchId);
+}
+
+class UpdateItemBranchUnitPrice extends ItemInBranchEvent {
+  final int itemBranchId;
+  final double newPrice;
+
+ const UpdateItemBranchUnitPrice(this.itemBranchId, this.newPrice);
+  @override
+  List<Object> get props => [itemBranchId, newPrice];
+}
+
+class LoadItemsInBranchByItem extends ItemInBranchEvent {
+  final int itemNumber;
+
+ const LoadItemsInBranchByItem(this.itemNumber);
+  @override
+  List<Object> get props => [itemNumber];
+}
+
+class LoadItemsInBranchByBranch extends ItemInBranchEvent {
+  final int branchId;
+
+ const LoadItemsInBranchByBranch(this.branchId);
+  @override
+  List<Object> get props => [branchId];
+}
+
+class LoadLowStockItems extends ItemInBranchEvent {
+  final int? branchId;
+
+ const LoadLowStockItems({this.branchId});
+  @override
+  List<Object> get props => [branchId ?? -1];
+}
+
+class LoadOutOfStockItems extends ItemInBranchEvent {
+  final int? branchId;
+
+ const LoadOutOfStockItems({this.branchId});
+  @override
+  List<Object> get props => [branchId ?? -1];
+}
+
+class UpdateItemQuantity extends ItemInBranchEvent {
+  final int itemId;
+  final double quantity;
+
+ const UpdateItemQuantity(this.itemId, this.quantity);
+  @override
+  List<Object> get props => [itemId, quantity];
+}

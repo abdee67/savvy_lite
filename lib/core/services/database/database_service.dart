@@ -751,6 +751,92 @@ CREATE INDEX idx_next_number_company ON next_number(company);
 ''');
     developer.log('Created table: lot_expiration_colors');
 
+    //26. create sales_order_header table
+    await db.execute('''
+  CREATE TABLE sales_order_header (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_date TEXT,
+  required_date TEXT,
+  shipped_date TEXT,
+  sales_type TEXT,
+  payment_method TEXT,
+  payment_instrument INTEGER,
+  discount TEXT,
+  add_on TEXT,
+  tax REAL,
+  with_hold_apply TEXT,
+  withhold_amount REAL,
+  discount_amount REAL,
+  discount_in_percent REAL,
+  reference_note1 TEXT,
+  reference_note_2 TEXT,
+  reference_note3 TEXT,
+  reference_note4 TEXT,
+  credit_date_topay TEXT,
+  fs_number TEXT,
+  void_indicator TEXT,
+  customer_bill_to INTEGER NOT NULL,
+  customer_table_id INTEGER NOT NULL,
+  employees_id INTEGER NOT NULL,
+  amount_total REAL,
+  company INTEGER,
+  payment_term INTEGER,
+  payment_status INTEGER,
+  order_number INTEGER,
+  amount_open REAL,
+  order_type INTEGER,
+  unit_cost REAL,
+  amount_cost REAL,
+  FOREIGN KEY (customer_bill_to) REFERENCES customer_table (id),
+  FOREIGN KEY (customer_table_id) REFERENCES customer_table (id),
+  FOREIGN KEY (employees_id) REFERENCES employees (id),
+  FOREIGN KEY (company) REFERENCES company_table (id),
+  FOREIGN KEY (payment_instrument) REFERENCES udc_details (id),
+  FOREIGN KEY (payment_status) REFERENCES udc_details (id),
+  FOREIGN KEY (order_type) REFERENCES udc_details (id)
+);
+CREATE INDEX idx_sales_order_header_customer_bill_to ON sales_order_header(customer_bill_to);
+CREATE INDEX idx_sales_order_header_customer_table_id ON sales_order_header(customer_table_id);
+CREATE INDEX idx_sales_order_header_employees_id ON sales_order_header(employees_id);
+CREATE INDEX idx_sales_order_header_company ON sales_order_header(company);
+CREATE INDEX idx_sales_order_header_payment_instrument ON sales_order_header(payment_instrument);
+CREATE INDEX idx_sales_order_header_payment_status ON sales_order_header(payment_status);
+CREATE INDEX idx_sales_order_header_order_type ON sales_order_header(order_type);
+''');
+    developer.log('Created table: sales_order_header');
+    //27. create sales_order_details table
+  await db.execute('''
+  CREATE TABLE sales_order_details (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    unit_price REAL,
+    quantity REAL,
+    extended_price REAL,
+    taxable TEXT,
+    reference1 TEXT,
+    reference2 TEXT,
+    sales_order_header_id INTEGER NOT NULL,
+    items_table_id INTEGER NOT NULL,
+    item_in_branch INTEGER,
+    company INTEGER,
+    lot_number INTEGER,
+    unit_cost REAL,
+    amount_cost REAL,
+    unit_of_measure INTEGER,
+    FOREIGN KEY (sales_order_header_id) REFERENCES sales_order_header (id) ON DELETE CASCADE,
+    FOREIGN KEY (items_table_id) REFERENCES items_table (id),
+    FOREIGN KEY (item_in_branch) REFERENCES items_in_branch (id),
+    FOREIGN KEY (company) REFERENCES company_table (id),
+    FOREIGN KEY (lot_number) REFERENCES lot_master (id),
+    FOREIGN KEY (unit_of_measure) REFERENCES udc_details (id)
+  )
+  CREATE INDEX idx_sales_order_details_sales_order_header_id ON sales_order_details(sales_order_header_id);
+  CREATE INDEX idx_sales_order_details_items_table_id ON sales_order_details(items_table_id);
+  CREATE INDEX idx_sales_order_details_item_in_branch ON sales_order_details(item_in_branch);
+  CREATE INDEX idx_sales_order_details_company ON sales_order_details(company);
+  CREATE INDEX idx_sales_order_details_lot_number ON sales_order_details(lot_number);
+  CREATE INDEX idx_sales_order_details_unit_of_measure ON sales_order_details(unit_of_measure);
+''');
+    developer.log('Created table: sales_order_details');
     //. Create sync_queue table
     await db.execute('''
       CREATE TABLE sync_queue (

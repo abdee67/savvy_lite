@@ -2,17 +2,17 @@ import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 
 enum ItemInBranchStatus {
-  initial,
+initial,
   loading,
-  searching,
-  success,
   loaded,
-  failure,
   creating,
   updating,
   deleting,
-  duplication,
+  searching,
   exporting,
+  success,
+  failure,
+  duplication,
 }
 
 enum ItemInBranchDetailStatus { hidden, showing, editing }
@@ -39,7 +39,12 @@ class ItemInBranchState extends Equatable {
   final List<ItemInBranchModel> exportedItems; //export multiple Branchs
   final ItemInBranchModel? exportedItem; //export single Branch
 
-  // Role management state
+  // Advanced data fields
+  final ItemInBranchModel? currentItemBranch;
+  final List<ItemInBranchModel> itemsByItem;
+  final List<ItemInBranchModel> itemsByBranch;
+  final List<ItemInBranchModel> lowStockItems;
+  final List<ItemInBranchModel> outOfStockItems;
 
   const ItemInBranchState({
     this.status = ItemInBranchStatus.initial,
@@ -59,6 +64,11 @@ class ItemInBranchState extends Equatable {
     this.showDetailPanel = false,
     this.exportedItems = const [],
     this.exportedItem,
+        this.currentItemBranch,
+    this.itemsByItem = const [],
+    this.itemsByBranch = const [],
+    this.lowStockItems = const [],
+    this.outOfStockItems = const [],
   });
 
   // --- Helper Getters ---
@@ -102,6 +112,11 @@ class ItemInBranchState extends Equatable {
     bool? showDetailPanel,
     List<ItemInBranchModel>? exportedItems,
     ItemInBranchModel? exportedItem,
+    ItemInBranchModel? currentItemBranch,
+    List<ItemInBranchModel>? itemsByItem,
+    List<ItemInBranchModel>? itemsByBranch,
+    List<ItemInBranchModel>? lowStockItems,
+    List<ItemInBranchModel>? outOfStockItems,
   }) {
     return ItemInBranchState(
       status: status ?? this.status,
@@ -122,6 +137,10 @@ class ItemInBranchState extends Equatable {
       showDetailPanel: showDetailPanel ?? this.showDetailPanel,
       exportedItem: exportedItem ?? this.exportedItem,
       exportedItems: exportedItems ?? this.exportedItems,
+      currentItemBranch: currentItemBranch ?? this.currentItemBranch,
+      itemsByItem: itemsByItem ?? this.itemsByItem,
+      itemsByBranch: itemsByBranch ?? this.itemsByBranch,
+      lowStockItems: lowStockItems ?? this.lowStockItems,
     );
   }
 
@@ -144,5 +163,10 @@ class ItemInBranchState extends Equatable {
     showDetailPanel,
     exportedItems,
     exportedItem,
+    currentItemBranch,
+    itemsByItem,
+    itemsByBranch,
+    lowStockItems,
+    outOfStockItems,
   ];
 }
