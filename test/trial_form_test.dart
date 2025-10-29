@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
-import 'package:savvy_stock/models/GetStarted/trial_form_data.dart';
-import 'package:savvy_stock/utils/form_validators.dart';
-import 'package:savvy_stock/services/trial_service.dart';
-import 'package:savvy_stock/widgets/getStarted/language_toggle.dart';
-import 'package:savvy_stock/widgets/components/textfields.dart';
+import 'package:savvy_stock/core/services/onboarding/trial_service.dart';
+import 'package:savvy_stock/core/utils/form_validators.dart';
+import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
+import 'package:savvy_stock/features/onboarding/models/trial_model.dart';
+import 'package:savvy_stock/features/onboarding/widgets/language_toggle.dart';
 
 void main() {
   group('TrialFormData Model Tests', () {

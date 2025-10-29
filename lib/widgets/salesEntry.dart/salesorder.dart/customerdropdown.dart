@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-import 'package:savvy_stock/models/customer.dart';
 
 /** 
 class CustomerDropdown extends StatefulWidget {
