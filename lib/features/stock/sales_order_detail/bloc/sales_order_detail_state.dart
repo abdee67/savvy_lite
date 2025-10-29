@@ -1,6 +1,5 @@
 // bloc/sales_order_details/sales_order_details_state.dart
 import 'package:flutter/foundation.dart';
-import 'package:savvy_stock/core/models/system_constant.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/stock/sales_order_detail/model/sales_order_detail.dart';
 @immutable

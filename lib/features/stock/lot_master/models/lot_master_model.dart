@@ -3,7 +3,7 @@ import 'package:savvy_stock/features/stock/lot_coloring/model/lot_coloring_model
 class LotMaster {
   final int? id;
   final int? itemNumber;
-  final int? lotNumber;
+   int? lotNumber;
   final double? unitPrice;
    double? quantityAvailable;
   final int? company;

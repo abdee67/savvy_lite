@@ -16,17 +16,51 @@ import 'package:savvy_stock/features/next_number/bloc/next_number_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_bloc.dart';
+import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_repo.dart';
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_bloc.dart';
+import 'package:savvy_stock/features/stock/item_transactions/repo/item_transaction_repo.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/bloc/lot_coloring_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_bloc.dart';
+import 'package:savvy_stock/features/stock/sales_order_detail/sales_order_detail_repo.dart';
+import 'package:savvy_stock/features/stock/sales_order_header/repo/sales_order_header_repo.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 
 final getIt = GetIt.instance;
 
 void initDependencies() {
+  // Repositories
+
+  getIt.registerLazySingleton<ItemTransactionRepository>(
+    () => ItemTransactionRepository(
+      authBloc: getIt(),
+      lotMasterController: getIt(),
+      itemCostTableController: getIt(),
+      itemLocationsController: getIt(),
+      itemInBranchModelController: getIt(),
+      itemUomConversionsController: getIt(),
+      udcDetailsController: getIt(),
+      systemConstantBloc: getIt(),
+      nextNumberBloc: getIt(),
+      databaseService: getIt(),
+    ),
+  );
+
+  getIt.registerLazySingleton<SalesOrderDetailRepository>( () => SalesOrderDetailRepository(databaseService: getIt()));
+  getIt.registerLazySingleton<SalesOrderHeaderRepository>( () => SalesOrderHeaderRepository());
+  
+  getIt.registerLazySingleton<ItemCostRepository>(
+    () => ItemCostRepository(databaseService: getIt()),
+  );
+  getIt.registerLazySingleton<StockItemInBranchRepository>(
+    () => StockItemInBranchRepository(
+      databaseService: getIt<LocalDatabaseService>(),
+    ),
+  );
+
   getIt.registerFactory<PaymentBloc>(() => PaymentBloc(getIt()));
 
   getIt.registerLazySingleton<AuthBloc>(
@@ -102,7 +136,15 @@ void initDependencies() {
   );
 
   getIt.registerFactory<StockItemInBranchBloc>(
-    () => StockItemInBranchBloc(databaseService: getIt(), authBloc: getIt()),
+    () => StockItemInBranchBloc(
+        authBloc: getIt(),
+        repository: getIt(),
+        systemConstantBloc: getIt(),
+        itemCostBloc: getIt(),
+        itemTransactionsRepository: getIt(),
+        lotMasterBloc: getIt(),
+        itemUomConversionsBloc: getIt(),
+        ),
   );
 
   getIt.registerFactory<ItemUomConversionBloc>(

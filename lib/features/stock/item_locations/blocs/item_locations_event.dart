@@ -1,8 +1,9 @@
 import 'package:equatable/equatable.dart';
-import 'package:flutter/material.dart';
+import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
+import 'package:savvy_stock/features/stock/sales_order_detail/model/sales_order_detail.dart';
 
-@immutable
+// Events
 abstract class ItemLocationsEvent extends Equatable {
   const ItemLocationsEvent();
 
@@ -10,97 +11,90 @@ abstract class ItemLocationsEvent extends Equatable {
   List<Object> get props => [];
 }
 
-class LoadItems extends ItemLocationsEvent {
+class LoadItemLocations extends ItemLocationsEvent {
   final int companyId;
-  const LoadItems(this.companyId);
+  const LoadItemLocations(this.companyId);
 
   @override
   List<Object> get props => [companyId];
 }
 
 class LoadItemLocationsByBranchAndItem extends ItemLocationsEvent {
+  final int companyId;
   final int branchId;
   final int itemId;
-  final int companyId;
   const LoadItemLocationsByBranchAndItem({
+    required this.companyId,
     required this.branchId,
     required this.itemId,
-    required this.companyId,
   });
 
   @override
-  List<Object> get props => [branchId, itemId];
+  List<Object> get props => [companyId, branchId, itemId];
 }
 
-class CreateItem extends ItemLocationsEvent {
+class CreateItemLocation extends ItemLocationsEvent {
   final ItemLocation item;
-  const CreateItem(this.item);
+  const CreateItemLocation(this.item);
 
   @override
   List<Object> get props => [item];
 }
 
-class UpdateItem extends ItemLocationsEvent {
+class UpdateItemLocation extends ItemLocationsEvent {
   final ItemLocation item;
-  const UpdateItem(this.item);
+  const UpdateItemLocation(this.item);
 
   @override
   List<Object> get props => [item];
 }
 
-class DeleteItem extends ItemLocationsEvent {
+class DeleteItemLocation extends ItemLocationsEvent {
   final int itemId;
-  final ItemLocation deletedItem;
-  final int deletedIndex;
-
-  const DeleteItem({
+  final ItemLocation? deletedItem;
+  final int? deletedIndex;
+  const DeleteItemLocation({
     required this.itemId,
-    required this.deletedItem,
-    required this.deletedIndex,
+    this.deletedItem,
+    this.deletedIndex,
   });
 
   @override
-  List<Object> get props => [itemId, deletedItem, deletedIndex];
+  List<Object> get props => [itemId];
 }
 
-class SearchItems extends ItemLocationsEvent {
+class SearchItemLocations extends ItemLocationsEvent {
   final String query;
-  const SearchItems(this.query);
+  const SearchItemLocations(this.query);
 
   @override
   List<Object> get props => [query];
 }
 
-class SelectItem extends ItemLocationsEvent {
+class SelectItemLocation extends ItemLocationsEvent {
   final ItemLocation item;
   final bool isSelected;
-  const SelectItem(this.item, this.isSelected);
+  const SelectItemLocation(this.item, this.isSelected);
 
   @override
   List<Object> get props => [item, isSelected];
 }
 
-class SelectAllItems extends ItemLocationsEvent {
+class SelectAllItemLocations extends ItemLocationsEvent {
   final List<ItemLocation> items;
-  const SelectAllItems(this.items);
+  const SelectAllItemLocations(this.items);
 
   @override
   List<Object> get props => [items];
 }
 
-class ClearSelection extends ItemLocationsEvent {
-  const ClearSelection();
+class ClearSelection extends ItemLocationsEvent {}
 
-  @override
-  List<Object> get props => [];
-}
-
-class DeleteSelectedItems extends ItemLocationsEvent {
+class DeleteSelectedItemLocations extends ItemLocationsEvent {
   final List<int> selectedItems;
   final List<ItemLocation> deletedItems;
   final List<int> deletedIndexes;
-
-  const DeleteSelectedItems({
+  const DeleteSelectedItemLocations({
     required this.selectedItems,
     required this.deletedItems,
     required this.deletedIndexes,
@@ -108,4 +102,24 @@ class DeleteSelectedItems extends ItemLocationsEvent {
 
   @override
   List<Object> get props => [selectedItems, deletedItems, deletedIndexes];
+}
+
+class SaveItemLocationRow extends ItemLocationsEvent {
+  final ItemLocation item;
+  final String action;
+  final int? transactionNumber;
+  final String? remark;
+  final PurchaseOrderReceiverModel? por;
+  final SalesOrderDetail? soD;
+  const SaveItemLocationRow(
+    this.item, {
+    this.action = 'A',
+    this.transactionNumber,
+    this.remark,
+    this.por,
+    this.soD,
+  });
+
+  @override
+  List<Object> get props => [item, action];
 }

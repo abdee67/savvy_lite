@@ -1,6 +1,8 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
+import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
+import 'package:savvy_stock/features/stock/sales_order_detail/model/sales_order_detail.dart';
 
 @immutable
 abstract class ItemInBranchEvent extends Equatable {
@@ -145,12 +147,52 @@ class ExportSingleItemFromBranch extends ItemInBranchEvent {
   @override
   List<Object> get props => [itemToExport];
 }
+
+// Complex business operations (from Java controller)
+class SaveRow extends ItemInBranchEvent {
+  final List<ItemInBranchModel> items;
+
+ const SaveRow(this.items);
+}
+
+class SaveInEdit extends ItemInBranchEvent {
+  final ItemInBranchModel item;
+  final String? transactionType;
+  final int? transactionNumber;
+  final String? remark;
+
+
+ const SaveInEdit(this.item, {
+    this.transactionType = 'A',
+    this.transactionNumber,
+    this.remark,
+  });
+}
+
+class CreateInEdit extends ItemInBranchEvent {
+  final ItemInBranchModel item;
+
+ const CreateInEdit(this.item);
+}
+
+class RemoveInCreate extends ItemInBranchEvent {
+  final ItemInBranchModel item;
+
+ const RemoveInCreate(this.item);
+}
+
+class RemoveInEdit extends ItemInBranchEvent {
+  final ItemInBranchModel item;
+
+ const RemoveInEdit(this.item);
+}
+
 // Advanced operation events
 class LoadItemBranchByItemAndBranch extends ItemInBranchEvent {
   final int itemNumber;
   final int branchId;
 
-  LoadItemBranchByItemAndBranch(this.itemNumber, this.branchId);
+  const LoadItemBranchByItemAndBranch(this.itemNumber, this.branchId);
 }
 
 class UpdateItemBranchUnitPrice extends ItemInBranchEvent {
@@ -201,4 +243,53 @@ class UpdateItemQuantity extends ItemInBranchEvent {
  const UpdateItemQuantity(this.itemId, this.quantity);
   @override
   List<Object> get props => [itemId, quantity];
+}
+
+
+// Stock management events
+class UpdateStockForSalesOrder extends ItemInBranchEvent {
+  final SalesOrderDetail salesOrderDetail;
+
+ const UpdateStockForSalesOrder(this.salesOrderDetail);
+}
+
+class UpdateStockForSalesOrderVoid extends ItemInBranchEvent {
+  final SalesOrderDetail salesOrderDetail;
+
+ const UpdateStockForSalesOrderVoid(this.salesOrderDetail);
+}
+
+class UpdateStockForPurchaseOrder extends ItemInBranchEvent {
+  final PurchaseOrderReceiverModel purchaseOrderReceiver;
+
+ const UpdateStockForPurchaseOrder(this.purchaseOrderReceiver);
+}
+
+class SetDefaultPrice extends ItemInBranchEvent {
+  final ItemInBranchModel item;
+
+ const SetDefaultPrice(this.item);
+}
+
+// Filter events
+class FilterItemsInBranch extends ItemInBranchEvent {}
+
+class FilterSelectedItems extends ItemInBranchEvent {
+  final int itemNumber;
+
+const  FilterSelectedItems(this.itemNumber);
+}
+
+class ClearDataForFilter extends ItemInBranchEvent {}
+
+class LoadAvailableItemsInBranch extends ItemInBranchEvent {
+  final int itemNumber;
+
+ const LoadAvailableItemsInBranch(this.itemNumber);
+}
+
+class SendNotification extends ItemInBranchEvent {
+  final ItemInBranchModel item;
+
+ const SendNotification(this.item);
 }

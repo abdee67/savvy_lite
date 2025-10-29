@@ -93,3 +93,22 @@ class CalculateUomConversion extends ItemUomConversionEvent {
   @override
   List<Object> get props => [itemId, fromUomId, toUomId, companyId];
 }
+class ValidateStructure extends ItemUomConversionEvent {
+  final List<ItemUomConversion> createItems;
+  final ItemUomConversion? currentItem;
+  const ValidateStructure({
+    required this.createItems,
+    this.currentItem,
+  });
+
+  @override
+  List<Object> get props => [createItems];
+}
+
+class CheckDuplication extends ItemUomConversionEvent {
+  final ItemUomConversion item;
+  const CheckDuplication(this.item);
+
+  @override
+  List<Object> get props => [item];
+}

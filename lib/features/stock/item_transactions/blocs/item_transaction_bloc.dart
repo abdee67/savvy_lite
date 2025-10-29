@@ -279,9 +279,8 @@ class ItemTransactionsBloc
         }
         if (filters['dateRange'] != null) {
           final dateRange = filters['dateRange'] as DateTimeRange;
-          if (transaction.dateCreated == null ||
-              transaction.dateCreated!.isBefore(dateRange.start) ||
-              transaction.dateCreated!.isAfter(dateRange.end)) {
+          if (transaction.dateCreated.isBefore(dateRange.start) ||
+              transaction.dateCreated.isAfter(dateRange.end)) {
             return false;
           }
         }
@@ -453,24 +452,24 @@ class ItemTransactionsBloc
     Emitter<ItemTransactionsState> emit,
   ) async {
     try {
-      double totalOpening = 0.0;
-      final items = itemsTableController.state.items;
-      final startDate = salesOrderHeaderController.state.startDateForSales;
-      final thruDate = salesOrderHeaderController.state.thruDateForSales;
+      final opening = await repository.calculateOpeningAmount(
+        itemId: event.itemIds,
+        branchId: event.branchId,
+        dateFrom: event.dateFrom,
+        dateThru: event.dateThru,
+      );
 
-      for (final item in items) {
-        final opening = await repository.calculateOpeningAmount(
-          itemId: item.id,
-          branchId: null,
-          dateFrom: startDate!,
-          dateThru: thruDate!,
-        );
-        totalOpening += opening;
-      }
-
-      emit(state.copyWith(totlaAmount: totalOpening));
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.loaded,
+          totlaAmount: opening,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(error: 'Failed to calculate total opening: $e'));
+      emit(state.copyWith(
+        status: ItemTransactionsStatus.error,
+        error: 'Failed to calculate total opening: $e',
+      ));
     }
   }
 

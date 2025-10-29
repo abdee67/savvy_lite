@@ -28,6 +28,7 @@ class LocationMasterBloc
 
     on<LoadLocationMasters>(_onLoadLocations);
     on<SaveLocationMaster>(_onSaveLocation);
+    on<SaveInRow>(_onSaveInRow);
     on<UpdateLocationMaster>(_onUpdateLocation);
     on<DeleteLocationMaster>(_onDeleteLocation);
     on<PrepareCreateLocation>(_onPrepareCreate);
@@ -164,6 +165,24 @@ class LocationMasterBloc
           message:
               'Failed to ${event.item.id != null ? 'update' : 'create'} location: $e',
         ),
+      );
+    }
+  }
+
+Future<void> _onSaveInRow(
+    SaveInRow event,
+    Emitter<LocationMasterState> emit,
+  ) async {
+    // Reuse the existing save logic
+    if (event.item.id != null) {
+      await _onUpdateLocation(
+        UpdateLocationMaster(event.item, event.assignedItems!),
+        emit,
+      );
+    } else {
+      await _onSaveLocation(
+        SaveLocationMaster(event.item, event.assignedItems!),
+        emit,
       );
     }
   }

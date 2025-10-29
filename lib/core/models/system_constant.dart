@@ -1,7 +1,7 @@
 class SystemConstant {
   final int? id;
   late final String? applyLotMgm;
-  final String? applyLocationMgm;
+ late final String? applyLocationMgm;
   final String? interfaceCustomer;
   final String? interfaceEmployee;
   final int? decimalPlaces;
@@ -216,11 +216,14 @@ class SystemConstant {
 
   // Helper methods for boolean conversions
   bool get applyLotMgmBoolean => applyLotMgm == 'Y';
+  bool get applyLocationMgmBoolean => applyLocationMgm == 'Y';
   bool get lotQtyAutoForSalesBoolean => lotQtyAutoForSales == 'Y';
   bool get autoSalesPriceBoolean => autoSalesPrice == 'Y';
   bool get generateBarcodeForItemBoolean => generateBarcodeForItem == 'Y';
 
   set applyLotMgmBoolean(bool value) => applyLotMgm = value ? 'Y' : 'N';
+  set applyLocationMgmBoolean(bool value) =>
+      applyLocationMgm = value ? 'Y' : 'N';
   set lotQtyAutoForSalesBoolean(bool value) =>
       lotQtyAutoForSales = value ? 'Y' : 'N';
   set autoSalesPriceBoolean(bool value) => autoSalesPrice = value ? 'Y' : 'N';

@@ -41,7 +41,7 @@ class _ItemsPickListState extends State<ItemsPickList> {
     }
     final query = _searchController.text.toLowerCase();
     return widget.sourceItems.where((item) {
-      return item.branchrefrence?.description?.toLowerCase().contains(query) ??
+      return item.branchRef?.description?.toLowerCase().contains(query) ??
           false;
     }).toList();
   }

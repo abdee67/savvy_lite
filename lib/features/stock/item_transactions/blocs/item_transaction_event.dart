@@ -191,7 +191,16 @@ class SaveAndClose extends ItemTransactionsEvent {
 }
 
 class GetTotalOpening extends ItemTransactionsEvent {
-  const GetTotalOpening();
+  final int itemIds;
+  final int? branchId;
+  final DateTime dateFrom;
+  final DateTime dateThru;
+  const GetTotalOpening( {
+    required this.itemIds,
+    this.branchId,
+    required this.dateFrom,
+    required this.dateThru,
+  });
 }
 
 class SaveAndAddNew extends ItemTransactionsEvent {

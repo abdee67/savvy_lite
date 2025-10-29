@@ -2,25 +2,24 @@
 import 'dart:async';
 
 import 'package:savvy_stock/core/services/database/database_service.dart';
-import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/stock/sales_order_detail/model/sales_order_detail.dart';
 
 class SalesOrderDetailRepository {
-  final LocalDatabaseService _databaseHelper;
+  final LocalDatabaseService databaseService;
 
-  SalesOrderDetailRepository(this._databaseHelper);
+  SalesOrderDetailRepository({required this.databaseService});
 
   // Create
   Future<int> create(SalesOrderDetail details) async {
-    final db = await _databaseHelper.database;
+    final db = await databaseService.database;
     return await db.insert('sales_order_details', details.toMap());
   }
 
   // Update
   Future<int> update(SalesOrderDetail details) async {
-    final db = await _databaseHelper.database;
+    final db = await databaseService.database;
     return await db.update(
       'sales_order_details',
       details.toMap(),
@@ -31,7 +30,7 @@ class SalesOrderDetailRepository {
 
   // Delete
   Future<int> delete(int id) async {
-    final db = await _databaseHelper.database;
+    final db = await databaseService.database;
     return await db.delete(
       'sales_order_details',
       where: 'id = ?',
@@ -41,7 +40,7 @@ class SalesOrderDetailRepository {
 
   // Delete collection
   Future<void> deleteCollection(List<SalesOrderDetail> items) async {
-    final db = await _databaseHelper.database;
+    final db = await databaseService.database;
     final batch = db.batch();
 
     for (final item in items) {
@@ -59,7 +58,7 @@ class SalesOrderDetailRepository {
 
   // Get all items
   Future<List<SalesOrderDetail>> getAll(int companyId) async {
-    final db = await _databaseHelper.database;
+    final db = await databaseService.database;
     final List<Map<String, dynamic>> maps = await db.query(
       'sales_order_details',
       where: 'company = ?',
@@ -73,7 +72,7 @@ class SalesOrderDetailRepository {
 
   // Get by ID
   Future<SalesOrderDetail?> getById(int id) async {
-    final db = await _databaseHelper.database;
+    final db = await databaseService.database;
     final List<Map<String, dynamic>> maps = await db.query(
       'sales_order_details',
       where: 'id = ?',
@@ -91,7 +90,7 @@ class SalesOrderDetailRepository {
     int headerId,
     int companyId,
   ) async {
-    final db = await _databaseHelper.database;
+    final db = await databaseService.database;
     final List<Map<String, dynamic>> maps = await db.query(
       'sales_order_details',
       where: 'sales_order_header_id = ? AND company = ?',
@@ -121,7 +120,7 @@ class SalesOrderDetailRepository {
   Future<List<SalesOrderDetail>> getSalesOrderDetailWithRelations(
     int companyId,
   ) async {
-    final db = await _databaseHelper.database;
+    final db = await databaseService.database;
 
     final query = '''
       SELECT sod.*, 
@@ -156,7 +155,7 @@ class SalesOrderDetailRepository {
     String barcode,
     int branchId,
   ) async {
-    final db = await _databaseHelper.database;
+    final db = await databaseService.database;
 
     final query = '''
       SELECT ib.*, it.*
@@ -183,7 +182,7 @@ class SalesOrderDetailRepository {
     int branchId,
     int companyId,
   ) async {
-    final db = await _databaseHelper.database;
+    final db = await databaseService.database;
 
     final query = '''
       SELECT lm.*

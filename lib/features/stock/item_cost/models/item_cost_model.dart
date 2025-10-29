@@ -1,3 +1,6 @@
+import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
+
 class ItemCost {
   int? id;
   int? itemNumber;
@@ -7,6 +10,9 @@ class ItemCost {
   int? dateUpdated;
   int? tempId;
 
+  //from join
+  final ItemInBranchModel? fromUOM;
+
   ItemCost({
     this.id,
     this.itemNumber,
@@ -14,7 +20,9 @@ class ItemCost {
     this.company,
     this.userId,
     this.dateUpdated,
+    this.fromUOM,
     this.tempId,
+
   });
   factory ItemCost.empty() {
     return ItemCost(
@@ -24,6 +32,7 @@ class ItemCost {
       company: null,
       userId: null,
       dateUpdated: null,
+      fromUOM: null,
       tempId: null,
     );
   }
@@ -37,7 +46,8 @@ class ItemCost {
       userId: map['user_id'],
       dateUpdated: map['date_updated'],
       tempId: map['temp_id'],
-    );
+      fromUOM: ItemInBranchModel.fromMap(map),
+        );
   }
 
   Map<String, dynamic> toMap() {

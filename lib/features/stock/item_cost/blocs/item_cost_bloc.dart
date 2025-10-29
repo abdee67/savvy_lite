@@ -4,24 +4,27 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 import 'package:savvy_stock/features/company/models/company_model.dart';
 import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_detail_model.dart';
 import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_receiver_model.dart';
+import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_bloc.dart';
 import 'package:savvy_stock/features/stock/item_cost/blocs/item_cost_event.dart';
 import 'package:savvy_stock/features/stock/item_cost/blocs/item_cost_state.dart';
 import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import '../models/item_cost_model.dart';
 
 class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
   final ItemCostRepository repository;
   final AuthBloc authBloc;
-  final ItemUomConversionsController itemUomConversionsController;
-  final ItemsInBranchController itemsInBranchController;
-  final SystemConstantController systemConstantController;
+  final ItemUomConversionBloc itemUomConversionsController;
+  final StockItemInBranchBloc itemsInBranchController;
+  final SystemConstantBloc systemConstantController;
 
   ItemCostBloc({
     required this.repository,
@@ -556,7 +559,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
   ) async {
     try {
       final poh = event.purchaseOrderHeader;
-      if (poh != null && poh.id != null) {
+      if (poh.id != null) {
         final otherCost = poh.amountOtherCosts ?? 0.0;
         final grossCost = poh.amountGross ?? 1.0;
 
@@ -569,7 +572,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
         for (final p in purchaseOrderDetailList) {
           final unitCost = p.unitCost ?? 0.0;
           final factor = await itemUomConversionsController.fromOtherToPrimary(
-              p.itemNumber!, p.unitOfMeasure?.toString() ?? '');
+              p.itemNumber!, p.unitOfMeasure!, authBloc.state.companyId!);
           final qty = p.quantityTransaction ?? 1.0;
           final w = (p.amountExtendedCost ?? 0.0) / grossCost;
           final cost = (w * otherCost / qty + unitCost) / factor;
@@ -641,7 +644,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
       ));
     }
   }
-
+/*
   Future<void> _onUpdateItemCostsForItemMaster(
     UpdateItemCostsForItemMaster event,
     Emitter<ItemCostState> emit,
@@ -686,7 +689,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
           final newItem = ItemCost(
             amountUnitCost: double.parse(im.unitCost!.toStringAsFixed(2)),
             dateUpdated: DateTime.now().millisecondsSinceEpoch,
-            userId: authBloc.state.id,
+            userId: authBloc.state.userId,
             company: authBloc.state.companyId,
             itemNumber: it.id,
           );
@@ -720,6 +723,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
       ));
     }
   }
+  */
 
   Future<void> _onUpdateUnitPrice(
     UpdateUnitPrice event,
@@ -728,14 +732,13 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
     try {
       final itCost = event.itemCost;
       final poR = event.purchaseOrderReceiver;
+        final systemConstant = systemConstantController.state.selected;
+        final autoSalesPriceBoolean = systemConstant!.autoSalesPrice ?? false;
 
-      if (itCost != null &&
-          itCost.id != null &&
+      if (itCost.id != null &&
           itCost.amountUnitCost != null &&
-          itCost.amountUnitCost != 0.0 &&
-          poR != null && 
-          poR.id != null &&
-          (systemConstantController.getSelected1()?.autoSalesPriceBoolean ?? false)) {
+          itCost.amountUnitCost != 0.0 && 
+          poR.id != null && (autoSalesPriceBoolean == true)) {
 
         double price = 0.0;
         final itemBranch = await itemsInBranchController.itemBranchByItemAndBranch(
@@ -753,8 +756,9 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
             case 'F': // Flat
               final factorib = await itemUomConversionsController.fromOtherToAnother(
                 itCost.itemNumber!,
-                itCost.itemNumber!.unitOfMeasure ?? '',
-                itemBranch.unitOfMeasure ?? '',
+                itCost.fromUOM!.unitOfMeasure!,
+                itemBranch.unitOfMeasure!,
+                authBloc.state.companyId!
               );
               final unitPriceF = (factorib * (itCost.amountUnitCost! + itemBranch.marginRate!)).toStringAsFixed(2);
               price = double.parse(unitPriceF);
@@ -764,8 +768,9 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
             case 'P': // Percentage
               final factoribP = await itemUomConversionsController.fromOtherToAnother(
                 itCost.itemNumber!,
-                itCost.itemNumber!.unitOfMeasure ?? '',
-                itemBranch.unitOfMeasure ?? '',
+                itCost.fromUOM!.unitOfMeasure!,
+                itemBranch.unitOfMeasure!,
+                authBloc.state.companyId!
               );
               final unitPriceP = (factoribP * (itCost.amountUnitCost! * (1 + itemBranch.marginRate! / 100.0))).toStringAsFixed(2);
               price = double.parse(unitPriceP);
@@ -818,15 +823,15 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
           itemsInBranchController.sendNotification(ib);
         } else if (it != null && (b == null || c != null)) {
           // Item Level Update
-          await itemsInBranchController.updateItemUnitPrice(it, newPrice);
-          final itemsInBranchList = await itemsInBranchController.itemInBranchByItem(it);
+          await itemsInBranchController.updateItemUnitPrice(it.id, newPrice);
+          final itemsInBranchList = await itemsInBranchController.itemInBranchByItem(it.id);
           for (final itB in itemsInBranchList) {
             await itemsInBranchController.updateUnitPrice(itB, newPrice);
             itemsInBranchController.sendNotification(itB);
           }
         } else if (b != null && it != null) {
           // Branch Level Update
-          final itemsInBranchList = await itemsInBranchController.itemInBranchByItemAndBranch(it, b);
+          final itemsInBranchList = await itemsInBranchController.itemInBranchByItemAndBranch(it.id, b.id);
           for (final itB in itemsInBranchList) {
             await itemsInBranchController.updateUnitPrice(itB, newPrice);
             itemsInBranchController.sendNotification(itB);
@@ -883,78 +888,5 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
     ));
 
     // This would typically show a success message in the UI
-  }
-}
-
-// Mock controller classes (you would implement these based on your actual business logic)
-class ItemUomConversionsController {
-  Future<double> fromOtherToPrimary(int itemNumber, String unitOfMeasure) async {
-    // Implement conversion logic
-    return 1.0;
-  }
-
-  Future<double> fromOtherToPrimaryItem(ItemEntryModel item, String unitOfMeasure) async {
-    // Implement conversion logic
-    return 1.0;
-  }
-
-  Future<double> fromOtherToAnother(int itemNumber, String fromUnit, String toUnit) async {
-    // Implement conversion logic
-    return 1.0;
-  }
-}
-
-class ItemsInBranchController {
-  Future<double> totalAvailabilityOfAnItemInSpecificPrimary(int itemNumber) async {
-    // Implement logic
-    return 0.0;
-  }
-
-  Future<double> totalAvailabilityOfAnItemInSpecificPrimaryItem(ItemEntryModel item) async {
-    // Implement logic
-    return 0.0;
-  }
-
-  Future<ItemInBranchModel?> itemBranchByItemAndBranch(int itemNumber, Branch branch) async {
-    // Implement logic
-    return null;
-  }
-
-  Future<void> updateUnitPrice(ItemInBranchModel itemsInBranch, double newPrice) async {
-    // Implement update logic
-  }
-
-  Future<void> updateItemUnitPrice(ItemEntryModel item, double newPrice) async {
-    // Implement update logic
-  }
-
-  Future<List<ItemInBranchModel>> itemInBranchByItem(ItemEntryModel item) async {
-    // Implement logic
-    return [];
-  }
-
-  Future<List<ItemInBranchModel>> itemInBranchByItemAndBranch(ItemEntryModel item, Branch branch) async {
-    // Implement logic
-    return [];
-  }
-
-/*************  ✨ Windsurf Command ⭐  *************/
-/// Sends a notification with the given items in branch data.
-///
-/// [itemsInBranch] is the items in branch data to be sent in the notification.
-///
-/// The notification will contain the item number, branch name, and the quantity available.
-
-
-/*******  df9efc81-5e09-49d5-9260-bf89608694a0  *******/
-  void sendNotification(ItemInBranchModel itemsInBranch) {
-    // Implement notification logic
-  }
-}
-
-class SystemConstantController {
-  dynamic getSelected1() {
-    // Implement logic
-    return null;
   }
 }

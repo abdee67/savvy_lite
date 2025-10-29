@@ -2,7 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 
 enum ItemInBranchStatus {
-initial,
+  initial,
   loading,
   loaded,
   creating,
@@ -13,15 +13,19 @@ initial,
   success,
   failure,
   duplication,
+  editing,
 }
 
 enum ItemInBranchDetailStatus { hidden, showing, editing }
 
-class ItemInBranchState extends Equatable {
+class ItemInBranchState{
   final ItemInBranchStatus status;
   final String? message;
   final int? itemId;
   final int? companyId;
+  final int? branchId;
+
+
   final List<ItemInBranchModel> items;
   final List<ItemInBranchModel> filteredItems;
   final String searchQuery;
@@ -45,12 +49,22 @@ class ItemInBranchState extends Equatable {
   final List<ItemInBranchModel> itemsByBranch;
   final List<ItemInBranchModel> lowStockItems;
   final List<ItemInBranchModel> outOfStockItems;
+    final List<ItemInBranchModel> availableItems;
+  final List<ItemInBranchModel> createItems;
+  final List<ItemInBranchModel> editItems;
+  final ItemInBranchModel? selected;
+  final ItemInBranchModel? selected1;
+  final ItemInBranchModel? selected2;
 
-  const ItemInBranchState({
+    // Financial data
+   double totalAmountInETB = 0.0;
+
+   ItemInBranchState({
     this.status = ItemInBranchStatus.initial,
     this.message,
     this.itemId,
     this.companyId,
+    this.branchId,
     this.items = const [],
     this.filteredItems = const [],
     this.searchQuery = '',
@@ -69,6 +83,13 @@ class ItemInBranchState extends Equatable {
     this.itemsByBranch = const [],
     this.lowStockItems = const [],
     this.outOfStockItems = const [],
+        this.availableItems = const [],
+    this.createItems = const [],  
+    this.editItems = const [],
+    this.selected,
+    this.selected1,
+    this.selected2,
+    this.totalAmountInETB = 0.0,
   });
 
   // --- Helper Getters ---
@@ -92,6 +113,12 @@ class ItemInBranchState extends Equatable {
   bool get canExport => filteredItems.isNotEmpty;
 
   bool get hasRecentDeletions => recentlyDeleted.isNotEmpty;
+
+  bool get hasItemsByItem => itemsByItem.isNotEmpty;
+  bool get hasItemsByBranch => itemsByBranch.isNotEmpty;
+  bool get hasLowStockItems => lowStockItems.isNotEmpty;
+  bool get hasOutOfStockItems => outOfStockItems.isNotEmpty;
+  bool get hasAvailableItems => availableItems.isNotEmpty;
 
   // --- CopyWith for immutability ---
   ItemInBranchState copyWith({
@@ -117,6 +144,13 @@ class ItemInBranchState extends Equatable {
     List<ItemInBranchModel>? itemsByBranch,
     List<ItemInBranchModel>? lowStockItems,
     List<ItemInBranchModel>? outOfStockItems,
+    List<ItemInBranchModel>? availableItems,
+    List<ItemInBranchModel>? createItems,
+    List<ItemInBranchModel>? editItems,
+    ItemInBranchModel? selected,
+    ItemInBranchModel? selected1,
+    ItemInBranchModel? selected2,
+    double? totalAmountInETB,
   }) {
     return ItemInBranchState(
       status: status ?? this.status,
@@ -141,6 +175,14 @@ class ItemInBranchState extends Equatable {
       itemsByItem: itemsByItem ?? this.itemsByItem,
       itemsByBranch: itemsByBranch ?? this.itemsByBranch,
       lowStockItems: lowStockItems ?? this.lowStockItems,
+      outOfStockItems: outOfStockItems ?? this.outOfStockItems,
+      availableItems: availableItems ?? this.availableItems,
+      createItems: createItems ?? this.createItems,
+      editItems: editItems ?? this.editItems,
+      selected: selected ?? this.selected,
+      selected1: selected1 ?? this.selected1,
+      selected2: selected2 ?? this.selected2,
+      totalAmountInETB: totalAmountInETB ?? this.totalAmountInETB,
     );
   }
 
@@ -168,5 +210,12 @@ class ItemInBranchState extends Equatable {
     itemsByBranch,
     lowStockItems,
     outOfStockItems,
+    availableItems,
+    createItems,
+    editItems,
+    selected,
+    selected1,
+    selected2,
+    totalAmountInETB
   ];
 }

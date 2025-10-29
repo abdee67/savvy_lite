@@ -69,7 +69,7 @@ class StockItemInBranchRepository {
   }
 
   // Find all items in branch for company
-  Future<List<ItemInBranchModel>> findAll(int companyId, {int? branchId}) async {
+  Future<List<ItemInBranchModel>> findAll(int companyId, {int? branchId, int? itemNumber}) async {
     final db = await databaseService.database;
     
     String whereClause = 'WHERE ib.company = ?';
@@ -78,6 +78,10 @@ class StockItemInBranchRepository {
     if (branchId != null) {
       whereClause += ' AND ib.branch = ?';
       whereArgs.add(branchId);
+    }
+        if (itemNumber != null) {
+      whereClause += ' AND ib.item_number = ?';
+      whereArgs.add(itemNumber);
     }
     
     final maps = await db.rawQuery('''
@@ -236,7 +240,7 @@ class StockItemInBranchRepository {
   Future<double> getTotalQuantityByItem(int itemNumber, int companyId) async {
     final db = await databaseService.database;
     final result = await db.rawQuery('''
-      SELECT SUM(quantity_on_hand) as total_quantity
+      SELECT SUM(quantity_available) as total_quantity
       FROM items_in_branch
       WHERE item_number = ? AND company = ?
     ''', [itemNumber, companyId]);
@@ -245,25 +249,6 @@ class StockItemInBranchRepository {
       return result.first['total_quantity'] as double? ?? 0.0;
     }
     return 0.0;
-  }
-
-  // Update multiple items in batch
-  Future<void> updateBatch(List<ItemInBranchModel> items) async {
-    final db = await databaseService.database;
-    final batch = db.batch();
-    
-    for (final item in items) {
-      if (item.id != null) {
-        batch.update(
-          'items_in_branch',
-          item.toMap(),
-          where: 'id = ? AND company = ?',
-          whereArgs: [item.id, item.company],
-        );
-      }
-    }
-    
-    await batch.commit();
   }
 
   // Get items with low stock (below reorder level)
@@ -316,5 +301,122 @@ class StockItemInBranchRepository {
     ''', whereArgs);
     
     return maps.map((map) => ItemInBranchModel.fromMap(map)).toList();
+  }
+    // Get items that reach reorder points or under
+  Future<List<ItemInBranchModel>> getReorderPointItems(int companyId, {int? branchId, int? itemNumber}) async {
+    final db = await databaseService.database;
+    
+    String whereClause = 'ib.quantity_available <= ib.reorder_point AND ib.company = ?';
+    List<dynamic> whereArgs = [companyId];
+    
+    if (branchId != null) {
+      whereClause += ' AND ib.branch = ?';
+      whereArgs.add(branchId);
+    }
+    
+    if (itemNumber != null) {
+      whereClause += ' AND ib.item_number = ?';
+      whereArgs.add(itemNumber);
+    }
+    
+    final maps = await db.rawQuery('''
+      SELECT ib.*, 
+             i.item_description, i.barcode, i.items_id,
+             b.description as branch_description, b.reference_id as branch_reference
+      FROM items_in_branch ib
+      LEFT JOIN items_table i ON ib.item_number = i.id
+      LEFT JOIN branch_table b ON ib.branch = b.id
+      WHERE $whereClause
+      ORDER BY ib.quantity_available ASC
+    ''', whereArgs);
+    
+    return maps.map((map) => ItemInBranchModel.fromMap(map)).toList();
+  }
+
+  // Update multiple items in batch
+  Future<void> updateBatch(List<ItemInBranchModel> items) async {
+    final db = await databaseService.database;
+    final batch = db.batch();
+    
+    for (final item in items) {
+      if (item.id != null) {
+        batch.update(
+          'items_in_branch',
+          item.toMap(),
+          where: 'id = ? AND company = ?',
+          whereArgs: [item.id, item.company],
+        );
+      }
+    }
+    
+    await batch.commit();
+  }
+
+  // Filter items by custom criteria (like the Java controller's filterItemsInBranch)
+  Future<List<ItemInBranchModel>> filterItems({
+    required int companyId,
+    int? branchId,
+    int? itemNumber,
+    bool? reachesReorderPointsOrUnder,
+    bool? noAvailability,
+  }) async {
+    final db = await databaseService.database;
+    
+    String whereClause = 'WHERE ib.company = ?';
+    List<dynamic> whereArgs = [companyId];
+    
+    if (branchId != null) {
+      whereClause += ' AND ib.branch = ?';
+      whereArgs.add(branchId);
+    }
+    
+    if (itemNumber != null) {
+      whereClause += ' AND ib.item_number = ?';
+      whereArgs.add(itemNumber);
+    }
+    
+    final maps = await db.rawQuery('''
+      SELECT ib.*, 
+             i.item_description, i.barcode, i.items_id,
+             b.description as branch_description, b.reference_id as branch_reference
+      FROM items_in_branch ib
+      LEFT JOIN items_table i ON ib.item_number = i.id
+      LEFT JOIN branch_table b ON ib.branch = b.id
+      $whereClause
+      ORDER BY i.item_description ASC
+    ''', whereArgs);
+    
+    var items = maps.map((map) => ItemInBranchModel.fromMap(map)).toList();
+    
+    // Apply additional filters like in Java controller
+    if (reachesReorderPointsOrUnder == true) {
+      items = items.where((item) {
+        final availability = _calculateAvailability(item);
+        final reorderPoint = _calculateReorderPoint(item);
+        return availability <= reorderPoint;
+      }).toList();
+    }
+    
+    if (noAvailability == true) {
+      items = items.where((item) {
+        final availability = _calculateAvailability(item);
+        return availability == 0.0;
+      }).toList();
+    }
+    
+    return items;
+  }
+
+  // Helper methods for complex calculations
+  double _calculateAvailability(ItemInBranchModel item) {
+    // This would need integration with LotMaster for expiration logic
+    // For now, just return quantity available
+    return item.quantityAvailable ?? 0.0;
+  }
+
+  double _calculateReorderPoint(ItemInBranchModel item) {
+    // This would need integration with item, branch, and company reorder points
+    // For now, just return the item's reorder point
+    return item.reorderPoint ?? 0.0;
   }
 }

@@ -1,23 +1,19 @@
 // bloc/sales_order_details/sales_order_details_bloc.dart
 import 'dart:async';
 import 'package:bloc/bloc.dart';
-import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/next_number/bloc/next_number_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
-import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/stock/UOM_entry/blocs/UOM_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_bloc.dart';
 import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
-import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/bloc/lot_coloring_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_bloc.dart';
 import 'package:savvy_stock/features/stock/sales_order_detail/bloc/sales_order_detail_event.dart';
 import 'package:savvy_stock/features/stock/sales_order_detail/bloc/sales_order_detail_state.dart';
 import 'package:savvy_stock/features/stock/sales_order_detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/sales_order_detail/sales_order_detail_repo.dart';
-import 'package:savvy_stock/features/stock/sales_order_header/model/sales_order_header.dart';
 import 'package:savvy_stock/features/stock/sales_order_header/repo/sales_order_header_repo.dart';
 
 

@@ -3,8 +3,6 @@ import 'package:equatable/equatable.dart';
 import 'package:meta/meta.dart';
 import 'package:savvy_stock/core/models/system_constant.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
-import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
-import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/stock/sales_order_detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/sales_order_header/model/sales_order_header.dart';
 @immutable

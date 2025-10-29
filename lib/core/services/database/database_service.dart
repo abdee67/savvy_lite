@@ -828,7 +828,7 @@ CREATE INDEX idx_sales_order_header_order_type ON sales_order_header(order_type)
     FOREIGN KEY (company) REFERENCES company_table (id),
     FOREIGN KEY (lot_number) REFERENCES lot_master (id),
     FOREIGN KEY (unit_of_measure) REFERENCES udc_details (id)
-  )
+  );
   CREATE INDEX idx_sales_order_details_sales_order_header_id ON sales_order_details(sales_order_header_id);
   CREATE INDEX idx_sales_order_details_items_table_id ON sales_order_details(items_table_id);
   CREATE INDEX idx_sales_order_details_item_in_branch ON sales_order_details(item_in_branch);

@@ -14,6 +14,7 @@ enum ItemUomConversionStatus {
   updating,
   deleting,
   duplication,
+  structureInvalid,
   exporting,
   converting,
 }
@@ -46,6 +47,9 @@ class ItemUomConversionState extends Equatable {
   final double? conversionFactor;
   final String? conversionError;
 
+   final bool? structureValid;
+  final bool? hasDuplication;
+
   const ItemUomConversionState({
     this.status = ItemUomConversionStatus.initial,
     this.message,
@@ -64,6 +68,8 @@ class ItemUomConversionState extends Equatable {
     this.exportedItem,
     this.conversionFactor,
     this.conversionError,
+    this.structureValid,
+    this.hasDuplication,
   });
 
   // Helper getters for UI state
@@ -102,6 +108,27 @@ class ItemUomConversionState extends Equatable {
   bool get hasCreateItems => uiState.createItems.isNotEmpty;
   bool get hasEditItems => uiState.editItems.isNotEmpty;
 
+  bool get isSearching => status == ItemUomConversionStatus.searching;
+  bool get isDuplicated => status == ItemUomConversionStatus.duplication;
+
+  bool get isStructureValid => structureValid ?? false;
+  bool get doeshasDuplication => hasDuplication ?? false;
+
+/*************  ✨ Windsurf Command ⭐  *************/
+  /// Creates a copy of the current state with the given parameters.
+  ///
+  /// [status] The new status of the state.
+  /// [message] The new message of the state.
+  /// [companyId] The new company ID of the state.
+  /// [items] The new list of items in the state.
+  /// [filteredItems] The new list of filtered items in the state.
+  /// [searchQuery] The new search query in the state.
+  /// [uiState] The new UI state of the state.
+  /// [detailStatus] The new detail status of the state.
+  /// [itemDetail] The new item detail of the state.
+  /// [recentlyDeleted] The new list of recently deleted items in the state.
+
+/*******  cb3288db-3d7f-401f-a91f-82707029c64d  *******/
   ItemUomConversionState copyWith({
     ItemUomConversionStatus? status,
     String? message,
@@ -120,6 +147,8 @@ class ItemUomConversionState extends Equatable {
     ItemUomConversion? exportedItem,
     double? conversionFactor,
     String? conversionError,
+    bool? structureValid,
+    bool? hasDuplication,
   }) {
     return ItemUomConversionState(
       status: status ?? this.status,
@@ -140,6 +169,8 @@ class ItemUomConversionState extends Equatable {
       exportedItem: exportedItem ?? this.exportedItem,
       conversionFactor: conversionFactor ?? this.conversionFactor,
       conversionError: conversionError ?? this.conversionError,
+      structureValid: structureValid ?? this.structureValid,
+      hasDuplication: hasDuplication ?? this.hasDuplication,
     );
   }
 
@@ -162,5 +193,7 @@ class ItemUomConversionState extends Equatable {
     exportedItem,
     conversionFactor,
     conversionError,
+    structureValid,
+    hasDuplication,
   ];
 }
