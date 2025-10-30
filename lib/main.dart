@@ -9,6 +9,7 @@ import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dar
 import 'package:savvy_stock/core/config/app_config.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/di/injection_container.dart';
+import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/routes/app_router.dart';
 import 'package:savvy_stock/core/services/conectitvity_service.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
@@ -26,12 +27,14 @@ import 'package:savvy_stock/features/sales/invoice/blocs/invoice_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_bloc.dart';
+import 'package:savvy_stock/features/stock/item_UoM_conversions/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/stock/item_cost/blocs/item_cost_bloc.dart';
 import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_repo.dart';
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_bloc.dart';
+import 'package:savvy_stock/features/stock/item_locations/repo/item_location_repo.dart';
 import 'package:savvy_stock/features/stock/item_transactions/blocs/item_transaction_bloc.dart';
 import 'package:savvy_stock/features/stock/item_transactions/repo/item_transaction_repo.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_bloc.dart';
@@ -54,7 +57,7 @@ Future<void> _initializeAndRunApp() async {
   try {
     await ConnectivityService().initConnectivity();
     initDependencies();
-    await LocalDatabaseService().resetDatabase();
+    // await LocalDatabaseService().resetDatabase();
     // await LocalDatabaseService().debugTable('branch_table');
 
     if (AppConfig.isTestMode) {
@@ -63,7 +66,7 @@ Future<void> _initializeAndRunApp() async {
       developer.log('💾 Using local database only');
     }
     // Debug database tables (optional - remove in production)
-    await LocalDatabaseService().debugTable('item_transactions');
+    await LocalDatabaseService().debugTable('items_in_branch');
   } catch (error, stackTrace) {
     developer.log('Initialization error: $error');
     developer.log('Stack trace: $stackTrace');
@@ -95,26 +98,46 @@ class _SavvyStockState extends State<SavvyStock> {
   late LotExpirationColorsBloc _lotExpirationColorsBloc;
   late StockItemInBranchRepository _stockItemInBranchRepository;
   late StockItemInBranchBloc _stockItemInBranchBloc;
-    late ItemTransactionRepository _itemTransactionsRepository;
-    late SalesOrderDetail _salesOrderDetail;
-    late SalesOrderHeaderRepository _salesOrderHeaderRepository;
-    late SalesOrderHeaderBloc _salesOrderHeaderBloc;
-    late StockItemEntryBloc _stockItemEntryBloc;
-    late ItemTransactionsBloc _itemTransactionsBloc;
+  late ItemTransactionRepository _itemTransactionsRepository;
+  late SalesOrderDetail _salesOrderDetail;
+  late SalesOrderHeaderRepository _salesOrderHeaderRepository;
+  late SalesOrderHeaderBloc _salesOrderHeaderBloc;
+  late StockItemEntryBloc _stockItemEntryBloc;
+  late ItemTransactionsBloc _itemTransactionsBloc;
   late LotMasterBloc _lotMasterBloc;
   late ItemUomConversionBloc _itemUomConversionsBloc;
+  late StockItemLocationBloc _stockItemLocationBloc;
   // final NotificationTableBloc notificationTableBloc;
   late ItemCostBloc _itemCostBloc;
   late ItemCostRepository _itemCostRepository;
+  late ItemUomConversionsRepository _itemUomConversionRepository;
+  late ItemLocationsRepository _stockItemLocationRepository;
+  late UdcRepository _udcRepository;
 
   @override
   void initState() {
     super.initState();
+    _udcRepository = getIt<UdcRepository>();
     _authBloc = getIt<AuthBloc>();
     _userBloc = getIt<UserBloc>();
     _nextNumberBloc = getIt<NextNumberBloc>();
+    _stockItemEntryBloc = getIt<StockItemEntryBloc>();
     _systemConstantBloc = getIt<SystemConstantBloc>();
     _lotExpirationColorsBloc = getIt<LotExpirationColorsBloc>();
+    _stockItemInBranchBloc = getIt<StockItemInBranchBloc>();
+    _stockItemInBranchRepository = getIt<StockItemInBranchRepository>();
+    _stockItemLocationBloc = getIt<StockItemLocationBloc>();
+    _stockItemLocationRepository = getIt<ItemLocationsRepository>();
+    _salesOrderHeaderRepository = getIt<SalesOrderHeaderRepository>();
+    _salesOrderHeaderBloc = getIt<SalesOrderHeaderBloc>();
+    _itemTransactionsRepository = getIt<ItemTransactionRepository>();
+    _itemTransactionsBloc = getIt<ItemTransactionsBloc>();
+    _lotMasterBloc = getIt<LotMasterBloc>();
+    _itemUomConversionsBloc = getIt<ItemUomConversionBloc>();
+    _itemUomConversionRepository = getIt<ItemUomConversionsRepository>();
+    _itemCostRepository = getIt<ItemCostRepository>();
+    _itemCostBloc = getIt<ItemCostBloc>();
+
     // Ensure system constants are loaded when companyId becomes available.
     final cid = _authBloc.state.companyId;
     if (cid != null) {
@@ -263,14 +286,14 @@ class _SavvyStockState extends State<SavvyStock> {
               authBloc: _authBloc,
               systemConstantBloc: _systemConstantBloc,
               lotMasterBloc: _lotMasterBloc,
-              itemCostBloc: _itemCostBloc,
+              //itemCostBloc: _itemCostBloc,
               itemTransactionsRepository: _itemTransactionsRepository,
-              itemUomConversionsBloc: _itemUomConversionsBloc
+              itemUomConversionsBloc: _itemUomConversionRepository,
             ),
           ),
           BlocProvider<ItemUomConversionBloc>(
             create: (context) => ItemUomConversionBloc(
-              databaseService: getIt(),
+              repository: _itemUomConversionRepository,
               authBloc: _authBloc,
             ),
           ),
@@ -290,13 +313,14 @@ class _SavvyStockState extends State<SavvyStock> {
           ),
           BlocProvider<StockItemLocationBloc>(
             create: (context) => StockItemLocationBloc(
-              databaseService: getIt(),
+              repository: _stockItemLocationRepository,
               authBloc: _authBloc,
             ),
           ),
           BlocProvider<LotMasterBloc>(
             create: (context) => LotMasterBloc(
-              databaseService: getIt(),
+              repository: getIt(),
+              udcRepository: _udcRepository,
               authBloc: _authBloc,
               systemConstantBloc: _systemConstantBloc,
               nextNumberBloc: _nextNumberBloc,
@@ -314,7 +338,7 @@ class _SavvyStockState extends State<SavvyStock> {
             create: (context) => ItemCostBloc(
               repository: _itemCostRepository,
               authBloc: _authBloc,
-              itemUomConversionsController: _itemUomConversionsBloc,
+              itemUomConversionsController: _itemUomConversionRepository,
               itemsInBranchController: _stockItemInBranchBloc,
               systemConstantController: _systemConstantBloc,
             ),
@@ -325,6 +349,7 @@ class _SavvyStockState extends State<SavvyStock> {
               itemsTableController: _stockItemEntryBloc,
               repository: _itemTransactionsRepository,
               authBloc: _authBloc,
+              udcRepository: _udcRepository,
               systemConstantBloc: _systemConstantBloc,
               nextNumberBloc: _nextNumberBloc,
             ),

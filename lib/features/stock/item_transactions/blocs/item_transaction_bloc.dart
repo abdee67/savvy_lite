@@ -1,18 +1,15 @@
 import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
-import 'package:savvy_stock/core/services/database/database_service.dart';
+import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/next_number/bloc/next_number_bloc.dart';
-import 'package:savvy_stock/features/sales/repositories/sales_repository.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_transactions/blocs/item_transaction_event.dart';
 import 'package:savvy_stock/features/stock/item_transactions/blocs/item_transaction_state.dart';
 import 'package:savvy_stock/features/stock/item_transactions/model/item_transaction_model.dart';
 import 'package:savvy_stock/features/stock/item_transactions/repo/item_transaction_repo.dart';
 import 'package:savvy_stock/features/stock/sales_order_header/bloc/sales_order_header_bloc.dart';
-import 'package:savvy_stock/features/stock/sales_order_header/repo/sales_order_header_repo.dart';
 
 class ItemTransactionsBloc
     extends Bloc<ItemTransactionsEvent, ItemTransactionsState> {
@@ -22,6 +19,7 @@ class ItemTransactionsBloc
   final NextNumberBloc nextNumberBloc;
   final StockItemEntryBloc itemsTableController;
   final SalesOrderHeaderBloc salesOrderHeaderController;
+  final UdcRepository udcRepository;
   StreamSubscription? _authSubscription;
 
   ItemTransactionsBloc({
@@ -31,6 +29,7 @@ class ItemTransactionsBloc
     required this.nextNumberBloc,
     required this.itemsTableController,
     required this.repository,
+    required this.udcRepository,
   }) : super(const ItemTransactionsState()) {
     _authSubscription = authBloc.stream.listen((authState) {
       if (authState.isAuthenticated && authState.companyId != null) {
@@ -49,6 +48,7 @@ class ItemTransactionsBloc
     on<CreateItemTransaction>(_onCreateTransaction);
     on<SaveAndClose>(_onSaveAndClose);
     on<SaveAndAddNew>(_onSaveAndAddNew);
+    on<ExportTransactions>(_onExportTransactions);
     on<UpdateItemTransaction>(_onUpdateTransaction);
     on<DeleteItemTransaction>(_onDeleteTransaction);
     on<DeleteMultipleItemTransactions>(_onDeleteMultipleTransactions);
@@ -65,6 +65,16 @@ class ItemTransactionsBloc
     on<CancelCreate>(_onCancelCreate);
     on<CancelUpdate>(_onCancelUpdate);
     on<Discard>(_onDiscard);
+
+    on<LoadLocationsForItem>(_onLoadLocationsForItem);
+    on<SelectLocation>(_onSelectLocation);
+    on<LoadLotsForItem>(_onLoadLotsForItem);
+    on<SelectLot>(_onSelectLot);
+    on<LoadToLocationsForItem>(_onLoadToLocationsForItem);
+    on<SelectToLocation>(_onSelectToLocation);
+    on<LoadItemsForBranch>(_onLoadItemsForBranch);
+    on<SelectItem>(_onSelectItem);
+    on<LoadUoMDescription>(_onLoadUoMDescription);
   }
 
   Future<void> _onLoadTransactions(
@@ -466,10 +476,12 @@ class ItemTransactionsBloc
         ),
       );
     } catch (e) {
-      emit(state.copyWith(
-        status: ItemTransactionsStatus.error,
-        error: 'Failed to calculate total opening: $e',
-      ));
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.error,
+          error: 'Failed to calculate total opening: $e',
+        ),
+      );
     }
   }
 
@@ -524,6 +536,25 @@ class ItemTransactionsBloc
         ),
       );
     }
+  }
+
+  void _onExportTransactions(
+    ExportTransactions event,
+    Emitter<ItemTransactionsState> emit,
+  ) {
+    emit(state.copyWith(status: ItemTransactionsStatus.exporting));
+
+    // Simulate export process
+    Future.delayed(const Duration(seconds: 2), () {
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.success,
+          exportedTransactions: event.transactions,
+          successmessage:
+              'Exported ${event.transactions.length} items successfully',
+        ),
+      );
+    });
   }
 
   Future<void> _onSaveAndAddNew(
@@ -585,6 +616,244 @@ class ItemTransactionsBloc
       );
     } catch (e) {
       emit(state.copyWith(error: 'Failed to discard transactions: $e'));
+    }
+  }
+
+  Future<void> _onLoadLocationsForItem(
+    LoadLocationsForItem event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    emit(state.copyWith(loadingLocations: true));
+    try {
+      final locations = await repository.itemLocationsRepository
+          .getItemLocationsByBranchAndItem(
+            branchId: event.branchId,
+            itemId: event.itemNumber,
+            companyId: authBloc.state.companyId!,
+          );
+      emit(
+        state.copyWith(loadingLocations: false, availableLocations: locations),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          loadingLocations: false,
+          error: 'Failed to load locations: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onSelectLocation(
+    SelectLocation event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    // Update the selected location in createItems or editItems
+    final updatedCreateItems = state.createItems.map((item) {
+      if (item.tempId == state.selected?.tempId) {
+        return item.copyWith(itemLocation: event.locationId);
+      }
+      return item;
+    }).toList();
+
+    final updatedEditItems = state.editItems.map((item) {
+      if (item.tempId == state.selected?.tempId) {
+        return item.copyWith(itemLocation: event.locationId);
+      }
+      return item;
+    }).toList();
+
+    emit(
+      state.copyWith(
+        createItems: updatedCreateItems,
+        editItems: updatedEditItems,
+      ),
+    );
+
+    if (event.locationId != null) {
+      add(
+        LoadLotsForItem(event.itemNumber!, event.branchId!, event.locationId!),
+      );
+    } else {
+      add(LoadLotsForItem(event.itemNumber!, event.branchId!, null));
+    }
+  }
+
+  Future<void> _onLoadLotsForItem(
+    LoadLotsForItem event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    emit(state.copyWith(loadingLots: true));
+    try {
+      final lots = await repository.lotMasterRepository
+          .getLotMastersByItemAndBranch(
+            itemNumber: event.itemNumber,
+            branch: event.branchId,
+            location: event.locationId,
+            companyId: authBloc.state.companyId!,
+          );
+      emit(state.copyWith(loadingLots: false, availableLots: lots));
+    } catch (e) {
+      emit(
+        state.copyWith(loadingLots: false, error: 'Failed to load lots: $e'),
+      );
+    }
+  }
+
+  Future<void> _onSelectLot(
+    SelectLot event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    // Update the selected lot in createItems or editItems
+    final updatedCreateItems = state.createItems.map((item) {
+      if (item.tempId == state.selected?.tempId) {
+        return item.copyWith(lotNumber: event.lotId);
+      }
+      return item;
+    }).toList();
+
+    final updatedEditItems = state.editItems.map((item) {
+      if (item.tempId == state.selected?.tempId) {
+        return item.copyWith(lotNumber: event.lotId);
+      }
+      return item;
+    }).toList();
+
+    emit(
+      state.copyWith(
+        createItems: updatedCreateItems,
+        editItems: updatedEditItems,
+      ),
+    );
+  }
+
+  Future<void> _onLoadToLocationsForItem(
+    LoadToLocationsForItem event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    emit(state.copyWith(loadingToLocations: true));
+    try {
+      final locations = await repository.itemLocationsRepository
+          .getItemLocationsByBranchAndItem(
+            itemId: event.itemNumber,
+            branchId: event.toBranchId,
+            companyId: authBloc.state.companyId!,
+          );
+      emit(
+        state.copyWith(
+          loadingToLocations: false,
+          availableToLocations: locations,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          loadingToLocations: false,
+          error: 'Failed to load to locations: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onSelectToLocation(
+    SelectToLocation event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    // Update the selected to location in createItems or editItems
+    final updatedCreateItems = state.createItems.map((item) {
+      if (item.tempId == state.selected?.tempId) {
+        return item.copyWith(itemLocation: event.toLocationId);
+      }
+      return item;
+    }).toList();
+
+    final updatedEditItems = state.editItems.map((item) {
+      if (item.tempId == state.selected?.tempId) {
+        return item.copyWith(itemLocation: event.toLocationId);
+      }
+      return item;
+    }).toList();
+
+    emit(
+      state.copyWith(
+        createItems: updatedCreateItems,
+        editItems: updatedEditItems,
+      ),
+    );
+  }
+
+  Future<void> _onLoadItemsForBranch(
+    LoadItemsForBranch event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    emit(state.copyWith(loadingItems: true));
+    try {
+      final items = await repository.itemInBranchRepository.findByBranch(
+        event.branchId,
+        authBloc.state.companyId!,
+      );
+      emit(state.copyWith(loadingItems: false, availableItems: items));
+    } catch (e) {
+      emit(
+        state.copyWith(loadingItems: false, error: 'Failed to load items: $e'),
+      );
+    }
+  }
+
+  Future<void> _onSelectItem(
+    SelectItem event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    // Update the selected item in createItems or editItems
+    final updatedCreateItems = state.createItems.map((item) {
+      if (item.tempId == state.selected?.tempId) {
+        return item.copyWith(itemNumber: event.itemNumber);
+      }
+      return item;
+    }).toList();
+
+    final updatedEditItems = state.editItems.map((item) {
+      if (item.tempId == state.selected?.tempId) {
+        return item.copyWith(itemNumber: event.itemNumber);
+      }
+      return item;
+    }).toList();
+
+    emit(
+      state.copyWith(
+        createItems: updatedCreateItems,
+        editItems: updatedEditItems,
+      ),
+    );
+    if (event.itemNumber != null) {
+      add(LoadLocationsForItem(event.itemNumber!, event.branchId));
+    }
+  }
+
+  Future<void> _onLoadUoMDescription(
+    LoadUoMDescription event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    emit(state.copyWith(loadingUoMDescription: true));
+    try {
+      final description = await udcRepository.getUdcDetailById(event.uomId);
+      final updatedUomDescriptions = Map<int, String>.from(
+        state.uomDescriptions,
+      )..[event.uomId] = description?.description1 ?? '';
+
+      emit(
+        state.copyWith(
+          loadingUoMDescription: false,
+          uomDescriptions: updatedUomDescriptions,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          loadingUoMDescription: false,
+          error: 'Failed to load UoM description: $e',
+        ),
+      );
     }
   }
 

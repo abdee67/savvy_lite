@@ -110,10 +110,19 @@ class AppRoutes {
   static const String lotColoringEdit = '$lotColorings/lot-coloring-edit';
   static const String lotColoringDelete = '$lotColorings/lot-coloring-delete';
 
+    //item Transactions Sub-Routes
   static const String inventoryTransaction = '$stock/inventory-transaction';
+  static const String inventoryTransactionCreate =
+      '$inventoryTransaction/inventory-transaction-create';
+  static const String inventoryTransactionEdit =
+      '$inventoryTransaction/inventory-transaction-edit';
+  static const String inventoryTransactionDelete =
+      '$inventoryTransaction/inventory-transaction-delete';
   static const String itemBranchEntry = '$stock/item-branch-entry';
   static const String barcodeFunction = '$stock/barcode-function';
   static const String exportFunction = '$stock/export-function';
+
+  
 
   // Branch Sub-Routes
   static const String branchManagement = '$branch/branch-management';

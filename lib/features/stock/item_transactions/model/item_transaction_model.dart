@@ -12,30 +12,30 @@ import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class ItemTransactionModel {
   final int? id;
-  final int? itemLocation;
+   int? itemLocation;
   final int? createdBy;
   final DateTime dateCreated;
-  final double quantityTransaction;
+   double quantityTransaction;
   final String? remark;
   final int? company;
-  final int? lotNumber;
+   int? lotNumber;
   final int? transactionType;
   final int? itemBranch;
   final int? transactionNumber;
-  final int? itemNumber;
+   int? itemNumber;
   final int? lotStatus;
   final int? branch;
   final int? supplier;
   final int? customer;
   final int? orderType;
-  final int? unitOfMeasure;
+   int? unitOfMeasure;
   final double beforeStoreQuantityAvailable;
   final double unitCost;
   final double amountCost;
   final double beforeAmountCost;
   final int? tempId;
-  final bool adjustToIncrease;
-  final int? itemLocationsTo;
+   bool adjustToIncrease;
+   int? itemLocationsTo;
 
   // Foreign key relationships
   final ItemLocation? location;
@@ -51,7 +51,7 @@ class ItemTransactionModel {
   final Customer? customerDetail;
   final Company? companyDetail;
 
-  const ItemTransactionModel({
+   ItemTransactionModel({
     this.id,
     this.itemLocation,
     this.createdBy,

@@ -2,7 +2,6 @@
 import 'dart:async';
 
 import 'package:bloc/bloc.dart';
-import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_event.dart';
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_state.dart';

@@ -56,7 +56,7 @@ class PrepareCopy extends ItemTransactionsEvent {
 }
 
 class SaveItemTransaction extends ItemTransactionsEvent {
-  final List<ItemTransactionModel> transactions ;
+  final List<ItemTransactionModel> transactions;
 
   const SaveItemTransaction(this.transactions);
 
@@ -147,16 +147,16 @@ class CreateStockCardTransaction extends ItemTransactionsEvent {
 
   @override
   List<Object?> get props => [
-        itemBranchId,
-        locationId,
-        lotId,
-        transactionType,
-        transactionNumber,
-        remark,
-        quantity,
-        purchaseOrderId,
-        salesOrderId,
-      ];
+    itemBranchId,
+    locationId,
+    lotId,
+    transactionType,
+    transactionNumber,
+    remark,
+    quantity,
+    purchaseOrderId,
+    salesOrderId,
+  ];
 }
 
 class ExecuteInventoryTransaction extends ItemTransactionsEvent {
@@ -195,7 +195,7 @@ class GetTotalOpening extends ItemTransactionsEvent {
   final int? branchId;
   final DateTime dateFrom;
   final DateTime dateThru;
-  const GetTotalOpening( {
+  const GetTotalOpening({
     required this.itemIds,
     this.branchId,
     required this.dateFrom,
@@ -237,3 +237,71 @@ class SelectMultipleItemTransactions extends ItemTransactionsEvent {
 }
 
 class ClearSelection extends ItemTransactionsEvent {}
+
+class ExportTransactions extends ItemTransactionsEvent {
+  final List<ItemTransactionModel> transactions;
+  final String format; // e.g., 'excel', 'pdf'
+
+  const ExportTransactions(this.transactions, this.format);
+
+  @override
+  List<Object?> get props => [transactions, format];
+}
+// events/item_transaction_event.dart
+
+// Events for location dropdown
+class LoadLocationsForItem extends ItemTransactionsEvent {
+  final int itemNumber;
+  final int branchId;
+  const LoadLocationsForItem(this.itemNumber, this.branchId);
+}
+
+class SelectLocation extends ItemTransactionsEvent {
+  final int? locationId;
+  final int itemNumber;
+  final int branchId;
+  const SelectLocation(this.locationId, this.itemNumber, this.branchId);
+}
+
+// Events for lot dropdown
+class LoadLotsForItem extends ItemTransactionsEvent {
+  final int itemNumber;
+  final int branchId;
+  final int? locationId;
+  const LoadLotsForItem(this.itemNumber, this.branchId, this.locationId);
+}
+
+class SelectLot extends ItemTransactionsEvent {
+  final int? lotId;
+  const SelectLot(this.lotId);
+}
+
+// Events for to-location dropdown (for transfers)
+class LoadToLocationsForItem extends ItemTransactionsEvent {
+  final int itemNumber;
+  final int toBranchId;
+  const LoadToLocationsForItem(this.itemNumber, this.toBranchId);
+}
+
+class SelectToLocation extends ItemTransactionsEvent {
+  final int? toLocationId;
+  const SelectToLocation(this.toLocationId);
+}
+
+// Events for item dropdown
+class LoadItemsForBranch extends ItemTransactionsEvent {
+  final int branchId;
+  const LoadItemsForBranch(this.branchId);
+}
+
+class SelectItem extends ItemTransactionsEvent {
+  final int? itemNumber;
+  final int branchId;
+  const SelectItem(this.itemNumber, this.branchId);
+}
+
+// Event to get UoM descriptions
+class LoadUoMDescription extends ItemTransactionsEvent {
+  final int uomId;
+  const LoadUoMDescription(this.uomId);
+}

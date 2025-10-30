@@ -1,16 +1,14 @@
 
 // bloc/item_cost_bloc.dart
 import 'dart:async';
-import 'dart:math' as math;
 import 'package:bloc/bloc.dart';
-import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 import 'package:savvy_stock/features/company/models/company_model.dart';
 import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_detail_model.dart';
 import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_receiver_model.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_bloc.dart';
+import 'package:savvy_stock/features/stock/item_UoM_conversions/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/stock/item_cost/blocs/item_cost_event.dart';
 import 'package:savvy_stock/features/stock/item_cost/blocs/item_cost_state.dart';
 import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
@@ -22,7 +20,7 @@ import '../models/item_cost_model.dart';
 class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
   final ItemCostRepository repository;
   final AuthBloc authBloc;
-  final ItemUomConversionBloc itemUomConversionsController;
+  final ItemUomConversionsRepository itemUomConversionsController;
   final StockItemInBranchBloc itemsInBranchController;
   final SystemConstantBloc systemConstantController;
 

@@ -6,17 +6,12 @@ import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/next_number/bloc/next_number_bloc.dart';
 import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/stock/item_UoM_conversions/item_uom_conv_repo.dart';
-import 'package:savvy_stock/features/stock/item_cost/blocs/item_cost_bloc.dart';
-import 'package:savvy_stock/features/stock/item_cost/models/item_cost_model.dart';
 import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
-import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_repo.dart';
-import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_bloc.dart';
 import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
 import 'package:savvy_stock/features/stock/item_locations/repo/item_location_repo.dart';
 import 'package:savvy_stock/features/stock/item_transactions/model/item_transaction_model.dart';
-import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/repo/lot_master_repo.dart';
 import 'package:savvy_stock/features/stock/sales_order_detail/model/sales_order_detail.dart';
@@ -528,13 +523,14 @@ class ItemTransactionRepository {
     
   ) async {
     // Similar implementation for issue transactions
-    if (!applyLocationMgmt  && !applyLotMgmt) {
-       await _adjustItemBranch(item, masterTransaction, 'D');
-    } else if ( applyLocationMgmt && !applyLotMgmt) {
-      return await _adjustItemLocation(item, masterTransaction, 'D');
-    } else if ( applyLocationMgmt && applyLotMgmt) {
-      return await _adjustLotMaster(item, masterTransaction, 'D');
-    }
+   // ✅ FIXED
+if (!applyLocationMgmt && !applyLotMgmt) {
+  await _adjustItemBranch(item, masterTransaction, 'D');
+} else if (applyLocationMgmt && !applyLotMgmt) {
+  await _adjustItemLocation(item, masterTransaction, 'D');
+} else if (applyLocationMgmt && applyLotMgmt) {
+  await _adjustLotMaster(item, masterTransaction, 'D');
+}
     
     return true;
   }
@@ -549,9 +545,9 @@ class ItemTransactionRepository {
     if (!applyLocationMgmt  && !applyLotMgmt) {
        await _adjustItemBranch(item, masterTransaction, 'D');
     } else if ( applyLocationMgmt && !applyLotMgmt) {
-      return await _adjustItemLocation(item, masterTransaction, 'D');
+       await _adjustItemLocation(item, masterTransaction, 'D');
     } else if ( applyLocationMgmt && applyLotMgmt) {
-      return await _adjustLotMaster(item, masterTransaction, 'D');
+       await _adjustLotMaster(item, masterTransaction, 'D');
     }
     return true;
   }
@@ -597,7 +593,7 @@ class ItemTransactionRepository {
     }
   }
 
-  Future<bool> _adjustItemLocation(
+  Future<void> _adjustItemLocation(
     ItemTransactionModel item,
     ItemTransactionModel masterTransaction,
     String incDec,
@@ -619,7 +615,7 @@ class ItemTransactionRepository {
       final qI = factor * (item.quantityTransaction).abs();
 
       if (qI < 0.0 && qb < qI.abs()) {
-        return false; // Quantity greater than expected
+        return; // Quantity greater than expected
       }
 
       if (incDec == 'I') {
@@ -630,10 +626,9 @@ class ItemTransactionRepository {
 
        itemLocationsRepository.updateItemLocation(item.location!);
     }
-    return true;
   }
 
-  Future<bool> _adjustLotMaster(
+  Future<void> _adjustLotMaster(
     ItemTransactionModel item,
     ItemTransactionModel masterTransaction,
     String incDec,
@@ -655,7 +650,7 @@ class ItemTransactionRepository {
       final qI = factor * (item.quantityTransaction).abs();
 
       if (qI < 0.0 && qb < qI.abs()) {
-        return false; // Quantity greater than expected
+        return; // Quantity greater than expected
       }
 
       if (incDec == 'I') {
@@ -666,7 +661,6 @@ class ItemTransactionRepository {
 
        lotMasterRepository.updateLotMaster(lm);
     }
-    return true;
   }
 
     // Opening amount calculation equivalent to Java version
@@ -714,7 +708,6 @@ class ItemTransactionRepository {
         AND date_created BETWEEN ? AND ? 
         AND before_amount_cost IS NOT NULL
         ORDER BY date_created
-          ORDER BY date_created
         ''',
           [
             authBloc.state.companyId!,
@@ -768,19 +761,19 @@ class ItemTransactionRepository {
 
         if (transactions.isEmpty) {
           // Take current available
-          final itemCost = itemCostRepository.findByItem(itemId, authBloc.state.companyId!);
+          final itemCostObj = await itemCostRepository.findByItem(itemId, authBloc.state.companyId!);
 
-          if (ib != null && itemCost != null) {
-          final factor = await itemUomConversionRepository.fromOtherToPrimary(
-            itemId,
-            ib.unitOfMeasure!,
-            authBloc.state.companyId!,
-          );
-          final unitCost = itemCost ?? 0.0;
-          qOpen = (factor * (ib.quantityAvailable ?? 0.0) * unitCost).abs();
-        } else {
-          qOpen = 0.0;
-        }
+          if (ib != null) {
+            final factor = await itemUomConversionRepository.fromOtherToPrimary(
+              itemId,
+              ib.unitOfMeasure!,
+              authBloc.state.companyId!,
+            );
+            final unitCost = itemCostObj?.amountUnitCost ?? 0.0;
+            qOpen = (factor * (ib.quantityAvailable ?? 0.0) * unitCost).abs();
+          } else {
+            qOpen = 0.0;
+          }
         } else {
           qOpen = transactions.isNotEmpty
               ? (transactions.first['before_amount_cost'] as double).abs()
@@ -842,15 +835,15 @@ class ItemTransactionRepository {
           }
 
           if (transactions.isEmpty) {
-            final itemCost = itemCostRepository.findByItem(itemId, authBloc.state.companyId!);
+            final itemCost = await itemCostRepository.findByItem(itemId, authBloc.state.companyId!);
 
-            if (ib != null && itemCost != null) {
+            if (itemCost != null) {
             final factor = await itemUomConversionRepository.fromOtherToPrimary(
               itemId,
               ib.unitOfMeasure!,
               authBloc.state.companyId!,
             );
-            final unitCost = itemCost ?? 0.0;
+            final unitCost = itemCost.amountUnitCost ?? 0.0;
             qOpen += (factor * (ib.quantityAvailable ?? 0.0) * unitCost).abs();
             }
              } else {
@@ -906,7 +899,7 @@ class ItemTransactionRepository {
     final transactions = await db.rawQuery(
       '''
       SELECT it.*,
-             il.location_description,
+             il.location,
              lm.lot_number,
              ib.quantity_available,
              i.item_description,

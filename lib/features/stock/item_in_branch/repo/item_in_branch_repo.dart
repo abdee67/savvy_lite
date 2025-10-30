@@ -79,10 +79,7 @@ class StockItemInBranchRepository {
       whereClause += ' AND ib.branch = ?';
       whereArgs.add(branchId);
     }
-        if (itemNumber != null) {
-      whereClause += ' AND ib.item_number = ?';
-      whereArgs.add(itemNumber);
-    }
+
     
     final maps = await db.rawQuery('''
       SELECT ib.*, 
@@ -339,15 +336,13 @@ class StockItemInBranchRepository {
     final batch = db.batch();
     
     for (final item in items) {
-      if (item.id != null) {
-        batch.update(
-          'items_in_branch',
-          item.toMap(),
-          where: 'id = ? AND company = ?',
-          whereArgs: [item.id, item.company],
-        );
-      }
-    }
+      batch.update(
+        'items_in_branch',
+        item.toMap(),
+        where: 'id = ? AND company = ?',
+        whereArgs: [item.id, item.company],
+      );
+        }
     
     await batch.commit();
   }

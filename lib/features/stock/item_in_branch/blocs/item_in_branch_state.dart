@@ -1,4 +1,3 @@
-import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 
 enum ItemInBranchStatus {

@@ -14,8 +14,8 @@ class ItemUomConversionsRepository {
       '''
       SELECT iuc.*,
              it.item_description,
-             uom_from.description as from_uom_description,
-             uom_to.description as to_uom_description
+             uom_from.description_1 as from_uom_description,
+             uom_to.description_1 as to_uom_description
       FROM item_uom_conversions iuc
       LEFT JOIN items_table it ON iuc.item_number = it.id
       LEFT JOIN udc_details uom_from ON iuc.from_uom = uom_from.id

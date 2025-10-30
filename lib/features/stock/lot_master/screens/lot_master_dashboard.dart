@@ -75,7 +75,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     context.read<LotMasterBloc>().add(
       LoadLotMasters(widget.authBloc.state.companyId!),
     );
-    context.read<LotMasterBloc>().add(ClaculateMultipleLotStatus());
+    context.read<LotMasterBloc>().add(CalculateMultipleLotStatus());
     context.read<BranchBloc>().add(
       LoadBranchs(widget.authBloc.state.companyId!),
     );
@@ -236,8 +236,8 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     final state = bloc.state;
 
     //CASE 1: Multiple lots
-    if (state.multiSelectionItems.isNotEmpty) {
-      final lotsToDelete = state.multiSelectionItems;
+    if (state.selectedItems.isNotEmpty) {
+      final lotsToDelete = state.selectedItems;
       showDeleteDialog(
         context,
         title: 'Delete selected lots?',
@@ -1179,7 +1179,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
   }
 
   void _calculateAllLotStatus() {
-    context.read<LotMasterBloc>().add(ClaculateMultipleLotStatus());
+    context.read<LotMasterBloc>().add(CalculateMultipleLotStatus());
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Recalculating all lot status...'),

@@ -128,7 +128,7 @@ class ItemUomConversionState extends Equatable {
   /// [itemDetail] The new item detail of the state.
   /// [recentlyDeleted] The new list of recently deleted items in the state.
 
-/*******  cb3288db-3d7f-401f-a91f-82707029c64d  *******/
+/// *****  cb3288db-3d7f-401f-a91f-82707029c64d  ******
   ItemUomConversionState copyWith({
     ItemUomConversionStatus? status,
     String? message,

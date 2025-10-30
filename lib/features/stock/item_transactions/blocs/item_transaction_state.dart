@@ -1,8 +1,11 @@
 import 'package:equatable/equatable.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
+import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
 import 'package:savvy_stock/features/stock/item_transactions/model/item_transaction_model.dart';
+import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 
 enum ItemTransactionsStatus {
-   initial,
+  initial,
   loading,
   loaded,
   creating,
@@ -10,6 +13,8 @@ enum ItemTransactionsStatus {
   deleting,
   saving,
   processing,
+  searching,
+  exporting,
   success,
   error,
   failure,
@@ -21,6 +26,7 @@ class ItemTransactionsState extends Equatable {
   final List<ItemTransactionModel> filteredTransactions;
   final List<ItemTransactionModel> createItems;
   final List<ItemTransactionModel> editItems;
+  final List<ItemTransactionModel> exportedTransactions;
   final String? successmessage;
   final String? error;
   final List<ItemTransactionModel> selectedItems;
@@ -38,12 +44,27 @@ class ItemTransactionsState extends Equatable {
   final bool isDuplicate;
   final int? companyId;
 
+  //dropdown data
+  final List<ItemLocation> availableLocations;
+  final List<LotMaster> availableLots;
+  final List<ItemLocation> availableToLocations;
+  final List<ItemInBranchModel> availableItems;
+  final Map<int, String> uomDescriptions; // Cache for UoM descriptions
+  final bool loadingUoMDescription;
+
+  // Loading states for dropdowns
+  final bool loadingLocations;
+  final bool loadingLots;
+  final bool loadingToLocations;
+  final bool loadingItems;
+
   const ItemTransactionsState({
     this.status = ItemTransactionsStatus.initial,
     this.transactions = const [],
     this.filteredTransactions = const [],
     this.createItems = const [],
     this.editItems = const [],
+    this.exportedTransactions = const [],
     this.successmessage,
     this.error,
     this.selectedItems = const [],
@@ -60,6 +81,16 @@ class ItemTransactionsState extends Equatable {
     this.totlaAmount = 0.0,
     this.companyId,
     this.isDuplicate = false,
+    this.availableLocations = const [],
+    this.availableLots = const [],
+    this.availableToLocations = const [],
+    this.availableItems = const [],
+    this.uomDescriptions = const {},
+    this.loadingUoMDescription = false,
+    this.loadingLocations = false,
+    this.loadingLots = false,
+    this.loadingToLocations = false,
+    this.loadingItems = false,
   });
 
   bool get hasError => error != null && error!.isNotEmpty;
@@ -74,6 +105,9 @@ class ItemTransactionsState extends Equatable {
 
   bool get hasSearchQuery => searchQuery != null && searchQuery!.isNotEmpty;
 
+  bool get hasFilters => filters != null && filters!.isNotEmpty;
+
+  bool isExporting() => status == ItemTransactionsStatus.exporting;
   bool isLoading() => status == ItemTransactionsStatus.loading;
   bool isProcessing() => status == ItemTransactionsStatus.processing;
   bool isSaving() => status == ItemTransactionsStatus.saving;
@@ -93,6 +127,7 @@ class ItemTransactionsState extends Equatable {
     List<ItemTransactionModel>? filteredTransactions,
     List<ItemTransactionModel>? createItems,
     List<ItemTransactionModel>? editItems,
+    List<ItemTransactionModel>? exportedTransactions,
     String? successmessage,
     String? error,
     List<ItemTransactionModel>? selectedItems,
@@ -100,6 +135,7 @@ class ItemTransactionsState extends Equatable {
     ItemTransactionModel? selected1,
     ItemTransactionModel? selected2,
     ItemTransactionModel? editingItem,
+
     String? searchQuery,
     bool? isSelectionMode,
     Map<String, dynamic>? filters,
@@ -109,6 +145,17 @@ class ItemTransactionsState extends Equatable {
     double? totlaAmount,
     bool? isDuplicate,
     int? companyId,
+
+    List<ItemLocation>? availableLocations,
+    List<LotMaster>? availableLots,
+    List<ItemLocation>? availableToLocations,
+    List<ItemInBranchModel>? availableItems,
+    Map<int, String>? uomDescriptions,
+    bool? loadingUoMDescription,
+    bool? loadingLocations,
+    bool? loadingLots,
+    bool? loadingToLocations,
+    bool? loadingItems,
   }) {
     return ItemTransactionsState(
       status: status ?? this.status,
@@ -116,6 +163,7 @@ class ItemTransactionsState extends Equatable {
       filteredTransactions: filteredTransactions ?? this.filteredTransactions,
       createItems: createItems ?? this.createItems,
       editItems: editItems ?? this.editItems,
+      exportedTransactions: exportedTransactions ?? this.exportedTransactions,
       successmessage: successmessage ?? this.successmessage,
       error: error ?? this.error,
       selectedItems: selectedItems ?? this.selectedItems,
@@ -132,30 +180,52 @@ class ItemTransactionsState extends Equatable {
       totlaAmount: totlaAmount ?? this.totlaAmount,
       companyId: companyId ?? this.companyId,
       isDuplicate: isDuplicate ?? this.isDuplicate,
+      availableLocations: availableLocations ?? this.availableLocations,
+      availableLots: availableLots ?? this.availableLots,
+      availableToLocations: availableToLocations ?? this.availableToLocations,
+      availableItems: availableItems ?? this.availableItems,
+      uomDescriptions: uomDescriptions ?? this.uomDescriptions,
+      loadingUoMDescription:
+          loadingUoMDescription ?? this.loadingUoMDescription,
+      loadingLocations: loadingLocations ?? this.loadingLocations,
+      loadingLots: loadingLots ?? this.loadingLots,
+      loadingToLocations: loadingToLocations ?? this.loadingToLocations,
+      loadingItems: loadingItems ?? this.loadingItems,
     );
   }
 
   @override
   List<Object?> get props => [
-        status,
-        transactions,
-        filteredTransactions,
-        successmessage,
-        error,
-        selectedItems,
-        selected,
-        selected1,
-        selected2,
-        editingItem,
-        createItems,
-        editItems,
-        openingAmount,
-        totlaAmount,
-        companyId,
-        searchQuery,
-        isSelectionMode,
-        filters,
-        totalQuantity,
-        totalCost,
-      ];
+    status,
+    transactions,
+    filteredTransactions,
+    successmessage,
+    error,
+    selectedItems,
+    selected,
+    selected1,
+    selected2,
+    editingItem,
+    createItems,
+    editItems,
+    exportedTransactions,
+    openingAmount,
+    totlaAmount,
+    companyId,
+    searchQuery,
+    isSelectionMode,
+    filters,
+    totalQuantity,
+    totalCost,
+    availableLocations,
+    availableLots,
+    availableToLocations,
+    availableItems,
+    uomDescriptions,
+    loadingUoMDescription,
+    loadingLocations,
+    loadingLots,
+    loadingToLocations,
+    loadingItems,
+  ];
 }

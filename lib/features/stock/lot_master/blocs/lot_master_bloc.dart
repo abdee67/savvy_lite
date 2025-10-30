@@ -55,7 +55,7 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
     on<RegenerateLotNumber>(_onRegenerateLotNumber);
     on<PrepareCreateLot>(_onPrepareCreate);
     on<PrepareEditLot>(_onPrepareEdit);
-    on<SelectLot>(_onSelectLot);
+    on<SelecteLot>(_onSelectLot);
     on<SelectMultiSelectionLots>(_onSelectMultiSelectionLots);
     on<ClearSelection>(_onClearSelection);
     on<AutoCreateLotForPO>(_onAutoCreateLotForPO);
@@ -450,7 +450,7 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
   }
 
   Future<void> _onSelectLot(
-    SelectLot event,
+    SelecteLot event,
     Emitter<LotMasterState> emit,
   ) async {
     final selectedItems = List<LotMaster>.from(state.selectedItems);
@@ -830,7 +830,7 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
       'remark': remark,
       'item_number': item.itemNumber,
       'branch': item.branch,
-      'location': item.location,
+      'item_location': item.location,
       'transaction_type': transactionType,
       'transaction_number': transactionNumber,
       'item_branch': item.branch,
@@ -857,7 +857,7 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
   }
 
   Future<int?> _getUdcDetailId(String headerCode, String detailCode) async {
-    return await udcRepository.getUdcDetailById(headerCode, detailCode);
+    return await udcRepository.getUdcDetailId(headerCode, detailCode);
   }
 
   // Public methods for external use

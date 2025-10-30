@@ -76,6 +76,31 @@ Future<UdcDetails?> getUdcDetailById(int? id) async {
     }
   }
 
+    Future<int?> getUdcDetailId(String headerCode, String detailCode) async {
+    try {
+      final db = await localDatabaseService.database;
+      final result = await db.rawQuery(
+        '''
+      SELECT ud.id FROM udc_details ud
+      JOIN udc_header uh ON ud.record_header = uh.id
+      WHERE uh.header_code = ? AND ud.detail_code = ?
+      ''',
+        [headerCode, detailCode],
+      );
+
+      if (result.isNotEmpty) {
+        return result.first['id'] as int?;
+      }
+
+      print('❌ No UDC found for header: $headerCode, detail: $detailCode');
+      return null;
+    } catch (e) {
+      print('❌ Error getting UDC detail ID: $e');
+      return null;
+    }
+    }
+ 
+
   Future<List<UdcDetails>> getLocalUdcDetailsByHeaderCode(
     String headerCode,
   ) async {

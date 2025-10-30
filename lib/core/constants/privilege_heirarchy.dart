@@ -96,7 +96,13 @@ class PrivilegeHierarchy {
     AppRoutes.lotColoringEdit: AppRoutes.lotColorings,
     AppRoutes.lotColoringDelete: AppRoutes.lotColorings,
 
+     //item Transactions Sub-Routes
     AppRoutes.inventoryTransaction: AppRoutes.stockDashboard,
+    AppRoutes.inventoryTransactionCreate: AppRoutes.inventoryTransaction,
+    AppRoutes.inventoryTransactionEdit: AppRoutes.inventoryTransaction,
+    AppRoutes.inventoryTransactionDelete: AppRoutes.inventoryTransaction,
+
+
     AppRoutes.itemBranchEntry: AppRoutes.stockDashboard,
     AppRoutes.barcodeFunction: AppRoutes.stockDashboard,
     AppRoutes.exportFunction: AppRoutes.stockDashboard,

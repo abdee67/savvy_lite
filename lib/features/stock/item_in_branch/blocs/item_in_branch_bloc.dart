@@ -6,6 +6,7 @@ import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_bloc.dart';
+import 'package:savvy_stock/features/stock/item_UoM_conversions/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/stock/item_cost/blocs/item_cost_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_event.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_state.dart';
@@ -21,9 +22,9 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
   final SystemConstantBloc systemConstantBloc;
   final ItemTransactionRepository itemTransactionsRepository;
   final LotMasterBloc lotMasterBloc;
-  final ItemUomConversionBloc itemUomConversionsBloc;
+  final ItemUomConversionsRepository itemUomConversionsBloc;
   // final NotificationTableBloc notificationTableBloc;
-  final ItemCostBloc itemCostBloc;
+  //final ItemCostBloc itemCostBloc;
 
   StreamSubscription? _authSubscription;
   StreamSubscription? _systemConstantSubscription;
@@ -36,7 +37,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     required this.lotMasterBloc,
     required this.itemUomConversionsBloc,
     //required this.notificationTableBloc,
-    required this.itemCostBloc,
+   // required this.itemCostBloc,
   }) : super( ItemInBranchState()) {
     // Listen to auth state changes
     _authSubscription = authBloc.stream.listen((authState) {
@@ -95,7 +96,6 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     on<SendNotification>(_onSendNotification);
         on<LoadOutOfStockItems>(_onLoadOutOfStockItems);
     on<UpdateItemQuantity>(_onUpdateItemQuantity);
-    on<SetDefaultPrice>(_onSetDefaultPrice);
     on<ExportItemFromBranch>(_onExportItemFromBranch);
     on<ExportSingleItemFromBranch>(_onExportSingleItemFromBranch);
     on<LoadLowStockItems>(_onLoadLowStockItems);
@@ -142,7 +142,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
       );
     }
   }
-
+  
   Future<void> _onAddItemToBranch(
     AddItemToBranch event,
     Emitter<ItemInBranchState> emit,
@@ -464,60 +464,33 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
         itemToSave = itemToSave.copyWith(unitPrice: itemToSave.unitPrice);
       }
 
-      if (itemToSave.id == null) {
-        // Create new
-        itemToSave = itemToSave.copyWith(company: companyId);
-        await repository.create(itemToSave);
+      // Update existing
+      final oldItem = await repository.findById(itemToSave.id);
+      final oldQty = oldItem?.quantityAvailable ?? 0.0;
+      final newQty = itemToSave.quantityAvailable ?? 0.0;
 
-        // Stock card creation like in Java controller
-        final systemConstant = systemConstantBloc.state.selected;
-        final applyLotMgmt = systemConstant?.applyLotMgmBoolean ?? false;
-        final applyLocationMgmt =
-            systemConstant?.applyLocationMgmBoolean ?? false;
-        if (!applyLotMgmt && !applyLocationMgmt) {
-          await itemTransactionsRepository.stockCardCreation(
-            ib: itemToSave,
-            transactionType: 'A',
-            remark: null,
-            loc: null,
-            lm: null,
-            trNo: null,
-            qty: itemToSave.quantityAvailable ?? 0.0,
-            soD: null,
-            por: null,
-          );
-        }
+      await repository.update(itemToSave);
 
-        // await _sendNotification(itemToSave);
-      } else {
-        // Update existing
-        final oldItem = await repository.findById(itemToSave.id);
-        final oldQty = oldItem?.quantityAvailable ?? 0.0;
-        final newQty = itemToSave.quantityAvailable ?? 0.0;
-
-        await repository.update(itemToSave);
-
-        final systemConstant = systemConstantBloc.state.selected;
-        final applyLotMgmt = systemConstant?.applyLotMgmBoolean ?? false;
-        final applyLocationMgmt =
-            systemConstant?.applyLocationMgmBoolean ?? false;
-        if (!applyLotMgmt && !applyLocationMgmt) {
-          await itemTransactionsRepository.stockCardCreation(
-            ib: itemToSave,
-            transactionType: 'A',
-            remark: null,
-            loc: null,
-            lm: null,
-            trNo: null,
-            qty: newQty - oldQty,
-            soD: null,
-            por: null,
-          );
-        }
-
-        //  await _sendNotification(itemToSave);
+      final systemConstant = systemConstantBloc.state.selected;
+      final applyLotMgmt = systemConstant?.applyLotMgmBoolean ?? false;
+      final applyLocationMgmt =
+          systemConstant?.applyLocationMgmBoolean ?? false;
+      if (!applyLotMgmt && !applyLocationMgmt) {
+        await itemTransactionsRepository.stockCardCreation(
+          ib: itemToSave,
+          transactionType: 'A',
+          remark: null,
+          loc: null,
+          lm: null,
+          trNo: null,
+          qty: newQty - oldQty,
+          soD: null,
+          por: null,
+        );
       }
 
+      //  await _sendNotification(itemToSave);
+    
       emit(
         state.copyWith(
           status: ItemInBranchStatus.success,
@@ -680,7 +653,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     Emitter<ItemInBranchState> emit,
   ) {
     // This would need item table lookup
-     if (event.item != null && event.item.itemNumber != null) {
+     if (event.item.itemNumber != null) {
        final updatedItem = event.item.copyWith(
          unitPrice: event.item.itemRef!.unitPrice,
          unitOfMeasure: event.item.unitOfMeasure,
@@ -767,7 +740,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
 
   // Calculate availability like in Java controller
   Future<double> _calculateAvailability(ItemInBranchModel item) async {
-    if (item.id == null || item.itemNumber == null) {
+    if (item.itemNumber == null) {
       return 0.0;
     }
     
@@ -951,14 +924,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
       );
     });
   }
-
-/*************  ✨ Windsurf Command ⭐  *************/
-  /// Handle export single item from branch event.
-  ///
-  /// This function will simulate the export process and
-  /// update the state with the exported item and a success
-  /// message.
-/*******  a447c9e7-6fe2-4d75-a50e-0b8c8613bb0a  *******/  void _onExportSingleItemFromBranch(
+    void _onExportSingleItemFromBranch(
     ExportSingleItemFromBranch event,
     Emitter<ItemInBranchState> emit,
   ) {

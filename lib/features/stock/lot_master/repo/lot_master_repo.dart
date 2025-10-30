@@ -10,7 +10,8 @@ class LotMasterRepository {
   // Get all lot masters for a company
   Future<List<LotMaster>> getLotMasters(int companyId) async {
     final db = await databaseService.database;
-    final lots = await db.rawQuery('''
+    final lots = await db.rawQuery(
+      '''
       SELECT lm.*,
              it.items_id as item_id,
              it.item_description,
@@ -25,7 +26,9 @@ class LotMasterRepository {
       LEFT JOIN udc_details ud ON lm.lot_status = ud.id
       WHERE lm.company = ?
       ORDER BY it.item_description, lm.lot_number
-    ''', [companyId]);
+    ''',
+      [companyId],
+    );
 
     return lots.map((p) => LotMaster.fromMap(p)).toList();
   }
@@ -33,7 +36,8 @@ class LotMasterRepository {
   // Get lot master by ID
   Future<LotMaster?> getLotMasterById(int id, int companyId) async {
     final db = await databaseService.database;
-    final lots = await db.rawQuery('''
+    final lots = await db.rawQuery(
+      '''
       SELECT lm.*,
              it.items_id as item_id,
              it.item_description,
@@ -47,7 +51,9 @@ class LotMasterRepository {
       LEFT JOIN location_master loc ON lm.location = loc.id
       LEFT JOIN udc_details ud ON lm.lot_status = ud.id
       WHERE lm.id = ? AND lm.company = ?
-    ''', [id, companyId]);
+    ''',
+      [id, companyId],
+    );
 
     return lots.isNotEmpty ? LotMaster.fromMap(lots.first) : null;
   }
@@ -62,7 +68,7 @@ class LotMasterRepository {
     int? statusId,
   }) async {
     final db = await databaseService.database;
-    
+
     var whereClause = 'WHERE lm.company = ?';
     final whereArgs = <dynamic>[companyId];
 
@@ -110,10 +116,12 @@ class LotMasterRepository {
   Future<List<LotMaster>> getLotMastersByItemAndBranch({
     required int companyId,
     required int itemNumber,
+    int? location,
     required int branch,
   }) async {
     final db = await databaseService.database;
-    final lots = await db.rawQuery('''
+    final lots = await db.rawQuery(
+      '''
       SELECT lm.*,
              it.item_description,
              b.description as branch_name,
@@ -127,7 +135,9 @@ class LotMasterRepository {
       LEFT JOIN udc_details ud ON lm.lot_status = ud.id
       WHERE lm.company = ? AND lm.item_number = ? AND lm.branch = ?
       ORDER BY lm.date_expiration, lm.lot_number
-    ''', [companyId, itemNumber, branch]);
+    ''',
+      [companyId, itemNumber, branch],
+    );
 
     return lots.map((p) => LotMaster.fromMap(p)).toList();
   }
@@ -165,7 +175,7 @@ class LotMasterRepository {
   Future<void> deleteMultipleLotMasters(List<int> ids, int companyId) async {
     final db = await databaseService.database;
     final batch = db.batch();
-    
+
     for (final id in ids) {
       batch.delete(
         'lot_master',
@@ -173,7 +183,7 @@ class LotMasterRepository {
         whereArgs: [id, companyId],
       );
     }
-    
+
     await batch.commit();
   }
 
@@ -196,13 +206,17 @@ class LotMasterRepository {
     );
 
     // Update items_in_branch table
-    final branchQuantities = await db.rawQuery('''
+    final branchQuantities = await db.rawQuery(
+      '''
       SELECT SUM(quantity_on_hand) as total_qty 
       FROM item_location 
       WHERE company = ? AND item_number = ? AND branch = ?
-    ''', [companyId, itemNumber, branch]);
+    ''',
+      [companyId, itemNumber, branch],
+    );
 
-    final branchQty = (branchQuantities.first['total_qty'] as num?)?.toDouble() ?? 0.0;
+    final branchQty =
+        (branchQuantities.first['total_qty'] as num?)?.toDouble() ?? 0.0;
 
     await db.update(
       'items_in_branch',
@@ -226,22 +240,32 @@ class LotMasterRepository {
     required int location,
   }) async {
     final db = await databaseService.database;
-    final result = await db.rawQuery('''
+    final result = await db.rawQuery(
+      '''
       SELECT SUM(quantity_available) as total_qty 
       FROM lot_master 
       WHERE company = ? AND item_number = ? AND branch = ? AND location = ?
-    ''', [companyId, itemNumber, branch, location]);
+    ''',
+      [companyId, itemNumber, branch, location],
+    );
 
     return (result.first['total_qty'] as num?)?.toDouble() ?? 0.0;
   }
 
   // Get item branch UoM
-  Future<int?> getItemBranchUoM(int itemNumber, int branch, int companyId) async {
+  Future<int?> getItemBranchUoM(
+    int itemNumber,
+    int branch,
+    int companyId,
+  ) async {
     final db = await databaseService.database;
-    final result = await db.rawQuery('''
+    final result = await db.rawQuery(
+      '''
       SELECT unit_of_measure FROM items_in_branch 
       WHERE company = ? AND item_number = ? AND branch = ?
-    ''', [companyId, itemNumber, branch]);
+    ''',
+      [companyId, itemNumber, branch],
+    );
 
     return result.isNotEmpty ? result.first['unit_of_measure'] as int? : null;
   }
@@ -256,10 +280,13 @@ class LotMasterRepository {
     if (fromUom == toUom) return 1.0;
 
     final db = await databaseService.database;
-    final result = await db.rawQuery('''
+    final result = await db.rawQuery(
+      '''
       SELECT conversion_factor FROM item_uom_conversions 
       WHERE company = ? AND item_number = ? AND from_uom = ? AND to_uom = ?
-    ''', [companyId, itemNumber, fromUom, toUom]);
+    ''',
+      [companyId, itemNumber, fromUom, toUom],
+    );
 
     return result.isNotEmpty
         ? (result.first['conversion_factor'] as double?) ?? 1.0
@@ -267,12 +294,19 @@ class LotMasterRepository {
   }
 
   // Get item branch unit price
-  Future<double> getItemBranchUnitPrice(int itemNumber, int branch, int companyId) async {
+  Future<double> getItemBranchUnitPrice(
+    int itemNumber,
+    int branch,
+    int companyId,
+  ) async {
     final db = await databaseService.database;
-    final result = await db.rawQuery('''
+    final result = await db.rawQuery(
+      '''
       SELECT unit_price FROM items_in_branch 
       WHERE company = ? AND item_number = ? AND branch = ?
-    ''', [companyId, itemNumber, branch]);
+    ''',
+      [companyId, itemNumber, branch],
+    );
 
     return result.isNotEmpty
         ? (result.first['unit_price'] as double?) ?? 0.0
@@ -285,7 +319,8 @@ class LotMasterRepository {
     required String query,
   }) async {
     final db = await databaseService.database;
-    final lots = await db.rawQuery('''
+    final lots = await db.rawQuery(
+      '''
       SELECT lm.*,
              it.item_description,
              b.description as branch_name,
@@ -300,7 +335,9 @@ class LotMasterRepository {
       WHERE lm.company = ? 
         AND (lm.lot_number LIKE ? OR lm.batch_number_supplier LIKE ? OR it.item_description LIKE ?)
       ORDER BY it.item_description, lm.lot_number
-    ''', [companyId, '%$query%', '%$query%', '%$query%']);
+    ''',
+      [companyId, '%$query%', '%$query%', '%$query%'],
+    );
 
     return lots.map((p) => LotMaster.fromMap(p)).toList();
   }
@@ -312,11 +349,11 @@ class LotMasterRepository {
     int? excludeId,
   }) async {
     final db = await databaseService.database;
-    
-    final whereClause = excludeId != null 
+
+    final whereClause = excludeId != null
         ? 'company = ? AND lot_number = ? AND id != ?'
         : 'company = ? AND lot_number = ?';
-    
+
     final whereArgs = excludeId != null
         ? [companyId, lotNumber, excludeId]
         : [companyId, lotNumber];
@@ -337,8 +374,9 @@ class LotMasterRepository {
   }) async {
     final db = await databaseService.database;
     final thresholdDate = DateTime.now().add(Duration(days: daysThreshold));
-    
-    final lots = await db.rawQuery('''
+
+    final lots = await db.rawQuery(
+      '''
       SELECT lm.*,
              it.item_description,
              b.description as branch_name,
@@ -355,7 +393,13 @@ class LotMasterRepository {
         AND lm.date_expiration BETWEEN ? AND ?
         AND lm.quantity_available > 0
       ORDER BY lm.date_expiration
-    ''', [companyId, DateTime.now().toIso8601String(), thresholdDate.toIso8601String()]);
+    ''',
+      [
+        companyId,
+        DateTime.now().toIso8601String(),
+        thresholdDate.toIso8601String(),
+      ],
+    );
 
     return lots.map((p) => LotMaster.fromMap(p)).toList();
   }
@@ -363,12 +407,15 @@ class LotMasterRepository {
   // Get lot quantity summary by item
   Future<Map<int, double>> getLotQuantitySummaryByItem(int companyId) async {
     final db = await databaseService.database;
-    final result = await db.rawQuery('''
+    final result = await db.rawQuery(
+      '''
       SELECT item_number, SUM(quantity_available) as total_qty
       FROM lot_master
       WHERE company = ?
       GROUP BY item_number
-    ''', [companyId]);
+    ''',
+      [companyId],
+    );
 
     final summary = <int, double>{};
     for (final row in result) {

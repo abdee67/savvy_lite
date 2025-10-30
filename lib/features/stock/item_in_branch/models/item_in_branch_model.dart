@@ -68,12 +68,37 @@ class ItemInBranchModel {
       marginRate: asDouble(map['margin_rate']),
       marginType: map['margin_type']?.toString(),
       reorderPoint: asDouble(map['reorder_point']),
-      branchRef: map['branch'] != null
-          ? Branch.fromMap(map)
-          : null,
-      itemRef: map['item_number'] != null
-          ? ItemEntryModel.fromMap(map) 
-          : null
+    branchRef: map['branch'] != null
+      ? Branch(
+        id: asInt(map['branch']) ?? 0,
+        referenceId: map['branch_reference']?.toString(),
+        description: map['branch_description']?.toString(),
+        city: map['branch_city']?.toString(),
+        region: map['branch_region']?.toString(),
+        state: map['branch_state']?.toString(),
+        country: map['branch_country']?.toString(),
+        addressLine: map['branch_address_line']?.toString(),
+        company: asInt(map['branch_company']),
+        branchPhone: map['branch_phone']?.toString(),
+        marginRate: asDouble(map['branch_margin_rate']),
+        marginType: map['branch_margin_type']?.toString(),
+      )
+      : null,
+    itemRef: map['item_number'] != null
+      ? ItemEntryModel(
+        id: asInt(map['item_number']) ?? 0,
+        itemsId: map['items_id']?.toString(),
+        itemDescription: map['item_description']?.toString(),
+        unitOfMeasure: map['unit_of_measure']?.toString(),
+        unitPrice: asDouble(map['unit_price']),
+        taxable: map['taxable']?.toString(),
+        barcode: map['barcode']?.toString(),
+        company: asInt(map['item_company']) ?? asInt(map['company']),
+        marginRate: asDouble(map['item_margin_rate']),
+        marginType: map['item_margin_type']?.toString(),
+        reorderPoint: asDouble(map['item_reorder_point']),
+      )
+      : null
 
     );
   }
