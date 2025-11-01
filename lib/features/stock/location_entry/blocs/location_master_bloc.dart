@@ -169,7 +169,7 @@ class LocationMasterBloc
     }
   }
 
-Future<void> _onSaveInRow(
+  Future<void> _onSaveInRow(
     SaveInRow event,
     Emitter<LocationMasterState> emit,
   ) async {

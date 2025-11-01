@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -12,7 +13,6 @@ import 'package:savvy_stock/features/branch_list/blocs/branch_list_state.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_event.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_state.dart';
-import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_bloc.dart';
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_event.dart';
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_state.dart';
@@ -25,6 +25,7 @@ import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_bloc.dart
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_event.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_state.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
+import 'package:savvy_stock/features/stock/lot_coloring/model/lot_coloring_model.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_event.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_state.dart';
@@ -46,6 +47,7 @@ class ItemTransactionsFormPage extends StatefulWidget {
 }
 
 class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
+  StreamSubscription? _trxNoSub;
   final _formKey = GlobalKey<FormState>();
 
   // Master transaction fields
@@ -113,9 +115,7 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
           (udc) => udc.id == transaction.transactionType,
           orElse: () => UdcDetails.empty(),
         );
-        if (transactionType.id != null) {
-          _selectedTransactionType = transactionType;
-        }
+        _selectedTransactionType = transactionType;
       }
 
       // For transfer transactions, load to branch
@@ -141,9 +141,12 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
   }
 
   void _setupTransactionNumberListener() {
-    context.read<ItemTransactionsBloc>().stream.listen((state) {
-      if (state.selected?.lotNumber != null) {
-        _transactionNumber = state.selected!.transactionNumber;
+    _trxNoSub = context.read<ItemTransactionsBloc>().stream.listen((state) {
+      if (state.selected?.transactionNumber != null) {
+        if (!mounted) return;
+        setState(() {
+          _transactionNumber = state.selected!.transactionNumber;
+        });
       }
     });
     print('Transaction number: $_transactionNumber');
@@ -155,6 +158,10 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
       // Reset to branch when transaction type changes (unless it's transfer)
       if (transactionType?.detailCode != 'T') {
         _selectedToBranch = null;
+        _selectedFromBranch = null;
+        _remark = null;
+        _transactionItems.clear();
+        _addNewTransactionItem();
       }
     });
   }
@@ -162,6 +169,8 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
   void _onFromBranchChanged(int? branchId) {
     setState(() {
       _selectedFromBranch = branchId;
+      _transactionItems.clear();
+      _addNewTransactionItem();
     });
 
     if (branchId != null) {
@@ -178,6 +187,8 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
   void _onToBranchChanged(int? branchId) {
     setState(() {
       _selectedToBranch = branchId;
+      _transactionItems.clear();
+      _addNewTransactionItem();
     });
   }
 
@@ -465,40 +476,36 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
-          Row(
+          Column(
             children: [
-              Expanded(
-                child: CustomTextField(
-                  labelText: 'Transaction Reference No.',
-                  value: _transactionNumber?.toString() ?? '',
-                  onChanged: (v) => _transactionNumber = int.tryParse(v),
-                  enabled: false, // Auto-generated, not editable
-                ),
+              CustomTextField(
+                labelText: 'Transaction Reference No.',
+                value: _transactionNumber?.toString() ?? '',
+                onChanged: (v) => _transactionNumber = int.tryParse(v),
+                enabled: false, // Auto-generated, not editable
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
-                  builder: (context, state) {
-                    final transactionTypes = state.details
-                        .where((udc) => udc.udcGroup == 'TT')
-                        .toList();
+              const SizedBox(height: 16),
+              BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
+                builder: (context, state) {
+                  final transactionTypes = state.details
+                      .where((udc) => udc.udcGroup == 'TT')
+                      .toList();
 
-                    return CustomDropdown<UdcDetails>(
-                      labelText: 'Transaction Type *',
-                      value: _selectedTransactionType,
-                      items: transactionTypes
-                          .map(
-                            (udc) => DropdownMenuItem<UdcDetails>(
-                              value: udc,
-                              child: Text(udc.description1),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: _onTransactionTypeChanged,
-                      validator: (v) => v == null ? 'Required' : null,
-                    );
-                  },
-                ),
+                  return CustomDropdown<UdcDetails>(
+                    labelText: 'Transaction Type *',
+                    value: _selectedTransactionType,
+                    items: transactionTypes
+                        .map(
+                          (udc) => DropdownMenuItem<UdcDetails>(
+                            value: udc,
+                            child: Text(udc.description1),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: _onTransactionTypeChanged,
+                    validator: (v) => v == null ? 'Required' : null,
+                  );
+                },
               ),
             ],
           ),
@@ -524,7 +531,7 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
                   ),
                 ),
               ),
-              if (_selectedTransactionType?.detailCode == 'SALE') ...[
+              if (_selectedTransactionType?.detailCode == 'T') ...[
                 const SizedBox(width: 16),
                 Expanded(
                   child: BlocBuilder<BranchBloc, BranchState>(
@@ -571,10 +578,8 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
         child: Column(
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Expanded(flex: 3, child: _buildItemNumberDropdown(item)),
-                const SizedBox(width: 16),
                 IconButton(
                   icon: const Icon(Iconsax.trash, size: 20, color: Colors.red),
                   onPressed: () => _removeTransactionItem(item),
@@ -582,6 +587,8 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
                 ),
               ],
             ),
+            _buildItemNumberDropdown(item),
+
             const SizedBox(height: 16),
 
             // Location selection (if location management enabled)
@@ -607,19 +614,23 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
               children: [
                 // Increase/Decrease checkbox for adjustment transactions
                 if (_selectedTransactionType?.detailCode == 'A') ...[
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Checkbox(
-                          value: item.adjustToIncrease,
-                          onChanged: (v) =>
-                              setState(() => item.adjustToIncrease = v ?? true),
-                        ),
-                        const Text('Increase'),
-                        const SizedBox(width: 16),
+                  Column(
+                    children: [
+                      Checkbox(
+                        value: item.adjustToIncrease,
+                        onChanged: (v) =>
+                            setState(() => item.adjustToIncrease = v ?? true),
+                        //when enabled
+                        tristate: false,
+                        checkColor: Colors.white,
+                        activeColor: Color(0xFF155888),
+                      ),
+                      if (item.adjustToIncrease)
+                        const Text('Increase')
+                      else
                         const Text('Decrease'),
-                      ],
-                    ),
+                      const SizedBox(width: 16),
+                    ],
                   ),
                   const SizedBox(width: 16),
                 ],
@@ -636,8 +647,9 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
                     validator: (v) {
                       if (v == null || v.isEmpty) return 'Required';
                       final value = double.tryParse(v);
-                      if (value == null || value <= 0)
+                      if (value == null || value <= 0) {
                         return 'Must be greater than 0';
+                      }
                       return null;
                     },
                   ),
@@ -680,113 +692,128 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
   }
 
   Widget _buildItemNumberDropdown(ItemTransactionModel item) {
-    return BlocBuilder<ItemTransactionsBloc, ItemTransactionsState>(
+    return BlocBuilder<StockItemInBranchBloc, ItemInBranchState>(
       builder: (context, state) {
-        return CustomTableDropdown<ItemInBranchModel>(
-          title: 'Item Number',
-          items: state.availableItems,
-          displayText: (itemBranch) =>
-              '${itemBranch.itemNumber} - ${_getItemDescription(itemBranch.itemNumber)}',
-          columns: [
-            TableColumnConfig<ItemInBranchModel>(
-              header: 'Item',
-              flex: 3,
-              cellBuilder: (itemBranch) => Text(
-                _getItemDescription(itemBranch.itemNumber),
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            TableColumnConfig<ItemInBranchModel>(
-              header: 'Available',
-              flex: 2,
-              cellBuilder: (itemBranch) => Text(
-                '${itemBranch.quantityAvailable?.toStringAsFixed(2) ?? '0.00'}',
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            TableColumnConfig<ItemInBranchModel>(
-              header: 'UoM',
-              flex: 1,
-              cellBuilder: (itemBranch) => Text(
-                state.uomDescriptions[itemBranch.unitOfMeasure] ?? 'Loading...',
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
-          onItemSelected: (selectedItemBranch) {
-            // Dispatch event instead of handling business logic
-            context.read<ItemTransactionsBloc>().add(
-              SelectItem(selectedItemBranch?.itemNumber, _selectedFromBranch!),
-            );
+        // Filter items by selected branch
+        final branchItems = state.items
+            .where((ib) => ib.branch == _selectedFromBranch)
+            .toList();
 
-            // Load UoM description if needed
-            if (selectedItemBranch?.unitOfMeasure != null) {
-              context.read<ItemTransactionsBloc>().add(
-                LoadUoMDescription(selectedItemBranch!.unitOfMeasure!),
+        return CustomDropdown<int>(
+          labelText: 'Item Number *',
+          value: item.itemNumber,
+          items: branchItems
+              .map(
+                (ib) => DropdownMenuItem<int>(
+                  value: ib.itemNumber,
+                  child: Text(
+                    '${ib.itemNumber} - ${ib.itemRef?.itemDescription}',
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: (v) {
+            setState(() {
+              item.itemNumber = v;
+              item.itemLocation = null; // Reset location when item changes
+              item.lotNumber = null; // Reset lot when item changes
+            });
+
+            // Load locations for the selected item
+            if (v != null && _selectedFromBranch != null) {
+              context.read<StockItemLocationBloc>().add(
+                LoadItemLocationsByBranchAndItem(
+                  branchId: _selectedFromBranch!,
+                  itemId: v,
+                  companyId: widget.authBloc.state.companyId!,
+                ),
+              );
+
+              // Load lots for the selected item
+              context.read<LotMasterBloc>().add(
+                FilterLotMasters(itemId: v, branchId: _selectedFromBranch!),
               );
             }
           },
-          expandedHeight: 200,
-          emptyText: 'Select Item',
-          selectedValue: state.availableItems.firstWhere(
-            (ib) => ib.itemNumber == item.itemNumber,
-            orElse: () => ItemInBranchModel.empty(),
-          ),
+          validator: (v) => v == null ? 'Required' : null,
         );
       },
     );
   }
 
   Widget _buildLocationDropdown(ItemTransactionModel item) {
-    return BlocBuilder<ItemTransactionsBloc, ItemTransactionsState>(
+    return BlocBuilder<StockItemLocationBloc, ItemLocationsState>(
       builder: (context, state) {
-        return CustomDropdown<int>(
-          labelText: 'Location *',
-          value: item.itemLocation,
-          items: state.availableLocations
-              .map(
-                (loc) => DropdownMenuItem<int>(
-                  value: loc.id,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(loc.location.toString()),
-                      Text(
-                        'Qty: ${loc.quantityOnHand ?? 0.0}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-              .toList(),
-          onChanged: (v) {
-            setState(() => item.itemLocation = v);
+        final locations = state.items
+            .where((loc) => loc.itemNumber == item.itemNumber)
+            .toList();
 
-            // Load lots for the selected location
-            if (item.itemNumber != null && _selectedFromBranch != null) {
-              context.read<LotMasterBloc>().add(
-                FilterLotMasters(
-                  itemId: item.itemNumber!,
-                  branchId: _selectedFromBranch!,
-                  locationId: v,
-                ),
-              );
+        // Find selected location object
+        final selectedLocation = locations.firstWhere(
+          (loc) => loc.id == item.itemLocation,
+          orElse: () => locations.isNotEmpty ? locations.first : ItemLocation(),
+        );
+
+        return CustomTableDropdown<ItemLocation>(
+          title: 'Location *',
+          items: locations,
+          displayText: (loc) => loc.locationDescription ?? 'No Description',
+          selectedValue: selectedLocation,
+          showSearch: true,
+          searchHint: 'Search locations...',
+          leadingIcon: Icon(Icons.location_on, size: 16),
+          columns: [
+            TableColumnConfig(
+              header: 'Location',
+              flex: 3,
+              cellBuilder: (loc) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    loc.locationDescription ?? 'No Description',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'ID: ${loc.id}',
+                    style: TextStyle(fontSize: 8, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+            TableColumnConfig(
+              header: 'Quantity',
+              flex: 2,
+              cellBuilder: (loc) => Text(
+                '${loc.quantityOnHand ?? 0.0}',
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
+              ),
+            ),
+            TableColumnConfig(
+              header: 'UOM',
+              flex: 1,
+              cellBuilder: (loc) => Text(
+                loc.itemRef?.unitOfMeasure ?? 'N/A',
+                style: TextStyle(fontSize: 10),
+              ),
+            ),
+          ],
+          onItemSelected: (selectedLoc) {
+            if (selectedLoc != null) {
+              setState(() => item.itemLocation = selectedLoc.id);
+
+              // Load lots for the selected location
+              if (item.itemNumber != null && _selectedFromBranch != null) {
+                context.read<LotMasterBloc>().add(
+                  FilterLotMasters(
+                    itemId: item.itemNumber!,
+                    branchId: _selectedFromBranch!,
+                    locationId: selectedLoc.id,
+                  ),
+                );
+              }
             }
           },
-          validator: (v) => v == null ? 'Required' : null,
         );
       },
     );
@@ -805,46 +832,112 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
             )
             .toList();
 
-        return CustomDropdown<int>(
-          labelText: 'Lot *',
-          value: item.lotNumber,
-          items: lots
-              .map(
-                (lot) => DropdownMenuItem<int>(
-                  value: lot.id,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Lot: ${lot.lotNumber}'),
-                      Text(
-                        'Qty: ${lot.quantityAvailable ?? 0.0}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      Text(
-                        'Status: ${lot.lotStatus ?? 'NaN'}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      if (lot.dateExpiration != null)
-                        Text(
-                          'Exp: ${_formatDate(lot.dateExpiration!)}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
-                        ),
-                    ],
+        // Find selected lot object
+        final selectedLot = lots.firstWhere(
+          (lot) => lot.id == item.lotNumber,
+          orElse: () => lots.isNotEmpty ? lots.first : LotMaster(),
+        );
+
+        return CustomTableDropdown<LotMaster>(
+          title: 'Lot *',
+          items: lots,
+          displayText: (lot) => lot.lotNumber.toString(),
+          selectedValue: selectedLot,
+          showSearch: true,
+          searchHint: 'Search lots...',
+          leadingIcon: Icon(Icons.inventory_2, size: 16),
+          rowBackgroundColor: (lot, isSelected) =>
+              _getColorFromType(lot.tempColorType),
+          columns: [
+            TableColumnConfig(
+              header: 'Lot No',
+              flex: 2,
+              cellBuilder: (lot) => Text(
+                lot.lotNumber.toString(),
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            TableColumnConfig(
+              header: 'Qty',
+              flex: 1,
+              cellBuilder: (lot) => Text(
+                '${lot.quantityAvailable ?? 0.0}',
+                style: TextStyle(fontSize: 10, color: Colors.white),
+              ),
+            ),
+            TableColumnConfig(
+              header: 'Status',
+              flex: 1,
+              cellBuilder: (lot) => Text(
+                lot.statusDescription.toString(),
+                style: TextStyle(
+                  fontSize: 8,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            TableColumnConfig(
+              header: 'UoM',
+              flex: 1,
+              cellBuilder: (lot) => Text(
+                lot.itemRef?.unitOfMeasure ?? 'N/A',
+                style: TextStyle(
+                  fontSize: 8,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            if (selectedLot.dateExpiration != null)
+              TableColumnConfig(
+                header: 'Expiration',
+                flex: 2,
+                cellBuilder: (lot) => Text(
+                  _formatDate(selectedLot.dateExpiration!),
+                  style: TextStyle(
+                    fontSize: 9,
+                    overflow: TextOverflow.ellipsis,
+                    color: Colors.white,
                   ),
                 ),
-              )
-              .toList(),
-          onChanged: (v) => setState(() => item.lotNumber = v),
-          validator: (v) => v == null ? 'Required' : null,
+              ),
+            if (selectedLot.dateEffective != null)
+              TableColumnConfig(
+                header: 'Effective',
+                flex: 2,
+                cellBuilder: (lot) => Text(
+                  _formatDate(selectedLot.dateEffective!),
+                  style: TextStyle(
+                    fontSize: 9,
+                    overflow: TextOverflow.ellipsis,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            if (selectedLot.dateReceived != null)
+              TableColumnConfig(
+                header: 'Received',
+                flex: 2,
+                cellBuilder: (lot) => Text(
+                  _formatDate(selectedLot.dateReceived!),
+                  style: TextStyle(
+                    fontSize: 9,
+                    overflow: TextOverflow.ellipsis,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+          ],
+          onItemSelected: (selectedLot) {
+            if (selectedLot != null) {
+              setState(() => item.lotNumber = selectedLot.id);
+            }
+          },
         );
       },
     );
@@ -861,31 +954,62 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
             )
             .toList();
 
-        return CustomDropdown<int>(
-          labelText: 'To Location *',
-          value: item.itemLocationsTo,
-          items: toLocations
-              .map(
-                (loc) => DropdownMenuItem<int>(
-                  value: loc.id,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(loc.location?.toString() ?? 'NaN'),
-                      Text(
-                        'Qty: ${loc.quantityOnHand ?? 0.0}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
+        // Find selected to location object
+        final selectedToLocation = toLocations.firstWhere(
+          (loc) => loc.id == item.itemLocationsTo,
+          orElse: () =>
+              toLocations.isNotEmpty ? toLocations.first : ItemLocation(),
+        );
+
+        return CustomTableDropdown<ItemLocation>(
+          title: 'To Location *',
+          items: toLocations,
+          displayText: (loc) => loc.locationDescription ?? 'No Description',
+          selectedValue: selectedToLocation,
+          showSearch: true,
+          searchHint: 'Search to locations...',
+          leadingIcon: Icon(Icons.arrow_forward, size: 16),
+          columns: [
+            TableColumnConfig(
+              header: 'To Location',
+              flex: 3,
+              cellBuilder: (loc) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    loc.locationDescription ?? 'No Description',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
                   ),
-                ),
-              )
-              .toList(),
-          onChanged: (v) => setState(() => item.itemLocationsTo = v),
-          validator: (v) => v == null ? 'Required' : null,
+                  SizedBox(height: 2),
+                  Text(
+                    'Branch: ${loc.branch}',
+                    style: TextStyle(fontSize: 8, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+            TableColumnConfig(
+              header: 'Quantity',
+              flex: 2,
+              cellBuilder: (loc) => Text(
+                '${loc.quantityOnHand ?? 0.0}',
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
+              ),
+            ),
+            TableColumnConfig(
+              header: 'UOM',
+              flex: 1,
+              cellBuilder: (loc) => Text(
+                loc.itemRef?.unitOfMeasure ?? 'N/A',
+                style: TextStyle(fontSize: 10),
+              ),
+            ),
+          ],
+          onItemSelected: (selectedLoc) {
+            if (selectedLoc != null) {
+              setState(() => item.itemLocationsTo = selectedLoc.id);
+            }
+          },
         );
       },
     );
@@ -925,14 +1049,45 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
     );
   }
 
-  // Helper methods
-  String _getItemDescription(int? itemNumber) {
-    // This would typically come from your items bloc
-
-    return '';
-  }
-
   String _formatDate(DateTime date) {
     return '${date.month}/${date.day}/${date.year}';
+  }
+
+  Color _getColorFromType(LotExpirationColor? color) {
+    if (color == null) return Colors.transparent;
+
+    final code = (color.colorTypeCode ?? '').trim().toUpperCase();
+    final name = (color.colorTypeName ?? '').trim().toLowerCase();
+
+    switch (code) {
+      case 'RED':
+        return Colors.red.withOpacity(1.0);
+      case 'BLU':
+        return Colors.blue.withOpacity(1.0);
+      case 'GRN':
+        return Colors.green.withOpacity(1.0);
+      case 'BLK':
+        return Colors.black.withOpacity(1.0);
+      case 'YL':
+        return Colors.yellow.withOpacity(1.0);
+      case 'ORG':
+        return Colors.orange.withOpacity(1.0);
+      case 'GRY':
+        return Colors.grey.withOpacity(1.0);
+      case 'OV':
+        return const Color.fromARGB(255, 14, 90, 4).withOpacity(1.0);
+      case 'PRPL':
+        return Colors.purple.withOpacity(1.0);
+      case 'LM':
+        return Colors.lime.withOpacity(1.0);
+      default:
+        if (name.contains('red')) return Colors.red.withOpacity(1.0);
+        if (name.contains('blue')) return Colors.blue.withOpacity(1.0);
+        if (name.contains('green')) return Colors.green.withOpacity(1.0);
+        if (name.contains('yellow')) return Colors.yellow.withOpacity(1.0);
+        if (name.contains('orange')) return Colors.orange.withOpacity(1.0);
+        if (name.contains('black')) return Colors.black.withOpacity(1.0);
+        return Colors.transparent;
+    }
   }
 }

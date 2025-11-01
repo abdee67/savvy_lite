@@ -671,11 +671,9 @@ class ItemTransactionsBloc
     );
 
     if (event.locationId != null) {
-      add(
-        LoadLotsForItem(event.itemNumber!, event.branchId!, event.locationId!),
-      );
+      add(LoadLotsForItem(event.itemNumber, event.branchId, event.locationId!));
     } else {
-      add(LoadLotsForItem(event.itemNumber!, event.branchId!, null));
+      add(LoadLotsForItem(event.itemNumber, event.branchId, null));
     }
   }
 

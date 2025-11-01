@@ -843,9 +843,9 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
           itemsInBranchController.sendNotification(ib);
         } else if (it != null && (b == null || c != null)) {
           // Item Level Update
-          await itemsInBranchController.updateItemUnitPrice(it.id!, newPrice);
+          await itemsInBranchController.updateItemUnitPrice(it.id, newPrice);
           final itemsInBranchList = await itemsInBranchController
-              .itemInBranchByItem(it.id!);
+              .itemInBranchByItem(it.id);
           for (final itB in itemsInBranchList) {
             await itemsInBranchController.updateUnitPrice(itB, newPrice);
             itemsInBranchController.sendNotification(itB);
@@ -853,7 +853,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
         } else if (b != null && it != null) {
           // Branch Level Update
           final itemsInBranchList = await itemsInBranchController
-              .itemInBranchByItemAndBranch(it.id!, b.id);
+              .itemInBranchByItemAndBranch(it.id, b.id);
           for (final itB in itemsInBranchList) {
             await itemsInBranchController.updateUnitPrice(itB, newPrice);
             itemsInBranchController.sendNotification(itB);

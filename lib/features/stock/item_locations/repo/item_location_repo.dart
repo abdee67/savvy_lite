@@ -25,17 +25,21 @@ class ItemLocationsRepository {
     required int itemId,
   }) async {
     final db = await databaseService.database;
-    final items = await db.rawQuery('''
+    final items = await db.rawQuery(
+      '''
       SELECT il.*,
              lm.location_description,
              it.item_description,
+             it.unit_of_measure,
              b.description as branch_name
       FROM item_location il
       LEFT JOIN location_master lm ON il.location = lm.id
       LEFT JOIN items_table it ON il.item_number = it.id
       LEFT JOIN branch_table b ON il.branch = b.id
       WHERE il.company = ? AND il.branch = ? AND il.item_number = ?
-    ''', [companyId, branchId, itemId]);
+    ''',
+      [companyId, branchId, itemId],
+    );
 
     return items.map((p) => ItemLocation.fromMap(p)).toList();
   }
@@ -84,7 +88,7 @@ class ItemLocationsRepository {
   Future<void> deleteItemLocations(List<int> ids, int companyId) async {
     final db = await databaseService.database;
     final batch = db.batch();
-    
+
     for (final id in ids) {
       batch.delete(
         'item_location',
@@ -92,7 +96,7 @@ class ItemLocationsRepository {
         whereArgs: [id, companyId],
       );
     }
-    
+
     await batch.commit();
   }
 
@@ -102,7 +106,8 @@ class ItemLocationsRepository {
     required String query,
   }) async {
     final db = await databaseService.database;
-    final items = await db.rawQuery('''
+    final items = await db.rawQuery(
+      '''
       SELECT il.*,
              lm.location_description,
              it.item_description,
@@ -113,7 +118,9 @@ class ItemLocationsRepository {
       LEFT JOIN branch_table b ON il.branch = b.id
       WHERE il.company = ? 
         AND (il.location LIKE ? OR it.item_description LIKE ? OR b.description LIKE ?)
-    ''', [companyId, '%$query%', '%$query%', '%$query%']);
+    ''',
+      [companyId, '%$query%', '%$query%', '%$query%'],
+    );
 
     return items.map((p) => ItemLocation.fromMap(p)).toList();
   }

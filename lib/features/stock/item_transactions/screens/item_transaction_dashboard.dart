@@ -15,7 +15,8 @@ class ItemTransactionsListPage extends StatefulWidget {
   const ItemTransactionsListPage({super.key, required this.authBloc});
 
   @override
-  State<ItemTransactionsListPage> createState() => _ItemTransactionsListPageState();
+  State<ItemTransactionsListPage> createState() =>
+      _ItemTransactionsListPageState();
 }
 
 class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
@@ -50,7 +51,7 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
 
     // Load transactions
     context.read<ItemTransactionsBloc>().add(
-      LoadItemTransactions(companyId:widget.authBloc.state.companyId!),
+      LoadItemTransactions(companyId: widget.authBloc.state.companyId!),
     );
   }
 
@@ -87,17 +88,23 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
   }
 
   void _handleSearch(String query) {
-    context.read<ItemTransactionsBloc>().add(FilterItemTransactions(query: query));
+    context.read<ItemTransactionsBloc>().add(
+      FilterItemTransactions(query: query),
+    );
   }
-
 
   void _clearSearch() {
     _searchController.clear();
-    context.read<ItemTransactionsBloc>().add(FilterItemTransactions(query:''));
+    context.read<ItemTransactionsBloc>().add(FilterItemTransactions(query: ''));
   }
 
-  void _toggleTransactionSelection(ItemTransactionModel transaction, bool selected) {
-    context.read<ItemTransactionsBloc>().add(SelectItemTransaction(transaction));
+  void _toggleTransactionSelection(
+    ItemTransactionModel transaction,
+    bool selected,
+  ) {
+    context.read<ItemTransactionsBloc>().add(
+      SelectItemTransaction(transaction),
+    );
   }
 
   void _showTransactionDetail(ItemTransactionModel transaction) {
@@ -131,45 +138,45 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
 
   void _refreshList() {
     context.read<ItemTransactionsBloc>().add(
-      LoadItemTransactions(companyId:widget.authBloc.state.companyId!),
+      LoadItemTransactions(companyId: widget.authBloc.state.companyId!),
     );
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Transactions refreshed')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Transactions refreshed')));
   }
 
   void _exportToExcel() {
     final bloc = context.read<ItemTransactionsBloc>();
     final state = bloc.state;
-    
+
     if (state.selectedItems.isNotEmpty) {
       bloc.add(ExportTransactions(state.selectedItems, 'excel'));
     } else {
       bloc.add(ExportTransactions(state.transactions, 'excel'));
     }
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Exporting to Excel...')),
-    );
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Exporting to Excel...')));
   }
 
   void _exportToCSV() {
     final bloc = context.read<ItemTransactionsBloc>();
     final state = bloc.state;
-    
+
     if (state.selectedItems.isNotEmpty) {
       bloc.add(ExportTransactions(state.selectedItems, 'csv'));
     } else {
       bloc.add(ExportTransactions(state.transactions, 'csv'));
     }
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Exporting to CSV...')),
-    );
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Exporting to CSV...')));
   }
 
   void _navigateToCreateScreen() {
-       context.read<ItemTransactionsBloc>().add(PrepareCreate());
+    context.read<ItemTransactionsBloc>().add(PrepareCreate());
     context.push(AppRoutes.inventoryTransactionCreate);
   }
 
@@ -195,20 +202,20 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
           final deletedIndexes = transactionsToDelete
               .map((trans) => state.transactions.indexOf(trans))
               .toList();
-          bloc.add(
-            DeleteMultipleItemTransactions(
-               transactionsToDelete,
-            ),
-          );
+          bloc.add(DeleteMultipleItemTransactions(transactionsToDelete));
         },
       );
       return;
     }
 
     // CASE 2: Single transaction by index
-    if (index == null || index < 0 || index >= state.filteredTransactions.length) {
+    if (index == null ||
+        index < 0 ||
+        index >= state.filteredTransactions.length) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cannot delete transaction. Invalid index.')),
+        const SnackBar(
+          content: Text('Cannot delete transaction. Invalid index.'),
+        ),
       );
       return;
     }
@@ -221,9 +228,7 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
       content:
           'Are you sure you want to delete transaction #${transactionToDelete.transactionNumber}?',
       onConfirm: () {
-        bloc.add(
-          DeleteItemTransaction(transactionToDelete),
-        );
+        bloc.add(DeleteItemTransaction(transactionToDelete));
       },
     );
   }
@@ -298,7 +303,9 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
           if (state.status == ItemTransactionsStatus.success) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.successmessage ?? 'Operation completed successfully'),
+                content: Text(
+                  state.successmessage ?? 'Operation completed successfully',
+                ),
                 backgroundColor: Colors.green,
               ),
             );
@@ -319,8 +326,8 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
               Column(
                 children: [
                   // Toolbar
-                 // _buildToolbar(),
-                  
+                  // _buildToolbar(),
+
                   // Search Bar
                   _buildSearchBar(),
                   _buildActionButtons(state),
@@ -353,14 +360,19 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white,
               foregroundColor: const Color.fromARGB(255, 28, 66, 146),
-              side: BorderSide(color: const Color.fromARGB(255, 28, 66, 146).withOpacity(0.3)),
+              side: BorderSide(
+                color: const Color.fromARGB(255, 28, 66, 146).withOpacity(0.3),
+              ),
             ),
           ),
           const Spacer(),
-          
+
           // Export Menu
           PopupMenuButton<String>(
-            icon: const Icon(Iconsax.export, color: Color.fromARGB(255, 28, 66, 146)),
+            icon: const Icon(
+              Iconsax.export,
+              color: Color.fromARGB(255, 28, 66, 146),
+            ),
             offset: const Offset(0, 50),
             itemBuilder: (context) => [
               const PopupMenuItem(
@@ -395,14 +407,28 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
                 color: Colors.white,
-                border: Border.all(color: const Color.fromARGB(255, 28, 66, 146).withOpacity(0.3)),
+                border: Border.all(
+                  color: const Color.fromARGB(
+                    255,
+                    28,
+                    66,
+                    146,
+                  ).withOpacity(0.3),
+                ),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Row(
                 children: [
-                  Icon(Iconsax.export, size: 16, color: Color.fromARGB(255, 28, 66, 146)),
+                  Icon(
+                    Iconsax.export,
+                    size: 16,
+                    color: Color.fromARGB(255, 28, 66, 146),
+                  ),
                   SizedBox(width: 8),
-                  Text('Export', style: TextStyle(color: Color.fromARGB(255, 28, 66, 146))),
+                  Text(
+                    'Export',
+                    style: TextStyle(color: Color.fromARGB(255, 28, 66, 146)),
+                  ),
                 ],
               ),
             ),
@@ -449,9 +475,6 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
       ),
     );
   }
-
-
-
 
   Widget _buildActionButtons(ItemTransactionsState state) {
     return AnimatedContainer(
@@ -516,9 +539,7 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
             shape: const CircleBorder(),
           ),
           child: Icon(
-            state.selectedItems.isNotEmpty
-                ? Icons.edit
-                : Icons.add,
+            state.selectedItems.isNotEmpty ? Icons.edit : Icons.add,
             color: Colors.white,
           ),
         );
@@ -551,7 +572,9 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () => context.read<ItemTransactionsBloc>().add(
-                LoadItemTransactions(companyId:widget.authBloc.state.companyId!),
+                LoadItemTransactions(
+                  companyId: widget.authBloc.state.companyId!,
+                ),
               ),
               child: const Text('Retry'),
             ),
@@ -568,13 +591,11 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Iconsax.receipt, size: 64, color: Colors.grey),
+            const Icon(Iconsax.receipt, size: 64, color: Colors.white),
             const SizedBox(height: 16),
             Text(
-              !hasQuery
-                  ? 'No transactions found'
-                  : 'No results for "${query}"',
-              style: const TextStyle(color: Colors.grey, fontSize: 16),
+              !hasQuery ? 'No transactions found' : 'No results for "$query"',
+              style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
           ],
         ),
@@ -616,7 +637,8 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
     double cardWidth,
   ) {
     final offset = _dragOffset[index] ?? 0.0;
-    final isExpanded = _transactionDetail == true && _selectedTransaction == transaction;
+    final isExpanded =
+        _transactionDetail == true && _selectedTransaction == transaction;
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
@@ -730,14 +752,19 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Transaction Avatar
-                        _buildTransactionAvatar(transaction, isSelected, isCompact),
+                        _buildTransactionAvatar(
+                          transaction,
+                          isSelected,
+                          isCompact,
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     'Transaction #${transaction.transactionNumber ?? 'N/A'}',
@@ -754,14 +781,25 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
                                       vertical: 2,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: _getTransactionTypeColor(transaction.transactionTypeDetail?.detailCode),
+                                      color: _getTransactionTypeColor(
+                                        transaction
+                                            .transactionTypeDetail
+                                            ?.detailCode,
+                                      ),
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
-                                        color: _getTransactionTypeBorderColor(transaction.transactionTypeDetail?.detailCode),
+                                        color: _getTransactionTypeBorderColor(
+                                          transaction
+                                              .transactionTypeDetail
+                                              ?.detailCode,
+                                        ),
                                       ),
                                     ),
                                     child: Text(
-                                      transaction.transactionTypeDetail?.description1 ?? 'Unknown',
+                                      transaction
+                                              .transactionTypeDetail
+                                              ?.description1 ??
+                                          'Unknown',
                                       style: TextStyle(
                                         fontSize: 10,
                                         color: Colors.white,
@@ -773,7 +811,8 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
                               ),
 
                               Text(
-                                transaction.item?.itemDescription ?? 'Item ${transaction.itemNumber}',
+                                transaction.item?.itemDescription ??
+                                    'Item ${transaction.itemNumber}',
                                 style: TextStyle(
                                   color: const Color(0xFF887F7F),
                                   fontSize: isCompact ? 12 : 14,
@@ -799,7 +838,8 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
                                       ),
                                     ),
                                     child: Text(
-                                      transaction.branchDetail?.description ?? 'Store ${transaction.branch}',
+                                      transaction.branchDetail?.description ??
+                                          'Store ${transaction.branch}',
                                       style: TextStyle(
                                         fontSize: 10,
                                         color: Colors.blue[800],
@@ -913,7 +953,10 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
                         ),
                       );
                     },
-                    child: _buildTransactionDetailContent(transaction, isCompact),
+                    child: _buildTransactionDetailContent(
+                      transaction,
+                      isCompact,
+                    ),
                   ),
                 ),
             ],
@@ -923,7 +966,10 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
     );
   }
 
-  Widget _buildTransactionDetailContent(ItemTransactionModel transaction, bool isCompact) {
+  Widget _buildTransactionDetailContent(
+    ItemTransactionModel transaction,
+    bool isCompact,
+  ) {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       child: Column(
@@ -942,13 +988,15 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
           ),
           _buildTransactionInfoItem(
             'Item : ',
-            transaction.item?.itemDescription ?? 'Item ${transaction.itemNumber}',
+            transaction.item?.itemDescription ??
+                'Item ${transaction.itemNumber}',
             Iconsax.box,
             isCompact,
           ),
           _buildTransactionInfoItem(
             'Store : ',
-            transaction.branchDetail?.description ?? 'Store ${transaction.branch}',
+            transaction.branchDetail?.description ??
+                'Store ${transaction.branch}',
             Iconsax.shop,
             isCompact,
           ),
@@ -959,33 +1007,35 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
             isCompact,
           ),
           if (transaction.lotNumber != null)
-          _buildTransactionInfoItem(
-            'Lot Number : ',
-            transaction.lot?.lotNumber?.toString() ?? 'N/A',
-            Iconsax.tag,
-            isCompact,
-          ),
+            _buildTransactionInfoItem(
+              'Lot Number : ',
+              transaction.lot?.lotNumber?.toString() ?? 'N/A',
+              Iconsax.tag,
+              isCompact,
+            ),
           if (transaction.lot?.batchNumberSupplier != null)
-          _buildTransactionInfoItem(
-            'Batch Number : ',
-            transaction.lot?.batchNumberSupplier ?? 'N/A',
-            Iconsax.barcode,
-            isCompact,
-          ),
+            _buildTransactionInfoItem(
+              'Batch Number : ',
+              transaction.lot?.batchNumberSupplier ?? 'N/A',
+              Iconsax.barcode,
+              isCompact,
+            ),
           if (transaction.supplier != null)
-          _buildTransactionInfoItem(
-            'Supplier : ',
-            transaction.supplierDetail?.supplierName ?? 'Supplier ${transaction.supplier}',
-            Iconsax.profile_2user,
-            isCompact,
-          ),
+            _buildTransactionInfoItem(
+              'Supplier : ',
+              transaction.supplierDetail?.supplierName ??
+                  'Supplier ${transaction.supplier}',
+              Iconsax.profile_2user,
+              isCompact,
+            ),
           if (transaction.customer != null)
-          _buildTransactionInfoItem(
-            'Customer : ',
-            transaction.customerDetail?.name ?? 'Customer ${transaction.customer}',
-            Iconsax.profile_circle,
-            isCompact,
-          ),
+            _buildTransactionInfoItem(
+              'Customer : ',
+              transaction.customerDetail?.name ??
+                  'Customer ${transaction.customer}',
+              Iconsax.profile_circle,
+              isCompact,
+            ),
           _buildTransactionInfoItem(
             'Transaction Quantity : ',
             transaction.quantityTransaction.toString(),
@@ -1005,19 +1055,19 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
             isCompact,
           ),
           if (transaction.orderTypeDetail != null)
-          _buildTransactionInfoItem(
-            'Order Type : ',
-            transaction.orderTypeDetail?.description1 ?? 'N/A',
-            Iconsax.receipt_item,
-            isCompact,
-          ),
+            _buildTransactionInfoItem(
+              'Order Type : ',
+              transaction.orderTypeDetail?.description1 ?? 'N/A',
+              Iconsax.receipt_item,
+              isCompact,
+            ),
           if (transaction.remark != null && transaction.remark!.isNotEmpty)
-          _buildTransactionInfoItem(
-            'Remark : ',
-            transaction.remark!,
-            Iconsax.note,
-            isCompact,
-          ),
+            _buildTransactionInfoItem(
+              'Remark : ',
+              transaction.remark!,
+              Iconsax.note,
+              isCompact,
+            ),
 
           // Action buttons row
           Padding(
@@ -1028,7 +1078,9 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
                 _buildActionButton(
                   Iconsax.eye,
                   'View Details',
-                  () => _showTransactionDetail(transaction), // This would show even more details
+                  () => _showTransactionDetail(
+                    transaction,
+                  ), // This would show even more details
                   isCompact,
                 ),
                 _buildActionButton(
@@ -1040,7 +1092,8 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
                 _buildActionButton(
                   Iconsax.repeat,
                   'Duplicate',
-                  () => _navigateToCreateScreen(), // Would pre-fill with this transaction's data
+                  () =>
+                      _navigateToCreateScreen(), // Would pre-fill with this transaction's data
                   isCompact,
                 ),
               ],

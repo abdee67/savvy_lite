@@ -281,14 +281,12 @@ class StockItemsEntryRepository {
     final batch = db.batch();
 
     for (final item in items) {
-      if (item.id != null) {
-        batch.update(
-          'items_table',
-          item.toMap(),
-          where: 'id = ? AND company = ?',
-          whereArgs: [item.id, item.company],
-        );
-      }
+      batch.update(
+        'items_table',
+        item.toMap(),
+        where: 'id = ? AND company = ?',
+        whereArgs: [item.id, item.company],
+      );
     }
 
     await batch.commit();

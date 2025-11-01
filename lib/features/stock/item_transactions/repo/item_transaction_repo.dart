@@ -24,7 +24,7 @@ class ItemTransactionRepository {
   final NextNumberBloc nextNumberBloc;
   final UdcRepository udcDetailsController;
   final ItemUomConversionBloc itemUomConversionBloc;
-  
+
   // Use repositories instead of BLoCs for data access
   final StockItemInBranchRepository itemInBranchRepository;
   final ItemLocationsRepository itemLocationsRepository;
@@ -63,7 +63,8 @@ class ItemTransactionRepository {
       if (ib != null || loc != null || lm != null) {
         final systemConstant = systemConstantBloc.state.selected;
         final applyLotMgmt = systemConstant?.applyLotMgmBoolean ?? false;
-        final applyLocationMgmt = systemConstant?.applyLocationMgmBoolean ?? false;
+        final applyLocationMgmt =
+            systemConstant?.applyLocationMgmBoolean ?? false;
         final user = authBloc.state.userId;
         final companyId = authBloc.state.companyId;
 
@@ -83,7 +84,10 @@ class ItemTransactionRepository {
             user: user,
             companyId: companyId,
           );
-        } else if (loc != null && applyLocationMgmt && !applyLotMgmt && qty != 0.0) {
+        } else if (loc != null &&
+            applyLocationMgmt &&
+            !applyLotMgmt &&
+            qty != 0.0) {
           await _createLocationTransaction(
             loc: loc,
             transactionType: transactionType,
@@ -95,7 +99,10 @@ class ItemTransactionRepository {
             user: user,
             companyId: companyId,
           );
-        } else if (lm != null && applyLocationMgmt && applyLotMgmt && qty != 0.0) {
+        } else if (lm != null &&
+            applyLocationMgmt &&
+            applyLotMgmt &&
+            qty != 0.0) {
           await _createLotTransaction(
             lm: lm,
             transactionType: transactionType,
@@ -128,9 +135,14 @@ class ItemTransactionRepository {
     final db = await databaseService.database;
 
     // Get transaction type UDC
-    final udcList = await udcDetailsController.getLocalUdcDetailsByCode('TT', transactionType);
+    final udcList = await udcDetailsController.getLocalUdcDetailsByCode(
+      'TT',
+      transactionType,
+    );
     if (udcList.isEmpty) {
-      throw Exception('Transaction type UDC not found for code: $transactionType');
+      throw Exception(
+        'Transaction type UDC not found for code: $transactionType',
+      );
     }
     final udc = udcList.first;
 
@@ -151,7 +163,10 @@ class ItemTransactionRepository {
 
     final qtyAvInStore = (ib.quantityAvailable ?? 0.0) + (factor * qty).abs();
 
-    final itemCost = await itemCostRepository.findByItem(ib.itemNumber, companyId);
+    final itemCost = await itemCostRepository.findByItem(
+      ib.itemNumber,
+      companyId,
+    );
     final unitCost = itemCost?.amountUnitCost ?? 0.0;
 
     final factorP = await itemUomConversionRepository.fromOtherToPrimary(
@@ -184,7 +199,8 @@ class ItemTransactionRepository {
       branch: ib.branch,
       unitOfMeasure: ib.unitOfMeasure,
       supplier: por?.poDetailRef?.supplierId,
-      orderType: por?.poDetailRef?.orderType ?? soD?.orderHeader?.orderTypeRef?.id,
+      orderType:
+          por?.poDetailRef?.orderType ?? soD?.orderHeader?.orderTypeRef?.id,
       customer: soD?.orderHeader?.customerTableRef?.id,
     );
 
@@ -209,9 +225,14 @@ class ItemTransactionRepository {
     final db = await databaseService.database;
 
     // Get transaction type UDC
-    final udcList = await udcDetailsController.getLocalUdcDetailsByCode('TT', transactionType);
+    final udcList = await udcDetailsController.getLocalUdcDetailsByCode(
+      'TT',
+      transactionType,
+    );
     if (udcList.isEmpty) {
-      throw Exception('Transaction type UDC not found for code: $transactionType');
+      throw Exception(
+        'Transaction type UDC not found for code: $transactionType',
+      );
     }
     final udc = udcList.first;
 
@@ -223,7 +244,9 @@ class ItemTransactionRepository {
     );
 
     if (ib == null) {
-      throw Exception('Item branch not found for item: ${loc.itemNumber}, branch: ${loc.branch}');
+      throw Exception(
+        'Item branch not found for item: ${loc.itemNumber}, branch: ${loc.branch}',
+      );
     }
 
     // Set transaction number
@@ -244,7 +267,10 @@ class ItemTransactionRepository {
 
     final qtyAvInStore = (ib.quantityAvailable ?? 0.0) + (factor * qty).abs();
 
-    final itemCost = await itemCostRepository.findByItem(loc.itemNumber!, companyId);
+    final itemCost = await itemCostRepository.findByItem(
+      loc.itemNumber!,
+      companyId,
+    );
     final unitCost = itemCost?.amountUnitCost ?? 0.0;
 
     final factorP = await itemUomConversionRepository.fromOtherToPrimary(
@@ -278,14 +304,17 @@ class ItemTransactionRepository {
       branch: loc.branch,
       unitOfMeasure: ib.unitOfMeasure ?? uom,
       supplier: por?.poDetailRef?.supplierId,
-      orderType: por?.poDetailRef?.orderType ?? soD?.orderHeader?.orderTypeRef?.id,
+      orderType:
+          por?.poDetailRef?.orderType ?? soD?.orderHeader?.orderTypeRef?.id,
       customer: soD?.orderHeader?.customerTableRef?.id,
     );
 
     await db.insert('item_transactions', transaction.toMap());
 
     // Update item location quantity
-    final updatedLoc = loc.copyWith(quantityOnHand: (loc.quantityOnHand ?? 0.0) + qty);
+    final updatedLoc = loc.copyWith(
+      quantityOnHand: (loc.quantityOnHand ?? 0.0) + qty,
+    );
     await itemLocationsRepository.updateItemLocation(updatedLoc);
 
     // Update item branch quantity
@@ -307,9 +336,14 @@ class ItemTransactionRepository {
     final db = await databaseService.database;
 
     // Get transaction type UDC
-    final udcList = await udcDetailsController.getLocalUdcDetailsByCode('TT', transactionType);
+    final udcList = await udcDetailsController.getLocalUdcDetailsByCode(
+      'TT',
+      transactionType,
+    );
     if (udcList.isEmpty) {
-      throw Exception('Transaction type UDC not found for code: $transactionType');
+      throw Exception(
+        'Transaction type UDC not found for code: $transactionType',
+      );
     }
     final udc = udcList.first;
 
@@ -321,7 +355,9 @@ class ItemTransactionRepository {
     );
 
     if (ib == null) {
-      throw Exception('Item branch not found for item: ${lm.itemNumber}, branch: ${lm.branch}');
+      throw Exception(
+        'Item branch not found for item: ${lm.itemNumber}, branch: ${lm.branch}',
+      );
     }
 
     // Set transaction number
@@ -334,7 +370,10 @@ class ItemTransactionRepository {
     // Calculate quantities and costs
     final qtyAvInStore = ib.quantityAvailable ?? 0.0;
 
-    final itemCost = await itemCostRepository.findByItem(lm.itemNumber!, companyId);
+    final itemCost = await itemCostRepository.findByItem(
+      lm.itemNumber!,
+      companyId,
+    );
     final unitCost = itemCost?.amountUnitCost ?? 0.0;
 
     final uom = await _getItemBranchUoM(lm.itemNumber!, lm.branch!);
@@ -371,14 +410,17 @@ class ItemTransactionRepository {
       branch: lm.branch,
       unitOfMeasure: ib.unitOfMeasure ?? uom,
       supplier: por?.poDetailRef?.supplierId,
-      orderType: por?.poDetailRef?.orderType ?? soD?.orderHeader?.orderTypeRef?.id,
+      orderType:
+          por?.poDetailRef?.orderType ?? soD?.orderHeader?.orderTypeRef?.id,
       customer: soD?.orderHeader?.customerTableRef?.id,
     );
 
     await db.insert('item_transactions', transaction.toMap());
 
     // Update lot quantity
-    final updatedLm = lm.copyWith(quantityAvailable: (lm.quantityAvailable ?? 0.0) + qty);
+    final updatedLm = lm.copyWith(
+      quantityAvailable: (lm.quantityAvailable ?? 0.0) + qty,
+    );
     await lotMasterRepository.updateLotMaster(updatedLm);
 
     // Update item branch quantity
@@ -395,7 +437,8 @@ class ItemTransactionRepository {
       if (masterTransaction.transactionType == null) return false;
 
       final systemConstant = systemConstantBloc.state.selected;
-      final applyLocationMgmt = systemConstant?.applyLocationMgmBoolean ?? false;
+      final applyLocationMgmt =
+          systemConstant?.applyLocationMgmBoolean ?? false;
       final applyLotMgmt = systemConstant?.applyLotMgmBoolean ?? false;
 
       // Validate all transactions first
@@ -439,15 +482,30 @@ class ItemTransactionRepository {
     bool applyLotMgmt,
   ) async {
     final transactionType = masterTransaction.transactionTypeDetail?.detailCode;
-    
+
     if (transactionType == 'A') {
-      return await _validateAdjustmentTransaction(item, masterTransaction, applyLocationMgmt, applyLotMgmt);
+      return await _validateAdjustmentTransaction(
+        item,
+        masterTransaction,
+        applyLocationMgmt,
+        applyLotMgmt,
+      );
     } else if (transactionType == 'I') {
-      return await _validateIssueTransaction(item, masterTransaction, applyLocationMgmt, applyLotMgmt);
+      return await _validateIssueTransaction(
+        item,
+        masterTransaction,
+        applyLocationMgmt,
+        applyLotMgmt,
+      );
     } else if (transactionType == 'T') {
-      return await _validateTransferTransaction(item, masterTransaction, applyLocationMgmt, applyLotMgmt);
+      return await _validateTransferTransaction(
+        item,
+        masterTransaction,
+        applyLocationMgmt,
+        applyLotMgmt,
+      );
     }
-    
+
     return true;
   }
 
@@ -467,7 +525,7 @@ class ItemTransactionRepository {
 
       final currentQty = ib.quantityAvailable ?? 0.0;
       final adjustmentQty = item.quantityTransaction;
-      
+
       if (!item.adjustToIncrease && currentQty < adjustmentQty.abs()) {
         return false; // Insufficient quantity for decrease
       }
@@ -505,33 +563,47 @@ class ItemTransactionRepository {
     bool applyLotMgmt,
   ) async {
     final transactionType = masterTransaction.transactionTypeDetail?.detailCode;
-    
+
     if (transactionType == 'A') {
-      await _processAdjustmentTransaction(item, masterTransaction, applyLocationMgmt, applyLotMgmt);
+      await _processAdjustmentTransaction(
+        item,
+        masterTransaction,
+        applyLocationMgmt,
+        applyLotMgmt,
+      );
     } else if (transactionType == 'I') {
-      await _processIssueTransaction(item, masterTransaction, applyLocationMgmt, applyLotMgmt);
+      await _processIssueTransaction(
+        item,
+        masterTransaction,
+        applyLocationMgmt,
+        applyLotMgmt,
+      );
     } else if (transactionType == 'T') {
-      await _processTransferTransaction(item, masterTransaction, applyLocationMgmt, applyLotMgmt);
+      await _processTransferTransaction(
+        item,
+        masterTransaction,
+        applyLocationMgmt,
+        applyLotMgmt,
+      );
     }
   }
 
-    Future<bool> _processIssueTransaction(
+  Future<bool> _processIssueTransaction(
     ItemTransactionModel item,
     ItemTransactionModel masterTransaction,
     bool applyLocationMgmt,
     bool applyLotMgmt,
-    
   ) async {
     // Similar implementation for issue transactions
-   // ✅ FIXED
-if (!applyLocationMgmt && !applyLotMgmt) {
-  await _adjustItemBranch(item, masterTransaction, 'D');
-} else if (applyLocationMgmt && !applyLotMgmt) {
-  await _adjustItemLocation(item, masterTransaction, 'D');
-} else if (applyLocationMgmt && applyLotMgmt) {
-  await _adjustLotMaster(item, masterTransaction, 'D');
-}
-    
+    // ✅ FIXED
+    if (!applyLocationMgmt && !applyLotMgmt) {
+      await _adjustItemBranch(item, masterTransaction, 'D');
+    } else if (applyLocationMgmt && !applyLotMgmt) {
+      await _adjustItemLocation(item, masterTransaction, 'D');
+    } else if (applyLocationMgmt && applyLotMgmt) {
+      await _adjustLotMaster(item, masterTransaction, 'D');
+    }
+
     return true;
   }
 
@@ -542,12 +614,12 @@ if (!applyLocationMgmt && !applyLotMgmt) {
     bool applyLotMgmt,
   ) async {
     // Similar implementation for transfer transactions
-    if (!applyLocationMgmt  && !applyLotMgmt) {
-       await _adjustItemBranch(item, masterTransaction, 'D');
-    } else if ( applyLocationMgmt && !applyLotMgmt) {
-       await _adjustItemLocation(item, masterTransaction, 'D');
-    } else if ( applyLocationMgmt && applyLotMgmt) {
-       await _adjustLotMaster(item, masterTransaction, 'D');
+    if (!applyLocationMgmt && !applyLotMgmt) {
+      await _adjustItemBranch(item, masterTransaction, 'D');
+    } else if (applyLocationMgmt && !applyLotMgmt) {
+      await _adjustItemLocation(item, masterTransaction, 'D');
+    } else if (applyLocationMgmt && applyLotMgmt) {
+      await _adjustLotMaster(item, masterTransaction, 'D');
     }
     return true;
   }
@@ -559,7 +631,7 @@ if (!applyLocationMgmt && !applyLotMgmt) {
     bool applyLotMgmt,
   ) async {
     final incDec = item.adjustToIncrease ? 'I' : 'D';
-    
+
     if (!applyLocationMgmt && !applyLotMgmt) {
       await _adjustItemBranch(item, masterTransaction, incDec);
     } else if (applyLocationMgmt && !applyLotMgmt) {
@@ -579,15 +651,15 @@ if (!applyLocationMgmt && !applyLotMgmt) {
       masterTransaction.branch!,
       authBloc.state.companyId!,
     );
-    
+
     if (ib != null) {
       final currentQty = ib.quantityAvailable ?? 0.0;
       final adjustmentQty = item.quantityTransaction;
-      
-      final newQty = incDec == 'I' 
+
+      final newQty = incDec == 'I'
           ? currentQty + adjustmentQty
           : currentQty - adjustmentQty;
-      
+
       final updatedIb = ib.copyWith(quantityAvailable: newQty);
       await itemInBranchRepository.update(updatedIb);
     }
@@ -624,7 +696,7 @@ if (!applyLocationMgmt && !applyLotMgmt) {
         il.quantityOnHand = qb - qI;
       }
 
-       itemLocationsRepository.updateItemLocation(item.location!);
+      itemLocationsRepository.updateItemLocation(item.location!);
     }
   }
 
@@ -659,11 +731,11 @@ if (!applyLocationMgmt && !applyLotMgmt) {
         lm.quantityAvailable = qb - qI;
       }
 
-       lotMasterRepository.updateLotMaster(lm);
+      lotMasterRepository.updateLotMaster(lm);
     }
   }
 
-    // Opening amount calculation equivalent to Java version
+  // Opening amount calculation equivalent to Java version
   Future<double> calculateOpeningAmount({
     required int itemId,
     required int? branchId,
@@ -699,8 +771,9 @@ if (!applyLocationMgmt && !applyLotMgmt) {
           authBloc.state.companyId!,
         );
 
-   // 1. Try to find transactions within the date range
-      List<Map<String, dynamic>> transactions = await db.rawQuery('''
+        // 1. Try to find transactions within the date range
+        List<Map<String, dynamic>> transactions = await db.rawQuery(
+          '''
         SELECT * FROM item_transactions 
         WHERE company = ? 
         AND item_number = ? 
@@ -720,7 +793,8 @@ if (!applyLocationMgmt && !applyLotMgmt) {
 
         if (transactions.isEmpty) {
           // 2. Find before any transaction (most recent before dateFrom)
-        transactions = await db.rawQuery('''
+          transactions = await db.rawQuery(
+            '''
           SELECT * FROM item_transactions 
           WHERE company = ? 
           AND item_number = ? 
@@ -738,9 +812,10 @@ if (!applyLocationMgmt && !applyLotMgmt) {
             ],
           );
         }
-      if (transactions.isEmpty) {
-        // 3. Still empty, find after (oldest after dateThru)
-        transactions = await db.rawQuery('''
+        if (transactions.isEmpty) {
+          // 3. Still empty, find after (oldest after dateThru)
+          transactions = await db.rawQuery(
+            '''
           SELECT * FROM item_transactions 
           WHERE company = ? 
           AND item_number = ? 
@@ -761,7 +836,10 @@ if (!applyLocationMgmt && !applyLotMgmt) {
 
         if (transactions.isEmpty) {
           // Take current available
-          final itemCostObj = await itemCostRepository.findByItem(itemId, authBloc.state.companyId!);
+          final itemCostObj = await itemCostRepository.findByItem(
+            itemId,
+            authBloc.state.companyId!,
+          );
 
           if (ib != null) {
             final factor = await itemUomConversionRepository.fromOtherToPrimary(
@@ -781,7 +859,10 @@ if (!applyLocationMgmt && !applyLotMgmt) {
         }
       } else {
         // All branches calculation
-        final itemInBranchModelList = await itemInBranchRepository.findByItem(itemId,authBloc.state.companyId!);
+        final itemInBranchModelList = await itemInBranchRepository.findByItem(
+          itemId,
+          authBloc.state.companyId!,
+        );
 
         for (final ib in itemInBranchModelList) {
           List<Map<String, dynamic>> transactions = await db.rawQuery(
@@ -835,22 +916,29 @@ if (!applyLocationMgmt && !applyLotMgmt) {
           }
 
           if (transactions.isEmpty) {
-            final itemCost = await itemCostRepository.findByItem(itemId, authBloc.state.companyId!);
-
-            if (itemCost != null) {
-            final factor = await itemUomConversionRepository.fromOtherToPrimary(
+            final itemCost = await itemCostRepository.findByItem(
               itemId,
-              ib.unitOfMeasure!,
               authBloc.state.companyId!,
             );
-            final unitCost = itemCost.amountUnitCost ?? 0.0;
-            qOpen += (factor * (ib.quantityAvailable ?? 0.0) * unitCost).abs();
+
+            if (itemCost != null) {
+              final factor = await itemUomConversionRepository
+                  .fromOtherToPrimary(
+                    itemId,
+                    ib.unitOfMeasure!,
+                    authBloc.state.companyId!,
+                  );
+              final unitCost = itemCost.amountUnitCost ?? 0.0;
+              qOpen += (factor * (ib.quantityAvailable ?? 0.0) * unitCost)
+                  .abs();
             }
-             } else {
-          qOpen += (transactions.first['before_amount_cost'] as num).toDouble().abs();
+          } else {
+            qOpen += (transactions.first['before_amount_cost'] as num)
+                .toDouble()
+                .abs();
+          }
         }
       }
-    }
 
       return qOpen;
     } catch (e) {
@@ -860,29 +948,29 @@ if (!applyLocationMgmt && !applyLotMgmt) {
   }
 
   Future<double> getTotalOpening({
-  required List<int> itemIds,
-  required DateTime dateFrom,
-  required DateTime dateThru,
-}) async {
-  try {
-    double totalOpening = 0.0;
-    
-    for (final itemId in itemIds) {
-      final opening = await calculateOpeningAmount(
-        itemId: itemId,
-        branchId: null, // Calculate for all branches
-        dateFrom: dateFrom,
-        dateThru: dateThru,
-      );
-      totalOpening += opening;
+    required List<int> itemIds,
+    required DateTime dateFrom,
+    required DateTime dateThru,
+  }) async {
+    try {
+      double totalOpening = 0.0;
+
+      for (final itemId in itemIds) {
+        final opening = await calculateOpeningAmount(
+          itemId: itemId,
+          branchId: null, // Calculate for all branches
+          dateFrom: dateFrom,
+          dateThru: dateThru,
+        );
+        totalOpening += opening;
+      }
+
+      return totalOpening;
+    } catch (e) {
+      print('Error calculating total opening: $e');
+      throw Exception('Failed to calculate total opening: $e');
     }
-    
-    return totalOpening;
-  } catch (e) {
-    print('Error calculating total opening: $e');
-    throw Exception('Failed to calculate total opening: $e');
   }
-}
 
   Future<int?> _getItemBranchUoM(int itemNumber, int branch) async {
     final db = await databaseService.database;
@@ -894,7 +982,9 @@ if (!applyLocationMgmt && !applyLotMgmt) {
   }
 
   // Basic CRUD operations
-  Future<List<ItemTransactionModel>> getTransactionsByCompany(int companyId) async {
+  Future<List<ItemTransactionModel>> getTransactionsByCompany(
+    int companyId,
+  ) async {
     final db = await databaseService.database;
     final transactions = await db.rawQuery(
       '''
@@ -920,7 +1010,9 @@ if (!applyLocationMgmt && !applyLotMgmt) {
       [companyId],
     );
 
-    return transactions.map((map) => ItemTransactionModel.fromMap(map)).toList();
+    return transactions
+        .map((map) => ItemTransactionModel.fromMap(map))
+        .toList();
   }
 
   Future<int> createTransaction(ItemTransactionModel transaction) async {
@@ -947,7 +1039,9 @@ if (!applyLocationMgmt && !applyLotMgmt) {
     );
   }
 
-  Future<void> deleteTransactions(List<ItemTransactionModel> transactions) async {
+  Future<void> deleteTransactions(
+    List<ItemTransactionModel> transactions,
+  ) async {
     final db = await databaseService.database;
     final batch = db.batch();
 

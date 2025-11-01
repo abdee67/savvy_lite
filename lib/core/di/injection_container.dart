@@ -23,6 +23,7 @@ import 'package:savvy_stock/features/stock/item_cost/blocs/item_cost_bloc.dart';
 import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/data/item_repository.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench.dart/blocs/item_master_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry_workbench.dart/repo/item_master_repo.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_repo.dart';
@@ -255,6 +256,22 @@ void initDependencies() {
       nextNumberBloc: getIt(),
       salesOrderHeaderController: getIt(),
       itemsTableController: getIt(),
+    ),
+  );
+
+  getIt.registerFactory<ItemMasterBloc>(
+    () => ItemMasterBloc(
+      repository: getIt(),
+      authBloc: getIt(),
+      systemConstantBloc: getIt(),
+      itemsEntryBloc: getIt(),
+      locationMasterBloc: getIt(),
+      itemsInBranchBloc: getIt(),
+      itemLocationsBloc: getIt(),
+      lotMasterBloc: getIt(),
+      itemCostBloc: getIt(),
+      udcDetailsBloc: getIt(),
+      nextNumberBloc: getIt(),
     ),
   );
 }

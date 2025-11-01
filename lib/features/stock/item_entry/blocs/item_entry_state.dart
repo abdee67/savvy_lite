@@ -1,4 +1,3 @@
-import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 
 enum ItemEntryStatus {

@@ -285,7 +285,7 @@ class StockItemsEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
         itemToSave = itemToSave.copyWith(barcode: null);
       }
 
-      if (itemToSave.id == null || itemToSave.id == 0) {
+      if (itemToSave.id == 0) {
         // Create new
         itemToSave = itemToSave.copyWith(company: companyId);
         await repository.create(itemToSave);
@@ -348,7 +348,7 @@ class StockItemsEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
         return;
       }
 
-      if (itemToSave.id == null || itemToSave.id == 0) {
+      if (itemToSave.id == 0) {
         // Create new
         itemToSave = itemToSave.copyWith(company: companyId);
         await repository.create(itemToSave);
@@ -417,7 +417,7 @@ class StockItemsEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
         return;
       }
 
-      if (itemToSave.id == null || itemToSave.id == 0) {
+      if (itemToSave.id == 0) {
         // Create new
         itemToSave = itemToSave.copyWith(company: companyId);
         await repository.create(itemToSave);
@@ -487,7 +487,7 @@ class StockItemsEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
           return;
         }
 
-        if (itemToSave.id == null || itemToSave.id == 0) {
+        if (itemToSave.id == 0) {
           // Create new
           itemToSave = itemToSave.copyWith(company: companyId);
           await repository.create(itemToSave);
@@ -993,39 +993,21 @@ class StockItemsEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
   // ========== REMOVE OPERATIONS ==========
 
   void _onRemoveInCreate(RemoveInCreate event, Emitter<ItemEntryState> emit) {
-    if (event.item.id == null) {
-      state.createItems.removeWhere(
-        (element) => element.tempId == event.item.tempId,
-      );
-    } else {
-      state.createItems.removeWhere((element) => element.id == event.item.id);
-      if (event.item.id != null) {
-        repository.delete(event.item.id!, authBloc.state.companyId!);
-      }
-    }
+    state.createItems.removeWhere((element) => element.id == event.item.id);
+    repository.delete(event.item.id!, authBloc.state.companyId!);
 
     emit(state.copyWith(createItems: state.createItems));
   }
 
   void _onRemoveInEdit(RemoveInEdit event, Emitter<ItemEntryState> emit) {
-    if (event.item.id == null) {
-      state.editItems.removeWhere(
-        (element) => element.tempId == event.item.tempId,
-      );
-    } else {
-      state.editItems.removeWhere((element) => element.id == event.item.id);
-      if (event.item.id != null) {
-        repository.delete(event.item.id!, authBloc.state.companyId!);
-      }
-    }
+    state.editItems.removeWhere((element) => element.id == event.item.id);
+    repository.delete(event.item.id!, authBloc.state.companyId!);
 
     emit(state.copyWith(editItems: state.editItems));
   }
 
   void _onRemoveRecord(RemoveRecord event, Emitter<ItemEntryState> emit) {
-    if (event.item.id != null) {
-      repository.delete(event.item.id!, authBloc.state.companyId!);
-    }
+    repository.delete(event.item.id, authBloc.state.companyId!);
 
     emit(state.copyWith(items: null));
   }
@@ -1042,9 +1024,7 @@ class StockItemsEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
 
   void _onDiscardChanges(DiscardChanges event, Emitter<ItemEntryState> emit) {
     for (final item in state.createItems) {
-      if (item.id != null) {
-        repository.delete(item.id!, authBloc.state.companyId!);
-      }
+      repository.delete(item.id, authBloc.state.companyId!);
     }
 
     emit(

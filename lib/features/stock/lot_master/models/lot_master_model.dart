@@ -1,11 +1,12 @@
 import 'package:savvy_stock/features/stock/lot_coloring/model/lot_coloring_model.dart';
+import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 
 class LotMaster {
   final int? id;
   final int? itemNumber;
-   int? lotNumber;
+  int? lotNumber;
   final double? unitPrice;
-   double? quantityAvailable;
+  double? quantityAvailable;
   final int? company;
   final DateTime? dateEffective;
   final DateTime? dateExpiration;
@@ -18,6 +19,7 @@ class LotMaster {
   final String? statusCode; //A, E, I
   final String? statusDescription; //Active, Expired, Inactive
   LotExpirationColor? tempColorType;
+  ItemEntryModel? itemRef;
 
   LotMaster({
     this.id,
@@ -36,6 +38,7 @@ class LotMaster {
     this.statusCode,
     this.statusDescription,
     this.tempColorType,
+    this.itemRef,
   });
 
   factory LotMaster.fromMap(Map<String, dynamic> map) {
@@ -67,6 +70,21 @@ class LotMaster {
       statusCode: map['status_code'] as String?, //A, E, I
       statusDescription:
           map['status_description'] as String?, //Active, Expired, Inactive
+      itemRef: map['item_number'] != null
+          ? ItemEntryModel(
+              id: map['item_number'],
+              itemsId: map['items_id'],
+              itemDescription: map['item_description'],
+              unitOfMeasure: map['unit_of_measure'],
+              unitPrice: map['unit_price'],
+              taxable: map['taxable'],
+              barcode: map['barcode'],
+              company: map['company'],
+              marginRate: map['margin_rate'],
+              marginType: map['margin_type'],
+              reorderPoint: map['reorder_point'],
+            )
+          : null,
     );
   }
 
@@ -105,6 +123,7 @@ class LotMaster {
     String? statusCode,
     String? statusDescription,
     LotExpirationColor? tempColorType,
+    ItemEntryModel? itemRef,
   }) {
     return LotMaster(
       id: id ?? this.id,
@@ -123,6 +142,7 @@ class LotMaster {
       statusCode: statusCode ?? this.statusCode,
       statusDescription: statusDescription ?? this.statusDescription,
       tempColorType: tempColorType ?? this.tempColorType,
+      itemRef: itemRef ?? this.itemRef,
     );
   }
 
@@ -144,5 +164,6 @@ class LotMaster {
     statusCode,
     statusDescription,
     tempColorType,
+    itemRef,
   ];
 }

@@ -3,16 +3,12 @@
 import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
-import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_bloc.dart';
 import 'package:savvy_stock/features/stock/item_UoM_conversions/item_uom_conv_repo.dart';
-import 'package:savvy_stock/features/stock/item_cost/blocs/item_cost_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_event.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_state.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_repo.dart';
-import 'package:savvy_stock/features/stock/item_transactions/blocs/item_transaction_bloc.dart';
 import 'package:savvy_stock/features/stock/item_transactions/repo/item_transaction_repo.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_bloc.dart';
 
@@ -37,8 +33,8 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     required this.lotMasterBloc,
     required this.itemUomConversionsBloc,
     //required this.notificationTableBloc,
-   // required this.itemCostBloc,
-  }) : super( ItemInBranchState()) {
+    // required this.itemCostBloc,
+  }) : super(ItemInBranchState()) {
     // Listen to auth state changes
     _authSubscription = authBloc.stream.listen((authState) {
       if (authState.isAuthenticated && authState.companyId != null) {
@@ -83,8 +79,8 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     on<SetDefaultPrice>(_onSetDefaultPrice);
 
     // Event handlers - Filter operations
-   // on<FilterItemsInBranch>(_onFilterItemsInBranch);
-  //  on<FilterSelectedItems>(_onFilterSelectedItems);
+    // on<FilterItemsInBranch>(_onFilterItemsInBranch);
+    //  on<FilterSelectedItems>(_onFilterSelectedItems);
     //on<ClearDataForFilter>(_onClearDataForFilter);
 
     // Event handlers - Advanced operations
@@ -94,12 +90,11 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     on<LoadItemsInBranchByBranch>(_onLoadItemsInBranchByBranch);
     on<LoadAvailableItemsInBranch>(_onLoadAvailableItemsInBranch);
     on<SendNotification>(_onSendNotification);
-        on<LoadOutOfStockItems>(_onLoadOutOfStockItems);
+    on<LoadOutOfStockItems>(_onLoadOutOfStockItems);
     on<UpdateItemQuantity>(_onUpdateItemQuantity);
     on<ExportItemFromBranch>(_onExportItemFromBranch);
     on<ExportSingleItemFromBranch>(_onExportSingleItemFromBranch);
     on<LoadLowStockItems>(_onLoadLowStockItems);
-    
   }
 
   @override
@@ -142,7 +137,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
       );
     }
   }
-  
+
   Future<void> _onAddItemToBranch(
     AddItemToBranch event,
     Emitter<ItemInBranchState> emit,
@@ -490,7 +485,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
       }
 
       //  await _sendNotification(itemToSave);
-    
+
       emit(
         state.copyWith(
           status: ItemInBranchStatus.success,
@@ -529,7 +524,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
         // For now, this is a placeholder implementation
         final factor = await itemUomConversionsBloc.fromOtherToPrimary(
           salesOrderDetail.itemsTableId!,
-          salesOrderDetail.itemBranch!.unitOfMeasure! ,
+          salesOrderDetail.itemBranch!.unitOfMeasure!,
           authBloc.state.companyId!,
         );
 
@@ -551,7 +546,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
           );
 
           // Create stock card entry
-           await itemTransactionsRepository.stockCardCreation(
+          await itemTransactionsRepository.stockCardCreation(
             ib: itemsInBranch,
             transactionType: 'S',
             remark: 'Sales Order Stock Deduction',
@@ -561,7 +556,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
             qty: -qtyToSubtract,
             soD: salesOrderDetail,
             por: null,
-           );
+          );
         }
       }
 
@@ -617,7 +612,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
           );
 
           // Create stock card entry
-           await itemTransactionsRepository.stockCardCreation(
+          await itemTransactionsRepository.stockCardCreation(
             ib: itemsInBranch,
             transactionType: 'R',
             remark: 'Purchase Order Stock Addition',
@@ -627,7 +622,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
             qty: qtyToAdd,
             soD: null,
             por: purchaseOrderReceiver,
-           );
+          );
         }
       }
 
@@ -647,19 +642,16 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     }
   }
 
-
   void _onSetDefaultPrice(
     SetDefaultPrice event,
     Emitter<ItemInBranchState> emit,
   ) {
     // This would need item table lookup
-     if (event.item.itemNumber != null) {
-       final updatedItem = event.item.copyWith(
-         unitPrice: event.item.itemRef!.unitPrice,
-         unitOfMeasure: event.item.unitOfMeasure,
-       );
-       emit(state.copyWith(itemForm: updatedItem));
-     }
+    final updatedItem = event.item.copyWith(
+      unitPrice: event.item.itemRef!.unitPrice,
+      unitOfMeasure: event.item.unitOfMeasure,
+    );
+    emit(state.copyWith(itemForm: updatedItem));
   }
 
   /* // ========== FILTER OPERATIONS ==========
@@ -709,7 +701,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
         item.branch,
         item.company!,
       );
-      
+
       if (existing != null && existing.id != item.id) {
         return false; // Duplicate found
       }
@@ -724,13 +716,14 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     try {
       // This would need integration with your notification system
       // The Java controller has complex logic for reorder point notifications
-      
+
       final availability = await _calculateAvailability(item);
       final reorderPoint = await _calculateReorderPoint(item);
-      
+
       if (availability <= reorderPoint) {
         // Create notification
-        final description = "The Item ${item.itemRef!.itemDescription} at ${item.branchRef!.description} reach its reorder point!";
+        final description =
+            "The Item ${item.itemRef!.itemDescription} at ${item.branchRef!.description} reach its reorder point!";
         // await notificationTableBloc.createNotification(...);
       }
     } catch (e) {
@@ -740,12 +733,8 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
 
   // Calculate availability like in Java controller
   Future<double> _calculateAvailability(ItemInBranchModel item) async {
-    if (item.itemNumber == null) {
-      return 0.0;
-    }
-    
     double quantityAvailable = item.quantityAvailable ?? 0.0;
-    
+
     // This would need integration with LotMaster for expiration logic
     // For now, return the quantity available
     return quantityAvailable;
@@ -757,7 +746,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     // For now, return the item's reorder point
     return item.reorderPoint ?? 0.0;
   }
-/*
+  /*
   // Calculate total costs in store like in Java controller
   Future<double> _totalCostsInStore(ItemInBranchModel item) async {
     if (item.quantityAvailable == null || item.itemNumber == null) {
@@ -924,7 +913,8 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
       );
     });
   }
-    void _onExportSingleItemFromBranch(
+
+  void _onExportSingleItemFromBranch(
     ExportSingleItemFromBranch event,
     Emitter<ItemInBranchState> emit,
   ) {
@@ -1087,23 +1077,30 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
   ) async {
     try {
       // Implementation of itemInBranchVailablesOnly from Java controller
-      final items = await repository.findByItem(event.itemNumber, authBloc.state.companyId!);
-      
+      final items = await repository.findByItem(
+        event.itemNumber,
+        authBloc.state.companyId!,
+      );
+
       // Filter available items based on complex business logic
       final availableItems = items.where((item) {
         // Add complex availability logic here
         return (item.quantityAvailable ?? 0.0) > 0;
       }).toList();
 
-      emit(state.copyWith(
-        availableItems: availableItems,
-        status: ItemInBranchStatus.success,
-      ));
+      emit(
+        state.copyWith(
+          availableItems: availableItems,
+          status: ItemInBranchStatus.success,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        status: ItemInBranchStatus.failure,
-        message: 'Failed to load available items: $e',
-      ));
+      emit(
+        state.copyWith(
+          status: ItemInBranchStatus.failure,
+          message: 'Failed to load available items: $e',
+        ),
+      );
     }
   }
 
@@ -1113,15 +1110,19 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
   ) async {
     try {
       await _sendNotification(event.item);
-      emit(state.copyWith(
-        status: ItemInBranchStatus.success,
-        message: 'Notification sent',
-      ));
+      emit(
+        state.copyWith(
+          status: ItemInBranchStatus.success,
+          message: 'Notification sent',
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        status: ItemInBranchStatus.failure,
-        message: 'Failed to send notification: $e',
-      ));
+      emit(
+        state.copyWith(
+          status: ItemInBranchStatus.failure,
+          message: 'Failed to send notification: $e',
+        ),
+      );
     }
   }
 

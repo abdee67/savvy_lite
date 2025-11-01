@@ -144,7 +144,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
           DeleteItem(
             deletedItem: itemToDelete,
             deletedIndex: index,
-            itemId: itemToDelete.id!,
+            itemId: itemToDelete.id,
           ),
         );
       },

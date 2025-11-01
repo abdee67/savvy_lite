@@ -15,6 +15,7 @@ class LotMasterRepository {
       SELECT lm.*,
              it.items_id as item_id,
              it.item_description,
+             it.unit_of_measure,
              b.description as branch_name,
              loc.location_description,
              ud.detail_code as status_code,

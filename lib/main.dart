@@ -69,7 +69,7 @@ Future<void> _initializeAndRunApp() async {
       developer.log('💾 Using local database only');
     }
     // Debug database tables (optional - remove in production)
-    await LocalDatabaseService().debugTable('items_table');
+    await LocalDatabaseService().debugTable('item_transactions');
   } catch (error, stackTrace) {
     developer.log('Initialization error: $error');
     developer.log('Stack trace: $stackTrace');
@@ -98,6 +98,7 @@ class _SavvyStockState extends State<SavvyStock> {
   late UserBloc _userBloc;
   late NextNumberBloc _nextNumberBloc;
   late SystemConstantBloc _systemConstantBloc;
+  late UdcDetailsBloc _udcDetailsBloc;
   late LotExpirationColorsBloc _lotExpirationColorsBloc;
   late StockItemInBranchRepository _stockItemInBranchRepository;
   late StockItemInBranchBloc _stockItemInBranchBloc;
@@ -129,6 +130,7 @@ class _SavvyStockState extends State<SavvyStock> {
     _nextNumberBloc = getIt<NextNumberBloc>();
     _stockItemEntryBloc = getIt<StockItemsEntryBloc>();
     _systemConstantBloc = getIt<SystemConstantBloc>();
+    _udcDetailsBloc = getIt<UdcDetailsBloc>();
     _lotExpirationColorsBloc = getIt<LotExpirationColorsBloc>();
     _stockItemInBranchBloc = getIt<StockItemInBranchBloc>();
     _stockItemInBranchRepository = getIt<StockItemInBranchRepository>();
@@ -376,7 +378,7 @@ class _SavvyStockState extends State<SavvyStock> {
               itemsEntryBloc: _stockItemEntryBloc,
               itemsInBranchBloc: _stockItemInBranchBloc,
               systemConstantBloc: _systemConstantBloc,
-              udcDetailsBloc: _ud,
+              udcDetailsBloc: _udcDetailsBloc,
               nextNumberBloc: _nextNumberBloc,
             ),
           ),

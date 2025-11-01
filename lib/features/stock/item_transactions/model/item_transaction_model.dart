@@ -12,30 +12,30 @@ import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class ItemTransactionModel {
   final int? id;
-   int? itemLocation;
+  int? itemLocation;
   final int? createdBy;
   final DateTime dateCreated;
-   double quantityTransaction;
+  double quantityTransaction;
   final String? remark;
   final int? company;
-   int? lotNumber;
+  int? lotNumber;
   final int? transactionType;
   final int? itemBranch;
   final int? transactionNumber;
-   int? itemNumber;
+  int? itemNumber;
   final int? lotStatus;
   final int? branch;
   final int? supplier;
   final int? customer;
   final int? orderType;
-   int? unitOfMeasure;
+  int? unitOfMeasure;
   final double beforeStoreQuantityAvailable;
   final double unitCost;
   final double amountCost;
   final double beforeAmountCost;
   final int? tempId;
-   bool adjustToIncrease;
-   int? itemLocationsTo;
+  bool adjustToIncrease;
+  int? itemLocationsTo;
 
   // Foreign key relationships
   final ItemLocation? location;
@@ -51,7 +51,7 @@ class ItemTransactionModel {
   final Customer? customerDetail;
   final Company? companyDetail;
 
-   ItemTransactionModel({
+  ItemTransactionModel({
     this.id,
     this.itemLocation,
     this.createdBy,
@@ -149,7 +149,8 @@ class ItemTransactionModel {
       customer: customer ?? this.customer,
       orderType: orderType ?? this.orderType,
       unitOfMeasure: unitOfMeasure ?? this.unitOfMeasure,
-      beforeStoreQuantityAvailable: beforeStoreQuantityAvailable ?? this.beforeStoreQuantityAvailable,
+      beforeStoreQuantityAvailable:
+          beforeStoreQuantityAvailable ?? this.beforeStoreQuantityAvailable,
       unitCost: unitCost ?? this.unitCost,
       amountCost: amountCost ?? this.amountCost,
       beforeAmountCost: beforeAmountCost ?? this.beforeAmountCost,
@@ -161,7 +162,8 @@ class ItemTransactionModel {
       itemBranchDetail: itemBranchDetail ?? this.itemBranchDetail,
       item: item ?? this.item,
       branchDetail: branchDetail ?? this.branchDetail,
-      transactionTypeDetail: transactionTypeDetail ?? this.transactionTypeDetail,
+      transactionTypeDetail:
+          transactionTypeDetail ?? this.transactionTypeDetail,
       lotStatusDetail: lotStatusDetail ?? this.lotStatusDetail,
       orderTypeDetail: orderTypeDetail ?? this.orderTypeDetail,
       unitOfMeasureDetail: unitOfMeasureDetail ?? this.unitOfMeasureDetail,
@@ -200,35 +202,55 @@ class ItemTransactionModel {
 
   factory ItemTransactionModel.fromMap(Map<String, dynamic> map) {
     return ItemTransactionModel(
-      id: map['id'],
-      itemLocation: map['item_location'],
-      createdBy: map['created_by'],
-      dateCreated: DateTime.parse(map['date_created']),
-      quantityTransaction: map['quantity_transaction']?.toDouble() ?? 0.0,
-      remark: map['remark'],
-      company: map['company'],
-      lotNumber: map['lot_number'],
-      transactionType: map['transaction_type'],
-      itemBranch: map['item_branch'],
-      transactionNumber: map['transaction_number'],
-      itemNumber: map['item_number'],
-      lotStatus: map['lot_status'],
-      branch: map['branch'],
-      supplier: map['supplier'],
-      customer: map['customer'],
-      orderType: map['order_type'],
-      unitOfMeasure: map['unit_of_measure'],
-      beforeStoreQuantityAvailable: map['before_store_quantity_available']?.toDouble() ?? 0.0,
-      unitCost: map['unit_cost']?.toDouble() ?? 0.0,
-      amountCost: map['amount_cost']?.toDouble() ?? 0.0,
-      beforeAmountCost: map['before_amount_cost']?.toDouble() ?? 0.0,
+      id: _toInt(map['id']),
+      itemLocation: _toInt(map['item_location']),
+      createdBy: _toInt(map['created_by']),
+      dateCreated: DateTime.parse(map['date_created'].toString()),
+      quantityTransaction: _toDouble(map['quantity_transaction']) ?? 0.0,
+      remark: map['remark']?.toString(),
+      company: _toInt(map['company']),
+      lotNumber: _toInt(map['lot_number']),
+      transactionType: _toInt(map['transaction_type']),
+      itemBranch: _toInt(map['item_branch']),
+      transactionNumber: _toInt(map['transaction_number']),
+      itemNumber: _toInt(map['item_number']),
+      lotStatus: _toInt(map['lot_status']),
+      branch: _toInt(map['branch']),
+      supplier: _toInt(map['supplier']),
+      customer: _toInt(map['customer']),
+      orderType: _toInt(map['order_type']),
+      unitOfMeasure: _toInt(map['unit_of_measure']),
+      beforeStoreQuantityAvailable:
+          _toDouble(map['before_store_quantity_available']) ?? 0.0,
+      unitCost: _toDouble(map['unit_cost']) ?? 0.0,
+      amountCost: _toDouble(map['amount_cost']) ?? 0.0,
+      beforeAmountCost: _toDouble(map['before_amount_cost']) ?? 0.0,
     );
   }
 
+  static int? _toInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    if (v is String) return int.tryParse(v);
+    return null;
+  }
+
+  static double? _toDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is double) return v;
+    if (v is int) return v.toDouble();
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v);
+    return null;
+  }
+
   // Helper method to load relationships
-  Future<ItemTransactionModel> loadRelationships(LocalDatabaseService databaseService) async {
+  Future<ItemTransactionModel> loadRelationships(
+    LocalDatabaseService databaseService,
+  ) async {
     final db = await databaseService.database;
-    
+
     // Load location
     ItemLocation? location;
     if (itemLocation != null) {

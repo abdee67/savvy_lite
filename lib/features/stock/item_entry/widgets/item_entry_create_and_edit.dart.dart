@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
 import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dart';
 import 'package:savvy_stock/core/blocs/system_constant/system_constant_state.dart';
@@ -610,7 +609,7 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
                   prefixIcon: const Icon(Icons.scale),
                   items: state.details.map((item) {
                     return DropdownMenuItem<String>(
-                      value: item.id?.toString(),
+                      value: item.id.toString(),
                       child: Text(item.description1 ?? 'Unknown'),
                     );
                   }).toList(),
