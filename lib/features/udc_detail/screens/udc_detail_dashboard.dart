@@ -27,7 +27,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
   @override
   void initState() {
     super.initState();
-    context.read<StockItemEntryBloc>().add(
+    context.read<StockItemsEntryBloc>().add(
       LoadItems(widget.authBloc.state.companyId!),
     );
   }
@@ -40,30 +40,30 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
   }
 
   void _handleSearch(String query) {
-    context.read<StockItemEntryBloc>().add(SearchItems(query));
+    context.read<StockItemsEntryBloc>().add(SearchItems(query));
   }
 
   void _clearSearch() {
     _searchController.clear();
-    context.read<StockItemEntryBloc>().add(SearchItems(''));
+    context.read<StockItemsEntryBloc>().add(SearchItems(''));
   }
 
   void _toggleItemEntryModelSelection(ItemEntryModel items, bool selected) {
-    context.read<StockItemEntryBloc>().add(SelectItem(items, selected));
+    context.read<StockItemsEntryBloc>().add(SelectItem(items, selected));
   }
 
   void _showItemDetail(ItemEntryModel item) {
     if (!_isSelectionMode) {
-      context.read<StockItemEntryBloc>().add(ShowItemDetail(item));
+      context.read<StockItemsEntryBloc>().add(ShowItemDetail(item));
     }
   }
 
   void _hideItemDetail() {
-    context.read<StockItemEntryBloc>().add(HideItemDetail());
+    context.read<StockItemsEntryBloc>().add(HideItemDetail());
   }
 
   void _clearSelection() {
-    context.read<StockItemEntryBloc>().add(ClearSelection());
+    context.read<StockItemsEntryBloc>().add(ClearSelection());
     setState(() {
       _isSelectionMode = false;
     });
@@ -80,7 +80,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
   }
 
   void _exportItem(ItemEntryModel item) {
-    context.read<StockItemEntryBloc>().add(ExportSingleItem(item));
+    context.read<StockItemsEntryBloc>().add(ExportSingleItem(item));
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Item data exported')));
@@ -95,7 +95,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
   }
 
   void _safeDelete(BuildContext context, {int? index}) {
-    final bloc = context.read<StockItemEntryBloc>();
+    final bloc = context.read<StockItemsEntryBloc>();
     final state = bloc.state;
 
     // CASE 1: Multiple users
@@ -199,7 +199,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
       ),
-      body: BlocConsumer<StockItemEntryBloc, ItemEntryState>(
+      body: BlocConsumer<StockItemsEntryBloc, ItemEntryState>(
         listener: (context, state) {
           if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
             setState(() {
@@ -231,7 +231,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
         },
       ),
       // Floating Action Button for Add
-      floatingActionButton: BlocBuilder<StockItemEntryBloc, ItemEntryState>(
+      floatingActionButton: BlocBuilder<StockItemsEntryBloc, ItemEntryState>(
         builder: (context, state) {
           if (state.showDetailPanel) {
             return const SizedBox.shrink();
@@ -364,7 +364,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => context.read<StockItemEntryBloc>().add(
+              onPressed: () => context.read<StockItemsEntryBloc>().add(
                 LoadItems(widget.authBloc.state.companyId!),
               ),
               child: const Text('Retry'),

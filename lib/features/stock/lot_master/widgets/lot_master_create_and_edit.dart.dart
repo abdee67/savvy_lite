@@ -55,8 +55,7 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
       TextEditingController();
   final TextEditingController _expirationDateController =
       TextEditingController();
-  final TextEditingController _receivedDateController =
-    TextEditingController();
+  final TextEditingController _receivedDateController = TextEditingController();
 
   final TextEditingController _lotNumberController = TextEditingController();
 
@@ -93,7 +92,7 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
     context.read<StockItemInBranchBloc>().add(
       LoadItemsFromBranch(widget.authBloc.state.companyId!),
     );
-    context.read<StockItemEntryBloc>().add(
+    context.read<StockItemsEntryBloc>().add(
       LoadItems(widget.authBloc.state.companyId!),
     );
 
@@ -114,7 +113,7 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
       _selectedLocation = lot.location;
       _effectiveDate = lot.dateEffective;
       _expirationDate = lot.dateExpiration;
-  _receivedDate = lot.dateReceived;
+      _receivedDate = lot.dateReceived;
       _selectedLotStatus = lot.lotStatus;
       _supplierBatchController.text = lot.batchNumberSupplier ?? '';
       _availableQuantityController.text =
@@ -159,9 +158,9 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
         ? '${_expirationDate!.month.toString().padLeft(2, '0')}/${_expirationDate!.day.toString().padLeft(2, '0')}/${_expirationDate!.year}'
         : '';
 
-  _receivedDateController.text = _receivedDate != null
-    ? '${_receivedDate!.month.toString().padLeft(2, '0')}/${_receivedDate!.day.toString().padLeft(2, '0')}/${_receivedDate!.year}'
-    : '';
+    _receivedDateController.text = _receivedDate != null
+        ? '${_receivedDate!.month.toString().padLeft(2, '0')}/${_receivedDate!.day.toString().padLeft(2, '0')}/${_receivedDate!.year}'
+        : '';
   }
 
   void _setupLotNumberListener() {
@@ -562,7 +561,7 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
                   prefixIcon: const Icon(Iconsax.box),
                   items: _branchItems.map((item) {
                     // Load item descriptions from item entry
-                    final itemEntryBloc = context.read<StockItemEntryBloc>();
+                    final itemEntryBloc = context.read<StockItemsEntryBloc>();
                     final itemEntryState = itemEntryBloc.state;
                     final itemDescription =
                         itemEntryState.items
@@ -695,8 +694,9 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
                 final udcState = context.watch<UdcDetailsBloc>().state;
                 UdcDetails? lotTypeUdc;
                 if (lotTypeId != null) {
-                  final matches =
-                      udcState.details.where((d) => d.id == lotTypeId);
+                  final matches = udcState.details.where(
+                    (d) => d.id == lotTypeId,
+                  );
                   if (matches.isNotEmpty) lotTypeUdc = matches.first;
                 }
                 final lotTypeCode = lotTypeUdc?.detailCode.toUpperCase();

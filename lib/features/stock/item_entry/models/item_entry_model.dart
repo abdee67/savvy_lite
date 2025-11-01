@@ -10,6 +10,11 @@ class ItemEntryModel {
   final double? marginRate;
   final String? marginType;
   final double? reorderPoint;
+  String? referenceId;
+  int? tempId;
+  bool? validCell;
+  // Additional fields from joins
+  String? unitOfMeasureDescription;
 
   ItemEntryModel({
     required this.id,
@@ -23,6 +28,10 @@ class ItemEntryModel {
     this.marginRate,
     this.marginType,
     this.reorderPoint,
+    this.referenceId,
+    this.tempId,
+    this.validCell = true,
+    this.unitOfMeasureDescription,
   });
 
   factory ItemEntryModel.empty() {
@@ -69,6 +78,10 @@ class ItemEntryModel {
       marginRate: asDouble(map['margin_rate']),
       marginType: map['margin_type']?.toString(),
       reorderPoint: asDouble(map['reorder_point']),
+      referenceId: map['reference_id']?.toString(),
+      tempId: asInt(map['temp_id']),
+      validCell: map['valid_cell'] == 1,
+      unitOfMeasureDescription: map['unit_of_measure_description']?.toString(),
     );
   }
 
@@ -85,6 +98,7 @@ class ItemEntryModel {
       'margin_rate': marginRate,
       'margin_type': marginType,
       'reorder_point': reorderPoint,
+      'reference_id': referenceId,
     };
   }
 
@@ -100,6 +114,10 @@ class ItemEntryModel {
     double? marginRate,
     String? marginType,
     double? reorderPoint,
+    String? referenceId,
+    int? tempId,
+    bool? validCell,
+    String? unitOfMeasureDescription,
   }) {
     return ItemEntryModel(
       id: id ?? this.id,
@@ -113,6 +131,11 @@ class ItemEntryModel {
       marginRate: marginRate ?? this.marginRate,
       marginType: marginType ?? this.marginType,
       reorderPoint: reorderPoint ?? this.reorderPoint,
+      referenceId: referenceId ?? this.referenceId,
+      tempId: tempId ?? this.tempId,
+      validCell: validCell ?? this.validCell,
+      unitOfMeasureDescription:
+          unitOfMeasureDescription ?? this.unitOfMeasureDescription,
     );
   }
 
@@ -129,5 +152,9 @@ class ItemEntryModel {
     marginRate,
     marginType,
     reorderPoint,
+    referenceId,
+    tempId,
+    validCell,
+    unitOfMeasureDescription,
   ];
 }

@@ -79,7 +79,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     context.read<BranchBloc>().add(
       LoadBranchs(widget.authBloc.state.companyId!),
     );
-    context.read<StockItemEntryBloc>().add(
+    context.read<StockItemsEntryBloc>().add(
       LoadItems(widget.authBloc.state.companyId!),
     );
     context.read<LocationMasterBloc>().add(
@@ -209,7 +209,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
   }
 
   String _getItemName(int itemId) {
-    final itemBloc = context.read<StockItemEntryBloc>();
+    final itemBloc = context.read<StockItemsEntryBloc>();
     final itemDescription =
         itemBloc.state.items
             .where((entry) => entry.id == itemId)
@@ -371,7 +371,6 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
         return Colors.purple;
       case 'LM':
         return Colors.lime;
-      
 
       default:
         // Fallback to name matching

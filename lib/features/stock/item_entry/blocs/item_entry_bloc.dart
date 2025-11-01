@@ -1,80 +1,128 @@
-// features/ItemEntry/blocs/ItemEntry_bloc.dart
+// features/stock/items_table/blocs/items_table_bloc.dart
 
 import 'dart:async';
-
 import 'package:bloc/bloc.dart';
-import 'package:savvy_stock/core/services/database/database_service.dart';
+import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_state.dart';
+import 'package:savvy_stock/features/stock/item_entry/data/item_repository.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
 
-class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
-  final LocalDatabaseService databaseService;
+class StockItemsEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
+  final StockItemsEntryRepository repository;
   final AuthBloc authBloc;
-  StreamSubscription? _authSubscription;
+  final SystemConstantBloc systemConstantBloc;
+  final StockItemInBranchBloc itemsInBranchBloc;
 
-  StockItemEntryBloc({required this.databaseService, required this.authBloc})
-    : super(const ItemEntryState()) {
+  StreamSubscription? _authSubscription;
+  StreamSubscription? _systemConstantSubscription;
+
+  StockItemsEntryBloc({
+    required this.repository,
+    required this.authBloc,
+    required this.systemConstantBloc,
+    required this.itemsInBranchBloc,
+  }) : super(ItemEntryState()) {
     // Listen to auth state changes
     _authSubscription = authBloc.stream.listen((authState) {
       if (authState.isAuthenticated && authState.companyId != null) {
         add(LoadItems(authState.companyId!));
       }
     });
+
+    // Listen to system constant changes
+    _systemConstantSubscription = systemConstantBloc.stream.listen((
+      systemState,
+    ) {
+      // Handle system constant changes
+    });
+
+    // Event handlers - Core CRUD operations
     on<LoadItems>(_onLoadItems);
     on<CreateItem>(_onCreateItem);
     on<UpdateItem>(_onUpdateItem);
     on<DeleteItem>(_onDeleteItem);
-    on<SearchItems>(_onSearchItem);
+    on<DeleteSelectedItems>(_onDeleteSelectedItems);
+
+    // Event handlers - Preparation operations (from Java controller)
+    on<PrepareCreate>(_onPrepareCreate);
+    on<PrepareCopy>(_onPrepareCopy);
+    on<PrepareCreateInCreate>(_onPrepareCreateInCreate);
+    on<PrepareCreateInCreate1>(_onPrepareCreateInCreate1);
+    on<PrepareCreateInCreateFormain>(_onPrepareCreateInCreateFormain);
+    on<PrepareCreateInEdit>(_onPrepareCreateInEdit);
+    on<PrepareEdit>(_onPrepareEdit);
+    //on<PrepareEdit1>(_onPrepareEdit1);
+
+    // Event handlers - Complex business operations (from Java controller)
+    on<SaveRow>(_onSaveRow);
+    on<SaveRow1>(_onSaveRow1);
+    on<SaveRowMain>(_onSaveRowMain);
+    on<SaveInEdit>(_onSaveInEdit);
+    on<CreateInEdit>(_onCreateInEdit);
+    on<RemoveInCreate>(_onRemoveInCreate);
+    on<RemoveInEdit>(_onRemoveInEdit);
+    on<RemoveRecord>(_onRemoveRecord);
+    on<CancelUpdate>(_onCancelUpdate);
+    on<CancelCreate>(_onCancelCreate);
+    on<DiscardChanges>(_onDiscardChanges);
+    on<RefreshList>(_onRefreshList);
+    on<RefreshList1>(_onRefreshList1);
+
+    // Event handlers - Filter and search operations
+    on<FilterItemList>(_onFilterItemList);
+    on<SearchItems>(_onSearchItems);
+    on<GenerateBarcodes>(_onGenerateBarcodes);
+
+    // Event handlers - Selection and UI operations
     on<SelectItem>(_onSelectItem);
-    on<SelectAllItems>(_onSelectAllItemEntrys);
+    on<SelectAllItems>(_onSelectAllItems);
     on<ClearSelection>(_onClearSelection);
-    on<DeleteSelectedItems>(_onDeleteSelectedItemEntrys);
-    on<ShowItemDetail>(_onShowItemEntryDetail);
-    on<HideItemDetail>(_onHideItemEntryDetail);
-    on<ExportItem>(_onExportItemEntry);
-    on<ExportSingleItem>(_onExportSingleItemEntry);
-    on<SetItemForm>(_onSetItemEntryForm);
+    on<ShowItemDetail>(_onShowItemDetail);
+    on<HideItemDetail>(_onHideItemDetail);
+    on<SetItemForm>(_onSetItemForm);
+
+    // Event handlers - Navigation operations
+    on<SaveAndClose>(_onSaveAndClose);
+    on<SaveAndAddNew>(_onSaveAndAddNew);
+    //on<SaveAndAddContinue>(_onSaveAndAddContinue);
   }
 
   @override
   Future<void> close() {
     _authSubscription?.cancel();
+    _systemConstantSubscription?.cancel();
     return super.close();
   }
+
+  // ========== CORE CRUD OPERATIONS ==========
 
   Future<void> _onLoadItems(
     LoadItems event,
     Emitter<ItemEntryState> emit,
   ) async {
-    emit(ItemEntryState(status: ItemEntryStatus.loading));
-    try {
-      final db = await databaseService.database;
-      final items = await db.query(
-        'items_table',
-        where: 'company = ?',
-        whereArgs: [event.companyId],
-      );
+    emit(state.copyWith(status: ItemEntryStatus.loading));
 
-      final itemList = items.map((p) => ItemEntryModel.fromMap(p)).toList();
+    try {
+      final items = await repository.findAll(event.companyId);
 
       emit(
-        ItemEntryState(
-          status: ItemEntryStatus.success,
-          items: itemList,
-          filteredItems: itemList,
-          searchQuery: '',
-          detailStatus: ItemEntryDetailStatus.hidden,
+        state.copyWith(
+          status: ItemEntryStatus.loaded,
+          items: items,
+          filteredItems: items,
           companyId: event.companyId,
           selectedItems: [],
+          searchQuery: '',
         ),
       );
     } catch (e) {
       emit(
-        ItemEntryState(
+        state.copyWith(
           status: ItemEntryStatus.failure,
-          message: 'Failed to load Items: $e',
+          message: 'Failed to load items: $e',
         ),
       );
     }
@@ -87,32 +135,56 @@ class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
     emit(
       state.copyWith(
         status: ItemEntryStatus.creating,
-        message: 'Creating Item...',
+        message: 'Creating item...',
       ),
     );
+
     try {
-      final db = await databaseService.database;
-      final itemMap = event.item.toMap();
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) {
+        throw Exception('Company ID not found');
+      }
 
-      //remove id for new employee insrtion
-      itemMap.remove('id');
+      // Check for duplication
+      final isDuplicate = await _duplicateChecker(event.item, companyId);
+      if (isDuplicate) {
+        emit(
+          state.copyWith(
+            status: ItemEntryStatus.duplication,
+            message: 'Duplicate Item ID or Barcode Not Allowed!',
+          ),
+        );
+        return;
+      }
 
-      //add creation metadata
-      itemMap['company'] = authBloc.state.companyId;
+      // Generate barcode if needed
+      var itemToCreate = event.item;
+      final selected = systemConstantBloc.state.selected;
+      if (selected?.generateBarcodeForItemBoolean == true &&
+          (itemToCreate.barcode == null || itemToCreate.barcode!.isEmpty)) {
+        final barcode = await repository.generateUniqueBarcode(companyId);
+        itemToCreate = itemToCreate.copyWith(barcode: barcode);
+      }
 
-      await db.insert('items_table', itemMap);
-      add(LoadItems(authBloc.state.companyId!));
+      // Set company and create
+      itemToCreate = itemToCreate.copyWith(company: companyId);
+      await repository.create(itemToCreate);
+
+      // Reload items
+      add(LoadItems(companyId));
+
       emit(
         state.copyWith(
           status: ItemEntryStatus.success,
           message: 'Item created successfully',
         ),
       );
+      add(LoadItems(companyId));
     } catch (e) {
       emit(
-        ItemEntryState(
+        state.copyWith(
           status: ItemEntryStatus.failure,
-          message: 'Failed to create Item: $e',
+          message: 'Failed to create item: $e',
         ),
       );
     }
@@ -125,36 +197,31 @@ class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
     emit(
       state.copyWith(
         status: ItemEntryStatus.updating,
-        message: 'Updating Item...',
+        message: 'Updating item...',
       ),
     );
-    try {
-      final db = await databaseService.database;
-      final companyId = authBloc.state.companyId;
 
-      // FIX: Add null checks
+    try {
+      final companyId = authBloc.state.companyId;
       if (companyId == null) {
+        throw Exception('Company ID not found');
+      }
+
+      // Check for duplication
+      final isDuplicate = await _duplicateChecker(event.item, companyId);
+      if (isDuplicate) {
         emit(
           state.copyWith(
-            status: ItemEntryStatus.failure,
-            message: 'Authentication error: Company ID not found',
+            status: ItemEntryStatus.duplication,
+            message: 'Duplicate Item ID or Barcode Not Allowed!',
           ),
         );
         return;
       }
 
-      final itemMap = event.item.toMap();
+      await repository.update(event.item);
 
-      // FIX: Ensure company field is included and not null
-      itemMap['company'] = companyId; // Make sure company is set
-
-      await db.update(
-        'items_table',
-        itemMap,
-        where: 'id = ? AND company = ?',
-        whereArgs: [event.item.id, companyId],
-      );
-
+      // Reload items
       add(LoadItems(companyId));
 
       emit(
@@ -163,70 +230,463 @@ class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
           message: 'Item updated successfully',
         ),
       );
+      add(LoadItems(companyId));
     } catch (e) {
       emit(
         state.copyWith(
           status: ItemEntryStatus.failure,
-          message: 'Failed to update ItemEntry: $e',
+          message: 'Failed to update item: $e',
         ),
       );
     }
   }
 
-  Future<void> _onDeleteItem(
-    DeleteItem event,
+  // ========== COMPLEX BUSINESS LOGIC FROM JAVA CONTROLLER ==========
+
+  Future<void> _onSaveRow(SaveRow event, Emitter<ItemEntryState> emit) async {
+    emit(
+      state.copyWith(
+        status: ItemEntryStatus.updating,
+        message: 'Saving row...',
+      ),
+    );
+
+    try {
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) {
+        throw Exception('Company ID not found');
+      }
+
+      var itemToSave = event.item;
+
+      // Generate barcode if needed (like in Java controller)
+      final selected = systemConstantBloc.state.selected;
+      if (selected?.generateBarcodeForItemBoolean == true &&
+          (itemToSave.barcode == null || itemToSave.barcode!.isEmpty)) {
+        final barcode = await repository.generateUniqueBarcode(companyId);
+        itemToSave = itemToSave.copyWith(barcode: barcode);
+      }
+
+      // Duplicate checker like in Java controller
+      final isValid = await _duplicateChecker(itemToSave, companyId);
+
+      if (!isValid) {
+        emit(
+          state.copyWith(
+            status: ItemEntryStatus.failure,
+            message: 'Duplicate Item ID Not Allowed!',
+          ),
+        );
+        return;
+      }
+
+      // Handle barcode like in Java controller
+      if (itemToSave.barcode == null || itemToSave.barcode!.isEmpty) {
+        itemToSave = itemToSave.copyWith(barcode: null);
+      }
+
+      if (itemToSave.id == null || itemToSave.id == 0) {
+        // Create new
+        itemToSave = itemToSave.copyWith(company: companyId);
+        await repository.create(itemToSave);
+      } else {
+        // Update existing
+        await repository.update(itemToSave);
+      }
+
+      emit(
+        state.copyWith(
+          status: ItemEntryStatus.success,
+          message: 'Saved successfully',
+        ),
+      );
+      add(LoadItems(companyId));
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemEntryStatus.failure,
+          message: 'Failed to save row: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onSaveRow1(SaveRow1 event, Emitter<ItemEntryState> emit) async {
+    emit(
+      state.copyWith(
+        status: ItemEntryStatus.updating,
+        message: 'Saving row...',
+      ),
+    );
+
+    try {
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) {
+        throw Exception('Company ID not found');
+      }
+
+      var itemToSave = event.item;
+
+      // Generate barcode if needed
+      final selected = systemConstantBloc.state.selected;
+      if (selected?.generateBarcodeForItemBoolean == true &&
+          (itemToSave.barcode == null || itemToSave.barcode!.isEmpty)) {
+        final barcode = await repository.generateUniqueBarcode(companyId);
+        itemToSave = itemToSave.copyWith(barcode: barcode);
+      }
+
+      // Duplicate checker
+      final isValid = await _duplicateChecker(itemToSave, companyId);
+
+      if (!isValid) {
+        emit(
+          state.copyWith(
+            status: ItemEntryStatus.failure,
+            message: 'Duplicate Item ID Not Allowed!',
+          ),
+        );
+        return;
+      }
+
+      if (itemToSave.id == null || itemToSave.id == 0) {
+        // Create new
+        itemToSave = itemToSave.copyWith(company: companyId);
+        await repository.create(itemToSave);
+      } else {
+        // Update existing
+        await repository.update(itemToSave);
+      }
+
+      // Refresh and prepare next create like in Java controller
+      add(RefreshList());
+      add(PrepareCreateInCreate1());
+
+      emit(
+        state.copyWith(
+          status: ItemEntryStatus.success,
+          message: 'Saved successfully',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemEntryStatus.failure,
+          message: 'Failed to save row: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onSaveRowMain(
+    SaveRowMain event,
     Emitter<ItemEntryState> emit,
   ) async {
     emit(
-      state.copyWith(status: ItemEntryStatus.deleting, message: 'Deleting..'),
+      state.copyWith(
+        status: ItemEntryStatus.updating,
+        message: 'Saving row...',
+      ),
     );
+
     try {
-      final db = await databaseService.database;
-      await db.delete(
-        'items_table',
-        where: 'id = ? AND company = ?',
-        whereArgs: [event.itemId, authBloc.state.companyId],
-      );
-      final updateItemEntrys = List<ItemEntryModel>.from(state.items)
-        ..removeWhere((p) => p.id == event.itemId);
-      final updateFilteredItemEntrys = List<ItemEntryModel>.from(
-        state.filteredItems,
-      )..removeWhere((p) => p.id == event.itemId);
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) {
+        throw Exception('Company ID not found');
+      }
+
+      var itemToSave = event.item;
+
+      // Generate barcode if needed
+      final selected = systemConstantBloc.state.selected;
+      if (selected?.generateBarcodeForItem == 'Y' &&
+          (itemToSave.barcode == null || itemToSave.barcode!.isEmpty)) {
+        final barcode = await repository.generateUniqueBarcode(companyId);
+        itemToSave = itemToSave.copyWith(barcode: barcode);
+      }
+
+      // Duplicate checker
+      final isValid = await _duplicateChecker(itemToSave, companyId);
+
+      if (!isValid) {
+        emit(
+          state.copyWith(
+            status: ItemEntryStatus.failure,
+            message: 'Duplicate Item ID Not Allowed!',
+          ),
+        );
+        return;
+      }
+
+      if (itemToSave.id == null || itemToSave.id == 0) {
+        // Create new
+        itemToSave = itemToSave.copyWith(company: companyId);
+        await repository.create(itemToSave);
+      } else {
+        // Update existing
+        await repository.update(itemToSave);
+      }
+
+      // Refresh and prepare next create like in Java controller
+      add(RefreshList());
+      add(PrepareCreateInCreateFormain());
+
       emit(
         state.copyWith(
-          items: updateItemEntrys,
-          filteredItems: updateFilteredItemEntrys,
-          recentlyDeleted: [...state.recentlyDeleted, event.deletedItem],
-          recentlyDeletedIndexes: [
-            ...state.recentlyDeletedIndexes,
-            event.deletedIndex,
-          ],
-          message: 'Item deleted successfully',
+          status: ItemEntryStatus.success,
+          message: 'Saved successfully',
         ),
       );
-      add(LoadItems(authBloc.state.companyId!));
     } catch (e) {
       emit(
-        ItemEntryState(
+        state.copyWith(
           status: ItemEntryStatus.failure,
-          message: 'Failed to delete Item: $e',
+          message: 'Failed to save row: $e',
         ),
       );
     }
   }
 
-  void _onClearSelection(ClearSelection event, Emitter<ItemEntryState> emit) {
-    emit(state.copyWith(selectedItems: []));
+  Future<void> _onSaveInEdit(
+    SaveInEdit event,
+    Emitter<ItemEntryState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        status: ItemEntryStatus.updating,
+        message: 'Saving in edit...',
+      ),
+    );
+
+    try {
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) {
+        throw Exception('Company ID not found');
+      }
+
+      for (final item in event.items) {
+        var itemToSave = item;
+
+        // Generate barcode if needed
+        final selected = systemConstantBloc.state.selected;
+        if (selected?.generateBarcodeForItemBoolean == true &&
+            (itemToSave.barcode == null || itemToSave.barcode!.isEmpty)) {
+          final barcode = await repository.generateUniqueBarcode(companyId);
+          itemToSave = itemToSave.copyWith(barcode: barcode);
+        }
+
+        // Duplicate checker
+        final isValid = await _duplicateChecker(itemToSave, companyId);
+
+        if (!isValid) {
+          emit(
+            state.copyWith(
+              status: ItemEntryStatus.failure,
+              message: 'Duplicate Item ID Not Allowed!',
+            ),
+          );
+          return;
+        }
+
+        if (itemToSave.id == null || itemToSave.id == 0) {
+          // Create new
+          itemToSave = itemToSave.copyWith(company: companyId);
+          await repository.create(itemToSave);
+        } else {
+          // Update existing
+          await repository.update(itemToSave);
+        }
+      }
+
+      // Prepare next create/edit like in Java controller
+
+      emit(
+        state.copyWith(
+          editItems: state.editItems,
+          status: ItemEntryStatus.success,
+          message: 'Saved successfully',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemEntryStatus.failure,
+          message: 'Failed to save in edit: $e',
+        ),
+      );
+    }
   }
 
-  void _onSearchItem(SearchItems event, Emitter<ItemEntryState> emit) {
-    final query = event.query.toLowerCase().trim();
+  // ========== PREPARATION OPERATIONS (FROM JAVA CONTROLLER) ==========
+
+  void _onPrepareCreate(PrepareCreate event, Emitter<ItemEntryState> emit) {
+    emit(
+      state.copyWith(
+        createItems: state.createItems,
+        selected: state.selected,
+        status: ItemEntryStatus.creating,
+      ),
+    );
+  }
+
+  void _onPrepareCopy(PrepareCopy event, Emitter<ItemEntryState> emit) {
+    emit(
+      state.copyWith(
+        createItems: state.createItems,
+        selected: state.selected,
+        status: ItemEntryStatus.creating,
+      ),
+    );
+
+    final selected = event.itemToCopy.copyWith(
+      id: null,
+      company: authBloc.state.companyId,
+    );
+    state.createItems.add(selected);
+
+    emit(
+      state.copyWith(
+        createItems: state.createItems,
+        selected: state.selected,
+        status: ItemEntryStatus.creating,
+      ),
+    );
+  }
+
+  void _onPrepareCreateInCreate(
+    PrepareCreateInCreate event,
+    Emitter<ItemEntryState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        items: state.items,
+        selected1: state.selected1,
+        status: ItemEntryStatus.creating,
+      ),
+    );
+  }
+
+  void _onPrepareCreateInCreate1(
+    PrepareCreateInCreate1 event,
+    Emitter<ItemEntryState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        items: state.items,
+        selected3: state.selected3,
+        status: ItemEntryStatus.creating,
+      ),
+    );
+  }
+
+  void _onPrepareCreateInCreateFormain(
+    PrepareCreateInCreateFormain event,
+    Emitter<ItemEntryState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        editItems: state.editItems,
+        selected3: state.selected3,
+        status: ItemEntryStatus.creating,
+      ),
+    );
+  }
+
+  void _onPrepareCreateInEdit(
+    PrepareCreateInEdit event,
+    Emitter<ItemEntryState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        editItems: state.editItems,
+        selected1: state.selected1,
+        status: ItemEntryStatus.creating,
+      ),
+    );
+  }
+
+  void _onPrepareEdit(PrepareEdit event, Emitter<ItemEntryState> emit) {
+    emit(
+      state.copyWith(
+        editItems: state.editItems,
+        selected: state.selected,
+        status: ItemEntryStatus.editing,
+      ),
+    );
+
+    final selected = state.multiselectionItems.isNotEmpty
+        ? state.multiselectionItems.first
+        : null;
+
+    if (selected != null) {
+      state.editItems.add(selected);
+    }
+
+    emit(
+      state.copyWith(
+        editItems: state.editItems,
+        selected: state.selected,
+        status: ItemEntryStatus.editing,
+      ),
+    );
+  }
+  /*
+  void _onPrepareEdit1(
+    PrepareEdit1 event,
+    Emitter<ItemEntryState> emit,
+  ) {
+    itemsInBranchController.getItemsReordersValues();
+    itemsInBranchBloc.add(GetItemsReordersValues());
+  }
+  */
+
+  // ========== FILTER AND SEARCH OPERATIONS ==========
+
+  Future<void> _onFilterItemList(
+    FilterItemList event,
+    Emitter<ItemEntryState> emit,
+  ) async {
+    emit(state.copyWith(status: ItemEntryStatus.loading));
+
+    try {
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) {
+        throw Exception('Company ID not found');
+      }
+
+      final items = await repository.filter(
+        companyId: companyId,
+        itemsId: state.selected2!.itemsId,
+        itemDescription: state.selected2!.itemDescription,
+        barcode: state.selected2!.barcode,
+      );
+
+      emit(
+        state.copyWith(
+          status: ItemEntryStatus.loaded,
+          items: items,
+          filteredItems: items,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemEntryStatus.failure,
+          message: 'Failed to filter items: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onSearchItems(
+    SearchItems event,
+    Emitter<ItemEntryState> emit,
+  ) async {
+    final query = event.query.trim();
 
     if (query.isEmpty) {
       emit(
         state.copyWith(
           filteredItems: state.items,
-          selectedItems: [],
           searchQuery: '',
           status: ItemEntryStatus.success,
         ),
@@ -234,100 +694,156 @@ class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
       return;
     }
 
-    final filtered = state.items.where((item) {
-      return item.barcode!.toLowerCase().contains(query) ||
-          item.itemDescription!.toLowerCase().contains(query) ||
-          item.itemsId!.toLowerCase().contains(query);
-    }).toList();
+    emit(state.copyWith(status: ItemEntryStatus.searching, searchQuery: query));
 
+    try {
+      final companyId = authBloc.state.companyId;
+      if (companyId != null) {
+        final searchResults = await repository.search(query, companyId);
+        emit(
+          state.copyWith(
+            filteredItems: searchResults,
+            status: ItemEntryStatus.success,
+          ),
+        );
+      }
+    } catch (e) {
+      // Fallback to local search
+      final filtered = state.items.where((item) {
+        return item.barcode?.toLowerCase().contains(query.toLowerCase()) ==
+                true ||
+            item.itemDescription?.toLowerCase().contains(query.toLowerCase()) ==
+                true ||
+            item.itemsId?.toLowerCase().contains(query.toLowerCase()) == true;
+      }).toList();
+
+      emit(
+        state.copyWith(
+          filteredItems: filtered,
+          status: ItemEntryStatus.success,
+        ),
+      );
+    }
+  }
+
+  Future<void> _onGenerateBarcodes(
+    GenerateBarcodes event,
+    Emitter<ItemEntryState> emit,
+  ) async {
     emit(
       state.copyWith(
-        filteredItems: filtered,
-        searchQuery: query,
-        selectedItems: [],
-        status: ItemEntryStatus.searching,
+        status: ItemEntryStatus.loading,
+        message: 'Generating barcodes...',
       ),
     );
+
+    try {
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) {
+        throw Exception('Company ID not found');
+      }
+
+      final itemsWithBarcodes = await repository.getItemsWithBarcodes(
+        companyId,
+      );
+
+      emit(
+        state.copyWith(
+          barcodeItems: itemsWithBarcodes,
+          status: ItemEntryStatus.success,
+          message: 'Barcodes loaded successfully',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemEntryStatus.failure,
+          message: 'Failed to generate barcodes: $e',
+        ),
+      );
+    }
   }
+
+  // ========== HELPER METHODS FROM JAVA CONTROLLER ==========
+
+  // Duplicate checker like in Java controller
+  Future<bool> _duplicateChecker(ItemEntryModel item, int companyId) async {
+    try {
+      final hasValidBarcode =
+          item.barcode != null && item.barcode!.trim().isNotEmpty;
+      final hasItemsId = item.itemsId != null;
+
+      if (hasItemsId && hasValidBarcode) {
+        // Check both itemsId and barcode
+        final duplicate = await repository.checkDuplicate(
+          companyId: companyId,
+          itemsId: item.itemsId,
+          barcode: item.barcode,
+          excludeId: item.id,
+        );
+        return !duplicate;
+      } else if (hasItemsId) {
+        // Check only itemsId
+        final duplicate = await repository.itemsIdExists(
+          item.itemsId!,
+          companyId,
+          excludeId: item.id,
+        );
+        return !duplicate;
+      }
+
+      return true; // No itemsId to check
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Preparing temp ID like in Java controller
+  List<ItemEntryModel> _preparingTempId(
+    ItemEntryModel item,
+    List<ItemEntryModel> list,
+  ) {
+    int tempId = 0;
+    if (list.isNotEmpty) {
+      for (final existingItem in list) {
+        if (existingItem.tempId != null && existingItem.tempId! > tempId) {
+          tempId = existingItem.tempId!;
+        }
+      }
+    }
+    tempId += 1;
+    final newItem = item.copyWith(tempId: tempId);
+    list.add(newItem);
+    return list;
+  }
+
+  // ========== SELECTION AND UI OPERATIONS ==========
 
   void _onSelectItem(SelectItem event, Emitter<ItemEntryState> emit) {
     final selectedItems = List<ItemEntryModel>.from(state.selectedItems);
+
     if (event.isSelected) {
       selectedItems.add(event.item);
     } else {
       selectedItems.removeWhere((item) => item.id == event.item.id);
     }
+
     emit(state.copyWith(selectedItems: selectedItems));
   }
 
-  void _onSelectAllItemEntrys(
-    SelectAllItems event,
-    Emitter<ItemEntryState> emit,
-  ) {
+  void _onSelectAllItems(SelectAllItems event, Emitter<ItemEntryState> emit) {
     if (state.selectedItems.length == event.items.length) {
-      // If all are selected, clear selection
       emit(state.copyWith(selectedItems: []));
     } else {
-      // Select all
       emit(state.copyWith(selectedItems: List.from(event.items)));
     }
   }
 
-  void _onSetItemEntryForm(SetItemForm event, Emitter<ItemEntryState> emit) {
-    emit(state.copyWith(itemForm: event.item));
+  void _onClearSelection(ClearSelection event, Emitter<ItemEntryState> emit) {
+    emit(state.copyWith(selectedItems: []));
   }
 
-  void _onDeleteSelectedItemEntrys(
-    DeleteSelectedItems event,
-    Emitter<ItemEntryState> emit,
-  ) async {
-    try {
-      final db = await databaseService.database;
-      final placeholders = List.filled(
-        event.selectedItems.length,
-        '?',
-      ).join(',');
-      final whereArgs = [...event.selectedItems, authBloc.state.companyId];
-      await db.delete(
-        'items_table',
-        where: 'id IN ($placeholders) AND company = ?',
-        whereArgs: whereArgs,
-      );
-      final updatedItemEntrys = state.items
-          .where((e) => !event.selectedItems.contains(e.id))
-          .toList();
-      final updatedFiltered = state.filteredItems
-          .where((e) => !event.selectedItems.contains(e.id))
-          .toList();
-
-      emit(
-        state.copyWith(
-          items: updatedItemEntrys,
-          filteredItems: updatedFiltered,
-          selectedItems: [],
-          recentlyDeleted: [...state.recentlyDeleted, ...event.deletedItems],
-          recentlyDeletedIndexes: [
-            ...state.recentlyDeletedIndexes,
-            ...event.deletedIndexes,
-          ],
-          message: '${event.selectedItems.length} items deleted successfully',
-        ),
-      );
-      add(LoadItems(authBloc.state.companyId!));
-    } catch (e) {
-      emit(
-        ItemEntryState(
-          status: ItemEntryStatus.failure,
-          message: 'Failed to delete selected Items: $e',
-        ),
-      );
-    }
-  }
-
-  void _onShowItemEntryDetail(
-    ShowItemDetail event,
-    Emitter<ItemEntryState> emit,
-  ) {
+  void _onShowItemDetail(ShowItemDetail event, Emitter<ItemEntryState> emit) {
     emit(
       state.copyWith(
         itemDetail: event.item,
@@ -337,10 +853,7 @@ class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
     );
   }
 
-  void _onHideItemEntryDetail(
-    HideItemDetail event,
-    Emitter<ItemEntryState> emit,
-  ) {
+  void _onHideItemDetail(HideItemDetail event, Emitter<ItemEntryState> emit) {
     emit(
       state.copyWith(
         detailStatus: ItemEntryDetailStatus.hidden,
@@ -350,38 +863,272 @@ class StockItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
     );
   }
 
-  void _onExportItemEntry(ExportItem event, Emitter<ItemEntryState> emit) {
-    emit(state.copyWith(status: ItemEntryStatus.exporting, isExporting: true));
-
-    // Simulate export process
-    Future.delayed(const Duration(seconds: 2), () {
-      emit(
-        state.copyWith(
-          status: ItemEntryStatus.success,
-          isExporting: false,
-          exportedItems: event.itemsToExport,
-          message: 'Exported ${event.itemsToExport.length} items successfully',
-        ),
-      );
-    });
+  void _onSetItemForm(SetItemForm event, Emitter<ItemEntryState> emit) {
+    emit(state.copyWith(itemForm: event.item));
   }
 
-  void _onExportSingleItemEntry(
-    ExportSingleItem event,
-    Emitter<ItemEntryState> emit,
-  ) {
-    emit(state.copyWith(status: ItemEntryStatus.exporting, isExporting: true));
+  // ========== NAVIGATION OPERATIONS ==========
 
-    // Simulate export process
-    Future.delayed(const Duration(seconds: 2), () {
+  void _onSaveAndClose(SaveAndClose event, Emitter<ItemEntryState> emit) {
+    add(CancelUpdate());
+    add(CancelCreate());
+    // Navigation would be handled by UI layer
+  }
+
+  void _onSaveAndAddNew(SaveAndAddNew event, Emitter<ItemEntryState> emit) {
+    emit(
+      state.copyWith(
+        createItems: state.createItems,
+        selected: state.selected,
+        selectedItems: [],
+        status: ItemEntryStatus.success,
+      ),
+    );
+    // Navigation would be handled by UI layer
+  }
+
+  // ========== DELETE OPERATIONS ==========
+
+  Future<void> _onDeleteItem(
+    DeleteItem event,
+    Emitter<ItemEntryState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        status: ItemEntryStatus.deleting,
+        message: 'Deleting item...',
+      ),
+    );
+
+    try {
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) {
+        throw Exception('Company ID not found');
+      }
+
+      await repository.delete(event.itemId, companyId);
+
+      // Update local state
+      final updatedItems = state.items
+          .where((item) => item.id != event.itemId)
+          .toList();
+      final updatedFilteredItems = state.filteredItems
+          .where((item) => item.id != event.itemId)
+          .toList();
+
       emit(
         state.copyWith(
+          items: updatedItems,
+          filteredItems: updatedFilteredItems,
           status: ItemEntryStatus.success,
-          isExporting: false,
-          exportedItem: event.itemToExport,
-          message: 'Exported ${event.itemToExport} items successfully',
+          message: 'Item deleted successfully',
+          recentlyDeleted: [...state.recentlyDeleted, event.deletedItem],
+          recentlyDeletedIndexes: [
+            ...state.recentlyDeletedIndexes,
+            event.deletedIndex,
+          ],
         ),
       );
-    });
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemEntryStatus.failure,
+          message: 'Failed to delete item: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onDeleteSelectedItems(
+    DeleteSelectedItems event,
+    Emitter<ItemEntryState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        status: ItemEntryStatus.deleting,
+        message: 'Deleting selected items...',
+      ),
+    );
+
+    try {
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) {
+        throw Exception('Company ID not found');
+      }
+
+      await repository.deleteMultiple(event.selectedItems, companyId);
+
+      // Update local state
+      final updatedItems = state.items
+          .where((item) => !event.selectedItems.contains(item.id))
+          .toList();
+      final updatedFilteredItems = state.filteredItems
+          .where((item) => !event.selectedItems.contains(item.id))
+          .toList();
+
+      emit(
+        state.copyWith(
+          items: updatedItems,
+          filteredItems: updatedFilteredItems,
+          selectedItems: [],
+          status: ItemEntryStatus.success,
+          message: '${event.selectedItems.length} items deleted successfully',
+          recentlyDeleted: [...state.recentlyDeleted, ...event.deletedItems],
+          recentlyDeletedIndexes: [
+            ...state.recentlyDeletedIndexes,
+            ...event.deletedIndexes,
+          ],
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemEntryStatus.failure,
+          message: 'Failed to delete selected items: $e',
+        ),
+      );
+    }
+  }
+
+  // ========== REMOVE OPERATIONS ==========
+
+  void _onRemoveInCreate(RemoveInCreate event, Emitter<ItemEntryState> emit) {
+    if (event.item.id == null) {
+      state.createItems.removeWhere(
+        (element) => element.tempId == event.item.tempId,
+      );
+    } else {
+      state.createItems.removeWhere((element) => element.id == event.item.id);
+      if (event.item.id != null) {
+        repository.delete(event.item.id!, authBloc.state.companyId!);
+      }
+    }
+
+    emit(state.copyWith(createItems: state.createItems));
+  }
+
+  void _onRemoveInEdit(RemoveInEdit event, Emitter<ItemEntryState> emit) {
+    if (event.item.id == null) {
+      state.editItems.removeWhere(
+        (element) => element.tempId == event.item.tempId,
+      );
+    } else {
+      state.editItems.removeWhere((element) => element.id == event.item.id);
+      if (event.item.id != null) {
+        repository.delete(event.item.id!, authBloc.state.companyId!);
+      }
+    }
+
+    emit(state.copyWith(editItems: state.editItems));
+  }
+
+  void _onRemoveRecord(RemoveRecord event, Emitter<ItemEntryState> emit) {
+    if (event.item.id != null) {
+      repository.delete(event.item.id!, authBloc.state.companyId!);
+    }
+
+    emit(state.copyWith(items: null));
+  }
+
+  // ========== CANCEL AND REFRESH OPERATIONS ==========
+
+  void _onCancelUpdate(CancelUpdate event, Emitter<ItemEntryState> emit) {
+    emit(state.copyWith(selected1: null, editItems: []));
+  }
+
+  void _onCancelCreate(CancelCreate event, Emitter<ItemEntryState> emit) {
+    emit(state.copyWith(selected: null, editItems: []));
+  }
+
+  void _onDiscardChanges(DiscardChanges event, Emitter<ItemEntryState> emit) {
+    for (final item in state.createItems) {
+      if (item.id != null) {
+        repository.delete(item.id!, authBloc.state.companyId!);
+      }
+    }
+
+    emit(
+      state.copyWith(
+        selected: null,
+        createItems: [],
+        items: null,
+        message: 'All records are removed',
+      ),
+    );
+  }
+
+  void _onRefreshList(RefreshList event, Emitter<ItemEntryState> emit) {
+    emit(state.copyWith(selected: null, editItems: []));
+
+    add(LoadItems(authBloc.state.companyId!));
+  }
+
+  void _onRefreshList1(RefreshList1 event, Emitter<ItemEntryState> emit) {
+    emit(state.copyWith(selected: null, selected2: null, editItems: []));
+
+    add(LoadItems(authBloc.state.companyId!));
+  }
+
+  void _onCreateInEdit(CreateInEdit event, Emitter<ItemEntryState> emit) async {
+    try {
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) throw Exception('Company ID not found');
+
+      final itemToCreate = state.selected1!.copyWith(company: companyId);
+      await repository.create(itemToCreate);
+
+      final updatedItems = await repository.findAll(companyId);
+
+      emit(
+        state.copyWith(
+          items: updatedItems,
+          filteredItems: updatedItems,
+          status: ItemEntryStatus.success,
+          message: 'Created successfully',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemEntryStatus.failure,
+          message: 'Failed to create item: $e',
+        ),
+      );
+    }
+  }
+
+  // ========== PUBLIC METHODS FOR OTHER BLOCS ==========
+
+  Future<ItemEntryModel?> getItemEntryModel(int id) async {
+    try {
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) return null;
+
+      return await repository.findById(id, companyId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<List<ItemEntryModel>> getItemsAvailableSelectMany() async {
+    try {
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) return [];
+
+      return await repository.getItemsForSelectMany(companyId);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<ItemEntryModel>> getItemsAvailableSelectOne() async {
+    try {
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) return [];
+
+      return await repository.getItemsForSelectOne(companyId);
+    } catch (e) {
+      return [];
+    }
   }
 }

@@ -261,7 +261,7 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
   String _getItemDescription(int? itemId) {
     if (itemId == null) return '';
     // load item descriptions from item_entry bloc
-    final itemEntryBloc = context.read<StockItemEntryBloc>();
+    final itemEntryBloc = context.read<StockItemsEntryBloc>();
     itemEntryBloc.add(LoadItems(widget.authBloc.state.companyId!));
 
     final itemEntryState = itemEntryBloc.state;

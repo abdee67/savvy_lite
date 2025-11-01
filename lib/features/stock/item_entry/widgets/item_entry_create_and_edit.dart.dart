@@ -10,17 +10,23 @@ import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_state.dart';
-import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/widgets/stock_qr_scanner.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_event.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_state.dart';
+import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 
 class ItemEntryFormPage extends StatefulWidget {
   final ItemEntryModel? item;
   final AuthBloc authBloc;
+  final bool isCreateInCreateMode;
 
-  const ItemEntryFormPage({super.key, this.item, required this.authBloc});
+  const ItemEntryFormPage({
+    super.key,
+    this.item,
+    required this.authBloc,
+    this.isCreateInCreateMode = false,
+  });
 
   @override
   State<ItemEntryFormPage> createState() => _ItemEntryFormPageState();
@@ -30,43 +36,53 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
   final _formKey = GlobalKey<FormState>();
 
   // Controllers
-  final TextEditingController _itemNumberController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
-  final TextEditingController _barcodeController = TextEditingController();
-  final TextEditingController _defaultUnitPriceController =
+  final TextEditingController _itemsIdController = TextEditingController();
+  final TextEditingController _itemDescriptionController =
       TextEditingController();
+  final TextEditingController _barcodeController = TextEditingController();
+  final TextEditingController _unitPriceController = TextEditingController();
   final TextEditingController _reorderPointController = TextEditingController();
   final TextEditingController _marginRateController = TextEditingController();
+  final TextEditingController _referenceIdController = TextEditingController();
 
   String? _selectedMarginType;
   String? _selectedUom;
   String? _selectedTaxable;
 
-  final List<String> _marginTypes = ['Flat', 'Percentage'];
+  final List<String> _marginTypes = ['%', 'N']; // Flat or Percentage
   final List<String> _taxable = ['YES', 'NO'];
 
   @override
   void initState() {
     super.initState();
     _initializeControllers();
+
+    // Load system constants
     context.read<SystemConstantBloc>().add(
       LoadSystemConstantsForCompany(widget.authBloc.state.companyId!),
     );
+
+    // Load UoM details
     context.read<UdcDetailsBloc>().add(LoadUdcDetailsByGroup('UM'));
+
+    // Set up item form if editing
     if (widget.item != null) {
-      context.read<StockItemEntryBloc>().add(SetItemForm(widget.item!));
-      context.read<UdcDetailsBloc>().add(LoadUdcDetailsByGroup('UM'));
+      context.read<StockItemsEntryBloc>().add(SetItemForm(widget.item!));
+    } else if (widget.isCreateInCreateMode) {
+      // Prepare for create in create mode
+      context.read<StockItemsEntryBloc>().add(PrepareCreateInCreate());
     }
   }
 
   void _initializeControllers() {
     final item = widget.item ?? ItemEntryModel.empty();
 
-    _itemNumberController.text = item.itemsId ?? '';
-    _descriptionController.text = item.itemDescription ?? '';
+    _itemsIdController.text = item.itemsId ?? '';
+    _itemDescriptionController.text = item.itemDescription ?? '';
     _barcodeController.text = item.barcode ?? '';
+    _referenceIdController.text = item.referenceId ?? '';
 
-    _defaultUnitPriceController.text = item.unitPrice?.toString() ?? '';
+    _unitPriceController.text = item.unitPrice?.toString() ?? '';
     _reorderPointController.text = item.reorderPoint?.toString() ?? '';
     _marginRateController.text = item.marginRate?.toString() ?? '';
 
@@ -96,30 +112,21 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
     );
   }
 
-  // Add this helper method for safe number parsing
+  // Helper method for safe number parsing
   double? _parseDouble(String value) {
     if (value.trim().isEmpty) return null;
     return double.tryParse(value.trim());
   }
 
-  // Enhanced barcode generation
-  String _generateBarcode() {
-    final companyId = widget.authBloc.state.companyId ?? 0;
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final random = DateTime.now().microsecondsSinceEpoch % 10000;
-
-    // Format: COMPANY_TIMESTAMP_RANDOM
-    return 'C${companyId}_T${timestamp}_R$random';
-  }
-
   @override
   void dispose() {
-    _itemNumberController.dispose();
-    _descriptionController.dispose();
+    _itemsIdController.dispose();
+    _itemDescriptionController.dispose();
     _barcodeController.dispose();
-    _defaultUnitPriceController.dispose();
+    _unitPriceController.dispose();
     _reorderPointController.dispose();
     _marginRateController.dispose();
+    _referenceIdController.dispose();
     super.dispose();
   }
 
@@ -127,27 +134,29 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
     if (_formKey.currentState!.validate()) {
       final systemConstantState = context.read<SystemConstantBloc>().state;
       final systemConstant = systemConstantState.systemConstant;
+
       String? finalBarcode = _barcodeController.text.trim();
-      //if it is auto is on
-      if (systemConstant?.shouldAutoGenerateBarcodeForItem == true) {
+
+      // Handle barcode generation based on system constant
+      if (systemConstant?.generateBarcodeForItemBoolean == true) {
         if (finalBarcode.isEmpty) {
-          finalBarcode = _generateBarcode();
+          // Barcode will be auto-generated by the bloc
+          finalBarcode = null;
         }
       } else {
-        //if filed is empty
         if (finalBarcode.isEmpty) {
           finalBarcode = null;
         }
-        //filed has  user input there
       }
+
       final item = ItemEntryModel(
         id: widget.item?.id ?? 0,
-        itemsId: _itemNumberController.text.trim(),
-        itemDescription: _descriptionController.text.trim(),
+        itemsId: _itemsIdController.text.trim(),
+        itemDescription: _itemDescriptionController.text.trim(),
         barcode: finalBarcode,
-        unitPrice: _defaultUnitPriceController.text.trim().isEmpty
+        unitPrice: _unitPriceController.text.trim().isEmpty
             ? null
-            : _parseDouble(_defaultUnitPriceController.text),
+            : _parseDouble(_unitPriceController.text),
         reorderPoint: _reorderPointController.text.trim().isEmpty
             ? null
             : _parseDouble(_reorderPointController.text),
@@ -157,14 +166,24 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
         unitOfMeasure: _selectedUom,
         taxable: _selectedTaxable == 'YES' ? 'Y' : 'N',
         marginType: _selectedMarginType,
+        referenceId: _referenceIdController.text.trim().isEmpty
+            ? null
+            : _referenceIdController.text.trim(),
         company: widget.authBloc.state.companyId,
       );
 
       if (widget.item == null) {
-        context.read<StockItemEntryBloc>().add(CreateItem(item));
+        // Create new item
+        if (widget.isCreateInCreateMode) {
+          context.read<StockItemsEntryBloc>().add(SaveRowMain(item));
+        } else {
+          context.read<StockItemsEntryBloc>().add(SaveRow(item));
+        }
       } else {
-        context.read<StockItemEntryBloc>().add(UpdateItem(item));
+        // Update existing item
+        context.read<StockItemsEntryBloc>().add(SaveRow(item));
       }
+
       _showSuccessDialog();
     }
   }
@@ -173,25 +192,48 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
+      builder: (context) => BlocListener<StockItemsEntryBloc, ItemEntryState>(
+        listener: (context, state) {
+          if (state.status == ItemEntryStatus.success) {
+            Navigator.of(context).pop();
+            Navigator.of(context).pop(true); // Return success
+          } else if (state.status == ItemEntryStatus.duplication) {
+            Navigator.of(context).pop();
+            _showErrorDialog(state.message ?? 'Duplicate item found');
+          } else if (state.status == ItemEntryStatus.failure) {
+            Navigator.of(context).pop();
+            _showErrorDialog(state.message ?? 'An error occurred');
+          }
+        },
+        child: AlertDialog(
+          title: const Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('Saving...'),
+            ],
+          ),
+          content: const Text('Please wait while we save your item.'),
+        ),
+      ),
+    );
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
       builder: (context) => AlertDialog(
         title: const Row(
           children: [
-            Icon(Icons.check_circle, color: Colors.green),
+            Icon(Icons.error, color: Colors.red),
             SizedBox(width: 8),
-            Text('Success'),
+            Text('Error'),
           ],
         ),
-        content: Text(
-          widget.item == null
-              ? 'Item created successfully!'
-              : 'Item updated successfully!',
-        ),
+        content: Text(message),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).pop();
-            },
+            onPressed: () => Navigator.of(context).pop(),
             child: const Text('OK'),
           ),
         ],
@@ -207,12 +249,24 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
         backgroundColor: const Color(0xFF155888),
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: widget.item != null
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed: _deleteItem,
+                  tooltip: 'Delete Item',
+                ),
+              ]
+            : null,
       ),
       body: MultiBlocListener(
         listeners: [
-          BlocListener<StockItemEntryBloc, ItemEntryState>(
+          BlocListener<StockItemsEntryBloc, ItemEntryState>(
             listener: (context, state) {
-              if (state.status == ItemEntryStatus.failure) {
+              if (state.status == ItemEntryStatus.success &&
+                  state.message?.contains('Saved') == true) {
+                // Success is handled in the dialog
+              } else if (state.status == ItemEntryStatus.failure) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(state.message ?? 'An error occurred'),
@@ -227,7 +281,9 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
               if (state.status == SystemConstantStatus.failure) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(state.errorMessage ?? 'An error occurred'),
+                    content: Text(
+                      state.errorMessage ?? 'System constant error',
+                    ),
                     backgroundColor: Colors.red,
                   ),
                 );
@@ -247,12 +303,45 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
     );
   }
 
+  void _deleteItem() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Item'),
+        content: const Text('Are you sure you want to delete this item?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              if (widget.item?.id != null) {
+                context.read<StockItemsEntryBloc>().add(
+                  DeleteItem(
+                    itemId: widget.item!.id,
+                    deletedItem: widget.item!,
+                    deletedIndex: 0,
+                  ),
+                );
+                Navigator.of(context).pop(true);
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
   // Barcode information widget
   Widget _buildBarcodeInfo() {
     return BlocBuilder<SystemConstantBloc, SystemConstantState>(
       builder: (context, state) {
         final isAutoGenerateEnabled =
-            state.systemConstant?.shouldAutoGenerateBarcodeForItem == true;
+            state.selected?.generateBarcodeForItem == 'Y';
+        print(isAutoGenerateEnabled);
 
         if (isAutoGenerateEnabled) {
           return Container(
@@ -281,7 +370,7 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Empty field will auto-generate barcode',
+                        'Empty field will auto-generate EAN13 barcode',
                         style: TextStyle(color: Colors.blue[700], fontSize: 11),
                       ),
                     ],
@@ -334,27 +423,39 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
     );
   }
 
-  // In your ItemEntryFormPage
   Widget _buildBarcodeField() {
     return BlocBuilder<SystemConstantBloc, SystemConstantState>(
       builder: (context, state) {
         final isAutoGenerateEnabled =
-            state.systemConstant?.shouldAutoGenerateBarcodeForItem == true;
+            state.systemConstant?.generateBarcodeForItemBoolean == true;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            StockItemQRScanner(
-              barcodeController: _barcodeController,
-              onBarcodeScanned: (barcode) {
-                // Handle the scanned barcode
-                setState(() {});
-              },
+            Row(
+              children: [
+                Expanded(
+                  child: CustomTextField(
+                    labelText: 'Barcode',
+                    controller: _barcodeController,
+                    onChanged: (value) {
+                      setState(() {
+                        _barcodeController.text = value;
+                      });
+                    },
+                    prefixIcon: const Icon(Icons.qr_code),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.qr_code_scanner),
+                      onPressed: _scanBarcode,
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             if (isAutoGenerateEnabled && _barcodeController.text.isEmpty)
               Text(
-                '• Leave empty for auto-generation',
+                '• Leave empty for EAN13 auto-generation',
                 style: TextStyle(fontSize: 12, color: Colors.green[700]),
               ),
           ],
@@ -370,25 +471,38 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
+            // Item ID
             CustomTextField(
-              labelText: 'Item Number *',
-              controller: _itemNumberController,
-              keyboardType: TextInputType.number,
+              labelText: 'Item ID *',
+              controller: _itemsIdController,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Item Number is required';
+                  return 'Item ID is required';
                 }
                 return null;
               },
               onChanged: (value) {
-                _itemNumberController.text = value;
+                _itemsIdController.text = value;
               },
-              prefixIcon: const Icon(Icons.store),
+              prefixIcon: const Icon(Icons.numbers),
             ),
             const SizedBox(height: 16),
+
+            // Reference ID
+            CustomTextField(
+              labelText: 'Reference ID',
+              controller: _referenceIdController,
+              onChanged: (value) {
+                _referenceIdController.text = value;
+              },
+              prefixIcon: const Icon(Icons.badge),
+            ),
+            const SizedBox(height: 16),
+
+            // Description
             CustomTextField(
               labelText: 'Description *',
-              controller: _descriptionController,
+              controller: _itemDescriptionController,
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Description is required';
@@ -396,53 +510,49 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
                 return null;
               },
               onChanged: (value) {
-                _descriptionController.text = value;
+                _itemDescriptionController.text = value;
               },
               prefixIcon: const Icon(Icons.description),
             ),
             const SizedBox(height: 16),
+
+            // Barcode
             _buildBarcodeField(),
             const SizedBox(height: 16),
+
+            // Unit Price
             CustomTextField(
-              labelText: 'Default Unit Price',
-              controller: _defaultUnitPriceController,
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Default Unit Price is required';
-                }
-                return null;
-              },
+              labelText: 'Unit Price',
+              controller: _unitPriceController,
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
               onChanged: (value) {
-                _defaultUnitPriceController.text = value;
+                _unitPriceController.text = value;
               },
               prefixIcon: const Icon(Icons.attach_money),
             ),
             const SizedBox(height: 16),
+
+            // Reorder Point
             CustomTextField(
               labelText: 'Reorder Point',
               controller: _reorderPointController,
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Reorder Point is required';
-                }
-                return null;
-              },
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
               onChanged: (value) {
                 _reorderPointController.text = value;
               },
               prefixIcon: const Icon(Icons.inventory_2),
             ),
             const SizedBox(height: 16),
+
+            // Margin Type
             CustomDropdown(
               labelText: 'Margin Type',
-              prefixIcon: const Icon(Iconsax.aave_aave),
+              prefixIcon: const Icon(Icons.trending_up),
               items: _marginTypes
                   .map(
                     (marginType) => DropdownMenuItem(
                       value: marginType,
-                      child: Text(marginType),
+                      child: Text(marginType == '%' ? 'Percentage' : 'Flat'),
                     ),
                   )
                   .toList(),
@@ -454,23 +564,20 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
               },
             ),
             const SizedBox(height: 16),
+
+            // Margin Rate
             CustomTextField(
               labelText: 'Margin Rate',
               controller: _marginRateController,
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Margin Rate is required';
-                }
-                return null;
-              },
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
               onChanged: (value) {
                 _marginRateController.text = value;
               },
-              prefixIcon: const Icon(Icons.trending_up),
+              prefixIcon: const Icon(Icons.percent),
             ),
             const SizedBox(height: 16),
-            //  UoM
+
+            // Unit of Measure
             BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
               builder: (context, state) {
                 if (state.status == UdcDetailsStatus.loading) {
@@ -480,13 +587,12 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8.0),
                     child: Text(
-                      'No UoM available ',
+                      'No UoM available',
                       style: TextStyle(color: Colors.grey),
                     ),
                   );
                 }
 
-                // Safe employee list with null check
                 final items = state.details.toList();
                 if (items.isEmpty) {
                   return const Padding(
@@ -499,13 +605,13 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
                 }
 
                 return CustomDropdown(
-                  labelText: 'UoM *',
-                  value: _selectedUom,
-                  prefixIcon: const Icon(Iconsax.aave_aave),
+                  labelText: 'Unit of Measure *',
+                  value: _selectedUom?.toString(),
+                  prefixIcon: const Icon(Icons.scale),
                   items: state.details.map((item) {
                     return DropdownMenuItem<String>(
-                      value: item.description1,
-                      child: Text(item.description1),
+                      value: item.id?.toString(),
+                      child: Text(item.description1 ?? 'Unknown'),
                     );
                   }).toList(),
                   onChanged: (value) {
@@ -514,8 +620,8 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
                     });
                   },
                   validator: (value) {
-                    if (value == null) {
-                      return 'Please select an UoM';
+                    if (value == null || value.isEmpty) {
+                      return 'Please select a Unit of Measure';
                     }
                     return null;
                   },
@@ -523,8 +629,11 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
               },
             ),
             const SizedBox(height: 16),
+
+            // Taxable
             CustomDropdown(
               labelText: 'Taxable',
+              prefixIcon: const Icon(Icons.receipt),
               items: _taxable
                   .map(
                     (taxable) =>
@@ -546,35 +655,71 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
   }
 
   Widget _buildBottomNavigation() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        IconButton(
-          icon: const Icon(Iconsax.backward),
-          style: IconButton.styleFrom(
-            backgroundColor: Colors.amber,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Back button
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            icon: const Icon(Icons.arrow_back, size: 20),
+            label: const Text('Back'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.grey[300],
+              foregroundColor: Colors.black87,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
             ),
           ),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-        ElevatedButton(
-          onPressed: _saveItem,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF155888),
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
+
+          // Save button
+          BlocBuilder<StockItemsEntryBloc, ItemEntryState>(
+            builder: (context, state) {
+              return ElevatedButton.icon(
+                onPressed:
+                    state.status == ItemEntryStatus.creating ||
+                        state.status == ItemEntryStatus.updating
+                    ? null
+                    : _saveItem,
+                icon:
+                    state.status == ItemEntryStatus.creating ||
+                        state.status == ItemEntryStatus.updating
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                        ),
+                      )
+                    : const Icon(Icons.save, size: 20),
+                label: Text(
+                  state.status == ItemEntryStatus.creating ||
+                          state.status == ItemEntryStatus.updating
+                      ? 'Saving...'
+                      : 'Save',
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF155888),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+              );
+            },
           ),
-          child: const Text('Save', style: TextStyle(color: Colors.white)),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

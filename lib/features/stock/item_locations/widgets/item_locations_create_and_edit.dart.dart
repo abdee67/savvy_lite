@@ -50,7 +50,7 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
       LoadSystemConstantsForCompany(widget.authBloc.state.companyId!),
     );
     if (widget.item != null) {
-      context.read<StockItemEntryBloc>().add(SetItemForm(widget.item!));
+      context.read<StockItemsEntryBloc>().add(SetItemForm(widget.item!));
     }
   }
 
@@ -156,9 +156,9 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
       );
 
       if (widget.item == null) {
-        context.read<StockItemEntryBloc>().add(CreateItem(item));
+        context.read<StockItemsEntryBloc>().add(CreateItem(item));
       } else {
-        context.read<StockItemEntryBloc>().add(UpdateItem(item));
+        context.read<StockItemsEntryBloc>().add(UpdateItem(item));
       }
       _showSuccessDialog();
     }
@@ -204,7 +204,7 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
       ),
       body: MultiBlocListener(
         listeners: [
-          BlocListener<StockItemEntryBloc, ItemEntryState>(
+          BlocListener<StockItemsEntryBloc, ItemEntryState>(
             listener: (context, state) {
               if (state.status == ItemEntryStatus.failure) {
                 ScaffoldMessenger.of(context).showSnackBar(

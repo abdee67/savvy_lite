@@ -70,7 +70,7 @@ class _LotExpirationColorsDashboardState
     context.read<BranchBloc>().add(
       LoadBranchs(widget.authBloc.state.companyId!),
     );
-    context.read<StockItemEntryBloc>().add(
+    context.read<StockItemsEntryBloc>().add(
       LoadItems(widget.authBloc.state.companyId!),
     );
     context.read<LotExpirationColorsBloc>().add(
@@ -345,7 +345,7 @@ class _LotExpirationColorsDashboardState
     final name = (color.colorTypeName ?? '').trim().toLowerCase();
 
     switch (code) {
-       case 'RED':
+      case 'RED':
         return Colors.red;
       case 'BLU':
         return Colors.blue;
@@ -365,7 +365,6 @@ class _LotExpirationColorsDashboardState
         return Colors.purple;
       case 'LM':
         return Colors.lime;
-      
 
       default:
         // Fallback to name matching
@@ -393,7 +392,7 @@ class _LotExpirationColorsDashboardState
   }
 
   String _getItemName(int itemId) {
-    final itemBloc = context.read<StockItemEntryBloc>();
+    final itemBloc = context.read<StockItemsEntryBloc>();
     final itemDescription =
         itemBloc.state.items
             .where((entry) => entry.id == itemId)
@@ -602,7 +601,7 @@ class _LotExpirationColorsDashboardState
           // Item Dropdown (for Level 3 and 4)
           if (_selectedLevel != null &&
               (_selectedLevel == '3' || _selectedLevel == '4'))
-            BlocBuilder<StockItemEntryBloc, ItemEntryState>(
+            BlocBuilder<StockItemsEntryBloc, ItemEntryState>(
               builder: (context, state) {
                 return CustomDropdown(
                   labelText: 'Item Number',

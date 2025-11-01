@@ -17,7 +17,7 @@ class ItemTransactionsBloc
   final AuthBloc authBloc;
   final SystemConstantBloc systemConstantBloc;
   final NextNumberBloc nextNumberBloc;
-  final StockItemEntryBloc itemsTableController;
+  final StockItemsEntryBloc itemsTableController;
   final SalesOrderHeaderBloc salesOrderHeaderController;
   final UdcRepository udcRepository;
   StreamSubscription? _authSubscription;

@@ -46,7 +46,7 @@ class _ItemUomConversionFormState extends State<ItemUomConversionForm> {
   void initState() {
     super.initState();
     _uomConversionBloc = context.read<ItemUomConversionBloc>();
-    context.read<StockItemEntryBloc>().add(
+    context.read<StockItemsEntryBloc>().add(
       LoadItems(widget.authBloc.state.companyId!),
     );
     context.read<UdcDetailsBloc>().add(LoadUdcDetailsByGroup('UM'));
@@ -212,7 +212,7 @@ class _ItemUomConversionFormState extends State<ItemUomConversionForm> {
                     const SizedBox(height: 20),
 
                     // Item Selection
-                    BlocBuilder<StockItemEntryBloc, ItemEntryState>(
+                    BlocBuilder<StockItemsEntryBloc, ItemEntryState>(
                       builder: (context, state) {
                         if (state.status == ItemEntryStatus.loading) {
                           return const Center(
