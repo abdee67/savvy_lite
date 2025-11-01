@@ -1,4 +1,3 @@
-
 // bloc/item_cost_bloc.dart
 import 'dart:async';
 import 'package:bloc/bloc.dart';
@@ -90,33 +89,8 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
     LoadItemCosts event,
     Emitter<ItemCostState> emit,
   ) async {
-    emit(ItemCostLoading(
-      items: state.items,
-      createItems: state.createItems,
-      editItems: state.editItems,
-      multiselectionItems: state.multiselectionItems,
-      filteredValues: state.filteredValues,
-      selected: state.selected,
-      selected1: state.selected1,
-      selected2: state.selected2,
-    ));
-
-    try {
-      final items = await repository.findAll();
-      final filteredItems = _filterItemsByUserPermission(items);
-      
-      emit(ItemCostLoaded(
-        items: filteredItems,
-        createItems: state.createItems,
-        editItems: state.editItems,
-        multiselectionItems: state.multiselectionItems,
-        filteredValues: state.filteredValues,
-        selected: state.selected,
-        selected1: state.selected1,
-        selected2: state.selected2,
-      ));
-    } catch (e) {
-      emit(ItemCostError(
+    emit(
+      ItemCostLoading(
         items: state.items,
         createItems: state.createItems,
         editItems: state.editItems,
@@ -125,8 +99,39 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
         selected: state.selected,
         selected1: state.selected1,
         selected2: state.selected2,
-        errorMessage: 'Error loading items: $e',
-      ));
+      ),
+    );
+
+    try {
+      final items = await repository.findAll();
+      final filteredItems = _filterItemsByUserPermission(items);
+
+      emit(
+        ItemCostLoaded(
+          items: filteredItems,
+          createItems: state.createItems,
+          editItems: state.editItems,
+          multiselectionItems: state.multiselectionItems,
+          filteredValues: state.filteredValues,
+          selected: state.selected,
+          selected1: state.selected1,
+          selected2: state.selected2,
+        ),
+      );
+    } catch (e) {
+      emit(
+        ItemCostError(
+          items: state.items,
+          createItems: state.createItems,
+          editItems: state.editItems,
+          multiselectionItems: state.multiselectionItems,
+          filteredValues: state.filteredValues,
+          selected: state.selected,
+          selected1: state.selected1,
+          selected2: state.selected2,
+          errorMessage: 'Error loading items: $e',
+        ),
+      );
     }
   }
 
@@ -137,10 +142,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
     add(LoadItemCosts());
   }
 
-  void _onSelectItemCost(
-    SelectItemCost event,
-    Emitter<ItemCostState> emit,
-  ) {
+  void _onSelectItemCost(SelectItemCost event, Emitter<ItemCostState> emit) {
     emit(state.copyWith(selected: event.itemCost));
   }
 
@@ -151,20 +153,11 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
     emit(state.copyWith(multiselectionItems: event.itemCosts));
   }
 
-  void _onClearSelection(
-    ClearSelection event,
-    Emitter<ItemCostState> emit,
-  ) {
-    emit(state.copyWith(
-      selected: null,
-      multiselectionItems: [],
-    ));
+  void _onClearSelection(ClearSelection event, Emitter<ItemCostState> emit) {
+    emit(state.copyWith(selected: null, multiselectionItems: []));
   }
 
-  void _onPrepareCreate(
-    PrepareCreate event,
-    Emitter<ItemCostState> emit,
-  ) {
+  void _onPrepareCreate(PrepareCreate event, Emitter<ItemCostState> emit) {
     final createItems = <ItemCost>[];
     final tempId = 1;
 
@@ -174,28 +167,19 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
     );
     createItems.add(selected);
 
-    emit(state.copyWith(
-      createItems: createItems,
-      selected: selected,
-    ));
+    emit(state.copyWith(createItems: createItems, selected: selected));
   }
 
-  void _onPrepareCopy(
-    PrepareCopy event,
-    Emitter<ItemCostState> emit,
-  ) {
+  void _onPrepareCopy(PrepareCopy event, Emitter<ItemCostState> emit) {
     final createItems = state.createItems ?? <ItemCost>[];
-    
+
     final selected = event.itemCostToCopy.copyWith(
       id: null,
       company: authBloc.state.companyId,
     );
     createItems.add(selected);
 
-    emit(state.copyWith(
-      createItems: createItems,
-      selected: selected,
-    ));
+    emit(state.copyWith(createItems: createItems, selected: selected));
   }
 
   void _onPrepareCreateInCreate(
@@ -203,12 +187,12 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
     Emitter<ItemCostState> emit,
   ) {
     final selected1 = ItemCost(company: authBloc.state.companyId);
-    final createItems = _preparingTempId(selected1, List.from(state.createItems));
+    final createItems = _preparingTempId(
+      selected1,
+      List.from(state.createItems),
+    );
 
-    emit(state.copyWith(
-      createItems: createItems,
-      selected1: selected1,
-    ));
+    emit(state.copyWith(createItems: createItems, selected1: selected1));
   }
 
   void _onPrepareCreateInEdit(
@@ -218,45 +202,38 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
     final selected1 = ItemCost(company: authBloc.state.companyId);
     final editItems = _preparingTempId(selected1, List.from(state.editItems));
 
-    emit(state.copyWith(
-      editItems: editItems,
-      selected1: selected1,
-    ));
+    emit(state.copyWith(editItems: editItems, selected1: selected1));
   }
 
-  void _onPrepareEdit(
-    PrepareEdit event,
-    Emitter<ItemCostState> emit,
-  ) {
+  void _onPrepareEdit(PrepareEdit event, Emitter<ItemCostState> emit) {
     final editItems = <ItemCost>[];
-    final selected = state.multiselectionItems.isNotEmpty 
-        ? state.multiselectionItems.first 
+    final selected = state.multiselectionItems.isNotEmpty
+        ? state.multiselectionItems.first
         : null;
-    
+
     if (selected != null) {
       editItems.add(selected);
     }
 
-    emit(state.copyWith(
-      editItems: editItems,
-      selected: selected,
-    ));
+    emit(state.copyWith(editItems: editItems, selected: selected));
   }
 
   Future<void> _onSaveItemCost(
     SaveItemCost event,
     Emitter<ItemCostState> emit,
   ) async {
-    emit(ItemCostLoading(
-      items: state.items,
-      createItems: state.createItems,
-      editItems: state.editItems,
-      multiselectionItems: state.multiselectionItems,
-      filteredValues: state.filteredValues,
-      selected: state.selected,
-      selected1: state.selected1,
-      selected2: state.selected2,
-    ));
+    emit(
+      ItemCostLoading(
+        items: state.items,
+        createItems: state.createItems,
+        editItems: state.editItems,
+        multiselectionItems: state.multiselectionItems,
+        filteredValues: state.filteredValues,
+        selected: state.selected,
+        selected1: state.selected1,
+        selected2: state.selected2,
+      ),
+    );
 
     try {
       for (final item in event.items) {
@@ -270,36 +247,37 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
       final updatedItems = await repository.findAll();
       final filteredItems = _filterItemsByUserPermission(updatedItems);
 
-      emit(ItemCostOperationSuccess(
-        items: filteredItems,
-        createItems: [],
-        editItems: [],
-        multiselectionItems: [],
-        filteredValues: state.filteredValues,
-        selected: null,
-        selected1: null,
-        selected2: state.selected2,
-        successMessage: 'Saved successfully',
-      ));
+      emit(
+        ItemCostOperationSuccess(
+          items: filteredItems,
+          createItems: [],
+          editItems: [],
+          multiselectionItems: [],
+          filteredValues: state.filteredValues,
+          selected: null,
+          selected1: null,
+          selected2: state.selected2,
+          successMessage: 'Saved successfully',
+        ),
+      );
     } catch (e) {
-      emit(ItemCostError(
-        items: state.items,
-        createItems: state.createItems,
-        editItems: state.editItems,
-        multiselectionItems: state.multiselectionItems,
-        filteredValues: state.filteredValues,
-        selected: state.selected,
-        selected1: state.selected1,
-        selected2: state.selected2,
-        errorMessage: 'Error saving items: $e',
-      ));
+      emit(
+        ItemCostError(
+          items: state.items,
+          createItems: state.createItems,
+          editItems: state.editItems,
+          multiselectionItems: state.multiselectionItems,
+          filteredValues: state.filteredValues,
+          selected: state.selected,
+          selected1: state.selected1,
+          selected2: state.selected2,
+          errorMessage: 'Error saving items: $e',
+        ),
+      );
     }
   }
 
-  Future<void> _onSaveRow(
-    SaveRow event,
-    Emitter<ItemCostState> emit,
-  ) async {
+  Future<void> _onSaveRow(SaveRow event, Emitter<ItemCostState> emit) async {
     try {
       for (final item in event.items) {
         if (item.id == null) {
@@ -309,29 +287,33 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
         }
       }
 
-      emit(ItemCostOperationSuccess(
-        items: state.items,
-        createItems: state.createItems,
-        editItems: state.editItems,
-        multiselectionItems: state.multiselectionItems,
-        filteredValues: state.filteredValues,
-        selected: state.selected,
-        selected1: state.selected1,
-        selected2: state.selected2,
-        successMessage: 'Saved successfully',
-      ));
+      emit(
+        ItemCostOperationSuccess(
+          items: state.items,
+          createItems: state.createItems,
+          editItems: state.editItems,
+          multiselectionItems: state.multiselectionItems,
+          filteredValues: state.filteredValues,
+          selected: state.selected,
+          selected1: state.selected1,
+          selected2: state.selected2,
+          successMessage: 'Saved successfully',
+        ),
+      );
     } catch (e) {
-      emit(ItemCostError(
-        items: state.items,
-        createItems: state.createItems,
-        editItems: state.editItems,
-        multiselectionItems: state.multiselectionItems,
-        filteredValues: state.filteredValues,
-        selected: state.selected,
-        selected1: state.selected1,
-        selected2: state.selected2,
-        errorMessage: 'Error saving row: $e',
-      ));
+      emit(
+        ItemCostError(
+          items: state.items,
+          createItems: state.createItems,
+          editItems: state.editItems,
+          multiselectionItems: state.multiselectionItems,
+          filteredValues: state.filteredValues,
+          selected: state.selected,
+          selected1: state.selected1,
+          selected2: state.selected2,
+          errorMessage: 'Error saving row: $e',
+        ),
+      );
     }
   }
 
@@ -351,29 +333,33 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
       final updatedItems = await repository.findAll();
       final filteredItems = _filterItemsByUserPermission(updatedItems);
 
-      emit(ItemCostOperationSuccess(
-        items: filteredItems,
-        createItems: state.createItems,
-        editItems: [],
-        multiselectionItems: state.multiselectionItems,
-        filteredValues: state.filteredValues,
-        selected: null,
-        selected1: null,
-        selected2: state.selected2,
-        successMessage: 'Saved successfully',
-      ));
+      emit(
+        ItemCostOperationSuccess(
+          items: filteredItems,
+          createItems: state.createItems,
+          editItems: [],
+          multiselectionItems: state.multiselectionItems,
+          filteredValues: state.filteredValues,
+          selected: null,
+          selected1: null,
+          selected2: state.selected2,
+          successMessage: 'Saved successfully',
+        ),
+      );
     } catch (e) {
-      emit(ItemCostError(
-        items: state.items,
-        createItems: state.createItems,
-        editItems: state.editItems,
-        multiselectionItems: state.multiselectionItems,
-        filteredValues: state.filteredValues,
-        selected: state.selected,
-        selected1: state.selected1,
-        selected2: state.selected2,
-        errorMessage: 'Error saving in edit: $e',
-      ));
+      emit(
+        ItemCostError(
+          items: state.items,
+          createItems: state.createItems,
+          editItems: state.editItems,
+          multiselectionItems: state.multiselectionItems,
+          filteredValues: state.filteredValues,
+          selected: state.selected,
+          selected1: state.selected1,
+          selected2: state.selected2,
+          errorMessage: 'Error saving in edit: $e',
+        ),
+      );
     }
   }
 
@@ -383,33 +369,37 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
   ) async {
     try {
       await repository.create(event.itemCost);
-      
+
       final updatedItems = await repository.findAll();
       final filteredItems = _filterItemsByUserPermission(updatedItems);
 
-      emit(ItemCostOperationSuccess(
-        items: filteredItems,
-        createItems: state.createItems,
-        editItems: state.editItems,
-        multiselectionItems: state.multiselectionItems,
-        filteredValues: state.filteredValues,
-        selected: state.selected,
-        selected1: null,
-        selected2: state.selected2,
-        successMessage: 'Created successfully',
-      ));
+      emit(
+        ItemCostOperationSuccess(
+          items: filteredItems,
+          createItems: state.createItems,
+          editItems: state.editItems,
+          multiselectionItems: state.multiselectionItems,
+          filteredValues: state.filteredValues,
+          selected: state.selected,
+          selected1: null,
+          selected2: state.selected2,
+          successMessage: 'Created successfully',
+        ),
+      );
     } catch (e) {
-      emit(ItemCostError(
-        items: state.items,
-        createItems: state.createItems,
-        editItems: state.editItems,
-        multiselectionItems: state.multiselectionItems,
-        filteredValues: state.filteredValues,
-        selected: state.selected,
-        selected1: state.selected1,
-        selected2: state.selected2,
-        errorMessage: 'Error creating item: $e',
-      ));
+      emit(
+        ItemCostError(
+          items: state.items,
+          createItems: state.createItems,
+          editItems: state.editItems,
+          multiselectionItems: state.multiselectionItems,
+          filteredValues: state.filteredValues,
+          selected: state.selected,
+          selected1: state.selected1,
+          selected2: state.selected2,
+          errorMessage: 'Error creating item: $e',
+        ),
+      );
     }
   }
 
@@ -425,29 +415,33 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
       final updatedItems = await repository.findAll();
       final filteredItems = _filterItemsByUserPermission(updatedItems);
 
-      emit(ItemCostOperationSuccess(
-        items: filteredItems,
-        createItems: state.createItems,
-        editItems: state.editItems,
-        multiselectionItems: state.multiselectionItems,
-        filteredValues: state.filteredValues,
-        selected: null,
-        selected1: null,
-        selected2: state.selected2,
-        successMessage: 'Deleted successfully',
-      ));
+      emit(
+        ItemCostOperationSuccess(
+          items: filteredItems,
+          createItems: state.createItems,
+          editItems: state.editItems,
+          multiselectionItems: state.multiselectionItems,
+          filteredValues: state.filteredValues,
+          selected: null,
+          selected1: null,
+          selected2: state.selected2,
+          successMessage: 'Deleted successfully',
+        ),
+      );
     } catch (e) {
-      emit(ItemCostError(
-        items: state.items,
-        createItems: state.createItems,
-        editItems: state.editItems,
-        multiselectionItems: state.multiselectionItems,
-        filteredValues: state.filteredValues,
-        selected: state.selected,
-        selected1: state.selected1,
-        selected2: state.selected2,
-        errorMessage: 'Error deleting item: $e',
-      ));
+      emit(
+        ItemCostError(
+          items: state.items,
+          createItems: state.createItems,
+          editItems: state.editItems,
+          multiselectionItems: state.multiselectionItems,
+          filteredValues: state.filteredValues,
+          selected: state.selected,
+          selected1: state.selected1,
+          selected2: state.selected2,
+          errorMessage: 'Error deleting item: $e',
+        ),
+      );
     }
   }
 
@@ -461,40 +455,43 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
       final updatedItems = await repository.findAll();
       final filteredItems = _filterItemsByUserPermission(updatedItems);
 
-      emit(ItemCostOperationSuccess(
-        items: filteredItems,
-        createItems: state.createItems,
-        editItems: state.editItems,
-        multiselectionItems: [],
-        filteredValues: state.filteredValues,
-        selected: null,
-        selected1: null,
-        selected2: state.selected2,
-        successMessage: 'Deleted successfully',
-      ));
+      emit(
+        ItemCostOperationSuccess(
+          items: filteredItems,
+          createItems: state.createItems,
+          editItems: state.editItems,
+          multiselectionItems: [],
+          filteredValues: state.filteredValues,
+          selected: null,
+          selected1: null,
+          selected2: state.selected2,
+          successMessage: 'Deleted successfully',
+        ),
+      );
     } catch (e) {
-      emit(ItemCostError(
-        items: state.items,
-        createItems: state.createItems,
-        editItems: state.editItems,
-        multiselectionItems: state.multiselectionItems,
-        filteredValues: state.filteredValues,
-        selected: state.selected,
-        selected1: state.selected1,
-        selected2: state.selected2,
-        errorMessage: 'Error deleting items: $e',
-      ));
+      emit(
+        ItemCostError(
+          items: state.items,
+          createItems: state.createItems,
+          editItems: state.editItems,
+          multiselectionItems: state.multiselectionItems,
+          filteredValues: state.filteredValues,
+          selected: state.selected,
+          selected1: state.selected1,
+          selected2: state.selected2,
+          errorMessage: 'Error deleting items: $e',
+        ),
+      );
     }
   }
 
-  void _onRemoveInCreate(
-    RemoveInCreate event,
-    Emitter<ItemCostState> emit,
-  ) {
+  void _onRemoveInCreate(RemoveInCreate event, Emitter<ItemCostState> emit) {
     final createItems = List<ItemCost>.from(state.createItems);
-    
+
     if (event.itemCost.id == null) {
-      createItems.removeWhere((element) => element.tempId == event.itemCost.tempId);
+      createItems.removeWhere(
+        (element) => element.tempId == event.itemCost.tempId,
+      );
     } else {
       createItems.removeWhere((element) => element.id == event.itemCost.id);
       if (event.itemCost.id != null) {
@@ -505,14 +502,13 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
     emit(state.copyWith(createItems: createItems));
   }
 
-  void _onRemoveInEdit(
-    RemoveInEdit event,
-    Emitter<ItemCostState> emit,
-  ) {
+  void _onRemoveInEdit(RemoveInEdit event, Emitter<ItemCostState> emit) {
     final editItems = List<ItemCost>.from(state.editItems);
-    
+
     if (event.itemCost.id == null) {
-      editItems.removeWhere((element) => element.tempId == event.itemCost.tempId);
+      editItems.removeWhere(
+        (element) => element.tempId == event.itemCost.tempId,
+      );
     } else {
       editItems.removeWhere((element) => element.id == event.itemCost.id);
       if (event.itemCost.id != null) {
@@ -523,19 +519,13 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
     emit(state.copyWith(editItems: editItems));
   }
 
-  void _onSaveAndClose(
-    SaveAndClose event,
-    Emitter<ItemCostState> emit,
-  ) {
+  void _onSaveAndClose(SaveAndClose event, Emitter<ItemCostState> emit) {
     _onCancelUpdate(CancelUpdate(), emit);
     _onCancelCreate(CancelCreate(), emit);
     // Navigation would be handled by the UI layer
   }
 
-  void _onSaveAndAddNew(
-    SaveAndAddNew event,
-    Emitter<ItemCostState> emit,
-  ) {
+  void _onSaveAndAddNew(SaveAndAddNew event, Emitter<ItemCostState> emit) {
     final createItems = <ItemCost>[ItemCost()];
     emit(state.copyWith(createItems: createItems));
     // Navigation would be handled by the UI layer
@@ -563,14 +553,18 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
 
         // This would need to be implemented based on your PurchaseOrderDetail repository
         // final purchaseOrderDetailList = await purchaseOrderDetailRepository.findByHeader(poh.id!);
-        
+
         // For demonstration, I'll create a mock implementation
-        final purchaseOrderDetailList = <PurchaseOrderDetailModel>[]; // Replace with actual data
+        final purchaseOrderDetailList =
+            <PurchaseOrderDetailModel>[]; // Replace with actual data
 
         for (final p in purchaseOrderDetailList) {
           final unitCost = p.unitCost ?? 0.0;
           final factor = await itemUomConversionsController.fromOtherToPrimary(
-              p.itemNumber!, p.unitOfMeasure!, authBloc.state.companyId!);
+            p.itemNumber!,
+            p.unitOfMeasure!,
+            authBloc.state.companyId!,
+          );
           final qty = p.quantityTransaction ?? 1.0;
           final w = (p.amountExtendedCost ?? 0.0) / grossCost;
           final cost = (w * otherCost / qty + unitCost) / factor;
@@ -583,17 +577,20 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
           if (itemCostTableList.isNotEmpty) {
             // This would need PurchaseOrderReceiver repository implementation
             // final purchaseOrderReceiverList = await purchaseOrderReceiverRepository.findByDetail(p.id!);
-            final purchaseOrderReceiverList = <PurchaseOrderReceiverModel>[]; // Replace with actual data
+            final purchaseOrderReceiverList =
+                <PurchaseOrderReceiverModel>[]; // Replace with actual data
 
             if (purchaseOrderReceiverList.isEmpty) {
               final item = itemCostTableList.first;
               final qtyTrn = factor * (p.quantityTransaction ?? 0.0);
-              final qtyOld = await itemsInBranchController.totalAvailabilityOfAnItemInSpecificPrimary(p.itemNumber!);
+              final qtyOld = await itemsInBranchController
+                  .totalAvailabilityOfAnItemInSpecificPrimary(p.itemNumber!);
               final qtyTotal = qtyOld + qtyTrn;
               final amountOld = (item.amountUnitCost ?? 0.0) * qtyOld;
               final amountN = cost * qtyTrn;
-              
-              final unitCostAvg = ((amountOld + amountN) / qtyTotal).toStringAsFixed(2);
+
+              final unitCostAvg = ((amountOld + amountN) / qtyTotal)
+                  .toStringAsFixed(2);
 
               final updatedItem = item.copyWith(
                 amountUnitCost: double.parse(unitCostAvg),
@@ -617,32 +614,36 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
         }
       }
 
-      emit(ItemCostOperationSuccess(
-        items: state.items,
-        createItems: state.createItems,
-        editItems: state.editItems,
-        multiselectionItems: state.multiselectionItems,
-        filteredValues: state.filteredValues,
-        selected: state.selected,
-        selected1: state.selected1,
-        selected2: state.selected2,
-        successMessage: 'Item costs updated successfully',
-      ));
+      emit(
+        ItemCostOperationSuccess(
+          items: state.items,
+          createItems: state.createItems,
+          editItems: state.editItems,
+          multiselectionItems: state.multiselectionItems,
+          filteredValues: state.filteredValues,
+          selected: state.selected,
+          selected1: state.selected1,
+          selected2: state.selected2,
+          successMessage: 'Item costs updated successfully',
+        ),
+      );
     } catch (e) {
-      emit(ItemCostError(
-        items: state.items,
-        createItems: state.createItems,
-        editItems: state.editItems,
-        multiselectionItems: state.multiselectionItems,
-        filteredValues: state.filteredValues,
-        selected: state.selected,
-        selected1: state.selected1,
-        selected2: state.selected2,
-        errorMessage: 'Error updating item costs: $e',
-      ));
+      emit(
+        ItemCostError(
+          items: state.items,
+          createItems: state.createItems,
+          editItems: state.editItems,
+          multiselectionItems: state.multiselectionItems,
+          filteredValues: state.filteredValues,
+          selected: state.selected,
+          selected1: state.selected1,
+          selected2: state.selected2,
+          errorMessage: 'Error updating item costs: $e',
+        ),
+      );
     }
   }
-/*
+  /*
   Future<void> _onUpdateItemCostsForItemMaster(
     UpdateItemCostsForItemMaster event,
     Emitter<ItemCostState> emit,
@@ -730,55 +731,88 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
     try {
       final itCost = event.itemCost;
       final poR = event.purchaseOrderReceiver;
-        final systemConstant = systemConstantController.state.selected;
-        final autoSalesPriceBoolean = systemConstant!.autoSalesPrice ?? false;
+      final systemConstant = systemConstantController.state.selected;
+      final autoSalesPriceBoolean = systemConstant!.autoSalesPrice ?? false;
 
       if (itCost.id != null &&
           itCost.amountUnitCost != null &&
-          itCost.amountUnitCost != 0.0 && 
-          poR.id != null && (autoSalesPriceBoolean == true)) {
-
+          itCost.amountUnitCost != 0.0 &&
+          poR.id != null &&
+          (autoSalesPriceBoolean == true)) {
         double price = 0.0;
-        final itemBranch = await itemsInBranchController.itemBranchByItemAndBranch(
-          itCost.itemNumber!, 
-          poR.branchRecieved!,
-        );
+        final itemBranch = await itemsInBranchController
+            .itemBranchByItemAndBranch(itCost.itemNumber!, poR.branchRecieved!);
 
         // Step 1: Item Branch Level
         if (itemBranch != null &&
             itemBranch.marginType != null &&
             itemBranch.marginRate != null &&
             itemBranch.marginRate != 0.0) {
-          
           switch (itemBranch.marginType) {
             case 'F': // Flat
-              final factorib = await itemUomConversionsController.fromOtherToAnother(
-                itCost.itemNumber!,
-                itCost.fromUOM!.unitOfMeasure!,
-                itemBranch.unitOfMeasure!,
-                authBloc.state.companyId!
-              );
-              final unitPriceF = (factorib * (itCost.amountUnitCost! + itemBranch.marginRate!)).toStringAsFixed(2);
+              final factorib = await itemUomConversionsController
+                  .fromOtherToAnother(
+                    itCost.itemNumber!,
+                    itCost.fromUOM!.unitOfMeasure!,
+                    itemBranch.unitOfMeasure!,
+                    authBloc.state.companyId!,
+                  );
+              final unitPriceF =
+                  (factorib * (itCost.amountUnitCost! + itemBranch.marginRate!))
+                      .toStringAsFixed(2);
               price = double.parse(unitPriceF);
-              await _updatingToItemBranchCompany(price, itemBranch, null, null, null);
-              break;
-            
-            case 'P': // Percentage
-              final factoribP = await itemUomConversionsController.fromOtherToAnother(
-                itCost.itemNumber!,
-                itCost.fromUOM!.unitOfMeasure!,
-                itemBranch.unitOfMeasure!,
-                authBloc.state.companyId!
+              await _updatingToItemBranchCompany(
+                price,
+                itemBranch,
+                null,
+                null,
+                null,
               );
-              final unitPriceP = (factoribP * (itCost.amountUnitCost! * (1 + itemBranch.marginRate! / 100.0))).toStringAsFixed(2);
+              break;
+
+            case 'P': // Percentage
+              final factoribP = await itemUomConversionsController
+                  .fromOtherToAnother(
+                    itCost.itemNumber!,
+                    itCost.fromUOM!.unitOfMeasure!,
+                    itemBranch.unitOfMeasure!,
+                    authBloc.state.companyId!,
+                  );
+              final unitPriceP =
+                  (factoribP *
+                          (itCost.amountUnitCost! *
+                              (1 + itemBranch.marginRate! / 100.0)))
+                      .toStringAsFixed(2);
               price = double.parse(unitPriceP);
-              await _updatingToItemBranchCompany(price, itemBranch, null, null, null);
+              await _updatingToItemBranchCompany(
+                price,
+                itemBranch,
+                null,
+                null,
+                null,
+              );
               break;
           }
         }
         // Additional steps would continue here following the same pattern...
 
-        emit(ItemCostOperationSuccess(
+        emit(
+          ItemCostOperationSuccess(
+            items: state.items,
+            createItems: state.createItems,
+            editItems: state.editItems,
+            multiselectionItems: state.multiselectionItems,
+            filteredValues: state.filteredValues,
+            selected: state.selected,
+            selected1: state.selected1,
+            selected2: state.selected2,
+            successMessage: 'Unit price updated successfully',
+          ),
+        );
+      }
+    } catch (e) {
+      emit(
+        ItemCostError(
           items: state.items,
           createItems: state.createItems,
           editItems: state.editItems,
@@ -787,21 +821,9 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
           selected: state.selected,
           selected1: state.selected1,
           selected2: state.selected2,
-          successMessage: 'Unit price updated successfully',
-        ));
-      }
-    } catch (e) {
-      emit(ItemCostError(
-        items: state.items,
-        createItems: state.createItems,
-        editItems: state.editItems,
-        multiselectionItems: state.multiselectionItems,
-        filteredValues: state.filteredValues,
-        selected: state.selected,
-        selected1: state.selected1,
-        selected2: state.selected2,
-        errorMessage: 'Error updating unit price: $e',
-      ));
+          errorMessage: 'Error updating unit price: $e',
+        ),
+      );
     }
   }
 
@@ -821,15 +843,17 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
           itemsInBranchController.sendNotification(ib);
         } else if (it != null && (b == null || c != null)) {
           // Item Level Update
-          await itemsInBranchController.updateItemUnitPrice(it.id, newPrice);
-          final itemsInBranchList = await itemsInBranchController.itemInBranchByItem(it.id);
+          await itemsInBranchController.updateItemUnitPrice(it.id!, newPrice);
+          final itemsInBranchList = await itemsInBranchController
+              .itemInBranchByItem(it.id!);
           for (final itB in itemsInBranchList) {
             await itemsInBranchController.updateUnitPrice(itB, newPrice);
             itemsInBranchController.sendNotification(itB);
           }
         } else if (b != null && it != null) {
           // Branch Level Update
-          final itemsInBranchList = await itemsInBranchController.itemInBranchByItemAndBranch(it.id, b.id);
+          final itemsInBranchList = await itemsInBranchController
+              .itemInBranchByItemAndBranch(it.id!, b.id);
           for (final itB in itemsInBranchList) {
             await itemsInBranchController.updateUnitPrice(itB, newPrice);
             itemsInBranchController.sendNotification(itB);
@@ -841,37 +865,19 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
     }
   }
 
-  void _onFilterItemCosts(
-    FilterItemCosts event,
-    Emitter<ItemCostState> emit,
-  ) {
+  void _onFilterItemCosts(FilterItemCosts event, Emitter<ItemCostState> emit) {
     emit(state.copyWith(filteredValues: event.filteredItems));
   }
 
-  void _onCancelUpdate(
-    CancelUpdate event,
-    Emitter<ItemCostState> emit,
-  ) {
-    emit(state.copyWith(
-      selected1: null,
-      editItems: null,
-    ));
+  void _onCancelUpdate(CancelUpdate event, Emitter<ItemCostState> emit) {
+    emit(state.copyWith(selected1: null, editItems: null));
   }
 
-  void _onCancelCreate(
-    CancelCreate event,
-    Emitter<ItemCostState> emit,
-  ) {
-    emit(state.copyWith(
-      selected: null,
-      createItems: null,
-    ));
+  void _onCancelCreate(CancelCreate event, Emitter<ItemCostState> emit) {
+    emit(state.copyWith(selected: null, createItems: null));
   }
 
-  void _onDiscardChanges(
-    DiscardChanges event,
-    Emitter<ItemCostState> emit,
-  ) {
+  void _onDiscardChanges(DiscardChanges event, Emitter<ItemCostState> emit) {
     final createItems = state.createItems ?? [];
     for (final item in createItems) {
       if (item.id != null) {
@@ -879,11 +885,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
       }
     }
 
-    emit(state.copyWith(
-      selected: null,
-      createItems: null,
-      items: null,
-    ));
+    emit(state.copyWith(selected: null, createItems: null, items: null));
 
     // This would typically show a success message in the UI
   }

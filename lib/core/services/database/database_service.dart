@@ -289,6 +289,7 @@ CREATE TABLE items_table (
   margin_rate REAL,
   margin_type TEXT,           -- e.g. '%' or 'N'
   reorder_point REAL,
+  reference_id TEXT,
   FOREIGN KEY (company) REFERENCES company_table(id) ON DELETE CASCADE,
   FOREIGN KEY (unit_of_measure) REFERENCES udc_details(id)
 );
@@ -805,7 +806,7 @@ CREATE INDEX idx_sales_order_header_order_type ON sales_order_header(order_type)
 ''');
     developer.log('Created table: sales_order_header');
     //27. create sales_order_details table
-  await db.execute('''
+    await db.execute('''
   CREATE TABLE sales_order_details (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     unit_price REAL,
@@ -837,6 +838,55 @@ CREATE INDEX idx_sales_order_header_order_type ON sales_order_header(order_type)
   CREATE INDEX idx_sales_order_details_unit_of_measure ON sales_order_details(unit_of_measure);
 ''');
     developer.log('Created table: sales_order_details');
+
+    //create item master table
+    await db.execute('''
+    CREATE TABLE item_master (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_description TEXT NOT NULL,
+  company_category INTEGER,
+  category_code_01 INTEGER,
+  category_code_02 INTEGER,
+  category_code_03 INTEGER,
+  category_code_04 INTEGER,
+  category_code_05 INTEGER,
+  category_code_06 INTEGER,
+  category_code_07 INTEGER,
+  category_code_08 INTEGER,
+  category_code_09 INTEGER,
+  category_code_10 INTEGER,
+  created_by_flag TEXT DEFAULT 'Y',
+  defualt_uom INTEGER,
+  taxable_flag TEXT DEFAULT 'Y',
+  UNIQUE (item_description, company_category),
+  FOREIGN KEY (company_category) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_01) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_02) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_03) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_04) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_05) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_06) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_07) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_08) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_09) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_10) REFERENCES udc_details (id),
+  FOREIGN KEY (defualt_uom) REFERENCES udc_details (id)
+);
+CREATE INDEX idx_item_master_company ON item_master(company);
+CREATE INDEX idx_item_master_category_code_01 ON item_master(category_code_01);
+CREATE INDEX idx_item_master_category_code_02 ON item_master(category_code_02);
+CREATE INDEX idx_item_master_category_code_03 ON item_master(category_code_03);
+CREATE INDEX idx_item_master_category_code_04 ON item_master(category_code_04);
+CREATE INDEX idx_item_master_category_code_05 ON item_master(category_code_05);
+CREATE INDEX idx_item_master_category_code_06 ON item_master(category_code_06);
+CREATE INDEX idx_item_master_category_code_07 ON item_master(category_code_07);
+CREATE INDEX idx_item_master_category_code_08 ON item_master(category_code_08);
+CREATE INDEX idx_item_master_category_code_09 ON item_master(category_code_09);
+CREATE INDEX idx_item_master_category_code_10 ON item_master(category_code_10);
+CREATE INDEX idx_item_master_defualt_uom ON item_master(defualt_uom);
+''');
+    developer.log('Created table: item_master');
+
     //. Create sync_queue table
     await db.execute('''
       CREATE TABLE sync_queue (
@@ -1255,24 +1305,24 @@ CREATE INDEX idx_sales_order_header_order_type ON sales_order_header(order_type)
       // --- Transaction Type (TT) ---
       {
         'id': 27,
-        'detail_code': 'SALE',
-        'description_1': 'Sales Transaction',
+        'detail_code': 'T',
+        'description_1': ' Inventory transfer',
         'description_2': null,
         'record_header': 8,
         'udc_group': 'TT',
       },
       {
         'id': 28,
-        'detail_code': 'PURCHASE',
-        'description_1': 'Purchase Transaction',
+        'detail_code': 'I',
+        'description_1': 'Inventory issue',
         'description_2': null,
         'record_header': 8,
         'udc_group': 'TT',
       },
       {
         'id': 29,
-        'detail_code': 'RETURN',
-        'description_1': 'Return Transaction',
+        'detail_code': 'A',
+        'description_1': 'Inventory adjustment',
         'description_2': null,
         'record_header': 8,
         'udc_group': 'TT',

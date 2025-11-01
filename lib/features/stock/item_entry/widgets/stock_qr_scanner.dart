@@ -54,7 +54,7 @@ class _StockItemQRScannerState extends State<StockItemQRScanner> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<StockItemEntryBloc, ItemEntryState>(
+    return BlocListener<StockItemsEntryBloc, ItemEntryState>(
       listener: (context, state) {
         if (state.message != null) {
           ScaffoldMessenger.of(

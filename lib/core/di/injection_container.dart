@@ -22,6 +22,8 @@ import 'package:savvy_stock/features/stock/item_UoM_conversions/item_uom_conv_re
 import 'package:savvy_stock/features/stock/item_cost/blocs/item_cost_bloc.dart';
 import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
+import 'package:savvy_stock/features/stock/item_entry/data/item_repository.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench.dart/repo/item_master_repo.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_repo.dart';
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_bloc.dart';
@@ -41,8 +43,47 @@ import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 final getIt = GetIt.instance;
 
 void initDependencies() {
-  // Repositories
+  // Secure Storage
+  getIt.registerLazySingleton<FlutterSecureStorage>(
+    () => FlutterSecureStorage(),
+  );
 
+  // HTTP Client
+  getIt.registerLazySingleton<http.Client>(() => http.Client());
+
+  // Database Service
+  getIt.registerLazySingleton<LocalDatabaseService>(
+    () => LocalDatabaseService(),
+  );
+
+  // Repositories
+  // Repository (with auth service dependency)
+  getIt.registerLazySingleton<SystemConstantRepository>(
+    () => SystemConstantRepository(
+      baseUrl: ApiConstants.baseUrl,
+      localDatabaseService: getIt(),
+      httpClient: getIt(),
+      authBloc: getIt(), // Pass auth service
+    ),
+  );
+
+  // UDC Repository
+  getIt.registerLazySingleton<UdcRepository>(
+    () => UdcRepository(
+      baseUrl: ApiConstants.baseUrl,
+      localDatabaseService: getIt(),
+      httpClient: getIt(),
+    ),
+  );
+
+  // Services
+  getIt.registerLazySingleton<SystemConstantsService>(
+    () => SystemConstantsService(getIt()),
+  );
+
+  getIt.registerLazySingleton<StockItemsEntryRepository>(
+    () => StockItemsEntryRepository(databaseService: getIt()),
+  );
   getIt.registerLazySingleton<SalesOrderDetailRepository>(
     () => SalesOrderDetailRepository(databaseService: getIt()),
   );
@@ -55,8 +96,10 @@ void initDependencies() {
   getIt.registerLazySingleton<LotMasterRepository>(
     () => LotMasterRepository(databaseService: getIt()),
   );
+  getIt.registerLazySingleton<ItemMasterRepository>(
+    () => ItemMasterRepository(databaseService: getIt()),
+  );
 
-  //getIt.registerLazySingleton<ItemUomConversionsRepository>( () => ItemUomConversionsRepository(databaseService: getIt()));
   getIt.registerLazySingleton<ItemUomConversionsRepository>(
     () => ItemUomConversionsRepository(databaseService: getIt()),
   );
@@ -85,6 +128,8 @@ void initDependencies() {
     ),
   );
 
+  // BLoCs
+
   getIt.registerFactory<PaymentBloc>(() => PaymentBloc(getIt()));
 
   getIt.registerLazySingleton<AuthBloc>(
@@ -103,44 +148,6 @@ void initDependencies() {
     () => RoleBloc(databaseService: getIt(), authBloc: getIt()),
   );
 
-  // Secure Storage
-  getIt.registerLazySingleton<FlutterSecureStorage>(
-    () => FlutterSecureStorage(),
-  );
-
-  // HTTP Client
-  getIt.registerLazySingleton<http.Client>(() => http.Client());
-
-  // Database Service
-  getIt.registerLazySingleton<LocalDatabaseService>(
-    () => LocalDatabaseService(),
-  );
-
-  // Repository (with auth service dependency)
-  getIt.registerLazySingleton<SystemConstantRepository>(
-    () => SystemConstantRepository(
-      baseUrl: ApiConstants.baseUrl,
-      localDatabaseService: getIt(),
-      httpClient: getIt(),
-      authBloc: getIt(), // Pass auth service
-    ),
-  );
-
-  // UDC Repository
-  getIt.registerLazySingleton<UdcRepository>(
-    () => UdcRepository(
-      baseUrl: ApiConstants.baseUrl,
-      localDatabaseService: getIt(),
-      httpClient: getIt(),
-    ),
-  );
-
-  // Services
-  getIt.registerLazySingleton<SystemConstantsService>(
-    () => SystemConstantsService(getIt()),
-  );
-
-  // BLoCs
   // System constants should be shared across the app. Register as a singleton so
   // all blocs/services that depend on it use the same instance.
   getIt.registerLazySingleton<SystemConstantBloc>(
@@ -155,8 +162,13 @@ void initDependencies() {
     () => BranchBloc(databaseService: getIt(), authBloc: getIt()),
   );
 
-  getIt.registerFactory<StockItemEntryBloc>(
-    () => StockItemEntryBloc(databaseService: getIt(), authBloc: getIt()),
+  getIt.registerFactory<StockItemsEntryBloc>(
+    () => StockItemsEntryBloc(
+      repository: getIt(),
+      authBloc: getIt(),
+      systemConstantBloc: getIt(),
+      itemsInBranchBloc: getIt(),
+    ),
   );
 
   getIt.registerFactory<StockItemInBranchBloc>(
