@@ -13,6 +13,7 @@ enum NextNumberStatus {
   deleting,
   success,
   failure,
+  duplicationFound,
 }
 
 class NextNumberState extends Equatable {
@@ -28,6 +29,9 @@ class NextNumberState extends Equatable {
   final String? error;
   final int companyId;
   final int? generatedNumber;
+    final String? generatedFormattedNumber;
+  final bool? hasDuplication;
+  final Map<String, int>? nextNumberSummary;
 
   const NextNumberState({
     this.status = NextNumberStatus.initial,
@@ -42,6 +46,9 @@ class NextNumberState extends Equatable {
     this.error,
     this.companyId = 0,
     this.generatedNumber,
+    this.generatedFormattedNumber,
+    this.hasDuplication,
+    this.nextNumberSummary,
   });
 
   bool get isLoaded => status == NextNumberStatus.loaded;
@@ -52,6 +59,8 @@ class NextNumberState extends Equatable {
   bool get isCreating => status == NextNumberStatus.creating;
   bool get isUpdating => status == NextNumberStatus.updating;
   bool get isDeleting => status == NextNumberStatus.deleting;
+  bool get isDuplicationFound => status == NextNumberStatus.duplicationFound;
+  
 
   NextNumberState copyWith({
     NextNumberStatus? status,
@@ -66,6 +75,9 @@ class NextNumberState extends Equatable {
     String? error,
     int? companyId,
     int? generatedNumber,
+    String? generatedFormattedNumber,
+    bool? hasDuplication,
+    Map<String, int>? nextNumberSummary,
   }) {
     return NextNumberState(
       status: status ?? this.status,
@@ -80,6 +92,9 @@ class NextNumberState extends Equatable {
       error: error ?? this.error,
       companyId: companyId ?? this.companyId,
       generatedNumber: generatedNumber ?? this.generatedNumber,
+      generatedFormattedNumber: generatedFormattedNumber ?? this.generatedFormattedNumber,
+      hasDuplication: hasDuplication ?? this.hasDuplication,
+      nextNumberSummary: nextNumberSummary ?? this.nextNumberSummary,
     );
   }
 
@@ -97,5 +112,8 @@ class NextNumberState extends Equatable {
     error,
     companyId,
     generatedNumber,
+    generatedFormattedNumber,
+    hasDuplication,
+    nextNumberSummary,
   ];
 }
