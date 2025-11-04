@@ -1,17 +1,19 @@
 import 'dart:developer' as developer;
 import 'package:http/http.dart' as http;
+import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 import 'package:sqflite/sqflite.dart';
 
-class UdcRepository {
+class UdcRepository extends BaseRepository {
   final String baseUrl;
-  final LocalDatabaseService localDatabaseService;
+  @override
+  final LocalDatabaseService databaseService;
   final http.Client httpClient;
 
   UdcRepository({
     required this.baseUrl,
-    required this.localDatabaseService,
+    required this.databaseService,
     required this.httpClient,
   });
 
@@ -37,31 +39,32 @@ class UdcRepository {
     }
   }
 
-Future<UdcDetails?> getUdcDetailById(int? id) async {
-  if (id == null) return null;
-  try {
-    final db = await localDatabaseService.database;
-    final result = await db.rawQuery(
-      '''
+  Future<UdcDetails?> getUdcDetailById(int? id, {Transaction? txn}) async {
+    if (id == null) return null;
+    try {
+      final db = txn ?? await databaseService.database;
+      final result = await db.rawQuery(
+        '''
       SELECT * FROM udc_details 
       WHERE id = ?
     ''',
-      [id],
-    );
+        [id],
+      );
 
-    return result.isNotEmpty ? UdcDetails.fromJson(result.first) : null;
-  } catch (e) {
-    developer.log('Error getting local UDC detail: $e');
-    return null;
+      return result.isNotEmpty ? UdcDetails.fromJson(result.first) : null;
+    } catch (e) {
+      developer.log('Error getting local UDC detail: $e');
+      return null;
+    }
   }
-}
 
   // Local database operations
   Future<List<UdcDetails>> getLocalUdcDetailsByCode(
     String detailCode,
-    String headerCode,
-  ) async {
-    final db = await localDatabaseService.database;
+    String headerCode, {
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
     try {
       final List<Map<String, dynamic>> maps = await db.query(
         'udc_details',
@@ -76,9 +79,13 @@ Future<UdcDetails?> getUdcDetailById(int? id) async {
     }
   }
 
-    Future<int?> getUdcDetailId(String headerCode, String detailCode) async {
+  Future<int?> getUdcDetailId(
+    String headerCode,
+    String detailCode, {
+    Transaction? txn,
+  }) async {
     try {
-      final db = await localDatabaseService.database;
+      final db = txn ?? await databaseService.database;
       final result = await db.rawQuery(
         '''
       SELECT ud.id FROM udc_details ud
@@ -98,13 +105,12 @@ Future<UdcDetails?> getUdcDetailById(int? id) async {
       print('❌ Error getting UDC detail ID: $e');
       return null;
     }
-    }
- 
+  }
 
   Future<List<UdcDetails>> getLocalUdcDetailsByHeaderCode(
     String headerCode,
   ) async {
-    final db = await localDatabaseService.database;
+    final db = await databaseService.database;
     try {
       final List<Map<String, dynamic>> maps = await db.rawQuery(
         '''
@@ -123,7 +129,7 @@ Future<UdcDetails?> getUdcDetailById(int? id) async {
 
   // Helper methods
   Future<void> _saveUdcDetailsToLocal(List<UdcDetails> details) async {
-    final db = await localDatabaseService.database;
+    final db = await databaseService.database;
     final batch = db.batch();
 
     for (final detail in details) {

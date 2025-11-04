@@ -1,25 +1,28 @@
 // features/stock/items_table/repositories/items_table_repository.dart
 import 'dart:math';
+import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:sqflite/sqflite.dart';
 
-class StockItemsEntryRepository {
+class StockItemsEntryRepository extends BaseRepository {
+  @override
   final LocalDatabaseService databaseService;
   final Random _random = Random();
 
   StockItemsEntryRepository({required this.databaseService});
 
   // Create new item
-  Future<int> create(ItemEntryModel item) async {
-    final db = await databaseService.database;
+  Future<int> create(ItemEntryModel item, {Transaction? txn}) async {
+    final db = txn ?? await databaseService.database;
     final itemMap = item.toMap();
     itemMap.remove('id');
     return await db.insert('items_table', itemMap);
   }
 
   // Update existing item
-  Future<int> update(ItemEntryModel item) async {
-    final db = await databaseService.database;
+  Future<int> update(ItemEntryModel item, {Transaction? txn}) async {
+    final db = txn ?? await databaseService.database;
     return await db.update(
       'items_table',
       item.toMap(),
@@ -29,8 +32,8 @@ class StockItemsEntryRepository {
   }
 
   // Delete item
-  Future<int> delete(int id, int companyId) async {
-    final db = await databaseService.database;
+  Future<int> delete(int id, int companyId, {Transaction? txn}) async {
+    final db = txn ?? await databaseService.database;
     return await db.delete(
       'items_table',
       where: 'id = ? AND company = ?',
@@ -39,8 +42,12 @@ class StockItemsEntryRepository {
   }
 
   // Delete multiple items
-  Future<void> deleteMultiple(List<int> ids, int companyId) async {
-    final db = await databaseService.database;
+  Future<void> deleteMultiple(
+    List<int> ids,
+    int companyId, {
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
     final batch = db.batch();
 
     for (final id in ids) {
@@ -109,9 +116,36 @@ class StockItemsEntryRepository {
     return null;
   }
 
+  //find by item description
+  Future<ItemEntryModel?> findByItemDescription(
+    String itemDescription,
+    int companyId, {
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
+    final maps = await db.rawQuery(
+      '''
+      SELECT it.*,ud.description_1 as unit_of_measure_description
+      FROM items_table it
+      LEFT JOIN udc_details ud ON it.unit_of_measure = ud.id
+      WHERE it.item_description = ? AND it.company = ?
+    ''',
+      [itemDescription, companyId],
+    );
+
+    if (maps.isNotEmpty) {
+      return ItemEntryModel.fromMap(maps.first);
+    }
+    return null;
+  }
+
   // Find item by barcode
-  Future<ItemEntryModel?> findByBarcode(String barcode, int companyId) async {
-    final db = await databaseService.database;
+  Future<ItemEntryModel?> findByBarcode(
+    String barcode,
+    int companyId, {
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
     final maps = await db.rawQuery(
       '''
       SELECT it.*,ud.description_1 as unit_of_measure_description
@@ -134,8 +168,9 @@ class StockItemsEntryRepository {
     String? itemsId,
     String? barcode,
     int? excludeId,
+    Transaction? txn,
   }) async {
-    final db = await databaseService.database;
+    final db = txn ?? await databaseService.database;
 
     String whereClause = 'company = ? AND (items_id = ? OR barcode = ?)';
     List<dynamic> whereArgs = [companyId, itemsId, barcode];
@@ -233,13 +268,18 @@ class StockItemsEntryRepository {
   }
 
   // Generate unique EAN13 barcode
-  Future<String> generateUniqueBarcode(int companyId) async {
+  Future<String> generateUniqueBarcode(
+    int companyId, {
+    Transaction? txn,
+  }) async {
     String barcode;
     bool exists;
 
     do {
       barcode = _generateEAN13();
-      final existingItem = await findByBarcode(barcode, companyId);
+      final existingItem = txn != null
+          ? await findByBarcode(barcode, companyId, txn: txn)
+          : await findByBarcode(barcode, companyId);
       exists = existingItem != null;
     } while (exists);
 
