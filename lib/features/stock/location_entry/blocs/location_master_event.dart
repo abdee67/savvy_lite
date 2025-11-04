@@ -29,9 +29,9 @@ class SaveInRow extends LocationMasterEvent {
   final int? transactionNumber;
   final String? remark;
 
-
- const SaveInRow(this.item, 
-     this.assignedItems,
+  const SaveInRow(
+    this.item,
+    this.assignedItems,
     this.transactionType,
     this.transactionNumber,
     this.remark,
@@ -103,8 +103,9 @@ class LoadItemsForBranch extends LocationMasterEvent {
 }
 
 class LoadLocationsByBranch extends LocationMasterEvent {
+  final String locationDescription;
   final int branchId;
-  const LoadLocationsByBranch(this.branchId);
+  const LoadLocationsByBranch(this.branchId, this.locationDescription);
 }
 
 class CancelCreate extends LocationMasterEvent {}

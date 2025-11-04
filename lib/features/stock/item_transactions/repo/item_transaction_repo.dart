@@ -459,13 +459,39 @@ class ItemTransactionRepository {
       final batch = db.batch();
 
       for (final transaction in detailTransactions) {
+        // Enrich detail with master/defaults and resolved references before saving
+        final resolvedIb = (transaction.itemNumber != null && masterTransaction.branch != null)
+            ? await itemInBranchRepository.findByItemAndBranch(
+                transaction.itemNumber!,
+                masterTransaction.branch!,
+                authBloc.state.companyId!,
+              )
+            : null;
+
+        final resolvedLot = (transaction.lotNumber != null)
+            ? await lotMasterRepository.getLotMasterById(
+                transaction.lotNumber!,
+                authBloc.state.companyId!,
+              )
+            : null;
+
+        final enriched = transaction.copyWith(
+          remark: transaction.remark ?? masterTransaction.remark,
+          transactionNumber: transaction.transactionNumber ?? masterTransaction.transactionNumber,
+          transactionType: transaction.transactionType ?? masterTransaction.transactionType,
+          branch: transaction.branch ?? masterTransaction.branch,
+          company: transaction.company ?? masterTransaction.company,
+          itemBranch: transaction.itemBranch ?? resolvedIb?.id,
+          lotStatus: transaction.lotStatus ?? resolvedLot?.lotStatus,
+        );
+
         await _processInventoryTransaction(
-          transaction,
+          enriched,
           masterTransaction,
           applyLocationMgmt,
           applyLotMgmt,
         );
-        batch.insert('item_transactions', transaction.toMap());
+        batch.insert('item_transactions', enriched.toMap());
       }
 
       await batch.commit();
@@ -562,7 +588,14 @@ class ItemTransactionRepository {
     bool applyLocationMgmt,
     bool applyLotMgmt,
   ) async {
-    final transactionType = masterTransaction.transactionTypeDetail?.detailCode;
+    // Derive transaction type code from UDC using the id to avoid relying on unset relations
+    String? transactionType;
+    if (masterTransaction.transactionType != null) {
+      final udc = await udcDetailsController.getUdcDetailById(
+        masterTransaction.transactionType,
+      );
+      transactionType = udc?.detailCode;
+    }
 
     if (transactionType == 'A') {
       await _processAdjustmentTransaction(

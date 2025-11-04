@@ -431,25 +431,14 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: CustomTextField(
-                    labelText: 'Barcode',
-                    controller: _barcodeController,
-                    onChanged: (value) {
-                      setState(() {
-                        _barcodeController.text = value;
-                      });
-                    },
-                    prefixIcon: const Icon(Icons.qr_code),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.qr_code_scanner),
-                      onPressed: _scanBarcode,
-                    ),
-                  ),
-                ),
-              ],
+            StockItemQRScanner(
+              barcodeController: _barcodeController,
+              onBarcodeScanned: (barcode) {
+                // Handle the scanned barcode
+                setState(() {
+                  _barcodeController.text = barcode;
+                });
+              },
             ),
             const SizedBox(height: 8),
             if (isAutoGenerateEnabled && _barcodeController.text.isEmpty)

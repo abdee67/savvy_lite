@@ -1,22 +1,22 @@
 // bloc/location_master_bloc.dart
 import 'dart:async';
 import 'package:bloc/bloc.dart';
-import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
-import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_event.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_state.dart';
 import 'package:savvy_stock/features/stock/location_entry/models/location_master_model.dart';
-import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
+import 'package:savvy_stock/features/stock/location_entry/repo/location_master_repository.dart';
 
 class LocationMasterBloc
     extends Bloc<LocationMasterEvent, LocationMasterState> {
-  final LocalDatabaseService databaseService;
+  final LocationMasterRepository locationMasterRepository;
   final AuthBloc authBloc;
   StreamSubscription? _authSubscription;
 
-  LocationMasterBloc({required this.databaseService, required this.authBloc})
-    : super(const LocationMasterState()) {
+  LocationMasterBloc({
+    required this.locationMasterRepository,
+    required this.authBloc,
+  }) : super(const LocationMasterState()) {
     _authSubscription = authBloc.stream.listen((authState) {
       if (authState.isAuthenticated && authState.companyId != null) {
         add(LoadLocationMasters(authState.companyId!));
@@ -71,30 +71,17 @@ class LocationMasterBloc
     print('🔄 BLoC: Loading locations for company ${event.companyId}');
     emit(state.copyWith(status: LocationMasterStatus.loading));
     try {
-      final db = await databaseService.database;
-      final locations = await db.rawQuery(
-        '''
-        SELECT
-        lm.*,
-        b.description as branch_name
-        FROM location_master lm
-        LEFT JOIN branch_table b ON lm.branch = b.id
-        WHERE lm.company = ?
-        ''',
-        [event.companyId],
+      final location = await locationMasterRepository.getLocationMasters(
+        event.companyId,
       );
-
-      final locationList = locations
-          .map((p) => LocationMaster.fromMap(p))
-          .toList();
 
       emit(
         state.copyWith(
           status: LocationMasterStatus.loaded,
-          items: locationList,
-          filteredItems: locationList,
+          items: location,
+          filteredItems: location,
           companyId: authBloc.state.companyId,
-          message: locationList.isEmpty ? 'No locations found' : null,
+          message: location.isEmpty ? 'No locations found' : null,
         ),
       );
     } catch (e) {
@@ -113,59 +100,82 @@ class LocationMasterBloc
   ) async {
     emit(state.copyWith(status: LocationMasterStatus.creating));
     try {
-      // Check if this is an update or create
-      final isUpdate = event.item.id != null;
+      final companyId = authBloc.state.companyId!;
+      final userId = authBloc.state.userId!;
 
-      if (isUpdate) {
-        // For updates, use update logic
-        await _onUpdateLocation(
-          UpdateLocationMaster(event.item, event.assignedItems),
-          emit,
-        );
-      } else {
-        // For creates, use create logic with duplication check
-        final isDuplication = await _checkDuplication(event.item);
-        if (isDuplication) {
-          emit(
-            state.copyWith(
-              status: LocationMasterStatus.duplication,
-              message: 'Location already exists for this branch',
-            ),
-          );
-          return;
-        }
-
-        final db = await databaseService.database;
-        final itemMap = _applySettings(event.item, false).toMap();
-        itemMap.remove('id');
-        itemMap['created_by'] = authBloc.state.userId;
-        itemMap['date_created'] = DateTime.now().toIso8601String();
-        itemMap['company'] = authBloc.state.companyId;
-
-        // Insert location
-        final locationId = await db.insert('location_master', itemMap);
-
-        // Save item locations assignments
-        await _saveItemLocations(locationId, event.assignedItems);
-
-        add(LoadLocationMasters(authBloc.state.companyId!));
-        add(ClearCreateList());
-
+      // Check for duplication
+      final isDuplication = await locationMasterRepository
+          .checkDuplicateLocation(event.item, companyId);
+      if (isDuplication) {
         emit(
           state.copyWith(
-            status: LocationMasterStatus.success,
-            message: 'Location added successfully',
+            status: LocationMasterStatus.duplication,
+            message: 'Location already exists for this branch',
           ),
         );
+        return;
       }
+
+      // Validate location
+      final errors = locationMasterRepository.validateLocation(event.item);
+      if (errors.isNotEmpty) {
+        emit(
+          state.copyWith(
+            status: LocationMasterStatus.failure,
+            message: errors.join(', '),
+          ),
+        );
+        return;
+      }
+
+      // Create location
+      final locationId = await locationMasterRepository.createLocationMaster(
+        event.item,
+        userId,
+        companyId,
+      );
+
+      // Save item locations assignments
+      if (event.assignedItems.isNotEmpty) {
+        await locationMasterRepository.saveItemLocations(
+          locationId,
+          event.assignedItems,
+          userId,
+          companyId,
+        );
+      }
+
+      add(LoadLocationMasters(companyId));
+      add(ClearCreateList());
+
+      emit(
+        state.copyWith(
+          status: LocationMasterStatus.success,
+          message: 'Location added successfully',
+        ),
+      );
     } catch (e) {
       emit(
         state.copyWith(
           status: LocationMasterStatus.failure,
-          message:
-              'Failed to ${event.item.id != null ? 'update' : 'create'} location: $e',
+          message: 'Failed to create location: $e',
         ),
       );
+    }
+  }
+
+  Future<void> _onLoadItemsForBranch(
+    LoadItemsForBranch event,
+    Emitter<LocationMasterState> emit,
+  ) async {
+    try {
+      final items = await locationMasterRepository.getItemsForBranch(
+        event.branchId,
+        authBloc.state.companyId!,
+      );
+      emit(state.copyWith(dualListSource: items, dualListTarget: const []));
+    } catch (e) {
+      emit(state.copyWith(message: 'Failed to load items for branch: $e'));
     }
   }
 
@@ -193,8 +203,8 @@ class LocationMasterBloc
   ) async {
     emit(state.copyWith(status: LocationMasterStatus.updating));
     try {
-      final db = await databaseService.database;
       final companyId = authBloc.state.companyId;
+      final userId = authBloc.state.userId;
 
       if (companyId == null) {
         emit(
@@ -206,20 +216,19 @@ class LocationMasterBloc
         return;
       }
 
-      final itemMap = _applySettings(event.item, true).toMap();
-      itemMap['updated_by'] = authBloc.state.userId;
-      itemMap['date_updated'] = DateTime.now().toIso8601String();
-      itemMap['company'] = companyId;
-
-      await db.update(
-        'location_master',
-        itemMap,
-        where: 'id = ? AND company = ?',
-        whereArgs: [event.item.id, companyId],
+      await locationMasterRepository.updateLocationMaster(
+        event.item,
+        userId!,
+        companyId,
       );
 
       // Update item locations assignments
-      await _updateItemLocations(event.item.id!, event.assignedItems);
+      await locationMasterRepository.updateItemLocations(
+        event.item.id!,
+        event.assignedItems,
+        userId,
+        companyId,
+      );
 
       add(LoadLocationMasters(companyId));
       emit(
@@ -289,62 +298,22 @@ class LocationMasterBloc
   }
 
   Future<void> _loadItemAssignmentsForEdit(LocationMaster location) async {
-    final db = await databaseService.database;
-
     // Get all items for the branch
-    final branchItems = await db.rawQuery(
-      '''
-      SELECT * FROM items_in_branch 
-      WHERE branch = ? AND company = ?
-      ''',
-      [location.branch, authBloc.state.companyId],
+    final branchItems = await locationMasterRepository.getItemsForBranch(
+      location.branch!,
+      authBloc.state.companyId!,
     );
 
     // Get assigned items for this location
-    final assignedItems = await db.rawQuery(
-      '''
-      SELECT ib.* FROM item_location il
-      JOIN items_in_branch ib ON il.item_number = ib.item_number AND il.branch = ib.branch
-      WHERE il.location = ? AND il.company = ?
-      ''',
-      [location.id, authBloc.state.companyId],
-    );
-
-    final sourceItems = branchItems
-        .map((e) => ItemInBranchModel.fromMap(e))
-        .toList();
-    final targetItems = assignedItems
-        .map((e) => ItemInBranchModel.fromMap(e))
-        .toList();
+    final assignedItems = await locationMasterRepository
+        .getAssignedItemsForLocation(location.id!, authBloc.state.companyId!);
 
     // Remove assigned items from source
-    sourceItems.removeWhere(
-      (source) => targetItems.any((target) => target.id == source.id),
+    branchItems.removeWhere(
+      (source) => assignedItems.any((target) => target.id == source.id),
     );
 
-    add(UpdateDualListModel(sourceItems, targetItems));
-  }
-
-  Future<void> _onLoadItemsForBranch(
-    LoadItemsForBranch event,
-    Emitter<LocationMasterState> emit,
-  ) async {
-    try {
-      final db = await databaseService.database;
-      final items = await db.rawQuery(
-        '''
-        SELECT * FROM items_in_branch 
-        WHERE branch = ? AND company = ?
-        ''',
-        [event.branchId, authBloc.state.companyId],
-      );
-
-      final itemList = items.map((e) => ItemInBranchModel.fromMap(e)).toList();
-
-      emit(state.copyWith(dualListSource: itemList, dualListTarget: const []));
-    } catch (e) {
-      emit(state.copyWith(message: 'Failed to load items for branch: $e'));
-    }
+    add(UpdateDualListModel(branchItems, assignedItems));
   }
 
   Future<void> _onLoadLocationsByBranch(
@@ -353,32 +322,18 @@ class LocationMasterBloc
   ) async {
     emit(state.copyWith(status: LocationMasterStatus.loading));
     try {
-      final db = await databaseService.database;
-      final locations = await db.rawQuery(
-        '''
-       SELECT lm.*,
-             b.description as branch_name
-      FROM location_master lm
-      LEFT JOIN branch_table b ON lm.branch = b.id
-      WHERE lm.branch = ? AND lm.company = ?
-      ORDER BY lm.location_description
-        ''',
-        [event.branchId, authBloc.state.companyId],
+      final locations = await locationMasterRepository.getLocationsByBranch(
+        event.locationDescription,
+        event.branchId,
+        authBloc.state.companyId!,
       );
-
-      final locationList = locations
-          .map((e) => LocationMaster.fromMap(e))
-          .toList();
-      print(
-        '📍 Loaded ${locationList.length} locations for branch $event.branchId',
-      ); // Debug log
 
       emit(
         state.copyWith(
           status: LocationMasterStatus.loaded,
-          filteredItems: locationList,
-          items: locationList,
-          message: locationList.isEmpty
+          filteredItems: locations,
+          items: locations,
+          message: locations.isEmpty
               ? 'No locations found for this branch'
               : null,
         ),
@@ -390,132 +345,6 @@ class LocationMasterBloc
           message: 'Failed to load locations by branch: $e',
         ),
       );
-    }
-  }
-
-  Future<void> _saveItemLocations(
-    int locationId,
-    List<ItemInBranchModel> assignedItems,
-  ) async {
-    final db = await databaseService.database;
-
-    for (final item in assignedItems) {
-      // Check if item location already exists
-      final existing = await db.rawQuery(
-        '''
-        SELECT COUNT(*) as count FROM item_location
-        WHERE branch = ? AND item_number = ? AND location = ? AND company = ?
-        ''',
-        [item.branch, item.itemNumber, locationId, authBloc.state.companyId],
-      );
-
-      final count = (existing.first['count'] as int?) ?? 0;
-      if (count == 0) {
-        final itemLocation = ItemLocation(
-          branch: item.branch,
-          itemNumber: item.itemNumber,
-          location: locationId,
-          quantityOnHand: item.quantityAvailable,
-          dateUpdated: DateTime.now(),
-          dateCreated: DateTime.now(),
-          updatedBy: authBloc.state.userId,
-          createdBy: authBloc.state.userId,
-          company: authBloc.state.companyId,
-        );
-
-        await db.insert('item_location', itemLocation.toMap());
-      }
-    }
-  }
-
-  Future<void> _updateItemLocations(
-    int locationId,
-    List<ItemInBranchModel> assignedItems,
-  ) async {
-    final db = await databaseService.database;
-
-    // Remove all existing assignments for this location
-    await db.delete(
-      'item_location',
-      where: 'location = ? AND company = ?',
-      whereArgs: [locationId, authBloc.state.companyId],
-    );
-
-    // Add new assignments
-    for (final item in assignedItems) {
-      final itemLocation = ItemLocation(
-        branch: item.branch,
-        itemNumber: item.itemNumber,
-        location: locationId,
-        quantityOnHand: item.quantityAvailable,
-        dateUpdated: DateTime.now(),
-        dateCreated: DateTime.now(),
-        updatedBy: authBloc.state.userId,
-        createdBy: authBloc.state.userId,
-        company: authBloc.state.companyId,
-      );
-
-      await db.insert('item_location', itemLocation.toMap());
-    }
-  }
-
-  // Helper Methods
-  LocationMaster _applySettings(LocationMaster item, bool isUpdate) {
-    final locationDescription = _generateLocationDescription(item);
-
-    return item.copyWith(
-      locationDescription: locationDescription,
-      createdBy: isUpdate ? item.createdBy : authBloc.state.userId,
-      dateCreated: isUpdate ? item.dateCreated : DateTime.now(),
-      updatedBy: isUpdate ? authBloc.state.userId : item.updatedBy,
-      dateUpdated: isUpdate ? DateTime.now() : item.dateUpdated,
-    );
-  }
-
-  String _generateLocationDescription(LocationMaster item) {
-    final codes = [
-      item.code01,
-      item.code02,
-      item.code03,
-      item.code04,
-      item.code05,
-      item.code06,
-      item.code07,
-      item.code08,
-      item.code09,
-      item.code10,
-    ];
-
-    final nonEmptyCodes = codes
-        .where((code) => code != null && code.isNotEmpty)
-        .toList();
-    return nonEmptyCodes.join('-');
-  }
-
-  Future<bool> _checkDuplication(LocationMaster item) async {
-    try {
-      final db = await databaseService.database;
-      // For updates, exclude the current item ID
-      // For creates, check against all items
-      final idCondition = item.id != null ? 'AND id != ?' : '';
-      final whereArgs = item.id != null
-          ? [
-              item.locationDescription,
-              item.branch,
-              authBloc.state.companyId,
-              item.id,
-            ]
-          : [item.locationDescription, item.branch, authBloc.state.companyId];
-
-      final existing = await db.rawQuery('''
-        SELECT COUNT(*) as count FROM location_master 
-        WHERE location_description = ? AND branch = ? AND company = ? $idCondition
-        ''', whereArgs);
-
-      final count = (existing.first['count'] as int?) ?? 0;
-      return count > 0;
-    } catch (e) {
-      return false;
     }
   }
 
@@ -614,30 +443,21 @@ class LocationMasterBloc
   ) async {
     emit(state.copyWith(status: LocationMasterStatus.deleting));
     try {
-      final db = await databaseService.database;
       final companyId = authBloc.state.companyId;
 
-      // First delete related item locations
-      await db.delete(
-        'item_location',
-        where: 'location = ? AND company = ?',
-        whereArgs: [event.item.id, companyId],
+      await locationMasterRepository.deleteLocationMaster(
+        event.item.id!,
+        companyId!,
       );
 
-      // Then delete the location
-      await db.delete(
-        'location_master',
-        where: 'id = ? AND company = ?',
-        whereArgs: [event.item.id, companyId],
-      );
-
-      add(LoadLocationMasters(companyId!));
       emit(
         state.copyWith(
           status: LocationMasterStatus.success,
           message: 'Location deleted successfully',
         ),
       );
+
+      add(LoadLocationMasters(companyId));
     } catch (e) {
       emit(
         state.copyWith(
@@ -656,35 +476,42 @@ class LocationMasterBloc
     return maxTempId + 1;
   }
 
-  void _onSearchLocations(
+  Future<void> _onSearchLocations(
     SearchLocations event,
     Emitter<LocationMasterState> emit,
-  ) {
-    final query = event.query.toLowerCase().trim();
+  ) async {
+    final results = await locationMasterRepository.searchLocations(
+      event.query,
+      authBloc.state.companyId!,
+    );
 
-    if (query.isEmpty) {
+    if (event.query.isEmpty) {
       emit(
         state.copyWith(
-          filteredLocations: state.locations,
+          filteredLocations: results,
           selectedLocations: [],
-          searchQuery: '',
+          searchQuery: event.query,
           status: LocationMasterStatus.success,
         ),
       );
       return;
     }
+
     emit(
       state.copyWith(
         filteredLocations: state.locations.where((location) {
-          return location.locationDescription?.toLowerCase().contains(query) ==
+          return location.locationDescription?.toLowerCase().contains(
+                    event.query,
+                  ) ==
                   true ||
-              location.branchName?.toLowerCase().contains(query) == true ||
-              location.code01?.toLowerCase().contains(query) == true ||
-              location.code02?.toLowerCase().contains(query) == true ||
-              location.code03?.toLowerCase().contains(query) == true;
+              location.branchName?.toLowerCase().contains(event.query) ==
+                  true ||
+              location.code01?.toLowerCase().contains(event.query) == true ||
+              location.code02?.toLowerCase().contains(event.query) == true ||
+              location.code03?.toLowerCase().contains(event.query) == true;
         }).toList(),
         selectedLocations: [],
-        searchQuery: query,
+        searchQuery: event.query,
         status: LocationMasterStatus.success,
       ),
     );

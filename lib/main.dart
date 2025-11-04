@@ -22,6 +22,7 @@ import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
 import 'package:savvy_stock/features/next_number/bloc/next_number_bloc.dart';
+import 'package:savvy_stock/features/next_number/repo/next_number_repo.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/invoice/blocs/invoice_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
@@ -34,6 +35,7 @@ import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart
 import 'package:savvy_stock/features/stock/item_entry/data/item_repository.dart';
 import 'package:savvy_stock/features/stock/item_entry_workbench.dart/blocs/item_master_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry_workbench.dart/repo/item_master_repo.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench.dart/repo/migration_service.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_repo.dart';
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_bloc.dart';
@@ -41,8 +43,10 @@ import 'package:savvy_stock/features/stock/item_locations/repo/item_location_rep
 import 'package:savvy_stock/features/stock/item_transactions/blocs/item_transaction_bloc.dart';
 import 'package:savvy_stock/features/stock/item_transactions/repo/item_transaction_repo.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_bloc.dart';
+import 'package:savvy_stock/features/stock/location_entry/repo/location_master_repository.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/bloc/lot_coloring_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_bloc.dart';
+import 'package:savvy_stock/features/stock/lot_master/repo/lot_master_repo.dart';
 import 'package:savvy_stock/features/stock/sales_order_detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/sales_order_header/bloc/sales_order_header_bloc.dart';
 import 'package:savvy_stock/features/stock/sales_order_header/repo/sales_order_header_repo.dart';
@@ -60,7 +64,7 @@ Future<void> _initializeAndRunApp() async {
   try {
     await ConnectivityService().initConnectivity();
     initDependencies();
-    // await LocalDatabaseService().resetDatabase();
+    await LocalDatabaseService().resetDatabase();
     // await LocalDatabaseService().debugTable('branch_table');
 
     if (AppConfig.isTestMode) {
@@ -69,7 +73,7 @@ Future<void> _initializeAndRunApp() async {
       developer.log('💾 Using local database only');
     }
     // Debug database tables (optional - remove in production)
-    await LocalDatabaseService().debugTable('item_transactions');
+    await LocalDatabaseService().debugTable('item_master');
   } catch (error, stackTrace) {
     developer.log('Initialization error: $error');
     developer.log('Stack trace: $stackTrace');
@@ -113,6 +117,9 @@ class _SavvyStockState extends State<SavvyStock> {
   late ItemUomConversionBloc _itemUomConversionsBloc;
   late StockItemLocationBloc _stockItemLocationBloc;
   late LocationMasterBloc _locationMasterBloc;
+  late MigrationService _migrationService;
+  late LocationMasterRepository _locationMasterRepository;
+  late NextNumberRepository _nextNumberRepository;
   // final NotificationTableBloc notificationTableBloc;
   late ItemCostBloc _itemCostBloc;
   late ItemCostRepository _itemCostRepository;
@@ -120,6 +127,7 @@ class _SavvyStockState extends State<SavvyStock> {
   late ItemLocationsRepository _stockItemLocationRepository;
   late UdcRepository _udcRepository;
   late ItemMasterRepository _itemMasterRepository;
+  late LotMasterRepository _lotMasterRepository;
 
   @override
   void initState() {
@@ -148,7 +156,10 @@ class _SavvyStockState extends State<SavvyStock> {
     _itemCostRepository = getIt<ItemCostRepository>();
     _itemCostBloc = getIt<ItemCostBloc>();
     _itemMasterRepository = getIt<ItemMasterRepository>();
-
+    _locationMasterRepository = getIt<LocationMasterRepository>();
+    _lotMasterRepository = getIt<LotMasterRepository>();
+    _migrationService = getIt<MigrationService>();
+    _nextNumberRepository = getIt<NextNumberRepository>();
     // Ensure system constants are loaded when companyId becomes available.
     final cid = _authBloc.state.companyId;
     if (cid != null) {
@@ -316,13 +327,13 @@ class _SavvyStockState extends State<SavvyStock> {
           ),
           BlocProvider<LocationMasterBloc>(
             create: (context) => LocationMasterBloc(
-              databaseService: getIt(),
+              locationMasterRepository: _locationMasterRepository,
               authBloc: _authBloc,
             ),
           ),
           BlocProvider<NextNumberBloc>(
             create: (context) =>
-                NextNumberBloc(databaseService: getIt(), authBloc: _authBloc),
+                NextNumberBloc(repository: getIt(), authBloc: _authBloc),
           ),
           BlocProvider<StockItemLocationBloc>(
             create: (context) => StockItemLocationBloc(
@@ -369,6 +380,7 @@ class _SavvyStockState extends State<SavvyStock> {
           ),
           BlocProvider<ItemMasterBloc>(
             create: (context) => ItemMasterBloc(
+              migrationService: _migrationService,
               repository: _itemMasterRepository,
               authBloc: _authBloc,
               locationMasterBloc: _locationMasterBloc,

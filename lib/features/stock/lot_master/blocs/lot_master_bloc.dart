@@ -21,7 +21,7 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
   final NextNumberBloc nextNumberBloc;
   final LotExpirationColorsBloc lotExpirationColorsBloc;
   final UdcRepository udcRepository;
-  
+
   StreamSubscription? _authSubscription;
   StreamSubscription? _systemConstantSubscription;
 
@@ -161,24 +161,26 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
           companyId: authBloc.state.companyId!,
           query: event.query,
         );
-        
+
         final searchedWithColors = await _calculateColorsForLots(searchedItems);
-        
-        emit(state.copyWith(
-          filteredItems: searchedWithColors, 
-          searchQuery: event.query
-        ));
+
+        emit(
+          state.copyWith(
+            filteredItems: searchedWithColors,
+            searchQuery: event.query,
+          ),
+        );
       } catch (e) {
         // Fallback to local search if repository search fails
         final filtered = state.items.where((item) {
           return item.lotNumber?.toString().toLowerCase().contains(
                     event.query.toLowerCase(),
                   ) ==
-                true ||
+                  true ||
               item.batchNumberSupplier?.toString().toLowerCase().contains(
                     event.query.toLowerCase(),
                   ) ==
-                true ||
+                  true ||
               (item.statusDescription?.toLowerCase().contains(
                     event.query.toLowerCase(),
                   ) ??
@@ -205,7 +207,8 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
         emit(
           state.copyWith(
             status: LotMasterStatus.dateValidationFailed,
-            message: 'The Effective Date & Expiration Date not Correct! ${lotTypeUdc?.description1 ?? 'Unknown'}',
+            message:
+                'The Effective Date & Expiration Date not Correct! ${lotTypeUdc?.description1 ?? 'Unknown'}',
             datesValid: false,
           ),
         );
@@ -258,7 +261,7 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
       }
 
       add(LoadLotMasters(authBloc.state.companyId!));
-      
+
       emit(
         state.copyWith(
           status: LotMasterStatus.success,
@@ -298,15 +301,14 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
       final lotStatus = applyLot
           ? await _calculateLotStatus(event.item, lotTypeUdc)
           : null;
-      final itemWithStatus = event.item.copyWith(
-        lotStatus: lotStatus,
-      );
+      final itemWithStatus = event.item.copyWith(lotStatus: lotStatus);
 
       await repository.updateLotMaster(itemWithStatus);
 
       // Update inventory if quantity changed and lot management is enabled
       if (applyLot && event.item.quantityAvailable != previousQty) {
-        final qtyDifference = (event.item.quantityAvailable ?? 0.0) - previousQty;
+        final qtyDifference =
+            (event.item.quantityAvailable ?? 0.0) - previousQty;
         await _updateInventoryQuantities(
           event.item,
           event.transactionType!,
@@ -317,7 +319,7 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
       }
 
       add(LoadLotMasters(authBloc.state.companyId!));
-      
+
       emit(
         state.copyWith(
           status: LotMasterStatus.success,
@@ -346,7 +348,7 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
       );
 
       add(LoadLotMasters(authBloc.state.companyId!));
-      
+
       emit(
         state.copyWith(
           status: LotMasterStatus.success,
@@ -376,7 +378,7 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
       );
 
       add(LoadLotMasters(authBloc.state.companyId!));
-      
+
       emit(
         state.copyWith(
           status: LotMasterStatus.success,
@@ -400,7 +402,7 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
     try {
       final lotNumber = await _generateLotNumber();
       final updatedSelected = state.selected?.copyWith(lotNumber: lotNumber);
-      
+
       emit(
         state.copyWith(
           selected: updatedSelected,
@@ -418,10 +420,7 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
   ) async {
     try {
       final lotNumber = await _generateLotNumber();
-      final newLot = LotMaster(
-        company: event.companyId,
-        lotNumber: lotNumber,
-      );
+      final newLot = LotMaster(company: event.companyId, lotNumber: lotNumber);
 
       emit(
         state.copyWith(
@@ -459,7 +458,7 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
     } else if (event.item != null) {
       selectedItems.removeWhere((item) => event.item!.id == item.id);
     }
-    
+
     emit(state.copyWith(selectedItems: selectedItems));
   }
 
@@ -604,7 +603,9 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
         state.copyWith(
           items: updatedItems,
           filteredItems: updatedFilteredItems,
-          selected: state.selected?.id == event.item.id ? updatedItem : state.selected,
+          selected: state.selected?.id == event.item.id
+              ? updatedItem
+              : state.selected,
         ),
       );
     } catch (e) {
@@ -628,7 +629,9 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
       }
 
       final itemsWithColors = await _calculateColorsForLots(updatedItems);
-      emit(state.copyWith(items: itemsWithColors, filteredItems: itemsWithColors));
+      emit(
+        state.copyWith(items: itemsWithColors, filteredItems: itemsWithColors),
+      );
     } catch (e) {
       print('Error recalculating all lot status: $e');
     }
@@ -640,12 +643,16 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
   ) async {
     try {
       final updatedItems = await _calculateColorsForLots(state.items);
-      final updatedFilteredItems = await _calculateColorsForLots(state.filteredItems);
-      
-      emit(state.copyWith(
-        items: updatedItems,
-        filteredItems: updatedFilteredItems,
-      ));
+      final updatedFilteredItems = await _calculateColorsForLots(
+        state.filteredItems,
+      );
+
+      emit(
+        state.copyWith(
+          items: updatedItems,
+          filteredItems: updatedFilteredItems,
+        ),
+      );
     } catch (e) {
       print('Error calculating lot colors: $e');
     }
@@ -680,7 +687,7 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
         companyId: authBloc.state.companyId!,
         daysThreshold: event.daysThreshold,
       );
-      
+
       final expiringWithColors = await _calculateColorsForLots(expiringLots);
       emit(state.copyWith(expiringLots: expiringWithColors));
     } catch (e) {
@@ -693,7 +700,9 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
     Emitter<LotMasterState> emit,
   ) async {
     try {
-      final quantitySummary = await repository.getLotQuantitySummaryByItem(event.companyId);
+      final quantitySummary = await repository.getLotQuantitySummaryByItem(
+        event.companyId,
+      );
       emit(state.copyWith(quantitySummary: quantitySummary));
     } catch (e) {
       print('Error getting lot quantity summary: $e');
@@ -781,7 +790,10 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
     return false;
   }
 
-  bool _validatePurchaseOrderDates(PurchaseOrderReceiverModel por, String? lotType) {
+  bool _validatePurchaseOrderDates(
+    PurchaseOrderReceiverModel por,
+    String? lotType,
+  ) {
     if (lotType == null || lotType.toUpperCase() == 'X') {
       return por.dateExpiration != null;
     } else if (lotType.toUpperCase() == 'F') {
@@ -801,10 +813,10 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
   ) async {
     // Update item location quantity
     final totalQty = await repository.getTotalQuantityForLocation(
-      companyId: authBloc.state.companyId!,
-      itemNumber: item.itemNumber!,
-      branch: item.branch!,
-      location: item.location!,
+      authBloc.state.companyId!,
+      item.itemNumber!,
+      item.branch!,
+      item.location!,
     );
 
     await repository.updateItemLocationQuantity(

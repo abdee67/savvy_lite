@@ -994,14 +994,14 @@ class StockItemsEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
 
   void _onRemoveInCreate(RemoveInCreate event, Emitter<ItemEntryState> emit) {
     state.createItems.removeWhere((element) => element.id == event.item.id);
-    repository.delete(event.item.id!, authBloc.state.companyId!);
+    repository.delete(event.item.id, authBloc.state.companyId!);
 
     emit(state.copyWith(createItems: state.createItems));
   }
 
   void _onRemoveInEdit(RemoveInEdit event, Emitter<ItemEntryState> emit) {
     state.editItems.removeWhere((element) => element.id == event.item.id);
-    repository.delete(event.item.id!, authBloc.state.companyId!);
+    repository.delete(event.item.id, authBloc.state.companyId!);
 
     emit(state.copyWith(editItems: state.editItems));
   }

@@ -253,7 +253,8 @@ class ExportTransactions extends ItemTransactionsEvent {
 class LoadLocationsForItem extends ItemTransactionsEvent {
   final int itemNumber;
   final int branchId;
-  const LoadLocationsForItem(this.itemNumber, this.branchId);
+  final int? locationId;
+  const LoadLocationsForItem(this.itemNumber, this.branchId, this.locationId);
 }
 
 class SelectLocation extends ItemTransactionsEvent {
@@ -280,7 +281,12 @@ class SelectLot extends ItemTransactionsEvent {
 class LoadToLocationsForItem extends ItemTransactionsEvent {
   final int itemNumber;
   final int toBranchId;
-  const LoadToLocationsForItem(this.itemNumber, this.toBranchId);
+  final int? locationId;
+  const LoadToLocationsForItem(
+    this.itemNumber,
+    this.toBranchId,
+    this.locationId,
+  );
 }
 
 class SelectToLocation extends ItemTransactionsEvent {
@@ -295,9 +301,10 @@ class LoadItemsForBranch extends ItemTransactionsEvent {
 }
 
 class SelectItem extends ItemTransactionsEvent {
+  final int? locationId;
   final int? itemNumber;
   final int branchId;
-  const SelectItem(this.itemNumber, this.branchId);
+  const SelectItem(this.itemNumber, this.branchId, this.locationId);
 }
 
 // Event to get UoM descriptions

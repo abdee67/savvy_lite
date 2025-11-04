@@ -1,15 +1,21 @@
 // features/stock/lot_master/repositories/lot_master_repository.dart
+import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
+import 'package:sqflite/sqflite.dart';
 
-class LotMasterRepository {
+class LotMasterRepository extends BaseRepository {
+  @override
   final LocalDatabaseService databaseService;
 
   LotMasterRepository({required this.databaseService});
 
   // Get all lot masters for a company
-  Future<List<LotMaster>> getLotMasters(int companyId) async {
-    final db = await databaseService.database;
+  Future<List<LotMaster>> getLotMasters(
+    int companyId, {
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
     final lots = await db.rawQuery(
       '''
       SELECT lm.*,
@@ -35,8 +41,12 @@ class LotMasterRepository {
   }
 
   // Get lot master by ID
-  Future<LotMaster?> getLotMasterById(int id, int companyId) async {
-    final db = await databaseService.database;
+  Future<LotMaster?> getLotMasterById(
+    int id,
+    int companyId, {
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
     final lots = await db.rawQuery(
       '''
       SELECT lm.*,
@@ -54,6 +64,36 @@ class LotMasterRepository {
       WHERE lm.id = ? AND lm.company = ?
     ''',
       [id, companyId],
+    );
+
+    return lots.isNotEmpty ? LotMaster.fromMap(lots.first) : null;
+  }
+
+  //find lot by item, location
+  Future<LotMaster?> getLotMasterByItemAndLocation(
+    int itemId,
+    int locationId,
+    int companyId, {
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
+    final lots = await db.rawQuery(
+      '''
+      SELECT lm.*,
+             it.items_id as item_id,
+             it.item_description,
+             b.description as branch_name,
+             loc.location_description,
+             ud.detail_code as status_code,
+             ud.description_1 as status_description
+      FROM lot_master lm
+      LEFT JOIN items_table it ON lm.item_number = it.id
+      LEFT JOIN branch_table b ON lm.branch = b.id
+      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN udc_details ud ON lm.lot_status = ud.id
+      WHERE lm.item_number = ? AND lm.location = ? AND lm.company = ?
+    ''',
+      [itemId, locationId, companyId],
     );
 
     return lots.isNotEmpty ? LotMaster.fromMap(lots.first) : null;
@@ -144,16 +184,16 @@ class LotMasterRepository {
   }
 
   // Create new lot master
-  Future<int> createLotMaster(LotMaster lot) async {
-    final db = await databaseService.database;
+  Future<int> createLotMaster(LotMaster lot, {Transaction? txn}) async {
+    final db = txn ?? await databaseService.database;
     final lotMap = lot.toMap();
     lotMap.remove('id'); // Remove ID for new insertion
     return await db.insert('lot_master', lotMap);
   }
 
   // Update existing lot master
-  Future<int> updateLotMaster(LotMaster lot) async {
-    final db = await databaseService.database;
+  Future<int> updateLotMaster(LotMaster lot, {Transaction? txn}) async {
+    final db = txn ?? await databaseService.database;
     return await db.update(
       'lot_master',
       lot.toMap(),
@@ -163,8 +203,8 @@ class LotMasterRepository {
   }
 
   // Delete lot master
-  Future<int> deleteLotMaster(int id, int companyId) async {
-    final db = await databaseService.database;
+  Future<int> deleteLotMaster(int id, int companyId, {Transaction? txn}) async {
+    final db = txn ?? await databaseService.database;
     return await db.delete(
       'lot_master',
       where: 'id = ? AND company = ?',
@@ -173,8 +213,12 @@ class LotMasterRepository {
   }
 
   // Batch delete multiple lot masters
-  Future<void> deleteMultipleLotMasters(List<int> ids, int companyId) async {
-    final db = await databaseService.database;
+  Future<void> deleteMultipleLotMasters(
+    List<int> ids,
+    int companyId, {
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
     final batch = db.batch();
 
     for (final id in ids) {
@@ -195,8 +239,9 @@ class LotMasterRepository {
     required int branch,
     required int location,
     required double quantity,
+    Transaction? txn,
   }) async {
-    final db = await databaseService.database;
+    final db = txn ?? await databaseService.database;
 
     // Update item_location table
     await db.update(
@@ -228,19 +273,23 @@ class LotMasterRepository {
   }
 
   // Create item transaction
-  Future<int> createItemTransaction(Map<String, dynamic> transaction) async {
-    final db = await databaseService.database;
+  Future<int> createItemTransaction(
+    Map<String, dynamic> transaction, {
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
     return await db.insert('item_transactions', transaction);
   }
 
   // Get total quantity for item-branch-location
-  Future<double> getTotalQuantityForLocation({
-    required int companyId,
-    required int itemNumber,
-    required int branch,
-    required int location,
+  Future<double> getTotalQuantityForLocation(
+    int companyId,
+    int itemNumber,
+    int branch,
+    int location, {
+    Transaction? txn,
   }) async {
-    final db = await databaseService.database;
+    final db = txn ?? await databaseService.database;
     final result = await db.rawQuery(
       '''
       SELECT SUM(quantity_available) as total_qty 
@@ -257,9 +306,10 @@ class LotMasterRepository {
   Future<int?> getItemBranchUoM(
     int itemNumber,
     int branch,
-    int companyId,
-  ) async {
-    final db = await databaseService.database;
+    int companyId, {
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
     final result = await db.rawQuery(
       '''
       SELECT unit_of_measure FROM items_in_branch 

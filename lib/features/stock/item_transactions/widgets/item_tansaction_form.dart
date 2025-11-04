@@ -63,6 +63,7 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
 
   // Transaction items list
   final List<ItemTransactionModel> _transactionItems = [];
+  UdcDetails? _selectedUnitOfMeasure;
 
   @override
   void initState() {
@@ -197,6 +198,10 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
       _transactionItems.add(
         ItemTransactionModel(
           tempId: DateTime.now().millisecondsSinceEpoch,
+          transactionNumber: _transactionNumber,
+          transactionType: _selectedTransactionType?.id,
+          branch: _selectedFromBranch,
+          remark: _remark,
           company: widget.authBloc.state.companyId,
           dateCreated: DateTime.now(),
           quantityTransaction: 0.0,
@@ -935,7 +940,9 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
           ],
           onItemSelected: (selectedLot) {
             if (selectedLot != null) {
-              setState(() => item.lotNumber = selectedLot.id);
+              setState(() {
+                item.lotNumber = selectedLot.id;
+              });
             }
           },
         );

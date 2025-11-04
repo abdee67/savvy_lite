@@ -85,7 +85,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     context.read<LocationMasterBloc>().add(
       LoadLocationMasters(widget.authBloc.state.companyId!),
     );
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    /*   WidgetsBinding.instance.addPostFrameCallback((_) {
       _debugSystemConstants();
       _debugSystemConstantBloc();
       if (context.read<LotMasterBloc>().state.items.isNotEmpty) {
@@ -93,7 +93,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
           context.read<LotMasterBloc>().state.items.first,
         );
       }
-    });
+    });*/
   }
 
   void _setupAnimations() {

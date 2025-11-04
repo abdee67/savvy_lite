@@ -1,11 +1,11 @@
 class ItemEntryModel {
-  final int id;
+  int id;
   final String? itemsId;
   final String? itemDescription;
   final String? unitOfMeasure;
   final double? unitPrice;
   final String? taxable; // 'Y' or 'N'
-  final String? barcode;
+  String? barcode;
   final int? company;
   final double? marginRate;
   final String? marginType;

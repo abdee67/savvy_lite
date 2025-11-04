@@ -23,10 +23,12 @@ class LoadItemLocationsByBranchAndItem extends ItemLocationsEvent {
   final int companyId;
   final int branchId;
   final int itemId;
+  final int? locationId;
   const LoadItemLocationsByBranchAndItem({
     required this.companyId,
     required this.branchId,
     required this.itemId,
+    this.locationId,
   });
 
   @override

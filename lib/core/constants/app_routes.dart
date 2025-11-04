@@ -82,7 +82,15 @@ class AppRoutes {
   static const String importItemInBranch = '$itemInBranch/import-item';
 
   static const String uomManagement = '$stock/uom-management';
+
+  //item workbench
   static const String itemWorkbench = '$stock/item-workbench';
+  static const String itemWorkbenchSingleCreate =
+      '$itemWorkbench/create-item-workbench';
+  static const String itemWorkbenchBatchUpload =
+      '$itemWorkbench/batch-upload-item-workbench';
+  static const String itemWorkbenchDelete =
+      '$itemWorkbench/delete-item-workbench';
 
   static const String itemUomConversions = '$stock/item-uom-conversions';
   static const String itemUomConversionsCreate =
@@ -110,7 +118,7 @@ class AppRoutes {
   static const String lotColoringEdit = '$lotColorings/lot-coloring-edit';
   static const String lotColoringDelete = '$lotColorings/lot-coloring-delete';
 
-    //item Transactions Sub-Routes
+  //item Transactions Sub-Routes
   static const String inventoryTransaction = '$stock/inventory-transaction';
   static const String inventoryTransactionCreate =
       '$inventoryTransaction/inventory-transaction-create';
@@ -118,11 +126,10 @@ class AppRoutes {
       '$inventoryTransaction/inventory-transaction-edit';
   static const String inventoryTransactionDelete =
       '$inventoryTransaction/inventory-transaction-delete';
+
   static const String itemBranchEntry = '$stock/item-branch-entry';
   static const String barcodeFunction = '$stock/barcode-function';
   static const String exportFunction = '$stock/export-function';
-
-  
 
   // Branch Sub-Routes
   static const String branchManagement = '$branch/branch-management';

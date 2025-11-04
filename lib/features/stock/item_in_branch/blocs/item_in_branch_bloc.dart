@@ -460,7 +460,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
       }
 
       // Update existing
-      final oldItem = await repository.findById(itemToSave.id);
+      final oldItem = await repository.findById(itemToSave.id, companyId);
       final oldQty = oldItem?.quantityAvailable ?? 0.0;
       final newQty = itemToSave.quantityAvailable ?? 0.0;
 

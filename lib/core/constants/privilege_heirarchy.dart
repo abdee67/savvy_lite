@@ -70,7 +70,12 @@ class PrivilegeHierarchy {
 
     // UOM Management (child of Stock Dashboard)
     AppRoutes.uomManagement: AppRoutes.stockDashboard,
+
+    // Item Workbench (child of Stock Dashboard)
     AppRoutes.itemWorkbench: AppRoutes.stockDashboard,
+    AppRoutes.itemWorkbenchSingleCreate: AppRoutes.itemWorkbench,
+    AppRoutes.itemWorkbenchBatchUpload: AppRoutes.itemWorkbench,
+    AppRoutes.itemWorkbenchDelete: AppRoutes.itemWorkbench,
 
     // Item UoM Conversions (child of Stock Dashboard)
     AppRoutes.itemUomConversions: AppRoutes.stockDashboard,
@@ -96,12 +101,11 @@ class PrivilegeHierarchy {
     AppRoutes.lotColoringEdit: AppRoutes.lotColorings,
     AppRoutes.lotColoringDelete: AppRoutes.lotColorings,
 
-     //item Transactions Sub-Routes
+    //item Transactions Sub-Routes
     AppRoutes.inventoryTransaction: AppRoutes.stockDashboard,
     AppRoutes.inventoryTransactionCreate: AppRoutes.inventoryTransaction,
     AppRoutes.inventoryTransactionEdit: AppRoutes.inventoryTransaction,
     AppRoutes.inventoryTransactionDelete: AppRoutes.inventoryTransaction,
-
 
     AppRoutes.itemBranchEntry: AppRoutes.stockDashboard,
     AppRoutes.barcodeFunction: AppRoutes.stockDashboard,

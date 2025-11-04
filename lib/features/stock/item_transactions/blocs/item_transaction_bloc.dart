@@ -627,6 +627,7 @@ class ItemTransactionsBloc
     try {
       final locations = await repository.itemLocationsRepository
           .getItemLocationsByBranchAndItem(
+            locationId: event.locationId!,
             branchId: event.branchId,
             itemId: event.itemNumber,
             companyId: authBloc.state.companyId!,
@@ -734,6 +735,7 @@ class ItemTransactionsBloc
       final locations = await repository.itemLocationsRepository
           .getItemLocationsByBranchAndItem(
             itemId: event.itemNumber,
+            locationId: event.locationId!,
             branchId: event.toBranchId,
             companyId: authBloc.state.companyId!,
           );
@@ -824,7 +826,13 @@ class ItemTransactionsBloc
       ),
     );
     if (event.itemNumber != null) {
-      add(LoadLocationsForItem(event.itemNumber!, event.branchId));
+      add(
+        LoadLocationsForItem(
+          event.itemNumber!,
+          event.branchId,
+          event.locationId,
+        ),
+      );
     }
   }
 

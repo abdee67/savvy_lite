@@ -1,4 +1,3 @@
-
 import 'dart:async';
 
 import 'package:bloc/bloc.dart';
@@ -8,15 +7,14 @@ import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_s
 import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
 import 'package:savvy_stock/features/stock/item_locations/repo/item_location_repo.dart';
 
-class StockItemLocationBloc extends Bloc<ItemLocationsEvent, ItemLocationsState> {
+class StockItemLocationBloc
+    extends Bloc<ItemLocationsEvent, ItemLocationsState> {
   final ItemLocationsRepository repository;
   final AuthBloc authBloc;
   StreamSubscription? _authSubscription;
 
-  StockItemLocationBloc({
-    required this.repository,
-    required this.authBloc,
-  }) : super(const ItemLocationsState()) {
+  StockItemLocationBloc({required this.repository, required this.authBloc})
+    : super(const ItemLocationsState()) {
     // Listen to auth state changes
     _authSubscription = authBloc.stream.listen((authState) {
       if (authState.isAuthenticated && authState.companyId != null) {
@@ -75,6 +73,7 @@ class StockItemLocationBloc extends Bloc<ItemLocationsEvent, ItemLocationsState>
     emit(state.copyWith(status: ItemLocationsStatus.loading));
     try {
       final items = await repository.getItemLocationsByBranchAndItem(
+        locationId: event.locationId!,
         companyId: event.companyId,
         branchId: event.branchId,
         itemId: event.itemId,
@@ -111,10 +110,10 @@ class StockItemLocationBloc extends Bloc<ItemLocationsEvent, ItemLocationsState>
       // Set company ID for the new item
       final itemToCreate = event.item.copyWith(company: companyId);
       await repository.createItemLocation(itemToCreate);
-      
+
       // Reload the list
       add(LoadItemLocations(companyId));
-      
+
       emit(
         state.copyWith(
           status: ItemLocationsStatus.success,
@@ -144,7 +143,7 @@ class StockItemLocationBloc extends Bloc<ItemLocationsEvent, ItemLocationsState>
 
       await repository.updateItemLocation(event.item);
       add(LoadItemLocations(companyId));
-      
+
       emit(
         state.copyWith(
           status: ItemLocationsStatus.success,
@@ -173,7 +172,7 @@ class StockItemLocationBloc extends Bloc<ItemLocationsEvent, ItemLocationsState>
       }
 
       await repository.deleteItemLocation(event.itemId, companyId);
-      
+
       // Update local state immediately
       final updatedItems = List<ItemLocation>.from(state.items)
         ..removeWhere((p) => p.id == event.itemId);
@@ -186,7 +185,7 @@ class StockItemLocationBloc extends Bloc<ItemLocationsEvent, ItemLocationsState>
           filteredItems: updatedFilteredItems,
           status: ItemLocationsStatus.success,
           message: 'Item location deleted successfully',
-          recentlyDeleted: event.deletedItem != null 
+          recentlyDeleted: event.deletedItem != null
               ? [...state.recentlyDeleted, event.deletedItem!]
               : state.recentlyDeleted,
           recentlyDeletedIndexes: event.deletedIndex != null
@@ -243,7 +242,7 @@ class StockItemLocationBloc extends Bloc<ItemLocationsEvent, ItemLocationsState>
 
     final filtered = state.items.where((item) {
       return item.location.toString().toLowerCase().contains(query) ||
-          item.itemNumber.toString().toLowerCase().contains(query) ;
+          item.itemNumber.toString().toLowerCase().contains(query);
     }).toList();
 
     emit(
@@ -298,7 +297,7 @@ class StockItemLocationBloc extends Bloc<ItemLocationsEvent, ItemLocationsState>
       }
 
       await repository.deleteItemLocations(event.selectedItems, companyId);
-      
+
       // Update local state
       final updatedItems = state.items
           .where((e) => !event.selectedItems.contains(e.id))
@@ -313,7 +312,8 @@ class StockItemLocationBloc extends Bloc<ItemLocationsEvent, ItemLocationsState>
           filteredItems: updatedFiltered,
           selectedItems: [],
           status: ItemLocationsStatus.success,
-          message: '${event.selectedItems.length} item locations deleted successfully',
+          message:
+              '${event.selectedItems.length} item locations deleted successfully',
           recentlyDeleted: [...state.recentlyDeleted, ...event.deletedItems],
           recentlyDeletedIndexes: [
             ...state.recentlyDeletedIndexes,

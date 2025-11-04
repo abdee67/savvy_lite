@@ -8,9 +8,9 @@ class LotMaster {
   final double? unitPrice;
   double? quantityAvailable;
   final int? company;
-  final DateTime? dateEffective;
-  final DateTime? dateExpiration;
-  final DateTime? dateReceived;
+  DateTime? dateEffective;
+  DateTime? dateExpiration;
+  DateTime? dateReceived;
   final int? branch;
   final int? location;
   final int? lotStatus;
