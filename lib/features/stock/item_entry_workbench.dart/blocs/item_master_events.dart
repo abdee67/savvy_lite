@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/features/stock/item_entry_workbench.dart/models/item_master_model.dart';
 
@@ -126,6 +128,55 @@ class PrepareDataMigrationImport extends ItemMasterEvent {
 
   const PrepareDataMigrationImport(this.theClass, this.theModule);
 }
+// Add these events to your existing item_master_events.dart
+
+// Excel Upload Events
+class PrepareExcelTemplate extends ItemMasterEvent {
+  final String className;
+  final String moduleName;
+
+  const PrepareExcelTemplate(this.className, this.moduleName);
+
+  @override
+  List<Object?> get props => [className, moduleName];
+}
+
+class ProcessExcelFile extends ItemMasterEvent {
+  final File excelFile;
+  final List<String> columns;
+  final Map<String, String> columnLabels;
+
+  const ProcessExcelFile({
+    required this.excelFile,
+    required this.columns,
+    required this.columnLabels,
+  });
+
+  @override
+  List<Object?> get props => [excelFile, columns, columnLabels];
+}
+
+class UpdateMigrationColumns extends ItemMasterEvent {
+  final List<String> columns;
+  final Map<String, String> columnLabels;
+
+  const UpdateMigrationColumns({
+    required this.columns,
+    required this.columnLabels,
+  });
+
+  @override
+  List<Object?> get props => [columns, columnLabels];
+}
+
+class SetColumnVisibility extends ItemMasterEvent {
+  final List<bool> columnVisibility;
+
+  const SetColumnVisibility(this.columnVisibility);
+
+  @override
+  List<Object?> get props => [columnVisibility];
+}
 
 class FilterItemEntry extends ItemMasterEvent {
   const FilterItemEntry();
@@ -228,14 +279,4 @@ class CheckDuplicate extends ItemMasterEvent {
   final ItemMaster item;
 
   const CheckDuplicate(this.item);
-}
-
-class UpdateMigrationColumns extends ItemMasterEvent {
-  final List<String> columns;
-  final Map<String, String> columnLabels;
-
-  const UpdateMigrationColumns({
-    required this.columns,
-    required this.columnLabels,
-  });
 }

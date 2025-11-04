@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:bloc/bloc.dart';
+import 'package:open_file/open_file.dart';
 import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/next_number/bloc/next_number_bloc.dart';
@@ -8,6 +9,8 @@ import 'package:savvy_stock/features/stock/item_entry_workbench.dart/blocs/item_
 import 'package:savvy_stock/features/stock/item_entry_workbench.dart/blocs/item_master_state.dart';
 import 'package:savvy_stock/features/stock/item_entry_workbench.dart/models/item_master_model.dart';
 import 'package:savvy_stock/features/stock/item_entry_workbench.dart/repo/item_master_repo.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench.dart/repo/migration_service.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench.dart/services/excel_service.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_bloc.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_bloc.dart';
@@ -19,6 +22,7 @@ import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 
 class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
   final ItemMasterRepository repository;
+  final MigrationService migrationService;
   final AuthBloc authBloc;
   final SystemConstantBloc systemConstantBloc;
   final StockItemsEntryBloc itemsEntryBloc;
@@ -34,6 +38,7 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
 
   ItemMasterBloc({
     required this.repository,
+    required this.migrationService,
     required this.authBloc,
     required this.systemConstantBloc,
     required this.itemsEntryBloc,
@@ -82,6 +87,10 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
 
     // Event handlers - Data migration operations
     on<ApplyMigration>(_onApplyMigration);
+    on<PrepareExcelTemplate>(_onPrepareExcelTemplate);
+    on<ProcessExcelFile>(_onProcessExcelFile);
+    on<SetColumnVisibility>(_onSetColumnVisibility);
+
     on<DataMigrationStock>(_onDataMigrationStock);
     on<PrepareDataMigrationImport>(_onPrepareDataMigrationImport);
     on<FilterItemEntry>(_onFilterItemEntry);
@@ -647,24 +656,225 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
     emit(state.copyWith(status: ItemMasterStatus.migrating));
 
     try {
-      // This would integrate with other BLoCs to perform the complex migration
-      // For now, we'll just save the item
-      await repository.create(event.item);
+      final result = await migrationService.applyMigration(event.item);
+
+      if (result.success) {
+        // Refresh data after successful migration
+        add(LoadItemMasters(authBloc.state.companyId));
+
+        emit(
+          state.copyWith(
+            status: ItemMasterStatus.success,
+            message: result.message,
+          ),
+        );
+      } else {
+        emit(
+          state.copyWith(
+            status: ItemMasterStatus.failure,
+            message: result.message,
+          ),
+        );
+      }
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemMasterStatus.failure,
+          message: 'Migration failed: $e',
+        ),
+      );
+    }
+  }
+
+  // Add these to your ItemMasterBloc
+
+  // Event handlers for Excel operations
+  Future<void> _onPrepareExcelTemplate(
+    PrepareExcelTemplate event,
+    Emitter<ItemMasterState> emit,
+  ) async {
+    emit(state.copyWith(status: ItemMasterStatus.generatingTemplate));
+
+    try {
+      // Replicate Java columnsForDataMigration logic
+      final (columns, columnLabels) = await _prepareMigrationColumns();
+      final systemConstant = systemConstantBloc.state.selected!;
+      final lotType = await migrationService.udcRepository.getUdcDetailById(
+        systemConstant.lotType!,
+      );
+
+      // Generate Excel template
+      final excelService = ExcelService();
+      final templateFile = await excelService.generateTemplate(
+        columns: columns,
+        columnLabels: columnLabels,
+        locationLevel:
+            systemConstantBloc.state.selected?.locationCategoryLevel ?? 1,
+        lotType: lotType?.detailCode ?? 'X',
+      );
 
       emit(
         state.copyWith(
           status: ItemMasterStatus.success,
-          message: 'Migration applied successfully',
+          migrationColumns: columns,
+          migrationColumnLabels: columnLabels,
+          message: 'Template generated successfully',
+        ),
+      );
+
+      // Open the file for download
+      await OpenFile.open(templateFile.path);
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemMasterStatus.failure,
+          message: 'Failed to generate template: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onProcessExcelFile(
+    ProcessExcelFile event,
+    Emitter<ItemMasterState> emit,
+  ) async {
+    emit(state.copyWith(status: ItemMasterStatus.processingFile));
+
+    try {
+      final excelService = ExcelService();
+      final items = await excelService.parseExcelFile(
+        file: event.excelFile,
+        columns: event.columns,
+        columnLabels: event.columnLabels,
+      );
+
+      if (items.isEmpty) {
+        emit(
+          state.copyWith(
+            status: ItemMasterStatus.failure,
+            message: 'No valid data found in the Excel file',
+          ),
+        );
+        return;
+      }
+
+      // Add items to createItems for review before migration
+      final createItems = List<ItemMaster>.from(state.createItems)
+        ..addAll(items);
+
+      emit(
+        state.copyWith(
+          status: ItemMasterStatus.success,
+          createItems: createItems,
+          uploadedItems: items,
+          currentExcelFile: event.excelFile,
+          showMigrationPanel: true,
+          message: '${items.length} items loaded from Excel file',
         ),
       );
     } catch (e) {
       emit(
         state.copyWith(
           status: ItemMasterStatus.failure,
-          message: 'Failed to apply migration: $e',
+          message: 'Failed to process Excel file: $e',
         ),
       );
     }
+  }
+
+  Future<void> _onUpdateMigrationColumns(
+    UpdateMigrationColumns event,
+    Emitter<ItemMasterState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        migrationColumns: event.columns,
+        migrationColumnLabels: event.columnLabels,
+      ),
+    );
+  }
+
+  Future<void> _onSetColumnVisibility(
+    SetColumnVisibility event,
+    Emitter<ItemMasterState> emit,
+  ) async {
+    emit(state.copyWith(columnVisibility: event.columnVisibility));
+  }
+
+  /// Helper method to replicate Java columnsForDataMigration logic
+  Future<(List<String>, Map<String, String>)> _prepareMigrationColumns() async {
+    final systemConstant = systemConstantBloc.state.selected;
+    final level = systemConstant?.locationCategoryLevel ?? 1;
+    final lotType = await migrationService.udcRepository.getUdcDetailById(
+      systemConstant?.lotType,
+    );
+
+    // Replicate Java date field logic
+    final dateField = "dateExpired";
+    final dateLabel =
+        (systemConstant?.lotType == null || lotType?.detailCode == 'X')
+        ? "Expiration Date"
+        : (lotType?.detailCode == 'F'
+              ? "Effective Date"
+              : (lotType?.detailCode == 'R' ? "Received Date" : ""));
+
+    // Calculate column size based on level - replicates Java logic
+    final columnSize = level == 1
+        ? 10
+        : (level == 2
+              ? 11
+              : (level == 3
+                    ? 12
+                    : (level == 4
+                          ? 13
+                          : (level == 5
+                                ? 14
+                                : (level == 6
+                                      ? 15
+                                      : (level == 7
+                                            ? 16
+                                            : (level == 8
+                                                  ? 17
+                                                  : (level == 9
+                                                        ? 18
+                                                        : 19))))))));
+
+    // Base columns - replicates Java baseColumns logic
+    final baseColumns = List<String>.filled(columnSize, '');
+    baseColumns[0] = "itemDescription";
+    baseColumns[1] = "branch";
+    baseColumns[2] = "defualtUom";
+    baseColumns[3] = "taxableFlag";
+    baseColumns[4] = "unitPrice";
+    baseColumns[5] = "unitCost";
+    baseColumns[6] = "quantity";
+    baseColumns[7] = dateField;
+    baseColumns[8] = "batchNumber";
+
+    // Add location codes dynamically
+    for (int i = 9; i < columnSize; i++) {
+      baseColumns[i] = "locationCode${i - 8}";
+    }
+
+    // Create column labels map - replicates Java columns4LabelMap
+    final columnLabels = <String, String>{};
+    columnLabels["itemDescription"] = "Item Description";
+    columnLabels["branch"] = "Store";
+    columnLabels["defualtUom"] = "UoM";
+    columnLabels["taxableFlag"] = "Taxable (Y/N)";
+    columnLabels["unitPrice"] = "Unit Price";
+    columnLabels["unitCost"] = "Unit Cost";
+    columnLabels["quantity"] = "Quantity";
+    columnLabels[dateField] = dateLabel;
+    columnLabels["batchNumber"] = "Batch Number";
+
+    // Add location code labels
+    for (int i = 9; i < columnSize; i++) {
+      final key = "locationCode${i - 8}";
+      columnLabels[key] = "Location ${i - 8}";
+    }
+
+    return (baseColumns, columnLabels);
   }
 
   Future<void> _onDataMigrationStock(
@@ -942,18 +1152,6 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
         ),
       );
     }
-  }
-
-  void _onUpdateMigrationColumns(
-    UpdateMigrationColumns event,
-    Emitter<ItemMasterState> emit,
-  ) {
-    emit(
-      state.copyWith(
-        columns4: event.columns,
-        columns4LabelMap: event.columnLabels,
-      ),
-    );
   }
 
   // ========== HELPER METHODS ==========

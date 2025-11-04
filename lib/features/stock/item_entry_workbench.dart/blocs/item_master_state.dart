@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/stock/item_entry_workbench.dart/models/item_master_model.dart';
 
@@ -15,6 +17,8 @@ enum ItemMasterStatus {
   duplication,
   editing,
   migrating,
+  generatingTemplate,
+  processingFile,
 }
 
 class ItemMasterState extends Equatable {
@@ -44,6 +48,11 @@ class ItemMasterState extends Equatable {
   // Data migration
   final List<String> columns4;
   final Map<String, String> columns4LabelMap;
+  final List<String> migrationColumns;
+  final Map<String, String> migrationColumnLabels;
+  final List<bool> columnVisibility;
+  final List<ItemMaster> uploadedItems;
+  final File? currentExcelFile;
   final bool isDuplicate;
 
   // UI state
@@ -68,6 +77,11 @@ class ItemMasterState extends Equatable {
     this.first = 0,
     this.columns4 = const [],
     this.columns4LabelMap = const {},
+    this.migrationColumns = const [],
+    this.migrationColumnLabels = const {},
+    this.columnVisibility = const [],
+    this.uploadedItems = const [],
+    this.currentExcelFile,
     this.isDuplicate = false,
     this.showMigrationPanel = false,
     this.showCreatePanel = false,
@@ -127,6 +141,11 @@ class ItemMasterState extends Equatable {
     bool? showMigrationPanel,
     bool? showCreatePanel,
     bool? showEditPanel,
+    List<String>? migrationColumns,
+    Map<String, String>? migrationColumnLabels,
+    List<bool>? columnVisibility,
+    List<ItemMaster>? uploadedItems,
+    File? currentExcelFile,
   }) {
     return ItemMasterState(
       status: status ?? this.status,
@@ -149,6 +168,12 @@ class ItemMasterState extends Equatable {
       showMigrationPanel: showMigrationPanel ?? this.showMigrationPanel,
       showCreatePanel: showCreatePanel ?? this.showCreatePanel,
       showEditPanel: showEditPanel ?? this.showEditPanel,
+      migrationColumns: migrationColumns ?? this.migrationColumns,
+      migrationColumnLabels:
+          migrationColumnLabels ?? this.migrationColumnLabels,
+      columnVisibility: columnVisibility ?? this.columnVisibility,
+      uploadedItems: uploadedItems ?? this.uploadedItems,
+      currentExcelFile: currentExcelFile ?? this.currentExcelFile,
     );
   }
 
@@ -174,5 +199,10 @@ class ItemMasterState extends Equatable {
     showMigrationPanel,
     showCreatePanel,
     showEditPanel,
+    migrationColumns,
+    migrationColumnLabels,
+    columnVisibility,
+    uploadedItems,
+    currentExcelFile,
   ];
 }

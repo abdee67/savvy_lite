@@ -41,6 +41,7 @@ class ItemMaster {
   bool? taxableBoolean;
 
   // Additional fields from joins
+  String? branchDescription;
   String? companyCategoryDescription;
   String? defualtUomDescription;
   String? categoryCode01Description;
@@ -96,6 +97,7 @@ class ItemMaster {
     this.taxableBoolean,
 
     // Join descriptions
+    this.branchDescription,
     this.companyCategoryDescription,
     this.defualtUomDescription,
     this.categoryCode01Description,
@@ -135,6 +137,7 @@ class ItemMaster {
       taxableBoolean: map['taxable_flag'] == 'Y',
 
       // Join descriptions
+      branchDescription: map['branch_description'],
       companyCategoryDescription: map['company_category_description'],
       defualtUomDescription: map['defualt_uom_description'],
       categoryCode01Description: map['category_code_01_description'],
@@ -168,8 +171,6 @@ class ItemMaster {
       'created_by_flag': createdByFlag,
       'defualt_uom': defualtUom,
       'taxable_flag': taxableFlag,
-      'temp_id': tempId,
-      'valid_cell': validCell == true ? 1 : 0,
     };
   }
 
@@ -215,6 +216,7 @@ class ItemMaster {
     bool? taxableBoolean,
 
     // Join descriptions
+    String? branchDescription,
     String? companyCategoryDescription,
     String? defualtUomDescription,
     String? categoryCode01Description,
@@ -270,6 +272,7 @@ class ItemMaster {
       taxableBoolean: taxableBoolean ?? this.taxableBoolean,
 
       // Join descriptions
+      branchDescription: branchDescription ?? this.branchDescription,
       companyCategoryDescription:
           companyCategoryDescription ?? this.companyCategoryDescription,
       defualtUomDescription:
