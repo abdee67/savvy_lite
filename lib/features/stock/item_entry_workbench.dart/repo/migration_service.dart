@@ -1,7 +1,6 @@
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
-import 'package:savvy_stock/features/next_number/bloc/next_number_bloc.dart';
 import 'package:savvy_stock/features/next_number/repo/next_number_repo.dart';
 import 'package:savvy_stock/features/stock/item_cost/models/item_cost_model.dart';
 import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
@@ -17,7 +16,7 @@ import 'package:savvy_stock/features/stock/location_entry/models/location_master
 import 'package:savvy_stock/features/stock/location_entry/repo/location_master_repository.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/repo/lot_master_repo.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:sqflite/sqflite.dart';
 
 class MigrationService {
@@ -247,10 +246,10 @@ class MigrationService {
       if (companyId == null) throw Exception('Company ID not available');
 
       final existingItemCost = await itemCostRepository
-          .findByItemNumberAndCompany(itemsTable.id!, companyId, txn: txn);
+          .findByItemNumberAndCompany(itemsTable.id, companyId, txn: txn);
 
       final itemCost = ItemCost(
-        itemNumber: itemsTable.id!,
+        itemNumber: itemsTable.id,
         amountUnitCost: item.unitCost ?? 0.0,
         company: companyId,
         dateUpdated: DateTime.now().millisecondsSinceEpoch,
@@ -418,7 +417,6 @@ class MigrationService {
           .getItemLocationsByBranchAndItem(
             branchId: item.branch!,
             itemId: itemNumber,
-            locationId: locationId,
             companyId: companyId,
             txn: txn,
           );
@@ -570,7 +568,7 @@ class MigrationService {
     ];
 
     final nonEmptyCodes = codes
-        .where((code) => code != null && code!.isNotEmpty)
+        .where((code) => code != null && code.isNotEmpty)
         .toList();
     return nonEmptyCodes.isNotEmpty
         ? nonEmptyCodes.join('-')

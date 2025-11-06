@@ -1,7 +1,7 @@
 // features/stock/lot_master/blocs/lot_master_bloc.dart
 import 'dart:async';
 import 'package:bloc/bloc.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/next_number/bloc/next_number_bloc.dart';

@@ -11,7 +11,10 @@ class NextNumberRepository extends BaseRepository {
   NextNumberRepository({required this.databaseService});
 
   // Get all next numbers for a company
-  Future<List<NextNumberModel>> getNextNumbers(int companyId, {Transaction? txn}) async {
+  Future<List<NextNumberModel>> getNextNumbers(
+    int companyId, {
+    Transaction? txn,
+  }) async {
     final db = txn ?? await databaseService.database;
     final nextNumbers = await db.rawQuery(
       '''
@@ -25,18 +28,28 @@ class NextNumberRepository extends BaseRepository {
   }
 
   // Get next number by ID
-  Future<NextNumberModel?> getNextNumberById(int id, int companyId, {Transaction? txn}) async {
+  Future<NextNumberModel?> getNextNumberById(
+    int id,
+    int companyId, {
+    Transaction? txn,
+  }) async {
     final db = txn ?? await databaseService.database;
     final nextNumbers = await db.query(
       'next_number',
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
-    return nextNumbers.isNotEmpty ? NextNumberModel.fromMap(nextNumbers.first) : null;
+    return nextNumbers.isNotEmpty
+        ? NextNumberModel.fromMap(nextNumbers.first)
+        : null;
   }
 
   // Get next number by code
-  Future<NextNumberModel?> getNextNumberByCode(String code, int companyId, {Transaction? txn}) async {
+  Future<NextNumberModel?> getNextNumberByCode(
+    String code,
+    int companyId, {
+    Transaction? txn,
+  }) async {
     final db = txn ?? await databaseService.database;
     final nextNumbers = await db.rawQuery(
       '''
@@ -45,7 +58,9 @@ class NextNumberRepository extends BaseRepository {
       ''',
       [companyId, code],
     );
-    return nextNumbers.isNotEmpty ? NextNumberModel.fromMap(nextNumbers.first) : null;
+    return nextNumbers.isNotEmpty
+        ? NextNumberModel.fromMap(nextNumbers.first)
+        : null;
   }
 
   // Create new next number
@@ -68,7 +83,11 @@ class NextNumberRepository extends BaseRepository {
   }
 
   // Delete next number
-  Future<int> deleteNextNumber(int id, int companyId, {Transaction? txn}) async {
+  Future<int> deleteNextNumber(
+    int id,
+    int companyId, {
+    Transaction? txn,
+  }) async {
     final db = txn ?? await databaseService.database;
     return await db.delete(
       'next_number',
@@ -78,7 +97,11 @@ class NextNumberRepository extends BaseRepository {
   }
 
   // Generate next number for a code
-  Future<int> generateNextNumber(String code, int companyId, {Transaction? txn}) async {
+  Future<int> generateNextNumber(
+    String code,
+    int companyId, {
+    Transaction? txn,
+  }) async {
     final db = txn ?? await databaseService.database;
 
     // Find the next number record for this code and company
@@ -110,7 +133,7 @@ class NextNumberRepository extends BaseRepository {
       // Record found, get current number and increment
       recordToUpdate = NextNumberModel.fromMap(nextNumberRecords.first);
       nextNumber = recordToUpdate.nextNumber!;
-      
+
       if (recordToUpdate.nextNumber == null) {
         nextNumber = 1;
         recordToUpdate = recordToUpdate.copyWith(nextNumber: 2);
@@ -132,31 +155,38 @@ class NextNumberRepository extends BaseRepository {
   }
 
   // Generate formatted number (like "LM000001")
-  Future<String> generateFormattedNumber(String code, int companyId, {Transaction? txn}) async {
+  Future<String> generateFormattedNumber(
+    String code,
+    int companyId, {
+    Transaction? txn,
+  }) async {
     final number = await generateNextNumber(code, companyId, txn: txn);
     return _formatNumber(code, number);
   }
 
   // Get default next numbers (company IS NULL)
-  Future<List<NextNumberModel>> getDefaultNextNumbers({Transaction? txn}) async {
+  Future<List<NextNumberModel>> getDefaultNextNumbers({
+    Transaction? txn,
+  }) async {
     final db = txn ?? await databaseService.database;
-    final defaultNextNumbers = await db.rawQuery(
-      '''
+    final defaultNextNumbers = await db.rawQuery('''
       SELECT * FROM next_number 
       WHERE company IS NULL
       ORDER BY next_number_code
-      '''
-    );
+      ''');
     return defaultNextNumbers.map((p) => NextNumberModel.fromMap(p)).toList();
   }
 
   // Copy default next numbers to a company
-  Future<void> copyDefaultNextNumbersToCompany(int companyId, {Transaction? txn}) async {
+  Future<void> copyDefaultNextNumbersToCompany(
+    int companyId, {
+    Transaction? txn,
+  }) async {
     final db = txn ?? await databaseService.database;
     final defaultNumbers = await getDefaultNextNumbers(txn: txn);
-    
+
     final batch = db.batch();
-    
+
     for (final defaultNumber in defaultNumbers) {
       final companyNumber = defaultNumber.copyWith(
         id: null,
@@ -164,18 +194,23 @@ class NextNumberRepository extends BaseRepository {
       );
       batch.insert('next_number', companyNumber.toMap());
     }
-    
+
     await batch.commit();
   }
 
   // Check if code already exists
-  Future<bool> checkCodeExists(String code, int companyId, {int? excludeId, Transaction? txn}) async {
+  Future<bool> checkCodeExists(
+    String code,
+    int companyId, {
+    int? excludeId,
+    Transaction? txn,
+  }) async {
     final db = txn ?? await databaseService.database;
-    
-    final whereClause = excludeId != null 
+
+    final whereClause = excludeId != null
         ? 'company = ? AND next_number_code = ? AND id != ?'
         : 'company = ? AND next_number_code = ?';
-    
+
     final whereArgs = excludeId != null
         ? [companyId, code, excludeId]
         : [companyId, code];
@@ -190,15 +225,19 @@ class NextNumberRepository extends BaseRepository {
   }
 
   // Get next number summary
-  Future<Map<String, int>> getNextNumberSummary(int companyId, {Transaction? txn}) async {
+  Future<Map<String, int>> getNextNumberSummary(
+    int companyId, {
+    Transaction? txn,
+  }) async {
     final db = txn ?? await databaseService.database;
     final result = await db.rawQuery(
       '''
       SELECT next_number_code, next_number 
       FROM next_number 
       WHERE company = ?
-      '''
-    , [companyId]);
+      ''',
+      [companyId],
+    );
 
     final summary = <String, int>{};
     for (final row in result) {
@@ -253,14 +292,18 @@ class NextNumberRepository extends BaseRepository {
       case 'AD':
         return 'AD${number.toString().padLeft(6, '0')}';
       default:
-        return '${code}${number.toString().padLeft(6, '0')}';
+        return '$code${number.toString().padLeft(6, '0')}';
     }
   }
 
   // Reset next number for a code
-  Future<void> resetNextNumber(String code, int startFrom, int companyId) async {
+  Future<void> resetNextNumber(
+    String code,
+    int startFrom,
+    int companyId,
+  ) async {
     final db = await databaseService.database;
-    
+
     await db.update(
       'next_number',
       {'next_number': startFrom},
@@ -273,13 +316,13 @@ class NextNumberRepository extends BaseRepository {
   Future<void> batchInsertNextNumbers(List<NextNumberModel> items) async {
     final db = await databaseService.database;
     final batch = db.batch();
-    
+
     for (final item in items) {
       final itemMap = item.toMap();
       itemMap.remove('id');
       batch.insert('next_number', itemMap);
     }
-    
+
     await batch.commit();
   }
 
@@ -287,7 +330,7 @@ class NextNumberRepository extends BaseRepository {
   Future<void> batchUpdateNextNumbers(List<NextNumberModel> items) async {
     final db = await databaseService.database;
     final batch = db.batch();
-    
+
     for (final item in items) {
       batch.update(
         'next_number',
@@ -296,7 +339,7 @@ class NextNumberRepository extends BaseRepository {
         whereArgs: [item.id, item.company],
       );
     }
-    
+
     await batch.commit();
   }
 
@@ -304,7 +347,7 @@ class NextNumberRepository extends BaseRepository {
   Future<void> batchDeleteNextNumbers(List<int> ids, int companyId) async {
     final db = await databaseService.database;
     final batch = db.batch();
-    
+
     for (final id in ids) {
       batch.delete(
         'next_number',
@@ -312,7 +355,7 @@ class NextNumberRepository extends BaseRepository {
         whereArgs: [id, companyId],
       );
     }
-    
+
     await batch.commit();
   }
 }

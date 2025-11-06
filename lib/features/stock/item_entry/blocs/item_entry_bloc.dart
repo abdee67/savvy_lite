@@ -2,7 +2,7 @@
 
 import 'dart:async';
 import 'package:bloc/bloc.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_state.dart';

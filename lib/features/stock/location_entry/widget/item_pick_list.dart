@@ -421,31 +421,11 @@ class _ItemsPickListState extends State<ItemsPickList> {
           ),
         ),
         title: Text(
-          description,
+          item.itemRef!.itemDescription!,
           style: TextStyle(
             fontWeight: FontWeight.w600,
             color: isSelected ? colors.primary : colors.onSurface,
           ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Item #$itemNumber',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: isSelected
-                    ? colors.primary.withOpacity(0.8)
-                    : colors.onSurface.withOpacity(0.6),
-              ),
-            ),
-            if (itemCode != null)
-              Text(
-                'Code: $itemCode',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colors.onSurface.withOpacity(0.5),
-                ),
-              ),
-          ],
         ),
         trailing: Icon(
           isSelected ? Icons.remove_circle : Icons.add_circle,

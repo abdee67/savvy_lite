@@ -85,7 +85,8 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
       _qunatityAvailableController.text = '0';
       _unitPriceController.text = item.unitPrice?.toString() ?? '';
       _marginRateController.text = item.marginRate?.toString() ?? '';
-      _marginRateController.text = item.marginRate?.toString() ?? '';
+      // _selectedMarginType = item.marginType;
+      _selectedUom = int.tryParse(item.unitOfMeasure!);
     }
     //for empty(may be for creating new item)
     else {

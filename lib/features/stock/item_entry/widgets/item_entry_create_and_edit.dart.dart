@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_state.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
 import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -92,23 +92,6 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
         : item.taxable == 'N'
         ? 'NO'
         : null;
-  }
-
-  // Handle barcode scanning
-  void _scanBarcode() async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => StockItemQRScanner(
-          barcodeController: _barcodeController,
-          onBarcodeScanned: (barcode) {
-            setState(() {
-              _barcodeController.text = barcode;
-            });
-          },
-        ),
-      ),
-    );
   }
 
   // Helper method for safe number parsing
@@ -503,68 +486,6 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
               prefixIcon: const Icon(Icons.description),
             ),
             const SizedBox(height: 16),
-
-            // Barcode
-            _buildBarcodeField(),
-            const SizedBox(height: 16),
-
-            // Unit Price
-            CustomTextField(
-              labelText: 'Unit Price',
-              controller: _unitPriceController,
-              keyboardType: TextInputType.numberWithOptions(decimal: true),
-              onChanged: (value) {
-                _unitPriceController.text = value;
-              },
-              prefixIcon: const Icon(Icons.attach_money),
-            ),
-            const SizedBox(height: 16),
-
-            // Reorder Point
-            CustomTextField(
-              labelText: 'Reorder Point',
-              controller: _reorderPointController,
-              keyboardType: TextInputType.numberWithOptions(decimal: true),
-              onChanged: (value) {
-                _reorderPointController.text = value;
-              },
-              prefixIcon: const Icon(Icons.inventory_2),
-            ),
-            const SizedBox(height: 16),
-
-            // Margin Type
-            CustomDropdown(
-              labelText: 'Margin Type',
-              prefixIcon: const Icon(Icons.trending_up),
-              items: _marginTypes
-                  .map(
-                    (marginType) => DropdownMenuItem(
-                      value: marginType,
-                      child: Text(marginType == '%' ? 'Percentage' : 'Flat'),
-                    ),
-                  )
-                  .toList(),
-              value: _selectedMarginType,
-              onChanged: (value) {
-                setState(() {
-                  _selectedMarginType = value;
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Margin Rate
-            CustomTextField(
-              labelText: 'Margin Rate',
-              controller: _marginRateController,
-              keyboardType: TextInputType.numberWithOptions(decimal: true),
-              onChanged: (value) {
-                _marginRateController.text = value;
-              },
-              prefixIcon: const Icon(Icons.percent),
-            ),
-            const SizedBox(height: 16),
-
             // Unit of Measure
             BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
               builder: (context, state) {
@@ -617,7 +538,33 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
               },
             ),
             const SizedBox(height: 16),
+            // Unit Price
+            CustomTextField(
+              labelText: 'Unit Price',
+              controller: _unitPriceController,
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
+              onChanged: (value) {
+                _unitPriceController.text = value;
+              },
+              prefixIcon: const Icon(Icons.attach_money),
+            ),
+            const SizedBox(height: 16),
+                    // Barcode
+            _buildBarcodeField(),
+            const SizedBox(height: 16),
 
+            // Reorder Point
+            CustomTextField(
+              labelText: 'Reorder Point',
+              controller: _reorderPointController,
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
+              onChanged: (value) {
+                _reorderPointController.text = value;
+              },
+              prefixIcon: const Icon(Icons.inventory_2),
+            ),
+            const SizedBox(height: 16),
+            
             // Taxable
             CustomDropdown(
               labelText: 'Taxable',
@@ -634,6 +581,39 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
                   _selectedTaxable = value;
                 });
               },
+            ),
+            const SizedBox(height: 16),
+
+            // Margin Type
+            CustomDropdown(
+              labelText: 'Margin Type',
+              prefixIcon: const Icon(Icons.trending_up),
+              items: _marginTypes
+                  .map(
+                    (marginType) => DropdownMenuItem(
+                      value: marginType,
+                      child: Text(marginType == '%' ? 'Percentage' : 'Flat'),
+                    ),
+                  )
+                  .toList(),
+              value: _selectedMarginType,
+              onChanged: (value) {
+                setState(() {
+                  _selectedMarginType = value;
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Margin Rate
+            CustomTextField(
+              labelText: 'Margin Rate',
+              controller: _marginRateController,
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
+              onChanged: (value) {
+                _marginRateController.text = value;
+              },
+              prefixIcon: const Icon(Icons.percent),
             ),
             const SizedBox(height: 16),
           ],

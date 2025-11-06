@@ -1,3 +1,5 @@
+import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
+import 'package:savvy_stock/features/stock/location_entry/models/location_master_model.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/model/lot_coloring_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 
@@ -20,6 +22,8 @@ class LotMaster {
   final String? statusDescription; //Active, Expired, Inactive
   LotExpirationColor? tempColorType;
   ItemEntryModel? itemRef;
+  Branch? branchRef;
+  LocationMaster? locationRef;
 
   LotMaster({
     this.id,
@@ -39,50 +43,88 @@ class LotMaster {
     this.statusDescription,
     this.tempColorType,
     this.itemRef,
+    this.branchRef,
+    this.locationRef,
   });
 
   factory LotMaster.fromMap(Map<String, dynamic> map) {
+    DateTime? parseDate(dynamic v) {
+      if (v == null) return null;
+      if (v is String) return DateTime.tryParse(v);
+      if (v is int) return DateTime.fromMillisecondsSinceEpoch(v);
+      if (v is num) return DateTime.fromMillisecondsSinceEpoch(v.toInt());
+      return null;
+    }
+
+    double? asDouble(dynamic v) {
+      if (v == null) return null;
+      if (v is double) return v;
+      if (v is int) return v.toDouble();
+      if (v is String) return double.tryParse(v);
+      return null;
+    }
+
+    int? asInt(dynamic v) {
+      if (v == null) return null;
+      if (v is int) return v;
+      if (v is String) return int.tryParse(v);
+      if (v is num) return v.toInt();
+      return null;
+    }
+
+    final itemNumber = asInt(map['item_number']);
+    final branch = asInt(map['branch']);
+    final location = asInt(map['location']);
+
     return LotMaster(
-      id: map['id'] as int?,
-      itemNumber: map['item_number'] as int?,
-      lotNumber: map['lot_number'] as int?,
-      unitPrice: map['unit_price'] != null
-          ? (map['unit_price'] as num).toDouble()
-          : null,
-      quantityAvailable: map['quantity_available'] != null
-          ? (map['quantity_available'] as num).toDouble()
-          : null,
-      company: map['company'] as int?,
-      dateEffective: map['date_effective'] != null
-          ? DateTime.tryParse(map['date_effective'])
-          : null,
-      dateExpiration: map['date_expiration'] != null
-          ? DateTime.tryParse(map['date_expiration'])
-          : null,
-      dateReceived: map['date_received'] != null
-          ? DateTime.tryParse(map['date_received'])
-          : null,
-      branch: map['branch'] as int?,
-      location: map['location'] as int?,
-      lotStatus: map['lot_status'] as int?,
-      batchNumberSupplier: map['batch_number_supplier'] as String?,
+      id: asInt(map['id']),
+      itemNumber: itemNumber,
+      lotNumber: asInt(map['lot_number']),
+      unitPrice: asDouble(map['unit_price']),
+      quantityAvailable: asDouble(map['quantity_available']),
+      company: asInt(map['company']),
+      dateEffective: parseDate(map['date_effective']),
+      dateExpiration: parseDate(map['date_expiration']),
+      dateReceived: parseDate(map['date_received']),
+      branch: asInt(map['branch']),
+      location: asInt(map['location']),
+      lotStatus: asInt(map['lot_status']),
+      batchNumberSupplier: map['batch_number_supplier']?.toString(),
       //FROM JOINS
-      statusCode: map['status_code'] as String?, //A, E, I
-      statusDescription:
-          map['status_description'] as String?, //Active, Expired, Inactive
-      itemRef: map['item_number'] != null
+      statusCode: map['status_code']?.toString(), //A, E, I
+      statusDescription: map['status_description']
+          ?.toString(), //Active, Expired, Inactive
+      itemRef: itemNumber != null
           ? ItemEntryModel(
-              id: map['item_number'],
-              itemsId: map['items_id'],
-              itemDescription: map['item_description'],
-              unitOfMeasure: map['unit_of_measure'],
-              unitPrice: map['unit_price'],
-              taxable: map['taxable'],
-              barcode: map['barcode'],
-              company: map['company'],
-              marginRate: map['margin_rate'],
-              marginType: map['margin_type'],
-              reorderPoint: map['reorder_point'],
+              id: itemNumber,
+              itemsId: (map['items_id'] ?? map['item_id'])?.toString(),
+              itemDescription: map['item_description']?.toString(),
+              unitOfMeasure: map['unit_of_measure']?.toString(),
+              unitPrice: asDouble(map['unit_price']),
+              taxable: map['taxable']?.toString(),
+              barcode: map['barcode']?.toString(),
+              company: asInt(map['company']),
+              marginRate: asDouble(map['margin_rate']),
+              marginType: map['margin_type']?.toString(),
+              reorderPoint: asDouble(map['reorder_point']),
+            )
+          : null,
+      branchRef: branch != null
+          ? Branch(
+              id: branch,
+              referenceId: map['reference_id']?.toString(),
+              description: (map['description'])?.toString(),
+              city: map['city']?.toString(),
+              region: map['region']?.toString(),
+              country: map['country']?.toString(),
+              marginRate: asDouble(map['margin_rate']),
+              marginType: map['margin_type']?.toString(),
+            )
+          : null,
+      locationRef: location != null
+          ? LocationMaster(
+              id: location,
+              locationDescription: map['location_description']?.toString(),
             )
           : null,
     );

@@ -614,12 +614,7 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
               ],
               // 3. ITEM CARD - Should come AFTER delete indicator
               AnimatedContainer(
-                padding: const EdgeInsets.only(
-                  top: 10,
-                  left: 10,
-                  right: 10,
-                  bottom: 10,
-                ),
+                padding: const EdgeInsets.only(top: 5, left: 10, right: 10),
                 //width: collapsedWidth,
                 height: collapsedHeight,
                 duration: const Duration(milliseconds: 400),
@@ -657,7 +652,7 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                itemDescription,
+                                item.itemRef!.itemDescription!,
                                 style: TextStyle(
                                   color: const Color(0xFF373737),
                                   fontSize: _getTitleFontSize(screenWidth),
@@ -666,7 +661,7 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
                                 ),
                               ),
                               Text(
-                                branch,
+                                item.branchRef!.description!,
                                 style: TextStyle(
                                   color: const Color(0xFF887F7F),
                                   fontSize: _getSubtitleFontSize(screenWidth),
@@ -1002,7 +997,7 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
   double _getCollapsedHeight(double screenWidth, double screenHeight) {
     if (screenWidth < 360) return screenHeight * 0.22; // Very small phones
     if (screenWidth < 400) return screenHeight * 0.20; // Small phones
-    if (screenWidth < 700) return screenHeight * 0.18; // Medium phones
+    if (screenWidth < 700) return screenHeight * 0.22; // Medium phones
     return screenHeight * 0.14; // Tablets and larger
   }
 

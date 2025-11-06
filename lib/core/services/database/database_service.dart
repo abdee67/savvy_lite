@@ -384,6 +384,9 @@ CREATE INDEX idx_items_in_branch_uom ON items_in_branch(unit_of_measure);
         lot_type INTEGER,
         location_category_level INTEGER DEFAULT 1,
         lot_qty_auto_for_sales TEXT DEFAULT 'Y',
+        discount_display TEXT DEFAULT 'N',
+        tax_info_display TEXT DEFAULT 'N',
+        reorder_point_uom_type TEXT DEFAULT 'I',
         is_synced INTEGER DEFAULT 1,
         last_sync_time INTEGER,
         created_at INTEGER DEFAULT (strftime('%s', 'now')),
@@ -1850,31 +1853,6 @@ CREATE INDEX idx_item_master_defualt_uom ON item_master(defualt_uom);
       await db.insert('user_role', userRole);
     }
     developer.log('Inserted user roles');
-
-    await db.insert('system_constant', {
-      'apply_lot_mgm': 'Y',
-      'apply_location_mgm': 'Y',
-      'interface_customer': 'Y',
-      'interface_employee': 'Y',
-      'decimal_places': 2,
-      'date_last_updated': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      'time_last_updated': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      'updated_by': 1,
-      'generate_barcode_for_item': 'Y',
-      'company': 1,
-      'rate_vat_percentage': 17.0,
-      'rate_with_percentage': 1.0,
-      'with_hold_initials': 2000.0,
-      'auto_sales_price': 'Y',
-      'lot_type': 'Expiration Date',
-      'location_category_level': 2,
-      'lot_qty_auto_for_sales': 'Y',
-      'is_synced': 1,
-      'last_sync_time': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      'updated_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-    });
-    developer.log('created system constant');
 
     await db.execute('''
   CREATE TABLE customer_table (

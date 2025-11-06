@@ -22,7 +22,7 @@ class LotMasterRepository extends BaseRepository {
              it.items_id as item_id,
              it.item_description,
              it.unit_of_measure,
-             b.description as branch_name,
+             b.description,
              loc.location_description,
              ud.detail_code as status_code,
              ud.description_1 as status_description

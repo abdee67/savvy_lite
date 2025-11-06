@@ -2,7 +2,7 @@
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
-import 'package:savvy_stock/core/models/system_constant.dart';
+import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 import 'package:savvy_stock/features/stock/sales_order_detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/sales_order_header/model/sales_order_header.dart';
 
@@ -15,7 +15,7 @@ abstract class SalesOrderDetailEvent extends Equatable {
 class SalesOrderDetailLoadEvent extends SalesOrderDetailEvent {
   final int companyId;
 
- const SalesOrderDetailLoadEvent(this.companyId);
+  const SalesOrderDetailLoadEvent(this.companyId);
   @override
   List<Object?> get props => [companyId];
 }
@@ -25,7 +25,7 @@ class SalesOrderDetailPrepareCreateEvent extends SalesOrderDetailEvent {
   final int userId;
   final int branchId;
 
- const SalesOrderDetailPrepareCreateEvent({
+  const SalesOrderDetailPrepareCreateEvent({
     required this.companyId,
     required this.userId,
     required this.branchId,
@@ -34,12 +34,13 @@ class SalesOrderDetailPrepareCreateEvent extends SalesOrderDetailEvent {
   List<Object?> get props => [companyId, userId, branchId];
 }
 
-class SalesOrderDetailPrepareCreateAfterCreateEvent extends SalesOrderDetailEvent {
+class SalesOrderDetailPrepareCreateAfterCreateEvent
+    extends SalesOrderDetailEvent {
   final int companyId;
   final int userId;
   final int branchId;
 
- const SalesOrderDetailPrepareCreateAfterCreateEvent({
+  const SalesOrderDetailPrepareCreateAfterCreateEvent({
     required this.companyId,
     required this.userId,
     required this.branchId,
@@ -52,7 +53,7 @@ class SalesOrderDetailPrepareCreateAfterCreateEvent extends SalesOrderDetailEven
 class SalesOrderDetailCreateEvent extends SalesOrderDetailEvent {
   final SalesOrderDetail details;
 
- const SalesOrderDetailCreateEvent(this.details);
+  const SalesOrderDetailCreateEvent(this.details);
   @override
   List<Object?> get props => [details];
 }
@@ -60,7 +61,7 @@ class SalesOrderDetailCreateEvent extends SalesOrderDetailEvent {
 class SalesOrderDetailUpdateEvent extends SalesOrderDetailEvent {
   final SalesOrderDetail details;
 
- const SalesOrderDetailUpdateEvent(this.details);
+  const SalesOrderDetailUpdateEvent(this.details);
   @override
   List<Object?> get props => [details];
 }
@@ -68,7 +69,7 @@ class SalesOrderDetailUpdateEvent extends SalesOrderDetailEvent {
 class SalesOrderDetailDeleteEvent extends SalesOrderDetailEvent {
   final int id;
 
- const SalesOrderDetailDeleteEvent(this.id);
+  const SalesOrderDetailDeleteEvent(this.id);
   @override
   List<Object?> get props => [id];
 }
@@ -76,7 +77,7 @@ class SalesOrderDetailDeleteEvent extends SalesOrderDetailEvent {
 class SalesOrderDetailDeleteCollectionEvent extends SalesOrderDetailEvent {
   final List<SalesOrderDetail> items;
 
- const SalesOrderDetailDeleteCollectionEvent(this.items);
+  const SalesOrderDetailDeleteCollectionEvent(this.items);
   @override
   List<Object?> get props => [items];
 }
@@ -85,7 +86,7 @@ class SalesOrderDetailDeleteCollectionEvent extends SalesOrderDetailEvent {
 class SalesOrderDetailMultiSelectEvent extends SalesOrderDetailEvent {
   final List<SalesOrderDetail> selectedItems;
 
- const SalesOrderDetailMultiSelectEvent(this.selectedItems);
+  const SalesOrderDetailMultiSelectEvent(this.selectedItems);
   @override
   List<Object?> get props => [selectedItems];
 }
@@ -93,11 +94,10 @@ class SalesOrderDetailMultiSelectEvent extends SalesOrderDetailEvent {
 class SalesOrderDetailPrepareEditEvent extends SalesOrderDetailEvent {
   final List<SalesOrderDetail> selectedItems;
 
- const SalesOrderDetailPrepareEditEvent(this.selectedItems);
+  const SalesOrderDetailPrepareEditEvent(this.selectedItems);
   @override
   List<Object?> get props => [selectedItems];
 }
-
 
 // Barcode events
 class SalesOrderDetailSetBarcodeEvent extends SalesOrderDetailEvent {
@@ -105,7 +105,7 @@ class SalesOrderDetailSetBarcodeEvent extends SalesOrderDetailEvent {
   final int branchId;
   final int companyId;
 
- const SalesOrderDetailSetBarcodeEvent({
+  const SalesOrderDetailSetBarcodeEvent({
     required this.barcode,
     required this.branchId,
     required this.companyId,
@@ -120,7 +120,7 @@ class SalesOrderDetailValidateAvailabilityEvent extends SalesOrderDetailEvent {
   final List<SalesOrderDetail> createItems;
   final int companyId;
 
-const  SalesOrderDetailValidateAvailabilityEvent({
+  const SalesOrderDetailValidateAvailabilityEvent({
     required this.item,
     required this.createItems,
     required this.companyId,
@@ -139,7 +139,7 @@ class SalesOrderDetailSaveEvent extends SalesOrderDetailEvent {
   final int branchId;
   final String? fsReference;
 
- const SalesOrderDetailSaveEvent({
+  const SalesOrderDetailSaveEvent({
     required this.createItems,
     required this.salesOrderHeader,
     required this.systemConstant,
@@ -150,20 +150,20 @@ class SalesOrderDetailSaveEvent extends SalesOrderDetailEvent {
   });
   @override
   List<Object?> get props => [
-        createItems,
-        salesOrderHeader,
-        systemConstant,
-        companyId,
-        userId,
-        branchId,
-        fsReference,
-      ];
+    createItems,
+    salesOrderHeader,
+    systemConstant,
+    companyId,
+    userId,
+    branchId,
+    fsReference,
+  ];
 }
 
 class SalesOrderDetailSaveRowEvent extends SalesOrderDetailEvent {
   final List<SalesOrderDetail> editItems;
 
- const SalesOrderDetailSaveRowEvent(this.editItems);
+  const SalesOrderDetailSaveRowEvent(this.editItems);
   @override
   List<Object?> get props => [editItems];
 }
@@ -173,7 +173,7 @@ class SalesOrderDetailReportGenerateEvent extends SalesOrderDetailEvent {
   final SalesOrderHeader salesHeader;
   final int companyId;
 
- const SalesOrderDetailReportGenerateEvent(this.salesHeader, this.companyId);
+  const SalesOrderDetailReportGenerateEvent(this.salesHeader, this.companyId);
   @override
   List<Object?> get props => [salesHeader, companyId];
 }
@@ -193,7 +193,7 @@ class SalesOrderDetailPrepareInvoiceReviewEvent extends SalesOrderDetailEvent {
   final double? subTotal;
   final String? fsReference;
 
- const SalesOrderDetailPrepareInvoiceReviewEvent({
+  const SalesOrderDetailPrepareInvoiceReviewEvent({
     required this.createItems,
     required this.salesOrderHeader,
     required this.systemConstant,
@@ -210,20 +210,20 @@ class SalesOrderDetailPrepareInvoiceReviewEvent extends SalesOrderDetailEvent {
   });
   @override
   List<Object?> get props => [
-        createItems,
-        salesOrderHeader,
-        systemConstant,
-        companyId,
-        branchId,
-        cityDesc,
-        countryDesc,
-        phoneNumbers,
-        regionDesc,
-        tinNumber,
-        totalAmount,
-        subTotal,
-        fsReference,
-      ];
+    createItems,
+    salesOrderHeader,
+    systemConstant,
+    companyId,
+    branchId,
+    cityDesc,
+    countryDesc,
+    phoneNumbers,
+    regionDesc,
+    tinNumber,
+    totalAmount,
+    subTotal,
+    fsReference,
+  ];
 }
 
 // Navigation events

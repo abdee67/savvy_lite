@@ -39,6 +39,22 @@ class UdcRepository extends BaseRepository {
     }
   }
 
+  Future<int?> getUdcDetailIdByHeaderCode(String detailCode) async {
+    try {
+      final db = await databaseService.database;
+      final List<Map<String, dynamic>> maps = await db.query(
+        'udc_details',
+        where: 'detail_code = ?',
+        whereArgs: [detailCode],
+      );
+      developer.log('Found ${maps.length} UDC details for code: $detailCode');
+      return maps.map((map) => UdcDetails.fromJson(map)).toList().first.id;
+    } catch (e) {
+      developer.log('Error getting local UDC details: $e');
+      return null;
+    }
+  }
+
   Future<UdcDetails?> getUdcDetailById(int? id, {Transaction? txn}) async {
     if (id == null) return null;
     try {

@@ -1,5 +1,5 @@
 // repositories/item_transaction_repository.dart
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -460,7 +460,8 @@ class ItemTransactionRepository {
 
       for (final transaction in detailTransactions) {
         // Enrich detail with master/defaults and resolved references before saving
-        final resolvedIb = (transaction.itemNumber != null && masterTransaction.branch != null)
+        final resolvedIb =
+            (transaction.itemNumber != null && masterTransaction.branch != null)
             ? await itemInBranchRepository.findByItemAndBranch(
                 transaction.itemNumber!,
                 masterTransaction.branch!,
@@ -477,8 +478,11 @@ class ItemTransactionRepository {
 
         final enriched = transaction.copyWith(
           remark: transaction.remark ?? masterTransaction.remark,
-          transactionNumber: transaction.transactionNumber ?? masterTransaction.transactionNumber,
-          transactionType: transaction.transactionType ?? masterTransaction.transactionType,
+          transactionNumber:
+              transaction.transactionNumber ??
+              masterTransaction.transactionNumber,
+          transactionType:
+              transaction.transactionType ?? masterTransaction.transactionType,
           branch: transaction.branch ?? masterTransaction.branch,
           company: transaction.company ?? masterTransaction.company,
           itemBranch: transaction.itemBranch ?? resolvedIb?.id,

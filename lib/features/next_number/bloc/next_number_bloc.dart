@@ -1,7 +1,6 @@
 // features/next_number/blocs/next_number_bloc.dart
 import 'dart:async';
 import 'package:bloc/bloc.dart';
-import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/next_number/bloc/next_number_event.dart';
 import 'package:savvy_stock/features/next_number/bloc/next_number_state.dart';
@@ -90,7 +89,7 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
     try {
       final nextNumber = await repository.generateNextNumber(
         event.code,
-        state.companyId!,
+        state.companyId,
       );
 
       emit(
@@ -102,7 +101,7 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
       );
 
       // Reload the list to reflect changes
-      add(LoadNextNumbers(state.companyId!));
+      add(LoadNextNumbers(state.companyId));
     } catch (e) {
       emit(
         state.copyWith(
@@ -126,7 +125,7 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
     try {
       final formattedNumber = await repository.generateFormattedNumber(
         event.code,
-        state.companyId!,
+        state.companyId,
       );
 
       emit(
@@ -138,7 +137,7 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
       );
 
       // Reload the list to reflect changes
-      add(LoadNextNumbers(state.companyId!));
+      add(LoadNextNumbers(state.companyId));
     } catch (e) {
       emit(
         state.copyWith(
@@ -157,8 +156,8 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
     try {
       // Check for code duplication
       final codeExists = await repository.checkCodeExists(
-        event.item.nextNumberCode!,
-        state.companyId!,
+        event.item.nextNumberCode,
+        state.companyId,
       );
 
       if (codeExists) {
@@ -174,7 +173,7 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
       final itemToSave = event.item.copyWith(company: state.companyId);
       await repository.createNextNumber(itemToSave);
 
-      add(LoadNextNumbers(state.companyId!));
+      add(LoadNextNumbers(state.companyId));
       add(ClearCreateList());
 
       emit(
@@ -201,8 +200,8 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
     try {
       // Check for code duplication (excluding current item)
       final codeExists = await repository.checkCodeExists(
-        event.item.nextNumberCode!,
-        state.companyId!,
+        event.item.nextNumberCode,
+        state.companyId,
         excludeId: event.item.id,
       );
 
@@ -218,7 +217,7 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
 
       await repository.updateNextNumber(event.item);
 
-      add(LoadNextNumbers(state.companyId!));
+      add(LoadNextNumbers(state.companyId));
       emit(
         state.copyWith(
           status: NextNumberStatus.success,
@@ -241,9 +240,9 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
   ) async {
     emit(state.copyWith(status: NextNumberStatus.deleting));
     try {
-      await repository.deleteNextNumber(event.item.id!, state.companyId!);
+      await repository.deleteNextNumber(event.item.id!, state.companyId);
 
-      add(LoadNextNumbers(state.companyId!));
+      add(LoadNextNumbers(state.companyId));
       emit(
         state.copyWith(
           status: NextNumberStatus.success,
@@ -272,7 +271,7 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
 
       await repository.batchInsertNextNumbers(itemsWithCompany);
 
-      add(LoadNextNumbers(state.companyId!));
+      add(LoadNextNumbers(state.companyId));
       add(ClearCreateList());
 
       emit(
@@ -299,7 +298,7 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
     try {
       await repository.batchUpdateNextNumbers(event.items);
 
-      add(LoadNextNumbers(state.companyId!));
+      add(LoadNextNumbers(state.companyId));
       emit(
         state.copyWith(
           status: NextNumberStatus.success,
@@ -323,9 +322,9 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
     emit(state.copyWith(status: NextNumberStatus.deleting));
     try {
       final ids = event.items.map((item) => item.id!).toList();
-      await repository.batchDeleteNextNumbers(ids, state.companyId!);
+      await repository.batchDeleteNextNumbers(ids, state.companyId);
 
-      add(LoadNextNumbers(state.companyId!));
+      add(LoadNextNumbers(state.companyId));
       emit(
         state.copyWith(
           status: NextNumberStatus.success,

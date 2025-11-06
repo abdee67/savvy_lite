@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:bloc/bloc.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/next_number/bloc/next_number_bloc.dart';
@@ -627,7 +627,6 @@ class ItemTransactionsBloc
     try {
       final locations = await repository.itemLocationsRepository
           .getItemLocationsByBranchAndItem(
-            locationId: event.locationId!,
             branchId: event.branchId,
             itemId: event.itemNumber,
             companyId: authBloc.state.companyId!,
@@ -735,7 +734,6 @@ class ItemTransactionsBloc
       final locations = await repository.itemLocationsRepository
           .getItemLocationsByBranchAndItem(
             itemId: event.itemNumber,
-            locationId: event.locationId!,
             branchId: event.toBranchId,
             companyId: authBloc.state.companyId!,
           );

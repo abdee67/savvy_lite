@@ -13,11 +13,11 @@ import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_bloc.dart
 import 'package:savvy_stock/features/stock/sales_order_detail/bloc/sales_order_detail_event.dart';
 import 'package:savvy_stock/features/stock/sales_order_detail/bloc/sales_order_detail_state.dart';
 import 'package:savvy_stock/features/stock/sales_order_detail/model/sales_order_detail.dart';
-import 'package:savvy_stock/features/stock/sales_order_detail/sales_order_detail_repo.dart';
+import 'package:savvy_stock/features/stock/sales_order_detail/repo/sales_order_detail_repo.dart';
 import 'package:savvy_stock/features/stock/sales_order_header/repo/sales_order_header_repo.dart';
 
-
-class SalesOrderDetailBloc extends Bloc<SalesOrderDetailEvent, SalesOrderDetailState> {
+class SalesOrderDetailBloc
+    extends Bloc<SalesOrderDetailEvent, SalesOrderDetailState> {
   final SalesOrderDetailRepository repository;
   final SalesOrderHeaderRepository headerRepository;
   final StockItemInBranchBloc itemBranchRepository;
@@ -42,14 +42,16 @@ class SalesOrderDetailBloc extends Bloc<SalesOrderDetailEvent, SalesOrderDetailS
     required this.nextNumberRepository,
     required this.customerTableRepository,
     required this.invoiceHeaderRepository,
-  //  required this.invoiceDetailRepository,
+    //  required this.invoiceDetailRepository,
     required this.itemCostTableRepository,
     required this.itemUomConversionsRepository,
     required this.lotExpirationColorsRepository,
   }) : super(SalesOrderDetailInitial()) {
     on<SalesOrderDetailLoadEvent>(_onLoad);
     on<SalesOrderDetailPrepareCreateEvent>(_onPrepareCreate);
-    on<SalesOrderDetailPrepareCreateAfterCreateEvent>(_onPrepareCreateAfterCreate);
+    on<SalesOrderDetailPrepareCreateAfterCreateEvent>(
+      _onPrepareCreateAfterCreate,
+    );
     on<SalesOrderDetailCreateEvent>(_onCreate);
     on<SalesOrderDetailUpdateEvent>(_onUpdate);
     on<SalesOrderDetailDeleteEvent>(_onDelete);
@@ -57,11 +59,11 @@ class SalesOrderDetailBloc extends Bloc<SalesOrderDetailEvent, SalesOrderDetailS
     on<SalesOrderDetailMultiSelectEvent>(_onMultiSelect);
     on<SalesOrderDetailPrepareEditEvent>(_onPrepareEdit);
     on<SalesOrderDetailSetBarcodeEvent>(_onSetBarcode);
-   // on<SalesOrderDetailValidateAvailabilityEvent>(_onValidateAvailability);
-   // on<SalesOrderDetailSaveEvent>(_onSave);
-   // on<SalesOrderDetailSaveRowEvent>(_onSaveRow);
-  //  on<SalesOrderDetailReportGenerateEvent>(_onReportGenerate);
-  //  on<SalesOrderDetailPrepareInvoiceReviewEvent>(_onPrepareInvoiceReview);
+    // on<SalesOrderDetailValidateAvailabilityEvent>(_onValidateAvailability);
+    // on<SalesOrderDetailSaveEvent>(_onSave);
+    // on<SalesOrderDetailSaveRowEvent>(_onSaveRow);
+    //  on<SalesOrderDetailReportGenerateEvent>(_onReportGenerate);
+    //  on<SalesOrderDetailPrepareInvoiceReviewEvent>(_onPrepareInvoiceReview);
     on<SalesOrderDetailDiscardEvent>(_onDiscard);
   }
 
@@ -72,22 +74,24 @@ class SalesOrderDetailBloc extends Bloc<SalesOrderDetailEvent, SalesOrderDetailS
     emit(SalesOrderDetailLoading());
     try {
       final items = await repository.getAll(event.companyId);
-      emit(SalesOrderDetailLoadSuccess(
-        items: items,
-        createItems: const [],
-        editItems: const [],
-        multiSelectionItems: const [],
-        filteredValues: const [],
-        selected2: SalesOrderDetail(
-          salesOrderHeaderId: 0,
-          itemsTableId: 0,
-          quantity: 1.0,
+      emit(
+        SalesOrderDetailLoadSuccess(
+          items: items,
+          createItems: const [],
+          editItems: const [],
+          multiSelectionItems: const [],
+          filteredValues: const [],
+          selected2: SalesOrderDetail(
+            salesOrderHeaderId: 0,
+            itemsTableId: 0,
+            quantity: 1.0,
+          ),
+          availableValidator: {},
+          enablePreview: false,
+          enableFinishingProcess: false,
+          useBarcode: false,
         ),
-        availableValidator: {},
-        enablePreview: false,
-        enableFinishingProcess: false,
-        useBarcode: false,
-      ));
+      );
     } catch (e) {
       emit(SalesOrderDetailError('Failed to load sales order details: $e'));
     }
@@ -99,17 +103,22 @@ class SalesOrderDetailBloc extends Bloc<SalesOrderDetailEvent, SalesOrderDetailS
   ) async {
     try {
       // Get default customer
-    /*  final defaultCustomers = await customerTableRepository.getDefaultCustomers(event.companyId);
+      /*  final defaultCustomers = await customerTableRepository.getDefaultCustomers(event.companyId);
       Customer? defaultCustomer;
       if (defaultCustomers.isNotEmpty) {
         defaultCustomer = defaultCustomers.first;
       } */
 
       // Get next order number
-      final orderNumber = await nextNumberRepository.generateFormattedNumber('SO');
-      
+      final orderNumber = await nextNumberRepository.generateFormattedNumber(
+        'SO',
+      );
+
       // Get order type
-      final orderType = await udcDetailsRepository.getLocalUdcDetailsByCode('OT', 'S');
+      final orderType = await udcDetailsRepository.getLocalUdcDetailsByCode(
+        'OT',
+        'S',
+      );
 
       final newDetails = SalesOrderDetail(
         tempId: 1,
@@ -119,24 +128,28 @@ class SalesOrderDetailBloc extends Bloc<SalesOrderDetailEvent, SalesOrderDetailS
 
       final createItems = [newDetails];
 
-      emit(SalesOrderDetailLoadSuccess(
-        items: state is SalesOrderDetailLoadSuccess ? (state as SalesOrderDetailLoadSuccess).items : [],
-        createItems: createItems,
-        editItems: const [],
-        multiSelectionItems: const [],
-        filteredValues: const [],
-        selected: newDetails,
-        selected1: null,
-        selected2: SalesOrderDetail(
-          salesOrderHeaderId: 0,
-          itemsTableId: 0,
-          quantity: 1.0,
+      emit(
+        SalesOrderDetailLoadSuccess(
+          items: state is SalesOrderDetailLoadSuccess
+              ? (state as SalesOrderDetailLoadSuccess).items
+              : [],
+          createItems: createItems,
+          editItems: const [],
+          multiSelectionItems: const [],
+          filteredValues: const [],
+          selected: newDetails,
+          selected1: null,
+          selected2: SalesOrderDetail(
+            salesOrderHeaderId: 0,
+            itemsTableId: 0,
+            quantity: 1.0,
+          ),
+          availableValidator: {},
+          enablePreview: false,
+          enableFinishingProcess: false,
+          useBarcode: false,
         ),
-        availableValidator: {},
-        enablePreview: false,
-        enableFinishingProcess: false,
-        useBarcode: false,
-      ));
+      );
 
       // Emit event for header creation
       // This would typically be handled by a separate SalesOrderHeaderBloc
@@ -160,12 +173,14 @@ class SalesOrderDetailBloc extends Bloc<SalesOrderDetailEvent, SalesOrderDetailS
 
       if (state is SalesOrderDetailLoadSuccess) {
         final currentState = state as SalesOrderDetailLoadSuccess;
-        emit(currentState.copyWith(
-          createItems: createItems,
-          selected: newDetails,
-          selected1: null,
-          availableValidator: {},
-        ));
+        emit(
+          currentState.copyWith(
+            createItems: createItems,
+            selected: newDetails,
+            selected1: null,
+            availableValidator: {},
+          ),
+        );
       }
     } catch (e) {
       emit(SalesOrderDetailError('Failed to prepare create after create: $e'));
@@ -179,12 +194,14 @@ class SalesOrderDetailBloc extends Bloc<SalesOrderDetailEvent, SalesOrderDetailS
     try {
       await repository.create(event.details);
       final items = await repository.getAll(event.details.company!);
-      
-      emit(SalesOrderDetailOperationSuccess(
-        message: 'Successfully created',
-        items: items,
-        createItems: const [],
-      ));
+
+      emit(
+        SalesOrderDetailOperationSuccess(
+          message: 'Successfully created',
+          items: items,
+          createItems: const [],
+        ),
+      );
     } catch (e) {
       emit(SalesOrderDetailError('Failed to create: $e'));
     }
@@ -197,12 +214,14 @@ class SalesOrderDetailBloc extends Bloc<SalesOrderDetailEvent, SalesOrderDetailS
     try {
       await repository.update(event.details);
       final items = await repository.getAll(event.details.company!);
-      
-      emit(SalesOrderDetailOperationSuccess(
-        message: 'Successfully updated',
-        items: items,
-        createItems: const [],
-      ));
+
+      emit(
+        SalesOrderDetailOperationSuccess(
+          message: 'Successfully updated',
+          items: items,
+          createItems: const [],
+        ),
+      );
     } catch (e) {
       emit(SalesOrderDetailError('Failed to update: $e'));
     }
@@ -216,7 +235,7 @@ class SalesOrderDetailBloc extends Bloc<SalesOrderDetailEvent, SalesOrderDetailS
       await repository.delete(event.id);
       final currentState = state as SalesOrderDetailLoadSuccess;
       final items = await repository.getAll(currentState.items.first.company!);
-      
+
       emit(currentState.copyWith(items: items));
     } catch (e) {
       emit(SalesOrderDetailError('Failed to delete: $e'));
@@ -231,7 +250,7 @@ class SalesOrderDetailBloc extends Bloc<SalesOrderDetailEvent, SalesOrderDetailS
       await repository.deleteCollection(event.items);
       final currentState = state as SalesOrderDetailLoadSuccess;
       final items = await repository.getAll(currentState.items.first.company!);
-      
+
       emit(currentState.copyWith(items: items));
     } catch (e) {
       emit(SalesOrderDetailError('Failed to delete collection: $e'));
@@ -254,12 +273,17 @@ class SalesOrderDetailBloc extends Bloc<SalesOrderDetailEvent, SalesOrderDetailS
   ) async {
     if (state is SalesOrderDetailLoadSuccess) {
       final currentState = state as SalesOrderDetailLoadSuccess;
-      emit(currentState.copyWith(
-        editItems: event.selectedItems,
-        selected: event.selectedItems.isNotEmpty ? event.selectedItems.first : null,
-      ));
+      emit(
+        currentState.copyWith(
+          editItems: event.selectedItems,
+          selected: event.selectedItems.isNotEmpty
+              ? event.selectedItems.first
+              : null,
+        ),
+      );
     }
   }
+
   Future<void> _onSetBarcode(
     SalesOrderDetailSetBarcodeEvent event,
     Emitter<SalesOrderDetailState> emit,
@@ -269,27 +293,29 @@ class SalesOrderDetailBloc extends Bloc<SalesOrderDetailEvent, SalesOrderDetailS
         event.barcode,
         event.branchId,
       );
-      
+
       if (itemBranchList.isNotEmpty) {
         if (state is SalesOrderDetailLoadSuccess) {
           final currentState = state as SalesOrderDetailLoadSuccess;
-          
+
           SalesOrderDetail itemToUpdate;
           List<SalesOrderDetail> updatedCreateItems;
-          if (currentState.createItems.length == 1 && 
+          if (currentState.createItems.length == 1 &&
               currentState.createItems[0].itemsTableId == 0) {
             itemToUpdate = currentState.createItems[0].copyWith(
               itemBranch: itemBranchList[0],
               itemsTableId: itemBranchList[0].itemNumber,
               quantity: 1.0,
             );
-            
+
             updatedCreateItems = [itemToUpdate];
-            emit(currentState.copyWith(
-              createItems: updatedCreateItems,
-              selected: itemToUpdate,
-              barcode: '',
-            ));
+            emit(
+              currentState.copyWith(
+                createItems: updatedCreateItems,
+                selected: itemToUpdate,
+                barcode: '',
+              ),
+            );
           } else {
             itemToUpdate = SalesOrderDetail(
               tempId: _getNextTempId(currentState.createItems),
@@ -299,24 +325,30 @@ class SalesOrderDetailBloc extends Bloc<SalesOrderDetailEvent, SalesOrderDetailS
               company: event.companyId,
               salesOrderHeaderId: 0,
             );
-            
+
             updatedCreateItems = [...currentState.createItems, itemToUpdate];
-            emit(currentState.copyWith(
-              createItems: updatedCreateItems,
-              selected: itemToUpdate,
-              barcode: '',
-            ));
+            emit(
+              currentState.copyWith(
+                createItems: updatedCreateItems,
+                selected: itemToUpdate,
+                barcode: '',
+              ),
+            );
           }
-          
+
           // Validate availability for the updated item
-          add(SalesOrderDetailValidateAvailabilityEvent(
-            item: itemToUpdate,
-            createItems: updatedCreateItems,
-            companyId: event.companyId,
-          ));
+          add(
+            SalesOrderDetailValidateAvailabilityEvent(
+              item: itemToUpdate,
+              createItems: updatedCreateItems,
+              companyId: event.companyId,
+            ),
+          );
         }
       } else {
-        emit(SalesOrderDetailError('No items found for barcode: ${event.barcode}'));
+        emit(
+          SalesOrderDetailError('No items found for barcode: ${event.barcode}'),
+        );
       }
     } catch (e) {
       emit(SalesOrderDetailError('Error setting barcode: $e'));
@@ -539,7 +571,7 @@ class SalesOrderDetailBloc extends Bloc<SalesOrderDetailEvent, SalesOrderDetailS
     }
   }
 */
-/*  Future<void> _onPrepareInvoiceReview(
+  /*  Future<void> _onPrepareInvoiceReview(
     SalesOrderDetailPrepareInvoiceReviewEvent event,
     Emitter<SalesOrderDetailState> emit,
   ) async {
@@ -596,28 +628,24 @@ class SalesOrderDetailBloc extends Bloc<SalesOrderDetailEvent, SalesOrderDetailS
   }
 */
 
-
   Future<void> _onDiscard(
     SalesOrderDetailDiscardEvent event,
     Emitter<SalesOrderDetailState> emit,
   ) async {
     if (state is SalesOrderDetailLoadSuccess) {
       final currentState = state as SalesOrderDetailLoadSuccess;
-      
+
       // Remove items that have IDs from database
-      final itemsWithIds = currentState.createItems.where((item) => item.id != null).toList();
+      final itemsWithIds = currentState.createItems
+          .where((item) => item.id != null)
+          .toList();
       if (itemsWithIds.isNotEmpty) {
         await repository.deleteCollection(itemsWithIds);
       }
-      
-      emit(currentState.copyWith(
-        createItems: const [],
-        selected: null,
-      ));
+
+      emit(currentState.copyWith(createItems: const [], selected: null));
     }
   }
-
-
 
   // Helper methods
   int _getNextTempId(List<SalesOrderDetail> items) {
@@ -630,7 +658,7 @@ class SalesOrderDetailBloc extends Bloc<SalesOrderDetailEvent, SalesOrderDetailS
     return maxTempId + 1;
   }
 
- /* Future<double> _getActualAvailableQuantity(SalesOrderDetail item) async {
+  /* Future<double> _getActualAvailableQuantity(SalesOrderDetail item) async {
     if (item.itemBranch == null) return 0.0;
     
     final items = await itemBranchRepository.getItemsAvailableByItemAndBranch(

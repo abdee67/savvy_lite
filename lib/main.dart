@@ -4,8 +4,8 @@ import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
 import 'package:savvy_stock/core/config/app_config.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/di/injection_container.dart';
@@ -13,7 +13,7 @@ import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/routes/app_router.dart';
 import 'package:savvy_stock/core/services/conectitvity_service.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
-import 'package:savvy_stock/core/services/system_constant/system_constant_service.dart';
+import 'package:savvy_stock/features/system_constant/repo/system_constant_service.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_bloc.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_bloc.dart';
 import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
@@ -73,7 +73,7 @@ Future<void> _initializeAndRunApp() async {
       developer.log('💾 Using local database only');
     }
     // Debug database tables (optional - remove in production)
-    await LocalDatabaseService().debugTable('item_master');
+    await LocalDatabaseService().debugTable('lot_master');
   } catch (error, stackTrace) {
     developer.log('Initialization error: $error');
     developer.log('Stack trace: $stackTrace');

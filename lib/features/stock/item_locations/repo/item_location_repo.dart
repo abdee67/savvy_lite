@@ -28,7 +28,6 @@ class ItemLocationsRepository extends BaseRepository {
   Future<List<ItemLocation>> getItemLocationsByBranchAndItem({
     required int companyId,
     required int branchId,
-    required int locationId,
     required int itemId,
     Transaction? txn,
   }) async {
@@ -44,9 +43,9 @@ class ItemLocationsRepository extends BaseRepository {
       LEFT JOIN location_master lm ON il.location = lm.id
       LEFT JOIN items_table it ON il.item_number = it.id
       LEFT JOIN branch_table b ON il.branch = b.id
-      WHERE il.company = ? AND il.branch = ? AND il.item_number = ? AND il.location = ?
+      WHERE il.company = ? AND il.branch = ? AND il.item_number = ?
     ''',
-      [companyId, branchId, itemId, locationId],
+      [companyId, branchId, itemId],
     );
 
     return items.map((p) => ItemLocation.fromMap(p)).toList();

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/di/injection_container.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
@@ -658,11 +658,11 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+            const Icon(Icons.error_outline, size: 64, color: Colors.white),
             const SizedBox(height: 16),
             Text(
               state.message.isNotEmpty ? state.message : 'Failed to load lots',
-              style: const TextStyle(color: Colors.grey),
+              style: const TextStyle(color: Colors.white),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -681,13 +681,13 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Iconsax.box_1, size: 64, color: Colors.grey),
+            const Icon(Iconsax.box_1, size: 64, color: Colors.white),
             const SizedBox(height: 16),
             Text(
               state.searchQuery.isEmpty
                   ? 'No lots found'
                   : 'No results for "${state.searchQuery}"',
-              style: const TextStyle(color: Colors.grey, fontSize: 16),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
           ],
         ),

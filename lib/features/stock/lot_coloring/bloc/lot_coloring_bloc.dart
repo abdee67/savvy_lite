@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:bloc/bloc.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/bloc/lot_coloring_event.dart';
@@ -171,14 +171,19 @@ class LotExpirationColorsBloc
         whereArgs: _scopeWhereArgs(event.color, authBloc.state.companyId),
       );
 
-      final existingColors = existingForScope.map((m) => LotExpirationColor.fromMap(m)).toList();
+      final existingColors = existingForScope
+          .map((m) => LotExpirationColor.fromMap(m))
+          .toList();
       final combined = <LotExpirationColor>[...existingColors, event.color];
       final rangesValid = await _validateRanges(combined);
       if (!rangesValid) {
-        emit(state.copyWith(
-          status: LotExpirationColorsStatus.failure,
-          message: 'Ranges must be consecutive and non-overlapping for the selected level/scope',
-        ));
+        emit(
+          state.copyWith(
+            status: LotExpirationColorsStatus.failure,
+            message:
+                'Ranges must be consecutive and non-overlapping for the selected level/scope',
+          ),
+        );
         return;
       }
 
@@ -228,17 +233,25 @@ class LotExpirationColorsBloc
       final existingForScope = await db.query(
         'lot_expiration_colors',
         where: '${_scopeWhereClause(event.color)} AND id != ?',
-        whereArgs: [..._scopeWhereArgs(event.color, authBloc.state.companyId), event.color.id],
+        whereArgs: [
+          ..._scopeWhereArgs(event.color, authBloc.state.companyId),
+          event.color.id,
+        ],
       );
 
-      final existingColors = existingForScope.map((m) => LotExpirationColor.fromMap(m)).toList();
+      final existingColors = existingForScope
+          .map((m) => LotExpirationColor.fromMap(m))
+          .toList();
       final combined = <LotExpirationColor>[...existingColors, event.color];
       final rangesValid = await _validateRanges(combined);
       if (!rangesValid) {
-        emit(state.copyWith(
-          status: LotExpirationColorsStatus.failure,
-          message: 'Ranges must be consecutive and non-overlapping for the selected level/scope',
-        ));
+        emit(
+          state.copyWith(
+            status: LotExpirationColorsStatus.failure,
+            message:
+                'Ranges must be consecutive and non-overlapping for the selected level/scope',
+          ),
+        );
         return;
       }
 
@@ -600,8 +613,6 @@ class LotExpirationColorsBloc
       // Both ends must be present to validate adjacency
       if (prevMin == null || nextMax == null) return false;
 
-   
-
       // Enforce consecutive boundary: nextMax == prevMin - 1
       if (nextMax != prevMin - 1) return false;
     }
@@ -609,38 +620,42 @@ class LotExpirationColorsBloc
     return true;
   }
 
-Future<LotExpirationColor?> _getLotExpirationColorByDetails(
-  int? branchId,
-  int? itemId,
-  DateTime? expirationDate,
-  DateTime? effectiveDate,
-  DateTime? receivedDate,
-) async {
-  if (itemId == null) {
-    print('❌ Item ID is null in color calculation');
-    return null;
-  }
+  Future<LotExpirationColor?> _getLotExpirationColorByDetails(
+    int? branchId,
+    int? itemId,
+    DateTime? expirationDate,
+    DateTime? effectiveDate,
+    DateTime? receivedDate,
+  ) async {
+    if (itemId == null) {
+      print('❌ Item ID is null in color calculation');
+      return null;
+    }
 
-  final db = await databaseService.database;
-  
-  // Get system constant for lot type
-  final systemConstant = systemConstantBloc.state.selected;
-  // If Apply Lot Management is disabled, skip color calculation
-  if (systemConstant?.applyLotMgmBoolean != true) {
-    print('⚠️ Apply Lot Management is disabled in system constants - skipping color calculation');
-    return null;
-  }
-  final lotTypeUdcDetail = await _getLotTypeUdcDetail(systemConstant?.lotType);
-  final lotType = lotTypeUdcDetail?.detailCode.toUpperCase();
+    final db = await databaseService.database;
 
-  final daysDifference = calculateDaysDifference(
-    expirationDate,
-    effectiveDate,
-    receivedDate,
-    lotType,
-  );
+    // Get system constant for lot type
+    final systemConstant = systemConstantBloc.state.selected;
+    // If Apply Lot Management is disabled, skip color calculation
+    if (systemConstant?.applyLotMgmBoolean != true) {
+      print(
+        '⚠️ Apply Lot Management is disabled in system constants - skipping color calculation',
+      );
+      return null;
+    }
+    final lotTypeUdcDetail = await _getLotTypeUdcDetail(
+      systemConstant?.lotType,
+    );
+    final lotType = lotTypeUdcDetail?.detailCode.toUpperCase();
 
-  print('''
+    final daysDifference = calculateDaysDifference(
+      expirationDate,
+      effectiveDate,
+      receivedDate,
+      lotType,
+    );
+
+    print('''
 🎨 COLOR CALCULATION:
   Branch: $branchId, Item: $itemId
   Lot Type: $lotType
@@ -650,16 +665,18 @@ Future<LotExpirationColor?> _getLotExpirationColorByDetails(
   Received: $receivedDate
 ''');
 
-  List<Map<String, dynamic>> results = [];
+    List<Map<String, dynamic>> results = [];
 
-  // Try different levels in order of specificity
-  // At this point itemId is already guaranteed non-null (we returned earlier if it was null),
-  // so only check branchId here for level 4.
-  if (branchId != null) {
-    // Level 4: Item Store Level
-    print('  ▶ Query Level 4 (Item Store) with args: company=${authBloc.state.companyId}, item=$itemId, branch=$branchId, days=$daysDifference');
-    results = await db.rawQuery(
-      '''
+    // Try different levels in order of specificity
+    // At this point itemId is already guaranteed non-null (we returned earlier if it was null),
+    // so only check branchId here for level 4.
+    if (branchId != null) {
+      // Level 4: Item Store Level
+      print(
+        '  ▶ Query Level 4 (Item Store) with args: company=${authBloc.state.companyId}, item=$itemId, branch=$branchId, days=$daysDifference',
+      );
+      results = await db.rawQuery(
+        '''
       SELECT lec.*, ud.detail_code as color_type_code, ud.description_1 as color_type_name
       FROM lot_expiration_colors lec
       LEFT JOIN udc_details ud ON lec.color_type = ud.id
@@ -670,17 +687,21 @@ Future<LotExpirationColor?> _getLotExpirationColorByDetails(
       AND lec.active_for_sales_flag = 'Y'
       LIMIT 1
       ''',
-      [authBloc.state.companyId, itemId, branchId, daysDifference],
-    );
-    print('  ℹ Level 4 returned: ${results.length} rows');
-    if (results.isNotEmpty) print('  ✅ Found Level 4 configuration -> ${results.first}');
-  }
+        [authBloc.state.companyId, itemId, branchId, daysDifference],
+      );
+      print('  ℹ Level 4 returned: ${results.length} rows');
+      if (results.isNotEmpty) {
+        print('  ✅ Found Level 4 configuration -> ${results.first}');
+      }
+    }
 
-  if (results.isEmpty) {
-    // Level 3: Item Level
-    print('  ▶ Query Level 3 (Item) with args: company=${authBloc.state.companyId}, item=$itemId, days=$daysDifference');
-    results = await db.rawQuery(
-      '''
+    if (results.isEmpty) {
+      // Level 3: Item Level
+      print(
+        '  ▶ Query Level 3 (Item) with args: company=${authBloc.state.companyId}, item=$itemId, days=$daysDifference',
+      );
+      results = await db.rawQuery(
+        '''
       SELECT lec.*, ud.detail_code as color_type_code, ud.description_1 as color_type_name
       FROM lot_expiration_colors lec
       LEFT JOIN udc_details ud ON lec.color_type = ud.id
@@ -691,17 +712,21 @@ Future<LotExpirationColor?> _getLotExpirationColorByDetails(
       AND lec.active_for_sales_flag = 'Y'
       LIMIT 1
       ''',
-      [authBloc.state.companyId, itemId, daysDifference],
-    );
-    print('  ℹ Level 3 returned: ${results.length} rows');
-    if (results.isNotEmpty) print('  ✅ Found Level 3 configuration -> ${results.first}');
-  }
+        [authBloc.state.companyId, itemId, daysDifference],
+      );
+      print('  ℹ Level 3 returned: ${results.length} rows');
+      if (results.isNotEmpty) {
+        print('  ✅ Found Level 3 configuration -> ${results.first}');
+      }
+    }
 
-  if (results.isEmpty && branchId != null) {
-    // Level 2: Store Level
-    print('  ▶ Query Level 2 (Store) with args: company=${authBloc.state.companyId}, branch=$branchId, days=$daysDifference');
-    results = await db.rawQuery(
-      '''
+    if (results.isEmpty && branchId != null) {
+      // Level 2: Store Level
+      print(
+        '  ▶ Query Level 2 (Store) with args: company=${authBloc.state.companyId}, branch=$branchId, days=$daysDifference',
+      );
+      results = await db.rawQuery(
+        '''
       SELECT lec.*, ud.detail_code as color_type_code, ud.description_1 as color_type_name
       FROM lot_expiration_colors lec
       LEFT JOIN udc_details ud ON lec.color_type = ud.id
@@ -712,17 +737,21 @@ Future<LotExpirationColor?> _getLotExpirationColorByDetails(
       AND lec.active_for_sales_flag = 'Y'
       LIMIT 1
       ''',
-      [authBloc.state.companyId, branchId, daysDifference],
-    );
-    print('  ℹ Level 2 returned: ${results.length} rows');
-    if (results.isNotEmpty) print('  ✅ Found Level 2 configuration -> ${results.first}');
-  }
+        [authBloc.state.companyId, branchId, daysDifference],
+      );
+      print('  ℹ Level 2 returned: ${results.length} rows');
+      if (results.isNotEmpty) {
+        print('  ✅ Found Level 2 configuration -> ${results.first}');
+      }
+    }
 
-  if (results.isEmpty) {
-    // Level 1: Company Level
-    print('  ▶ Query Level 1 (Company) with args: company=${authBloc.state.companyId}, days=$daysDifference');
-    results = await db.rawQuery(
-      '''
+    if (results.isEmpty) {
+      // Level 1: Company Level
+      print(
+        '  ▶ Query Level 1 (Company) with args: company=${authBloc.state.companyId}, days=$daysDifference',
+      );
+      results = await db.rawQuery(
+        '''
       SELECT lec.*, ud.detail_code as color_type_code, ud.description_1 as color_type_name
       FROM lot_expiration_colors lec
       LEFT JOIN udc_details ud ON lec.color_type = ud.id
@@ -733,22 +762,27 @@ Future<LotExpirationColor?> _getLotExpirationColorByDetails(
       AND lec.active_for_sales_flag = 'Y'
       LIMIT 1
       ''',
-      [authBloc.state.companyId, daysDifference],
-    );
-    print('  ℹ Level 1 returned: ${results.length} rows');
-    if (results.isNotEmpty) print('  ✅ Found Level 1 configuration -> ${results.first}');
+        [authBloc.state.companyId, daysDifference],
+      );
+      print('  ℹ Level 1 returned: ${results.length} rows');
+      if (results.isNotEmpty) {
+        print('  ✅ Found Level 1 configuration -> ${results.first}');
+      }
+    }
+
+    if (results.isEmpty) {
+      print('  ❌ No color configuration found for any level');
+      print(
+        '  🔎 Search params -> company: ${authBloc.state.companyId}, branch: $branchId, item: $itemId, lotType: $lotType, daysDifference: $daysDifference',
+      );
+      return null;
+    }
+
+    final color = LotExpirationColor.fromMap(results.first);
+    print('  🎯 Final Color: ${color.colorTypeName} (${color.colorTypeCode})');
+    return color;
   }
 
-  if (results.isEmpty) {
-    print('  ❌ No color configuration found for any level');
-    print('  🔎 Search params -> company: ${authBloc.state.companyId}, branch: $branchId, item: $itemId, lotType: $lotType, daysDifference: $daysDifference');
-    return null;
-  }
-
-  final color = LotExpirationColor.fromMap(results.first);
-  print('  🎯 Final Color: ${color.colorTypeName} (${color.colorTypeCode})');
-  return color;
-}
   int calculateDaysDifference(
     DateTime? expirationDate,
     DateTime? effectiveDate,
@@ -775,45 +809,47 @@ Future<LotExpirationColor?> _getLotExpirationColorByDetails(
     return lotType?.toUpperCase() == 'R' ? difference.abs() : difference;
   }
 
-Future<UdcDetails?> _getLotTypeUdcDetail(int? lotTypeId) async {
-  if (lotTypeId == null) {
-    print('❌ Lot type ID is null');
-    return null;
-  }
-  
-  try {
-    final db = await databaseService.database;
-    final result = await db.rawQuery(
-      '''
+  Future<UdcDetails?> _getLotTypeUdcDetail(int? lotTypeId) async {
+    if (lotTypeId == null) {
+      print('❌ Lot type ID is null');
+      return null;
+    }
+
+    try {
+      final db = await databaseService.database;
+      final result = await db.rawQuery(
+        '''
       SELECT * FROM udc_details 
       WHERE id = ? AND record_header = (SELECT id FROM udc_header WHERE header_code = 'LT')
       ''',
-      [lotTypeId],
-    );
-
-    if (result.isNotEmpty) {
-      final udc = UdcDetails.fromJson(result.first);
-      print('✅ Found UDC detail: ${udc.detailCode} - ${udc.description1}');
-      return udc;
-    } else {
-      print('❌ No UDC detail found for ID: $lotTypeId with header LT');
-      // Try without header constraint as fallback
-      final fallbackResult = await db.rawQuery(
-        'SELECT * FROM udc_details WHERE id = ?',
         [lotTypeId],
       );
-      if (fallbackResult.isNotEmpty) {
-        final udc = UdcDetails.fromJson(fallbackResult.first);
-        print('✅ Found UDC detail (fallback): ${udc.detailCode} - ${udc.description1}');
+
+      if (result.isNotEmpty) {
+        final udc = UdcDetails.fromJson(result.first);
+        print('✅ Found UDC detail: ${udc.detailCode} - ${udc.description1}');
         return udc;
+      } else {
+        print('❌ No UDC detail found for ID: $lotTypeId with header LT');
+        // Try without header constraint as fallback
+        final fallbackResult = await db.rawQuery(
+          'SELECT * FROM udc_details WHERE id = ?',
+          [lotTypeId],
+        );
+        if (fallbackResult.isNotEmpty) {
+          final udc = UdcDetails.fromJson(fallbackResult.first);
+          print(
+            '✅ Found UDC detail (fallback): ${udc.detailCode} - ${udc.description1}',
+          );
+          return udc;
+        }
+        return null;
       }
+    } catch (e) {
+      print('❌ Error getting lot type UDC: $e');
       return null;
     }
-  } catch (e) {
-    print('❌ Error getting lot type UDC: $e');
-    return null;
   }
-}
 
   Future<void> _onRecalculateAllColor(
     RecalculateAllColor event,

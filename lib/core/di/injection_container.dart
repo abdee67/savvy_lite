@@ -1,11 +1,11 @@
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/core/constants/api_constants.dart';
-import 'package:savvy_stock/core/repositories/system_constant_repository.dart';
+import 'package:savvy_stock/features/system_constant/repo/system_constant_repository.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
-import 'package:savvy_stock/core/services/system_constant/system_constant_service.dart';
+import 'package:savvy_stock/features/system_constant/repo/system_constant_service.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_bloc.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_bloc.dart';
 import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
@@ -39,7 +39,7 @@ import 'package:savvy_stock/features/stock/lot_coloring/bloc/lot_coloring_bloc.d
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_master/repo/lot_master_repo.dart';
 import 'package:savvy_stock/features/stock/sales_order_detail/bloc/sales_order_detail_bloc.dart';
-import 'package:savvy_stock/features/stock/sales_order_detail/sales_order_detail_repo.dart';
+import 'package:savvy_stock/features/stock/sales_order_detail/repo/sales_order_detail_repo.dart';
 import 'package:savvy_stock/features/stock/sales_order_header/bloc/sales_order_header_bloc.dart';
 import 'package:savvy_stock/features/stock/sales_order_header/repo/sales_order_header_repo.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
@@ -68,6 +68,7 @@ void initDependencies() {
       localDatabaseService: getIt(),
       httpClient: getIt(),
       authBloc: getIt(), // Pass auth service
+      udcRepository: getIt(),
     ),
   );
 

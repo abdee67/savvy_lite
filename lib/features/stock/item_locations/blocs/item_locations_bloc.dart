@@ -73,7 +73,6 @@ class StockItemLocationBloc
     emit(state.copyWith(status: ItemLocationsStatus.loading));
     try {
       final items = await repository.getItemLocationsByBranchAndItem(
-        locationId: event.locationId!,
         companyId: event.companyId,
         branchId: event.branchId,
         itemId: event.itemId,

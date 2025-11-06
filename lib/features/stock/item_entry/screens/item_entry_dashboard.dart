@@ -418,11 +418,11 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+            const Icon(Icons.error_outline, size: 64, color: Colors.white),
             const SizedBox(height: 16),
             Text(
               state.message ?? 'Failed to load Items',
-              style: const TextStyle(color: Colors.grey),
+              style: const TextStyle(color: Colors.white),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -441,13 +441,13 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Iconsax.box, size: 64, color: Colors.grey),
+            const Icon(Iconsax.box, size: 64, color: Colors.white),
             const SizedBox(height: 16),
             Text(
               state.searchQuery.isEmpty
                   ? 'No items found'
                   : 'No results for "${state.searchQuery}"',
-              style: const TextStyle(color: Colors.grey, fontSize: 16),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
           ],
         ),
