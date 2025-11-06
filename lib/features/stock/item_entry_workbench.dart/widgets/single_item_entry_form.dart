@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_state.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
 import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_searchable_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_text_form.dart';
@@ -444,27 +444,20 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
     return BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
       builder: (context, state) {
         if (state.status == UdcDetailsStatus.loading) {
-          return const CustomDropdown(
+          return const CustomSearchableDropdown(
             labelText: 'UoM',
-            items: [],
-            prefixIcon: Icon(Icons.scale),
+            options: [],
             enabled: false,
-            hintText: 'Loading UoM...',
           );
         }
 
         final uomList = state.details
             .where((detail) => detail.udcGroup == 'UM')
             .toList();
-        return CustomDropdown(
+        return CustomSearchableDropdown(
           labelText: 'UoM',
-          prefixIcon: const Icon(Icons.scale),
-          items: uomList.map((uom) {
-            return DropdownMenuItem(
-              value: uom.id.toString(),
-              child: Text(uom.description1 ?? 'Unknown'),
-            );
-          }).toList(),
+          prefixIcon: Icons.scale,
+          options: uomList.map((uom) => uom.description1 ?? 'Unknown').toList(),
           onChanged: (value) {
             setState(() {
               _items[index] = _items[index].copyWith(
