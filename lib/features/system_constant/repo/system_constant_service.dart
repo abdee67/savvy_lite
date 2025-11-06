@@ -3,8 +3,8 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/errors/exceptions.dart';
-import 'package:savvy_stock/core/models/system_constant.dart';
-import 'package:savvy_stock/core/repositories/system_constant_repository.dart';
+import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
+import 'package:savvy_stock/features/system_constant/repo/system_constant_repository.dart';
 
 class SystemConstantsService with ChangeNotifier {
   final SystemConstantRepository _repository;
@@ -37,6 +37,17 @@ class SystemConstantsService with ChangeNotifier {
   bool get applyLotManagement => _currentSystemConstant?.applyLotMgm == 'Y';
   bool get autoGenerateBarcode =>
       _currentSystemConstant?.generateBarcodeForItem == 'Y';
+  bool get autoSalesPrice => _currentSystemConstant?.autoSalesPrice == 'Y';
+  bool get lotQtyAutoForSales =>
+      _currentSystemConstant?.lotQtyAutoForSales == 'Y';
+  bool get discountDisplay => _currentSystemConstant?.discountDisplay == 'Y';
+  bool get taxInfoDisplay => _currentSystemConstant?.taxInfoDisplay == 'Y';
+  bool get reorderPointUomType =>
+      _currentSystemConstant?.reorderPointUomType == 'I';
+  int get locationCategoryLevel =>
+      _currentSystemConstant?.locationCategoryLevel ?? 1;
+  bool get applyLocationManagement =>
+      _currentSystemConstant?.applyLocationMgm == 'Y';
 
   Future<void> _loadSystemConstants() async {
     if (_isLoading) return;
@@ -68,6 +79,9 @@ class SystemConstantsService with ChangeNotifier {
           autoSalesPrice: 'N',
           generateBarcodeForItem: 'N',
           lotQtyAutoForSales: 'Y',
+          discountDisplay: 'N',
+          taxInfoDisplay: 'N',
+          reorderPointUomType: 'I',
           locationCategoryLevel: 1,
           isSynced: false,
         );
@@ -131,6 +145,9 @@ class SystemConstantsService with ChangeNotifier {
         autoSalesPrice: 'N',
         generateBarcodeForItem: 'N',
         lotQtyAutoForSales: 'Y',
+        discountDisplay: 'N',
+        taxInfoDisplay: 'N',
+        reorderPointUomType: 'I',
         locationCategoryLevel: 1,
       );
     }

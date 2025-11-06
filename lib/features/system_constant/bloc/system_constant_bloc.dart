@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
 import 'package:savvy_stock/core/errors/exceptions.dart';
-import 'package:savvy_stock/core/models/system_constant.dart';
-import 'package:savvy_stock/core/repositories/system_constant_repository.dart';
+import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
+import 'package:savvy_stock/features/system_constant/repo/system_constant_repository.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'system_constant_event.dart';
 import 'system_constant_state.dart';
-import 'package:savvy_stock/core/services/system_constant/system_constant_service.dart';
+import 'package:savvy_stock/features/system_constant/repo/system_constant_service.dart';
 
 class SystemConstantBloc
     extends Bloc<SystemConstantEvent, SystemConstantState> {
@@ -85,7 +85,9 @@ class SystemConstantBloc
           unsyncedCount: unSyncedCount,
         ),
       );
-           print('✅ SystemConstantBloc: State updated with lot_type: ${companyConstants.lotType}');
+      print(
+        '✅ SystemConstantBloc: State updated with lot_type: ${companyConstants.lotType}',
+      );
     } catch (e) {
       developer.log('Error loading system constants: $e');
       emit(
@@ -426,6 +428,9 @@ class SystemConstantBloc
           rateWithholdingPercentage: 2.0,
           withHoldInitials: 1000.0,
           generateBarcodeForItem: 'N',
+          reorderPointUomType: 'I',
+          discountDisplay: 'Y',
+          taxInfoDisplay: 'Y',
         );
       }
 

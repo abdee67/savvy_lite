@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_state.dart';
-import 'package:savvy_stock/core/models/system_constant.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
+import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 
-import '../../../core/blocs/system_constant/system_constant_bloc.dart';
+import '../bloc/system_constant_bloc.dart';
 
 class SystemConstantsForm extends StatefulWidget {
   const SystemConstantsForm({super.key});

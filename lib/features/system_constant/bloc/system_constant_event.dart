@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:savvy_stock/core/models/system_constant.dart';
+import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 
 abstract class SystemConstantEvent extends Equatable {
   const SystemConstantEvent();

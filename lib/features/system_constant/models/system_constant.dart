@@ -1,10 +1,10 @@
 class SystemConstant {
   final int? id;
   late final String? applyLotMgm;
- late final String? applyLocationMgm;
+  late final String? applyLocationMgm;
   final String? interfaceCustomer;
   final String? interfaceEmployee;
-  final int? decimalPlaces;
+  int? decimalPlaces;
   final DateTime? dateLastUpdated;
   final DateTime? timeLastUpdated;
   final int? updatedBy;
@@ -17,6 +17,9 @@ class SystemConstant {
   final int? lotType;
   final int? locationCategoryLevel;
   late final String? lotQtyAutoForSales;
+  late final String? discountDisplay;
+  late final String? taxInfoDisplay;
+  late final String? reorderPointUomType;
   final int? tempId;
   final bool isSynced;
   final DateTime? lastSyncTime;
@@ -40,6 +43,9 @@ class SystemConstant {
     this.lotType,
     this.locationCategoryLevel,
     this.lotQtyAutoForSales,
+    this.discountDisplay,
+    this.taxInfoDisplay,
+    this.reorderPointUomType,
     this.tempId,
     this.isSynced = true,
     this.lastSyncTime,
@@ -69,6 +75,9 @@ class SystemConstant {
       lotType: json['lot_type'],
       locationCategoryLevel: json['location_category_level'],
       lotQtyAutoForSales: json['lot_qty_auto_for_sales'],
+      discountDisplay: json['discount_display'],
+      taxInfoDisplay: json['tax_info_display'],
+      reorderPointUomType: json['reorder_point_uom_type'],
       isSynced: json['is_synced'] == 1,
       lastSyncTime: json['last_sync_time'] != null
           ? DateTime.fromMillisecondsSinceEpoch(json['last_sync_time'])
@@ -99,6 +108,9 @@ class SystemConstant {
       'lot_type': lotType,
       'location_category_level': locationCategoryLevel,
       'lot_qty_auto_for_sales': lotQtyAutoForSales,
+      'discount_display': discountDisplay,
+      'tax_info_display': taxInfoDisplay,
+      'reorder_point_uom_type': reorderPointUomType,
       'is_synced': isSynced ? 1 : 0,
       'last_sync_time': lastSyncTime?.millisecondsSinceEpoch,
     };
@@ -124,6 +136,9 @@ class SystemConstant {
       'lot_type': lotType,
       'location_category_level': locationCategoryLevel,
       'lot_qty_auto_for_sales': lotQtyAutoForSales,
+      'discount_display': discountDisplay,
+      'tax_info_display': taxInfoDisplay,
+      'reorder_point_uom_type': reorderPointUomType,
       'is_synced': isSynced ? 1 : 0,
       'last_sync_time': lastSyncTime?.millisecondsSinceEpoch,
     };
@@ -155,6 +170,9 @@ class SystemConstant {
           : map['lot_type'],
       locationCategoryLevel: map['location_category_level'],
       lotQtyAutoForSales: map['lot_qty_auto_for_sales'],
+      discountDisplay: map['discount_display'],
+      taxInfoDisplay: map['tax_info_display'],
+      reorderPointUomType: map['reorder_point_uom_type'],
       isSynced: map['is_synced'] == 1,
       lastSyncTime: map['last_sync_time'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['last_sync_time'])
@@ -182,6 +200,9 @@ class SystemConstant {
     int? lotType,
     int? locationCategoryLevel,
     String? lotQtyAutoForSales,
+    String? discountDisplay,
+    String? taxInfoDisplay,
+    String? reorderPointUomType,
     int? tempId,
     bool? isSynced,
     DateTime? lastSyncTime,
@@ -208,6 +229,9 @@ class SystemConstant {
       locationCategoryLevel:
           locationCategoryLevel ?? this.locationCategoryLevel,
       lotQtyAutoForSales: lotQtyAutoForSales ?? this.lotQtyAutoForSales,
+      discountDisplay: discountDisplay ?? this.discountDisplay,
+      taxInfoDisplay: taxInfoDisplay ?? this.taxInfoDisplay,
+      reorderPointUomType: reorderPointUomType ?? this.reorderPointUomType,
       tempId: tempId ?? this.tempId,
       isSynced: isSynced ?? this.isSynced,
       lastSyncTime: lastSyncTime ?? this.lastSyncTime,
@@ -220,6 +244,9 @@ class SystemConstant {
   bool get lotQtyAutoForSalesBoolean => lotQtyAutoForSales == 'Y';
   bool get autoSalesPriceBoolean => autoSalesPrice == 'Y';
   bool get generateBarcodeForItemBoolean => generateBarcodeForItem == 'Y';
+  bool get discountDisplayBoolean => discountDisplay == 'Y';
+  bool get taxInfoDisplayBoolean => taxInfoDisplay == 'Y';
+  bool get reorderPointUomTypeBoolean => reorderPointUomType == 'I';
 
   set applyLotMgmBoolean(bool value) => applyLotMgm = value ? 'Y' : 'N';
   set applyLocationMgmBoolean(bool value) =>
@@ -229,4 +256,8 @@ class SystemConstant {
   set autoSalesPriceBoolean(bool value) => autoSalesPrice = value ? 'Y' : 'N';
   set generateBarcodeForItemBoolean(bool value) =>
       generateBarcodeForItem = value ? 'Y' : 'N';
+  set discountDisplayBoolean(bool value) => discountDisplay = value ? 'Y' : 'N';
+  set taxInfoDisplayBoolean(bool value) => taxInfoDisplay = value ? 'Y' : 'N';
+  set reorderPointUomTypeBoolean(bool value) =>
+      reorderPointUomType = value ? 'I' : 'D';
 }

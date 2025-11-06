@@ -2,12 +2,13 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 import 'package:http/http.dart' as http;
 import 'package:savvy_stock/core/constants/api_constants.dart';
-import 'package:savvy_stock/core/models/system_constant.dart';
+import 'package:savvy_stock/core/repositories/udc_repository.dart';
+import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:sqflite/sqflite.dart';
 
-import '../errors/exceptions.dart';
+import '../../../core/errors/exceptions.dart';
 
 class SystemConstantRepository {
   final LocalDatabaseService localDatabaseService;
@@ -15,12 +16,14 @@ class SystemConstantRepository {
   // final AuthService authService;
   final http.Client httpClient;
   final AuthBloc authBloc;
+  final UdcRepository udcRepository;
 
   SystemConstantRepository({
     this.baseUrl = ApiConstants.baseUrl,
     required this.localDatabaseService,
     required this.authBloc,
     required this.httpClient,
+    required this.udcRepository,
   });
 
   // Offline-first: Try API first, fallback to local database
@@ -122,11 +125,12 @@ class SystemConstantRepository {
     }
   }
 
-  SystemConstant _createDefaultSystemConstant(int? companyId) {
+  Future<SystemConstant> _createDefaultSystemConstant(int? companyId) async {
     developer.log('Creating default system constants for company: $companyId');
-
+    final lotType = await udcRepository.getUdcDetailIdByHeaderCode('X');
     return SystemConstant(
-      applyLotMgm: 'N',
+      applyLotMgm: 'Y',
+      lotType: lotType!,
       applyLocationMgm: 'Y',
       decimalPlaces: 2,
       generateBarcodeForItem: 'N',
@@ -136,13 +140,14 @@ class SystemConstantRepository {
       withHoldInitials: 1000.0,
       autoSalesPrice: 'N',
       lotQtyAutoForSales: 'Y',
+      discountDisplay: 'Y',
+      taxInfoDisplay: 'Y',
+      reorderPointUomType: 'I',
       locationCategoryLevel: 1,
       isSynced: false, // Mark as not synced since it's local
     );
   }
 
-  // Local database operations
-  // Local database operations
   Future<List<SystemConstant>> getLocalSystemConstants() async {
     final db = await localDatabaseService.database;
     try {
