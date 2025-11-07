@@ -93,3 +93,59 @@ class CalculateUomConversion extends ItemUomConversionEvent {
   @override
   List<Object> get props => [itemId, fromUomId, toUomId, companyId];
 }
+
+class ValidateStructure extends ItemUomConversionEvent {
+  final List<ItemUomConversion> createItems;
+  final ItemUomConversion? currentItem;
+  const ValidateStructure({required this.createItems, this.currentItem});
+
+  @override
+  List<Object> get props => [createItems];
+}
+
+class CheckDuplication extends ItemUomConversionEvent {
+  final ItemUomConversion item;
+  const CheckDuplication(this.item);
+
+  @override
+  List<Object> get props => [item];
+}
+
+// Add this to your ItemUomConversionEvent
+class ResetUomConversionStatus extends ItemUomConversionEvent {
+  const ResetUomConversionStatus();
+
+  @override
+  List<Object> get props => [];
+}
+
+// Add these to your ItemUomConversionEvent
+class SearchItemUomConversions extends ItemUomConversionEvent {
+  final String query;
+  const SearchItemUomConversions(this.query);
+  @override
+  List<Object> get props => [query];
+}
+
+class SelectItemUomConversion extends ItemUomConversionEvent {
+  final ItemUomConversion conversion;
+  final bool selected;
+  const SelectItemUomConversion(this.conversion, this.selected);
+  @override
+  List<Object> get props => [conversion, selected];
+}
+
+class ClearSelection extends ItemUomConversionEvent {
+  const ClearSelection();
+  @override
+  List<Object> get props => [];
+}
+
+class DeleteMultipleItemUomConversions extends ItemUomConversionEvent {
+  final List<ItemUomConversion> conversions;
+  const DeleteMultipleItemUomConversions(this.conversions);
+  @override
+  List<Object> get props => [conversions];
+}
+
+// Add handlers for these events in your bloc

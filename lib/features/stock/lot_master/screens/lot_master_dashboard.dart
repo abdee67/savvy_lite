@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/di/injection_container.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
@@ -75,17 +75,17 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     context.read<LotMasterBloc>().add(
       LoadLotMasters(widget.authBloc.state.companyId!),
     );
-    context.read<LotMasterBloc>().add(ClaculateMultipleLotStatus());
+    context.read<LotMasterBloc>().add(CalculateMultipleLotStatus());
     context.read<BranchBloc>().add(
       LoadBranchs(widget.authBloc.state.companyId!),
     );
-    context.read<StockItemEntryBloc>().add(
+    context.read<StockItemsEntryBloc>().add(
       LoadItems(widget.authBloc.state.companyId!),
     );
     context.read<LocationMasterBloc>().add(
       LoadLocationMasters(widget.authBloc.state.companyId!),
     );
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    /*   WidgetsBinding.instance.addPostFrameCallback((_) {
       _debugSystemConstants();
       _debugSystemConstantBloc();
       if (context.read<LotMasterBloc>().state.items.isNotEmpty) {
@@ -93,7 +93,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
           context.read<LotMasterBloc>().state.items.first,
         );
       }
-    });
+    });*/
   }
 
   void _setupAnimations() {
@@ -209,7 +209,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
   }
 
   String _getItemName(int itemId) {
-    final itemBloc = context.read<StockItemEntryBloc>();
+    final itemBloc = context.read<StockItemsEntryBloc>();
     final itemDescription =
         itemBloc.state.items
             .where((entry) => entry.id == itemId)
@@ -236,8 +236,8 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     final state = bloc.state;
 
     //CASE 1: Multiple lots
-    if (state.multiSelectionItems.isNotEmpty) {
-      final lotsToDelete = state.multiSelectionItems;
+    if (state.selectedItems.isNotEmpty) {
+      final lotsToDelete = state.selectedItems;
       showDeleteDialog(
         context,
         title: 'Delete selected lots?',
@@ -359,8 +359,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
         return Colors.green;
       case 'BLK':
         return Colors.black;
-      case 'YEL':
-      case 'YLW':
+      case 'YL':
         return Colors.yellow;
       case 'ORG':
         return Colors.orange;
@@ -368,6 +367,10 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
         return Colors.grey;
       case 'OV':
         return const Color.fromARGB(255, 14, 90, 4);
+      case 'PRPL':
+        return Colors.purple;
+      case 'LM':
+        return Colors.lime;
 
       default:
         // Fallback to name matching
@@ -655,11 +658,11 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+            const Icon(Icons.error_outline, size: 64, color: Colors.white),
             const SizedBox(height: 16),
             Text(
               state.message.isNotEmpty ? state.message : 'Failed to load lots',
-              style: const TextStyle(color: Colors.grey),
+              style: const TextStyle(color: Colors.white),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -678,13 +681,13 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Iconsax.box_1, size: 64, color: Colors.grey),
+            const Icon(Iconsax.box_1, size: 64, color: Colors.white),
             const SizedBox(height: 16),
             Text(
               state.searchQuery.isEmpty
                   ? 'No lots found'
                   : 'No results for "${state.searchQuery}"',
-              style: const TextStyle(color: Colors.grey, fontSize: 16),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
           ],
         ),
@@ -1175,7 +1178,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
   }
 
   void _calculateAllLotStatus() {
-    context.read<LotMasterBloc>().add(ClaculateMultipleLotStatus());
+    context.read<LotMasterBloc>().add(CalculateMultipleLotStatus());
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Recalculating all lot status...'),

@@ -24,6 +24,7 @@ class CustomTextField extends StatefulWidget {
   final bool obscureText;
   final String? suffixText;
   final Function()? onTap;
+  final int maxLines;
 
   const CustomTextField({
     super.key,
@@ -48,6 +49,7 @@ class CustomTextField extends StatefulWidget {
     this.obscureText = false,
     this.suffixText,
     this.onTap,
+    this.maxLines = 1,
   });
 
   @override
@@ -118,6 +120,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
         textInputAction: widget.textInputAction,
         focusNode: widget.focusNode,
         onTap: widget.onTap,
+        maxLines: widget.maxLines,
         style: TextStyle(
           color: widget.isDarkTheme ? Colors.white : Colors.black,
         ),

@@ -54,7 +54,7 @@ class _LotExpirationColorsFormPageState
       LoadBranchs(widget.authBloc.state.companyId!),
     );
     context.read<UdcDetailsBloc>().add(LoadUdcDetailsByGroup('CT'));
-    context.read<StockItemEntryBloc>().add(
+    context.read<StockItemsEntryBloc>().add(
       LoadItems(widget.authBloc.state.companyId!),
     );
     context.read<StockItemInBranchBloc>().add(
@@ -105,7 +105,9 @@ class _LotExpirationColorsFormPageState
     }
 
     // If there's an existing empty range (missing min or max), fill its max with suggestion
-    final idxToFill = _colorRanges.indexWhere((r) => r.daysMaximum == null || r.daysMinimum == null);
+    final idxToFill = _colorRanges.indexWhere(
+      (r) => r.daysMaximum == null || r.daysMinimum == null,
+    );
     if (idxToFill != -1) {
       setState(() {
         final r = _colorRanges[idxToFill];
@@ -115,21 +117,25 @@ class _LotExpirationColorsFormPageState
     } else {
       // Create a new pre-filled range with suggested max; user can adjust min/type
       setState(() {
-        _colorRanges.add(LotExpirationColor(
-          tempId: DateTime.now().millisecondsSinceEpoch,
-          company: widget.authBloc.state.companyId!,
-          daysMinimum: null,
-          daysMaximum: suggestedMax,
-          colorType: null,
-          description: '',
-          activeForSalesFlag: 'Y',
-        ));
+        _colorRanges.add(
+          LotExpirationColor(
+            tempId: DateTime.now().millisecondsSinceEpoch,
+            company: widget.authBloc.state.companyId!,
+            daysMinimum: null,
+            daysMaximum: suggestedMax,
+            colorType: null,
+            description: '',
+            activeForSalesFlag: 'Y',
+          ),
+        );
       });
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Suggested max days: $suggestedMax (you can edit before saving)'),
+        content: Text(
+          'Suggested max days: $suggestedMax (you can edit before saving)',
+        ),
         backgroundColor: Colors.blue,
       ),
     );
@@ -238,11 +244,6 @@ class _LotExpirationColorsFormPageState
 
         if (prevMin == null || nextMax == null) return false;
 
-        // Overlap check
-        if (prev.daysMaximum != null && next.daysMinimum != null) {
-          if (prev.daysMaximum! >= next.daysMinimum!) return false;
-        }
-
         // Enforce adjacency
         if (nextMax != prevMin - 1) return false;
       }
@@ -253,7 +254,9 @@ class _LotExpirationColorsFormPageState
     if (!validateAdjacency(combined)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Ranges must be consecutive and non-overlapping for the selected level/scope'),
+          content: Text(
+            'Ranges must be consecutive and non-overlapping for the selected level/scope',
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -382,7 +385,7 @@ class _LotExpirationColorsFormPageState
 
   Widget _buildItemSelector() {
     if (_selectedLevel == '3') {
-      return BlocBuilder<StockItemEntryBloc, ItemEntryState>(
+      return BlocBuilder<StockItemsEntryBloc, ItemEntryState>(
         builder: (context, state) => CustomDropdown(
           labelText: 'Item *',
           value: _selectedItem,
@@ -403,7 +406,7 @@ class _LotExpirationColorsFormPageState
           labelText: 'Item *',
           value: _selectedItem,
           items: state.items.map((item) {
-            final itemEntryBloc = context.read<StockItemEntryBloc>();
+            final itemEntryBloc = context.read<StockItemsEntryBloc>();
             final itemEntryState = itemEntryBloc.state;
             final itemDescription =
                 itemEntryState.items
@@ -437,12 +440,12 @@ class _LotExpirationColorsFormPageState
                   value: range.daysMaximum?.toString() ?? '',
                   onChanged: (v) => range.daysMaximum = int.tryParse(v),
                   validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                  suffixIcon:  IconButton(
-            icon: const Icon(Iconsax.radar),
-            onPressed: _suggestNextRange,
-            tooltip: 'Suggest Next',
-            color: Color(0xFF155888),
-          ),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Iconsax.radar),
+                    onPressed: _suggestNextRange,
+                    tooltip: 'Suggest Next',
+                    color: Color(0xFF155888),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -455,7 +458,6 @@ class _LotExpirationColorsFormPageState
                   validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                 ),
               ),
-              
             ],
           ),
           const SizedBox(height: 12),

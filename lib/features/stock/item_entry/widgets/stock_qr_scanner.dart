@@ -54,7 +54,7 @@ class _StockItemQRScannerState extends State<StockItemQRScanner> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<StockItemEntryBloc, ItemEntryState>(
+    return BlocListener<StockItemsEntryBloc, ItemEntryState>(
       listener: (context, state) {
         if (state.message != null) {
           ScaffoldMessenger.of(
@@ -73,16 +73,9 @@ class _StockItemQRScannerState extends State<StockItemQRScanner> {
                   labelText: 'Barcode',
                   hintText: 'Enter 12 or 13 digit barcode',
                   prefixIcon: const Icon(Icons.qr_code),
-                  suffixIcon: Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF155888),
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    child: IconButton(
-                      onPressed: _openScanner,
-                      icon: const Icon(Icons.camera_alt, color: Colors.white),
-                      tooltip: 'Scan Barcode',
-                    ),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.camera_alt),
+                    onPressed: _openScanner,
                   ),
 
                   keyboardType: TextInputType.number,

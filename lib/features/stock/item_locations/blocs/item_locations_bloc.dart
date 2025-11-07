@@ -1,38 +1,38 @@
-// features/ItemEntry/blocs/ItemEntry_bloc.dart
-
 import 'dart:async';
 
 import 'package:bloc/bloc.dart';
-import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_event.dart';
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_state.dart';
 import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
+import 'package:savvy_stock/features/stock/item_locations/repo/item_location_repo.dart';
 
 class StockItemLocationBloc
     extends Bloc<ItemLocationsEvent, ItemLocationsState> {
-  final LocalDatabaseService databaseService;
+  final ItemLocationsRepository repository;
   final AuthBloc authBloc;
   StreamSubscription? _authSubscription;
 
-  StockItemLocationBloc({required this.databaseService, required this.authBloc})
+  StockItemLocationBloc({required this.repository, required this.authBloc})
     : super(const ItemLocationsState()) {
     // Listen to auth state changes
     _authSubscription = authBloc.stream.listen((authState) {
       if (authState.isAuthenticated && authState.companyId != null) {
-        add(LoadItems(authState.companyId!));
+        add(LoadItemLocations(authState.companyId!));
       }
     });
-    on<LoadItems>(_onLoadItems);
+
+    on<LoadItemLocations>(_onLoadItemLocations);
     on<LoadItemLocationsByBranchAndItem>(_onLoadItemLocationsByBranchAndItem);
-    on<CreateItem>(_onCreateItem);
-    on<UpdateItem>(_onUpdateItem);
-    on<DeleteItem>(_onDeleteItem);
-    on<SearchItems>(_onSearchItem);
-    on<SelectItem>(_onSelectItem);
-    on<SelectAllItems>(_onSelectAllItemEntrys);
+    on<CreateItemLocation>(_onCreateItemLocation);
+    on<UpdateItemLocation>(_onUpdateItemLocation);
+    on<DeleteItemLocation>(_onDeleteItemLocation);
+    on<SearchItemLocations>(_onSearchItemLocations);
+    on<SelectItemLocation>(_onSelectItemLocation);
+    on<SelectAllItemLocations>(_onSelectAllItemLocations);
     on<ClearSelection>(_onClearSelection);
-    on<DeleteSelectedItems>(_onDeleteSelectedItemEntrys);
+    on<DeleteSelectedItemLocations>(_onDeleteSelectedItemLocations);
+    on<SaveItemLocationRow>(_onSaveItemLocationRow);
   }
 
   @override
@@ -41,37 +41,26 @@ class StockItemLocationBloc
     return super.close();
   }
 
-  Future<void> _onLoadItems(
-    LoadItems event,
+  Future<void> _onLoadItemLocations(
+    LoadItemLocations event,
     Emitter<ItemLocationsState> emit,
   ) async {
-    emit(ItemLocationsState(status: ItemLocationsStatus.loading));
+    emit(state.copyWith(status: ItemLocationsStatus.loading));
     try {
-      final db = await databaseService.database;
-      final items = await db.query(
-        'item_location',
-        where: 'company = ?',
-        whereArgs: [event.companyId],
-      );
-
-      final itemList = items.map((p) => ItemLocation.fromMap(p)).toList();
-
+      final items = await repository.getItemLocations(event.companyId);
       emit(
-        ItemLocationsState(
+        state.copyWith(
           status: ItemLocationsStatus.success,
-          items: itemList,
-          filteredItems: itemList,
-          searchQuery: '',
-          detailStatus: ItemLocationsDetailStatus.hidden,
+          items: items,
+          filteredItems: items,
           companyId: event.companyId,
-          selectedItems: [],
         ),
       );
     } catch (e) {
       emit(
-        ItemLocationsState(
+        state.copyWith(
           status: ItemLocationsStatus.failure,
-          message: 'Failed to load Items: $e',
+          message: 'Failed to load item locations: $e',
         ),
       );
     }
@@ -81,182 +70,210 @@ class StockItemLocationBloc
     LoadItemLocationsByBranchAndItem event,
     Emitter<ItemLocationsState> emit,
   ) async {
-    emit(ItemLocationsState(status: ItemLocationsStatus.loading));
+    emit(state.copyWith(status: ItemLocationsStatus.loading));
     try {
-      final db = await databaseService.database;
-      final items = await db.rawQuery(
-        '''SELECT il.*,
-             lm.location_description,
-             it.item_description,
-             b.description as branch_name
-      FROM item_location il
-      LEFT JOIN location_master lm ON il.location = lm.id
-      LEFT JOIN items_table it ON il.item_number = it.id
-      LEFT JOIN branch_table b ON il.branch = b.id
-      WHERE il.company = ? AND il.branch = ? AND il.item_number = ?
-        ''',
-        [event.companyId, event.branchId, event.itemId],
+      final items = await repository.getItemLocationsByBranchAndItem(
+        companyId: event.companyId,
+        branchId: event.branchId,
+        itemId: event.itemId,
       );
-
-      final itemList = items.map((p) => ItemLocation.fromMap(p)).toList();
-
-      emit(
-        ItemLocationsState(
-          status: ItemLocationsStatus.success,
-          items: itemList,
-          filteredItems: itemList,
-          searchQuery: '',
-          detailStatus: ItemLocationsDetailStatus.hidden,
-          companyId: event.companyId,
-          selectedItems: [],
-        ),
-      );
-    } catch (e) {
-      print('Error loading item location: $e');
-      emit(
-        ItemLocationsState(
-          status: ItemLocationsStatus.failure,
-          message: 'Failed to load Items: $e',
-        ),
-      );
-    }
-  }
-
-  Future<void> _onCreateItem(
-    CreateItem event,
-    Emitter<ItemLocationsState> emit,
-  ) async {
-    emit(
-      state.copyWith(
-        status: ItemLocationsStatus.creating,
-        message: 'Creating Item...',
-      ),
-    );
-    try {
-      final db = await databaseService.database;
-      final itemMap = event.item.toMap();
-
-      //remove id for new employee insrtion
-      itemMap.remove('id');
-
-      //add creation metadata
-      itemMap['company'] = authBloc.state.companyId;
-
-      await db.insert('item_location', itemMap);
-      add(LoadItems(authBloc.state.companyId!));
       emit(
         state.copyWith(
           status: ItemLocationsStatus.success,
-          message: 'Item created successfully',
+          items: items,
+          filteredItems: items,
+          companyId: event.companyId,
         ),
       );
     } catch (e) {
       emit(
-        ItemLocationsState(
+        state.copyWith(
           status: ItemLocationsStatus.failure,
-          message: 'Failed to create Item: $e',
+          message: 'Failed to load item locations: $e',
         ),
       );
     }
   }
 
-  Future<void> _onUpdateItem(
-    UpdateItem event,
+  Future<void> _onCreateItemLocation(
+    CreateItemLocation event,
     Emitter<ItemLocationsState> emit,
   ) async {
-    emit(
-      state.copyWith(
-        status: ItemLocationsStatus.updating,
-        message: 'Updating Item...',
-      ),
-    );
+    emit(state.copyWith(status: ItemLocationsStatus.creating));
     try {
-      final db = await databaseService.database;
       final companyId = authBloc.state.companyId;
-
-      // FIX: Add null checks
       if (companyId == null) {
-        emit(
-          state.copyWith(
-            status: ItemLocationsStatus.failure,
-            message: 'Authentication error: Company ID not found',
-          ),
-        );
-        return;
+        throw Exception('Company ID not found');
       }
 
-      final itemMap = event.item.toMap();
+      // Set company ID for the new item
+      final itemToCreate = event.item.copyWith(company: companyId);
+      await repository.createItemLocation(itemToCreate);
 
-      // FIX: Ensure company field is included and not null
-      itemMap['company'] = companyId; // Make sure company is set
-
-      await db.update(
-        'items_table',
-        itemMap,
-        where: 'id = ? AND company = ?',
-        whereArgs: [event.item.id, companyId],
-      );
-
-      add(LoadItems(companyId));
+      // Reload the list
+      add(LoadItemLocations(companyId));
 
       emit(
         state.copyWith(
           status: ItemLocationsStatus.success,
-          message: 'Item updated successfully',
+          message: 'Item location created successfully',
         ),
       );
     } catch (e) {
       emit(
         state.copyWith(
           status: ItemLocationsStatus.failure,
-          message: 'Failed to update ItemEntry: $e',
+          message: 'Failed to create item location: $e',
         ),
       );
     }
   }
 
-  Future<void> _onDeleteItem(
-    DeleteItem event,
+  Future<void> _onUpdateItemLocation(
+    UpdateItemLocation event,
     Emitter<ItemLocationsState> emit,
   ) async {
-    emit(
-      state.copyWith(
-        status: ItemLocationsStatus.deleting,
-        message: 'Deleting..',
-      ),
-    );
+    emit(state.copyWith(status: ItemLocationsStatus.updating));
     try {
-      final db = await databaseService.database;
-      await db.delete(
-        'items_table',
-        where: 'id = ? AND company = ?',
-        whereArgs: [event.itemId, authBloc.state.companyId],
-      );
-      final updateItemEntrys = List<ItemLocation>.from(state.items)
-        ..removeWhere((p) => p.id == event.itemId);
-      final updateFilteredItemEntrys = List<ItemLocation>.from(
-        state.filteredItems,
-      )..removeWhere((p) => p.id == event.itemId);
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) {
+        throw Exception('Company ID not found');
+      }
+
+      await repository.updateItemLocation(event.item);
+      add(LoadItemLocations(companyId));
+
       emit(
         state.copyWith(
-          items: updateItemEntrys,
-          filteredItems: updateFilteredItemEntrys,
-          recentlyDeleted: [...state.recentlyDeleted, event.deletedItem],
-          recentlyDeletedIndexes: [
-            ...state.recentlyDeletedIndexes,
-            event.deletedIndex,
-          ],
-          message: 'Item deleted successfully',
+          status: ItemLocationsStatus.success,
+          message: 'Item location updated successfully',
         ),
       );
-      add(LoadItems(authBloc.state.companyId!));
     } catch (e) {
       emit(
-        ItemLocationsState(
+        state.copyWith(
           status: ItemLocationsStatus.failure,
-          message: 'Failed to delete Item: $e',
+          message: 'Failed to update item location: $e',
         ),
       );
+    }
+  }
+
+  Future<void> _onDeleteItemLocation(
+    DeleteItemLocation event,
+    Emitter<ItemLocationsState> emit,
+  ) async {
+    emit(state.copyWith(status: ItemLocationsStatus.deleting));
+    try {
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) {
+        throw Exception('Company ID not found');
+      }
+
+      await repository.deleteItemLocation(event.itemId, companyId);
+
+      // Update local state immediately
+      final updatedItems = List<ItemLocation>.from(state.items)
+        ..removeWhere((p) => p.id == event.itemId);
+      final updatedFilteredItems = List<ItemLocation>.from(state.filteredItems)
+        ..removeWhere((p) => p.id == event.itemId);
+
+      emit(
+        state.copyWith(
+          items: updatedItems,
+          filteredItems: updatedFilteredItems,
+          status: ItemLocationsStatus.success,
+          message: 'Item location deleted successfully',
+          recentlyDeleted: event.deletedItem != null
+              ? [...state.recentlyDeleted, event.deletedItem!]
+              : state.recentlyDeleted,
+          recentlyDeletedIndexes: event.deletedIndex != null
+              ? [...state.recentlyDeletedIndexes, event.deletedIndex!]
+              : state.recentlyDeletedIndexes,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemLocationsStatus.failure,
+          message: 'Failed to delete item location: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onSaveItemLocationRow(
+    SaveItemLocationRow event,
+    Emitter<ItemLocationsState> emit,
+  ) async {
+    try {
+      if (event.item.id != null) {
+        add(UpdateItemLocation(event.item));
+      } else {
+        add(CreateItemLocation(event.item));
+      }
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemLocationsStatus.failure,
+          message: 'Failed to save item location: $e',
+        ),
+      );
+    }
+  }
+
+  void _onSearchItemLocations(
+    SearchItemLocations event,
+    Emitter<ItemLocationsState> emit,
+  ) {
+    final query = event.query.toLowerCase().trim();
+
+    if (query.isEmpty) {
+      emit(
+        state.copyWith(
+          filteredItems: state.items,
+          searchQuery: '',
+          status: ItemLocationsStatus.success,
+        ),
+      );
+      return;
+    }
+
+    final filtered = state.items.where((item) {
+      return item.location.toString().toLowerCase().contains(query) ||
+          item.itemNumber.toString().toLowerCase().contains(query);
+    }).toList();
+
+    emit(
+      state.copyWith(
+        filteredItems: filtered,
+        searchQuery: query,
+        status: ItemLocationsStatus.searching,
+      ),
+    );
+  }
+
+  void _onSelectItemLocation(
+    SelectItemLocation event,
+    Emitter<ItemLocationsState> emit,
+  ) {
+    final selectedItems = List<ItemLocation>.from(state.selectedItems);
+    if (event.isSelected) {
+      selectedItems.add(event.item);
+    } else {
+      selectedItems.removeWhere((item) => item.id == event.item.id);
+    }
+    emit(state.copyWith(selectedItems: selectedItems));
+  }
+
+  void _onSelectAllItemLocations(
+    SelectAllItemLocations event,
+    Emitter<ItemLocationsState> emit,
+  ) {
+    if (state.selectedItems.length == event.items.length) {
+      emit(state.copyWith(selectedItems: []));
+    } else {
+      emit(state.copyWith(selectedItems: List.from(event.items)));
     }
   }
 
@@ -267,76 +284,21 @@ class StockItemLocationBloc
     emit(state.copyWith(selectedItems: []));
   }
 
-  void _onSearchItem(SearchItems event, Emitter<ItemLocationsState> emit) {
-    final query = event.query.toLowerCase().trim();
-
-    if (query.isEmpty) {
-      emit(
-        state.copyWith(
-          filteredItems: state.items,
-          selectedItems: [],
-          searchQuery: '',
-          status: ItemLocationsStatus.success,
-        ),
-      );
-      return;
-    }
-
-    final filtered = state.items.where((item) {
-      return item.location!.toString().toLowerCase().contains(query) ||
-          item.itemNumber!.toString().toLowerCase().contains(query);
-    }).toList();
-
-    emit(
-      state.copyWith(
-        filteredItems: filtered,
-        searchQuery: query,
-        selectedItems: [],
-        status: ItemLocationsStatus.searching,
-      ),
-    );
-  }
-
-  void _onSelectItem(SelectItem event, Emitter<ItemLocationsState> emit) {
-    final selectedItems = List<ItemLocation>.from(state.selectedItems);
-    if (event.isSelected) {
-      selectedItems.add(event.item);
-    } else {
-      selectedItems.removeWhere((item) => item.id == event.item.id);
-    }
-    emit(state.copyWith(selectedItems: selectedItems));
-  }
-
-  void _onSelectAllItemEntrys(
-    SelectAllItems event,
-    Emitter<ItemLocationsState> emit,
-  ) {
-    if (state.selectedItems.length == event.items.length) {
-      // If all are selected, clear selection
-      emit(state.copyWith(selectedItems: []));
-    } else {
-      // Select all
-      emit(state.copyWith(selectedItems: List.from(event.items)));
-    }
-  }
-
-  void _onDeleteSelectedItemEntrys(
-    DeleteSelectedItems event,
+  Future<void> _onDeleteSelectedItemLocations(
+    DeleteSelectedItemLocations event,
     Emitter<ItemLocationsState> emit,
   ) async {
+    emit(state.copyWith(status: ItemLocationsStatus.deleting));
     try {
-      final db = await databaseService.database;
-      final placeholders = List.filled(
-        event.selectedItems.length,
-        '?',
-      ).join(',');
-      final whereArgs = [...event.selectedItems, authBloc.state.companyId];
-      await db.delete(
-        'items_table',
-        where: 'id IN ($placeholders) AND company = ?',
-        whereArgs: whereArgs,
-      );
-      final updatedItemEntrys = state.items
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) {
+        throw Exception('Company ID not found');
+      }
+
+      await repository.deleteItemLocations(event.selectedItems, companyId);
+
+      // Update local state
+      final updatedItems = state.items
           .where((e) => !event.selectedItems.contains(e.id))
           .toList();
       final updatedFiltered = state.filteredItems
@@ -345,23 +307,24 @@ class StockItemLocationBloc
 
       emit(
         state.copyWith(
-          items: updatedItemEntrys,
+          items: updatedItems,
           filteredItems: updatedFiltered,
           selectedItems: [],
+          status: ItemLocationsStatus.success,
+          message:
+              '${event.selectedItems.length} item locations deleted successfully',
           recentlyDeleted: [...state.recentlyDeleted, ...event.deletedItems],
           recentlyDeletedIndexes: [
             ...state.recentlyDeletedIndexes,
             ...event.deletedIndexes,
           ],
-          message: '${event.selectedItems.length} items deleted successfully',
         ),
       );
-      add(LoadItems(authBloc.state.companyId!));
     } catch (e) {
       emit(
-        ItemLocationsState(
+        state.copyWith(
           status: ItemLocationsStatus.failure,
-          message: 'Failed to delete selected Items: $e',
+          message: 'Failed to delete selected item locations: $e',
         ),
       );
     }

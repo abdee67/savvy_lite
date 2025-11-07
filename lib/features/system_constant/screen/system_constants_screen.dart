@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_state.dart';
-import 'package:savvy_stock/core/models/system_constant.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
+import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
 import 'package:savvy_stock/core/theme/colors.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/system_constant/widgets/general_setting_tab.dart';
@@ -24,7 +24,7 @@ class _SystemConstantsScreenState extends State<SystemConstantsScreen>
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   SystemConstant _editedSystemConstant = SystemConstant();
   bool _hasChanges = false;
-  bool _initialLoadComplete = false; // ADD THIS
+  bool _initialLoadComplete = false;
 
   @override
   void initState() {

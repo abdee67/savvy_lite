@@ -41,7 +41,7 @@ class _ItemsPickListState extends State<ItemsPickList> {
     }
     final query = _searchController.text.toLowerCase();
     return widget.sourceItems.where((item) {
-      return item.branchrefrence?.description?.toLowerCase().contains(query) ??
+      return item.branchRef?.description?.toLowerCase().contains(query) ??
           false;
     }).toList();
   }
@@ -367,7 +367,7 @@ class _ItemsPickListState extends State<ItemsPickList> {
   String _getItemDescription(int? itemId) {
     if (itemId == null) return '';
     // load item descriptions from item_entry bloc
-    final itemEntryBloc = context.read<StockItemEntryBloc>();
+    final itemEntryBloc = context.read<StockItemsEntryBloc>();
     itemEntryBloc.add(LoadItems(widget.authBloc.state.companyId!));
 
     final itemEntryState = itemEntryBloc.state;
@@ -421,31 +421,11 @@ class _ItemsPickListState extends State<ItemsPickList> {
           ),
         ),
         title: Text(
-          description,
+          item.itemRef!.itemDescription!,
           style: TextStyle(
             fontWeight: FontWeight.w600,
             color: isSelected ? colors.primary : colors.onSurface,
           ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Item #$itemNumber',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: isSelected
-                    ? colors.primary.withOpacity(0.8)
-                    : colors.onSurface.withOpacity(0.6),
-              ),
-            ),
-            if (itemCode != null)
-              Text(
-                'Code: $itemCode',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colors.onSurface.withOpacity(0.5),
-                ),
-              ),
-          ],
         ),
         trailing: Icon(
           isSelected ? Icons.remove_circle : Icons.add_circle,

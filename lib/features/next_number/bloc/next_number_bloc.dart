@@ -1,18 +1,18 @@
-// features/stock/next_number/blocs/next_number_bloc.dart
+// features/next_number/blocs/next_number_bloc.dart
 import 'dart:async';
 import 'package:bloc/bloc.dart';
-import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/next_number/bloc/next_number_event.dart';
 import 'package:savvy_stock/features/next_number/bloc/next_number_state.dart';
 import 'package:savvy_stock/features/next_number/model/next_number_model.dart';
+import 'package:savvy_stock/features/next_number/repo/next_number_repo.dart';
 
 class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
-  final LocalDatabaseService databaseService;
+  final NextNumberRepository repository;
   final AuthBloc authBloc;
   StreamSubscription? _authSubscription;
 
-  NextNumberBloc({required this.databaseService, required this.authBloc})
+  NextNumberBloc({required this.repository, required this.authBloc})
     : super(const NextNumberState()) {
     _authSubscription = authBloc.stream.listen((authState) {
       if (authState.isAuthenticated && authState.companyId != null) {
@@ -22,9 +22,13 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
 
     on<LoadNextNumbers>(_onLoadNextNumbers);
     on<GenerateNextNumber>(_onGenerateNextNumber);
+    on<GenerateFormattedNumber>(_onGenerateFormattedNumber);
     on<SaveNextNumber>(_onSaveNextNumber);
     on<UpdateNextNumber>(_onUpdateNextNumber);
     on<DeleteNextNumber>(_onDeleteNextNumber);
+    on<BatchSaveNextNumbers>(_onBatchSaveNextNumbers);
+    on<BatchUpdateNextNumbers>(_onBatchUpdateNextNumbers);
+    on<BatchDeleteNextNumbers>(_onBatchDeleteNextNumbers);
     on<PrepareCreateNextNumber>(_onPrepareCreate);
     on<PrepareCopyNextNumber>(_onPrepareCopy);
     on<PrepareEditNextNumber>(_onPrepareEdit);
@@ -35,6 +39,10 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
     on<ClearCreateList>(_onClearCreateList);
     on<CancelCreate>(_onCancelCreate);
     on<CancelUpdate>(_onCancelUpdate);
+    on<ResetNextNumber>(_onResetNextNumber);
+    on<CheckCodeExists>(_onCheckCodeExists);
+    on<CopyDefaultNextNumbers>(_onCopyDefaultNextNumbers);
+    on<GetNextNumberSummary>(_onGetNextNumberSummary);
   }
 
   @override
@@ -49,24 +57,12 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
   ) async {
     emit(state.copyWith(status: NextNumberStatus.loading));
     try {
-      final db = await databaseService.database;
-      final nextNumbers = await db.rawQuery(
-        '''
-        SELECT * FROM next_number 
-        WHERE company = ? 
-        ORDER BY next_number_code
-      ''',
-        [event.companyId],
-      );
-
-      final nextNumberList = nextNumbers
-          .map((p) => NextNumberModel.fromMap(p))
-          .toList();
+      final items = await repository.getNextNumbers(event.companyId);
 
       emit(
         state.copyWith(
           status: NextNumberStatus.loaded,
-          items: nextNumberList,
+          items: items,
           companyId: event.companyId,
         ),
       );
@@ -91,53 +87,10 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
 
     emit(state.copyWith(status: NextNumberStatus.generating));
     try {
-      final db = await databaseService.database;
-
-      // Find the next number record for this code and company
-      final nextNumberRecords = await db.rawQuery(
-        '''
-        SELECT * FROM next_number 
-        WHERE company = ? AND next_number_code = ?
-      ''',
-        [state.companyId, event.code],
+      final nextNumber = await repository.generateNextNumber(
+        event.code,
+        state.companyId,
       );
-
-      int nextNumber;
-      NextNumberModel? recordToUpdate;
-
-      if (nextNumberRecords.isEmpty) {
-        // No record found, start from 1
-        nextNumber = 1;
-
-        // Create a new record starting from 2
-        final newRecord = NextNumberModel(
-          nextNumberCode: event.code,
-          nextNumberDescription: _getDescriptionForCode(event.code),
-          nextNumber: 2,
-          company: state.companyId,
-        );
-
-        await db.insert('next_number', newRecord.toMap());
-      } else {
-        // Record found, get current number and increment
-        recordToUpdate = NextNumberModel.fromMap(nextNumberRecords.first);
-        nextNumber = recordToUpdate.nextNumber!;
-        if (recordToUpdate.nextNumber == null) {
-          nextNumber = 1;
-          recordToUpdate = recordToUpdate.copyWith(nextNumber: 2);
-        } else {
-          nextNumber = recordToUpdate.nextNumber!;
-          recordToUpdate = recordToUpdate.copyWith(nextNumber: nextNumber + 1);
-        }
-        // Update the record with next number
-
-        await db.update(
-          'next_number',
-          recordToUpdate.toMap(),
-          where: 'id = ? AND company = ?',
-          whereArgs: [recordToUpdate.id, state.companyId],
-        );
-      }
 
       emit(
         state.copyWith(
@@ -159,19 +112,40 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
     }
   }
 
-  String _getDescriptionForCode(String code) {
-    final descriptions = {
-      'LM': 'Lot Master',
-      'PO': 'Purchase Order',
-      'SO': 'Sales Order',
-      'GR': 'Goods Receipt',
-      'GI': 'Goods Issue',
-      'TR': 'Transfer',
-      'AD': 'Adjustment',
-      // Add more codes as needed
-    };
+  Future<void> _onGenerateFormattedNumber(
+    GenerateFormattedNumber event,
+    Emitter<NextNumberState> emit,
+  ) async {
+    if (event.code.isEmpty) {
+      emit(state.copyWith(message: 'Code cannot be empty'));
+      return;
+    }
 
-    return descriptions[code] ?? 'Next Number for $code';
+    emit(state.copyWith(status: NextNumberStatus.generating));
+    try {
+      final formattedNumber = await repository.generateFormattedNumber(
+        event.code,
+        state.companyId,
+      );
+
+      emit(
+        state.copyWith(
+          status: NextNumberStatus.success,
+          generatedFormattedNumber: formattedNumber,
+          message: 'Generated formatted number: $formattedNumber',
+        ),
+      );
+
+      // Reload the list to reflect changes
+      add(LoadNextNumbers(state.companyId));
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: NextNumberStatus.failure,
+          message: 'Failed to generate formatted number: $e',
+        ),
+      );
+    }
   }
 
   Future<void> _onSaveNextNumber(
@@ -180,11 +154,24 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
   ) async {
     emit(state.copyWith(status: NextNumberStatus.creating));
     try {
-      final db = await databaseService.database;
-      final itemMap = event.item.toMap();
-      itemMap.remove('id');
+      // Check for code duplication
+      final codeExists = await repository.checkCodeExists(
+        event.item.nextNumberCode,
+        state.companyId,
+      );
 
-      await db.insert('next_number', itemMap);
+      if (codeExists) {
+        emit(
+          state.copyWith(
+            status: NextNumberStatus.duplicationFound,
+            message: 'Next number code already exists',
+          ),
+        );
+        return;
+      }
+
+      final itemToSave = event.item.copyWith(company: state.companyId);
+      await repository.createNextNumber(itemToSave);
 
       add(LoadNextNumbers(state.companyId));
       add(ClearCreateList());
@@ -211,15 +198,24 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
   ) async {
     emit(state.copyWith(status: NextNumberStatus.updating));
     try {
-      final db = await databaseService.database;
-      final itemMap = event.item.toMap();
-
-      await db.update(
-        'next_number',
-        itemMap,
-        where: 'id = ? AND company = ?',
-        whereArgs: [event.item.id, state.companyId],
+      // Check for code duplication (excluding current item)
+      final codeExists = await repository.checkCodeExists(
+        event.item.nextNumberCode,
+        state.companyId,
+        excludeId: event.item.id,
       );
+
+      if (codeExists) {
+        emit(
+          state.copyWith(
+            status: NextNumberStatus.duplicationFound,
+            message: 'Next number code already exists',
+          ),
+        );
+        return;
+      }
+
+      await repository.updateNextNumber(event.item);
 
       add(LoadNextNumbers(state.companyId));
       emit(
@@ -244,13 +240,7 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
   ) async {
     emit(state.copyWith(status: NextNumberStatus.deleting));
     try {
-      final db = await databaseService.database;
-
-      await db.delete(
-        'next_number',
-        where: 'id = ? AND company = ?',
-        whereArgs: [event.item.id, state.companyId],
-      );
+      await repository.deleteNextNumber(event.item.id!, state.companyId);
 
       add(LoadNextNumbers(state.companyId));
       emit(
@@ -264,6 +254,88 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
         state.copyWith(
           status: NextNumberStatus.failure,
           message: 'Failed to delete next number: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onBatchSaveNextNumbers(
+    BatchSaveNextNumbers event,
+    Emitter<NextNumberState> emit,
+  ) async {
+    emit(state.copyWith(status: NextNumberStatus.creating));
+    try {
+      final itemsWithCompany = event.items
+          .map((item) => item.copyWith(company: state.companyId))
+          .toList();
+
+      await repository.batchInsertNextNumbers(itemsWithCompany);
+
+      add(LoadNextNumbers(state.companyId));
+      add(ClearCreateList());
+
+      emit(
+        state.copyWith(
+          status: NextNumberStatus.success,
+          message: '${event.items.length} next numbers saved successfully',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: NextNumberStatus.failure,
+          message: 'Failed to save next numbers: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onBatchUpdateNextNumbers(
+    BatchUpdateNextNumbers event,
+    Emitter<NextNumberState> emit,
+  ) async {
+    emit(state.copyWith(status: NextNumberStatus.updating));
+    try {
+      await repository.batchUpdateNextNumbers(event.items);
+
+      add(LoadNextNumbers(state.companyId));
+      emit(
+        state.copyWith(
+          status: NextNumberStatus.success,
+          message: '${event.items.length} next numbers updated successfully',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: NextNumberStatus.failure,
+          message: 'Failed to update next numbers: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onBatchDeleteNextNumbers(
+    BatchDeleteNextNumbers event,
+    Emitter<NextNumberState> emit,
+  ) async {
+    emit(state.copyWith(status: NextNumberStatus.deleting));
+    try {
+      final ids = event.items.map((item) => item.id!).toList();
+      await repository.batchDeleteNextNumbers(ids, state.companyId);
+
+      add(LoadNextNumbers(state.companyId));
+      emit(
+        state.copyWith(
+          status: NextNumberStatus.success,
+          message: '${event.items.length} next numbers deleted successfully',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: NextNumberStatus.failure,
+          message: 'Failed to delete next numbers: $e',
         ),
       );
     }
@@ -317,21 +389,11 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
   ) async {
     emit(state.copyWith(status: NextNumberStatus.loading));
     try {
-      final db = await databaseService.database;
-
-      // Load default next numbers (company IS NULL)
-      final defaultNextNumbers = await db.rawQuery('''
-        SELECT * FROM next_number 
-        WHERE company IS NULL
-      ''');
-
-      final defaultList = defaultNextNumbers
-          .map((p) => NextNumberModel.fromMap(p))
-          .toList();
+      final defaultNextNumbers = await repository.getDefaultNextNumbers();
 
       // Create copies with null IDs for editing
-      final editList = defaultList
-          .map((item) => item.copyWith(id: null))
+      final editList = defaultNextNumbers
+          .map((item) => item.copyWith(id: null, company: state.companyId))
           .toList();
 
       emit(
@@ -344,6 +406,94 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
           message: 'Failed to prepare edit: $e',
         ),
       );
+    }
+  }
+
+  Future<void> _onResetNextNumber(
+    ResetNextNumber event,
+    Emitter<NextNumberState> emit,
+  ) async {
+    emit(state.copyWith(status: NextNumberStatus.updating));
+    try {
+      await repository.resetNextNumber(
+        event.code,
+        event.startFrom,
+        state.companyId,
+      );
+
+      add(LoadNextNumbers(state.companyId));
+      emit(
+        state.copyWith(
+          status: NextNumberStatus.success,
+          message: 'Next number for ${event.code} reset to ${event.startFrom}',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: NextNumberStatus.failure,
+          message: 'Failed to reset next number: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onCheckCodeExists(
+    CheckCodeExists event,
+    Emitter<NextNumberState> emit,
+  ) async {
+    try {
+      final codeExists = await repository.checkCodeExists(
+        event.code,
+        state.companyId,
+        excludeId: event.excludeId,
+      );
+
+      emit(
+        state.copyWith(
+          hasDuplication: codeExists,
+          message: codeExists ? 'Code already exists' : 'Code is available',
+        ),
+      );
+    } catch (e) {
+      emit(state.copyWith(message: 'Error checking code existence: $e'));
+    }
+  }
+
+  Future<void> _onCopyDefaultNextNumbers(
+    CopyDefaultNextNumbers event,
+    Emitter<NextNumberState> emit,
+  ) async {
+    emit(state.copyWith(status: NextNumberStatus.creating));
+    try {
+      await repository.copyDefaultNextNumbersToCompany(state.companyId);
+
+      add(LoadNextNumbers(state.companyId));
+      emit(
+        state.copyWith(
+          status: NextNumberStatus.success,
+          message: 'Default next numbers copied successfully',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: NextNumberStatus.failure,
+          message: 'Failed to copy default next numbers: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onGetNextNumberSummary(
+    GetNextNumberSummary event,
+    Emitter<NextNumberState> emit,
+  ) async {
+    try {
+      final summary = await repository.getNextNumberSummary(state.companyId);
+      emit(state.copyWith(nextNumberSummary: summary));
+    } catch (e) {
+      emit(state.copyWith(message: 'Failed to get next number summary: $e'));
     }
   }
 
@@ -413,6 +563,7 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
     emit(state.copyWith(selected1: null, editItems: const []));
   }
 
+  // Helper methods
   int _getNextTempId(List<NextNumberModel> items) {
     if (items.isEmpty) return 1;
     final maxTempId = items
@@ -421,47 +572,41 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
     return maxTempId + 1;
   }
 
-  // Public method to generate formatted numbers (like "LM000001")
-  Future<String> generateFormattedNumber(String code) async {
-    final number = await _generateNumber(code);
-    return number.toString();
+  // Public methods
+  Future<int> generateFormattedNumber(String code) async {
+    final number = await repository.generateNextNumber(code, state.companyId);
+    return number;
   }
 
-  Future<int> _generateNumber(String code) async {
-    final db = await databaseService.database;
+  Future<String> generateFormattedNumberString(String code) async {
+    return await repository.generateFormattedNumber(code, state.companyId);
+  }
 
-    final nextNumberRecords = await db.rawQuery(
-      '''
-      SELECT * FROM next_number 
-      WHERE company = ? AND next_number_code = ?
-    ''',
-      [state.companyId, code],
-    );
+  // Get description for code
+  String getDescriptionForCode(String code) {
+    final descriptions = {
+      'LM': 'Lot Master',
+      'PO': 'Purchase Order',
+      'SO': 'Sales Order',
+      'GR': 'Goods Receipt',
+      'GI': 'Goods Issue',
+      'TR': 'Transfer',
+      'AD': 'Adjustment',
+      'TN': 'Transaction Number',
+      'IN': 'Invoice Number',
+      'CN': 'Credit Note',
+      'DN': 'Debit Note',
+      'RN': 'Return Note',
+      'SR': 'Sales Return',
+      'PR': 'Purchase Return',
+      'WO': 'Work Order',
+      'MO': 'Manufacturing Order',
+      'QC': 'Quality Control',
+      'ST': 'Stock Transfer',
+      'RT': 'Return',
+      'JV': 'Journal Voucher',
+    };
 
-    if (nextNumberRecords.isEmpty) {
-      // Create new record starting from 2, return 1
-      final newRecord = NextNumberModel(
-        nextNumberCode: code,
-        nextNumberDescription: _getDescriptionForCode(code),
-        nextNumber: 2,
-        company: state.companyId,
-      );
-
-      await db.insert('next_number', newRecord.toMap());
-      return 1;
-    } else {
-      final record = NextNumberModel.fromMap(nextNumberRecords.first);
-      final currentNumber = record.nextNumber;
-
-      // Update record
-      await db.update(
-        'next_number',
-        record.copyWith(nextNumber: currentNumber! + 1).toMap(),
-        where: 'id = ? AND company = ?',
-        whereArgs: [record.id, state.companyId],
-      );
-
-      return currentNumber;
-    }
+    return descriptions[code] ?? 'Next Number for $code';
   }
 }

@@ -20,6 +20,8 @@ class PurchaseOrderDetailModel {
   final int? unitOfMeasure;
   final String? batchNumberSupplier;
 
+  
+
   PurchaseOrderDetailModel({
     this.id,
     this.poHeader,

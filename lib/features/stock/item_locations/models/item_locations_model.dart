@@ -1,9 +1,9 @@
-import 'package:equatable/equatable.dart';
+import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 
-class ItemLocation extends Equatable {
+class ItemLocation {
   // Primary Fields
   final int? id; // INTEGER PRIMARY KEY AUTOINCREMENT
-  final double? quantityOnHand; // REAL
+  double? quantityOnHand; // REAL
 
   // Relational IDs (Foreign Keys)
   final int? itemNumber; // INTEGER (FK to items_table)
@@ -17,7 +17,11 @@ class ItemLocation extends Equatable {
   final int? updatedBy; // INTEGER (FK to user_table)
   final int? createdBy; // INTEGER (FK to user_table)
 
-  const ItemLocation({
+  //joins
+  final String? locationDescription;
+  final ItemEntryModel? itemRef;
+
+  ItemLocation({
     this.id,
     this.quantityOnHand,
     this.itemNumber,
@@ -28,6 +32,8 @@ class ItemLocation extends Equatable {
     this.dateCreated,
     this.updatedBy,
     this.createdBy,
+    this.locationDescription,
+    this.itemRef,
   });
 
   factory ItemLocation.empty() {
@@ -42,6 +48,7 @@ class ItemLocation extends Equatable {
       updatedBy: null,
       dateUpdated: null,
       company: null,
+      locationDescription: null,
     );
   }
 
@@ -52,8 +59,10 @@ class ItemLocation extends Equatable {
       if (v is int) {
         // Support unix seconds or milliseconds
         final isMillis = v > 10000000000; // ~Sat Nov 20 2286
-        return DateTime.fromMillisecondsSinceEpoch(isMillis ? v : v * 1000,
-            isUtc: false);
+        return DateTime.fromMillisecondsSinceEpoch(
+          isMillis ? v : v * 1000,
+          isUtc: false,
+        );
       }
       return null;
     }
@@ -83,6 +92,22 @@ class ItemLocation extends Equatable {
       updatedBy: asInt(map['updated_by']),
       dateUpdated: parseDate(map['date_updated']),
       company: asInt(map['company']),
+      locationDescription: map['location_description'],
+      itemRef: map['item_number'] != null
+          ? ItemEntryModel(
+              id: asInt(map['item_number']) ?? 0,
+              itemsId: map['items_id']?.toString(),
+              itemDescription: map['item_description']?.toString(),
+              unitOfMeasure: map['unit_of_measure']?.toString(),
+              unitPrice: asDouble(map['unit_price']),
+              taxable: map['taxable']?.toString(),
+              barcode: map['barcode']?.toString(),
+              company: asInt(map['item_company']) ?? asInt(map['company']),
+              marginRate: asDouble(map['item_margin_rate']),
+              marginType: map['item_margin_type']?.toString(),
+              reorderPoint: asDouble(map['item_reorder_point']),
+            )
+          : null,
     );
   }
 
@@ -115,6 +140,8 @@ class ItemLocation extends Equatable {
     double? inverseConversion,
     int? tempId,
     bool? validCell,
+    String? locationDescription,
+    ItemEntryModel? itemRef,
   }) {
     return ItemLocation(
       id: id ?? this.id,
@@ -127,6 +154,8 @@ class ItemLocation extends Equatable {
       updatedBy: updatedBy ?? this.updatedBy,
       dateUpdated: dateUpdated ?? this.dateUpdated,
       company: company ?? this.company,
+      locationDescription: locationDescription ?? this.locationDescription,
+      itemRef: itemRef ?? this.itemRef,
     );
   }
 
@@ -142,5 +171,7 @@ class ItemLocation extends Equatable {
     updatedBy,
     dateUpdated,
     company,
+    locationDescription,
+    itemRef,
   ];
 }

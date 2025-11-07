@@ -354,12 +354,59 @@ class PrivilegeSeeder {
         'delete_lot_colorings',
       ),
 
+      //item Transactions Sub-Routes
       _createPrivilege(
         'Inventory Transaction',
         'link',
         AppRoutes.inventoryTransaction,
         'inventory_transaction',
       ),
+      _createPrivilege(
+        'Create Inventory Transaction',
+        'button',
+        AppRoutes.inventoryTransactionCreate,
+        'create_inventory_transaction',
+      ),
+      _createPrivilege(
+        'Edit Inventory Transaction',
+        'button',
+        AppRoutes.inventoryTransactionEdit,
+        'edit_inventory_transaction',
+      ),
+      _createPrivilege(
+        'Delete Inventory Transaction',
+        'button',
+        AppRoutes.inventoryTransactionDelete,
+        'delete_inventory_transaction',
+      ),
+
+      //item entry workbench
+      _createPrivilege(
+        'Item Entry Workbench',
+        'link',
+        AppRoutes.itemWorkbench,
+        'item_entry_workbench',
+      ),
+      _createPrivilege(
+        'Single Item Entry',
+        'button',
+        AppRoutes.itemWorkbenchSingleCreate,
+        'single_item_entry',
+      ),
+      _createPrivilege(
+        'Batch Upload',
+        'button',
+        AppRoutes.itemWorkbenchBatchUpload,
+        'batch_upload',
+      ),
+
+      _createPrivilege(
+        'Delete Item',
+        'button',
+        AppRoutes.itemWorkbenchDelete,
+        'delete_item',
+      ),
+
       _createPrivilege(
         'Item Branch Entry',
         'link',

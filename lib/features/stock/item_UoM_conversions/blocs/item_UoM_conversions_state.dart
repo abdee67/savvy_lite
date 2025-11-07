@@ -14,6 +14,7 @@ enum ItemUomConversionStatus {
   updating,
   deleting,
   duplication,
+  structureInvalid,
   exporting,
   converting,
 }
@@ -46,6 +47,9 @@ class ItemUomConversionState extends Equatable {
   final double? conversionFactor;
   final String? conversionError;
 
+   final bool? structureValid;
+  final bool? hasDuplication;
+
   const ItemUomConversionState({
     this.status = ItemUomConversionStatus.initial,
     this.message,
@@ -64,6 +68,8 @@ class ItemUomConversionState extends Equatable {
     this.exportedItem,
     this.conversionFactor,
     this.conversionError,
+    this.structureValid,
+    this.hasDuplication,
   });
 
   // Helper getters for UI state
@@ -102,6 +108,12 @@ class ItemUomConversionState extends Equatable {
   bool get hasCreateItems => uiState.createItems.isNotEmpty;
   bool get hasEditItems => uiState.editItems.isNotEmpty;
 
+  bool get isSearching => status == ItemUomConversionStatus.searching;
+  bool get isDuplicated => status == ItemUomConversionStatus.duplication;
+
+  bool get isStructureValid => structureValid ?? false;
+  bool get doeshasDuplication => hasDuplication ?? false;
+
   ItemUomConversionState copyWith({
     ItemUomConversionStatus? status,
     String? message,
@@ -120,6 +132,8 @@ class ItemUomConversionState extends Equatable {
     ItemUomConversion? exportedItem,
     double? conversionFactor,
     String? conversionError,
+    bool? structureValid,
+    bool? hasDuplication,
   }) {
     return ItemUomConversionState(
       status: status ?? this.status,
@@ -140,6 +154,8 @@ class ItemUomConversionState extends Equatable {
       exportedItem: exportedItem ?? this.exportedItem,
       conversionFactor: conversionFactor ?? this.conversionFactor,
       conversionError: conversionError ?? this.conversionError,
+      structureValid: structureValid ?? this.structureValid,
+      hasDuplication: hasDuplication ?? this.hasDuplication,
     );
   }
 
@@ -162,5 +178,7 @@ class ItemUomConversionState extends Equatable {
     exportedItem,
     conversionFactor,
     conversionError,
+    structureValid,
+    hasDuplication,
   ];
 }

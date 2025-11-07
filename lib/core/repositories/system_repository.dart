@@ -1,5 +1,5 @@
 import 'package:dartz/dartz.dart';
-import 'package:savvy_stock/core/models/system_constant.dart';
+import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 import '../errors/failures.dart';
 
 abstract class SystemRepository {

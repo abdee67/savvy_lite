@@ -5,12 +5,14 @@ class TableColumnConfig<T> {
   final double flex;
   final Widget Function(T item) cellBuilder;
   final MainAxisAlignment alignment;
+  final CrossAxisAlignment crossAxisAlignment;
 
   const TableColumnConfig({
     required this.header,
     required this.cellBuilder,
     this.flex = 1,
-    this.alignment = MainAxisAlignment.spaceBetween,
+    this.alignment = MainAxisAlignment.start,
+    this.crossAxisAlignment = CrossAxisAlignment.start,
   });
 }
 
@@ -22,12 +24,23 @@ class CustomTableDropdown<T> extends StatefulWidget {
   final ValueChanged<T?> onItemSelected;
   final double expandedHeight;
   final String emptyText;
+  final String noItemsText;
   final BorderRadius? borderRadius;
   final Color backgroundColor;
   final Color expandedBackgroundColor;
   final Color selectedColor;
+  final Color textColor;
+  final Color selectedTextColor;
   final bool showHeaderRow;
   final T? selectedValue;
+  final Widget? leadingIcon;
+  final Widget? trailingIcon;
+  final TextStyle? textStyle;
+  final TextStyle? headerTextStyle;
+  final bool showSearch;
+  final String? searchHint;
+  final bool showSelectedItemInHeader;
+  final Color Function(T item, bool isSelected)? rowBackgroundColor;
 
   const CustomTableDropdown({
     super.key,
@@ -38,12 +51,23 @@ class CustomTableDropdown<T> extends StatefulWidget {
     required this.onItemSelected,
     this.expandedHeight = 200,
     this.emptyText = 'Select One',
+    this.noItemsText = 'No items available',
     this.borderRadius,
     this.backgroundColor = const Color(0xFFEDEDED),
     this.expandedBackgroundColor = const Color(0xFFFDD105),
     this.selectedColor = const Color(0xFF145888),
+    this.textColor = Colors.white,
+    this.selectedTextColor = Colors.white,
     this.showHeaderRow = true,
     this.selectedValue,
+    this.leadingIcon,
+    this.trailingIcon,
+    this.textStyle,
+    this.headerTextStyle,
+    this.showSearch = false,
+    this.searchHint,
+    this.showSelectedItemInHeader = true,
+    this.rowBackgroundColor,
   });
 
   @override
@@ -54,16 +78,19 @@ class _CustomTableDropdownState<T> extends State<CustomTableDropdown<T>>
     with SingleTickerProviderStateMixin {
   bool _isExpanded = false;
   T? _selectedItem;
+  late List<T> _filteredItems;
+  final TextEditingController _searchController = TextEditingController();
 
-  // Animation controllers for smooth expansion
+  // Animation controllers
   late AnimationController _animationController;
   late Animation<double> _heightAnimation;
   late Animation<double> _opacityAnimation;
-  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
+    _filteredItems = widget.items;
+    _selectedItem = widget.selectedValue;
 
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 400),
@@ -87,14 +114,6 @@ class _CustomTableDropdownState<T> extends State<CustomTableDropdown<T>>
         curve: const Interval(0.3, 1.0, curve: Curves.easeIn),
       ),
     );
-
-    _slideAnimation =
-        Tween<Offset>(begin: const Offset(0.0, -0.1), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _animationController,
-            curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
-          ),
-        );
   }
 
   void _toggleExpand() {
@@ -104,6 +123,8 @@ class _CustomTableDropdownState<T> extends State<CustomTableDropdown<T>>
         _animationController.forward(from: 0.0);
       } else {
         _animationController.reverse();
+        _searchController.clear();
+        _filteredItems = widget.items;
       }
     });
   }
@@ -113,35 +134,41 @@ class _CustomTableDropdownState<T> extends State<CustomTableDropdown<T>>
       _selectedItem = item;
       _isExpanded = false;
       _animationController.reverse();
+      _searchController.clear();
+      _filteredItems = widget.items;
       widget.onItemSelected(item);
     });
   }
 
-  // Helper method to extract phone number from item
-  String _getPhoneNumber(T item) {
-    if (widget.columns.length > 2) {
-      final phoneWidget = widget.columns[2].cellBuilder(item);
-      if (phoneWidget is Text) {
-        return phoneWidget.data ?? '0923505050';
+  void _onSearchChanged(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredItems = widget.items;
+      } else {
+        _filteredItems = widget.items.where((item) {
+          final displayText = widget.displayText(item).toLowerCase();
+          return displayText.contains(query.toLowerCase());
+        }).toList();
       }
-    }
-    return '0923505050';
-  }
-
-  String _getTin(T item) {
-    if (widget.columns.length > 1) {
-      final tinWidget = widget.columns[1].cellBuilder(item);
-      if (tinWidget is Text) {
-        return tinWidget.data ?? '0923505050';
-      }
-    }
-    return '0923505050';
+    });
   }
 
   @override
   void dispose() {
     _animationController.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant CustomTableDropdown<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.items != widget.items) {
+      _filteredItems = widget.items;
+    }
+    if (oldWidget.selectedValue != widget.selectedValue) {
+      _selectedItem = widget.selectedValue;
+    }
   }
 
   @override
@@ -162,12 +189,7 @@ class _CustomTableDropdownState<T> extends State<CustomTableDropdown<T>>
             child: Container(
               width: cardWidth,
               height: 39,
-              padding: const EdgeInsets.only(
-                top: 10,
-                left: 27,
-                right: 12,
-                bottom: 10,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 27, vertical: 10),
               decoration: ShapeDecoration(
                 color: widget.backgroundColor,
                 shape: RoundedRectangleBorder(
@@ -183,17 +205,37 @@ class _CustomTableDropdownState<T> extends State<CustomTableDropdown<T>>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    widget.selectedValue != null
-                        ? widget.displayText(widget.selectedValue as T)
-                        : widget.emptyText,
-                    style: const TextStyle(
-                      color: Color(0xFF373737),
-                      fontSize: 12,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w500,
+                  Expanded(
+                    child: Row(
+                      children: [
+                        if (widget.leadingIcon != null) ...[
+                          widget.leadingIcon!,
+                          const SizedBox(width: 8),
+                        ],
+                        Expanded(
+                          child: Text(
+                            _selectedItem != null &&
+                                    widget.showSelectedItemInHeader
+                                ? widget.displayText(_selectedItem as T)
+                                : widget.emptyText,
+                            style:
+                                widget.textStyle ??
+                                const TextStyle(
+                                  color: Color(0xFF373737),
+                                  fontSize: 12,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w500,
+                                ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                  if (widget.trailingIcon != null) ...[
+                    widget.trailingIcon!,
+                    const SizedBox(width: 8),
+                  ],
                   Icon(
                     _isExpanded
                         ? Icons.keyboard_arrow_up
@@ -206,7 +248,7 @@ class _CustomTableDropdownState<T> extends State<CustomTableDropdown<T>>
             ),
           ),
 
-          // Expanded Content - Only show when expanded OR during collapse animation
+          // Expanded Content
           if (_isExpanded || _animationController.isAnimating)
             AnimatedBuilder(
               animation: _animationController,
@@ -215,7 +257,6 @@ class _CustomTableDropdownState<T> extends State<CustomTableDropdown<T>>
                     _heightAnimation.value * widget.expandedHeight;
                 final currentOpacity = _opacityAnimation.value;
 
-                // Don't render if height is effectively zero
                 if (currentHeight < 1.0) {
                   return const SizedBox.shrink();
                 }
@@ -250,97 +291,73 @@ class _CustomTableDropdownState<T> extends State<CustomTableDropdown<T>>
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Row (Name and Phone)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.only(bottom: 8),
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: Color(0xFF1C1C1C))),
+          // Search Field
+          if (widget.showSearch) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: TextField(
+                controller: _searchController,
+                onChanged: _onSearchChanged,
+                decoration: InputDecoration(
+                  hintText: widget.searchHint ?? 'Search...',
+                  border: InputBorder.none,
+                  icon: const Icon(Icons.search, size: 20),
+                  contentPadding: EdgeInsets.zero,
+                  isDense: true,
+                ),
+                style: const TextStyle(fontSize: 12),
+              ),
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Name Header
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    'Name',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 10,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
+            const SizedBox(height: 12),
+          ],
 
-                //TIN
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    'TIN',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 10,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w500,
+          // Header Row
+          if (widget.showHeaderRow && widget.columns.isNotEmpty) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.only(bottom: 8),
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: Color(0xFF1C1C1C))),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: widget.columns.map((column) {
+                  return Expanded(
+                    flex: column.flex.round(),
+                    child: Text(
+                      column.header,
+                      textAlign: TextAlign.center,
+                      style:
+                          widget.headerTextStyle ??
+                          const TextStyle(
+                            color: Colors.black,
+                            fontSize: 10,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w500,
+                          ),
                     ),
-                  ),
-                ),
-
-                // Phone Header
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    'Phone',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 10,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
+                  );
+                }).toList(),
+              ),
             ),
-          ),
-
-          const SizedBox(height: 8),
+            const SizedBox(height: 8),
+          ],
 
           // Items List
           Expanded(
-            child: widget.items.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.inventory_2_outlined,
-                          size: 48,
-                          color: Color(0xFF887F7F),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'No items available',
-                          style: TextStyle(
-                            color: const Color(0xFF887F7F),
-                            fontSize: 14,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
+            child: _filteredItems.isEmpty
+                ? _buildEmptyState()
                 : SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
                     child: Column(
-                      children: widget.items.map((item) {
+                      children: _filteredItems.map((item) {
                         final bool isSelected =
                             _selectedItem == item ||
                             (widget.selectedValue != null &&
@@ -356,11 +373,39 @@ class _CustomTableDropdownState<T> extends State<CustomTableDropdown<T>>
     );
   }
 
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.inventory_2_outlined,
+            size: 48,
+            color: Color(0xFF887F7F),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            widget.noItemsText,
+            style: const TextStyle(
+              color: Color(0xFF887F7F),
+              fontSize: 14,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildItemCard(T item, bool isSelected) {
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
-        color: isSelected ? widget.selectedColor : Colors.transparent,
+        color: isSelected
+            ? widget.selectedColor
+            : (widget.rowBackgroundColor?.call(item, isSelected) ??
+                  Colors.transparent),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Material(
@@ -372,49 +417,15 @@ class _CustomTableDropdownState<T> extends State<CustomTableDropdown<T>>
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Customer Name
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    widget.displayText(item),
-                    style: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black,
-                      fontSize: 10,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w500,
-                    ),
+              children: widget.columns.map((column) {
+                return Expanded(
+                  flex: column.flex.round(),
+                  child: Container(
+                    alignment: Alignment.centerLeft,
+                    child: column.cellBuilder(item),
                   ),
-                ),
-
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    _getTin(item),
-                    style: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black,
-                      fontSize: 10,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-
-                // Phone Number
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    _getPhoneNumber(item),
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black,
-                      fontSize: 10,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
+                );
+              }).toList(),
             ),
           ),
         ),

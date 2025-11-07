@@ -22,6 +22,22 @@ class SaveLocationMaster extends LocationMasterEvent {
   const SaveLocationMaster(this.item, this.assignedItems);
 }
 
+class SaveInRow extends LocationMasterEvent {
+  final LocationMaster item;
+  final List<ItemInBranchModel>? assignedItems;
+  final String? transactionType;
+  final int? transactionNumber;
+  final String? remark;
+
+  const SaveInRow(
+    this.item,
+    this.assignedItems,
+    this.transactionType,
+    this.transactionNumber,
+    this.remark,
+  );
+}
+
 class UpdateLocationMaster extends LocationMasterEvent {
   final LocationMaster item;
   final List<ItemInBranchModel> assignedItems;
@@ -87,8 +103,9 @@ class LoadItemsForBranch extends LocationMasterEvent {
 }
 
 class LoadLocationsByBranch extends LocationMasterEvent {
+  final String locationDescription;
   final int branchId;
-  const LoadLocationsByBranch(this.branchId);
+  const LoadLocationsByBranch(this.branchId, this.locationDescription);
 }
 
 class CancelCreate extends LocationMasterEvent {}

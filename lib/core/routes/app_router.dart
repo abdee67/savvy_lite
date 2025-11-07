@@ -41,9 +41,15 @@ import 'package:savvy_stock/features/stock/item_UoM_conversions/widgets/item_UoM
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/screens/item_entry_dashboard.dart';
 import 'package:savvy_stock/features/stock/item_entry/widgets/item_entry_create_and_edit.dart.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench.dart/screens/item_master_create.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench.dart/widgets/batch_upload_section.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench.dart/widgets/single_item_entry_form.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/screens/item_in_branch_dashboard.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/widgets/item_in_branch_create_and_edit.dart.dart';
+import 'package:savvy_stock/features/stock/item_transactions/model/item_transaction_model.dart';
+import 'package:savvy_stock/features/stock/item_transactions/screens/item_transaction_dashboard.dart';
+import 'package:savvy_stock/features/stock/item_transactions/widgets/item_tansaction_form.dart';
 import 'package:savvy_stock/features/stock/location_entry/models/location_master_model.dart';
 import 'package:savvy_stock/features/stock/location_entry/screens/location_master_screen.dart';
 import 'package:savvy_stock/features/stock/location_entry/screens/location_master_create_edit.dart';
@@ -606,6 +612,77 @@ class AppRouter {
         redirect: _protectedRouteRedirect,
       ),
 
+      //item Transactions Sub-Routes
+      GoRoute(
+        path: AppRoutes.inventoryTransaction,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.inventoryTransaction,
+          parentPrivilege: AppRoutes.stockDashboard,
+          child: ItemTransactionsListPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+
+      GoRoute(
+        path: AppRoutes.inventoryTransactionCreate,
+        builder: (context, state) {
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.inventoryTransaction,
+            parentPrivilege: AppRoutes.lotColorings,
+            child: ItemTransactionsFormPage(authBloc: authBloc),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.inventoryTransactionEdit,
+        builder: (context, state) {
+          final extra = state.extra;
+          final item = extra != null ? extra as ItemTransactionModel? : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.inventoryTransaction,
+            parentPrivilege: AppRoutes.lotColorings,
+            child: ItemTransactionsFormPage(
+              authBloc: authBloc,
+              existingTransaction: item,
+            ),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+
+      //item master sub routes
+      GoRoute(
+        path: AppRoutes.itemWorkbench,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.itemWorkbench,
+          parentPrivilege: AppRoutes.stockDashboard,
+          child: ItemMasterCreatePage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.itemWorkbenchSingleCreate,
+        builder: (context, state) {
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.itemWorkbenchSingleCreate,
+            parentPrivilege: AppRoutes.itemWorkbench,
+            child: SingleItemEntryForm(authBloc: authBloc),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.itemWorkbenchBatchUpload,
+        builder: (context, state) {
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.itemWorkbenchBatchUpload,
+            parentPrivilege: AppRoutes.itemWorkbench,
+            child: BatchUploadSection(),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
       GoRoute(
         path: AppRoutes.branchManagement,
         builder: (context, state) => PrivilegeRouteGuard(

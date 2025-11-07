@@ -289,6 +289,7 @@ CREATE TABLE items_table (
   margin_rate REAL,
   margin_type TEXT,           -- e.g. '%' or 'N'
   reorder_point REAL,
+  reference_id TEXT,
   FOREIGN KEY (company) REFERENCES company_table(id) ON DELETE CASCADE,
   FOREIGN KEY (unit_of_measure) REFERENCES udc_details(id)
 );
@@ -383,6 +384,9 @@ CREATE INDEX idx_items_in_branch_uom ON items_in_branch(unit_of_measure);
         lot_type INTEGER,
         location_category_level INTEGER DEFAULT 1,
         lot_qty_auto_for_sales TEXT DEFAULT 'Y',
+        discount_display TEXT DEFAULT 'N',
+        tax_info_display TEXT DEFAULT 'N',
+        reorder_point_uom_type TEXT DEFAULT 'I',
         is_synced INTEGER DEFAULT 1,
         last_sync_time INTEGER,
         created_at INTEGER DEFAULT (strftime('%s', 'now')),
@@ -750,6 +754,141 @@ CREATE INDEX idx_next_number_company ON next_number(company);
   CREATE INDEX idx_lot_expiration_colors_company ON lot_expiration_colors(company);
 ''');
     developer.log('Created table: lot_expiration_colors');
+
+    //26. create sales_order_header table
+    await db.execute('''
+  CREATE TABLE sales_order_header (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_date TEXT,
+  required_date TEXT,
+  shipped_date TEXT,
+  sales_type TEXT,
+  payment_method TEXT,
+  payment_instrument INTEGER,
+  discount TEXT,
+  add_on TEXT,
+  tax REAL,
+  with_hold_apply TEXT,
+  withhold_amount REAL,
+  discount_amount REAL,
+  discount_in_percent REAL,
+  reference_note1 TEXT,
+  reference_note_2 TEXT,
+  reference_note3 TEXT,
+  reference_note4 TEXT,
+  credit_date_topay TEXT,
+  fs_number TEXT,
+  void_indicator TEXT,
+  customer_bill_to INTEGER NOT NULL,
+  customer_table_id INTEGER NOT NULL,
+  employees_id INTEGER NOT NULL,
+  amount_total REAL,
+  company INTEGER,
+  payment_term INTEGER,
+  payment_status INTEGER,
+  order_number INTEGER,
+  amount_open REAL,
+  order_type INTEGER,
+  unit_cost REAL,
+  amount_cost REAL,
+  FOREIGN KEY (customer_bill_to) REFERENCES customer_table (id),
+  FOREIGN KEY (customer_table_id) REFERENCES customer_table (id),
+  FOREIGN KEY (employees_id) REFERENCES employees (id),
+  FOREIGN KEY (company) REFERENCES company_table (id),
+  FOREIGN KEY (payment_instrument) REFERENCES udc_details (id),
+  FOREIGN KEY (payment_status) REFERENCES udc_details (id),
+  FOREIGN KEY (order_type) REFERENCES udc_details (id)
+);
+CREATE INDEX idx_sales_order_header_customer_bill_to ON sales_order_header(customer_bill_to);
+CREATE INDEX idx_sales_order_header_customer_table_id ON sales_order_header(customer_table_id);
+CREATE INDEX idx_sales_order_header_employees_id ON sales_order_header(employees_id);
+CREATE INDEX idx_sales_order_header_company ON sales_order_header(company);
+CREATE INDEX idx_sales_order_header_payment_instrument ON sales_order_header(payment_instrument);
+CREATE INDEX idx_sales_order_header_payment_status ON sales_order_header(payment_status);
+CREATE INDEX idx_sales_order_header_order_type ON sales_order_header(order_type);
+''');
+    developer.log('Created table: sales_order_header');
+    //27. create sales_order_details table
+    await db.execute('''
+  CREATE TABLE sales_order_details (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    unit_price REAL,
+    quantity REAL,
+    extended_price REAL,
+    taxable TEXT,
+    reference1 TEXT,
+    reference2 TEXT,
+    sales_order_header_id INTEGER NOT NULL,
+    items_table_id INTEGER NOT NULL,
+    item_in_branch INTEGER,
+    company INTEGER,
+    lot_number INTEGER,
+    unit_cost REAL,
+    amount_cost REAL,
+    unit_of_measure INTEGER,
+    FOREIGN KEY (sales_order_header_id) REFERENCES sales_order_header (id) ON DELETE CASCADE,
+    FOREIGN KEY (items_table_id) REFERENCES items_table (id),
+    FOREIGN KEY (item_in_branch) REFERENCES items_in_branch (id),
+    FOREIGN KEY (company) REFERENCES company_table (id),
+    FOREIGN KEY (lot_number) REFERENCES lot_master (id),
+    FOREIGN KEY (unit_of_measure) REFERENCES udc_details (id)
+  );
+  CREATE INDEX idx_sales_order_details_sales_order_header_id ON sales_order_details(sales_order_header_id);
+  CREATE INDEX idx_sales_order_details_items_table_id ON sales_order_details(items_table_id);
+  CREATE INDEX idx_sales_order_details_item_in_branch ON sales_order_details(item_in_branch);
+  CREATE INDEX idx_sales_order_details_company ON sales_order_details(company);
+  CREATE INDEX idx_sales_order_details_lot_number ON sales_order_details(lot_number);
+  CREATE INDEX idx_sales_order_details_unit_of_measure ON sales_order_details(unit_of_measure);
+''');
+    developer.log('Created table: sales_order_details');
+
+    //create item master table
+    await db.execute('''
+    CREATE TABLE item_master (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_description TEXT NOT NULL,
+  company_category INTEGER,
+  category_code_01 INTEGER,
+  category_code_02 INTEGER,
+  category_code_03 INTEGER,
+  category_code_04 INTEGER,
+  category_code_05 INTEGER,
+  category_code_06 INTEGER,
+  category_code_07 INTEGER,
+  category_code_08 INTEGER,
+  category_code_09 INTEGER,
+  category_code_10 INTEGER,
+  created_by_flag TEXT DEFAULT 'Y',
+  defualt_uom INTEGER,
+  taxable_flag TEXT DEFAULT 'Y',
+  UNIQUE (item_description, company_category),
+  FOREIGN KEY (company_category) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_01) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_02) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_03) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_04) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_05) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_06) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_07) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_08) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_09) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_10) REFERENCES udc_details (id),
+  FOREIGN KEY (defualt_uom) REFERENCES udc_details (id)
+);
+CREATE INDEX idx_item_master_company ON item_master(company);
+CREATE INDEX idx_item_master_category_code_01 ON item_master(category_code_01);
+CREATE INDEX idx_item_master_category_code_02 ON item_master(category_code_02);
+CREATE INDEX idx_item_master_category_code_03 ON item_master(category_code_03);
+CREATE INDEX idx_item_master_category_code_04 ON item_master(category_code_04);
+CREATE INDEX idx_item_master_category_code_05 ON item_master(category_code_05);
+CREATE INDEX idx_item_master_category_code_06 ON item_master(category_code_06);
+CREATE INDEX idx_item_master_category_code_07 ON item_master(category_code_07);
+CREATE INDEX idx_item_master_category_code_08 ON item_master(category_code_08);
+CREATE INDEX idx_item_master_category_code_09 ON item_master(category_code_09);
+CREATE INDEX idx_item_master_category_code_10 ON item_master(category_code_10);
+CREATE INDEX idx_item_master_defualt_uom ON item_master(defualt_uom);
+''');
+    developer.log('Created table: item_master');
 
     //. Create sync_queue table
     await db.execute('''
@@ -1169,24 +1308,24 @@ CREATE INDEX idx_next_number_company ON next_number(company);
       // --- Transaction Type (TT) ---
       {
         'id': 27,
-        'detail_code': 'SALE',
-        'description_1': 'Sales Transaction',
+        'detail_code': 'T',
+        'description_1': ' Inventory transfer',
         'description_2': null,
         'record_header': 8,
         'udc_group': 'TT',
       },
       {
         'id': 28,
-        'detail_code': 'PURCHASE',
-        'description_1': 'Purchase Transaction',
+        'detail_code': 'I',
+        'description_1': 'Inventory issue',
         'description_2': null,
         'record_header': 8,
         'udc_group': 'TT',
       },
       {
         'id': 29,
-        'detail_code': 'RETURN',
-        'description_1': 'Return Transaction',
+        'detail_code': 'A',
+        'description_1': 'Inventory adjustment',
         'description_2': null,
         'record_header': 8,
         'udc_group': 'TT',
@@ -1714,31 +1853,6 @@ CREATE INDEX idx_next_number_company ON next_number(company);
       await db.insert('user_role', userRole);
     }
     developer.log('Inserted user roles');
-
-    await db.insert('system_constant', {
-      'apply_lot_mgm': 'Y',
-      'apply_location_mgm': 'Y',
-      'interface_customer': 'Y',
-      'interface_employee': 'Y',
-      'decimal_places': 2,
-      'date_last_updated': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      'time_last_updated': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      'updated_by': 1,
-      'generate_barcode_for_item': 'Y',
-      'company': 1,
-      'rate_vat_percentage': 17.0,
-      'rate_with_percentage': 1.0,
-      'with_hold_initials': 2000.0,
-      'auto_sales_price': 'Y',
-      'lot_type': 'Expiration Date',
-      'location_category_level': 2,
-      'lot_qty_auto_for_sales': 'Y',
-      'is_synced': 1,
-      'last_sync_time': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      'updated_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-    });
-    developer.log('created system constant');
 
     await db.execute('''
   CREATE TABLE customer_table (
