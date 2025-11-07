@@ -4,6 +4,7 @@ import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:savvy_stock/features/stock/item_UoM_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
 import 'package:savvy_stock/core/config/app_config.dart';
@@ -28,7 +29,6 @@ import 'package:savvy_stock/features/sales/invoice/blocs/invoice_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_bloc.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/stock/item_cost/blocs/item_cost_bloc.dart';
 import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
@@ -64,7 +64,7 @@ Future<void> _initializeAndRunApp() async {
   try {
     await ConnectivityService().initConnectivity();
     initDependencies();
-    await LocalDatabaseService().resetDatabase();
+    //await LocalDatabaseService().resetDatabase();
     // await LocalDatabaseService().debugTable('branch_table');
 
     if (AppConfig.isTestMode) {
@@ -73,7 +73,7 @@ Future<void> _initializeAndRunApp() async {
       developer.log('💾 Using local database only');
     }
     // Debug database tables (optional - remove in production)
-    await LocalDatabaseService().debugTable('lot_master');
+    await LocalDatabaseService().debugTable('items_in_branch');
   } catch (error, stackTrace) {
     developer.log('Initialization error: $error');
     developer.log('Stack trace: $stackTrace');

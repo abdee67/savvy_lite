@@ -29,7 +29,10 @@ class ItemUomConversionsRepository {
   }
 
   // Get UoM conversion by ID
-  Future<ItemUomConversion?> getItemUomConversionById(int id, int companyId) async {
+  Future<ItemUomConversion?> getItemUomConversionById(
+    int id,
+    int companyId,
+  ) async {
     final db = await databaseService.database;
     final items = await db.rawQuery(
       '''
@@ -50,7 +53,7 @@ class ItemUomConversionsRepository {
 
   // Get UoM conversions by item number
   Future<List<ItemUomConversion>> getItemUomConversionsByItem(
-    int itemNumber, 
+    int itemNumber,
     int companyId,
   ) async {
     final db = await databaseService.database;
@@ -104,7 +107,7 @@ class ItemUomConversionsRepository {
   // Check for duplication
   Future<bool> checkDuplication(ItemUomConversion item) async {
     final db = await databaseService.database;
-    
+
     final whereParts = <String>[];
     final whereArgs = <dynamic>[];
 
@@ -159,7 +162,8 @@ class ItemUomConversionsRepository {
     // Check for duplicate structure level in database
     final existingStructure = await db.query(
       'item_uom_conversions',
-      where: 'item_number = ? AND uom_structure_level = ? AND company = ? AND id != ?',
+      where:
+          'item_number = ? AND uom_structure_level = ? AND company = ? AND id != ?',
       whereArgs: [
         item.itemNumber,
         item.uomStructureLevel,
@@ -277,7 +281,8 @@ class ItemUomConversionsRepository {
     }
     return null;
   }
-    // UoM Conversion Methods
+
+  // UoM Conversion Methods
   Future<double> fromOtherToAnother(
     int itemId,
     int fromUomId,
@@ -294,7 +299,10 @@ class ItemUomConversionsRepository {
       if (primaryUomId == null) {
         // Use unstructured conversion when no primary UOM
         return await getUnstructuredUomConversion(
-          itemId, fromUomId, toUomId, companyId,
+          itemId,
+          fromUomId,
+          toUomId,
+          companyId,
         );
       }
 
@@ -307,28 +315,43 @@ class ItemUomConversionsRepository {
 
       // Get structure levels for both UoMs
       final strFrom = await getItemUomStructureCode(
-        itemId, fromUomId, 'from', companyId,
+        itemId,
+        fromUomId,
+        'from',
+        companyId,
       );
       final strTo = await getItemUomStructureCode(
-        itemId, toUomId, 'to', companyId,
+        itemId,
+        toUomId,
+        'to',
+        companyId,
       );
 
       if (strFrom == null || strTo == null) {
         // Use unstructured conversion when no structure levels found
         return await getUnstructuredUomConversion(
-          itemId, fromUomId, toUomId, companyId,
+          itemId,
+          fromUomId,
+          toUomId,
+          companyId,
         );
       }
 
       // Get conversions between the two structure levels
       final conversions = await getConversionsBetweenLevels(
-        itemId, strFrom, strTo, companyId,
+        itemId,
+        strFrom,
+        strTo,
+        companyId,
       );
 
       // If no structured conversions found, use unstructured
       if (conversions.isEmpty) {
         return await getUnstructuredUomConversion(
-          itemId, fromUomId, toUomId, companyId,
+          itemId,
+          fromUomId,
+          toUomId,
+          companyId,
         );
       }
 
@@ -344,26 +367,43 @@ class ItemUomConversionsRepository {
     } catch (e) {
       // Fallback to unstructured conversion on error
       return await getUnstructuredUomConversion(
-        itemId, fromUomId, toUomId, companyId,
+        itemId,
+        fromUomId,
+        toUomId,
+        companyId,
       );
     }
   }
 
-  Future<double> fromPrimaryToOther(int itemId, int toUomId, int companyId) async {
+  Future<double> fromPrimaryToOther(
+    int itemId,
+    int toUomId,
+    int companyId,
+  ) async {
     final factor = await fromOtherToPrimary(itemId, toUomId, companyId);
     return factor != 1.0 ? 1.0 / factor : 1.0;
   }
 
-  Future<double> fromOtherToPrimary(int itemId, int fromUomId, int companyId) async {
+  Future<double> fromOtherToPrimary(
+    int itemId,
+    int fromUomId,
+    int companyId,
+  ) async {
     try {
       final str = await getItemUomStructureCode(
-        itemId, fromUomId, 'from', companyId,
+        itemId,
+        fromUomId,
+        'from',
+        companyId,
       );
 
       if (str == null) return 1.0;
 
       final conversions = await getConversionsBetweenLevels(
-        itemId, str, 100, companyId, // Use high number to get all levels above
+        itemId,
+        str,
+        100,
+        companyId, // Use high number to get all levels above
       );
 
       double factor = 1.0;

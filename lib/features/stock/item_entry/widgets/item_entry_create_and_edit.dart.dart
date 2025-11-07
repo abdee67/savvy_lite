@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:savvy_stock/core/widgets/custom_searchable_dropdown.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
@@ -42,7 +43,6 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
   final TextEditingController _unitPriceController = TextEditingController();
   final TextEditingController _reorderPointController = TextEditingController();
   final TextEditingController _marginRateController = TextEditingController();
-  final TextEditingController _referenceIdController = TextEditingController();
 
   String? _selectedMarginType;
   String? _selectedUom;
@@ -79,7 +79,6 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
     _itemsIdController.text = item.itemsId ?? '';
     _itemDescriptionController.text = item.itemDescription ?? '';
     _barcodeController.text = item.barcode ?? '';
-    _referenceIdController.text = item.referenceId ?? '';
 
     _unitPriceController.text = item.unitPrice?.toString() ?? '';
     _reorderPointController.text = item.reorderPoint?.toString() ?? '';
@@ -108,7 +107,6 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
     _unitPriceController.dispose();
     _reorderPointController.dispose();
     _marginRateController.dispose();
-    _referenceIdController.dispose();
     super.dispose();
   }
 
@@ -148,9 +146,6 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
         unitOfMeasure: _selectedUom,
         taxable: _selectedTaxable == 'YES' ? 'Y' : 'N',
         marginType: _selectedMarginType,
-        referenceId: _referenceIdController.text.trim().isEmpty
-            ? null
-            : _referenceIdController.text.trim(),
         company: widget.authBloc.state.companyId,
       );
 
@@ -458,18 +453,6 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
               prefixIcon: const Icon(Icons.numbers),
             ),
             const SizedBox(height: 16),
-
-            // Reference ID
-            CustomTextField(
-              labelText: 'Reference ID',
-              controller: _referenceIdController,
-              onChanged: (value) {
-                _referenceIdController.text = value;
-              },
-              prefixIcon: const Icon(Icons.badge),
-            ),
-            const SizedBox(height: 16),
-
             // Description
             CustomTextField(
               labelText: 'Description *',
@@ -512,17 +495,21 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
                     ),
                   );
                 }
+                final itemDescriptions = state.details
+                    .where(
+                      (item) =>
+                          item.description1 != null &&
+                          item.description1.isNotEmpty,
+                    )
+                    .map((item) => item.description1)
+                    .toSet()
+                    .toList();
 
-                return CustomDropdown(
+                return CustomSearchableDropdown(
                   labelText: 'Unit of Measure *',
                   value: _selectedUom?.toString(),
-                  prefixIcon: const Icon(Icons.scale),
-                  items: state.details.map((item) {
-                    return DropdownMenuItem<String>(
-                      value: item.id.toString(),
-                      child: Text(item.description1 ?? 'Unknown'),
-                    );
-                  }).toList(),
+                  prefixIcon: Icons.scale,
+                  options: itemDescriptions,
                   onChanged: (value) {
                     setState(() {
                       _selectedUom = value;
@@ -549,7 +536,7 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
               prefixIcon: const Icon(Icons.attach_money),
             ),
             const SizedBox(height: 16),
-                    // Barcode
+            // Barcode
             _buildBarcodeField(),
             const SizedBox(height: 16),
 
@@ -564,7 +551,7 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
               prefixIcon: const Icon(Icons.inventory_2),
             ),
             const SizedBox(height: 16),
-            
+
             // Taxable
             CustomDropdown(
               labelText: 'Taxable',
@@ -613,7 +600,9 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
               onChanged: (value) {
                 _marginRateController.text = value;
               },
-              prefixIcon: const Icon(Icons.percent),
+              prefixIcon: _selectedMarginType == '%'
+                  ? const Icon(Icons.percent)
+                  : const Icon(Icons.attach_money),
             ),
             const SizedBox(height: 16),
           ],

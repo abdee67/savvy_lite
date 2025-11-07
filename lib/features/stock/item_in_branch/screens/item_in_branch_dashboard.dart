@@ -366,8 +366,6 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
               onChanged: _handleSearch,
             ),
           ),
-          const SizedBox(width: 12),
-          _buildFloatingActionButton(context),
         ],
       ),
     );
@@ -428,21 +426,13 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
               // Navigate to edit screen with selected item
               final item = state.selectedItems.first;
               _navigateToEditScreen(item);
-            } else {
-              // Navigate to add screen
-              _navigateToAddScreen();
             }
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Color.fromARGB(255, 28, 66, 146),
             shape: const CircleBorder(),
           ),
-          child: Icon(
-            state.canEdit && state.selectedItems.isNotEmpty
-                ? Icons.edit
-                : Icons.add,
-            color: Colors.white,
-          ),
+          child: const Icon(Icons.edit, color: Colors.white),
         );
       },
     );
@@ -802,14 +792,14 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
       child: Column(
         children: [
           _buildItemInfoItem(
-            'Item ID : ',
+            'Item in Branch ID : ',
             item.id.toString(),
             Iconsax.card,
             screenWidth,
           ),
           _buildItemInfoItem(
-            'Item Number : ',
-            item.itemNumber.toString(),
+            'Item : ',
+            item.itemRef!.itemsId.toString(),
             Iconsax.box,
             screenWidth,
           ),

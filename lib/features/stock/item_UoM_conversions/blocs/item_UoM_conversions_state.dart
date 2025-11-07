@@ -114,21 +114,6 @@ class ItemUomConversionState extends Equatable {
   bool get isStructureValid => structureValid ?? false;
   bool get doeshasDuplication => hasDuplication ?? false;
 
-/*************  ✨ Windsurf Command ⭐  *************/
-  /// Creates a copy of the current state with the given parameters.
-  ///
-  /// [status] The new status of the state.
-  /// [message] The new message of the state.
-  /// [companyId] The new company ID of the state.
-  /// [items] The new list of items in the state.
-  /// [filteredItems] The new list of filtered items in the state.
-  /// [searchQuery] The new search query in the state.
-  /// [uiState] The new UI state of the state.
-  /// [detailStatus] The new detail status of the state.
-  /// [itemDetail] The new item detail of the state.
-  /// [recentlyDeleted] The new list of recently deleted items in the state.
-
-/// *****  cb3288db-3d7f-401f-a91f-82707029c64d  ******
   ItemUomConversionState copyWith({
     ItemUomConversionStatus? status,
     String? message,

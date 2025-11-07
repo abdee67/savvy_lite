@@ -4,18 +4,17 @@ import 'package:bloc/bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_event.dart';
 import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_state.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/stock/item_UoM_conversions/models/item_UoM_conversions_model.dart';
+import 'package:savvy_stock/features/stock/item_UoM_conversions/repo/item_uom_conv_repo.dart';
 
-class ItemUomConversionBloc extends Bloc<ItemUomConversionEvent, ItemUomConversionState> {
+class ItemUomConversionBloc
+    extends Bloc<ItemUomConversionEvent, ItemUomConversionState> {
   final ItemUomConversionsRepository repository;
   final AuthBloc authBloc;
   StreamSubscription? _authSubscription;
 
-  ItemUomConversionBloc({
-    required this.repository,
-    required this.authBloc,
-  }) : super(const ItemUomConversionState()) {
+  ItemUomConversionBloc({required this.repository, required this.authBloc})
+    : super(const ItemUomConversionState()) {
     _authSubscription = authBloc.stream.listen((authState) {
       if (authState.isAuthenticated && authState.companyId != null) {
         add(LoadItemUomConversions(authState.companyId!));
@@ -35,6 +34,7 @@ class ItemUomConversionBloc extends Bloc<ItemUomConversionEvent, ItemUomConversi
     on<CalculateUomConversion>(_onCalculateUomConversion);
     on<ValidateStructure>(_onValidateStructure);
     on<CheckDuplication>(_onCheckDuplication);
+    on<ResetUomConversionStatus>(_onResetUomConversionStatus);
   }
 
   @override
@@ -88,7 +88,9 @@ class ItemUomConversionBloc extends Bloc<ItemUomConversionEvent, ItemUomConversi
       }
 
       // Check for structure validation
-      final isStructureValid = await repository.checkStructureValidation(event.item);
+      final isStructureValid = await repository.checkStructureValidation(
+        event.item,
+      );
       if (!isStructureValid) {
         emit(
           state.copyWith(
@@ -100,14 +102,28 @@ class ItemUomConversionBloc extends Bloc<ItemUomConversionEvent, ItemUomConversi
         return;
       }
 
-      // Validate consecutive structure levels in create list
-      final createItemsWithCurrent = [...state.createItems, event.item];
-      final isConsecutive = _validateConsecutiveStructureLevels(createItemsWithCurrent);
+      // Validate consecutive structure levels taking into account existing
+      // saved conversions for the same item. When adding a new structured
+      // level we must combine the already-saved conversions for the item
+      // with any pending create-items and the current item being saved.
+      final existingForItem = state.items
+          .where((it) => it.itemNumber == event.item.itemNumber)
+          .toList();
+      final createItemsWithCurrent = [
+        ...existingForItem,
+        ...state.createItems,
+        event.item,
+      ];
+
+      final isConsecutive = _validateConsecutiveStructureLevels(
+        createItemsWithCurrent,
+      );
       if (!isConsecutive) {
         emit(
           state.copyWith(
             status: ItemUomConversionStatus.structureInvalid,
-            message: 'The UoM structure levels must be consecutive (1, 2, 3...). Please correct the level.',
+            message:
+                'The UoM structure levels must be consecutive (1, 2, 3...). Please correct the level.',
             structureValid: false,
           ),
         );
@@ -164,12 +180,47 @@ class ItemUomConversionBloc extends Bloc<ItemUomConversionEvent, ItemUomConversi
       }
 
       // Check for structure validation
-      final isStructureValid = await repository.checkStructureValidation(event.item);
+      final isStructureValid = await repository.checkStructureValidation(
+        event.item,
+      );
       if (!isStructureValid) {
         emit(
           state.copyWith(
             status: ItemUomConversionStatus.structureInvalid,
             message: 'UoM structure level already exists for this item',
+            structureValid: false,
+          ),
+        );
+        return;
+      }
+      // Validate consecutive structure levels taking into account existing
+      // saved conversions for the same item. Exclude the item being updated
+      // from the existing list so we validate the intended final layout.
+      final existingForItem = state.items
+          .where((it) =>
+              it.itemNumber == event.item.itemNumber && it.id != event.item.id)
+          .toList();
+
+      // Include only pending create-items that belong to the same item
+      final pendingForItem = state.createItems
+          .where((it) => it.itemNumber == event.item.itemNumber)
+          .toList();
+
+      final itemsAfterUpdate = [
+        ...existingForItem,
+        ...pendingForItem,
+        event.item,
+      ];
+
+      final isConsecutive = _validateConsecutiveStructureLevels(
+        itemsAfterUpdate,
+      );
+      if (!isConsecutive) {
+        emit(
+          state.copyWith(
+            status: ItemUomConversionStatus.structureInvalid,
+            message:
+                'The UoM structure levels must be consecutive (1, 2, 3...). Please correct the level.',
             structureValid: false,
           ),
         );
@@ -208,9 +259,12 @@ class ItemUomConversionBloc extends Bloc<ItemUomConversionEvent, ItemUomConversi
   ) async {
     emit(state.copyWith(status: ItemUomConversionStatus.deleting));
     try {
-      await repository.deleteItemUomConversion(event.item.id!, event.item.company!);
+      await repository.deleteItemUomConversion(
+        event.item.id!,
+        event.item.company!,
+      );
       add(LoadItemUomConversions(authBloc.state.companyId!));
-      
+
       emit(
         state.copyWith(
           status: ItemUomConversionStatus.success,
@@ -256,8 +310,6 @@ class ItemUomConversionBloc extends Bloc<ItemUomConversionEvent, ItemUomConversi
       );
     }
   }
-
-
 
   // UI State Management Methods
   Future<void> _onPrepareCreate(
@@ -344,14 +396,33 @@ class ItemUomConversionBloc extends Bloc<ItemUomConversionEvent, ItemUomConversi
     ValidateStructure event,
     Emitter<ItemUomConversionState> emit,
   ) async {
-    final isConsecutive = _validateConsecutiveStructureLevels(
-      event.currentItem != null ? [...event.createItems, event.currentItem!] : event.createItems,
-    );
+    // Determine the item number to validate against. Prefer the currentItem
+    // if provided, otherwise infer from the createItems list.
+    final int? itemNumber = event.currentItem?.itemNumber ??
+        (event.createItems.isNotEmpty ? event.createItems.first.itemNumber : null);
+
+    // Collect existing saved conversions for the same item (if any).
+    final existingForItem = itemNumber != null
+        ? state.items.where((it) => it.itemNumber == itemNumber).toList()
+        : <ItemUomConversion>[];
+
+    // Include only the pending create items that belong to the same item.
+    final pendingForItem = event.createItems
+        .where((it) => it.itemNumber == itemNumber)
+        .toList();
+
+    final itemsToValidate = [
+      ...existingForItem,
+      ...pendingForItem,
+      if (event.currentItem != null) event.currentItem!,
+    ];
+
+    final isConsecutive = _validateConsecutiveStructureLevels(itemsToValidate);
 
     emit(
       state.copyWith(
         structureValid: isConsecutive,
-        message: isConsecutive 
+        message: isConsecutive
             ? 'Structure levels are valid'
             : 'Structure levels must be consecutive (1, 2, 3...)',
       ),
@@ -366,7 +437,7 @@ class ItemUomConversionBloc extends Bloc<ItemUomConversionEvent, ItemUomConversi
     emit(
       state.copyWith(
         hasDuplication: hasDuplication,
-        message: hasDuplication 
+        message: hasDuplication
             ? 'UoM conversion already exists'
             : 'No duplication found',
       ),
@@ -383,10 +454,11 @@ class ItemUomConversionBloc extends Bloc<ItemUomConversionEvent, ItemUomConversi
   }
 
   bool _validateConsecutiveStructureLevels(List<ItemUomConversion> items) {
-    final itemsWithLevels = items
-        .where((item) => item.uomStructureLevel != null)
-        .toList()
-      ..sort((a, b) => (a.uomStructureLevel ?? 0).compareTo(b.uomStructureLevel ?? 0));
+    final itemsWithLevels =
+        items.where((item) => item.uomStructureLevel != null).toList()..sort(
+          (a, b) =>
+              (a.uomStructureLevel ?? 0).compareTo(b.uomStructureLevel ?? 0),
+        );
 
     if (itemsWithLevels.isEmpty) return true;
 
@@ -397,5 +469,19 @@ class ItemUomConversionBloc extends Bloc<ItemUomConversionEvent, ItemUomConversi
     }
 
     return true;
+  }
+
+  void _onResetUomConversionStatus(
+    ResetUomConversionStatus event,
+    Emitter<ItemUomConversionState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        status: ItemUomConversionStatus.initial,
+        structureValid: true,
+        hasDuplication: false,
+        message: '',
+      ),
+    );
   }
 }

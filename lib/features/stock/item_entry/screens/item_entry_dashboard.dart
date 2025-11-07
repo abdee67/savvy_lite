@@ -769,7 +769,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
         children: [
           _buildItemInfoItem(
             'Item ID : ',
-            item.id.toString(),
+            item.itemsId.toString(),
             Iconsax.card,
             isCompact,
           ),
