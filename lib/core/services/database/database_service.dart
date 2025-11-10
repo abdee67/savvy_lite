@@ -1866,6 +1866,7 @@ CREATE INDEX idx_item_master_defualt_uom ON item_master(defualt_uom);
     region TEXT,
     city TEXT,
     tin_number TEXT,
+    defaults_value TEXT,
     address1 TEXT,
     address2 TEXT,
     address3 TEXT,

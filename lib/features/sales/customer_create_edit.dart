@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
@@ -21,6 +22,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
   final PageController _pageController = PageController();
   final _formKey = GlobalKey<FormState>();
   int _currentPage = 0;
+  bool _isSaving = false;
 
   // Controllers
   late TextEditingController _customerNameController;
@@ -31,7 +33,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
   late TextEditingController _addressController;
   late TextEditingController _customerCityController;
   late TextEditingController _regionController;
-  late TextEditingController _contacrNameController;
+  late TextEditingController _contactNameController;
   late TextEditingController _contactPhone1Controller;
   late TextEditingController _contactPhone2Controller;
   late TextEditingController _address1Controller;
@@ -40,12 +42,17 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
   late TextEditingController _address4Controller;
   late TextEditingController _faxController;
 
+  String? _selectedDefault;
+  final List<String> _defaultValues = ['YES', 'NO'];
+
   @override
   void initState() {
     super.initState();
     _initializeControllers();
+
+    // Set selected customer if editing
     if (widget.customer != null) {
-      context.read<CustomerBloc>().add(SetCustomerForm(widget.customer!));
+      context.read<CustomerBloc>().add(SetSelectedCustomer(widget.customer!));
     }
   }
 
@@ -56,26 +63,38 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
       text: customer.customerName,
     );
     _customerIDController = TextEditingController(
-      text: customer.customerId.toString(),
+      text: customer.customerId?.toString() ?? '',
     );
     _contactTitleController = TextEditingController(
-      text: customer.contactTitle,
+      text: customer.contactTitle ?? '',
     );
-    _tinNumberController = TextEditingController(text: customer.tinNumber);
-    _stateController = TextEditingController(text: customer.state);
-    _addressController = TextEditingController(text: customer.address);
-    _customerCityController = TextEditingController(text: customer.city);
-    _regionController = TextEditingController(text: customer.region);
-    _contacrNameController = TextEditingController(text: customer.contactName);
+    _tinNumberController = TextEditingController(
+      text: customer.tinNumber ?? '',
+    );
+
+    // FIX: Proper default value handling
+    _selectedDefault = customer.defaultsValue == 'Y'
+        ? 'YES'
+        : 'NO'; // Default to 'NO' for new customers
+
+    _stateController = TextEditingController(text: customer.state ?? '');
+    _addressController = TextEditingController(text: customer.address ?? '');
+    _customerCityController = TextEditingController(text: customer.city ?? '');
+    _regionController = TextEditingController(text: customer.region ?? '');
+    _contactNameController = TextEditingController(
+      text: customer.contactName ?? '',
+    );
     _contactPhone1Controller = TextEditingController(
-      text: customer.phoneNumber,
+      text: customer.phoneNumber ?? '',
     );
-    _contactPhone2Controller = TextEditingController(text: customer.phone2);
-    _address1Controller = TextEditingController(text: customer.address1);
-    _address2Controller = TextEditingController(text: customer.address2);
-    _address3Controller = TextEditingController(text: customer.address3);
-    _address4Controller = TextEditingController(text: customer.address4);
-    _faxController = TextEditingController(text: customer.fax);
+    _contactPhone2Controller = TextEditingController(
+      text: customer.phone2 ?? '',
+    );
+    _address1Controller = TextEditingController(text: customer.address1 ?? '');
+    _address2Controller = TextEditingController(text: customer.address2 ?? '');
+    _address3Controller = TextEditingController(text: customer.address3 ?? '');
+    _address4Controller = TextEditingController(text: customer.address4 ?? '');
+    _faxController = TextEditingController(text: customer.fax ?? '');
   }
 
   @override
@@ -88,7 +107,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
     _addressController.dispose();
     _customerCityController.dispose();
     _regionController.dispose();
-    _contacrNameController.dispose();
+    _contactNameController.dispose();
     _contactPhone1Controller.dispose();
     _contactPhone2Controller.dispose();
     _address1Controller.dispose();
@@ -100,46 +119,85 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
   }
 
   void _previousSlide() {
-    _pageController.previousPage(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
+    if (_currentPage > 0) {
+      _pageController.previousPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      Navigator.of(context).pop();
+    }
   }
 
   void _saveCustomer() {
     if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isSaving = true;
+      });
+
+      // FIX: Create customer object with proper null handling
       final customer = Customer(
-        id: widget.customer?.id ?? 0,
+        id: widget.customer?.id, // FIX: Use null for new customers
         customerId: _customerIDController.text.isEmpty
             ? null
-            : int.parse(_customerIDController.text),
-        customerName: _customerNameController.text,
-        contactTitle: _contactTitleController.text.isEmpty
-            ? ''
-            : _contactTitleController.text,
-        tinNumber: _tinNumberController.text,
-        state: _stateController.text,
-        address: _addressController.text,
-        city: _customerCityController.text,
-        region: _regionController.text,
-        contactName: _contacrNameController.text,
-        phoneNumber: _contactPhone1Controller.text,
-        phone2: _contactPhone2Controller.text,
-        address1: _address1Controller.text,
-        address2: _address2Controller.text,
-        address3: _address3Controller.text,
-        address4: _address4Controller.text,
-        fax: _faxController.text,
-        company: widget.authBloc.state.companyId, // Get from auth bloc
+            : int.tryParse(_customerIDController.text),
+        customerName: _customerNameController.text.trim(),
+        contactTitle: _contactTitleController.text.trim().isEmpty
+            ? null
+            : _contactTitleController.text.trim(),
+        tinNumber: _tinNumberController.text.trim().isEmpty
+            ? null
+            : _tinNumberController.text.trim(),
+        defaultsValue: _selectedDefault == 'YES'
+            ? 'Y'
+            : 'N', // FIX: Proper mapping
+        state: _stateController.text.trim().isEmpty
+            ? null
+            : _stateController.text.trim(),
+        address: _addressController.text.trim().isEmpty
+            ? null
+            : _addressController.text.trim(),
+        city: _customerCityController.text.trim().isEmpty
+            ? null
+            : _customerCityController.text.trim(),
+        region: _regionController.text.trim().isEmpty
+            ? null
+            : _regionController.text.trim(),
+        contactName: _contactNameController.text.trim().isEmpty
+            ? null
+            : _contactNameController.text.trim(),
+        phoneNumber: _contactPhone1Controller.text.trim(),
+        phone2: _contactPhone2Controller.text.trim().isEmpty
+            ? null
+            : _contactPhone2Controller.text.trim(),
+        address1: _address1Controller.text.trim().isEmpty
+            ? null
+            : _address1Controller.text.trim(),
+        address2: _address2Controller.text.trim().isEmpty
+            ? null
+            : _address2Controller.text.trim(),
+        address3: _address3Controller.text.trim().isEmpty
+            ? null
+            : _address3Controller.text.trim(),
+        address4: _address4Controller.text.trim().isEmpty
+            ? null
+            : _address4Controller.text.trim(),
+        fax: _faxController.text.trim().isEmpty
+            ? null
+            : _faxController.text.trim(),
+        country: 'Ethiopia', // FIX: Set default country
+        company: widget.authBloc.state.companyId,
       );
-
-      if (widget.customer == null) {
-        context.read<CustomerBloc>().add(AddCustomer(customer));
-      } else {
-        context.read<CustomerBloc>().add(UpdateCustomer(customer));
-      }
-
+      _performSave(customer);
       _showSuccessDialog();
+    }
+  }
+
+  void _performSave(Customer customer) {
+    if (widget.customer == null) {
+      context.read<CustomerBloc>().add(SaveCustomer(customer));
+    } else {
+      context.read<CustomerBloc>().add(UpdateCustomer(customer));
     }
   }
 
@@ -172,9 +230,31 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).pop();
+              Navigator.of(context).pop(); // Close dialog
+              Navigator.of(context).pop(); // Close page
             },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.error, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Error'),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
             child: const Text('OK'),
           ),
         ],
@@ -184,26 +264,25 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.customer == null ? 'Create Customer' : 'Edit Customer',
+    return BlocListener<CustomerBloc, CustomerState>(
+      listener: (context, state) {
+        // Handle failure
+        if (state.status == CustomerStatus.failure && _isSaving) {
+          setState(() {
+            _isSaving = false;
+          });
+          _showErrorDialog(state.message);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            widget.customer == null ? 'Create Customer' : 'Edit Customer',
+          ),
+          backgroundColor: const Color(0xFF145888),
+          elevation: 0,
         ),
-        backgroundColor: Color(0xFF145888),
-        elevation: 0,
-      ),
-      body: BlocListener<CustomerBloc, CustomerState>(
-        listener: (context, state) {
-          if (state.status == CustomerStatus.failure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.errorMessage ?? 'An error occurred'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        child: Column(
+        body: Column(
           children: [
             // Progress Indicator
             Container(
@@ -241,7 +320,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
           width: 30,
           height: 30,
           decoration: BoxDecoration(
-            color: isActive ? Color(0xFF145888) : Colors.grey.shade300,
+            color: isActive ? const Color(0xFF145888) : Colors.grey.shade300,
             shape: BoxShape.circle,
           ),
           child: Center(
@@ -258,7 +337,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
         Text(
           label,
           style: TextStyle(
-            color: isActive ? Color(0xFF145888) : Colors.grey.shade600,
+            color: isActive ? const Color(0xFF145888) : Colors.grey.shade600,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -284,8 +363,10 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
           const SizedBox(height: 16),
           _buildTextField(
             _customerIDController,
-            'Customer ID *',
+            'Customer ID',
             Icons.numbers,
+            TextInputType.number,
+            false,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -300,6 +381,26 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
             'TIN Number',
             Icons.numbers,
             TextInputType.number,
+            false,
+          ),
+          const SizedBox(height: 16),
+          CustomDropdown(
+            labelText: 'Default Customer',
+            prefixIcon: const Icon(Icons.person),
+            items: _defaultValues
+                .map(
+                  (defaultValue) => DropdownMenuItem(
+                    value: defaultValue,
+                    child: Text(defaultValue),
+                  ),
+                )
+                .toList(),
+            value: _selectedDefault,
+            onChanged: (value) {
+              setState(() {
+                _selectedDefault = value;
+              });
+            },
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -307,6 +408,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
             'State',
             Icons.location_city,
             TextInputType.text,
+            false,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -314,6 +416,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
             'Region',
             Icons.location_city,
             TextInputType.text,
+            false,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -321,6 +424,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
             'City',
             Icons.location_city,
             TextInputType.text,
+            false,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -328,6 +432,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
             'Address',
             Icons.streetview_sharp,
             TextInputType.text,
+            false,
           ),
           const SizedBox(height: 16),
           _buildBottomNavigation(),
@@ -347,44 +452,66 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
       child: Column(
         children: [
           const SizedBox(height: 16),
-          _buildTextField(_contacrNameController, 'Contact Name', Icons.person),
+          _buildTextField(
+            _contactNameController,
+            'Contact Name *',
+            Icons.person,
+          ),
           const SizedBox(height: 16),
           _buildTextField(
             _contactPhone2Controller,
             'Contact Phone 2',
             Icons.phone,
+            TextInputType.phone,
+            false,
           ),
           const SizedBox(height: 16),
           _buildTextField(
             _contactTitleController,
             'Contact Title',
             Icons.title,
+            TextInputType.text,
+            false,
           ),
           const SizedBox(height: 16),
-          _buildTextField(_faxController, 'Fax', Icons.fax),
+          _buildTextField(
+            _faxController,
+            'Fax',
+            Icons.fax,
+            TextInputType.text,
+            false,
+          ),
           const SizedBox(height: 16),
           _buildTextField(
             _address1Controller,
             'Address 1',
             Icons.streetview_sharp,
+            TextInputType.text,
+            false,
           ),
           const SizedBox(height: 16),
           _buildTextField(
             _address2Controller,
             'Address 2',
             Icons.streetview_sharp,
+            TextInputType.text,
+            false,
           ),
           const SizedBox(height: 16),
           _buildTextField(
             _address3Controller,
             'Address 3',
             Icons.streetview_sharp,
+            TextInputType.text,
+            false,
           ),
           const SizedBox(height: 16),
           _buildTextField(
             _address4Controller,
             'Address 4',
             Icons.streetview_sharp,
+            TextInputType.text,
+            false,
           ),
           const SizedBox(height: 16),
           _buildBottomNavigation(),
@@ -398,6 +525,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
     String label,
     IconData icon, [
     TextInputType? keyboardType,
+    bool isRequired = true,
   ]) {
     return CustomTextField(
       controller: controller,
@@ -405,7 +533,9 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
       labelText: label,
       prefixIcon: Icon(icon),
       validator: (value) {
-        if (label.contains('*') && (value == null || value.isEmpty)) {
+        if (label.contains('*') &&
+            isRequired &&
+            (value == null || value.isEmpty)) {
           return 'This field is required';
         }
         return null;
@@ -416,6 +546,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
   Widget _buildBottomNavigation() {
     final screen = MediaQuery.of(context).size;
     final bool isTablet = screen.width > 600;
+
     return Stack(
       children: [
         Column(
@@ -424,11 +555,13 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 ElevatedButton(
-                  onPressed: () {
-                    _currentPage == 0
-                        ? Navigator.pop(context)
-                        : _previousSlide();
-                  },
+                  onPressed: _isSaving
+                      ? null
+                      : () {
+                          _currentPage == 0
+                              ? Navigator.pop(context)
+                              : _previousSlide();
+                        },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.amber,
                     padding: EdgeInsets.symmetric(
@@ -444,11 +577,15 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
                 ),
 
                 ElevatedButton(
-                  onPressed: _currentPage == 0 ? _nextSlide : _saveCustomer,
+                  onPressed: _isSaving
+                      ? null
+                      : _currentPage == 0
+                      ? _nextSlide
+                      : _saveCustomer,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _currentPage == 0
                         ? Colors.amber
-                        : Color(0xFF145888),
+                        : const Color(0xFF145888),
                     padding: EdgeInsets.symmetric(
                       horizontal: isTablet ? 60 : 40,
                       vertical: 16,
@@ -457,10 +594,19 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
                       borderRadius: BorderRadius.circular(30),
                     ),
                   ),
-                  child: Text(
-                    _currentPage == 0 ? 'Next' : 'Save',
-                    style: const TextStyle(color: Colors.white),
-                  ),
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(Colors.white),
+                          ),
+                        )
+                      : Text(
+                          _currentPage == 0 ? 'Next' : 'Save',
+                          style: const TextStyle(color: Colors.white),
+                        ),
                 ),
               ],
             ),

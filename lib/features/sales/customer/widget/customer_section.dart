@@ -38,20 +38,20 @@ class CustomerSection extends StatelessWidget {
         CustomTableDropdown<Customer>(
           title: title,
           items: customers,
-          displayText: (customer) => customer.customerName!,
+          displayText: (customer) => customer.customerName ?? '',
           selectedValue: selectedCustomer.isNotEmpty ? selectedCustomer : null,
           columns: [
             TableColumnConfig(
               header: 'Name',
-              cellBuilder: (customer) => Text(customer.customerName!),
+              cellBuilder: (customer) => Text(customer.customerName ?? ''),
             ),
             TableColumnConfig(
               header: 'TIN',
-              cellBuilder: (customer) => Text(customer.tinNumber!),
+              cellBuilder: (customer) => Text(customer.tinNumber ?? ''),
             ),
             TableColumnConfig(
               header: 'Phone',
-              cellBuilder: (customer) => Text(customer.phoneNumber!),
+              cellBuilder: (customer) => Text(customer.phoneNumber ?? ''),
             ),
           ],
           onItemSelected: (customer) {

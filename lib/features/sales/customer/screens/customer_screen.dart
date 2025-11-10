@@ -6,6 +6,7 @@ import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_event.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_state.dart';
+import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/customer/widget/customer_details_field.dart';
 import 'package:savvy_stock/features/sales/customer/widget/customer_section.dart';
 
@@ -20,8 +21,15 @@ class CustomerInfoScreen extends StatelessWidget {
   }
 }
 
-class CustomerInfoScreenView extends StatelessWidget {
+class CustomerInfoScreenView extends StatefulWidget {
   const CustomerInfoScreenView({super.key});
+
+  @override
+  State<CustomerInfoScreenView> createState() => _CustomerInfoScreenViewState();
+}
+
+class _CustomerInfoScreenViewState extends State<CustomerInfoScreenView> {
+  bool _isInitialized = false;
 
   @override
   Widget build(BuildContext context) {
@@ -42,11 +50,14 @@ class CustomerInfoScreenView extends StatelessWidget {
       body: BlocConsumer<CustomerBloc, CustomerState>(
         listener: (context, state) {
           if (state.status == CustomerStatus.failure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.errorMessage ?? 'An error occurred'),
-              ),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.errorMessage)));
+          }
+          // Auto-select default customer when customers are loaded
+          if (state.status == CustomerStatus.loaded && !_isInitialized) {
+            _isInitialized = true;
+            _autoSelectDefaultCustomer(context, state);
           }
         },
         builder: (context, state) {
@@ -59,7 +70,8 @@ class CustomerInfoScreenView extends StatelessWidget {
                 CustomerSection(
                   authBloc: context.read<AuthBloc>(),
                   title: 'Customer Bill To:',
-                  selectedCustomer: state.selectedBillToCustomer,
+                  selectedCustomer:
+                      state.selectedBillToCustomer ?? Customer.empty,
                   customers: state.customers,
                   onCustomerSelected: (customer) {
                     context.read<CustomerBloc>().add(
@@ -73,9 +85,9 @@ class CustomerInfoScreenView extends StatelessWidget {
 
                 // Customer details fields
                 CustomerDetailsField(
-                  tin: state.tin,
-                  phone: state.phone,
-                  country: state.country,
+                  tin: state.tin ?? '',
+                  phone: state.phone ?? '',
+                  country: state.country ?? '',
                   onDetailsChanged: (tin, phone, country) {
                     context.read<CustomerBloc>().add(
                       UpdateCustomerDetails(
@@ -93,7 +105,8 @@ class CustomerInfoScreenView extends StatelessWidget {
                 CustomerSection(
                   authBloc: context.read<AuthBloc>(),
                   title: 'Customer Ship To:',
-                  selectedCustomer: state.selectedShipToCustomer,
+                  selectedCustomer:
+                      state.selectedShipToCustomer ?? Customer.empty,
                   customers: state.customers,
                   onCustomerSelected: (customer) {
                     context.read<CustomerBloc>().add(
@@ -113,6 +126,44 @@ class CustomerInfoScreenView extends StatelessWidget {
         },
       ),
     );
+  }
+
+  void _autoSelectDefaultCustomer(BuildContext context, CustomerState state) {
+    final customerBloc = context.read<CustomerBloc>();
+
+    // Find default customer (where defaultsValue = 'Y')
+    final defaultCustomer = state.customers.firstWhere(
+      (customer) => customer.defaultsValue == 'Y',
+      orElse: () => Customer.empty,
+    );
+
+    if (defaultCustomer.isNotEmpty) {
+      // Auto-select default customer for both bill to and ship to
+      customerBloc.add(SelectBillToCustomer(defaultCustomer));
+      customerBloc.add(SelectShipToCustomer(defaultCustomer));
+
+      // Also update the details fields
+      customerBloc.add(
+        UpdateCustomerDetails(
+          tin: defaultCustomer.tinNumber ?? '',
+          phone: defaultCustomer.phoneNumber ?? '',
+          country: defaultCustomer.country ?? 'Ethiopia',
+        ),
+      );
+    } else if (state.customers.isNotEmpty) {
+      // If no default customer, select the first customer
+      final firstCustomer = state.customers.first;
+      customerBloc.add(SelectBillToCustomer(firstCustomer));
+      customerBloc.add(SelectShipToCustomer(firstCustomer));
+
+      customerBloc.add(
+        UpdateCustomerDetails(
+          tin: firstCustomer.tinNumber ?? '',
+          phone: firstCustomer.phoneNumber ?? '',
+          country: firstCustomer.country ?? 'Ethiopia',
+        ),
+      );
+    }
   }
 
   Widget _buildNextButton(BuildContext context, bool isValid) {
@@ -140,7 +191,7 @@ class CustomerInfoScreenView extends StatelessWidget {
 
   void _goToNextPage(BuildContext context) {
     final customerBloc = context.read<CustomerBloc>();
-    final selectedCustomer = customerBloc.state.selectedBillToCustomer;
+    final selectedCustomer = customerBloc.state.selectedBillToCustomer!;
 
     if (selectedCustomer.id == null) {
       ScaffoldMessenger.of(context).showSnackBar(

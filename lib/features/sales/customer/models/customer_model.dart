@@ -20,6 +20,8 @@ class Customer extends Equatable {
   final String? contactName;
   final String? contactTitle;
   final int? company;
+  final String? defaultsValue;
+  final int? tempId;
 
   const Customer({
     this.id,
@@ -41,6 +43,8 @@ class Customer extends Equatable {
     this.contactName,
     this.contactTitle,
     this.company,
+    this.defaultsValue,
+    this.tempId,
   });
 
   factory Customer.fromMap(Map<String, dynamic> map) {
@@ -64,6 +68,8 @@ class Customer extends Equatable {
       contactName: map['contact_name'],
       contactTitle: map['contact_title'],
       company: map['company'],
+      defaultsValue: map['defaults_value'],
+      tempId: map['temp_id'],
     );
   }
 
@@ -88,6 +94,8 @@ class Customer extends Equatable {
       'contact_name': contactName,
       'contact_title': contactTitle,
       'company': company,
+      'defaults_value': defaultsValue,
+      if (tempId != null) 'temp_id': tempId,
     };
   }
 
@@ -111,6 +119,8 @@ class Customer extends Equatable {
     contactName: '',
     contactTitle: '',
     company: 0,
+    defaultsValue: 'N',
+    tempId: null,
   );
 
   bool get isEmpty => id == 'empty'; // Use this for checking
@@ -139,7 +149,9 @@ class Customer extends Equatable {
         other.phone2 == phone2 &&
         other.contactName == contactName &&
         other.contactTitle == contactTitle &&
-        other.company == company;
+        other.company == company &&
+        other.defaultsValue == defaultsValue &&
+        other.tempId == tempId;
   }
 
   @override
@@ -164,6 +176,7 @@ class Customer extends Equatable {
       contactName,
       contactTitle,
       company,
+      defaultsValue,
     );
   }
 
@@ -187,6 +200,8 @@ class Customer extends Equatable {
     String? contactName,
     String? contactTitle,
     int? company,
+    String? defaultsValue,
+    int? tempId,
   }) {
     return Customer(
       id: id ?? this.id,
@@ -208,6 +223,8 @@ class Customer extends Equatable {
       contactName: contactName ?? this.contactName,
       contactTitle: contactTitle ?? this.contactTitle,
       company: company ?? this.company,
+      defaultsValue: defaultsValue ?? this.defaultsValue,
+      tempId: tempId ?? this.tempId,
     );
   }
 
@@ -232,5 +249,7 @@ class Customer extends Equatable {
     contactName,
     contactTitle,
     company,
+    defaultsValue,
+    tempId,
   ];
 }
