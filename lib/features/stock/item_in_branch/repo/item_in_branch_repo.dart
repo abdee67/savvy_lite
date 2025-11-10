@@ -24,8 +24,8 @@ class StockItemInBranchRepository extends BaseRepository {
     return await db.update(
       'items_in_branch',
       item.toMap(),
-      where: 'id = ? AND company = ?',
-      whereArgs: [item.id, item.company],
+      where: 'id = ? AND company = ? AND branch = ? ',
+      whereArgs: [item.id, item.company, item.branch],
     );
   }
 
@@ -34,7 +34,7 @@ class StockItemInBranchRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     return await db.delete(
       'items_in_branch',
-      where: 'id = ? AND company = ?',
+      where: 'id = ? AND company = ? AND branch = ?',
       whereArgs: [id, companyId],
     );
   }

@@ -397,17 +397,19 @@ class _ItemUomConversionFormState extends State<ItemUomConversionForm> {
           tooltip: 'Cancel',
         ),
         actions: [
-          if (widget.editingItem == null) ...[
-            IconButton(
-              icon: const Icon(Icons.save_alt),
-              onPressed: _isProcessing ? null : _saveAndAddNew,
-              tooltip: 'Save and Add New',
+          ElevatedButton(
+            onPressed: _isProcessing ? null : _resetForm,
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              side: BorderSide(color: Colors.white),
             ),
-          ],
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: _isProcessing ? null : _saveAndClose,
-            tooltip: 'Save and Close',
+            child: Text(
+              'Reset',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -923,25 +925,6 @@ class _ItemUomConversionFormState extends State<ItemUomConversionForm> {
   Widget _buildActionButtons() {
     return Row(
       children: [
-        // Reset Button
-        Expanded(
-          child: OutlinedButton(
-            onPressed: _isProcessing ? null : _resetForm,
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              side: BorderSide(color: Theme.of(context).primaryColor),
-            ),
-            child: Text(
-              'Reset',
-              style: TextStyle(
-                color: Theme.of(context).primaryColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-
         // Save and Add New Button (only for create mode)
         if (widget.editingItem == null) ...[
           Expanded(

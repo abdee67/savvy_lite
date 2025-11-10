@@ -405,8 +405,9 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
                     String? currentUomDesc;
                     if (_selectedUom != null) {
                       final match = udcList.where((u) => u.id == _selectedUom);
-                      if (match.isNotEmpty)
+                      if (match.isNotEmpty) {
                         currentUomDesc = match.first.description1;
+                      }
                     }
 
                     return CustomSearchableDropdown(

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/core/utils/ui_helper.dart';
-import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_searchable_dropdown.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_bloc.dart';
