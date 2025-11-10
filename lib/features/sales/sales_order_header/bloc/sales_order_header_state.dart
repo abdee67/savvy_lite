@@ -1,7 +1,7 @@
 // bloc/sales_order_header_state.dart
 
 import 'package:equatable/equatable.dart';
-import 'package:savvy_stock/features/stock/sales_order_header/model/sales_order_header.dart';
+import 'package:savvy_stock/features/sales/sales_order_header/model/sales_order_header.dart';
 
 enum SalesOrderHeaderStatus {
   initial,
@@ -43,7 +43,7 @@ class SalesOrderHeaderState extends Equatable {
   final String? searchQuery;
   final bool isSelectionMode;
   final Map<String, dynamic>? filters;
-  
+
   // Calculated totals
   final double subTotal;
   final double tax;
@@ -51,7 +51,7 @@ class SalesOrderHeaderState extends Equatable {
   final double totalAmount;
   final double discountAmount;
   final double amountOpen;
-  
+
   // Filter and configuration fields
   final DateTime? startDateForSales;
   final DateTime? thruDateForSales;
@@ -63,7 +63,7 @@ class SalesOrderHeaderState extends Equatable {
   final bool discountval;
   final bool allDetailTransactions;
   final String? fsRefrence;
-  
+
   // Customer information
   final String? tinNumber;
   final String? phoneNumbers;
@@ -71,14 +71,14 @@ class SalesOrderHeaderState extends Equatable {
   final String? stateDesc;
   final String? regionDesc;
   final String? cityDesc;
-  
+
   // Business data
   final int? companyId;
   final int? nextOrderNumber;
   final String? amountInWords;
   final bool isDuplicate;
 
-    const SalesOrderHeaderState({
+  const SalesOrderHeaderState({
     this.status = SalesOrderHeaderStatus.initial,
     this.headers = const [],
     this.filteredHeaders = const [],
@@ -166,9 +166,11 @@ class SalesOrderHeaderState extends Equatable {
   bool get hasEditingItem => editingItem != null;
 
   // Default date getters (similar to Java controller logic)
-  DateTime get effectiveStartDateForSales => startDateForSales ?? DateTime(DateTime.now().year, 1, 1);
+  DateTime get effectiveStartDateForSales =>
+      startDateForSales ?? DateTime(DateTime.now().year, 1, 1);
   DateTime get effectiveThruDateForSales => thruDateForSales ?? DateTime.now();
-  DateTime get effectiveDateOrderStart => dateOrderStart ?? DateTime(DateTime.now().year, 1, 1);
+  DateTime get effectiveDateOrderStart =>
+      dateOrderStart ?? DateTime(DateTime.now().year, 1, 1);
   DateTime get effectiveDateOrderEnd => dateOrderEnd ?? DateTime.now();
   bool get effectiveDiscountval => discountval;
   bool get effectiveApplyWH => applyWH;
@@ -231,7 +233,8 @@ class SalesOrderHeaderState extends Equatable {
       error: error ?? this.error,
       selectedItems: selectedItems ?? this.selectedItems,
       multiselectionItems: multiselectionItems ?? this.multiselectionItems,
-      multiselectionItemsForVoid: multiselectionItemsForVoid ?? this.multiselectionItemsForVoid,
+      multiselectionItemsForVoid:
+          multiselectionItemsForVoid ?? this.multiselectionItemsForVoid,
       selected: selected ?? this.selected,
       selected1: selected1 ?? this.selected1,
       selected2: selected2 ?? this.selected2,
@@ -254,7 +257,8 @@ class SalesOrderHeaderState extends Equatable {
       orderStatus: orderStatus ?? this.orderStatus,
       applyWH: applyWH ?? this.applyWH,
       discountval: discountval ?? this.discountval,
-      allDetailTransactions: allDetailTransactions ?? this.allDetailTransactions,
+      allDetailTransactions:
+          allDetailTransactions ?? this.allDetailTransactions,
       fsRefrence: fsRefrence ?? this.fsRefrence,
       tinNumber: tinNumber ?? this.tinNumber,
       phoneNumbers: phoneNumbers ?? this.phoneNumbers,
@@ -271,47 +275,45 @@ class SalesOrderHeaderState extends Equatable {
 
   // Helper methods for common state transitions
   SalesOrderHeaderState loadingState() => copyWith(
-        status: SalesOrderHeaderStatus.loading,
-        error: null,
-        successmessage: null,
-      );
+    status: SalesOrderHeaderStatus.loading,
+    error: null,
+    successmessage: null,
+  );
 
   SalesOrderHeaderState successState(String message) => copyWith(
-        status: SalesOrderHeaderStatus.success,
-        successmessage: message,
-        error: null,
-      );
+    status: SalesOrderHeaderStatus.success,
+    successmessage: message,
+    error: null,
+  );
 
   SalesOrderHeaderState errorState(String errorMessage) => copyWith(
-        status: SalesOrderHeaderStatus.error,
-        error: errorMessage,
-        successmessage: null,
-      );
+    status: SalesOrderHeaderStatus.error,
+    error: errorMessage,
+    successmessage: null,
+  );
 
   SalesOrderHeaderState processingState() => copyWith(
-        status: SalesOrderHeaderStatus.processing,
-        error: null,
-        successmessage: null,
-      );
+    status: SalesOrderHeaderStatus.processing,
+    error: null,
+    successmessage: null,
+  );
 
   SalesOrderHeaderState calculatingState() => copyWith(
-        status: SalesOrderHeaderStatus.calculating,
-        error: null,
-        successmessage: null,
-      );
+    status: SalesOrderHeaderStatus.calculating,
+    error: null,
+    successmessage: null,
+  );
 
-  SalesOrderHeaderState clearMessages() => copyWith(
-        error: null,
-        successmessage: null,
-      );
+  SalesOrderHeaderState clearMessages() =>
+      copyWith(error: null, successmessage: null);
 
   SalesOrderHeaderState clearFilters() => copyWith(
-        selected3: null,
-        dateOrderStart: null,
-        dateOrderEnd: null,
-        filteredHeaders: headers,
-        filters: null,
-      );
+    selected3: null,
+    dateOrderStart: null,
+    dateOrderEnd: null,
+    filteredHeaders: headers,
+    filters: null,
+  );
 
   SalesOrderHeaderState updateCustomerInfo({
     String? tinNumber,
@@ -320,62 +322,61 @@ class SalesOrderHeaderState extends Equatable {
     String? stateDesc,
     String? regionDesc,
     String? cityDesc,
-  }) =>
-      copyWith(
-        tinNumber: tinNumber,
-        phoneNumbers: phoneNumbers,
-        countryDesc: countryDesc,
-        stateDesc: stateDesc,
-        regionDesc: regionDesc,
-        cityDesc: cityDesc,
-      );
+  }) => copyWith(
+    tinNumber: tinNumber,
+    phoneNumbers: phoneNumbers,
+    countryDesc: countryDesc,
+    stateDesc: stateDesc,
+    regionDesc: regionDesc,
+    cityDesc: cityDesc,
+  );
 
   @override
   List<Object?> get props => [
-        status,
-        headers,
-        filteredHeaders,
-        createItems,
-        editItems,
-        creditHeaders,
-        successmessage,
-        error,
-        selectedItems,
-        multiselectionItems,
-        multiselectionItemsForVoid,
-        selected,
-        selected1,
-        selected2,
-        selected3,
-        editingItem,
-        searchQuery,
-        isSelectionMode,
-        filters,
-        subTotal,
-        tax,
-        withholdAmount,
-        totalAmount,
-        discountAmount,
-        amountOpen,
-        startDateForSales,
-        thruDateForSales,
-        dateOrderStart,
-        dateOrderEnd,
-        paymentType,
-        orderStatus,
-        applyWH,
-        discountval,
-        allDetailTransactions,
-        fsRefrence,
-        tinNumber,
-        phoneNumbers,
-        countryDesc,
-        stateDesc,
-        regionDesc,
-        cityDesc,
-        companyId,
-        nextOrderNumber,
-        amountInWords,
-        isDuplicate,
-      ];
+    status,
+    headers,
+    filteredHeaders,
+    createItems,
+    editItems,
+    creditHeaders,
+    successmessage,
+    error,
+    selectedItems,
+    multiselectionItems,
+    multiselectionItemsForVoid,
+    selected,
+    selected1,
+    selected2,
+    selected3,
+    editingItem,
+    searchQuery,
+    isSelectionMode,
+    filters,
+    subTotal,
+    tax,
+    withholdAmount,
+    totalAmount,
+    discountAmount,
+    amountOpen,
+    startDateForSales,
+    thruDateForSales,
+    dateOrderStart,
+    dateOrderEnd,
+    paymentType,
+    orderStatus,
+    applyWH,
+    discountval,
+    allDetailTransactions,
+    fsRefrence,
+    tinNumber,
+    phoneNumbers,
+    countryDesc,
+    stateDesc,
+    regionDesc,
+    cityDesc,
+    companyId,
+    nextOrderNumber,
+    amountInWords,
+    isDuplicate,
+  ];
 }

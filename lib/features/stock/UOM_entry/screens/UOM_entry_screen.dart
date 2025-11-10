@@ -45,7 +45,7 @@ class InvoiceReviewScreen extends StatelessWidget {
           LoadInvoice(
             orderId: DateTime.now().millisecondsSinceEpoch.toString(),
             orderDate: DateTime.now(),
-            customer: customer,
+            customer: customer!,
             confirmedItems: confirmedItems,
             paymentModel: paymentModel,
           ),
@@ -59,20 +59,24 @@ class InvoiceReviewScreen extends StatelessWidget {
               icon: const Icon(Icons.print),
               onPressed: () => _printInvoice(
                 context,
-                customer,
+                customer!,
                 confirmedItems,
                 paymentModel,
               ),
             ),
             IconButton(
               icon: const Icon(Icons.save),
-              onPressed: () =>
-                  _saveInvoice(context, customer, confirmedItems, paymentModel),
+              onPressed: () => _saveInvoice(
+                context,
+                customer!,
+                confirmedItems,
+                paymentModel,
+              ),
             ),
             PopupMenuButton<String>(
               onSelected: (format) => _exportInvoice(
                 context,
-                customer,
+                customer!,
                 confirmedItems,
                 paymentModel,
                 format,

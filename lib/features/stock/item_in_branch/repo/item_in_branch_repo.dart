@@ -184,6 +184,28 @@ class StockItemInBranchRepository extends BaseRepository {
     return maps.map((map) => ItemInBranchModel.fromMap(map)).toList();
   }
 
+  //find item from branch by barcode
+  Future<List<ItemInBranchModel>> findByBarcode(
+    String barcode,
+    int companyId,
+  ) async {
+    final db = await databaseService.database;
+    final maps = await db.rawQuery(
+      '''
+      SELECT ib.*, 
+             i.item_description, i.barcode, i.items_id,
+             b.description as branch_description, b.reference_id as branch_reference
+      FROM items_in_branch ib
+      LEFT JOIN items_table i ON ib.item_number = i.id
+      LEFT JOIN branch_table b ON ib.branch = b.id
+      WHERE i.barcode = ? AND ib.company = ?
+    ''',
+      [barcode, companyId],
+    );
+
+    return maps.map((map) => ItemInBranchModel.fromMap(map)).toList();
+  }
+
   // Check if item exists in branch (duplication check)
   Future<bool> existsByItemAndBranch(
     int itemNumber,

@@ -1,11 +1,12 @@
 // repositories/sales_order_header_repository.dart
 import 'dart:async';
 import 'package:savvy_stock/core/services/database/database_service.dart';
-import 'package:savvy_stock/features/stock/sales_order_header/model/sales_order_header.dart';
+import 'package:savvy_stock/features/sales/sales_order_header/model/sales_order_header.dart';
 import 'package:sqflite/sqflite.dart';
 
 class SalesOrderHeaderRepository {
-  static final SalesOrderHeaderRepository _instance = SalesOrderHeaderRepository._internal();
+  static final SalesOrderHeaderRepository _instance =
+      SalesOrderHeaderRepository._internal();
   factory SalesOrderHeaderRepository() => _instance;
   SalesOrderHeaderRepository._internal();
 
@@ -72,7 +73,7 @@ class SalesOrderHeaderRepository {
     bool includeVoided = false,
   }) async {
     final db = await _db;
-    
+
     String where = '1=1';
     List<dynamic> whereArgs = [];
 
@@ -128,7 +129,7 @@ class SalesOrderHeaderRepository {
       'SELECT MAX(order_number) as max_order FROM sales_order_header WHERE company = ?',
       [companyId],
     );
-    
+
     final maxOrder = result.first['max_order'] as int?;
     return (maxOrder ?? 0) + 1;
   }
@@ -138,11 +139,12 @@ class SalesOrderHeaderRepository {
     final db = await _db;
     final maps = await db.query(
       'sales_order_header',
-      where: 'company = ? AND payment_term IS NOT NULL AND (void_indicator IS NULL OR void_indicator = "")',
+      where:
+          'company = ? AND payment_term IS NOT NULL AND (void_indicator IS NULL OR void_indicator = "")',
       whereArgs: [companyId],
       orderBy: 'id DESC',
     );
-    
+
     return maps.map((map) => SalesOrderHeader.fromMap(map)).toList();
   }
 
@@ -156,6 +158,7 @@ class SalesOrderHeaderRepository {
       whereArgs: [id],
     );
   }
+
   // Complex Query Builder (replacing Java's dynamicQueryGeneral)
   Future<List<SalesOrderHeader>> _buildDynamicQuery({
     required Map<String, dynamic> queryParams,
@@ -164,7 +167,7 @@ class SalesOrderHeaderRepository {
     String orderBy = 'id DESC',
   }) async {
     final db = await _db;
-    
+
     String whereClause = 'company = ?';
     List<dynamic> whereArgs = [companyId];
 
@@ -276,7 +279,7 @@ class SalesOrderHeaderRepository {
     bool includeVoided = false,
   }) async {
     final db = await _db;
-    
+
     String where = 'company = ?';
     List<dynamic> whereArgs = [companyId];
 
@@ -329,10 +332,11 @@ class SalesOrderHeaderRepository {
     required int companyId,
   }) async {
     final db = await _db;
-    
+
     final maps = await db.query(
       'sales_order_header',
-      where: 'company = ? AND order_number = ? AND order_type = ? AND (void_indicator IS NULL OR void_indicator = "")',
+      where:
+          'company = ? AND order_number = ? AND order_type = ? AND (void_indicator IS NULL OR void_indicator = "")',
       whereArgs: [companyId, orderNumber, orderType],
     );
 
@@ -346,7 +350,7 @@ class SalesOrderHeaderRepository {
     bool? voided,
   }) async {
     final db = await _db;
-    
+
     String where = 'company = ? AND employees_id = ?';
     List<dynamic> whereArgs = [companyId, employeeId];
 
@@ -374,8 +378,9 @@ class SalesOrderHeaderRepository {
     double? minOpenAmount,
   }) async {
     final db = await _db;
-    
-    String where = 'company = ? AND payment_term IS NOT NULL AND amount_open > 0 AND (void_indicator IS NULL OR void_indicator = "")';
+
+    String where =
+        'company = ? AND payment_term IS NOT NULL AND amount_open > 0 AND (void_indicator IS NULL OR void_indicator = "")';
     List<dynamic> whereArgs = [companyId];
 
     if (minOpenAmount != null) {
@@ -396,10 +401,10 @@ class SalesOrderHeaderRepository {
   // Bulk operations like Java's removeList
   Future<int> deleteMultiple(List<int> ids) async {
     if (ids.isEmpty) return 0;
-    
+
     final db = await _db;
     final placeholders = List.generate(ids.length, (_) => '?').join(',');
-    
+
     return await db.delete(
       'sales_order_header',
       where: 'id IN ($placeholders)',
@@ -411,7 +416,7 @@ class SalesOrderHeaderRepository {
   Future<int> updateMultiple(List<SalesOrderHeader> headers) async {
     final db = await _db;
     final batch = db.batch();
-    
+
     for (final header in headers) {
       batch.update(
         'sales_order_header',
@@ -420,7 +425,7 @@ class SalesOrderHeaderRepository {
         whereArgs: [header.id],
       );
     }
-    
+
     final results = await batch.commit();
     return results.length;
   }
@@ -432,8 +437,9 @@ class SalesOrderHeaderRepository {
     required DateTime endDate,
   }) async {
     final db = await _db;
-    
-    final result = await db.rawQuery('''
+
+    final result = await db.rawQuery(
+      '''
       SELECT 
         COUNT(*) as total_orders,
         SUM(amount_total) as total_amount,
@@ -447,7 +453,9 @@ class SalesOrderHeaderRepository {
       WHERE company = ? 
         AND order_date BETWEEN ? AND ?
         AND (void_indicator IS NULL OR void_indicator = "")
-    ''', [companyId, startDate.toIso8601String(), endDate.toIso8601String()]);
+    ''',
+      [companyId, startDate.toIso8601String(), endDate.toIso8601String()],
+    );
 
     return result.isNotEmpty ? result.first : {};
   }

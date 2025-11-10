@@ -24,7 +24,7 @@ class _PaymentActionState extends State<PaymentAction> {
     final customer = customerBloc.state.selectedBillToCustomer;
     final items = itemEntryBloc.state.confirmedItems;
 
-    print('Selected customer: ${customer.id} - ${customer.customerName}');
+    print('Selected customer: ${customer!.id} - ${customer.customerName}');
     print('Confirmed items: ${items.length}');
     // Update this check to properly verify if a customer is selected
     if (customer.id == null) {

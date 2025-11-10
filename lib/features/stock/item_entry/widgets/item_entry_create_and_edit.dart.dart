@@ -496,10 +496,7 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
                   );
                 }
                 final itemDescriptions = state.details
-                    .where(
-                      (item) =>
-                          item.description1.isNotEmpty,
-                    )
+                    .where((item) => item.description1.isNotEmpty)
                     .map((item) => item.description1)
                     .toSet()
                     .toList();

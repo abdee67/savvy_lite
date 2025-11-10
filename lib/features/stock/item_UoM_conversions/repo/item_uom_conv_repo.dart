@@ -419,4 +419,27 @@ class ItemUomConversionsRepository {
       return 1.0;
     }
   }
+
+  // Get conversion factor
+  Future<double> getConversionFactor(
+    int itemId,
+    int fromUomId,
+    int toUomId,
+    int companyId,
+  ) async {
+    final db = await databaseService.database;
+    final result = await db.rawQuery(
+      '''
+      SELECT conversion_factor 
+      FROM item_uom_conversions 
+      WHERE item_number = ? AND from_uom = ? AND to_uom = ? AND company = ?
+      ''',
+      [itemId, fromUomId, toUomId, companyId],
+    );
+
+    if (result.isNotEmpty && result.first['conversion_factor'] != null) {
+      return result.first['conversion_factor'] as double;
+    }
+    return 1.0;
+  }
 }

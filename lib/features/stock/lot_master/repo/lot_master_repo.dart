@@ -474,4 +474,19 @@ class LotMasterRepository extends BaseRepository {
     }
     return summary;
   }
+
+  Future<void> restoreLotQuantity(
+    int lotNumber,
+    double quantity,
+    int companyId,
+  ) async {
+    final db = await databaseService.database;
+    await db.update(
+      'lot_master',
+      {'quantity_available': quantity},
+      where: 'lot_number = ? AND company = ?',
+      whereArgs: [lotNumber, companyId, quantity],
+    );
+    return;
+  }
 }

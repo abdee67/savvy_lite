@@ -440,7 +440,7 @@ class _SalesItemEntryConfirmedItemState
     final selectedCustomerFromState = state.customer;
 
     print(
-      'Customer from Bloc: "${selectedCustomerFromBloc.customerName}" (ID: ${selectedCustomerFromBloc.id})',
+      'Customer from Bloc: "${selectedCustomerFromBloc!.customerName}" (ID: ${selectedCustomerFromBloc.id})',
     );
     print(
       'Customer from State: "${selectedCustomerFromState.customerName}" (ID: ${selectedCustomerFromState.id})',

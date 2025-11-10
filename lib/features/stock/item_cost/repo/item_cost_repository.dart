@@ -70,9 +70,9 @@ class ItemCostRepository extends BaseRepository {
   // Find item costs by item number and company
   Future<List<ItemCost>> findByItemNumberAndCompany(
     int itemNumber,
-    int companyId,
-    {Transaction? txn}
-  ) async {
+    int companyId, {
+    Transaction? txn,
+  }) async {
     final db = txn ?? await databaseService.database;
     final maps = await db.query(
       'item_cost',
@@ -131,6 +131,17 @@ class ItemCostRepository extends BaseRepository {
     ''',
       [companyId],
     );
+  }
+
+  // Get purchase history for item
+  Future<List<ItemCost>> getPurchaseHistory(int itemId, int companyId) async {
+    final db = await databaseService.database;
+    final maps = await db.query(
+      'item_cost',
+      where: 'item_number = ? AND company = ?',
+      whereArgs: [itemId, companyId],
+    );
+    return maps.map((map) => ItemCost.fromMap(map)).toList();
   }
 
   // Update multiple item costs in batch

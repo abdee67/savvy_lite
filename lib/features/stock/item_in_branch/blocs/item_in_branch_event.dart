@@ -1,8 +1,8 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_receiver_model.dart';
+import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
-import 'package:savvy_stock/features/stock/sales_order_detail/model/sales_order_detail.dart';
 
 @immutable
 abstract class ItemInBranchEvent extends Equatable {
@@ -152,7 +152,7 @@ class ExportSingleItemFromBranch extends ItemInBranchEvent {
 class SaveRow extends ItemInBranchEvent {
   final List<ItemInBranchModel> items;
 
- const SaveRow(this.items);
+  const SaveRow(this.items);
 }
 
 class SaveInEdit extends ItemInBranchEvent {
@@ -161,8 +161,8 @@ class SaveInEdit extends ItemInBranchEvent {
   final int? transactionNumber;
   final String? remark;
 
-
- const SaveInEdit(this.item, {
+  const SaveInEdit(
+    this.item, {
     this.transactionType = 'A',
     this.transactionNumber,
     this.remark,
@@ -172,19 +172,19 @@ class SaveInEdit extends ItemInBranchEvent {
 class CreateInEdit extends ItemInBranchEvent {
   final ItemInBranchModel item;
 
- const CreateInEdit(this.item);
+  const CreateInEdit(this.item);
 }
 
 class RemoveInCreate extends ItemInBranchEvent {
   final ItemInBranchModel item;
 
- const RemoveInCreate(this.item);
+  const RemoveInCreate(this.item);
 }
 
 class RemoveInEdit extends ItemInBranchEvent {
   final ItemInBranchModel item;
 
- const RemoveInEdit(this.item);
+  const RemoveInEdit(this.item);
 }
 
 // Advanced operation events
@@ -199,7 +199,7 @@ class UpdateItemBranchUnitPrice extends ItemInBranchEvent {
   final int itemBranchId;
   final double newPrice;
 
- const UpdateItemBranchUnitPrice(this.itemBranchId, this.newPrice);
+  const UpdateItemBranchUnitPrice(this.itemBranchId, this.newPrice);
   @override
   List<Object> get props => [itemBranchId, newPrice];
 }
@@ -207,7 +207,7 @@ class UpdateItemBranchUnitPrice extends ItemInBranchEvent {
 class LoadItemsInBranchByItem extends ItemInBranchEvent {
   final int itemNumber;
 
- const LoadItemsInBranchByItem(this.itemNumber);
+  const LoadItemsInBranchByItem(this.itemNumber);
   @override
   List<Object> get props => [itemNumber];
 }
@@ -215,7 +215,7 @@ class LoadItemsInBranchByItem extends ItemInBranchEvent {
 class LoadItemsInBranchByBranch extends ItemInBranchEvent {
   final int branchId;
 
- const LoadItemsInBranchByBranch(this.branchId);
+  const LoadItemsInBranchByBranch(this.branchId);
   @override
   List<Object> get props => [branchId];
 }
@@ -223,7 +223,7 @@ class LoadItemsInBranchByBranch extends ItemInBranchEvent {
 class LoadLowStockItems extends ItemInBranchEvent {
   final int? branchId;
 
- const LoadLowStockItems({this.branchId});
+  const LoadLowStockItems({this.branchId});
   @override
   List<Object> get props => [branchId ?? -1];
 }
@@ -231,7 +231,7 @@ class LoadLowStockItems extends ItemInBranchEvent {
 class LoadOutOfStockItems extends ItemInBranchEvent {
   final int? branchId;
 
- const LoadOutOfStockItems({this.branchId});
+  const LoadOutOfStockItems({this.branchId});
   @override
   List<Object> get props => [branchId ?? -1];
 }
@@ -240,35 +240,34 @@ class UpdateItemQuantity extends ItemInBranchEvent {
   final int itemId;
   final double quantity;
 
- const UpdateItemQuantity(this.itemId, this.quantity);
+  const UpdateItemQuantity(this.itemId, this.quantity);
   @override
   List<Object> get props => [itemId, quantity];
 }
-
 
 // Stock management events
 class UpdateStockForSalesOrder extends ItemInBranchEvent {
   final SalesOrderDetail salesOrderDetail;
 
- const UpdateStockForSalesOrder(this.salesOrderDetail);
+  const UpdateStockForSalesOrder(this.salesOrderDetail);
 }
 
 class UpdateStockForSalesOrderVoid extends ItemInBranchEvent {
   final SalesOrderDetail salesOrderDetail;
 
- const UpdateStockForSalesOrderVoid(this.salesOrderDetail);
+  const UpdateStockForSalesOrderVoid(this.salesOrderDetail);
 }
 
 class UpdateStockForPurchaseOrder extends ItemInBranchEvent {
   final PurchaseOrderReceiverModel purchaseOrderReceiver;
 
- const UpdateStockForPurchaseOrder(this.purchaseOrderReceiver);
+  const UpdateStockForPurchaseOrder(this.purchaseOrderReceiver);
 }
 
 class SetDefaultPrice extends ItemInBranchEvent {
   final ItemInBranchModel item;
 
- const SetDefaultPrice(this.item);
+  const SetDefaultPrice(this.item);
 }
 
 // Filter events
@@ -277,7 +276,7 @@ class FilterItemsInBranch extends ItemInBranchEvent {}
 class FilterSelectedItems extends ItemInBranchEvent {
   final int itemNumber;
 
-const  FilterSelectedItems(this.itemNumber);
+  const FilterSelectedItems(this.itemNumber);
 }
 
 class ClearDataForFilter extends ItemInBranchEvent {}
@@ -285,11 +284,11 @@ class ClearDataForFilter extends ItemInBranchEvent {}
 class LoadAvailableItemsInBranch extends ItemInBranchEvent {
   final int itemNumber;
 
- const LoadAvailableItemsInBranch(this.itemNumber);
+  const LoadAvailableItemsInBranch(this.itemNumber);
 }
 
 class SendNotification extends ItemInBranchEvent {
   final ItemInBranchModel item;
 
- const SendNotification(this.item);
+  const SendNotification(this.item);
 }

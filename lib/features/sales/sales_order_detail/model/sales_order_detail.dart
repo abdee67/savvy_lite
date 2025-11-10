@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
-import 'package:savvy_stock/features/stock/sales_order_header/model/sales_order_header.dart';
+import 'package:savvy_stock/features/sales/sales_order_header/model/sales_order_header.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
@@ -121,6 +121,9 @@ class SalesOrderDetail extends Equatable {
     };
   }
 
+  bool get isValid => itemsTableId != 0 && quantity != null && quantity! > 0;
+  bool get hasExtendedPrice => extendedPrice != null && extendedPrice! > 0;
+
   SalesOrderDetail copyWith({
     int? id,
     double? unitPrice,
@@ -192,4 +195,20 @@ class SalesOrderDetail extends Equatable {
     uom,
     orderHeader,
   ];
+}
+
+class StockValidationResult {
+  final bool isValid;
+  final double availableQuantity;
+  final double requestedQuantity;
+  final double beyondQuantity;
+  final String message;
+
+  const StockValidationResult({
+    required this.isValid,
+    required this.availableQuantity,
+    required this.requestedQuantity,
+    required this.beyondQuantity,
+    required this.message,
+  });
 }

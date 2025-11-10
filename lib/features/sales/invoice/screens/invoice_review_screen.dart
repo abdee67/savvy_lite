@@ -48,7 +48,7 @@ class InvoiceReviewScreen extends StatelessWidget {
       );
 
       debugPrint('Creating invoice with:');
-      debugPrint('- Customer ID: ${customer.id}');
+      debugPrint('- Customer ID: ${customer!.id}');
       debugPrint('- Items count: ${confirmedItems.length}');
       debugPrint('- Payment Type: ${paymentState.paymentType}');
 

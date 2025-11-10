@@ -53,7 +53,7 @@ class _ItemEntryScreenViewState extends State<ItemEntryScreenView> {
     // Debug: Check global CustomerBloc
     final customerBloc = context.read<CustomerBloc>();
     print(
-      'Global CustomerBloc selected customer: ${customerBloc.state.selectedBillToCustomer.customerName}',
+      'Global CustomerBloc selected customer: ${customerBloc.state.selectedBillToCustomer!.customerName}',
     );
 
     // Debug: Check global ItemEntryBloc

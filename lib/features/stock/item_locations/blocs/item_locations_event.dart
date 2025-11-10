@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_receiver_model.dart';
+import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
-import 'package:savvy_stock/features/stock/sales_order_detail/model/sales_order_detail.dart';
 
 // Events
 abstract class ItemLocationsEvent extends Equatable {
