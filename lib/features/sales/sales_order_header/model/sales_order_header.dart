@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
 import 'package:savvy_stock/features/company/models/company_model.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
+import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class SalesOrderHeader extends Equatable {
@@ -48,6 +49,7 @@ class SalesOrderHeader extends Equatable {
   final UdcDetails? paymentInstrumentRef;
   final UdcDetails? paymentStatusRef;
   final UdcDetails? orderTypeRef;
+  final SalesOrderDetail? salesOrderDetail;
 
   const SalesOrderHeader({
     this.id,
@@ -90,6 +92,7 @@ class SalesOrderHeader extends Equatable {
     this.paymentInstrumentRef,
     this.paymentStatusRef,
     this.orderTypeRef,
+    this.salesOrderDetail,
     this.tempId,
   });
 
@@ -147,6 +150,9 @@ class SalesOrderHeader extends Equatable {
           ? Employee.fromMap({
               'id': map['employees_id'],
               'name': map['employee_name'],
+              'nameFirst': map['employee_name_first'],
+              'nameLast': map['employee_name_last'],
+
             })
           : null,
       paymentStatusRef: map['payment_status_code'] != null
@@ -156,6 +162,11 @@ class SalesOrderHeader extends Equatable {
               'description': map['payment_status_description'],
             })
           : null,
+          salesOrderDetail: map['sales_order_detail'] != null
+              ? SalesOrderDetail.fromMap({
+                'id' : map[]
+              })
+              : null,
     );
   }
 
@@ -194,6 +205,7 @@ class SalesOrderHeader extends Equatable {
       'order_type': orderType,
       'unit_cost': unitCost,
       'amount_cost': amountCost,
+      'sales_order_detail': salesOrderDetail?.toMap(),
     };
   }
 
@@ -231,6 +243,14 @@ class SalesOrderHeader extends Equatable {
     int? orderType,
     double? unitCost,
     double? amountCost,
+    Customer? customerBillToRef,
+    Customer? customerTableRef,
+    Employee? employee,
+    Company? companyRef,
+    UdcDetails? paymentInstrumentRef,
+    UdcDetails? paymentStatusRef,
+    UdcDetails? orderTypeRef,
+    SalesOrderDetail? salesOrderDetail,
     int? tempId,
   }) {
     return SalesOrderHeader(
@@ -267,6 +287,14 @@ class SalesOrderHeader extends Equatable {
       orderType: orderType ?? this.orderType,
       unitCost: unitCost ?? this.unitCost,
       amountCost: amountCost ?? this.amountCost,
+      customerBillToRef: customerBillToRef ?? this.customerBillToRef,
+      customerTableRef: customerTableRef ?? this.customerTableRef,
+      employee: employee ?? this.employee,
+      companyRef: companyRef ?? this.companyRef,
+      paymentInstrumentRef: paymentInstrumentRef ?? this.paymentInstrumentRef,
+      paymentStatusRef: paymentStatusRef ?? this.paymentStatusRef,
+      orderTypeRef: orderTypeRef ?? this.orderTypeRef,
+      salesOrderDetail: salesOrderDetail ?? this.salesOrderDetail,
       tempId: tempId ?? this.tempId,
     );
   }
@@ -313,6 +341,17 @@ class SalesOrderHeader extends Equatable {
     paymentInstrumentRef,
     paymentStatusRef,
     orderTypeRef,
+    employee,
+    customerBillTo,
+    customerTableId,
+    customerBillToRef,
+    customerTableRef,
+    employee,
+    companyRef,
+    paymentInstrumentRef,
+    paymentStatusRef,
+    orderTypeRef,
+    salesOrderDetail,
     tempId,
   ];
 }

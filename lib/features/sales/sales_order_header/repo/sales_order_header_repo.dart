@@ -1,6 +1,7 @@
 // repositories/sales_order_header_repository.dart
 import 'dart:async';
 import 'package:savvy_stock/core/services/database/database_service.dart';
+import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/sales/sales_order_header/model/sales_order_header.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -157,6 +158,20 @@ class SalesOrderHeaderRepository {
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+
+  // Get voided sales orders
+  Future<List<SalesOrderHeader>> getVoidedSalesOrders(int companyId) async {
+    final db = await _db;
+    final maps = await db.query(
+      'sales_order_header',
+      where:
+          'company = ? AND void_indicator IS NOT NULL AND void_indicator != ""',
+      whereArgs: [companyId],
+      orderBy: 'id DESC',
+    );
+
+    return maps.map((map) => SalesOrderHeader.fromMap(map)).toList();
   }
 
   // Complex Query Builder (replacing Java's dynamicQueryGeneral)
@@ -325,6 +340,40 @@ class SalesOrderHeaderRepository {
     return maps.map((map) => SalesOrderHeader.fromMap(map)).toList();
   }
 
+  // FS Number Generation
+  Future<String> generateNextFsNumber(int companyId, int branchId) async {
+    final db = await _db;
+
+    final result = await db.rawQuery(
+      '''
+      SELECT MAX(CAST(fs_number AS INTEGER)) as max_fs 
+      FROM sales_order_header 
+      WHERE company = ? AND branch_value = ?
+    ''',
+      [companyId, branchId],
+    );
+
+    final maxFs = result.first['max_fs'] as int?;
+    final nextFs = (maxFs ?? 0) + 1;
+
+    return nextFs.toString().padLeft(8, '0');
+  }
+
+  // Sales Order Details for Void Processing
+  Future<List<SalesOrderDetail>> getSalesOrderDetailsByHeaderId(
+    int headerId,
+  ) async {
+    final db = await _db;
+
+    final maps = await db.query(
+      'sales_order_details',
+      where: 'sales_order_header_id = ?',
+      whereArgs: [headerId],
+    );
+
+    return maps.map((map) => SalesOrderDetail.fromMap(map)).toList();
+  }
+
   // Find by order number and type (complex business logic)
   Future<SalesOrderHeader?> findByOrderNumberAndType({
     required int orderNumber,
@@ -396,6 +445,29 @@ class SalesOrderHeaderRepository {
     );
 
     return maps.map((map) => SalesOrderHeader.fromMap(map)).toList();
+  }
+
+  // Stock Reversal for Voided Orders
+  Future<void> reverseStockQuantity(int itemInBranchId, double quantity) async {
+    final db = await _db;
+
+    // Get current quantity
+    final currentResult = await db.query(
+      'items_in_branch',
+      where: 'id = ?',
+      whereArgs: [itemInBranchId],
+    );
+
+    if (currentResult.isNotEmpty) {
+      final currentQty = currentResult.first['quantity_available'] as double;
+      final newQty = currentQty + quantity; // Add back the quantity
+      await db.update(
+        'items_in_branch',
+        {'quantity_available': newQty},
+        where: 'id = ?',
+        whereArgs: [itemInBranchId],
+      );
+    }
   }
 
   // Bulk operations like Java's removeList

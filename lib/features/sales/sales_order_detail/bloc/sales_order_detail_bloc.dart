@@ -8,9 +8,13 @@ import 'package:savvy_stock/features/sales/sales_order_detail/bloc/sales_order_d
 import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/sales/sales_order_detail/repo/sales_order_detail_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order_header/repo/sales_order_header_repo.dart';
+import 'package:savvy_stock/features/stock/item_UoM_conversions/repo/item_uom_conv_repo.dart';
+import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
 import 'package:savvy_stock/features/stock/item_entry/data/item_repository.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_repo.dart';
 import 'package:savvy_stock/features/stock/lot_master/repo/lot_master_repo.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
 
 class SalesOrderDetailBloc
     extends Bloc<SalesOrderDetailsEvent, SalesOrderDetailState> {
@@ -18,17 +22,24 @@ class SalesOrderDetailBloc
   final SalesOrderHeaderRepository salesOrderHeaderRepository;
   final StockItemsEntryRepository itemsTableRepository;
   final StockItemInBranchRepository itemsInBranchRepository;
+  final ItemUomConversionsRepository itemUOMConversionsRepository;
+  final SystemConstantBloc systemConstantBloc;
+  final ItemCostRepository itemCostRepository;
   final LotMasterRepository lotMasterRepository;
   final UdcRepository udcDetailsRepository;
   final AuthBloc authBloc;
 
   StreamSubscription? _authSubscription;
+  StreamSubscription? _systemConstantSubscription;
 
   SalesOrderDetailBloc({
     required this.repository,
     required this.salesOrderHeaderRepository,
     required this.itemsTableRepository,
     required this.itemsInBranchRepository,
+    required this.itemCostRepository,
+    required this.itemUOMConversionsRepository,
+    required this.systemConstantBloc,
     required this.lotMasterRepository,
     required this.udcDetailsRepository,
     required this.authBloc,
@@ -39,14 +50,28 @@ class SalesOrderDetailBloc
       }
     });
 
+    _systemConstantSubscription = systemConstantBloc.stream.listen((state) {
+      if (state.status == SystemConstantStatus.loaded) {
+        add(
+          SystemConstantsUpdated(systemConstants: state.systemConstants.first),
+        );
+      }
+    });
+
     // Event handlers
     on<SalesOrderDetailsInitialized>(_onInitialized);
+    on<SystemConstantsUpdated>(_onSystemConstantsUpdated);
     on<LoadSalesOrderDetails>(_onLoadSalesOrderDetails);
     on<LoadSalesOrderDetailsByHeader>(_onLoadSalesOrderDetailsByHeader);
     on<CreateSalesOrderDetails>(_onCreateSalesOrderDetails);
     on<UpdateSalesOrderDetails>(_onUpdateSalesOrderDetails);
     on<DeleteSalesOrderDetails>(_onDeleteSalesOrderDetails);
     on<DeleteSalesOrderDetailsBatch>(_onDeleteSalesOrderDetailsBatch);
+
+    // ✅ DETAIL-ONLY: Stock Validation & Business Logic
+    on<ValidateStockAvailability>(_onValidateStockAvailability);
+    on<ValidateAllStockAvailability>(_onValidateAllStockAvailability);
+    on<AvailableValidatorMethod>(_onAvailableValidatorMethod);
 
     // UI State Management
     on<PrepareCreate>(_onPrepareCreate);
@@ -78,12 +103,25 @@ class SalesOrderDetailBloc
     on<SetUseBarcode>(_onSetUseBarcode);
     on<SetBarCode>(_onSetBarCode);
     on<ScanBarcode>(_onScanBarcode);
-    on<ValidateStockAvailability>(_onValidateStockAvailability);
-    on<ValidateAllStockAvailability>(_onValidateAllStockAvailability);
+    on<SettingSOByBarcode>(_onSettingSOByBarcode);
 
     // Calculations
     on<CalculateExtendedPrice>(_onCalculateExtendedPrice);
     on<CalculateAllExtendedPrices>(_onCalculateAllExtendedPrices);
+    on<CalculateUomConversion>(_onCalculateUomConversion);
+    on<UpdateUnitPriceWithUom>(_onUpdateUnitPriceWithUom);
+
+    // ✅ DETAIL-ONLY: Lot Management
+    on<CheckLotAvailability>(_onCheckLotAvailability);
+    on<AutoAssignLotNumber>(_onAutoAssignLotNumber);
+    on<ValidateLotQuantities>(_onValidateLotQuantities);
+
+    // ✅ DETAIL-ONLY: Cost Calculations
+    on<CalculateItemCost>(_onCalculateItemCost);
+    on<CalculateAllItemCosts>(_onCalculateAllItemCosts);
+
+    // ✅ DETAIL-ONLY: Stock Reversal
+    on<ReverseStockOnVoid>(_onReverseStockOnVoid);
 
     // Filtering
     on<FilterSalesOrderDetails>(_onFilterSalesOrderDetails);
@@ -611,7 +649,7 @@ class SalesOrderDetailBloc
               state.createItems.first.itemsTableId == 0) {
             // Update the first empty item
             newItem = state.createItems.first.copyWith(
-              itemsTableId: itemsTable.id!,
+              itemsTableId: itemsTable.id,
               itemInBranch: itemInBranch.id,
               quantity: 1.0,
             );
@@ -1004,5 +1042,350 @@ class SalesOrderDetailBloc
         .map((e) => e.tempId ?? 0)
         .reduce((a, b) => a > b ? a : b);
     return maxTempId + 1;
+  }
+
+  // 🎯 CRITICAL: Stock Validation (Equivalent to Java's availableValidatorMethod)
+  Future<void> _onValidateStockForOrder(
+    ValidateStockForOrder event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    emit(state.copyWith(status: SalesOrderHeaderStatus.validatingItemInBranch));
+    try {
+      // Build item branch map for validation
+      final itemBranchMap = <int, ItemInBranchModel>{};
+      for (final item in state.createItems) {
+        if (item.salesOrderDetail!.itemInBranch != null) {
+          final itemBranch = await itemInBranchRepository.findById(
+            item.salesOrderDetail!.itemInBranch!,
+            state.companyId!,
+          );
+          if (itemBranch != null) {
+            itemBranchMap[item.salesOrderDetail!.itemInBranch!] = itemBranch;
+          }
+        }
+      }
+
+      final validationResult = await itemInBranchRepository.validateSalesOrder(
+        items: state.createItems,
+        customer: event.customer,
+        itemBranchMap: itemBranchMap,
+        currentAvailableValidator: state.v,
+        systemConstants: state.systemConstants!,
+      );
+
+      emit(
+        state.copyWith(
+          status: SalesOrderDetailStatus.loaded,
+          validationErrors: validationResult.errors,
+          validationWarnings: validationResult.warnings,
+          availableValidator: validationResult.availableQuantities,
+          isSalesOrderValid: validationResult.isValid,
+          validationMessage: validationResult.isValid
+              ? 'Sales order validation passed'
+              : validationResult.combinedErrorMessage,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: SalesOrderDetailStatus.failure,
+          errorMessage: 'Validation failed: $e',
+        ),
+      );
+    }
+  }
+
+  // 🎯 CRITICAL: Lot Availability Check (Equivalent to Java's lot validation)
+  Future<void> _onCheckLotAvailability(
+    CheckLotAvailability event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    emit(state.copyWith(status: SalesOrderHeaderStatus.validatingLot));
+    final systemConstants =
+        systemConstantBloc.systemConstantService.currentSystemConstant;
+    final applyLotMgm = systemConstants?.applyLotMgm == 'Y';
+
+    try {
+      final itemBranch = await itemInBranchRepository.findById(
+        event.branchId,
+        state.companyId!,
+      );
+
+      if (itemBranch == null) return;
+
+      if (applyLotMgm) {
+        final lotValidation = await lotMasterRepository.validateLotForSale(
+          itemId: event.itemId,
+          branchId: itemBranch.branch,
+          companyId: state.companyId!,
+          requestedQuantity: event.quantity,
+          systemConstants: systemConstants!,
+          selectedLot: event.selectedLot,
+        );
+
+        if (lotValidation.isValid) {
+          // Update item with recommended lot
+          final updatedItem = event.orderDetail
+              .firstWhere((item) => item.id == event.orderDetail.first.id)
+              .copyWith(
+                lotNumber: lotValidation.recommendedLot?.id,
+                lot: lotValidation.recommendedLot,
+              );
+
+          // Update in sales order details
+          final currentDetails = state.salesOrderDetail ?? [];
+          final itemIndex = currentDetails.indexWhere(
+            (item) =>
+                item.tempId == event.orderDetail.first.tempId ||
+                item.id == event.orderDetail.first.id,
+          );
+
+          if (itemIndex != -1) {
+            final updatedDetails = List<SalesOrderDetail>.from(currentDetails);
+            updatedDetails[itemIndex] = updatedItem;
+
+            emit(
+              state.copyWith(
+                status: SalesOrderHeaderStatus.loaded,
+                salesOrderDetail: updatedDetails,
+                successmessage: 'Lot validation successful',
+              ),
+            );
+          }
+        } else {
+          emit(
+            state.copyWith(
+              status: SalesOrderHeaderStatus.failure,
+              error: lotValidation.message,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.failure,
+          error: 'Lot validation error: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onCalculateUomConversion(
+    CalculateUomConversion event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    try {
+      // 🎯 Use ItemUomConversionsBloc to get conversion factor
+      final conversionFactor = await itemUomConversionsRepository
+          .getConversionFactor(
+            event.itemId,
+            event.fromUomId,
+            event.toUomId,
+            event.companyId,
+          );
+
+      final convertedQuantity = event.quantity * conversionFactor;
+
+      emit(
+        state.copyWith(
+          uomConversionResult: UOMConversionResult(
+            convertedQuantity: convertedQuantity,
+            conversionFactor: conversionFactor,
+            fromUOM: event.fromUomId,
+            toUOM: event.toUomId,
+            isSuccess: true,
+          ),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to calculate UOM conversion: $e'));
+    }
+  }
+
+  Future<void> _reverseStockQuantities(
+    int salesOrderId,
+    bool applyLotMgm,
+  ) async {
+    // Implement stock reversal logic when voiding sales order
+    final orderDetails = await repository.getSalesOrderDetailsByHeaderId(
+      salesOrderId,
+    );
+
+    for (final detail in orderDetails) {
+      if (detail.itemInBranch != null && detail.quantity != null) {
+        if (!applyLotMgm && detail.lotNumber != null) {
+          await lotMasterRepository.restoreLotQuantity(
+            detail.itemInBranch!,
+            detail.quantity!,
+            detail.company!,
+          );
+        } else {
+          await itemInBranchRepository.updateQuantity(
+            detail.itemInBranch!,
+            detail.quantity!,
+            detail.company!,
+          );
+        }
+        await itemTransactionRepository.stockCardCreation(
+          ib: detail.itemBranch!,
+          loc: null,
+          lm: null,
+          transactionType: 'SO',
+          trNo: null,
+          remark: null,
+          qty: detail.quantity!,
+          por: null,
+          soD: detail,
+        );
+      }
+    }
+  }
+
+  // Stock Integration Methods (from Java controller)
+  Future<void> updateStockAfterSalesOrder(SalesOrderHeader header) async {
+    try {
+      // Get sales order details
+      final orderDetails = await repository.getSalesOrderDetailsByHeaderId(
+        header.id!,
+      );
+
+      // Update stock quantities for each item
+      for (final detail in orderDetails) {
+        if (detail.itemInBranch != null && detail.quantity != null) {
+          // Reduce available quantity in stock
+          await itemInBranchRepository.updateStockQuantity(
+            detail.itemInBranch!,
+            -detail.quantity!, // Negative to reduce stock
+          );
+
+          // Create item transaction record
+          await itemTransactionRepository.createTransaction(
+            itemInBranchId: detail.itemInBranch!,
+            quantity: detail.quantity!,
+            transactionType: 'SO', // Sales Order
+            referenceId: header.id!,
+            orderDate: header.orderDate!,
+          );
+        }
+      }
+    } catch (e) {
+      print('Error updating stock after sales order: $e');
+      rethrow;
+    }
+  }
+
+  // Integration with ItemInBranchBloc for stock validation
+  Future<bool> validateStockAvailability(List<dynamic> orderDetails) async {
+    try {
+      for (final detail in orderDetails) {
+        if (detail.itemInBranch != null && detail.quantity != null) {
+          final availableStock = await repository.getAvailableStock(
+            detail.itemInBranch!,
+          );
+          if (availableStock < detail.quantity!) {
+            return false; // Insufficient stock
+          }
+        }
+      }
+      return true; // All items have sufficient stock
+    } catch (e) {
+      print('Error validating stock availability: $e');
+      return false;
+    }
+  }
+
+  // Integration with LotMasterBloc for lot tracking
+  Future<void> assignLotsToSalesOrder(SalesOrderHeader header) async {
+    try {
+      final orderDetails = await repository.getSalesOrderDetailsByHeaderId(
+        header.id!,
+      );
+
+      for (final detail in orderDetails) {
+        if (detail.itemInBranch != null && detail.quantity != null) {
+          // Get available lots for the item
+          final availableLots = await repository.getAvailableLotsForItem(
+            detail.itemInBranch!,
+          );
+
+          // Assign lots based on FIFO or other logic
+          await repository.assignLotsToSalesOrderDetail(
+            salesOrderDetailId: detail.id!,
+            lots: availableLots,
+            requiredQuantity: detail.quantity!,
+          );
+        }
+      }
+    } catch (e) {
+      print('Error assigning lots to sales order: $e');
+      rethrow;
+    }
+  }
+
+  // Integration with ItemLocationsBloc for location tracking
+  Future<void> updateItemLocations(SalesOrderHeader header) async {
+    try {
+      final orderDetails = await repository.getSalesOrderDetailsByHeaderId(
+        header.id!,
+      );
+
+      for (final detail in orderDetails) {
+        if (detail.itemInBranch != null && detail.quantity != null) {
+          // Update item location quantities
+          await repository.updateItemLocationQuantity(
+            itemInBranchId: detail.itemInBranch!,
+            quantity: detail.quantity!,
+            locationType: 'SALES', // Sales location
+          );
+        }
+      }
+    } catch (e) {
+      print('Error updating item locations: $e');
+      rethrow;
+    }
+  }
+
+  // Business logic methods from Java controller
+  Future<void> processHeaderBusinessLogic(SalesOrderHeader header) async {
+    try {
+      // Validate stock availability
+      final orderDetails = await repository.getSalesOrderDetailsByHeaderId(
+        header.id!,
+      );
+      final hasStock = await validateStockAvailability(orderDetails);
+
+      if (!hasStock) {
+        throw Exception('Insufficient stock for some items');
+      }
+
+      // Update stock quantities
+      await updateStockAfterSalesOrder(header);
+
+      // Assign lots if lot tracking is enabled
+      final systemConstants =
+          systemConstantBloc.systemConstantService.currentSystemConstant;
+      if (systemConstants?.lotType != null && systemConstants!.lotType! > 0) {
+        await assignLotsToSalesOrder(header);
+      }
+
+      // Update item locations
+      await updateItemLocations(header);
+
+      // Generate FS number if not already set
+      if (header.fsNumber == null || header.fsNumber!.isEmpty) {
+        final fsNumber = await repository.generateNextFsNumber(
+          header.company!,
+          1, // Default branch - should come from user context
+        );
+
+        // Update header with FS number
+        final updatedHeader = header.copyWith(fsNumber: fsNumber);
+        await repository.updateSalesOrderHeader(updatedHeader);
+      }
+    } catch (e) {
+      print('Error processing header business logic: $e');
+      rethrow;
+    }
   }
 }

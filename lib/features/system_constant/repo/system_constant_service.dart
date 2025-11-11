@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer' as developer;
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/errors/exceptions.dart';
@@ -223,12 +224,13 @@ class SystemConstantsService with ChangeNotifier {
     }
   }
 
-  String formatNumber(double value) {
+  double roundToDecimalPlaces(double value, int decimalPlaces) {
     try {
-      return value.toStringAsFixed(decimalPlaces);
+      final factor = pow(10, decimalPlaces);
+    return (value * factor).round() / factor;
     } catch (e) {
       developer.log('Error in formatNumber: $e');
-      return value.toString();
+      return value;
     }
   }
 

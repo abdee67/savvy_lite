@@ -1,7 +1,11 @@
 // bloc/sales_order_header_state.dart
 
 import 'package:equatable/equatable.dart';
+import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/sales/sales_order_header/model/sales_order_header.dart';
+import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
+import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 enum SalesOrderHeaderStatus {
   initial,
@@ -21,6 +25,8 @@ enum SalesOrderHeaderStatus {
   converting,
   preparing,
   copying,
+  validatingItemInBranch,
+  validatingLot,
 }
 
 class SalesOrderHeaderState extends Equatable {
@@ -39,10 +45,14 @@ class SalesOrderHeaderState extends Equatable {
   final SalesOrderHeader? selected1;
   final SalesOrderHeader? selected2;
   final SalesOrderHeader? selected3;
+  final SalesOrderHeader? selected4;
   final SalesOrderHeader? editingItem;
   final String? searchQuery;
   final bool isSelectionMode;
   final Map<String, dynamic>? filters;
+  final List<SalesOrderHeader> voidedHeaders;
+  final String? fsNumber;
+  final SystemConstant? systemConstants;
 
   // Calculated totals
   final double subTotal;
@@ -57,12 +67,13 @@ class SalesOrderHeaderState extends Equatable {
   final DateTime? thruDateForSales;
   final DateTime? dateOrderStart;
   final DateTime? dateOrderEnd;
+  final DateTime? dateForCreditFrom;
+  final DateTime? dateForCreditTo;
   final String? paymentType;
   final String? orderStatus;
   final bool applyWH;
   final bool discountval;
   final bool allDetailTransactions;
-  final String? fsRefrence;
 
   // Customer information
   final String? tinNumber;
@@ -77,6 +88,15 @@ class SalesOrderHeaderState extends Equatable {
   final int? nextOrderNumber;
   final String? amountInWords;
   final bool isDuplicate;
+
+  // Tax settings
+  final bool applyWithholding;
+  final List<SalesOrderDetail>? salesOrderDetail;
+
+  // UOM Conversion
+  final UOMConversionResult? uomConversionResult;
+  final LotValidationResult? lotValidationResult;
+  final ValidationResult? validationResult;
 
   const SalesOrderHeaderState({
     this.status = SalesOrderHeaderStatus.initial,
@@ -94,10 +114,12 @@ class SalesOrderHeaderState extends Equatable {
     this.selected1,
     this.selected2,
     this.selected3,
+    this.selected4,
     this.editingItem,
     this.searchQuery,
     this.isSelectionMode = false,
     this.filters,
+    this.voidedHeaders = const [],
     this.subTotal = 0.0,
     this.tax = 0.0,
     this.withholdAmount = 0.0,
@@ -108,12 +130,15 @@ class SalesOrderHeaderState extends Equatable {
     this.thruDateForSales,
     this.dateOrderStart,
     this.dateOrderEnd,
+    this.dateForCreditFrom,
+    this.dateForCreditTo,
     this.paymentType,
     this.orderStatus,
     this.applyWH = false,
     this.discountval = false,
     this.allDetailTransactions = false,
-    this.fsRefrence,
+    this.fsNumber,
+    this.systemConstants,
     this.tinNumber,
     this.phoneNumbers,
     this.countryDesc,
@@ -124,6 +149,11 @@ class SalesOrderHeaderState extends Equatable {
     this.nextOrderNumber,
     this.amountInWords,
     this.isDuplicate = false,
+    this.applyWithholding = false,
+    this.salesOrderDetail,
+    this.uomConversionResult,
+    this.lotValidationResult,
+    this.validationResult,
   });
 
   // Getters for status checks
@@ -138,6 +168,12 @@ class SalesOrderHeaderState extends Equatable {
   bool get hasMultiSelectionItems => multiselectionItems.isNotEmpty;
   bool get hasSearchQuery => searchQuery != null && searchQuery!.isNotEmpty;
   bool get hasFilters => filters != null && filters!.isNotEmpty;
+  bool get hasSalesOrderDetail => salesOrderDetail != null;
+  bool get hasVoidedHeaders => voidedHeaders.isNotEmpty;
+  bool get hasSystemConstants => systemConstants != null;
+  bool get hasUOMConversionResult => uomConversionResult != null;
+  bool get hasLotValidationResult => lotValidationResult != null;
+  bool get hasValidationResult => validationResult != null;
 
   // Status check methods
   bool isLoading() => status == SalesOrderHeaderStatus.loading;
@@ -191,6 +227,7 @@ class SalesOrderHeaderState extends Equatable {
     SalesOrderHeader? selected1,
     SalesOrderHeader? selected2,
     SalesOrderHeader? selected3,
+    SalesOrderHeader? selected4,
     SalesOrderHeader? editingItem,
     String? searchQuery,
     bool? isSelectionMode,
@@ -205,12 +242,16 @@ class SalesOrderHeaderState extends Equatable {
     DateTime? thruDateForSales,
     DateTime? dateOrderStart,
     DateTime? dateOrderEnd,
+    DateTime? dateForCreditFrom,
+    DateTime? dateForCreditTo,
     String? paymentType,
     String? orderStatus,
     bool? applyWH,
     bool? discountval,
     bool? allDetailTransactions,
-    String? fsRefrence,
+    List<SalesOrderHeader>? voidedHeaders,
+    String? fsNumber,
+    SystemConstant? systemConstants,
     String? tinNumber,
     String? phoneNumbers,
     String? countryDesc,
@@ -221,6 +262,11 @@ class SalesOrderHeaderState extends Equatable {
     int? nextOrderNumber,
     String? amountInWords,
     bool? isDuplicate,
+    bool? applyWithholding,
+    List<SalesOrderDetail>? salesOrderDetail,
+    UOMConversionResult? uomConversionResult,
+    LotValidationResult? lotValidationResult,
+    ValidationResult? validationResult,
   }) {
     return SalesOrderHeaderState(
       status: status ?? this.status,
@@ -239,6 +285,7 @@ class SalesOrderHeaderState extends Equatable {
       selected1: selected1 ?? this.selected1,
       selected2: selected2 ?? this.selected2,
       selected3: selected3 ?? this.selected3,
+      selected4: selected4 ?? this.selected4,
       editingItem: editingItem ?? this.editingItem,
       searchQuery: searchQuery ?? this.searchQuery,
       isSelectionMode: isSelectionMode ?? this.isSelectionMode,
@@ -253,13 +300,17 @@ class SalesOrderHeaderState extends Equatable {
       thruDateForSales: thruDateForSales ?? this.thruDateForSales,
       dateOrderStart: dateOrderStart ?? this.dateOrderStart,
       dateOrderEnd: dateOrderEnd ?? this.dateOrderEnd,
+      dateForCreditFrom: dateForCreditFrom ?? this.dateForCreditFrom,
+      dateForCreditTo: dateForCreditTo ?? this.dateForCreditTo,
       paymentType: paymentType ?? this.paymentType,
       orderStatus: orderStatus ?? this.orderStatus,
       applyWH: applyWH ?? this.applyWH,
       discountval: discountval ?? this.discountval,
       allDetailTransactions:
           allDetailTransactions ?? this.allDetailTransactions,
-      fsRefrence: fsRefrence ?? this.fsRefrence,
+      voidedHeaders: voidedHeaders ?? this.voidedHeaders,
+      fsNumber: fsNumber ?? this.fsNumber,
+      systemConstants: systemConstants ?? this.systemConstants,
       tinNumber: tinNumber ?? this.tinNumber,
       phoneNumbers: phoneNumbers ?? this.phoneNumbers,
       countryDesc: countryDesc ?? this.countryDesc,
@@ -270,6 +321,11 @@ class SalesOrderHeaderState extends Equatable {
       nextOrderNumber: nextOrderNumber ?? this.nextOrderNumber,
       amountInWords: amountInWords ?? this.amountInWords,
       isDuplicate: isDuplicate ?? this.isDuplicate,
+      applyWithholding: applyWithholding ?? this.applyWithholding,
+      salesOrderDetail: salesOrderDetail ?? this.salesOrderDetail,
+      uomConversionResult: uomConversionResult ?? this.uomConversionResult,
+      lotValidationResult: lotValidationResult ?? this.lotValidationResult,
+      validationResult: validationResult ?? this.validationResult,
     );
   }
 
@@ -348,10 +404,12 @@ class SalesOrderHeaderState extends Equatable {
     selected1,
     selected2,
     selected3,
+    selected4,
     editingItem,
     searchQuery,
     isSelectionMode,
     filters,
+    voidedHeaders,
     subTotal,
     tax,
     withholdAmount,
@@ -362,12 +420,15 @@ class SalesOrderHeaderState extends Equatable {
     thruDateForSales,
     dateOrderStart,
     dateOrderEnd,
+    dateForCreditFrom,
+    dateForCreditTo,
     paymentType,
     orderStatus,
     applyWH,
     discountval,
     allDetailTransactions,
-    fsRefrence,
+    fsNumber,
+    systemConstants,
     tinNumber,
     phoneNumbers,
     countryDesc,
@@ -378,5 +439,59 @@ class SalesOrderHeaderState extends Equatable {
     nextOrderNumber,
     amountInWords,
     isDuplicate,
+    applyWithholding,
+    salesOrderDetail,
+    lotValidationResult,
+    validationResult,
   ];
+}
+
+class UOMConversionResult {
+  final double convertedQuantity;
+  final double conversionFactor;
+  final int fromUOM;
+  final int toUOM;
+  final bool isSuccess;
+
+  const UOMConversionResult({
+    required this.convertedQuantity,
+    required this.conversionFactor,
+    required this.fromUOM,
+    required this.toUOM,
+    required this.isSuccess,
+  });
+}
+
+class LotValidationResult {
+  final bool isValid;
+  final LotMaster? recommendedLot;
+  final double availableQuantity;
+  final String message;
+  final List<LotMaster> availableLots;
+
+  const LotValidationResult({
+    required this.isValid,
+    this.recommendedLot,
+    required this.availableQuantity,
+    required this.message,
+    required this.availableLots,
+  });
+}
+
+class ValidationResult {
+  final bool isValid;
+  final List<String> errors;
+  final List<String> warnings;
+  final Map<int, double>
+  availableQuantities; // item_in_branch_id -> available_qty
+
+  const ValidationResult({
+    required this.isValid,
+    required this.errors,
+    required this.warnings,
+    required this.availableQuantities,
+  });
+
+  String get combinedErrorMessage => errors.join('\n');
+  String get combinedWarningMessage => warnings.join('\n');
 }

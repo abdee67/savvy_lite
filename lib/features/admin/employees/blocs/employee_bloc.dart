@@ -1,29 +1,28 @@
-// features/Employee/blocs/Employee_bloc.dart
-
 import 'dart:async';
-
 import 'package:bloc/bloc.dart';
-import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_event.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_state.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
+import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
-import 'package:sqflite/sqflite.dart';
 
 class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
-  final LocalDatabaseService databaseService;
+  final EmployeeRepository repository;
   final AuthBloc authBloc;
   StreamSubscription? _authSubscription;
 
-  EmployeeBloc({required this.databaseService, required this.authBloc})
-    : super(const EmployeeState()) {
+  EmployeeBloc({
+    required this.repository,
+    required this.authBloc,
+  }) : super(const EmployeeState()) {
     // Listen to auth state changes
     _authSubscription = authBloc.stream.listen((authState) {
       if (authState.isAuthenticated && authState.companyId != null) {
         add(LoadEmployees(authState.companyId!));
       }
     });
+
     on<LoadEmployees>(_onLoadEmployees);
     on<CreateEmployee>(_onCreateEmployee);
     on<UpdateEmployee>(_onUpdateEmployee);
@@ -59,23 +58,15 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
     LoadEmployees event,
     Emitter<EmployeeState> emit,
   ) async {
-    emit(EmployeeState(status: EmployeeStatus.loading));
+    emit(state.copyWith(status: EmployeeStatus.loading));
     try {
-      final db = await databaseService.database;
-      final employees = await db.query(
-        'employees',
-        where: 'company = ?',
-        whereArgs: [event.companyId],
-        orderBy: 'name_first ASC, name_last ASC',
-      );
-
-      final employeeList = employees.map((p) => Employee.fromMap(p)).toList();
+      final employees = await repository.loadEmployees(event.companyId);
 
       emit(
-        EmployeeState(
+        state.copyWith(
           status: EmployeeStatus.success,
-          employees: employeeList,
-          filteredEmployees: employeeList,
+          employees: employees,
+          filteredEmployees: employees,
           searchQuery: '',
           detailStatus: EmployeeDetailStatus.hidden,
           companyId: event.companyId,
@@ -84,7 +75,7 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
       );
     } catch (e) {
       emit(
-        EmployeeState(
+        state.copyWith(
           status: EmployeeStatus.failure,
           message: 'Failed to load Employees: $e',
         ),
@@ -103,16 +94,11 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
       ),
     );
     try {
-      final db = await databaseService.database;
-      final employeeMap = event.employee.toMap();
-
-      //remove id for new employee insrtion
-      employeeMap.remove('id');
-
-      //add creation metadata
-      employeeMap['company'] = authBloc.state.companyId!;
-
-      await db.insert('employees', employeeMap);
+      await repository.insertEmployee(
+        event.employee, 
+        authBloc.state.companyId!
+      );
+      
       add(LoadEmployees(authBloc.state.companyId!));
       emit(
         state.copyWith(
@@ -122,7 +108,7 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
       );
     } catch (e) {
       emit(
-        EmployeeState(
+        state.copyWith(
           status: EmployeeStatus.failure,
           message: 'Failed to create Employee: $e',
         ),
@@ -141,16 +127,11 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
       ),
     );
     try {
-      final db = await databaseService.database;
-      final employeeMap = event.employee.toMap();
-
-      //add update metadata
-      await db.update(
-        'employees',
-        employeeMap,
-        where: 'id = ? AND company = ?',
-        whereArgs: [event.employee.id, authBloc.state.companyId!],
+      await repository.updateEmployee(
+        event.employee, 
+        authBloc.state.companyId!
       );
+      
       add(LoadEmployees(authBloc.state.companyId!));
       emit(
         state.copyWith(
@@ -160,7 +141,7 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
       );
     } catch (e) {
       emit(
-        EmployeeState(
+        state.copyWith(
           status: EmployeeStatus.failure,
           message: 'Failed to update Employee: $e',
         ),
@@ -202,20 +183,23 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
     Emitter<EmployeeState> emit,
   ) async {
     emit(
-      state.copyWith(status: EmployeeStatus.deleting, message: 'Deleting..'),
+      state.copyWith(
+        status: EmployeeStatus.deleting, 
+        message: 'Deleting..'
+      ),
     );
     try {
-      final db = await databaseService.database;
-      await db.delete(
-        'employees',
-        where: 'id = ? AND company = ?',
-        whereArgs: [event.employeeId, authBloc.state.companyId!],
+      await repository.deleteEmployee(
+        event.employeeId, 
+        authBloc.state.companyId!
       );
+      
       final updateEmployees = List<Employee>.from(state.employees)
         ..removeWhere((p) => p.id == event.employeeId);
       final updateFilteredEmployees = List<Employee>.from(
         state.filteredEmployees,
       )..removeWhere((p) => p.id == event.employeeId);
+      
       emit(
         state.copyWith(
           employees: updateEmployees,
@@ -228,10 +212,11 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
           message: 'Employee deleted successfully',
         ),
       );
+      
       add(LoadEmployees(authBloc.state.companyId!));
     } catch (e) {
       emit(
-        EmployeeState(
+        state.copyWith(
           status: EmployeeStatus.failure,
           message: 'Failed to delete Employee: $e',
         ),
@@ -243,7 +228,10 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
     emit(state.copyWith(selectedEmployees: []));
   }
 
-  void _onSearchEmployees(SearchEmployees event, Emitter<EmployeeState> emit) {
+  Future<void> _onSearchEmployees(
+    SearchEmployees event, 
+    Emitter<EmployeeState> emit
+  ) async {
     final query = event.query.toLowerCase().trim();
 
     if (query.isEmpty) {
@@ -258,21 +246,39 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
       return;
     }
 
-    final filtered = state.employees.where((employee) {
-      return employee.nameFirst.toLowerCase().contains(query) ||
-          employee.nameLast.toLowerCase().contains(query) ||
-          employee.phone.toLowerCase().contains(query) ||
-          employee.email.toLowerCase().contains(query);
-    }).toList();
+    try {
+      // Use repository for search to handle large datasets efficiently
+      final filtered = await repository.searchEmployees(
+        query, 
+        authBloc.state.companyId!
+      );
 
-    emit(
-      state.copyWith(
-        filteredEmployees: filtered,
-        searchQuery: query,
-        selectedEmployees: [],
-        status: EmployeeStatus.searching,
-      ),
-    );
+      emit(
+        state.copyWith(
+          filteredEmployees: filtered,
+          searchQuery: query,
+          selectedEmployees: [],
+          status: EmployeeStatus.searching,
+        ),
+      );
+    } catch (e) {
+      // Fallback to client-side search if repository search fails
+      final filtered = state.employees.where((employee) {
+        return employee.nameFirst.toLowerCase().contains(query) ||
+            employee.nameLast.toLowerCase().contains(query) ||
+            employee.phone.toLowerCase().contains(query) ||
+            employee.email.toLowerCase().contains(query);
+      }).toList();
+
+      emit(
+        state.copyWith(
+          filteredEmployees: filtered,
+          searchQuery: query,
+          selectedEmployees: [],
+          status: EmployeeStatus.searching,
+        ),
+      );
+    }
   }
 
   void _onSelectEmployee(SelectEmployee event, Emitter<EmployeeState> emit) {
@@ -300,27 +306,23 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
     }
   }
 
-  void _onDeleteSelectedEmployees(
+  Future<void> _onDeleteSelectedEmployees(
     DeleteSelectedEmployees event,
     Emitter<EmployeeState> emit,
   ) async {
     try {
-      final db = await databaseService.database;
-      final placeholders = List.filled(
-        event.selectedEmployees.length,
-        '?',
-      ).join(',');
-      final whereArgs = [...event.selectedEmployees, authBloc.state.companyId];
-      await db.delete(
-        'employees',
-        where: 'id IN ($placeholders) AND company = ?',
-        whereArgs: whereArgs,
+      final employeeIds = event.selectedEmployees;
+      
+      await repository.deleteMultipleEmployees(
+        employeeIds, 
+        authBloc.state.companyId!
       );
+      
       final updatedEmployees = state.employees
-          .where((e) => !event.selectedEmployees.contains(e.id))
+          .where((e) => !employeeIds.contains(e.id))
           .toList();
       final updatedFiltered = state.filteredEmployees
-          .where((e) => !event.selectedEmployees.contains(e.id))
+          .where((e) => !employeeIds.contains(e.id))
           .toList();
 
       emit(
@@ -340,10 +342,11 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
               '${event.selectedEmployees.length} employees deleted successfully',
         ),
       );
+      
       add(LoadEmployees(authBloc.state.companyId!));
     } catch (e) {
       emit(
-        EmployeeState(
+        state.copyWith(
           status: EmployeeStatus.failure,
           message: 'Failed to delete selected Employees: $e',
         ),
@@ -356,7 +359,8 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
     Emitter<EmployeeState> emit,
   ) async {
     try {
-      final db = await databaseService.database;
+      // Restore to database
+      await repository.batchInsertEmployees(event.deletedItems);
 
       // Reinsert at original positions in memory
       final updatedEmployees = List<Employee>.from(state.employees);
@@ -371,23 +375,17 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
         } else {
           updatedEmployees.add(item); // fallback if index is invalid
         }
-
-        // Also restore to DB
-        await db.insert(
-          'employees',
-          item.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-
-        emit(
-          state.copyWith(
-            employees: updatedEmployees,
-            filteredEmployees: updatedEmployees,
-            recentlyDeleted: [],
-            recentlyDeletedIndexes: [],
-          ),
-        );
       }
+
+      emit(
+        state.copyWith(
+          employees: updatedEmployees,
+          filteredEmployees: updatedEmployees,
+          recentlyDeleted: [],
+          recentlyDeletedIndexes: [],
+          message: '${event.deletedItems.length} employees restored successfully',
+        ),
+      );
     } catch (e) {
       emit(
         state.copyWith(
@@ -452,13 +450,13 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
           status: EmployeeStatus.success,
           isExporting: false,
           exportedEmployee: event.employeeToExport,
-          message: 'Exported ${event.employeeToExport} employees successfully',
+          message: 'Exported employee successfully',
         ),
       );
     });
   }
 
-  void _onToggleRoleManagement(
+  Future<void> _onToggleRoleManagement(
     ToggleRoleManagement event,
     Emitter<EmployeeState> emit,
   ) async {
@@ -474,19 +472,19 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
       );
     } else {
       // Entering role management mode - only if employee has user account
-      final employee = state.employees.firstWhere(
-        (e) => e.id == event.employeeId,
-        orElse: () => Employee.empty(),
+      final employee = await repository.getEmployeeById(
+        event.employeeId, 
+        authBloc.state.companyId!
       );
 
-      if (employee.id == 0) {
+      if (employee == null) {
         // Employee not found, don't enter role management
         emit(state);
         return;
       }
 
-      // Check if this employee has a user account (you'll need to implement this check)
-      final hasUserAccount = await _checkIfEmployeeHasUserAccount(
+      // Check if this employee has a user account
+      final hasUserAccount = await repository.checkIfEmployeeHasUserAccount(
         event.employeeId,
       );
 
@@ -505,21 +503,6 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
           hasRoleChanges: false,
         ),
       );
-    }
-  }
-
-  // Helper method to check if employee has user account
-  Future<bool> _checkIfEmployeeHasUserAccount(int employeeId) async {
-    try {
-      final db = await databaseService.database;
-      final users = await db.query(
-        'user_table',
-        where: 'employees_id = ?',
-        whereArgs: [employeeId],
-      );
-      return users.isNotEmpty;
-    } catch (e) {
-      return false;
     }
   }
 
@@ -568,6 +551,26 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
   void _onSaveRoleChanges(SaveRoleChanges event, Emitter<EmployeeState> emit) {
     // This will be handled by the UI using UserBloc directly
     // We just reset the state
-    emit(state.copyWith(selectedRolesForAssignment: [], hasRoleChanges: false));
+    emit(state.copyWith(
+      selectedRolesForAssignment: [], 
+      hasRoleChanges: false,
+      isRoleManagementMode: false,
+      employeeInRoleManagement: null,
+    ));
+  }
+
+  // Public helper methods
+  Future<Employee?> getEmployeeById(int employeeId) async {
+    return await repository.getEmployeeById(
+      employeeId, 
+      authBloc.state.companyId!
+    );
+  }
+
+  Future<List<Employee>> getEmployeesByIds(List<int> employeeIds) async {
+    return await repository.getEmployeesByIds(
+      employeeIds, 
+      authBloc.state.companyId!
+    );
   }
 }

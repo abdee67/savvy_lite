@@ -1,4 +1,5 @@
 /// features/sales/sales_order_details/repositories/sales_order_details_repository.dart
+library;
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';

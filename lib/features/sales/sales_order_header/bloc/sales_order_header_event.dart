@@ -2,7 +2,9 @@
 import 'package:equatable/equatable.dart';
 import 'package:meta/meta.dart';
 import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/sales/sales_order_header/bloc/sales_order_header_state.dart';
 import 'package:savvy_stock/features/sales/sales_order_header/model/sales_order_header.dart';
+import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 
@@ -19,6 +21,19 @@ class LoadSalesOrderHeaders extends SalesOrderHeaderEvent {
   List<Object?> get props => [companyId];
 }
 
+class SalesOrderHeaderInitialized extends SalesOrderHeaderEvent {
+  final int companyId;
+  final int employeeId;
+
+  const SalesOrderHeaderInitialized({
+    required this.companyId,
+    required this.employeeId,
+  });
+
+  @override
+  List<Object?> get props => [companyId, employeeId];
+}
+
 class LoadCreditSalesOrders extends SalesOrderHeaderEvent {
   final int companyId;
 
@@ -26,6 +41,21 @@ class LoadCreditSalesOrders extends SalesOrderHeaderEvent {
 
   @override
   List<Object?> get props => [companyId];
+}
+
+class LoadVoidedSalesOrders extends SalesOrderHeaderEvent {
+  final int companyId;
+  final int customerBillTo;
+  final String fsNumber;
+
+  const LoadVoidedSalesOrders({
+    required this.companyId,
+    required this.customerBillTo,
+    required this.fsNumber,
+  });
+
+  @override
+  List<Object?> get props => [companyId, customerBillTo, fsNumber];
 }
 
 class CreateSalesOrderHeader extends SalesOrderHeaderEvent {
@@ -62,6 +92,59 @@ class DeleteMultipleSalesOrders extends SalesOrderHeaderEvent {
   List<Object?> get props => [headers];
 }
 
+class PrepareCreateAfterCreate extends SalesOrderHeaderEvent {
+  final int companyId;
+  final int employeeId;
+
+  const PrepareCreateAfterCreate({
+    required this.companyId,
+    required this.employeeId,
+  });
+  @override
+  List<Object?> get props => [companyId, employeeId];
+}
+
+class PrepareEdit extends SalesOrderHeaderEvent {
+  final int id;
+
+  const PrepareEdit({required this.id});
+  @override
+  List<Object?> get props => [id];
+}
+
+class UnvoidSalesOrder extends SalesOrderHeaderEvent {
+  final int id;
+
+  const UnvoidSalesOrder({required this.id});
+  @override
+  List<Object?> get props => [id];
+}
+
+class SetDefaultCustomer extends SalesOrderHeaderEvent {
+  final int companyId;
+
+  const SetDefaultCustomer({required this.companyId});
+  @override
+  List<Object?> get props => [companyId];
+}
+
+class GenerateNextFsNumber extends SalesOrderHeaderEvent {
+  final int companyId;
+  final int branchId;
+
+  const GenerateNextFsNumber({required this.companyId, required this.branchId});
+  @override
+  List<Object?> get props => [companyId, branchId];
+}
+
+class RefreshSalesOrderHeaders extends SalesOrderHeaderEvent {
+  final int companyId;
+
+  const RefreshSalesOrderHeaders({required this.companyId});
+  @override
+  List<Object?> get props => [companyId];
+}
+
 class VoidSalesOrder extends SalesOrderHeaderEvent {
   final int id;
   final String voidIndicator;
@@ -71,15 +154,69 @@ class VoidSalesOrder extends SalesOrderHeaderEvent {
   List<Object?> get props => [id, voidIndicator];
 }
 
+class CalculateUomConversion extends SalesOrderHeaderEvent {
+  final int itemId;
+  final int fromUomId;
+  final int toUomId;
+  final double quantity;
+  final int companyId;
+
+  const CalculateUomConversion({
+    required this.itemId,
+    required this.fromUomId,
+    required this.toUomId,
+    required this.quantity,
+    required this.companyId,
+  });
+  @override
+  List<Object?> get props => [itemId, fromUomId, toUomId, quantity, companyId];
+}
+
+class ValidateStockForOrder extends SalesOrderHeaderEvent {
+  final List<SalesOrderDetail> orderDetails;
+
+  const ValidateStockForOrder({required this.orderDetails});
+  @override
+  List<Object?> get props => [orderDetails];
+}
+
+class CheckLotAvailability extends SalesOrderHeaderEvent {
+  final double quantity;
+  final LotMaster selectedLot;
+  final List<SalesOrderDetail> orderDetail;
+  final int itemId;
+  final int branchId;
+
+  const CheckLotAvailability({
+    required this.quantity,
+    required this.selectedLot,
+    required this.orderDetail,
+    required this.itemId,
+    required this.branchId,
+  });
+  @override
+  List<Object?> get props => [quantity, selectedLot, itemId, branchId];
+}
+
+class SystemConstantsUpdated extends SalesOrderHeaderEvent {
+  final SystemConstant systemConstants;
+
+  const SystemConstantsUpdated({required this.systemConstants});
+  @override
+  List<Object?> get props => [systemConstants];
+}
+
 class CalculateOrderTotals extends SalesOrderHeaderEvent {
   final SalesOrderHeader header;
   final List<SalesOrderDetail> orderDetails;
+  final double discountAmount;
   final bool applyWithholding;
   final SystemConstant? systemConstants;
 
   const CalculateOrderTotals({
     required this.header,
     required this.orderDetails,
+    required this.discountAmount,
     required this.applyWithholding,
     this.systemConstants,
   });
@@ -90,6 +227,38 @@ class CalculateOrderTotals extends SalesOrderHeaderEvent {
     applyWithholding,
     systemConstants,
   ];
+}
+
+class UpdateTaxSettings extends SalesOrderHeaderEvent {
+  final SalesOrderHeader header;
+  final bool applyWithholding;
+  final double discountAmount;
+  final SystemConstant systemConstants;
+
+  const UpdateTaxSettings({
+    required this.header,
+    required this.applyWithholding,
+    required this.discountAmount,
+    required this.systemConstants,
+  });
+
+  @override
+  List<Object?> get props => [
+    header,
+    applyWithholding,
+    discountAmount,
+    systemConstants,
+  ];
+}
+
+class CalculateCreditDueDate extends SalesOrderHeaderEvent {
+  final int? paymentTerm;
+  final DateTime? orderDate;
+
+  const CalculateCreditDueDate({this.paymentTerm, this.orderDate});
+
+  @override
+  List<Object?> get props => [paymentTerm, orderDate];
 }
 
 class GetNextOrderNumber extends SalesOrderHeaderEvent {
@@ -174,6 +343,38 @@ class UpdatePaymentType extends SalesOrderHeaderEvent {
   List<Object?> get props => [paymentType];
 }
 
+class UpdatePaymentStatus extends SalesOrderHeaderEvent {
+  final int paymentStatusId;
+
+  const UpdatePaymentStatus({required this.paymentStatusId});
+  @override
+  List<Object?> get props => [paymentStatusId];
+}
+
+class SetPaymentTerm extends SalesOrderHeaderEvent {
+  final int paymentTermId;
+
+  const SetPaymentTerm({required this.paymentTermId});
+  @override
+  List<Object?> get props => [paymentTermId];
+}
+
+class ApplyWithholdingTax extends SalesOrderHeaderEvent {
+  final bool applyWithholding;
+
+  const ApplyWithholdingTax({required this.applyWithholding});
+  @override
+  List<Object?> get props => [applyWithholding];
+}
+
+class ApplyDiscount extends SalesOrderHeaderEvent {
+  final double discountAmount;
+
+  const ApplyDiscount({required this.discountAmount});
+  @override
+  List<Object?> get props => [discountAmount];
+}
+
 class UpdateDateFilters extends SalesOrderHeaderEvent {
   final DateTime? startDate;
   final DateTime? endDate;
@@ -182,6 +383,50 @@ class UpdateDateFilters extends SalesOrderHeaderEvent {
 
   @override
   List<Object?> get props => [startDate, endDate];
+}
+
+class FilterCreditSalesOrders extends SalesOrderHeaderEvent {
+  final SalesOrderHeader filter;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final int companyId;
+
+  const FilterCreditSalesOrders({
+    required this.filter,
+    this.startDate,
+    this.endDate,
+    required this.companyId,
+  });
+  @override
+  List<Object?> get props => [filter, startDate, endDate, companyId];
+}
+
+class FilterVoidedSalesOrders extends SalesOrderHeaderEvent {
+  final SalesOrderHeader filter;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final int companyId;
+
+  const FilterVoidedSalesOrders({
+    required this.filter,
+    this.startDate,
+    this.endDate,
+    required this.companyId,
+  });
+  @override
+  List<Object?> get props => [filter, startDate, endDate, companyId];
+}
+
+class CancelUpdate extends SalesOrderHeaderEvent {
+  const CancelUpdate();
+  @override
+  List<Object?> get props => [];
+}
+
+class CancelCreate extends SalesOrderHeaderEvent {
+  const CancelCreate();
+  @override
+  List<Object?> get props => [];
 }
 
 class DiscardChanges extends SalesOrderHeaderEvent {
