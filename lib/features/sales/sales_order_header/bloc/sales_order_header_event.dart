@@ -2,7 +2,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:meta/meta.dart';
 import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_detail.dart';
-import 'package:savvy_stock/features/sales/sales_order_header/bloc/sales_order_header_state.dart';
 import 'package:savvy_stock/features/sales/sales_order_header/model/sales_order_header.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/system_constant/models/system_constant.dart';

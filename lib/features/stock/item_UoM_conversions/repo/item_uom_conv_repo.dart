@@ -1,6 +1,7 @@
 // features/stock/item_UoM_conversions/repositories/item_uom_conversions_repository.dart
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/stock/item_UoM_conversions/models/item_UoM_conversions_model.dart';
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class ItemUomConversionsRepository {
   final LocalDatabaseService databaseService;
@@ -441,5 +442,86 @@ class ItemUomConversionsRepository {
       return result.first['conversion_factor'] as double;
     }
     return 1.0;
+  }
+
+  Future<double> convertQuantity({
+    required int itemId,
+    required double quantity,
+    required UdcDetails fromUOM,
+    required UdcDetails toUOM,
+    required int companyId,
+  }) async {
+    try {
+      // Same UOM - no conversion needed
+      if (fromUOM.id == toUOM.id) {
+        return quantity;
+      }
+
+      // Get conversion factor from database
+      final conversion = await getConversionFactor(
+        itemId,
+        fromUOM.id,
+        toUOM.id,
+        companyId,
+      );
+
+      final convertedQuantity = quantity * conversion;
+
+      return convertedQuantity;
+    } catch (e) {
+      // Return error result
+      return quantity;
+    }
+  }
+
+  // Convert price based on UOM
+  Future<double> convertPrice({
+    required int itemId,
+    required double price,
+    required int fromUomId,
+    required int toUomId,
+    required int companyId,
+  }) async {
+    try {
+      if (fromUomId == toUomId) return price;
+
+      final conversion = await getConversionFactor(
+        itemId,
+        fromUomId,
+        toUomId,
+        companyId,
+      );
+
+      return price * conversion;
+    } catch (e) {
+      return price;
+    }
+  }
+
+  // Get all available UOMs for an item
+  Future<List<ItemUomConversion>> getAvailableUOMsForItem(
+    int itemId,
+    int companyId,
+  ) async {
+    return await getItemUomConversionsByItem(itemId, companyId);
+  }
+
+  // Validate if conversion is possible
+  Future<bool> validateUOMConversion({
+    required int itemId,
+    required int fromUomId,
+    required int toUomId,
+    required int companyId,
+  }) async {
+    if (fromUomId == toUomId) return true;
+
+    final conversion = await getConversionFactor(
+      itemId,
+      fromUomId,
+      toUomId,
+      companyId,
+    );
+
+    return conversion != null;
   }
 }

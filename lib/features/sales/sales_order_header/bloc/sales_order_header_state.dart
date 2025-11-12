@@ -5,7 +5,6 @@ import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_
 import 'package:savvy_stock/features/sales/sales_order_header/model/sales_order_header.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
-import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 enum SalesOrderHeaderStatus {
   initial,

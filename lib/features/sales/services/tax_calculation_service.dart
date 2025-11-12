@@ -48,16 +48,17 @@ class TaxCalculationService {
     // Calculate final total
     final totalAmount =
         subtotal + vatAmount - withholdingAmount - discountAmount;
+    final decimal = systemConstantService.decimalPlaces;
 
     // Create calculation breakdown
     final breakdown =
         '''
-Subtotal: ${systemConstantService.formatNumber(subtotal)}
-Taxable Amount: ${systemConstantService.formatNumber(taxableAmount)}
-VAT (${systemConstantService.vatRate}%): ${systemConstantService.formatNumber(vatAmount)}
-${applyWithholding ? 'Withholding Tax (${systemConstantService.withholdingRate}%): ${systemConstantService.formatNumber(withholdingAmount)}' : 'Withholding Tax: Not Applied'}
-Discount: ${systemConstantService.formatNumber(discountAmount)}
-Total: ${systemConstantService.formatNumber(totalAmount)}
+Subtotal: ${systemConstantService.roundToDecimalPlaces(subtotal, decimal)}
+Taxable Amount: ${systemConstantService.roundToDecimalPlaces(taxableAmount, decimal)}
+VAT (${systemConstantService.vatRate}%): ${systemConstantService.roundToDecimalPlaces(vatAmount, decimal)}
+${applyWithholding ? 'Withholding Tax (${systemConstantService.withholdingRate}%): ${systemConstantService.roundToDecimalPlaces(withholdingAmount, decimal)}' : 'Withholding Tax: Not Applied'}
+Discount: ${systemConstantService.roundToDecimalPlaces(discountAmount, decimal)}
+Total: ${systemConstantService.roundToDecimalPlaces(totalAmount, decimal)}
 ''';
 
     return TaxCalculationResult(

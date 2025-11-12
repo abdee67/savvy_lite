@@ -1,9 +1,7 @@
 // bloc/sales_order_header_bloc.dart
 import 'dart:async';
 import 'package:bloc/bloc.dart';
-import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/item_UoM_conversions/repo/item_uom_conv_repo.dart';
-import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/stock/item_locations/repo/item_location_repo.dart';
 import 'package:savvy_stock/features/stock/item_transactions/repo/item_transaction_repo.dart';
 import 'package:savvy_stock/features/stock/lot_master/repo/lot_master_repo.dart';

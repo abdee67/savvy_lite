@@ -1,14 +1,35 @@
 // features/stock/lot_master/repositories/lot_master_repository.dart
 import 'package:savvy_stock/core/repositories/base_repo.dart';
+import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
+import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/sales/sales_order_header/bloc/sales_order_header_state.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_repo.dart';
+import 'package:savvy_stock/features/stock/item_transactions/repo/item_transaction_repo.dart';
+import 'package:savvy_stock/features/stock/lot_coloring/model/lot_coloring_model.dart';
+import 'package:savvy_stock/features/stock/lot_coloring/repo/lot_expiration_repo.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
+import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 import 'package:sqflite/sqflite.dart';
 
 class LotMasterRepository extends BaseRepository {
   @override
   final LocalDatabaseService databaseService;
+  final LotExpirationColorsRepository expirationColorsRepository;
+  final StockItemInBranchRepository itemInBranchRepository;
+  final ItemTransactionRepository itemTransactionRepository;
+  final SystemConstantBloc systemContantBloc;
+  final UdcRepository udcDetailsRepository;
 
-  LotMasterRepository({required this.databaseService});
+  LotMasterRepository({
+    required this.databaseService,
+    required this.expirationColorsRepository,
+    required this.itemInBranchRepository,
+    required this.itemTransactionRepository,
+    required this.systemContantBloc,
+    required this.udcDetailsRepository,
+  });
 
   // Get all lot masters for a company
   Future<List<LotMaster>> getLotMasters(
@@ -178,6 +199,29 @@ class LotMasterRepository extends BaseRepository {
       ORDER BY lm.date_expiration, lm.lot_number
     ''',
       [companyId, itemNumber, branch],
+    );
+
+    return lots.map((p) => LotMaster.fromMap(p)).toList();
+  }
+
+  Future<List<LotMaster>> getLotMastersByItem({
+    required int companyId,
+    required int itemNumber,
+  }) async {
+    final db = await databaseService.database;
+    final lots = await db.rawQuery(
+      '''
+      SELECT lm.*,
+             it.item_description,
+             ud.detail_code as status_code,
+             ud.description_1 as status_description
+      FROM lot_master lm
+      LEFT JOIN items_table it ON lm.item_number = it.id
+      LEFT JOIN udc_details ud ON lm.lot_status = ud.id
+      WHERE lm.company = ? AND lm.item_number = ?
+      ORDER BY lm.date_expiration, lm.lot_number
+    ''',
+      [companyId, itemNumber],
     );
 
     return lots.map((p) => LotMaster.fromMap(p)).toList();
@@ -488,5 +532,494 @@ class LotMasterRepository extends BaseRepository {
       whereArgs: [lotNumber, companyId, quantity],
     );
     return;
+  }
+
+  // Get expired lot masters from specific branch and location
+  Future<List<LotMaster>> getExpiredLotMastersFromBranchAndLocation({
+    required int itemId,
+    required int branchId,
+    required int companyId,
+    int? locationId,
+  }) async {
+    final db = await databaseService.database;
+
+    var whereClause = '''
+      WHERE lm.company = ? 
+        AND lm.item_number = ? 
+        AND lm.branch = ?
+        AND lm.date_expiration IS NOT NULL
+        AND lm.date_expiration < ?
+        AND lm.quantity_available > 0
+    ''';
+
+    final whereArgs = <dynamic>[
+      companyId,
+      itemId,
+      branchId,
+      DateTime.now().toIso8601String(),
+    ];
+
+    if (locationId != null) {
+      whereClause += ' AND lm.location = ?';
+      whereArgs.add(locationId);
+    }
+
+    final lots = await db.rawQuery('''
+      SELECT lm.*,
+             it.item_description,
+             b.description as branch_name,
+             loc.location_description,
+             ud.detail_code as status_code,
+             ud.description_1 as status_description
+      FROM lot_master lm
+      LEFT JOIN items_table it ON lm.item_number = it.id
+      LEFT JOIN branch_table b ON lm.branch = b.id
+      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN udc_details ud ON lm.lot_status = ud.id
+      $whereClause
+      ORDER BY lm.date_expiration
+    ''', whereArgs);
+
+    return lots.map((p) => LotMaster.fromMap(p)).toList();
+  }
+
+  Future<LotValidationResult> validateLotForSale({
+    required int itemId,
+    required int branchId,
+    required int companyId,
+    required double requestedQuantity,
+    required SystemConstant systemConstants,
+    required SalesOrderDetail soD,
+    LotMaster? selectedLot,
+  }) async {
+    try {
+      // Filter out expired and inactive lots
+      final validLots = await _validateLotLevelAvailability(soD, companyId);
+
+      if (!validLots.isValid) {
+        return LotValidationResult(
+          isValid: false,
+          availableQuantity: 0.0,
+          message: 'No valid lots available for this item',
+          availableLots: [],
+        );
+      }
+
+      // If lot is manually selected, validate it
+      if (selectedLot != null && !systemConstants.lotQtyAutoForSalesBoolean) {
+        return await _validateSelectedLot(
+          selectedLot,
+          requestedQuantity,
+          validLots,
+          systemConstants,
+        );
+      }
+
+      // Auto-select lot based on FIFO/FEFO
+      return await _autoSelectLot(
+        validLots,
+        requestedQuantity,
+        systemConstants,
+      );
+    } catch (e) {
+      return LotValidationResult(
+        isValid: false,
+        availableQuantity: 0.0,
+        message: 'Error validating lot: $e',
+        availableLots: [],
+      );
+    }
+  }
+
+  // Helper method for lot-level validation
+  Future<({double availableQty, String message, bool isValid})>
+  _validateLotLevelAvailability(SalesOrderDetail soD, int companyId) async {
+    try {
+      // Get available lots for this item and branch
+      List<LotMaster> availableLots = await getLotMastersByItemAndBranch(
+        itemNumber: soD.itemsTableId!,
+        branch: soD.itemBranch!.branch,
+        companyId: companyId,
+      );
+
+      // Filter lots based on system configuration (like Java logic)
+      final systemConstant = systemContantBloc.state.selected;
+      final lotType = systemConstant?.lotType;
+      final lotTypeCode = await udcDetailsRepository.getUdcDetailById(lotType);
+      final lotTypeCodeId = lotTypeCode?.detailCode;
+
+      // Apply filtering similar to Java implementation
+      availableLots = availableLots
+          .where((lot) => lot.statusCode != 'E') // Exclude expired
+          .where(
+            (lot) =>
+                lot.quantityAvailable != null && lot.quantityAvailable! > 0,
+          )
+          .toList();
+
+      // Apply additional filtering based on lot type and expiration colors
+      availableLots = await _filterAndSortLotsForSales(
+        availableLots,
+        soD,
+        companyId,
+        lotTypeCodeId,
+      );
+
+      // Calculate total available quantity from valid lots
+      double totalAvailable = availableLots.fold(
+        0.0,
+        (sum, lot) => sum + (lot.quantityAvailable ?? 0.0),
+      );
+
+      // Check if specific lot is selected (manual lot selection)
+      if (!(systemConstant?.lotQtyAutoForSalesBoolean ?? true) &&
+          soD.lotNumber != null) {
+        final selectedLot = availableLots.firstWhere(
+          (lot) => lot.id == soD.lot!.id,
+          orElse: () => LotMaster(),
+        );
+
+        if (selectedLot.id == null) {
+          return (
+            availableQty: 0.0,
+            message: 'Selected lot not available for sales',
+            isValid: false,
+          );
+        }
+
+        final lotQty = selectedLot.quantityAvailable ?? 0.0;
+        return (
+          availableQty: lotQty,
+          message:
+              'Lot-level: ${lotQty.toStringAsFixed(2)} available in selected lot',
+          isValid: lotQty > 0,
+        );
+      }
+
+      return (
+        availableQty: totalAvailable,
+        message:
+            'Lot-level: ${totalAvailable.toStringAsFixed(2)} available across ${availableLots.length} lots',
+        isValid: totalAvailable > 0,
+      );
+    } catch (e) {
+      return (
+        availableQty: 0.0,
+        message: 'Error checking lot availability: $e',
+        isValid: false,
+      );
+    }
+  }
+
+  Future<LotValidationResult> _validateSelectedLot(
+    LotMaster selectedLot,
+    double requestedQuantity,
+    List<LotMaster> validLots,
+    SystemConstant systemConstants,
+  ) async {
+    // Check if selected lot is in valid lots
+    final isValidLot = validLots.any((lot) => lot.id == selectedLot.id);
+
+    if (!isValidLot) {
+      return LotValidationResult(
+        isValid: false,
+        availableQuantity: 0.0,
+        message: 'Selected lot is not valid or available for sales',
+        availableLots: validLots,
+      );
+    }
+
+    // Check quantity availability
+    if (selectedLot.quantityAvailable! < requestedQuantity) {
+      return LotValidationResult(
+        isValid: false,
+        availableQuantity: selectedLot.quantityAvailable!,
+        message: 'Insufficient quantity in selected lot',
+        availableLots: validLots,
+      );
+    }
+
+    return LotValidationResult(
+      isValid: true,
+      recommendedLot: selectedLot,
+      availableQuantity: selectedLot.quantityAvailable!,
+      message: 'Lot validation successful',
+      availableLots: validLots,
+    );
+  }
+
+  Future<LotValidationResult> _autoSelectLot(
+    List<LotMaster> validLots,
+    double requestedQuantity,
+    SystemConstant systemConstants,
+  ) async {
+    double remainingQuantity = requestedQuantity;
+    final List<LotMaster> allocatedLots = [];
+
+    for (final lot in validLots) {
+      if (remainingQuantity <= 0) break;
+
+      final quantityFromThisLot = lot.quantityAvailable! >= remainingQuantity
+          ? remainingQuantity
+          : lot.quantityAvailable!;
+
+      allocatedLots.add(lot.copyWith(quantityAvailable: quantityFromThisLot));
+      remainingQuantity -= quantityFromThisLot;
+    }
+
+    if (remainingQuantity > 0) {
+      return LotValidationResult(
+        isValid: false,
+        availableQuantity: requestedQuantity - remainingQuantity,
+        message: 'Insufficient quantity across all lots',
+        availableLots: validLots,
+      );
+    }
+
+    return LotValidationResult(
+      isValid: true,
+      recommendedLot: allocatedLots.first, // Use first allocated lot
+      availableQuantity: requestedQuantity,
+      message: 'Auto-lot allocation successful',
+      availableLots: validLots,
+    );
+  }
+
+  // Update lot quantities after sale
+  Future<void> updateLotQuantitiesAfterSale({
+    required List<SalesOrderDetail> soldItems,
+    required int companyId,
+  }) async {
+    for (final item in soldItems) {
+      if (item.lotNumber != null && item.quantity != null) {
+        await updateLotMaster(item.lot!);
+      }
+    }
+  }
+
+  // Case 3: Both location and lot management
+  Future<void> handleLotStockUpdate(
+    SalesOrderDetail soD,
+    double factor,
+    int companyId,
+  ) async {
+    final systemConstant = systemContantBloc.state.selected;
+    final lotType = systemConstant?.lotType;
+    final lotTypeCode = await udcDetailsRepository.getUdcDetailById(lotType);
+    final lotTypeCodeId = lotTypeCode?.detailCode;
+    List<LotMaster> lotMasterList = [];
+
+    // Check if manual lot selection is enabled and lot is provided
+    if (!(systemConstant?.lotQtyAutoForSalesBoolean ?? true) &&
+        soD.lotNumber != null) {
+      lotMasterList.add(soD.lot!);
+    } else {
+      // Automatic lot selection - get all available lots
+      lotMasterList = await getLotMastersByItemAndBranch(
+        itemNumber: soD.itemsTableId!,
+        branch: soD.itemBranch!.branch,
+        companyId: companyId,
+      );
+
+      // Filter out expired lots and those with no quantity
+      lotMasterList = lotMasterList
+          .where(
+            (lot) =>
+                lot.statusCode != 'E' && // Exclude expired
+                lot.quantityAvailable != null &&
+                lot.quantityAvailable! > 0,
+          )
+          .toList();
+
+      // Apply additional filtering and sorting based on lot type
+      lotMasterList = await _filterAndSortLotsForSales(
+        lotMasterList,
+        soD,
+        companyId,
+        lotTypeCodeId,
+      );
+    }
+
+    double remainingQty = factor * soD.quantity!;
+
+    for (final lot in lotMasterList) {
+      if (remainingQty <= 0) break;
+
+      final currentLot = await getLotMasterById(lot.id!, companyId);
+      final availableQty = currentLot?.quantityAvailable ?? 0.0;
+
+      if (availableQty >= remainingQty) {
+        // This lot has enough stock
+        final newQty = availableQty - remainingQty;
+        final updatedLot = currentLot?.copyWith(quantityAvailable: newQty);
+
+        await updateLotMaster(updatedLot!);
+
+        // Create transaction for this lot
+        await itemTransactionRepository.stockCardCreation(
+          ib: null,
+          loc: null,
+          lm: updatedLot,
+          transactionType: 'I',
+          trNo: soD.orderHeader?.orderNumber,
+          remark: 'Sales',
+          qty: -remainingQty,
+          por: null,
+          soD: soD,
+        );
+
+        remainingQty = 0;
+      } else {
+        // Take all available from this lot
+        final updatedLot = currentLot?.copyWith(quantityAvailable: 0.0);
+        await updateLotMaster(updatedLot!);
+
+        // Create transaction for this lot
+        await itemTransactionRepository.stockCardCreation(
+          ib: null,
+          loc: null,
+          lm: updatedLot,
+          transactionType: 'I',
+          trNo: soD.orderHeader?.orderNumber,
+          remark: 'Sales',
+          qty: -availableQty,
+          por: null,
+          soD: soD,
+        );
+
+        remainingQty -= availableQty;
+      }
+    }
+
+    if (remainingQty > 0) {
+      throw Exception(
+        'Insufficient stock across lots. Remaining: $remainingQty',
+      );
+    }
+
+    // Update the main item branch quantity
+    await itemInBranchRepository.updateItemBranchQuantity(
+      soD,
+      factor,
+      companyId,
+    );
+  }
+
+  // Helper method to filter and sort lots for sales
+  Future<List<LotMaster>> _filterAndSortLotsForSales(
+    List<LotMaster> lots,
+    SalesOrderDetail soD,
+    int companyId,
+    String? lotTypeCodeId,
+  ) async {
+    final systemConstant = systemContantBloc.state.selected;
+    final lotType = systemConstant?.lotType;
+    final lotTypeCode = await udcDetailsRepository.getUdcDetailById(lotType);
+    final lotTypeCodeId = lotTypeCode?.detailCode;
+    List<LotMaster> filteredLots = [];
+
+    for (final lot in lots) {
+      bool isActiveForSales = await _isLotActiveForSales(
+        soD,
+        lot,
+        lotTypeCodeId,
+        companyId,
+      );
+      if (isActiveForSales) {
+        filteredLots.add(lot);
+      }
+    }
+
+    // Sort based on lot type
+    if (lotTypeCodeId == null || lotTypeCodeId == 'X') {
+      // Sort by expiration date
+      filteredLots.sort(
+        (a, b) => (a.dateExpiration ?? DateTime.now()).compareTo(
+          b.dateExpiration ?? DateTime.now(),
+        ),
+      );
+    } else if (lotTypeCodeId == 'F') {
+      // Sort by effective date
+      filteredLots.sort(
+        (a, b) => (a.dateEffective ?? DateTime.now()).compareTo(
+          b.dateEffective ?? DateTime.now(),
+        ),
+      );
+    } else if (lotTypeCodeId == 'R') {
+      // Sort by received date
+      filteredLots.sort(
+        (a, b) => (a.dateReceived ?? DateTime.now()).compareTo(
+          b.dateReceived ?? DateTime.now(),
+        ),
+      );
+    }
+
+    return filteredLots;
+  }
+
+  // Helper method to check if lot is active for sales
+  Future<bool> _isLotActiveForSales(
+    SalesOrderDetail soD,
+    LotMaster lot,
+    String? lotType,
+    int companyId,
+  ) async {
+    try {
+      LotExpirationColor? expirationColor;
+
+      if (lotType == null || lotType == 'X') {
+        expirationColor = await expirationColorsRepository
+            .getLotExpirationColorByDetails(
+              branchId: soD.itemBranch!.branch,
+              itemId: soD.itemsTableId!,
+              companyId: companyId!,
+              daysDifference: int.parse(
+                lot.dateExpiration!
+                    .difference(DateTime.now())
+                    .inDays
+                    .toString(),
+              ),
+            );
+      } else if (lotType == 'F') {
+        expirationColor = await expirationColorsRepository
+            .getLotExpirationColorByDetails(
+              branchId: soD.itemBranch!.branch,
+              itemId: soD.itemsTableId!,
+              daysDifference: int.parse(
+                lot.dateEffective!.difference(DateTime.now()).inDays.toString(),
+              ),
+              companyId: companyId!,
+            );
+      } else if (lotType == 'R') {
+        expirationColor = await expirationColorsRepository
+            .getLotExpirationColorByDetails(
+              branchId: soD.itemBranch!.branch,
+              itemId: soD.itemsTableId!,
+              daysDifference: int.parse(
+                lot.dateReceived!.difference(DateTime.now()).inDays.toString(),
+              ),
+              companyId: companyId!,
+            );
+      }
+
+      // If no expiration color rule exists, or if it exists and allows sales
+      return expirationColor == null ||
+          expirationColor.activeForSalesFlag == 'Y';
+    } catch (e) {
+      // If there's an error checking, assume it's active for sales
+      return true;
+    }
+  }
+
+  // Restore lot quantities for voided sales
+  Future<void> restoreLotQuantitiesForVoid({
+    required List<SalesOrderDetail> voidedItems,
+    required int companyId,
+  }) async {
+    for (final item in voidedItems) {
+      if (item.lotNumber != null && item.quantity != null) {
+        await restoreLotQuantity(item.lotNumber!, item.quantity!, companyId);
+      }
+    }
   }
 }

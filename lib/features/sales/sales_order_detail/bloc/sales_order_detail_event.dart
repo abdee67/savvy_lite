@@ -1,6 +1,8 @@
 // features/sales/sales_order_details/blocs/sales_order_details_event.dart
 
 import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
+import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 
 abstract class SalesOrderDetailsEvent {
   const SalesOrderDetailsEvent();
@@ -11,6 +13,28 @@ class SalesOrderDetailsInitialized extends SalesOrderDetailsEvent {
   final int companyId;
 
   const SalesOrderDetailsInitialized({required this.companyId});
+}
+
+class ValidateStockForOrder extends SalesOrderDetailsEvent {
+  final SalesOrderDetail item;
+
+  const ValidateStockForOrder({required this.item});
+}
+
+class ValidateAllStockForOrder extends SalesOrderDetailsEvent {
+  const ValidateAllStockForOrder();
+}
+
+class AvailableValidatorMethod extends SalesOrderDetailsEvent {
+  final SalesOrderDetail item;
+
+  const AvailableValidatorMethod({required this.item});
+}
+
+class SystemConstantUpdate extends SalesOrderDetailsEvent {
+  final SystemConstant systemConstant;
+
+  const SystemConstantUpdate({required this.systemConstant});
 }
 
 class LoadSalesOrderDetails extends SalesOrderDetailsEvent {
@@ -168,13 +192,14 @@ class ScanBarcode extends SalesOrderDetailsEvent {
 }
 
 class ValidateStockAvailability extends SalesOrderDetailsEvent {
-  final SalesOrderDetail item;
+  final SalesOrderDetail salesOrderDetail;
 
-  const ValidateStockAvailability({required this.item});
+  const ValidateStockAvailability({required this.salesOrderDetail});
 }
 
 class ValidateAllStockAvailability extends SalesOrderDetailsEvent {
-  const ValidateAllStockAvailability();
+  final SalesOrderDetail item;
+  const ValidateAllStockAvailability({required this.item});
 }
 
 // Calculations
@@ -186,6 +211,40 @@ class CalculateExtendedPrice extends SalesOrderDetailsEvent {
 
 class CalculateAllExtendedPrices extends SalesOrderDetailsEvent {
   const CalculateAllExtendedPrices();
+}
+
+class UpdateUnitPriceWithUom extends SalesOrderDetailsEvent {
+  final SalesOrderDetail salesOrderDetail;
+  final ItemInBranchModel? itemsInBranch;
+
+  const UpdateUnitPriceWithUom({
+    required this.salesOrderDetail,
+    this.itemsInBranch,
+  });
+}
+
+class CalculateItemCost extends SalesOrderDetailsEvent {
+  final SalesOrderDetail salesOrderDetail;
+
+  const CalculateItemCost({required this.salesOrderDetail});
+}
+
+class CalculateAllItemCosts extends SalesOrderDetailsEvent {
+  final List<SalesOrderDetail> salesOrderDetail;
+  final int companyId;
+  const CalculateAllItemCosts({
+    required this.salesOrderDetail,
+    required this.companyId,
+  });
+}
+
+class ReverseStockOnVoid extends SalesOrderDetailsEvent {
+  final int salesOrderId;
+  final bool applyLotMgm;
+  const ReverseStockOnVoid({
+    required this.salesOrderId,
+    required this.applyLotMgm,
+  });
 }
 
 // Filtering and Search

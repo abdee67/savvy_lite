@@ -1,10 +1,12 @@
 // features/sales/sales_order_details/blocs/sales_order_details_state.dart
 
 import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 
 enum SalesOrderDetailStatus {
   initial,
   loading,
+  processing,
   loaded,
   creating,
   updating,
@@ -38,6 +40,7 @@ class SalesOrderDetailState {
   final bool enableFinishingProcess;
   final String? availablitySelections;
   final Map<int, StockValidationResult> stockValidationResults;
+  final SystemConstant? systemConstant;
 
   const SalesOrderDetailState({
     this.status = SalesOrderDetailStatus.initial,
@@ -62,6 +65,7 @@ class SalesOrderDetailState {
     this.enableFinishingProcess = false,
     this.availablitySelections,
     this.stockValidationResults = const {},
+    this.systemConstant,
   });
 
   SalesOrderDetailState copyWith({
@@ -87,6 +91,7 @@ class SalesOrderDetailState {
     bool? enableFinishingProcess,
     String? availablitySelections,
     Map<int, StockValidationResult>? stockValidationResults,
+    SystemConstant? systemConstant,
   }) {
     return SalesOrderDetailState(
       status: status ?? this.status,
@@ -115,6 +120,7 @@ class SalesOrderDetailState {
           availablitySelections ?? this.availablitySelections,
       stockValidationResults:
           stockValidationResults ?? this.stockValidationResults,
+      systemConstant: systemConstant ?? this.systemConstant,
     );
   }
 

@@ -1,12 +1,12 @@
 /// features/sales/sales_order_details/repositories/sales_order_details_repository.dart
 library;
+
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
-import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:sqflite/sqflite.dart';
 
 class SalesOrderDetailRepository {

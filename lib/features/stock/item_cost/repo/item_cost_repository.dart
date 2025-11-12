@@ -1,14 +1,20 @@
 // features/stock/item_cost/repositories/item_cost_repository.dart
 import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
+import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/item_cost/models/item_cost_model.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:sqflite/sqflite.dart';
 
 class ItemCostRepository extends BaseRepository {
   @override
   final LocalDatabaseService databaseService;
+  final ItemUomConversionsRepository uomConversionRepository;
 
-  ItemCostRepository({required this.databaseService});
+  ItemCostRepository({
+    required this.databaseService,
+    required this.uomConversionRepository,
+  });
 
   // Create new item cost
   Future<int> create(ItemCost itemCost, {Transaction? txn}) async {
@@ -173,5 +179,101 @@ class ItemCostRepository extends BaseRepository {
       limit: 1,
     );
     return maps.isNotEmpty;
+  }
+
+  Future<double> calculateItemCost({
+    required SalesOrderDetail item,
+    required int companyId,
+  }) async {
+    try {
+      // Get standard cost from item cost table
+      final itemCost = await findByItemNumberAndCompany(
+        item.itemsTableId!,
+        companyId,
+      );
+
+      double unitCost = 0.0;
+      String costSource = 'Standard Cost';
+
+      if (itemCost.isNotEmpty) {
+        unitCost = itemCost.first.amountUnitCost ?? 0.0;
+      } else {
+        // Fallback: Use last purchase price or average cost
+        final avgCost = await _getAverageCost(item.itemsTableId!, companyId);
+        unitCost = avgCost;
+        costSource = 'Average Cost';
+      }
+
+      // Apply UOM conversion if needed
+      if (item.unitOfMeasure != null &&
+          item.itemBranch?.unitOfMeasure != item.unitOfMeasure) {
+        unitCost = await _convertCostUOM(
+          unitCost,
+          item.itemsTableId!,
+          item.itemBranch!.unitOfMeasure!,
+          item.unitOfMeasure!,
+          companyId,
+        );
+      }
+
+      final amountCost = unitCost * (item.quantity ?? 0);
+
+      return amountCost;
+    } catch (e) {
+      // Fallback to zero cost with error tracking
+      return 0.0;
+    }
+  }
+
+  Future<double> _getAverageCost(int itemId, int companyId) async {
+    // Implement average cost calculation based on purchase history
+    final purchaseHistory = await getPurchaseHistory(itemId, companyId);
+
+    if (purchaseHistory.isEmpty) return 0.0;
+
+    final totalValue = purchaseHistory.fold(
+      0.0,
+      (sum, record) =>
+          sum + (record.amountUnitCost! * record.fromUOM!.quantityAvailable!),
+    );
+    final totalQuantity = purchaseHistory.fold(
+      0.0,
+      (sum, record) => sum + record.fromUOM!.quantityAvailable!,
+    );
+
+    return totalQuantity > 0 ? totalValue / totalQuantity : 0.0;
+  }
+
+  Future<double> _convertCostUOM(
+    double cost,
+    int itemId,
+    int fromUomId,
+    int toUomId,
+    int companyId,
+  ) async {
+    // Get UOM conversion factor and adjust cost
+    final conversion = await uomConversionRepository.getConversionFactor(
+      itemId,
+      fromUomId,
+      toUomId,
+      companyId,
+    );
+
+    return cost * conversion;
+  }
+
+  // Calculate total cost for all items in order
+  Future<double> calculateTotalOrderCost(List<SalesOrderDetail> items) async {
+    double totalCost = 0.0;
+
+    for (final item in items) {
+      final costResult = await calculateItemCost(
+        item: item,
+        companyId: item.company!,
+      );
+      totalCost += costResult;
+    }
+
+    return totalCost;
   }
 }
