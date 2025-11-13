@@ -3,7 +3,6 @@
 import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:savvy_stock/features/stock/item_UoM_conversions/repo/item_uom_conv_repo.dart';
-import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_event.dart';
@@ -20,8 +19,6 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
   final ItemTransactionRepository itemTransactionsRepository;
   final LotMasterBloc lotMasterBloc;
   final ItemUomConversionsRepository itemUomConversionsBloc;
-  final StockItemInBranchBloc stockItemInBranchBloc;
-  final StockItemLocationBloc stockItemLocationsBloc;
   // final NotificationTableBloc notificationTableBloc;
   //final ItemCostBloc itemCostBloc;
 
@@ -35,8 +32,6 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     required this.itemTransactionsRepository,
     required this.lotMasterBloc,
     required this.itemUomConversionsBloc,
-    required this.stockItemInBranchBloc,
-    required this.stockItemLocationsBloc,
     //required this.notificationTableBloc,
     // required this.itemCostBloc,
   }) : super(ItemInBranchState()) {
@@ -78,7 +73,6 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     on<SaveInEdit>(_onSaveInEdit);
 
     // Event handlers - Stock management operations
-    on<UpdateStockForSalesOrder>(_onUpdateStockForSalesOrder);
     //on<UpdateStockForSalesOrderVoid>(_onUpdateStockForSalesOrderVoid);
     on<UpdateStockForPurchaseOrder>(_onUpdateStockForPurchaseOrder);
     on<SetDefaultPrice>(_onSetDefaultPrice);
@@ -105,6 +99,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
   @override
   Future<void> close() {
     _authSubscription?.cancel();
+    _systemConstantSubscription?.cancel();
     return super.close();
   }
 
@@ -508,72 +503,6 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
   }
 
   // ========== STOCK MANAGEMENT OPERATIONS ==========
-
-  Future<void> _onUpdateStockForSalesOrder(
-    UpdateStockForSalesOrder event,
-    Emitter<ItemInBranchState> emit,
-  ) async {
-    try {
-      final salesOrderDetail = event.salesOrderDetail;
-
-      // Validate input like Java version
-      if (salesOrderDetail.itemsTableId != null &&
-          salesOrderDetail.quantity != null &&
-          salesOrderDetail.quantity != 0.0 &&
-          salesOrderDetail.itemInBranch != null) {
-        // Get conversion factor
-        final factor = await itemUomConversionsBloc.fromOtherToPrimary(
-          salesOrderDetail.itemsTableId!,
-          salesOrderDetail.unitOfMeasure ??
-              salesOrderDetail.itemBranch!.unitOfMeasure!,
-          authBloc.state.companyId!,
-        );
-
-        // Get system constants
-        final systemConstant = systemConstantBloc.state.selected;
-        final applyLocationMgmt =
-            systemConstant?.applyLocationMgmBoolean ?? false;
-        final applyLotMgmt = systemConstant?.applyLotMgmBoolean ?? false;
-
-        if (!applyLocationMgmt && !applyLotMgmt) {
-          // Case 1: No location or lot management
-          await repository.handleSimpleStockUpdate(
-            salesOrderDetail,
-            factor,
-            authBloc.state.companyId!,
-          );
-        } else if (applyLocationMgmt && !applyLotMgmt) {
-          // Case 2: Location management only
-          await stockItemLocationsBloc.repository.handleLocationStockUpdate(
-            salesOrderDetail,
-            factor,
-            authBloc.state.companyId!,
-          );
-        } else if (applyLocationMgmt && applyLotMgmt) {
-          // Case 3: Both location and lot management
-          await lotMasterBloc.repository.handleLotStockUpdate(
-            salesOrderDetail,
-            factor,
-            authBloc.state.companyId!,
-          );
-        }
-
-        emit(
-          state.copyWith(
-            status: ItemInBranchStatus.success,
-            message: 'Stock updated for sales order',
-          ),
-        );
-      }
-    } catch (e) {
-      emit(
-        state.copyWith(
-          status: ItemInBranchStatus.failure,
-          message: 'Failed to update stock for sales order: $e',
-        ),
-      );
-    }
-  }
 
   Future<void> _onUpdateStockForPurchaseOrder(
     UpdateStockForPurchaseOrder event,

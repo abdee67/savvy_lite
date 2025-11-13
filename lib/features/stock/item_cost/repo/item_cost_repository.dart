@@ -1,7 +1,7 @@
 // features/stock/item_cost/repositories/item_cost_repository.dart
 import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
-import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/item_cost/models/item_cost_model.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:sqflite/sqflite.dart';

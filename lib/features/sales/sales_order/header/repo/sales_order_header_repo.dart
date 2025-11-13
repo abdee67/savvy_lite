@@ -1,8 +1,8 @@
 // repositories/sales_order_header_repository.dart
 import 'dart:async';
 import 'package:savvy_stock/core/services/database/database_service.dart';
-import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_detail.dart';
-import 'package:savvy_stock/features/sales/sales_order_header/model/sales_order_header.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
 import 'package:sqflite/sqflite.dart';
 
 class SalesOrderHeaderRepository {

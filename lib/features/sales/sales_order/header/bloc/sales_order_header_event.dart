@@ -1,8 +1,8 @@
 // bloc/sales_order_header_event.dart
 import 'package:equatable/equatable.dart';
 import 'package:meta/meta.dart';
-import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_detail.dart';
-import 'package:savvy_stock/features/sales/sales_order_header/model/sales_order_header.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
@@ -299,11 +299,14 @@ class SearchSalesOrders extends SalesOrderHeaderEvent {
   List<Object?> get props => [query];
 }
 
-class PrepareCreate extends SalesOrderHeaderEvent {
+class PrepareCreateSalesOrderHeader extends SalesOrderHeaderEvent {
   final int companyId;
   final int employeeId;
 
-  const PrepareCreate({required this.companyId, required this.employeeId});
+  const PrepareCreateSalesOrderHeader({
+    required this.companyId,
+    required this.employeeId,
+  });
   @override
   List<Object?> get props => [companyId, employeeId];
 }

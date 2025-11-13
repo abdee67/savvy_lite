@@ -6,6 +6,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
 import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/repo/sales_order_detail_repo.dart';
+import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/integration/service/sales_order_integration_service.dart';
+import 'package:savvy_stock/features/sales/services/validate_stock_availability.dart';
 import 'package:savvy_stock/features/stock/item_UoM_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/repo/lot_expiration_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
@@ -50,9 +55,9 @@ import 'package:savvy_stock/features/stock/location_entry/repo/location_master_r
 import 'package:savvy_stock/features/stock/lot_coloring/bloc/lot_coloring_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_master/repo/lot_master_repo.dart';
-import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_detail.dart';
-import 'package:savvy_stock/features/sales/sales_order_header/bloc/sales_order_header_bloc.dart';
-import 'package:savvy_stock/features/sales/sales_order_header/repo/sales_order_header_repo.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/repo/sales_order_header_repo.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -110,7 +115,6 @@ class _SavvyStockState extends State<SavvyStock> {
   late StockItemInBranchRepository _stockItemInBranchRepository;
   late StockItemInBranchBloc _stockItemInBranchBloc;
   late ItemTransactionRepository _itemTransactionsRepository;
-  late SalesOrderDetail _salesOrderDetail;
   late SalesOrderHeaderRepository _salesOrderHeaderRepository;
   late CustomerRepository _customerRepository;
   late SalesOrderHeaderBloc _salesOrderHeaderBloc;
@@ -121,6 +125,8 @@ class _SavvyStockState extends State<SavvyStock> {
   late ItemUomConversionBloc _itemUomConversionsBloc;
   late StockItemLocationBloc _stockItemLocationBloc;
   late LocationMasterBloc _locationMasterBloc;
+  late SalesOrderDetailBloc _salesOrderDetailBloc;
+  late SalesOrderDetailRepository _salesOrderDetailRepository;
   late MigrationService _migrationService;
   late LocationMasterRepository _locationMasterRepository;
   late NextNumberRepository _nextNumberRepository;
@@ -134,6 +140,7 @@ class _SavvyStockState extends State<SavvyStock> {
   late LotMasterRepository _lotMasterRepository;
   late LotExpirationColorsRepository _lotExpirationColorsRepository;
   late EmployeeRepository _employeeRepository;
+  late ValidateStockAvailabilityService _validateStockAvailabilityService;
 
   @override
   void initState() {
@@ -169,6 +176,8 @@ class _SavvyStockState extends State<SavvyStock> {
     _nextNumberRepository = getIt<NextNumberRepository>();
     _lotExpirationColorsRepository = getIt<LotExpirationColorsRepository>();
     _employeeRepository = getIt<EmployeeRepository>();
+    _validateStockAvailabilityService =
+        getIt<ValidateStockAvailabilityService>();
     // Ensure system constants are loaded when companyId becomes available.
     final cid = _authBloc.state.companyId;
     if (cid != null) {
@@ -401,6 +410,40 @@ class _SavvyStockState extends State<SavvyStock> {
               systemConstantBloc: _systemConstantBloc,
               udcDetailsBloc: _udcDetailsBloc,
               nextNumberBloc: _nextNumberBloc,
+            ),
+          ),
+          BlocProvider<SalesOrderHeaderBloc>(
+            create: (context) => SalesOrderHeaderBloc(
+              repository: _salesOrderHeaderRepository,
+              authBloc: _authBloc,
+              customerRepository: _customerRepository,
+              employeesRepository: _employeeRepository,
+              udcDetailRepository: _udcRepository,
+              systemConstantBloc: _systemConstantBloc,
+            ),
+          ),
+          BlocProvider<SalesOrderDetailBloc>(
+            create: (context) => SalesOrderDetailBloc(
+              repository: _salesOrderDetailRepository,
+              authBloc: _authBloc,
+              validateStockAvailabilityService:
+                  _validateStockAvailabilityService,
+              salesOrderHeaderRepository: _salesOrderHeaderRepository,
+              itemsInBranchRepository: _stockItemInBranchRepository,
+              headerBloc: _salesOrderHeaderBloc,
+              itemCostRepository: _itemCostRepository,
+              itemUOMConversionsRepository: _itemUomConversionRepository,
+              itemsTableRepository: _stockItemsEntryRepository,
+              udcDetailsRepository: _udcRepository,
+              lotMasterRepository: _lotMasterRepository,
+
+              systemConstantBloc: _systemConstantBloc,
+            ),
+          ),
+          BlocProvider<SalesOrderCoordinatorBloc>(
+            create: (context) => SalesOrderCoordinatorBloc(
+              headerBloc: _salesOrderHeaderBloc,
+              detailBloc: _salesOrderDetailBloc,
             ),
           ),
         ],

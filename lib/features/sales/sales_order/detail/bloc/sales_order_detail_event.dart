@@ -1,6 +1,6 @@
 // features/sales/sales_order_details/blocs/sales_order_details_event.dart
 
-import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 
@@ -62,6 +62,12 @@ class UpdateSalesOrderDetails extends SalesOrderDetailsEvent {
   const UpdateSalesOrderDetails({required this.details});
 }
 
+class UpdateStockForSalesOrder extends SalesOrderDetailsEvent {
+  final SalesOrderDetail salesOrderDetail;
+
+  const UpdateStockForSalesOrder({required this.salesOrderDetail});
+}
+
 class DeleteSalesOrderDetails extends SalesOrderDetailsEvent {
   final int id;
 
@@ -75,16 +81,16 @@ class DeleteSalesOrderDetailsBatch extends SalesOrderDetailsEvent {
 }
 
 // UI State Management (equivalent to Java preparation methods)
-class PrepareCreate extends SalesOrderDetailsEvent {
-  const PrepareCreate();
+class PrepareCreateSalesOrderDetails extends SalesOrderDetailsEvent {
+  const PrepareCreateSalesOrderDetails();
 }
 
-class PrepareCreateAfterCreate extends SalesOrderDetailsEvent {
-  const PrepareCreateAfterCreate();
+class PrepareCreateAfterCreateSalesOrderDetails extends SalesOrderDetailsEvent {
+  const PrepareCreateAfterCreateSalesOrderDetails();
 }
 
-class PrepareCopy extends SalesOrderDetailsEvent {
-  const PrepareCopy();
+class PrepareCopySalesOrderDetails extends SalesOrderDetailsEvent {
+  const PrepareCopySalesOrderDetails();
 }
 
 class PrepareCreateInCreate extends SalesOrderDetailsEvent {
@@ -99,54 +105,57 @@ class PrepareCreateInEdit extends SalesOrderDetailsEvent {
   const PrepareCreateInEdit();
 }
 
-class PrepareEdit extends SalesOrderDetailsEvent {
-  const PrepareEdit();
+class PrepareEditSalesOrderDetails extends SalesOrderDetailsEvent {
+  const PrepareEditSalesOrderDetails();
 }
 
-class CancelUpdate extends SalesOrderDetailsEvent {
-  const CancelUpdate();
+class CancelUpdateSalesOrderDetails extends SalesOrderDetailsEvent {
+  const CancelUpdateSalesOrderDetails();
 }
 
-class CancelCreate extends SalesOrderDetailsEvent {
-  const CancelCreate();
+class CancelCreateSalesOrderDetails extends SalesOrderDetailsEvent {
+  const CancelCreateSalesOrderDetails();
 }
 
-class Discard extends SalesOrderDetailsEvent {
-  const Discard();
+class DiscardSalesOrderDetails extends SalesOrderDetailsEvent {
+  const DiscardSalesOrderDetails();
 }
 
 // Item Management in Lists
-class AddToCreateItems extends SalesOrderDetailsEvent {
+class AddToCreateItemsSalesOrderDetails extends SalesOrderDetailsEvent {
   final SalesOrderDetail item;
 
-  const AddToCreateItems({required this.item});
+  const AddToCreateItemsSalesOrderDetails({required this.item});
 }
 
-class UpdateInCreateItems extends SalesOrderDetailsEvent {
+class UpdateInCreateItemsSalesOrderDetails extends SalesOrderDetailsEvent {
   final SalesOrderDetail item;
   final int index;
 
-  const UpdateInCreateItems({required this.item, required this.index});
+  const UpdateInCreateItemsSalesOrderDetails({
+    required this.item,
+    required this.index,
+  });
 }
 
-class RemoveFromCreateItems extends SalesOrderDetailsEvent {
+class RemoveFromCreateItemsSalesOrderDetails extends SalesOrderDetailsEvent {
   final SalesOrderDetail item;
 
-  const RemoveFromCreateItems({required this.item});
+  const RemoveFromCreateItemsSalesOrderDetails({required this.item});
 }
 
-class RemoveFromEditItems extends SalesOrderDetailsEvent {
+class RemoveFromEditItemsSalesOrderDetails extends SalesOrderDetailsEvent {
   final SalesOrderDetail item;
 
-  const RemoveFromEditItems({required this.item});
+  const RemoveFromEditItemsSalesOrderDetails({required this.item});
 }
 
-class ClearCreateItems extends SalesOrderDetailsEvent {
-  const ClearCreateItems();
+class ClearCreateItemsSalesOrderDetails extends SalesOrderDetailsEvent {
+  const ClearCreateItemsSalesOrderDetails();
 }
 
-class ClearEditItems extends SalesOrderDetailsEvent {
-  const ClearEditItems();
+class ClearEditItemsSalesOrderDetails extends SalesOrderDetailsEvent {
+  const ClearEditItemsSalesOrderDetails();
 }
 
 // Selection Management

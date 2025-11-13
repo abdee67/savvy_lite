@@ -1,4 +1,4 @@
-// features/sales/services/proforma_conversion_service.dart
+/*// features/sales/services/proforma_conversion_service.dart
 import 'package:savvy_stock/features/sales/sales_order_header/model/sales_order_header.dart';
 import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_detail.dart';
 
@@ -89,7 +89,7 @@ class ProformaConversionService {
       amountTotal: proforma.amountTotal,
       tax: proforma.tax,
       discountAmount: proforma.discountAmount,
-      proformaReference: proforma.fsNumber,
+      //proformaReference: proforma.fsNumber,
       company: proforma.company,
       employeesId: proforma.employeesId,
       orderType: proforma.orderType,
@@ -151,3 +151,4 @@ class ProformaConversionService {
     }
   }
 }
+*/

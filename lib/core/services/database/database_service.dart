@@ -890,6 +890,51 @@ CREATE INDEX idx_item_master_defualt_uom ON item_master(defualt_uom);
 ''');
     developer.log('Created table: item_master');
 
+    //invoice header table
+    await db.execute('''
+CREATE TABLE invoice_history_header (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  fs_number TEXT,
+  customer_name TEXT,
+  tin_number TEXT,
+  phone_number TEXT,
+  country TEXT,
+  city TEXT,
+  region TEXT,
+  tax_amount REAL,
+  withhold_amount REAL,
+  total_amount REAL,
+  date_transaction TEXT, -- store as ISO8601 string (e.g., "2025-11-13")
+  sales_person TEXT,
+  mrc_number TEXT,
+  discount_amount REAL,
+  amount_beforeTax REAL,
+  company INTEGER,
+  FOREIGN KEY (company) REFERENCES company_table(id)
+);
+CREATE INDEX idx_invoice_history_header_company ON invoice_history_header(company);
+
+''');
+    developer.log('Created table: invoice_history_header');
+    //invoice for detail
+    await db.execute('''
+CREATE TABLE invoice_history_detail (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  invoice_history INTEGER,
+  item TEXT,
+  unit_of_measure TEXT,
+  quantity_transaction REAL,
+  amount_unit_price REAL,
+  amount_extended_price REAL,
+  company INTEGER,
+  FOREIGN KEY (invoice_history) REFERENCES invoice_history_header(id),
+  FOREIGN KEY (company) REFERENCES company_table(id)
+);
+CREATE INDEX idx_invoice_history_detail_invoice_history ON invoice_history_detail(invoice_history);
+CREATE INDEX idx_invoice_history_detail_company ON invoice_history_detail(company);
+''');
+    developer.log('Created table: invoice_history_detail');
+
     //. Create sync_queue table
     await db.execute('''
       CREATE TABLE sync_queue (

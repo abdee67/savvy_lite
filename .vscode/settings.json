@@ -1,4 +1,5 @@
 {
     "java.configuration.updateBuildConfiguration": "interactive",
-    "git.openRepositoryInParentFolders": "prompt"
+    "git.openRepositoryInParentFolders": "prompt",
+    "editor.cursorBlinking": "smooth"
 }

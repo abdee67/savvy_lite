@@ -1,6 +1,6 @@
 // features/sales/services/payment_processing_service.dart
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
-import 'package:savvy_stock/features/sales/sales_order_header/model/sales_order_header.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
 
 class PaymentProcessingResult {
   final bool success;

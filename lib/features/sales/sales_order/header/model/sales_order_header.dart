@@ -2,7 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
 import 'package:savvy_stock/features/company/models/company_model.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
-import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class SalesOrderHeader extends Equatable {
@@ -152,7 +152,6 @@ class SalesOrderHeader extends Equatable {
               'name': map['employee_name'],
               'nameFirst': map['employee_name_first'],
               'nameLast': map['employee_name_last'],
-
             })
           : null,
       paymentStatusRef: map['payment_status_code'] != null
@@ -162,11 +161,9 @@ class SalesOrderHeader extends Equatable {
               'description': map['payment_status_description'],
             })
           : null,
-          salesOrderDetail: map['sales_order_detail'] != null
-              ? SalesOrderDetail.fromMap({
-                'id' : map[]
-              })
-              : null,
+      salesOrderDetail: map['sales_order_detail'] != null
+          ? SalesOrderDetail.fromMap({'id': map['sales_order_detail_id']})
+          : null,
     );
   }
 
@@ -205,7 +202,7 @@ class SalesOrderHeader extends Equatable {
       'order_type': orderType,
       'unit_cost': unitCost,
       'amount_cost': amountCost,
-      'sales_order_detail': salesOrderDetail?.toMap(),
+      'sales_order_detail_id': salesOrderDetail?.id,
     };
   }
 

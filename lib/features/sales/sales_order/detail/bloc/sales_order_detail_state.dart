@@ -1,6 +1,6 @@
 // features/sales/sales_order_details/blocs/sales_order_details_state.dart
 
-import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 
 enum SalesOrderDetailStatus {

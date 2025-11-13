@@ -6,10 +6,10 @@ import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
-import 'package:savvy_stock/features/sales/sales_order_header/bloc/sales_order_header_event.dart';
-import 'package:savvy_stock/features/sales/sales_order_header/bloc/sales_order_header_state.dart';
-import 'package:savvy_stock/features/sales/sales_order_header/model/sales_order_header.dart';
-import 'package:savvy_stock/features/sales/sales_order_header/repo/sales_order_header_repo.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_event.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_state.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/repo/sales_order_header_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
@@ -107,7 +107,7 @@ class SalesOrderHeaderBloc
     on<SetPaymentTerm>(_onSetPaymentTerm);
 
     // UI State Management
-    on<PrepareCreate>(_onPrepareCreate);
+    on<PrepareCreateSalesOrderHeader>(_onPrepareCreate);
     on<PrepareCreateAfterCreate>(_onPrepareCreateAfterCreate);
     on<PrepareEdit>(_onPrepareEdit);
     on<CancelUpdate>(_onCancelUpdate);
@@ -914,7 +914,7 @@ class SalesOrderHeaderBloc
 
   // Enhanced Create with System Constants Defaults
   Future<void> _onPrepareCreate(
-    PrepareCreate event,
+    PrepareCreateSalesOrderHeader event,
     Emitter<SalesOrderHeaderState> emit,
   ) async {
     try {

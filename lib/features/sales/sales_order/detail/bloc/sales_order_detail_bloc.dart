@@ -3,11 +3,14 @@ import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
-import 'package:savvy_stock/features/sales/sales_order_detail/bloc/sales_order_detail_event.dart';
-import 'package:savvy_stock/features/sales/sales_order_detail/bloc/sales_order_detail_state.dart';
-import 'package:savvy_stock/features/sales/sales_order_detail/model/sales_order_detail.dart';
-import 'package:savvy_stock/features/sales/sales_order_detail/repo/sales_order_detail_repo.dart';
-import 'package:savvy_stock/features/sales/sales_order_header/repo/sales_order_header_repo.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_event.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_event.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_state.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/repo/sales_order_detail_repo.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/repo/sales_order_header_repo.dart';
+import 'package:savvy_stock/features/sales/services/validate_stock_availability.dart';
 import 'package:savvy_stock/features/stock/item_UoM_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
 import 'package:savvy_stock/features/stock/item_entry/data/item_repository.dart';
@@ -21,13 +24,15 @@ class SalesOrderDetailBloc
     extends Bloc<SalesOrderDetailsEvent, SalesOrderDetailState> {
   final SalesOrderDetailRepository repository;
   final SalesOrderHeaderRepository salesOrderHeaderRepository;
+  final SalesOrderHeaderBloc headerBloc; // Add header bloc reference
+
   final StockItemsEntryRepository itemsTableRepository;
   final StockItemInBranchRepository itemsInBranchRepository;
   final ItemUomConversionsRepository itemUOMConversionsRepository;
+  final ValidateStockAvailabilityService validateStockAvailabilityService;
   final SystemConstantBloc systemConstantBloc;
   final ItemCostRepository itemCostRepository;
   final LotMasterRepository lotMasterRepository;
-  final ItemLocationsRepository itemLocationRepository;
   final UdcRepository udcDetailsRepository;
   final AuthBloc authBloc;
 
@@ -37,12 +42,13 @@ class SalesOrderDetailBloc
   SalesOrderDetailBloc({
     required this.repository,
     required this.salesOrderHeaderRepository,
+    required this.headerBloc,
     required this.itemsTableRepository,
     required this.itemsInBranchRepository,
     required this.itemCostRepository,
     required this.itemUOMConversionsRepository,
+    required this.validateStockAvailabilityService,
     required this.systemConstantBloc,
-    required this.itemLocationRepository,
     required this.lotMasterRepository,
     required this.udcDetailsRepository,
     required this.authBloc,
@@ -74,24 +80,26 @@ class SalesOrderDetailBloc
     on<ValidateAllStockAvailability>(_onValidateAllStockAvailability);
 
     // UI State Management
-    on<PrepareCreate>(_onPrepareCreate);
-    on<PrepareCreateAfterCreate>(_onPrepareCreateAfterCreate);
-    on<PrepareCopy>(_onPrepareCopy);
+    on<PrepareCreateSalesOrderDetails>(_onPrepareCreate);
+    on<PrepareCreateAfterCreateSalesOrderDetails>(
+      _onPrepareCreateAfterCreateSalesOrderDetails,
+    );
+    on<PrepareCopySalesOrderDetails>(_onPrepareCopySalesOrderDetails);
     on<PrepareCreateInCreate>(_onPrepareCreateInCreate);
     on<PrepareCreate1>(_onPrepareCreate1);
     on<PrepareCreateInEdit>(_onPrepareCreateInEdit);
-    on<PrepareEdit>(_onPrepareEdit);
-    on<CancelUpdate>(_onCancelUpdate);
-    on<CancelCreate>(_onCancelCreate);
-    on<Discard>(_onDiscard);
+    on<PrepareEditSalesOrderDetails>(_onPrepareEdit);
+    on<CancelUpdateSalesOrderDetails>(_onCancelUpdate);
+    on<CancelCreateSalesOrderDetails>(_onCancelCreate);
+    on<DiscardSalesOrderDetails>(_onDiscard);
 
     // Item Management
-    on<AddToCreateItems>(_onAddToCreateItems);
-    on<UpdateInCreateItems>(_onUpdateInCreateItems);
-    on<RemoveFromCreateItems>(_onRemoveFromCreateItems);
-    on<RemoveFromEditItems>(_onRemoveFromEditItems);
-    on<ClearCreateItems>(_onClearCreateItems);
-    on<ClearEditItems>(_onClearEditItems);
+    on<AddToCreateItemsSalesOrderDetails>(_onAddToCreateItems);
+    on<UpdateInCreateItemsSalesOrderDetails>(_onUpdateInCreateItems);
+    on<RemoveFromCreateItemsSalesOrderDetails>(_onRemoveFromCreateItems);
+    on<RemoveFromEditItemsSalesOrderDetails>(_onRemoveFromEditItems);
+    on<ClearCreateItemsSalesOrderDetails>(_onClearCreateItems);
+    on<ClearEditItemsSalesOrderDetails>(_onClearEditItems);
 
     // Selection Management
     on<SetSelected>(_onSetSelected);
@@ -315,7 +323,7 @@ class SalesOrderDetailBloc
 
   // UI State Management (equivalent to Java preparation methods)
   Future<void> _onPrepareCreate(
-    PrepareCreate event,
+    PrepareCreateSalesOrderDetails event,
     Emitter<SalesOrderDetailState> emit,
   ) async {
     final companyId = authBloc.state.companyId;
@@ -345,8 +353,8 @@ class SalesOrderDetailBloc
     );
   }
 
-  Future<void> _onPrepareCreateAfterCreate(
-    PrepareCreateAfterCreate event,
+  Future<void> _onPrepareCreateAfterCreateSalesOrderDetails(
+    PrepareCreateAfterCreateSalesOrderDetails event,
     Emitter<SalesOrderDetailState> emit,
   ) async {
     final companyId = authBloc.state.companyId;
@@ -371,8 +379,8 @@ class SalesOrderDetailBloc
     );
   }
 
-  Future<void> _onPrepareCopy(
-    PrepareCopy event,
+  Future<void> _onPrepareCopySalesOrderDetails(
+    PrepareCopySalesOrderDetails event,
     Emitter<SalesOrderDetailState> emit,
   ) async {
     if (state.multiselectionItems.isEmpty) return;
@@ -449,7 +457,7 @@ class SalesOrderDetailBloc
   }
 
   Future<void> _onPrepareEdit(
-    PrepareEdit event,
+    PrepareEditSalesOrderDetails event,
     Emitter<SalesOrderDetailState> emit,
   ) async {
     if (state.multiselectionItems.isEmpty) return;
@@ -463,14 +471,14 @@ class SalesOrderDetailBloc
   }
 
   void _onCancelUpdate(
-    CancelUpdate event,
+    CancelUpdateSalesOrderDetails event,
     Emitter<SalesOrderDetailState> emit,
   ) {
     emit(state.copyWith(selected1: null, editItems: const []));
   }
 
   void _onCancelCreate(
-    CancelCreate event,
+    CancelCreateSalesOrderDetails event,
     Emitter<SalesOrderDetailState> emit,
   ) {
     emit(
@@ -479,7 +487,7 @@ class SalesOrderDetailBloc
   }
 
   Future<void> _onDiscard(
-    Discard event,
+    DiscardSalesOrderDetails event,
     Emitter<SalesOrderDetailState> emit,
   ) async {
     // Remove items that have IDs (are saved)
@@ -504,7 +512,7 @@ class SalesOrderDetailBloc
 
   // Item Management in Lists
   void _onAddToCreateItems(
-    AddToCreateItems event,
+    AddToCreateItemsSalesOrderDetails event,
     Emitter<SalesOrderDetailState> emit,
   ) {
     final newItem = event.item.copyWith(
@@ -517,7 +525,7 @@ class SalesOrderDetailBloc
   }
 
   void _onUpdateInCreateItems(
-    UpdateInCreateItems event,
+    UpdateInCreateItemsSalesOrderDetails event,
     Emitter<SalesOrderDetailState> emit,
   ) {
     final updatedCreateItems = List<SalesOrderDetail>.from(state.createItems);
@@ -529,7 +537,7 @@ class SalesOrderDetailBloc
   }
 
   Future<void> _onRemoveFromCreateItems(
-    RemoveFromCreateItems event,
+    RemoveFromCreateItemsSalesOrderDetails event,
     Emitter<SalesOrderDetailState> emit,
   ) async {
     final updatedCreateItems = state.createItems.where((item) {
@@ -549,7 +557,7 @@ class SalesOrderDetailBloc
   }
 
   Future<void> _onRemoveFromEditItems(
-    RemoveFromEditItems event,
+    RemoveFromEditItemsSalesOrderDetails event,
     Emitter<SalesOrderDetailState> emit,
   ) async {
     final updatedEditItems = List<SalesOrderDetail>.from(
@@ -571,14 +579,14 @@ class SalesOrderDetailBloc
   }
 
   void _onClearCreateItems(
-    ClearCreateItems event,
+    ClearCreateItemsSalesOrderDetails event,
     Emitter<SalesOrderDetailState> emit,
   ) {
     emit(state.copyWith(createItems: const []));
   }
 
   void _onClearEditItems(
-    ClearEditItems event,
+    ClearEditItemsSalesOrderDetails event,
     Emitter<SalesOrderDetailState> emit,
   ) {
     emit(state.copyWith(editItems: const []));
@@ -749,20 +757,20 @@ class SalesOrderDetailBloc
       // Check availability based on system configuration
       if (applyLocationMgmt && applyLotMgmt) {
         // Case 1: Both location and lot management
-        final lotAvailability = await lotMasterRepository
+        final lotAvailability = await validateStockAvailabilityService
             .validateLotLevelAvailability(soD, state.companyId!);
         availableQuantity = lotAvailability.availableQty;
         validationMessage = lotAvailability.message;
         isValid = lotAvailability.isValid;
       } else if (applyLocationMgmt && !applyLotMgmt) {
         // 🎯 Get actual available quantity from ItemsInBranch
-        final locationAvailability = await itemLocationRepository
+        final locationAvailability = await validateStockAvailabilityService
             .validateLocationLevelAvailability(soD, state.companyId!);
         availableQuantity = locationAvailability.availableQty;
         validationMessage = locationAvailability.message;
         isValid = locationAvailability.isValid;
       } else {
-        final branchAvailability = await itemsInBranchRepository
+        final branchAvailability = await validateStockAvailabilityService
             .validateBranchLevelAvailability(soD, state.companyId!);
         availableQuantity = branchAvailability.availableQty;
         validationMessage = branchAvailability.message;
@@ -863,7 +871,12 @@ class SalesOrderDetailBloc
     );
 
     if (itemIndex != -1) {
-      add(UpdateInCreateItems(item: updatedItem, index: itemIndex));
+      add(
+        UpdateInCreateItemsSalesOrderDetails(
+          item: updatedItem,
+          index: itemIndex,
+        ),
+      );
     }
   }
 
@@ -913,7 +926,12 @@ class SalesOrderDetailBloc
         );
 
         if (itemIndex != -1) {
-          add(UpdateInCreateItems(item: updatedDetail, index: itemIndex));
+          add(
+            UpdateInCreateItemsSalesOrderDetails(
+              item: updatedDetail,
+              index: itemIndex,
+            ),
+          );
         }
 
         // 🎯 Validate stock availability
@@ -931,7 +949,12 @@ class SalesOrderDetailBloc
         );
 
         if (itemIndex != -1) {
-          add(UpdateInCreateItems(item: disabledDetail, index: itemIndex));
+          add(
+            UpdateInCreateItemsSalesOrderDetails(
+              item: disabledDetail,
+              index: itemIndex,
+            ),
+          );
         }
       }
     } catch (e) {
@@ -970,7 +993,12 @@ class SalesOrderDetailBloc
       );
 
       if (itemIndex != -1) {
-        add(UpdateInCreateItems(item: updatedDetail, index: itemIndex));
+        add(
+          UpdateInCreateItemsSalesOrderDetails(
+            item: updatedDetail,
+            index: itemIndex,
+          ),
+        );
       }
     } catch (e) {
       print('Failed to calculate item cost: $e');
@@ -1109,21 +1137,21 @@ class SalesOrderDetailBloc
 
         if (!applyLocationMgmt && !applyLotMgmt) {
           // Case 1: No location or lot management
-          await itemsInBranchRepository.handleSimpleStockUpdate(
+          await validateStockAvailabilityService.handleSimpleStockUpdate(
             salesOrderDetail,
             factor,
             authBloc.state.companyId!,
           );
         } else if (applyLocationMgmt && !applyLotMgmt) {
           // Case 2: Location management only
-          await itemLocationRepository.handleLocationStockUpdate(
+          await validateStockAvailabilityService.handleLocationStockUpdate(
             salesOrderDetail,
             factor,
             authBloc.state.companyId!,
           );
         } else if (applyLocationMgmt && applyLotMgmt) {
           // Case 3: Both location and lot management
-          await lotMasterRepository.handleLotStockUpdate(
+          await validateStockAvailabilityService.handleLotStockUpdate(
             salesOrderDetail,
             factor,
             authBloc.state.companyId!,
@@ -1155,12 +1183,21 @@ class SalesOrderDetailBloc
     try {
       emit(state.copyWith(status: SalesOrderDetailStatus.saving));
 
-      // 🎯 Validate all stock first
+      // 1. Validate stock using header's system constants
+      final systemConstant = headerBloc.state.systemConstants;
+      final applyLotMgmt = systemConstant?.applyLotMgmBoolean ?? false;
+
       bool allStockValid = true;
       for (final item in state.createItems) {
         if (item.itemInBranch != null) {
           final result = state.stockValidationResults[item.itemInBranch!];
           if (result == null || !result.isValid) {
+            allStockValid = false;
+            break;
+          }
+
+          // Additional lot validation if enabled
+          if (applyLotMgmt && item.lotNumber == null) {
             allStockValid = false;
             break;
           }
@@ -1185,21 +1222,25 @@ class SalesOrderDetailBloc
         ),
       );
 
-      // 🎯 Prepare items for saving with header ID
-      final itemsToSave = state.createItems
-          .map(
-            (item) => item.copyWith(
-              salesOrderHeaderId: event.salesOrderHeaderId,
-              company: state.companyId,
-            ),
-          )
-          .toList();
+      // 3. Save details
+      await repository.createSalesOrderDetailBatch(state.createItems);
 
-      // 🎯 Save to repository
-      await repository.createSalesOrderDetailBatch(itemsToSave);
+      // 4. Update header with calculated totals
+      final subTotal = state.createItems
+          .map((detail) => detail.extendedPrice ?? 0.0)
+          .reduce((a, b) => a + b);
 
-      // 🎯 Update stock quantities (like Java's updatingStockItemAvailablitySo)
-      for (final item in itemsToSave) {
+      headerBloc.add(
+        CalculateOrderTotals(
+          header: headerBloc.state.selected!,
+          orderDetails: state.createItems,
+          applyWithholding: headerBloc.state.applyWH ?? false,
+          discountAmount: headerBloc.state.discountAmount ?? 0.0,
+        ),
+      );
+
+      // 5. Update stock
+      for (final item in state.createItems) {
         if (item.itemInBranch != null && item.quantity != null) {
           add(UpdateStockForSalesOrder(salesOrderDetail: item));
         }
