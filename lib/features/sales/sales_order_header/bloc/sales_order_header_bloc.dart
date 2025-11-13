@@ -1,11 +1,6 @@
 // bloc/sales_order_header_bloc.dart
 import 'dart:async';
 import 'package:bloc/bloc.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/repo/item_uom_conv_repo.dart';
-import 'package:savvy_stock/features/stock/item_locations/repo/item_location_repo.dart';
-import 'package:savvy_stock/features/stock/item_transactions/repo/item_transaction_repo.dart';
-import 'package:savvy_stock/features/stock/lot_master/repo/lot_master_repo.dart';
-import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
@@ -16,7 +11,6 @@ import 'package:savvy_stock/features/sales/sales_order_header/bloc/sales_order_h
 import 'package:savvy_stock/features/sales/sales_order_header/model/sales_order_header.dart';
 import 'package:savvy_stock/features/sales/sales_order_header/repo/sales_order_header_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
-import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class SalesOrderHeaderBloc
@@ -24,15 +18,9 @@ class SalesOrderHeaderBloc
   final SalesOrderHeaderRepository repository;
   final AuthBloc authBloc;
   final SystemConstantBloc systemConstantBloc;
-  final UdcDetailsBloc udcDetailBloc;
   final UdcRepository udcDetailRepository;
   final CustomerRepository customerRepository;
   final EmployeeRepository employeesRepository;
-  final ItemUomConversionsRepository itemUomConversionsRepository;
-  final LotMasterRepository lotMasterRepository;
-  final StockItemInBranchRepository itemInBranchRepository;
-  final ItemLocationsRepository itemLocationRepository;
-  final ItemTransactionRepository itemTransactionRepository;
 
   StreamSubscription? _authSubscription;
   StreamSubscription? _systemConstantsSubscription;
@@ -44,15 +32,9 @@ class SalesOrderHeaderBloc
     required this.repository,
     required this.authBloc,
     required this.systemConstantBloc,
-    required this.udcDetailBloc,
     required this.customerRepository,
     required this.employeesRepository,
     required this.udcDetailRepository,
-    required this.itemUomConversionsRepository,
-    required this.lotMasterRepository,
-    required this.itemInBranchRepository,
-    required this.itemLocationRepository,
-    required this.itemTransactionRepository,
   }) : super(const SalesOrderHeaderState()) {
     // Listen to authentication state
     _authSubscription = authBloc.stream.listen((authState) {

@@ -583,57 +583,9 @@ class LotMasterRepository extends BaseRepository {
     return lots.map((p) => LotMaster.fromMap(p)).toList();
   }
 
-  Future<LotValidationResult> validateLotForSale({
-    required int itemId,
-    required int branchId,
-    required int companyId,
-    required double requestedQuantity,
-    required SystemConstant systemConstants,
-    required SalesOrderDetail soD,
-    LotMaster? selectedLot,
-  }) async {
-    try {
-      // Filter out expired and inactive lots
-      final validLots = await _validateLotLevelAvailability(soD, companyId);
-
-      if (!validLots.isValid) {
-        return LotValidationResult(
-          isValid: false,
-          availableQuantity: 0.0,
-          message: 'No valid lots available for this item',
-          availableLots: [],
-        );
-      }
-
-      // If lot is manually selected, validate it
-      if (selectedLot != null && !systemConstants.lotQtyAutoForSalesBoolean) {
-        return await _validateSelectedLot(
-          selectedLot,
-          requestedQuantity,
-          validLots,
-          systemConstants,
-        );
-      }
-
-      // Auto-select lot based on FIFO/FEFO
-      return await _autoSelectLot(
-        validLots,
-        requestedQuantity,
-        systemConstants,
-      );
-    } catch (e) {
-      return LotValidationResult(
-        isValid: false,
-        availableQuantity: 0.0,
-        message: 'Error validating lot: $e',
-        availableLots: [],
-      );
-    }
-  }
-
   // Helper method for lot-level validation
   Future<({double availableQty, String message, bool isValid})>
-  _validateLotLevelAvailability(SalesOrderDetail soD, int companyId) async {
+  validateLotLevelAvailability(SalesOrderDetail soD, int companyId) async {
     try {
       // Get available lots for this item and branch
       List<LotMaster> availableLots = await getLotMastersByItemAndBranch(
@@ -709,43 +661,6 @@ class LotMasterRepository extends BaseRepository {
         isValid: false,
       );
     }
-  }
-
-  Future<LotValidationResult> _validateSelectedLot(
-    LotMaster selectedLot,
-    double requestedQuantity,
-    List<LotMaster> validLots,
-    SystemConstant systemConstants,
-  ) async {
-    // Check if selected lot is in valid lots
-    final isValidLot = validLots.any((lot) => lot.id == selectedLot.id);
-
-    if (!isValidLot) {
-      return LotValidationResult(
-        isValid: false,
-        availableQuantity: 0.0,
-        message: 'Selected lot is not valid or available for sales',
-        availableLots: validLots,
-      );
-    }
-
-    // Check quantity availability
-    if (selectedLot.quantityAvailable! < requestedQuantity) {
-      return LotValidationResult(
-        isValid: false,
-        availableQuantity: selectedLot.quantityAvailable!,
-        message: 'Insufficient quantity in selected lot',
-        availableLots: validLots,
-      );
-    }
-
-    return LotValidationResult(
-      isValid: true,
-      recommendedLot: selectedLot,
-      availableQuantity: selectedLot.quantityAvailable!,
-      message: 'Lot validation successful',
-      availableLots: validLots,
-    );
   }
 
   Future<LotValidationResult> _autoSelectLot(
@@ -972,7 +887,7 @@ class LotMasterRepository extends BaseRepository {
             .getLotExpirationColorByDetails(
               branchId: soD.itemBranch!.branch,
               itemId: soD.itemsTableId!,
-              companyId: companyId!,
+              companyId: companyId,
               daysDifference: int.parse(
                 lot.dateExpiration!
                     .difference(DateTime.now())
@@ -988,7 +903,7 @@ class LotMasterRepository extends BaseRepository {
               daysDifference: int.parse(
                 lot.dateEffective!.difference(DateTime.now()).inDays.toString(),
               ),
-              companyId: companyId!,
+              companyId: companyId,
             );
       } else if (lotType == 'R') {
         expirationColor = await expirationColorsRepository
@@ -998,7 +913,7 @@ class LotMasterRepository extends BaseRepository {
               daysDifference: int.parse(
                 lot.dateReceived!.difference(DateTime.now()).inDays.toString(),
               ),
-              companyId: companyId!,
+              companyId: companyId,
             );
       }
 
@@ -1020,6 +935,27 @@ class LotMasterRepository extends BaseRepository {
       if (item.lotNumber != null && item.quantity != null) {
         await restoreLotQuantity(item.lotNumber!, item.quantity!, companyId);
       }
+    }
+  }
+
+  Future<double> calculateExpiredLotQuantity(
+    SalesOrderDetail soD,
+    int companyId,
+  ) async {
+    try {
+      final lots = await getLotMastersByItemAndBranch(
+        itemNumber: soD.itemsTableId!,
+        branch: soD.itemBranch!.branch,
+        companyId: companyId,
+      );
+
+      // Calculate total quantity in expired lots
+      double totalAvailable = lots
+          .where((lot) => lot.statusCode == 'E') // Expired lots
+          .fold(0.0, (sum, lot) => sum + (lot.quantityAvailable ?? 0.0));
+      return totalAvailable;
+    } catch (e) {
+      return 0.0;
     }
   }
 }

@@ -4,8 +4,10 @@ import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
 import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
 import 'package:savvy_stock/features/stock/item_UoM_conversions/repo/item_uom_conv_repo.dart';
+import 'package:savvy_stock/features/stock/lot_coloring/repo/lot_expiration_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
 import 'package:savvy_stock/core/config/app_config.dart';
@@ -130,6 +132,8 @@ class _SavvyStockState extends State<SavvyStock> {
   late UdcRepository _udcRepository;
   late ItemMasterRepository _itemMasterRepository;
   late LotMasterRepository _lotMasterRepository;
+  late LotExpirationColorsRepository _lotExpirationColorsRepository;
+  late EmployeeRepository _employeeRepository;
 
   @override
   void initState() {
@@ -163,6 +167,8 @@ class _SavvyStockState extends State<SavvyStock> {
     _lotMasterRepository = getIt<LotMasterRepository>();
     _migrationService = getIt<MigrationService>();
     _nextNumberRepository = getIt<NextNumberRepository>();
+    _lotExpirationColorsRepository = getIt<LotExpirationColorsRepository>();
+    _employeeRepository = getIt<EmployeeRepository>();
     // Ensure system constants are loaded when companyId becomes available.
     final cid = _authBloc.state.companyId;
     if (cid != null) {
@@ -266,7 +272,7 @@ class _SavvyStockState extends State<SavvyStock> {
           BlocProvider<AuthBloc>.value(value: _authBloc),
           BlocProvider<EmployeeBloc>(
             create: (context) =>
-                EmployeeBloc(databaseService: getIt(), authBloc: _authBloc),
+                EmployeeBloc(repository: getIt(), authBloc: _authBloc),
           ),
           BlocProvider<UserBloc>(
             create: (context) =>
@@ -356,7 +362,7 @@ class _SavvyStockState extends State<SavvyStock> {
           ),
           BlocProvider<LotExpirationColorsBloc>(
             create: (context) => LotExpirationColorsBloc(
-              databaseService: getIt(),
+              repository: getIt(),
               authBloc: _authBloc,
               systemConstantBloc: _systemConstantBloc,
             ),

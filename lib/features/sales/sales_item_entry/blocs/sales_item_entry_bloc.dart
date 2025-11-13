@@ -491,6 +491,7 @@ class ItemEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
     return SelectedItem(quantity: confirmedItem.quantity);
   }
 
+
   void _onToggleBarcode(ToggleBarcode event, Emitter<ItemEntryState> emit) {
     emit(state.copyWith(useBarcode: event.useBarcode));
   }
