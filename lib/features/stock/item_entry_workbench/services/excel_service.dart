@@ -1,7 +1,7 @@
 // services/excel_service.dart
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
-import 'package:savvy_stock/features/stock/item_entry_workbench.dart/models/item_master_model.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/models/item_master_model.dart';
 import 'package:syncfusion_flutter_xlsio/xlsio.dart';
 
 class ExcelService {

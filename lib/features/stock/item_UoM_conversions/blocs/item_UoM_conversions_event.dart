@@ -1,7 +1,7 @@
 // bloc/item_uom_conversion_event.dart
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/models/item_UoM_conversions_model.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/models/item_uom_conversions_model.dart';
 
 @immutable
 abstract class ItemUomConversionEvent extends Equatable {

@@ -1,6 +1,6 @@
-// features/stock/item_UoM_conversions/repositories/item_uom_conversions_repository.dart
+// features/stock/item_uom_conversions/repositories/item_uom_conversions_repository.dart
 import 'package:savvy_stock/core/services/database/database_service.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/models/item_UoM_conversions_model.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/models/item_uom_conversions_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class ItemUomConversionsRepository {

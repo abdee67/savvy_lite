@@ -1,157 +1,185 @@
+// features/sales/sales_order/coordinator/bloc/sales_order_coordinator_state.dart
 import 'package:equatable/equatable.dart';
-import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 
 enum SalesOrderCoordinatorStatus {
   initial,
-  processing,
-  success,
-  error,
-  synchronizing,
-  calculating,
+  loading,
   creatingHeader,
   creatingDetails,
+  updatingHeader,
+  updatingDetails,
   voiding,
+  preparing,
+  prepared,
+  processing,
   reversingStock,
-}
-
-class SalesOrderTotals {
-  final double totalAmount;
-  final double totalTax;
-  final double grandTotal;
-  final double discountAmount;
-  final double withholdingTax;
-
-  const SalesOrderTotals({
-    this.totalAmount = 0.0,
-    this.totalTax = 0.0,
-    this.grandTotal = 0.0,
-    this.discountAmount = 0.0,
-    this.withholdingTax = 0.0,
-  });
-
-  SalesOrderTotals copyWith({
-    double? totalAmount,
-    double? totalTax,
-    double? grandTotal,
-    double? discountAmount,
-    double? withholdingTax,
-  }) {
-    return SalesOrderTotals(
-      totalAmount: totalAmount ?? this.totalAmount,
-      totalTax: totalTax ?? this.totalTax,
-      grandTotal: grandTotal ?? this.grandTotal,
-      discountAmount: discountAmount ?? this.discountAmount,
-      withholdingTax: withholdingTax ?? this.withholdingTax,
-    );
-  }
+  calculating,
+  synchronizing,
+  success,
+  error,
+  partialError,
+  rollback,
 }
 
 class SalesOrderCoordinatorState extends Equatable {
   final SalesOrderCoordinatorStatus status;
-  final String? lastOperation;
-  final DateTime? lastCalculation;
-  final String? error;
   final SalesOrderHeader? currentHeader;
   final List<SalesOrderDetail> currentDetails;
-  final bool? lastApplyWH;
-  final double? lastDiscountAmount;
-  final List<SalesOrderDetail>? lastDetails;
-  final Customer? currentCustomer;
-  final SalesOrderTotals totals;
-  final bool isOrderComplete;
+  final List<SalesOrderDetail> lastSavedDetails;
+  final String? error;
+  final String? successMessage;
   final DateTime? lastSyncTime;
-  final bool isCalculatingTotals;
-  final bool isUpdatingCustomer;
-  final bool isUnitPriceUpdating;
+  final String? lastOperation;
+  final DateTime? lastCalculationTime;
+  final bool isOrderComplete;
+  final bool isStockValidated;
+  final bool isCalculationsComplete;
+  final Map<int, StockValidationResult> stockValidationResults;
+  final double? lastSubTotal;
+  final double? lastTax;
+  final double? lastWithholdAmount;
+  final double? lastDiscountAmount;
+  final double? lastTotalAmount;
+  final Set<String> pendingOperations;
 
   const SalesOrderCoordinatorState({
     this.status = SalesOrderCoordinatorStatus.initial,
-    this.lastOperation,
-    this.lastCalculation,
-    this.error,
     this.currentHeader,
     this.currentDetails = const [],
-    this.lastApplyWH,
-    this.lastDiscountAmount,
-    this.lastDetails,
-    this.currentCustomer,
-    this.totals = const SalesOrderTotals(),
-    this.isOrderComplete = false,
+    this.lastSavedDetails = const [],
+    this.error,
+    this.successMessage,
     this.lastSyncTime,
-    this.isCalculatingTotals = false,
-    this.isUpdatingCustomer = false,
-    this.isUnitPriceUpdating = false,
+    this.lastOperation,
+    this.lastCalculationTime,
+    this.isOrderComplete = false,
+    this.isStockValidated = false,
+    this.isCalculationsComplete = false,
+    this.stockValidationResults = const {},
+    this.lastSubTotal,
+    this.lastTax,
+    this.lastWithholdAmount,
+    this.lastDiscountAmount,
+    this.lastTotalAmount,
+    this.pendingOperations = const {},
   });
-
-  SalesOrderCoordinatorState copyWith({
-    SalesOrderCoordinatorStatus? status,
-    String? lastOperation,
-    DateTime? lastCalculation,
-    String? error,
-    SalesOrderHeader? currentHeader,
-    List<SalesOrderDetail>? currentDetails,
-    bool? lastApplyWH,
-    double? lastDiscountAmount,
-    List<SalesOrderDetail>? lastDetails,
-    Customer? currentCustomer,
-    SalesOrderTotals? totals,
-    bool? isOrderComplete,
-    DateTime? lastSyncTime,
-    bool? isCalculatingTotals,
-    bool? isUpdatingCustomer,
-    bool? isUnitPriceUpdating,
-  }) {
-    return SalesOrderCoordinatorState(
-      status: status ?? this.status,
-      lastOperation: lastOperation ?? this.lastOperation,
-      lastCalculation: lastCalculation ?? this.lastCalculation,
-      error: error ?? this.error,
-      currentHeader: currentHeader ?? this.currentHeader,
-      currentDetails: currentDetails ?? this.currentDetails,
-      lastApplyWH: lastApplyWH ?? this.lastApplyWH,
-      lastDiscountAmount: lastDiscountAmount ?? this.lastDiscountAmount,
-      lastDetails: lastDetails ?? this.lastDetails,
-      currentCustomer: currentCustomer ?? this.currentCustomer,
-      totals: totals ?? this.totals,
-      isOrderComplete: isOrderComplete ?? this.isOrderComplete,
-      lastSyncTime: lastSyncTime ?? this.lastSyncTime,
-      isCalculatingTotals: isCalculatingTotals ?? this.isCalculatingTotals,
-      isUpdatingCustomer: isUpdatingCustomer ?? this.isUpdatingCustomer,
-      isUnitPriceUpdating: isUnitPriceUpdating ?? this.isUnitPriceUpdating,
-    );
-  }
-
-  bool get isProcessing => status == SalesOrderCoordinatorStatus.processing;
-  bool get hasError => status == SalesOrderCoordinatorStatus.error;
-  bool get hasCurrentOrder => currentHeader != null;
-  bool get hasDetails => currentDetails.isNotEmpty;
-  bool get canSubmitOrder => hasCurrentOrder && hasDetails && isOrderComplete;
-  bool get isCreating =>
-      status == SalesOrderCoordinatorStatus.creatingHeader ||
-      status == SalesOrderCoordinatorStatus.creatingDetails;
-  bool get isVoiding => status == SalesOrderCoordinatorStatus.voiding;
-  bool get isReversingStock =>
-      status == SalesOrderCoordinatorStatus.reversingStock;
 
   @override
   List<Object?> get props => [
     status,
-    lastOperation,
-    lastCalculation,
-    error,
     currentHeader,
     currentDetails,
-    lastApplyWH,
-    lastDiscountAmount,
-    lastDetails,
-    currentCustomer,
-    totals,
-    isOrderComplete,
+    lastSavedDetails,
+    error,
+    successMessage,
     lastSyncTime,
-    isCalculatingTotals,
-    isUpdatingCustomer,
-    isUnitPriceUpdating,
+    lastOperation,
+    lastCalculationTime,
+    isOrderComplete,
+    isStockValidated,
+    isCalculationsComplete,
+    stockValidationResults,
+    lastSubTotal,
+    lastTax,
+    lastWithholdAmount,
+    lastDiscountAmount,
+    lastTotalAmount,
+    pendingOperations,
   ];
+
+  SalesOrderCoordinatorState copyWith({
+    SalesOrderCoordinatorStatus? status,
+    SalesOrderHeader? currentHeader,
+    List<SalesOrderDetail>? currentDetails,
+    List<SalesOrderDetail>? lastSavedDetails,
+    String? error,
+    String? successMessage,
+    DateTime? lastSyncTime,
+    String? lastOperation,
+    DateTime? lastCalculationTime,
+    bool? isOrderComplete,
+    bool? isStockValidated,
+    bool? isCalculationsComplete,
+    Map<int, StockValidationResult>? stockValidationResults,
+    double? lastSubTotal,
+    double? lastTax,
+    double? lastWithholdAmount,
+    double? lastDiscountAmount,
+    double? lastTotalAmount,
+    Set<String>? pendingOperations,
+  }) {
+    return SalesOrderCoordinatorState(
+      status: status ?? this.status,
+      currentHeader: currentHeader ?? this.currentHeader,
+      currentDetails: currentDetails ?? this.currentDetails,
+      lastSavedDetails: lastSavedDetails ?? this.lastSavedDetails,
+      error: error ?? this.error,
+      successMessage: successMessage ?? this.successMessage,
+      lastSyncTime: lastSyncTime ?? this.lastSyncTime,
+      lastOperation: lastOperation ?? this.lastOperation,
+      lastCalculationTime: lastCalculationTime ?? this.lastCalculationTime,
+      isOrderComplete: isOrderComplete ?? this.isOrderComplete,
+      isStockValidated: isStockValidated ?? this.isStockValidated,
+      isCalculationsComplete:
+          isCalculationsComplete ?? this.isCalculationsComplete,
+      stockValidationResults:
+          stockValidationResults ?? this.stockValidationResults,
+      lastSubTotal: lastSubTotal ?? this.lastSubTotal,
+      lastTax: lastTax ?? this.lastTax,
+      lastWithholdAmount: lastWithholdAmount ?? this.lastWithholdAmount,
+      lastDiscountAmount: lastDiscountAmount ?? this.lastDiscountAmount,
+      lastTotalAmount: lastTotalAmount ?? this.lastTotalAmount,
+      pendingOperations: pendingOperations ?? this.pendingOperations,
+    );
+  }
+
+  // Helper methods
+  SalesOrderCoordinatorState loadingState(String operation) {
+    return copyWith(
+      status: SalesOrderCoordinatorStatus.loading,
+      pendingOperations: {...pendingOperations, operation},
+      error: null,
+      successMessage: null,
+    );
+  }
+
+  SalesOrderCoordinatorState successState(String message, {String? operation}) {
+    final updatedOperations = operation != null
+        ? (Set<String>.from(pendingOperations)..remove(operation))
+        : pendingOperations;
+
+    return copyWith(
+      status: SalesOrderCoordinatorStatus.success,
+      successMessage: message,
+      error: null,
+      pendingOperations: updatedOperations,
+    );
+  }
+
+  SalesOrderCoordinatorState errorState(String error, {String? operation}) {
+    final updatedOperations = operation != null
+        ? (Set<String>.from(pendingOperations)..remove(operation))
+        : pendingOperations;
+
+    return copyWith(
+      status: SalesOrderCoordinatorStatus.error,
+      error: error,
+      successMessage: null,
+      pendingOperations: updatedOperations,
+    );
+  }
+
+  SalesOrderCoordinatorState operationComplete(String operation) {
+    return copyWith(
+      pendingOperations: {...pendingOperations}..remove(operation),
+    );
+  }
+
+  bool get hasPendingOperations => pendingOperations.isNotEmpty;
+  bool get canCreateOrder =>
+      currentHeader != null && currentDetails.isNotEmpty && isStockValidated;
+  bool get canUpdateOrder =>
+      currentHeader?.id != null && currentDetails.isNotEmpty;
 }

@@ -9,9 +9,8 @@ import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/repo/sales_order_detail_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/service/sales_order_integration_service.dart';
 import 'package:savvy_stock/features/sales/services/validate_stock_availability.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/repo/item_uom_conv_repo.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/repo/lot_expiration_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
@@ -36,14 +35,14 @@ import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/invoice/blocs/invoice_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_bloc.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_bloc.dart';
 import 'package:savvy_stock/features/stock/item_cost/blocs/item_cost_bloc.dart';
 import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/data/item_repository.dart';
-import 'package:savvy_stock/features/stock/item_entry_workbench.dart/blocs/item_master_bloc.dart';
-import 'package:savvy_stock/features/stock/item_entry_workbench.dart/repo/item_master_repo.dart';
-import 'package:savvy_stock/features/stock/item_entry_workbench.dart/repo/migration_service.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/blocs/item_master_bloc.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/repo/item_master_repo.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/repo/migration_service.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_repo.dart';
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_bloc.dart';
@@ -55,7 +54,6 @@ import 'package:savvy_stock/features/stock/location_entry/repo/location_master_r
 import 'package:savvy_stock/features/stock/lot_coloring/bloc/lot_coloring_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_master/repo/lot_master_repo.dart';
-import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/repo/sales_order_header_repo.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
@@ -118,6 +116,7 @@ class _SavvyStockState extends State<SavvyStock> {
   late SalesOrderHeaderRepository _salesOrderHeaderRepository;
   late CustomerRepository _customerRepository;
   late SalesOrderHeaderBloc _salesOrderHeaderBloc;
+  late CustomerBloc _customerBloc;
   late StockItemsEntryBloc _stockItemEntryBloc;
   late StockItemsEntryRepository _stockItemsEntryRepository;
   late ItemTransactionsBloc _itemTransactionsBloc;
@@ -159,7 +158,9 @@ class _SavvyStockState extends State<SavvyStock> {
     _stockItemLocationRepository = getIt<ItemLocationsRepository>();
     _salesOrderHeaderRepository = getIt<SalesOrderHeaderRepository>();
     _customerRepository = getIt<CustomerRepository>();
+    _customerBloc = getIt<CustomerBloc>();
     _salesOrderHeaderBloc = getIt<SalesOrderHeaderBloc>();
+    _salesOrderDetailBloc = getIt<SalesOrderDetailBloc>();
     _itemTransactionsRepository = getIt<ItemTransactionRepository>();
     _stockItemsEntryRepository = getIt<StockItemsEntryRepository>();
     _itemTransactionsBloc = getIt<ItemTransactionsBloc>();
@@ -296,8 +297,10 @@ class _SavvyStockState extends State<SavvyStock> {
                 RoleBloc(databaseService: getIt(), authBloc: _authBloc),
           ),
           BlocProvider<CustomerBloc>(
-            create: (context) =>
-                CustomerBloc(authBloc: _authBloc, repository: getIt()),
+            create: (context) => CustomerBloc(
+              authBloc: _authBloc,
+              repository: _customerRepository,
+            ),
           ),
           BlocProvider<ItemEntryBloc>(create: (context) => ItemEntryBloc()),
           BlocProvider<PaymentBloc>(

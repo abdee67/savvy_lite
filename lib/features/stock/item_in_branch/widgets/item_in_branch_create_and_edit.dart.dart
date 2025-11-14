@@ -98,7 +98,9 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
       _unitPriceController.text = entry.unitPrice?.toString() ?? '';
       _marginRateController.text = entry.marginRate?.toString() ?? '';
       final marginType = entry.marginType;
-      if (marginType != null) {
+      if (marginType != null &&
+          marginType.isNotEmpty &&
+          _marginTypes.contains(marginType)) {
         _selectedMarginType = marginType;
       } else {
         _selectedMarginType = null;

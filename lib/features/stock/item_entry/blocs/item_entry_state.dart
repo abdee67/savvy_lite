@@ -101,6 +101,7 @@ class ItemEntryState {
   bool get canEdit => selectedItems.length == 1;
   bool get canDelete => selectedItems.isNotEmpty;
   bool get canExport => filteredItems.isNotEmpty;
+  bool get useBarcode => barcodeItems.isNotEmpty;
 
   bool get hasRecentDeletions => recentlyDeleted.isNotEmpty;
 

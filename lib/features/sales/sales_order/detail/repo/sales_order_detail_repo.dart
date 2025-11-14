@@ -418,7 +418,7 @@ class SalesOrderDetailRepository {
     int companyId,
   ) async {
     final query = '''
-      SELECT sod.*, 
+      SELECT sod.*
              it.item_descripton as item_description,
              it.barcode as item_barcode,
              ib.quantity_available as branch_quantity,

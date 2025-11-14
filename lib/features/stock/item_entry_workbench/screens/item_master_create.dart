@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:savvy_stock/features/stock/item_entry_workbench.dart/blocs/item_master_bloc.dart';
-import 'package:savvy_stock/features/stock/item_entry_workbench.dart/blocs/item_master_state.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/blocs/item_master_bloc.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/blocs/item_master_state.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
-import 'package:savvy_stock/features/stock/item_entry_workbench.dart/widgets/batch_upload_section.dart';
-import 'package:savvy_stock/features/stock/item_entry_workbench.dart/widgets/single_item_entry_form.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/widgets/batch_upload_section.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/widgets/single_item_entry_form.dart';
 
 class ItemMasterCreatePage extends StatefulWidget {
   final AuthBloc authBloc;

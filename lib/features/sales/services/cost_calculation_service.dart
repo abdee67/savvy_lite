@@ -1,6 +1,6 @@
 // features/sales/services/cost_calculation_service.dart
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/repo/item_uom_conv_repo.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
 
 class CostCalculationResult {

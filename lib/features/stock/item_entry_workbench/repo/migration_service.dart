@@ -6,8 +6,8 @@ import 'package:savvy_stock/features/stock/item_cost/models/item_cost_model.dart
 import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
 import 'package:savvy_stock/features/stock/item_entry/data/item_repository.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
-import 'package:savvy_stock/features/stock/item_entry_workbench.dart/models/item_master_model.dart';
-import 'package:savvy_stock/features/stock/item_entry_workbench.dart/repo/item_master_repo.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/models/item_master_model.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/repo/item_master_repo.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_repo.dart';
 import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';

@@ -1,11 +1,11 @@
-// features/stock/item_UoM_conversions/blocs/item_UoM_conversions_bloc.dart
+// features/stock/item_uom_conversions/blocs/item_uom_conversions_bloc.dart
 import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_event.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_state.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/models/item_UoM_conversions_model.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/repo/item_uom_conv_repo.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_event.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_state.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/models/item_uom_conversions_model.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 
 class ItemUomConversionBloc
     extends Bloc<ItemUomConversionEvent, ItemUomConversionState> {
@@ -197,8 +197,11 @@ class ItemUomConversionBloc
       // saved conversions for the same item. Exclude the item being updated
       // from the existing list so we validate the intended final layout.
       final existingForItem = state.items
-          .where((it) =>
-              it.itemNumber == event.item.itemNumber && it.id != event.item.id)
+          .where(
+            (it) =>
+                it.itemNumber == event.item.itemNumber &&
+                it.id != event.item.id,
+          )
           .toList();
 
       // Include only pending create-items that belong to the same item
@@ -398,8 +401,11 @@ class ItemUomConversionBloc
   ) async {
     // Determine the item number to validate against. Prefer the currentItem
     // if provided, otherwise infer from the createItems list.
-    final int? itemNumber = event.currentItem?.itemNumber ??
-        (event.createItems.isNotEmpty ? event.createItems.first.itemNumber : null);
+    final int? itemNumber =
+        event.currentItem?.itemNumber ??
+        (event.createItems.isNotEmpty
+            ? event.createItems.first.itemNumber
+            : null);
 
     // Collect existing saved conversions for the same item (if any).
     final existingForItem = itemNumber != null

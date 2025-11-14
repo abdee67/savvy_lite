@@ -1,6 +1,6 @@
 // features/sales/services/uom_conversion_service.dart
-import 'package:savvy_stock/features/stock/item_UoM_conversions/models/item_UoM_conversions_model.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/repo/item_uom_conv_repo.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/models/item_UoM_conversions_model.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class UOMConversionResult {
@@ -96,7 +96,7 @@ class UOMConversionService {
     }
   }
 
-  // Get all available UOMs for an item
+  /*// Get all available UOMs for an item
   Future<List<ItemUomConversion>> getAvailableUOMsForItem(
     int itemId,
     int companyId,
@@ -106,7 +106,7 @@ class UOMConversionService {
       companyId,
     );
   }
-
+*/
   // Validate if conversion is possible
   Future<bool> validateUOMConversion({
     required int itemId,

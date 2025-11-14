@@ -2,10 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:savvy_stock/features/stock/item_entry_workbench.dart/blocs/item_master_bloc.dart';
-import 'package:savvy_stock/features/stock/item_entry_workbench.dart/blocs/item_master_events.dart';
-import 'package:savvy_stock/features/stock/item_entry_workbench.dart/blocs/item_master_state.dart';
-import 'package:savvy_stock/features/stock/item_entry_workbench.dart/models/item_master_model.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/blocs/item_master_bloc.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/blocs/item_master_events.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/blocs/item_master_state.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/models/item_master_model.dart';
 
 class BatchUploadSection extends StatelessWidget {
   const BatchUploadSection({super.key});

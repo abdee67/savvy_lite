@@ -1,15 +1,19 @@
+// features/sales/sales_item_entry/widgets/sales_item_entry_confirmed_item.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_event.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_state.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
+import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
 
 class SalesItemEntryConfirmedItem extends StatefulWidget {
-  const SalesItemEntryConfirmedItem({super.key});
+  final List<GlobalKey<FormState>> formKeys;
+  const SalesItemEntryConfirmedItem({super.key, required this.formKeys});
 
   @override
   State<SalesItemEntryConfirmedItem> createState() =>
@@ -19,30 +23,26 @@ class SalesItemEntryConfirmedItem extends StatefulWidget {
 class _SalesItemEntryConfirmedItemState
     extends State<SalesItemEntryConfirmedItem> {
   final Map<int, double> _dragOffset = {};
-  final List<GlobalKey<FormState>> _formKeys = [];
-  final ScrollController _upperScrollController = ScrollController();
-  bool _initialized = false;
-  void _safeDeleteItem(BuildContext context, int index) {
-    final bloc = context.read<ItemEntryBloc>();
-    final state = bloc.state;
+  final ScrollController _scrollController = ScrollController();
 
-    // Validate the index
-    if (index < 0 || index >= state.confirmedItems.length) {
+  void _safeDeleteItem(BuildContext context, int index) {
+    final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
+    final coordinatorState = coordinatorBloc.state;
+
+    if (index < 0 || index >= coordinatorState.currentDetails.length) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cannot delete item. Invalid index.')),
       );
       return;
     }
 
-    final itemToDelete = state.confirmedItems[index];
+    final itemToDelete = coordinatorState.currentDetails[index];
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Delete "${itemToDelete.itemName}"?'),
-        content: Text(
-          'Are you sure you want to delete "${itemToDelete.itemName}"?',
-        ),
+        title: const Text('Delete Item?'),
+        content: Text('Are you sure you want to delete this item?'),
         actions: [
           TextButton(
             child: const Text('Cancel'),
@@ -51,26 +51,11 @@ class _SalesItemEntryConfirmedItemState
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              bloc.add(DeleteConfirmedItem(index: index));
-              // Show undo snackbar
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('"${itemToDelete.itemName}" deleted'),
-                  action: SnackBarAction(
-                    label: 'UNDO',
-                    onPressed: () {
-                      // Add undo functionality if needed
-                      bloc.add(
-                        UndoDelete(
-                          deletedItem: itemToDelete,
-                          deletedIndex: index,
-                        ),
-                      );
-                    },
-                  ),
-                  duration: const Duration(seconds: 5),
-                ),
-              );
+              coordinatorBloc.add(RemoveDetailFromOrder(detail: itemToDelete));
+
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Item deleted')));
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Delete'),
@@ -81,20 +66,17 @@ class _SalesItemEntryConfirmedItemState
   }
 
   void _moveToEdit(BuildContext context, int index) {
-    final bloc = context.read<ItemEntryBloc>();
-    bloc.add(MoveToEdit(confirmedIndex: index));
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Item moved to edit section')));
+    // In this implementation, items are always editable in the form section
+    // This function could be used to highlight or scroll to the item
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Item can be edited in the form above')),
+    );
   }
 
   void _onHorizontalDragUpdate(int index, DragUpdateDetails details) {
     setState(() {
       final current = _dragOffset[index] ?? 0;
       var newOffset = current + details.delta.dx;
-
-      // only allow left swipe
       if (newOffset > 0) newOffset = 0;
       _dragOffset[index] = newOffset;
     });
@@ -106,12 +88,12 @@ class _SalesItemEntryConfirmedItemState
     DragEndDetails details,
   ) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final threshold = screenWidth * 0.3; // ✅ 30% of screen width
+    final threshold = screenWidth * 0.3;
     final current = _dragOffset[index] ?? 0;
+
     if (current.abs() > threshold) {
-      // Swipe far enough → delete
       setState(() {
-        _dragOffset[index] = -screenWidth; // slide fully left
+        _dragOffset[index] = -screenWidth;
       });
 
       Future.delayed(const Duration(milliseconds: 300), () {
@@ -123,51 +105,102 @@ class _SalesItemEntryConfirmedItemState
         }
       });
     } else {
-      // Not far enough → snap back
       setState(() {
         _dragOffset[index] = 0.0;
       });
     }
   }
 
-  void _confirmOrder(BuildContext context) {
+  void _validateAndProceed(BuildContext context) {
     // Validate all forms
     bool allValid = true;
-    for (int i = 0; i < _formKeys.length; i++) {
-      if (_formKeys[i].currentState != null &&
-          !_formKeys[i].currentState!.validate()) {
+    for (final formKey in widget.formKeys) {
+      if (formKey.currentState != null && !formKey.currentState!.validate()) {
         allValid = false;
-
-        // Scroll to the first invalid field
-        _upperScrollController.animateTo(
-          i * 300.0, // Adjust based on your item height
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
         break;
       }
     }
 
-    if (allValid) {
-      context.read<ItemEntryBloc>().add(ConfirmOrder());
+    if (!allValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fix validation errors in the forms'),
+        ),
+      );
+      return;
+    }
+
+    final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
+    final coordinatorState = coordinatorBloc.state;
+
+    if (coordinatorState.currentDetails.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add at least one item')),
+      );
+      return;
+    }
+
+    // Validate stock availability
+    if (!coordinatorState.isStockValidated) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please validate stock availability first'),
+        ),
+      );
+      return;
+    }
+
+    _navigateToSummary(context, coordinatorState);
+  }
+
+  void _navigateToSummary(
+    BuildContext context,
+    SalesOrderCoordinatorState state,
+  ) {
+    final customerBloc = context.read<CustomerBloc>();
+    final selectedCustomer = customerBloc.state.selectedBillToCustomer;
+
+    if (selectedCustomer == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a customer first')),
+      );
+      return;
+    }
+
+    if (context.read<AuthBloc>().state.hasAccessToPrivilege(
+      AppRoutes.paymentSummary,
+    )) {
+      context.push(
+        AppRoutes.paymentSummary,
+        extra: {
+          'customer': selectedCustomer,
+          'orderDetails': state.currentDetails,
+          'orderHeader': state.currentHeader,
+          'totalAmount': state.lastTotalAmount ?? 0.0,
+        },
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fix validation errors')),
+        const SnackBar(content: Text('No access to payment summary')),
       );
     }
   }
 
+  double _calculateTotalAmount(List<SalesOrderDetail> details) {
+    return details.fold<double>(0.0, (sum, detail) {
+      return sum + (detail.extendedPrice ?? 0.0);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isSmallScreen = MediaQuery.of(context).size.width < 600;
-    final padding = isSmallScreen ? 12.0 : 16.0;
-    return BlocConsumer<ItemEntryBloc, ItemEntryState>(
-      listener: (context, state) {
-        if (!_initialized) {
-          _initialized = true;
-        }
-      },
-      builder: (context, state) {
+    return BlocBuilder<SalesOrderCoordinatorBloc, SalesOrderCoordinatorState>(
+      builder: (context, coordinatorState) {
+        final confirmedDetails = coordinatorState.currentDetails;
+        final totalAmount =
+            coordinatorState.lastTotalAmount ??
+            _calculateTotalAmount(confirmedDetails);
+
         return Expanded(
           child: Stack(
             clipBehavior: Clip.none,
@@ -175,38 +208,49 @@ class _SalesItemEntryConfirmedItemState
               Positioned.fill(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade500,
-                    borderRadius: BorderRadius.only(
+                    color: Colors.grey.shade100,
+                    borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(20),
                       topRight: Radius.circular(20),
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, -2),
+                      ),
+                    ],
                   ),
                   padding: const EdgeInsets.only(
-                    top: 30, //spacing for confirm button
-                    left: 10,
-                    right: 10,
+                    top: 50,
+                    left: 16,
+                    right: 16,
                     bottom: 16,
                   ),
                   child: Column(
                     children: [
-                      const SizedBox(height: 4),
+                      // Header
+                      Text(
+                        'Order Summary',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Items List
                       Expanded(
-                        child: state.confirmedItems.isEmpty
+                        child: confirmedDetails.isEmpty
                             ? _buildEmptyState()
                             : ListView.builder(
-                                itemCount: state.confirmedItems.length,
+                                controller: _scrollController,
+                                itemCount: confirmedDetails.length,
                                 itemBuilder: (context, index) {
-                                  final item = state.confirmedItems[index];
-                                  final isSelected = state
-                                      .selectedConfirmedItemIndices
-                                      .contains(index);
-                                  final itemPrice = state.itemsInStores
-                                      .firstWhere(
-                                        (element) =>
-                                            element.item.id == item.itemId,
-                                      )
-                                      .unitPrice;
+                                  final item = confirmedDetails[index];
                                   final offset = _dragOffset[index] ?? 0.0;
+
                                   return GestureDetector(
                                     onDoubleTap: () =>
                                         _moveToEdit(context, index),
@@ -220,26 +264,20 @@ class _SalesItemEntryConfirmedItemState
                                         ),
                                     child: Stack(
                                       children: [
-                                        // 🔴 Background (delete indicator)
+                                        // Delete background
                                         Positioned.fill(
                                           child: Container(
                                             alignment: Alignment.centerRight,
                                             decoration: BoxDecoration(
                                               color: Colors.redAccent,
-                                              borderRadius: BorderRadius.only(
-                                                topLeft: Radius.circular(20),
-                                                topRight: Radius.circular(20),
-                                                bottomLeft: Radius.circular(20),
-                                                bottomRight: Radius.circular(
-                                                  20,
-                                                ),
-                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
                                             ),
                                             padding: const EdgeInsets.symmetric(
                                               horizontal: 20,
                                             ),
                                             margin: const EdgeInsets.only(
-                                              bottom: 2,
+                                              bottom: 8,
                                             ),
                                             child: const Icon(
                                               Icons.delete,
@@ -249,7 +287,7 @@ class _SalesItemEntryConfirmedItemState
                                           ),
                                         ),
 
-                                        // 🟢 Foreground (draggable card)
+                                        // Item card
                                         AnimatedContainer(
                                           duration: const Duration(
                                             milliseconds: 200,
@@ -261,12 +299,10 @@ class _SalesItemEntryConfirmedItemState
                                           ),
                                           curve: Curves.easeOut,
                                           margin: const EdgeInsets.only(
-                                            bottom: 10,
+                                            bottom: 8,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: isSelected
-                                                ? Colors.grey.shade200
-                                                : Colors.white,
+                                            color: Colors.white,
                                             borderRadius: BorderRadius.circular(
                                               12,
                                             ),
@@ -275,60 +311,67 @@ class _SalesItemEntryConfirmedItemState
                                                 color: Colors.black.withOpacity(
                                                   0.1,
                                                 ),
-                                                blurRadius: 6,
-                                                offset: const Offset(0, 3),
+                                                blurRadius: 4,
+                                                offset: const Offset(0, 2),
                                               ),
                                             ],
-                                            border: isSelected
-                                                ? Border.all(
-                                                    color: Colors.black,
-                                                  )
-                                                : null,
                                           ),
                                           child: Padding(
-                                            padding: const EdgeInsets.all(8),
+                                            padding: const EdgeInsets.all(16),
                                             child: Row(
                                               children: [
+                                                // Item info
                                                 Expanded(
-                                                  child: Text(
-                                                    item.itemName,
-                                                    style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontSize: 16,
-                                                    ),
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
+                                                  flex: 3,
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                        'Item ${index + 1}',
+                                                        style: const TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: 16,
+                                                        ),
+                                                      ),
+                                                      if (item.extendedPrice !=
+                                                          null)
+                                                        Text(
+                                                          'Total: \$${item.extendedPrice!.toStringAsFixed(2)}',
+                                                          style:
+                                                              const TextStyle(
+                                                                color: Colors
+                                                                    .green,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w500,
+                                                              ),
+                                                        ),
+                                                    ],
                                                   ),
                                                 ),
+
+                                                // Quantity
                                                 Expanded(
                                                   child: Text(
-                                                    item.quantity
-                                                        .toStringAsFixed(2),
+                                                    'Qty: ${item.quantity?.toStringAsFixed(2) ?? '0'}',
                                                     style: const TextStyle(
                                                       fontSize: 14,
                                                     ),
                                                     textAlign: TextAlign.center,
                                                   ),
                                                 ),
+
+                                                // Unit Price
                                                 Expanded(
                                                   child: Text(
-                                                    itemPrice.toString(),
+                                                    'Price: \$${item.unitPrice?.toStringAsFixed(2) ?? '0'}',
                                                     style: const TextStyle(
                                                       fontSize: 14,
                                                     ),
                                                     textAlign: TextAlign.center,
-                                                  ),
-                                                ),
-                                                Expanded(
-                                                  child: Text(
-                                                    '\$${item.totalPrice.toStringAsFixed(2)}',
-                                                    style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontSize: 16,
-                                                    ),
-                                                    textAlign: TextAlign.end,
                                                   ),
                                                 ),
                                               ],
@@ -341,12 +384,15 @@ class _SalesItemEntryConfirmedItemState
                                 },
                               ),
                       ),
-                      const SizedBox(height: 4),
+
+                      const SizedBox(height: 16),
+
+                      // Total Amount
                       Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
-                          color: const Color.fromARGB(255, 29, 91, 134),
+                          color: const Color(0xFF155888),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -360,7 +406,7 @@ class _SalesItemEntryConfirmedItemState
                               ),
                             ),
                             Text(
-                              '\$${state.totalAmount.toStringAsFixed(2)}',
+                              '\$${totalAmount.toStringAsFixed(2)}',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -370,59 +416,76 @@ class _SalesItemEntryConfirmedItemState
                           ],
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Align(
-                        alignment: Alignment.bottomRight,
+
+                      const SizedBox(height: 16),
+
+                      // Continue Button
+                      SizedBox(
+                        width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: state.totalAmount > 0
-                              ? () => _navigateToSummary(context, state)
+                          onPressed: confirmedDetails.isNotEmpty
+                              ? () => _validateAndProceed(context)
                               : null,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color.fromARGB(
-                              255,
-                              24,
-                              103,
-                              160,
-                            ),
+                            backgroundColor: const Color(0xFF155888),
                             foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
-                          child: const Text('Save & Continue'),
+                          child: const Text(
+                            'Save & Continue to Payment',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-              // Confirm Order Button
+
+              // Validate & Calculate Button
               Positioned(
                 right: 16,
-                top: -20,
+                top: -25,
                 child: SizedBox(
-                  width: 150,
-                  height: 40,
+                  height: 50,
                   child: ElevatedButton(
-                    onPressed: state.hasValidItems
-                        ? () => _confirmOrder(context)
+                    onPressed: confirmedDetails.isNotEmpty
+                        ? () {
+                            context.read<SalesOrderCoordinatorBloc>().add(
+                              const ValidateCompleteStockAvailability(),
+                            );
+                            context.read<SalesOrderCoordinatorBloc>().add(
+                              const CalculateCompleteOrderTotals(),
+                            );
+                          }
                         : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: state.hasValidItems
-                          ? const Color.fromARGB(255, 29, 110, 168)
+                      backgroundColor: confirmedDetails.isNotEmpty
+                          ? Colors.orange
                           : Colors.grey,
-                      foregroundColor: state.hasValidItems
-                          ? Colors.white
-                          : Colors.black,
-                      padding: EdgeInsets.zero,
+                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(25),
                       ),
                       elevation: 4,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
                     ),
-                    child: Text(
-                      state.hasValidItems ? 'Confirm Order' : 'Select item',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.calculate, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'Validate & Calculate',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -434,52 +497,22 @@ class _SalesItemEntryConfirmedItemState
     );
   }
 
-  void _navigateToSummary(BuildContext context, ItemEntryState state) {
-    final customerBloc = context.read<CustomerBloc>();
-    final selectedCustomerFromBloc = customerBloc.state.selectedBillToCustomer;
-    final selectedCustomerFromState = state.customer;
-
-    print(
-      'Customer from Bloc: "${selectedCustomerFromBloc!.customerName}" (ID: ${selectedCustomerFromBloc.id})',
-    );
-    print(
-      'Customer from State: "${selectedCustomerFromState.customerName}" (ID: ${selectedCustomerFromState.id})',
-    );
-    print('Customer isEmpty: ${selectedCustomerFromState.isEmpty}');
-    print(
-      'Customer == Customer.empty: ${selectedCustomerFromState == Customer.empty}',
-    );
-    if (selectedCustomerFromState.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a customer first')),
-      );
-      return;
-    }
-    final paymentScreenRoute = AppRoutes.paymentSummary;
-    context.push(
-      paymentScreenRoute,
-      extra: {
-        'confirmedItems': state.confirmedItems,
-        'totalAmount': state.totalAmount,
-        'customer': selectedCustomerFromState,
-      },
-    );
-  }
-
   Widget _buildEmptyState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.shopping_cart_outlined,
-            size: 48,
-            color: Color(0xFF155888),
-          ),
-          SizedBox(height: 16),
+          Icon(Icons.shopping_cart_outlined, size: 48, color: Colors.grey[400]),
+          const SizedBox(height: 16),
           Text(
-            'No items added yet',
-            style: TextStyle(fontSize: 16, color: Color(0xFF155888)),
+            'No items confirmed yet',
+            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Add items above and click "Confirm Item"',
+            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+            textAlign: TextAlign.center,
           ),
         ],
       ),

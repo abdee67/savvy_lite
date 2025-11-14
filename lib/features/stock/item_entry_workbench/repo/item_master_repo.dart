@@ -1,6 +1,6 @@
 // features/stock/item_master/repositories/item_master_repository.dart
 import 'package:savvy_stock/core/services/database/database_service.dart';
-import 'package:savvy_stock/features/stock/item_entry_workbench.dart/models/item_master_model.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/models/item_master_model.dart';
 
 class ItemMasterRepository {
   final LocalDatabaseService databaseService;

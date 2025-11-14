@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:savvy_stock/features/stock/item_entry_workbench.dart/models/item_master_model.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/models/item_master_model.dart';
 
 @immutable
 abstract class ItemMasterEvent {

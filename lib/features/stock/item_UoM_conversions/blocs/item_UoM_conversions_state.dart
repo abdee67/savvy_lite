@@ -1,7 +1,7 @@
 // bloc/item_uom_conversion_state.dart
 import 'package:equatable/equatable.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/models/item_UoM_conversions_model.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/models/uom_cconverstion_ui_state.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/models/item_uom_conversions_model.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/models/uom_cconverstion_ui_state.dart';
 
 enum ItemUomConversionStatus {
   initial,
@@ -47,7 +47,7 @@ class ItemUomConversionState extends Equatable {
   final double? conversionFactor;
   final String? conversionError;
 
-   final bool? structureValid;
+  final bool? structureValid;
   final bool? hasDuplication;
 
   const ItemUomConversionState({

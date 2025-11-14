@@ -1,18 +1,18 @@
+// features/sales/sales_order/coordinator/bloc/sales_order_coordinator_event.dart
 import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
-import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 
-// Base event class
+// Base event
 abstract class SalesOrderCoordinatorEvent extends Equatable {
   const SalesOrderCoordinatorEvent();
 
   @override
-  List<Object> get props => [];
+  List<Object?> get props => [];
 }
 
-// Create complete sales order with header and details
+// Order Lifecycle Events
 class CreateCompleteSalesOrder extends SalesOrderCoordinatorEvent {
   final SalesOrderHeader header;
   final List<SalesOrderDetail> details;
@@ -20,128 +20,176 @@ class CreateCompleteSalesOrder extends SalesOrderCoordinatorEvent {
   const CreateCompleteSalesOrder({required this.header, required this.details});
 
   @override
-  List<Object> get props => [header, details];
+  List<Object?> get props => [header, details];
 }
 
-// Update existing sales order with details
-class UpdateSalesOrderWithDetails extends SalesOrderCoordinatorEvent {
+class UpdateCompleteSalesOrder extends SalesOrderCoordinatorEvent {
   final SalesOrderHeader header;
   final List<SalesOrderDetail> details;
+  final bool validateStock;
 
-  const UpdateSalesOrderWithDetails({
+  const UpdateCompleteSalesOrder({
     required this.header,
     required this.details,
+    this.validateStock = true,
   });
 
   @override
-  List<Object> get props => [header, details];
+  List<Object?> get props => [header, details, validateStock];
 }
 
-// Void sales order with all details
-class VoidSalesOrderWithDetails extends SalesOrderCoordinatorEvent {
-  final SalesOrderHeader header;
+class VoidCompleteSalesOrder extends SalesOrderCoordinatorEvent {
+  final int salesOrderId;
+  final bool reverseStock;
 
-  const VoidSalesOrderWithDetails({required this.header});
+  const VoidCompleteSalesOrder({
+    required this.salesOrderId,
+    this.reverseStock = true,
+  });
 
   @override
-  List<Object> get props => [header];
+  List<Object?> get props => [salesOrderId, reverseStock];
 }
 
-// Calculate complete totals for the entire order
-class CalculateCompleteTotals extends SalesOrderCoordinatorEvent {
-  const CalculateCompleteTotals();
+class DeleteCompleteSalesOrder extends SalesOrderCoordinatorEvent {
+  final int salesOrderId;
+  final bool reverseStock;
+
+  const DeleteCompleteSalesOrder({
+    required this.salesOrderId,
+    this.reverseStock = true,
+  });
+
+  @override
+  List<Object?> get props => [salesOrderId, reverseStock];
 }
 
-// Sync customer information to all details
-class SyncCustomerToDetails extends SalesOrderCoordinatorEvent {
+// Calculation & Validation Events
+class CalculateCompleteOrderTotals extends SalesOrderCoordinatorEvent {
+  final bool forceRecalculation;
+
+  const CalculateCompleteOrderTotals({this.forceRecalculation = false});
+}
+
+class ValidateCompleteStockAvailability extends SalesOrderCoordinatorEvent {
+  final bool validateAllItems;
+
+  const ValidateCompleteStockAvailability({this.validateAllItems = true});
+}
+
+class SyncFinancialData extends SalesOrderCoordinatorEvent {
+  final double? discountAmount;
+  final bool? applyWithholding;
+
+  const SyncFinancialData({this.discountAmount, this.applyWithholding});
+}
+
+// Customer & Header Synchronization
+class SyncCustomerToOrder extends SalesOrderCoordinatorEvent {
   final Customer customer;
 
-  const SyncCustomerToDetails({required this.customer});
+  const SyncCustomerToOrder({required this.customer});
 
   @override
-  List<Object> get props => [customer];
+  List<Object?> get props => [customer];
 }
 
-// Sync header information to details
 class SyncHeaderToDetails extends SalesOrderCoordinatorEvent {
-  const SyncHeaderToDetails();
+  final SalesOrderHeader? header;
+
+  const SyncHeaderToDetails({this.header});
 }
 
-// Prepare new order by resetting both header and detail blocs
-class PrepareNewOrder extends SalesOrderCoordinatorEvent {
-  const PrepareNewOrder();
+// Preparation & Initialization
+class PrepareNewSalesOrder extends SalesOrderCoordinatorEvent {
+  final int companyId;
+  final int employeeId;
+  final Customer? defaultCustomer;
+
+  const PrepareNewSalesOrder({
+    required this.companyId,
+    required this.employeeId,
+    this.defaultCustomer,
+  });
+
+  @override
+  List<Object?> get props => [companyId, employeeId, defaultCustomer];
 }
 
-// Update unit price from item branch (replicates JSF's unitPriceSetBySelectedItemBranch)
-class UpdateUnitPriceFromItemBranch extends SalesOrderCoordinatorEvent {
-  final ItemInBranchModel itemBranch;
+class LoadCompleteSalesOrder extends SalesOrderCoordinatorEvent {
+  final int salesOrderId;
+
+  const LoadCompleteSalesOrder({required this.salesOrderId});
+
+  @override
+  List<Object?> get props => [salesOrderId];
+}
+
+// Item & Detail Management
+class AddDetailToOrder extends SalesOrderCoordinatorEvent {
   final SalesOrderDetail detail;
 
-  const UpdateUnitPriceFromItemBranch({
-    required this.itemBranch,
-    required this.detail,
-  });
+  const AddDetailToOrder({required this.detail});
 
   @override
-  List<Object> get props => [itemBranch, detail];
+  List<Object?> get props => [detail];
 }
 
-// Update header financial settings
-class UpdateHeaderFinancials extends SalesOrderCoordinatorEvent {
-  final bool applyWH;
-  final double discountAmount;
+class UpdateDetailInOrder extends SalesOrderCoordinatorEvent {
+  final SalesOrderDetail detail;
+  final int index;
 
-  const UpdateHeaderFinancials({
-    required this.applyWH,
-    required this.discountAmount,
-  });
+  const UpdateDetailInOrder({required this.detail, required this.index});
 
   @override
-  List<Object> get props => [applyWH, discountAmount];
+  List<Object?> get props => [detail, index];
 }
 
-// Update details list
-class UpdateDetails extends SalesOrderCoordinatorEvent {
-  final List<SalesOrderDetail> details;
+class RemoveDetailFromOrder extends SalesOrderCoordinatorEvent {
+  final SalesOrderDetail detail;
 
-  const UpdateDetails({required this.details});
+  const RemoveDetailFromOrder({required this.detail});
 
   @override
-  List<Object> get props => [details];
+  List<Object?> get props => [detail];
 }
 
-// Event for when header selection changes
-class HeaderSelectionChanged extends SalesOrderCoordinatorEvent {
+class ClearOrderDetails extends SalesOrderCoordinatorEvent {}
+
+// State Synchronization Events
+class HeaderStateChanged extends SalesOrderCoordinatorEvent {
   final SalesOrderHeader? selectedHeader;
+  final List<SalesOrderHeader> headers;
 
-  const HeaderSelectionChanged({this.selectedHeader});
-
-  @override
-  List<Object> get props => [selectedHeader ?? ''];
-}
-
-// Event for when details change
-class DetailsChanged extends SalesOrderCoordinatorEvent {
-  final List<SalesOrderDetail> details;
-
-  const DetailsChanged({required this.details});
+  const HeaderStateChanged({this.selectedHeader, required this.headers});
 
   @override
-  List<Object> get props => [details];
+  List<Object?> get props => [selectedHeader, headers];
 }
 
-// Event to reverse stock on void (like Java's soVoid)
-class ReverseStockOnVoidIntegration extends SalesOrderCoordinatorEvent {
-  final SalesOrderHeader header;
-  final int salesOrderId;
-  final bool applyLotMgm;
+class DetailStateChanged extends SalesOrderCoordinatorEvent {
+  final List<SalesOrderDetail> currentDetails;
+  final List<SalesOrderDetail> createItems;
+  final List<SalesOrderDetail> editItems;
 
-  const ReverseStockOnVoidIntegration({
-    required this.header,
-    required this.salesOrderId,
-    required this.applyLotMgm,
+  const DetailStateChanged({
+    required this.currentDetails,
+    required this.createItems,
+    required this.editItems,
   });
 
   @override
-  List<Object> get props => [salesOrderId, applyLotMgm];
+  List<Object?> get props => [currentDetails, createItems, editItems];
+}
+
+// Utility Events
+class ResetCoordinatorState extends SalesOrderCoordinatorEvent {}
+
+class RetryFailedOperation extends SalesOrderCoordinatorEvent {
+  final SalesOrderCoordinatorEvent failedEvent;
+
+  const RetryFailedOperation({required this.failedEvent});
+
+  @override
+  List<Object?> get props => [failedEvent];
 }
