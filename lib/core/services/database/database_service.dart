@@ -935,6 +935,32 @@ CREATE INDEX idx_invoice_history_detail_company ON invoice_history_detail(compan
 ''');
     developer.log('Created table: invoice_history_detail');
 
+    //sales person table
+    await db.execute('''
+CREATE TABLE salespersons (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  uuid TEXT NOT NULL,
+  full_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone_number TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  referral_code TEXT NOT NULL,
+  parent_salesperson_id INTEGER,
+  status TEXT NOT NULL DEFAULT 'ACTIVE',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+
+  UNIQUE (uuid),
+  UNIQUE (email),
+  UNIQUE (phone_number),
+  UNIQUE (referral_code),
+
+  FOREIGN KEY (parent_salesperson_id) REFERENCES salespersons(id)
+);
+
+CREATE INDEX idx_sales_person_company ON salespersons(company);
+''');
+    developer.log('Created table: salespersons');
     //. Create sync_queue table
     await db.execute('''
       CREATE TABLE sync_queue (
@@ -1898,6 +1924,38 @@ CREATE INDEX idx_invoice_history_detail_company ON invoice_history_detail(compan
       await db.insert('user_role', userRole);
     }
     developer.log('Inserted user roles');
+    //insert sales persons
+    final salesPersons = [
+      {
+        'full_name': 'Sales1',
+        'uuid': '1',
+        'email': 'john.doe@gmail.com',
+        'phone_number': '12345678900',
+        'password_hash': argon2Hash,
+        'referral_code': 'ref001',
+        'parent_salesperson_id': 1,
+        'status': 'ACTIVE',
+        'created_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      {
+        'full_name': 'Sales2',
+        'uuid': '2',
+        'email': 'jane.doe@gmail.com',
+        'phone_number': '12345678901',
+        'password_hash': argon2Hash,
+        'referral_code': 'ref002',
+        'parent_salesperson_id': 1,
+        'status': 'ACTIVE',
+        'created_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+    ];
+
+    for (final salesPerson in salesPersons) {
+      await db.insert('salespersons', salesPerson);
+    }
+    developer.log('Inserted sales persons');
 
     await db.execute('''
   CREATE TABLE customer_table (
