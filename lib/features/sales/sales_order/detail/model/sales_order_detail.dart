@@ -31,6 +31,9 @@ class SalesOrderDetail extends Equatable {
   final ItemInBranchModel? itemBranch;
   final UdcDetails? uom;
   final SalesOrderHeader? orderHeader;
+  final int? quantityAvailable;
+  final int? lotQuantityAvailable;
+  final DateTime? lotExpiration;
 
   const SalesOrderDetail({
     this.id,
@@ -54,6 +57,9 @@ class SalesOrderDetail extends Equatable {
     this.uom,
     this.orderHeader,
     this.tempId,
+    this.quantityAvailable,
+    this.lotQuantityAvailable,
+    this.lotExpiration,
   });
 
   // ✅ Create object from SQLite row (can include JOIN fields)
@@ -74,28 +80,58 @@ class SalesOrderDetail extends Equatable {
       unitCost: (map['unit_cost'] as num?)?.toDouble(),
       amountCost: (map['amount_cost'] as num?)?.toDouble(),
       unitOfMeasure: map['unit_of_measure'] as int?,
+      quantityAvailable: map['quantity_available'] as int?,
+      lotQuantityAvailable: map['lot_quantity_available'] as int?,
+      lotExpiration: map['lot_expiration'] as DateTime?,
+
       tempId: map['temp_id'] as int?,
 
       // 👇 Joined objects (optional)
-      item: map['item_name'] != null
-          ? ItemEntryModel.fromMap({
-              'id': map['items_table_id'],
-              'item_name': map['item_name'],
-              'item_code': map['item_code'],
-            })
+      item: map['items_table_id'] != null
+          ? ItemEntryModel(
+              id: map['items_table_id'],
+              itemsId: map['items_id'],
+              itemDescription: map['item_description'],
+              unitOfMeasure: map['unit_of_measure'],
+              unitPrice: map['unit_price'],
+              taxable: map['taxable'],
+              barcode: map['barcode'],
+              company: map['company'],
+              marginRate: map['margin_rate'],
+              marginType: map['margin_type'],
+              reorderPoint: map['reorder_point'],
+              referenceId: map['reference_id'],
+              tempId: map['temp_id'],
+              validCell: map['valid_cell'],
+              unitOfMeasureDescription: map['unit_of_measure_description'],
+            )
           : null,
-      lot: map['lot_batch_number_supplier'] != null
-          ? LotMaster.fromMap({
-              'id': map['lot_number'],
-              'batch_number_supplier': map['lot_batch_number_supplier'],
-            })
+      lot: map['lot_number'] != null
+          ? LotMaster(
+              id: map['lot_number'],
+              batchNumberSupplier: map['batch_number_supplier'],
+              itemNumber: map['item_number'],
+              branch: map['branch'],
+              location: map['location'],
+              lotStatus: map['lot_status'],
+              dateEffective: map['date_effective'],
+              dateExpiration: map['date_expiration'],
+              dateReceived: map['date_received'],
+              company: map['company'],
+              statusCode: map['status_code'],
+              statusDescription: map['status_description'],
+              quantityAvailable: map['quantity_available'],
+            )
           : null,
-      uom: map['uom_code'] != null
-          ? UdcDetails.fromJson({
-              'id': map['unit_of_measure'],
-              'code': map['uom_code'],
-              'description': map['uom_description'],
-            })
+      itemBranch: map['item_in_branch'] != null
+          ? ItemInBranchModel(
+              id: map['item_in_branch'],
+              itemNumber: map['item_number'],
+              branch: map['branch'],
+              quantityAvailable: map['quantity_available'],
+              company: map['company'],
+              unitOfMeasure: map['unit_of_measure'],
+            )
           : null,
     );
   }
@@ -145,6 +181,9 @@ class SalesOrderDetail extends Equatable {
     ItemInBranchModel? itemBranch,
     UdcDetails? uom,
     SalesOrderHeader? orderHeader,
+    int? quantityAvailable,
+    int? lotQuantityAvailable,
+    DateTime? lotExpiration,
     int? tempId,
   }) {
     return SalesOrderDetail(
@@ -168,6 +207,9 @@ class SalesOrderDetail extends Equatable {
       itemBranch: itemBranch ?? this.itemBranch,
       uom: uom ?? this.uom,
       orderHeader: orderHeader ?? this.orderHeader,
+      quantityAvailable: quantityAvailable ?? this.quantityAvailable,
+      lotQuantityAvailable: lotQuantityAvailable ?? this.lotQuantityAvailable,
+      lotExpiration: lotExpiration ?? this.lotExpiration,
       tempId: tempId ?? this.tempId,
     );
   }
@@ -194,6 +236,10 @@ class SalesOrderDetail extends Equatable {
     itemBranch,
     uom,
     orderHeader,
+    quantityAvailable,
+    lotQuantityAvailable,
+    lotExpiration,
+    tempId,
   ];
 }
 

@@ -123,8 +123,9 @@ class Customer extends Equatable {
     tempId: null,
   );
 
-  bool get isEmpty => id == 'empty'; // Use this for checking
-  bool get isNotEmpty => id != 'empty';
+  // Proper empty checks: consider missing id or no name as empty
+  bool get isEmpty => id == null || id == 0 || (customerName?.isEmpty ?? true);
+  bool get isNotEmpty => !isEmpty;
 
   @override
   bool operator ==(Object other) {

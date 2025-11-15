@@ -348,9 +348,9 @@ class SalesOrderHeaderRepository {
       '''
       SELECT MAX(CAST(fs_number AS INTEGER)) as max_fs 
       FROM sales_order_header 
-      WHERE company = ? AND branch_value = ?
+      WHERE company = ? 
     ''',
-      [companyId, branchId],
+      [companyId],
     );
 
     final maxFs = result.first['max_fs'] as int?;

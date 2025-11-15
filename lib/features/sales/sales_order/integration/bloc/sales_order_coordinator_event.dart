@@ -103,17 +103,19 @@ class SyncHeaderToDetails extends SalesOrderCoordinatorEvent {
 // Preparation & Initialization
 class PrepareNewSalesOrder extends SalesOrderCoordinatorEvent {
   final int companyId;
+  final int branchId;
   final int employeeId;
   final Customer? defaultCustomer;
 
   const PrepareNewSalesOrder({
     required this.companyId,
+    required this.branchId,
     required this.employeeId,
     this.defaultCustomer,
   });
 
   @override
-  List<Object?> get props => [companyId, employeeId, defaultCustomer];
+  List<Object?> get props => [companyId, branchId, employeeId, defaultCustomer];
 }
 
 class LoadCompleteSalesOrder extends SalesOrderCoordinatorEvent {

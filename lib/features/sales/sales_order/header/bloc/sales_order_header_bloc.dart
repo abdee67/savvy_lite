@@ -44,7 +44,7 @@ class SalesOrderHeaderBloc
         add(
           SalesOrderHeaderInitialized(
             companyId: authState.companyId!,
-            employeeId: authState.userId!,
+            employeeId: authState.userId!.id,
           ),
         );
       }
@@ -926,6 +926,10 @@ class SalesOrderHeaderBloc
       final nextOrderNumber = await repository.getNextOrderNumber(
         event.companyId,
       );
+      final nextFsNumber = await repository.generateNextFsNumber(
+        event.companyId,
+        event.branchId,
+      );
 
       // Get default order type from UDC
       final defaultOrderType = await _getDefaultOrderType();
@@ -941,6 +945,7 @@ class SalesOrderHeaderBloc
         orderNumber: nextOrderNumber,
         paymentMethod: 'Cash',
         orderType: defaultOrderType?.id,
+        fsNumber: nextFsNumber,
         // Set default tax settings from system constants
         tax: 0.0,
         withholdAmount: 0.0,
@@ -954,33 +959,27 @@ class SalesOrderHeaderBloc
       if (defaultCustomer != null) {
         add(
           UpdateCustomerInfo(
-            customer: defaultCustomer,
+            customer: defaultCustomer.first,
             currentHeader: newHeader,
           ),
         );
       }
-
-      // Get employee details for sales representative
-      final employee = await employeesRepository.getEmployeeById(
-        event.employeeId,
-        event.companyId,
-      );
-      final salesRepresent = employee != null
-          ? '${employee.nameFirst} ${employee.nameLast}'.trim()
-          : null;
-
-      final headerWithSalesRep = newHeader.copyWith(employee: employee);
-
       emit(
         state.copyWith(
           status: SalesOrderHeaderStatus.loaded,
-          createItems: [headerWithSalesRep],
-          selected: headerWithSalesRep,
+          createItems: [newHeader],
+          selected: newHeader,
           nextOrderNumber: nextOrderNumber,
           paymentType: 'Cash',
           applyWH: systemConstantBloc.systemConstantService
               .shouldApplyWithholding(0.0),
+          defaultCustomer: defaultCustomer,
+          successmessage:
+              'header defaultCustomer: company=${event.companyId}, count=${defaultCustomer?.length ?? 0}',
         ),
+      );
+      print(
+        'header defaultCustomer: company=${event.companyId}, count=${defaultCustomer?.length ?? 0}',
       );
     } catch (e) {
       emit(state.errorState('Failed to prepare create: $e'));
@@ -1049,7 +1048,7 @@ class SalesOrderHeaderBloc
       if (defaultCustomer != null) {
         add(
           UpdateCustomerInfo(
-            customer: defaultCustomer,
+            customer: defaultCustomer.first,
             currentHeader: state.selected,
           ),
         );

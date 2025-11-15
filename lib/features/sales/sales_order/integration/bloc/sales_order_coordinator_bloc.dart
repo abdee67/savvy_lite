@@ -349,9 +349,10 @@ class SalesOrderCoordinatorBloc
       headerBloc.add(ApplyDiscount(discountAmount: event.discountAmount!));
     }
 
-    // Recalculate totals
-    add(const CalculateCompleteOrderTotals());
-
+    if (detailBloc.state.createItems.isNotEmpty) {
+      // Recalculate totals
+      add(const CalculateCompleteOrderTotals());
+    }
     emit(
       state.copyWith(
         lastSyncTime: DateTime.now(),
@@ -418,6 +419,7 @@ class SalesOrderCoordinatorBloc
       headerBloc.add(
         PrepareCreateSalesOrderHeader(
           companyId: event.companyId,
+          branchId: event.branchId,
           employeeId: event.employeeId,
         ),
       );
@@ -527,7 +529,9 @@ class SalesOrderCoordinatorBloc
 
     // Auto-validate stock and recalculate totals
     add(const ValidateCompleteStockAvailability());
-    add(const CalculateCompleteOrderTotals());
+    if (detailBloc.state.createItems.isNotEmpty) {
+      add(const CalculateCompleteOrderTotals());
+    }
   }
 
   void _onUpdateDetailInOrder(
@@ -555,7 +559,9 @@ class SalesOrderCoordinatorBloc
     );
 
     add(const ValidateCompleteStockAvailability());
-    add(const CalculateCompleteOrderTotals());
+    if (detailBloc.state.createItems.isNotEmpty) {
+      add(const CalculateCompleteOrderTotals());
+    }
   }
 
   void _onRemoveDetailFromOrder(
@@ -581,7 +587,9 @@ class SalesOrderCoordinatorBloc
 
     if (updatedDetails.isNotEmpty) {
       add(const ValidateCompleteStockAvailability());
-      add(const CalculateCompleteOrderTotals());
+      if (detailBloc.state.createItems.isNotEmpty) {
+        add(const CalculateCompleteOrderTotals());
+      }
     }
   }
 
@@ -608,7 +616,12 @@ class SalesOrderCoordinatorBloc
     Emitter<SalesOrderCoordinatorState> emit,
   ) {
     if (event.selectedHeader != state.currentHeader) {
-      emit(state.copyWith(currentHeader: event.selectedHeader));
+      emit(
+        state.copyWith(
+          currentHeader: event.selectedHeader,
+          defaultCustomer: headerBloc.state.defaultCustomer,
+        ),
+      );
 
       // If header changed and we have details, sync them
       if (event.selectedHeader != null && state.currentDetails.isNotEmpty) {

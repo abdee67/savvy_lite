@@ -30,7 +30,7 @@ class CustomerRepository {
   }
 
   // Get default customer (where defaults_value = 'Y')
-  Future<Customer?> getDefaultCustomer(int companyId) async {
+  Future<List<Customer>?> getDefaultCustomer(int companyId) async {
     final db = await databaseService.database;
     final customers = await db.rawQuery(
       '''
@@ -39,7 +39,9 @@ class CustomerRepository {
       ''',
       [companyId],
     );
-    return customers.isNotEmpty ? Customer.fromMap(customers.first) : null;
+    return customers.isNotEmpty
+        ? customers.map((e) => Customer.fromMap(e)).toList()
+        : null;
   }
 
   // Create new customer
@@ -129,12 +131,12 @@ class CustomerRepository {
     // If setting as default, unset previous default
     if (newCustomer.defaultsValue == 'Y') {
       final currentDefault = await getDefaultCustomer(companyId);
-      if (currentDefault != null && currentDefault.id != newCustomer.id) {
+      if (currentDefault != null && currentDefault.isNotEmpty) {
         await db.update(
           'customer_table',
           {'defaults_value': 'N'},
           where: 'id = ? AND company = ?',
-          whereArgs: [currentDefault.id, companyId],
+          whereArgs: [currentDefault.first.id, companyId],
         );
       }
     }
@@ -170,6 +172,6 @@ class CustomerRepository {
     if (customer.defaultsValue != 'Y') return true;
 
     final currentDefault = await getDefaultCustomer(companyId);
-    return currentDefault == null || currentDefault.id == customer.id;
+    return currentDefault == null || currentDefault.isNotEmpty;
   }
 }

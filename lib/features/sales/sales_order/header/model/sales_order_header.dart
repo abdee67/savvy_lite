@@ -3,6 +3,7 @@ import 'package:savvy_stock/features/admin/employees/models/employee_model.dart'
 import 'package:savvy_stock/features/company/models/company_model.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class SalesOrderHeader extends Equatable {
@@ -162,7 +163,16 @@ class SalesOrderHeader extends Equatable {
             })
           : null,
       salesOrderDetail: map['sales_order_detail'] != null
-          ? SalesOrderDetail.fromMap({'id': map['sales_order_detail_id']})
+          ? SalesOrderDetail(
+            id: map['sales_order_detail_id'],
+            itemBranch: map['item_branch'] != null
+                ? ItemInBranchModel(
+                    id: map['item_branch'],
+                    itemNumber: map['item_number'],
+                    branch: map['branch'],
+                  )
+                : null,
+            )
           : null,
     );
   }

@@ -1,5 +1,6 @@
 // features/sales/sales_order/coordinator/bloc/sales_order_coordinator_state.dart
 import 'package:equatable/equatable.dart';
+import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 
@@ -43,6 +44,7 @@ class SalesOrderCoordinatorState extends Equatable {
   final double? lastDiscountAmount;
   final double? lastTotalAmount;
   final Set<String> pendingOperations;
+  final List<Customer>? defaultCustomer;
 
   const SalesOrderCoordinatorState({
     this.status = SalesOrderCoordinatorStatus.initial,
@@ -64,6 +66,7 @@ class SalesOrderCoordinatorState extends Equatable {
     this.lastDiscountAmount,
     this.lastTotalAmount,
     this.pendingOperations = const {},
+    this.defaultCustomer,
   });
 
   @override
@@ -87,6 +90,7 @@ class SalesOrderCoordinatorState extends Equatable {
     lastDiscountAmount,
     lastTotalAmount,
     pendingOperations,
+    defaultCustomer,
   ];
 
   SalesOrderCoordinatorState copyWith({
@@ -109,6 +113,7 @@ class SalesOrderCoordinatorState extends Equatable {
     double? lastDiscountAmount,
     double? lastTotalAmount,
     Set<String>? pendingOperations,
+    List<Customer>? defaultCustomer,
   }) {
     return SalesOrderCoordinatorState(
       status: status ?? this.status,
@@ -132,6 +137,7 @@ class SalesOrderCoordinatorState extends Equatable {
       lastDiscountAmount: lastDiscountAmount ?? this.lastDiscountAmount,
       lastTotalAmount: lastTotalAmount ?? this.lastTotalAmount,
       pendingOperations: pendingOperations ?? this.pendingOperations,
+      defaultCustomer: defaultCustomer ?? this.defaultCustomer,
     );
   }
 

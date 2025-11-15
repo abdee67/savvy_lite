@@ -382,9 +382,9 @@ class SalesOrderDetailRepository {
   // Get extended price sum for a sales order header
   Future<double> getExtendedPriceSumByHeaderId(int headerId) async {
     final db = await databaseService.database;
-    final result = await db.query(
+    final result = await db.rawQuery(
       'SELECT SUM(extended_price) as total FROM sales_order_details WHERE sales_order_header_id = ?',
-      whereArgs: [headerId],
+      [headerId],
     );
 
     final total = result.first['total'] as double?;
@@ -397,7 +397,7 @@ class SalesOrderDetailRepository {
     int branchId,
   ) async {
     final db = await databaseService.database;
-    final result = await db.query(
+    final result = await db.rawQuery(
       '''
       SELECT SUM(sod.quantity) as total_quantity
       FROM sales_order_details sod
@@ -406,7 +406,7 @@ class SalesOrderDetailRepository {
       WHERE sod.items_table_id = ? AND iib.branch = ?
         AND soh.void_indicator IS NULL
     ''',
-      whereArgs: [itemsTableId, branchId],
+      [itemsTableId, branchId],
     );
 
     final total = result.first['total_quantity'] as double?;
@@ -418,23 +418,21 @@ class SalesOrderDetailRepository {
     int companyId,
   ) async {
     final query = '''
-      SELECT sod.*
-             it.item_descripton as item_description,
-             it.barcode as item_barcode,
-             ib.quantity_available as branch_quantity,
-             lm.quantity_available as lot_quantity,
-             lm.date_expiration as lot_expiration,
-             ud.description1 as uom_description
-      FROM sales_order_details sod
-      LEFT JOIN items_table it ON sod.items_table_id = it.id
-      LEFT JOIN items_in_branch ib ON sod.item_in_branch = ib.id
-      LEFT JOIN lot_master lm ON sod.lot_number = lm.id
-      LEFT JOIN udc_details ud ON sod.unit_of_measure = ud.id
-      WHERE sod.company = ?
-    ''';
+    SELECT sod.*, 
+           it.item_description as item_description,
+           it.barcode as barcode,
+           ib.quantity_available as quantity_available,
+           lm.quantity_available as lot_quantity_available,
+           lm.date_expiration as lot_expiration
+    FROM sales_order_details sod
+    LEFT JOIN items_table it ON sod.items_table_id = it.id
+    LEFT JOIN items_in_branch ib ON sod.item_in_branch = ib.id
+    LEFT JOIN lot_master lm ON sod.lot_number = lm.id
+    WHERE sod.company = ?
+  ''';
 
     final db = await databaseService.database;
-    final maps = await db.query(query, whereArgs: [companyId]);
+    final maps = await db.rawQuery(query, [companyId]);
 
     // Process the results to create SalesOrderDetail with related objects
     // This would need custom mapping based on your specific needs
@@ -457,7 +455,7 @@ class SalesOrderDetailRepository {
     ''';
 
     final db = await databaseService.database;
-    final result = await db.query(query, whereArgs: [barcode, branchId]);
+    final result = await db.rawQuery(query, [barcode, branchId]);
 
     // Convert to ItemsInBranch objects
     return List.generate(result.length, (i) {
@@ -480,10 +478,7 @@ class SalesOrderDetailRepository {
     ''';
 
     final db = await databaseService.database;
-    final result = await db.query(
-      query,
-      whereArgs: [itemId, branchId, companyId],
-    );
+    final result = await db.rawQuery(query, [itemId, branchId, companyId]);
 
     return List.generate(result.length, (i) {
       final data = result[i];

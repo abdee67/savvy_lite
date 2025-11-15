@@ -258,6 +258,7 @@ class SalesOrderIntegrationService {
   Future<void> prepareNewSalesOrder({
     required int companyId,
     required int employeeId,
+    required int branchId,
     Customer? defaultCustomer,
   }) async {
     try {
@@ -265,6 +266,7 @@ class SalesOrderIntegrationService {
       headerBloc.add(
         PrepareCreateSalesOrderHeader(
           companyId: companyId,
+          branchId: branchId,
           employeeId: employeeId,
         ),
       );
@@ -654,9 +656,6 @@ class SalesOrderIntegrationService {
 
     // Verify financial calculations are complete
     final headerState = headerBloc.state;
-    if (headerState.totalAmount == null) {
-      throw Exception('Financial calculations incomplete');
-    }
   }
 
   Future<void> _validateVoidOperation(
@@ -701,8 +700,7 @@ class SalesOrderIntegrationService {
     final completer = Completer<void>();
     late StreamSubscription subscription;
     subscription = headerBloc.stream.listen((headerState) {
-      if (headerState.status == SalesOrderHeaderStatus.loaded &&
-          headerState.totalAmount != null) {
+      if (headerState.status == SalesOrderHeaderStatus.loaded) {
         if (!completer.isCompleted) {
           completer.complete();
           subscription.cancel();
@@ -849,7 +847,7 @@ class SalesOrderIntegrationService {
 
     // Additional validation of calculated totals
     final headerState = headerBloc.state;
-    if (headerState.totalAmount == null || headerState.totalAmount <= 0) {
+    if (headerState.totalAmount <= 0) {
       throw Exception('Invalid total amount calculated');
     }
   }

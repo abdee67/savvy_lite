@@ -301,14 +301,16 @@ class SearchSalesOrders extends SalesOrderHeaderEvent {
 
 class PrepareCreateSalesOrderHeader extends SalesOrderHeaderEvent {
   final int companyId;
+  final int branchId;
   final int employeeId;
 
   const PrepareCreateSalesOrderHeader({
     required this.companyId,
+    required this.branchId,
     required this.employeeId,
   });
   @override
-  List<Object?> get props => [companyId, employeeId];
+  List<Object?> get props => [companyId, branchId, employeeId];
 }
 
 class RemoveSalesOrder extends SalesOrderHeaderEvent {

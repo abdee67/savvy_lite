@@ -9,43 +9,64 @@ import 'package:savvy_stock/features/sales/customer/blocs/customer_event.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_state.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/customer/widget/customer_section.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_person.model.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
 
 class CustomerInfoScreen extends StatelessWidget {
   final AuthBloc authBloc;
+
   const CustomerInfoScreen({super.key, required this.authBloc});
 
   @override
   Widget build(BuildContext context) {
-    // Ensure customers are loaded (once per screen show)
     final companyId = authBloc.state.companyId;
+
     if (companyId != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.microtask(() {
         context.read<CustomerBloc>().add(LoadCustomers(companyId));
       });
     }
 
-    return const CustomerInfoScreenContent();
+    return CustomerInfoScreenContent(authBloc: authBloc);
   }
 }
 
 class CustomerInfoScreenContent extends StatefulWidget {
-  const CustomerInfoScreenContent({super.key});
+  final AuthBloc authBloc;
+
+  const CustomerInfoScreenContent({super.key, required this.authBloc});
 
   @override
+
   State<CustomerInfoScreenContent> createState() =>
       _CustomerInfoScreenContentState();
 }
 
 class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
+  static const _containerHeight = 20.0;
+  static const _containerWidth = 20.0;
+  static const _circularProgressStrokeWidth = 2.0;
+  static const _elevatedButtonBorderRadius = 20.0;
+  static const _horizontalPadding32 = 32.0;
+  static const _verticalPadding12 = 12.0;
+  static const _sizedBoxHeight16 = 16.0;
+  static const _sizedBoxHeight8 = 8.0;
+  static const _sizedBoxHeight20 = 20.0;
+  static const _sizedBoxWidth16 = 16.0;
+  static const _appBarFontSize = 25.0;
+  static const _titleFontSize = 16.0;
+  static const _detailLabelWidth = 100.0;
+  static const _cardElevation = 2.0;
+  static const _cardPadding = 16.0;
+  static const _verticalDetailPadding = 4.0;
+
   bool _isInitialized = false;
   bool _isOrderPrepared = false;
-  bool _areCustomersLoaded = false;
-  late TextEditingController _salesRefController;
-  late TextEditingController _orderDateController;
-  late TextEditingController _salesPersonController;
+  late final TextEditingController _salesRefController;
+  late final TextEditingController _orderDateController;
+  late final TextEditingController _salesPersonController;
 
   Customer? _selectedBillToCustomer;
   Customer? _selectedShipToCustomer;
@@ -57,73 +78,27 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
     _orderDateController = TextEditingController();
     _salesPersonController = TextEditingController();
 
-    // Initialize order preparation after widgets are built
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeOrderPreparation();
-    });
+    Future.microtask(_initializeOrderPreparation);
   }
 
   void _initializeOrderPreparation() {
-    final authState = context.read<AuthBloc>().state;
-    if (authState.companyId != null && authState.userId != null) {
+    final companyId = widget.authBloc.state.companyId;
+    final userId = widget.authBloc.state.userId?.id;
+    final branchId = widget.authBloc.state.userId?.branch;
+
+    if (companyId != null && userId != null && branchId != null) {
       context.read<SalesOrderCoordinatorBloc>().add(
         PrepareNewSalesOrder(
-          companyId: authState.companyId!,
-          employeeId: authState.userId!,
+          companyId: companyId,
+          employeeId: userId,
+          branchId: branchId,
         ),
       );
     }
   }
 
-  // Method to auto-select default customers when both order and customers are ready
-  void _autoSelectDefaultCustomers(
-    BuildContext context,
-    CustomerState customerState,
-  ) {
-    if (!_isInitialized && _isOrderPrepared && _areCustomersLoaded) {
-      _isInitialized = true;
-
-      // Find default customer
-      final defaultCustomers = customerState.customers
-          .where((customer) => customer.defaultsValue == 'Y')
-          .toList();
-
-      if (defaultCustomers.isNotEmpty) {
-        final defaultCustomer = defaultCustomers.first;
-
-        // Set both bill to and ship to as default customer initially
-        _selectedBillToCustomer = defaultCustomer;
-        _selectedShipToCustomer = defaultCustomer;
-
-        // Update coordinator bloc with default customer
-        context.read<SalesOrderCoordinatorBloc>().add(
-          SyncCustomerToOrder(customer: defaultCustomer),
-        );
-
-        // Update customer bloc selections
-        context.read<CustomerBloc>().add(SelectBillToCustomer(defaultCustomer));
-        context.read<CustomerBloc>().add(SelectShipToCustomer(defaultCustomer));
-
-        // Update UI
-        if (mounted) {
-          setState(() {});
-        }
-
-        // Pre-fill form fields with default customer data
-        _prefillCustomerData(defaultCustomer);
-
-        print(
-          'Default customer automatically selected: ${defaultCustomer.customerName}',
-        );
-      } else {
-        print('No default customer found');
-      }
-    }
-  }
-
-  void _prefillCustomerData(Customer customer) {
-    _salesPersonController.text = customer.customerName ?? '';
-    // You can pre-fill other fields as needed
+  void _prefillCustomerData(Salesperson salesPerson) {
+    _salesPersonController.text = salesPerson.fullName;
   }
 
   @override
@@ -138,100 +113,16 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
   Widget build(BuildContext context) {
     return MultiBlocListener(
       listeners: [
-        // Listen for customer state changes
-        BlocListener<CustomerBloc, CustomerState>(
-          listener: (context, customerState) {
-            if (customerState.status == CustomerStatus.loaded) {
-              setState(() {
-                _areCustomersLoaded = true;
-              });
-              _autoSelectDefaultCustomers(context, customerState);
-            }
-          },
-        ),
-        // Listen for coordinator state changes
         BlocListener<SalesOrderCoordinatorBloc, SalesOrderCoordinatorState>(
-          listener: (context, coordinatorState) {
-            // Handle order preparation completion
-            if (coordinatorState.status ==
-                    SalesOrderCoordinatorStatus.success &&
-                coordinatorState.lastOperation?.contains('prepared') == true) {
-              setState(() {
-                _isOrderPrepared = true;
-              });
-
-              // Trigger auto-selection if customers are already loaded
-              final customerState = context.read<CustomerBloc>().state;
-              if (customerState.status == CustomerStatus.loaded) {
-                _autoSelectDefaultCustomers(context, customerState);
-              }
-            }
-
-            // Handle errors
-            if (coordinatorState.status == SalesOrderCoordinatorStatus.error) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(coordinatorState.error!),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-
-            // Handle successful operations
-            if (coordinatorState.status ==
-                SalesOrderCoordinatorStatus.success) {
-              if (coordinatorState.lastOperation?.contains('prepared') ==
-                  true) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('New sales order prepared successfully'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            }
-          },
+          listenWhen: (previous, current) =>
+              previous.status != current.status ||
+              previous.lastOperation != current.lastOperation,
+          listener: _handleCoordinatorStateChange,
         ),
       ],
       child: Scaffold(
         backgroundColor: Colors.white,
-        appBar: AppBar(
-          title: const Text(
-            'Customer Information',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 25,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          backgroundColor: const Color(0xFF155888),
-          elevation: 0,
-          actions: [
-            // Show loading indicator when preparing order
-            BlocBuilder<SalesOrderCoordinatorBloc, SalesOrderCoordinatorState>(
-              builder: (context, state) {
-                if (state.pendingOperations.contains('prepare_new_order')) {
-                  return const Padding(
-                    padding: EdgeInsets.only(right: 16.0),
-                    child: Center(
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }
-                return const SizedBox();
-              },
-            ),
-          ],
-        ),
+        appBar: _buildAppBar(context),
         body: BlocBuilder<CustomerBloc, CustomerState>(
           builder: (context, customerState) {
             return BlocBuilder<
@@ -239,6 +130,16 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
               SalesOrderCoordinatorState
             >(
               builder: (context, coordinatorState) {
+                // Use post-frame callback to initialize default customer AFTER build
+                if (!_isInitialized &&
+                    coordinatorState.defaultCustomer != null &&
+                    coordinatorState.defaultCustomer!.isNotEmpty &&
+                    customerState.customers.isNotEmpty) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _initializeDefaultCustomer(coordinatorState, customerState);
+                  });
+                }
+
                 final isValid =
                     _selectedBillToCustomer != null &&
                     _selectedShipToCustomer != null &&
@@ -246,126 +147,7 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
 
                 return Stack(
                   children: [
-                    SingleChildScrollView(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Show loading state while preparing order
-                          if (coordinatorState.pendingOperations.contains(
-                            'prepare_new_order',
-                          ))
-                            const _OrderPreparationLoader(),
-
-                          // Customer Bill To section
-                          CustomerSection(
-                            authBloc: context.read<AuthBloc>(),
-                            title: 'Customer Bill To:',
-                            selectedCustomer:
-                                _selectedBillToCustomer ?? Customer.empty,
-                            customers: customerState.customers,
-                            onCustomerSelected: (customer) {
-                              setState(() {
-                                _selectedBillToCustomer = customer;
-                              });
-
-                              // Update coordinator with selected customer
-                              context.read<SalesOrderCoordinatorBloc>().add(
-                                SyncCustomerToOrder(customer: customer),
-                              );
-
-                              // Update customer bloc
-                              context.read<CustomerBloc>().add(
-                                SelectBillToCustomer(customer),
-                              );
-
-                              // If ship to is not set or same as previous bill to, update it too
-                              if (_selectedShipToCustomer == null ||
-                                  _selectedShipToCustomer?.id ==
-                                      _selectedBillToCustomer?.id) {
-                                setState(() {
-                                  _selectedShipToCustomer = customer;
-                                });
-                                context.read<CustomerBloc>().add(
-                                  SelectShipToCustomer(customer),
-                                );
-                              }
-
-                              print(
-                                'Bill To customer selected: ${customer.customerName}',
-                              );
-                            },
-                            showAddButton: true,
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Customer Ship To section
-                          CustomerSection(
-                            authBloc: context.read<AuthBloc>(),
-                            title: 'Customer Ship To:',
-                            selectedCustomer:
-                                _selectedShipToCustomer ?? Customer.empty,
-                            customers: customerState.customers,
-                            onCustomerSelected: (customer) {
-                              setState(() {
-                                _selectedShipToCustomer = customer;
-                              });
-
-                              // Update customer bloc
-                              context.read<CustomerBloc>().add(
-                                SelectShipToCustomer(customer),
-                              );
-
-                              print(
-                                'Ship To customer selected: ${customer.customerName}',
-                              );
-                            },
-                            showAddButton: false,
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Order Information Section
-                          const Text(
-                            'Order Information:',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-
-                          // Sales Reference (auto-generated from coordinator)
-                          _buildSalesReferenceField(coordinatorState),
-
-                          const SizedBox(height: 8),
-
-                          // Order Date (auto-filled with current date)
-                          _buildOrderDateField(coordinatorState),
-
-                          const SizedBox(height: 8),
-
-                          // Sales Person (auto-filled from auth user)
-                          _buildSalesPersonField(coordinatorState),
-
-                          const SizedBox(height: 20),
-
-                          // Customer Details Display
-                          if (_selectedBillToCustomer != null)
-                            _buildCustomerDetails(_selectedBillToCustomer!),
-
-                          const SizedBox(height: 20),
-
-                          // Next button
-                          _buildNextButton(context, isValid, coordinatorState),
-
-                          const SizedBox(height: 20),
-                        ],
-                      ),
-                    ),
-
-                    // Show overlay when order is being prepared
+                    _buildContent(coordinatorState, isValid, customerState),
                     if (coordinatorState.pendingOperations.contains(
                       'prepare_new_order',
                     ))
@@ -380,6 +162,235 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
     );
   }
 
+  void _handleCoordinatorStateChange(
+    BuildContext context,
+    SalesOrderCoordinatorState coordinatorState,
+  ) {
+    // Handle order preparation completion
+    if (coordinatorState.status == SalesOrderCoordinatorStatus.success &&
+        coordinatorState.lastOperation?.contains('prepared') == true) {
+      setState(() {
+        _isOrderPrepared = true;
+      });
+    }
+
+    // Handle errors
+    if (coordinatorState.status == SalesOrderCoordinatorStatus.error) {
+      _showErrorSnackBar(context, coordinatorState.error!);
+    }
+
+    // Handle successful operations
+    if (coordinatorState.status == SalesOrderCoordinatorStatus.success &&
+        coordinatorState.lastOperation?.contains('prepared') == true) {
+      _showSuccessSnackBar(context, 'New sales order prepared successfully');
+    }
+  }
+
+  void _initializeDefaultCustomer(
+    SalesOrderCoordinatorState state,
+    CustomerState customerState,
+  ) {
+    if (_isInitialized) return;
+
+    final loaded = customerState.customers;
+    if (loaded.isEmpty) return;
+
+    Customer? defaultCustomer;
+
+    final defaults = state.defaultCustomer;
+    if (defaults != null && defaults.isNotEmpty) {
+      defaultCustomer = defaults.first;
+    }
+
+    if (defaultCustomer == null) {
+      try {
+        defaultCustomer = loaded.firstWhere(
+          (c) => c.defaultsValue == 'Y',
+          orElse: () => loaded.first,
+        );
+      } catch (_) {
+        defaultCustomer = loaded.first;
+      }
+    }
+
+    if (defaultCustomer == null) return;
+
+    Customer billToMatch = defaultCustomer;
+    if (defaultCustomer.id != null) {
+      try {
+        billToMatch = loaded.firstWhere(
+          (c) => c.id == defaultCustomer!.id,
+          orElse: () => defaultCustomer!,
+        );
+      } catch (_) {
+        billToMatch = defaultCustomer!;
+      }
+    }
+
+    setState(() {
+      _selectedBillToCustomer = billToMatch;
+      _selectedShipToCustomer = billToMatch;
+      _isInitialized = true;
+    });
+
+    // _prefillCustomerData(billToMatch);
+
+    // Dispatch events without try-catch, let errors propagate naturally
+    context.read<CustomerBloc>().add(SelectBillToCustomer(billToMatch));
+    context.read<CustomerBloc>().add(SelectShipToCustomer(billToMatch));
+
+    context.read<SalesOrderCoordinatorBloc>().add(
+      SyncCustomerToOrder(customer: billToMatch),
+    );
+  }
+
+  AppBar _buildAppBar(BuildContext context) {
+    return AppBar(
+      title: const Text(
+        'Customer Information',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: _appBarFontSize,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      backgroundColor: const Color(0xFF155888),
+      elevation: 0,
+      actions: [
+        BlocSelector<
+          SalesOrderCoordinatorBloc,
+          SalesOrderCoordinatorState,
+          bool
+        >(
+          selector: (state) =>
+              state.pendingOperations.contains('prepare_new_order'),
+          builder: (context, isLoading) {
+            if (!isLoading) return const SizedBox.shrink();
+
+            return const Padding(
+              padding: EdgeInsets.only(right: 16.0),
+              child: Center(
+                child: SizedBox(
+                  width: _containerWidth,
+                  height: _containerHeight,
+                  child: CircularProgressIndicator(
+                    strokeWidth: _circularProgressStrokeWidth,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContent(
+    SalesOrderCoordinatorState coordinatorState,
+    bool isValid,
+    CustomerState customerState,
+  ) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (coordinatorState.pendingOperations.contains('prepare_new_order'))
+            const _OrderPreparationLoader(),
+
+          _buildCustomerSections(coordinatorState, customerState),
+          const SizedBox(height: _sizedBoxHeight16),
+          _buildOrderInformationSection(coordinatorState),
+          const SizedBox(height: _sizedBoxHeight20),
+          if (_selectedBillToCustomer != null)
+            _buildCustomerDetails(_selectedBillToCustomer!),
+          const SizedBox(height: _sizedBoxHeight20),
+          _buildNextButton(isValid, coordinatorState),
+          const SizedBox(height: _sizedBoxHeight20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCustomerSections(
+    SalesOrderCoordinatorState coordinatorState,
+    CustomerState customerState,
+  ) {
+    return Column(
+      children: [
+        CustomerSection(
+          authBloc: context.read<AuthBloc>(),
+          title: 'Customer Bill To:',
+          selectedCustomer: _selectedBillToCustomer ?? Customer.empty,
+          customers: customerState.customers,
+          onCustomerSelected: _handleBillToCustomerSelected,
+          showAddButton: true,
+        ),
+        const SizedBox(height: _sizedBoxHeight16),
+        CustomerSection(
+          authBloc: context.read<AuthBloc>(),
+          title: 'Customer Ship To:',
+          selectedCustomer: _selectedShipToCustomer ?? Customer.empty,
+          customers: customerState.customers,
+          onCustomerSelected: _handleShipToCustomerSelected,
+          showAddButton: false,
+        ),
+      ],
+    );
+  }
+
+  void _handleBillToCustomerSelected(Customer customer) {
+    setState(() {
+      _selectedBillToCustomer = customer;
+    });
+
+    context.read<SalesOrderCoordinatorBloc>().add(
+      SyncCustomerToOrder(customer: customer),
+    );
+
+    context.read<CustomerBloc>().add(SelectBillToCustomer(customer));
+
+    if (_selectedShipToCustomer == null ||
+        _selectedShipToCustomer?.id == _selectedBillToCustomer?.id) {
+      setState(() {
+        _selectedShipToCustomer = customer;
+      });
+      context.read<CustomerBloc>().add(SelectShipToCustomer(customer));
+    }
+  }
+
+  void _handleShipToCustomerSelected(Customer customer) {
+    setState(() {
+      _selectedShipToCustomer = customer;
+    });
+
+    context.read<CustomerBloc>().add(SelectShipToCustomer(customer));
+  }
+
+  Widget _buildOrderInformationSection(
+    SalesOrderCoordinatorState coordinatorState,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Order Information:',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: _titleFontSize,
+          ),
+        ),
+        const SizedBox(height: _sizedBoxHeight8),
+        _buildSalesReferenceField(coordinatorState),
+        const SizedBox(height: _sizedBoxHeight8),
+        _buildOrderDateField(coordinatorState),
+        const SizedBox(height: _sizedBoxHeight8),
+        _buildSalesPersonField(coordinatorState),
+      ],
+    );
+  }
+
   Widget _buildSalesReferenceField(SalesOrderCoordinatorState state) {
     final fsNumber = state.currentHeader?.fsNumber ?? '';
     if (fsNumber.isNotEmpty && _salesRefController.text.isEmpty) {
@@ -390,7 +401,6 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
       controller: _salesRefController,
       labelText: 'Sales Reference',
       readOnly: true,
-      onChanged: (value) => {},
     );
   }
 
@@ -405,7 +415,6 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
       controller: _orderDateController,
       labelText: 'Order Date',
       readOnly: true,
-      onChanged: (value) => {},
     );
   }
 
@@ -419,29 +428,31 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
       controller: _salesPersonController,
       labelText: 'Sales Person',
       readOnly: true,
-      onChanged: (value) => {},
     );
   }
 
   Widget _buildCustomerDetails(Customer customer) {
     return Card(
-      elevation: 2,
+      elevation: _cardElevation,
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(_cardPadding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'Customer Information:',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: _titleFontSize,
+              ),
             ),
-            const SizedBox(height: 8),
-            _buildDetailRow('Name', customer.customerName ?? 'N/A'),
-            _buildDetailRow('TIN Number', customer.tinNumber ?? 'N/A'),
-            _buildDetailRow('Phone', customer.phoneNumber ?? 'N/A'),
-            _buildDetailRow('Country', customer.country ?? 'N/A'),
-            _buildDetailRow('Region', customer.region ?? 'N/A'),
-            _buildDetailRow('City', customer.city ?? 'N/A'),
+            const SizedBox(height: _sizedBoxHeight8),
+            _buildDetailRow('Name', customer.customerName),
+            _buildDetailRow('TIN Number', customer.tinNumber),
+            _buildDetailRow('Phone', customer.phoneNumber),
+            _buildDetailRow('Country', customer.country),
+            _buildDetailRow('Region', customer.region),
+            _buildDetailRow('City', customer.city),
             if (customer.defaultsValue == 'Y')
               _buildDetailRow('Status', 'Default Customer'),
           ],
@@ -450,60 +461,65 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(String label, String? value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: const EdgeInsets.symmetric(vertical: _verticalDetailPadding),
       child: Row(
         children: [
           SizedBox(
-            width: 100,
+            width: _detailLabelWidth,
             child: Text(
               '$label:',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
-          Expanded(child: Text(value)),
+          Expanded(child: Text(value ?? 'N/A')),
         ],
       ),
     );
   }
 
   Widget _buildNextButton(
-    BuildContext context,
     bool isValid,
     SalesOrderCoordinatorState coordinatorState,
   ) {
+    final isProcessing =
+        coordinatorState.status == SalesOrderCoordinatorStatus.processing;
+    final isPreparingOrder = coordinatorState.pendingOperations.contains(
+      'prepare_new_order',
+    );
+
     return Container(
       alignment: Alignment.bottomRight,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          // Show processing indicator
-          if (coordinatorState.status == SalesOrderCoordinatorStatus.processing)
+          if (isProcessing)
             const Padding(
               padding: EdgeInsets.only(right: 16.0),
               child: CircularProgressIndicator(),
             ),
-
           ElevatedButton(
-            onPressed:
-                isValid &&
-                    coordinatorState.status !=
-                        SalesOrderCoordinatorStatus.processing &&
-                    !coordinatorState.pendingOperations.contains(
-                      'prepare_new_order',
-                    )
+            onPressed: isValid && !isProcessing && !isPreparingOrder
                 ? () => _goToNextPage(context)
                 : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF155888),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(
+                  _elevatedButtonBorderRadius,
+                ),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+              padding: const EdgeInsets.symmetric(
+                horizontal: _horizontalPadding32,
+                vertical: _verticalPadding12,
+              ),
             ),
-            child: const Text('Next', style: TextStyle(fontSize: 16)),
+            child: const Text(
+              'Next',
+              style: TextStyle(fontSize: _titleFontSize),
+            ),
           ),
         ],
       ),
@@ -512,25 +528,17 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
 
   void _goToNextPage(BuildContext context) {
     if (_selectedBillToCustomer == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a customer first')),
-      );
+      _showErrorSnackBar(context, 'Please select a customer first');
       return;
     }
 
-    // Ensure the coordinator has the latest customer data
     context.read<SalesOrderCoordinatorBloc>().add(
       SyncCustomerToOrder(customer: _selectedBillToCustomer!),
-    );
-
-    print(
-      'Selected customer: ${_selectedBillToCustomer!.id} - ${_selectedBillToCustomer!.customerName}',
     );
 
     if (context.read<AuthBloc>().state.hasAccessToPrivilege(
       AppRoutes.salesItemEntry,
     )) {
-      // Pass both customers and the current order state to the next screen
       final customerData = {
         'billToCustomer': _selectedBillToCustomer,
         'shipToCustomer': _selectedShipToCustomer,
@@ -542,14 +550,31 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
 
       context.push(AppRoutes.salesItemEntry, extra: customerData);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No access to sales item entry')),
-      );
+      _showErrorSnackBar(context, 'No access to sales item entry');
     }
+  }
+
+  void _showErrorSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _showSuccessSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 }
 
-// Loading overlay widget
 class _LoadingOverlay extends StatelessWidget {
   const _LoadingOverlay();
 
@@ -580,7 +605,6 @@ class _LoadingOverlay extends StatelessWidget {
   }
 }
 
-// Order preparation loader widget
 class _OrderPreparationLoader extends StatelessWidget {
   const _OrderPreparationLoader();
 

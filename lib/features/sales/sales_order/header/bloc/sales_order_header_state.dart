@@ -1,6 +1,7 @@
 // bloc/sales_order_header_state.dart
 
 import 'package:equatable/equatable.dart';
+import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
@@ -81,6 +82,7 @@ class SalesOrderHeaderState extends Equatable {
   final String? stateDesc;
   final String? regionDesc;
   final String? cityDesc;
+  final List<Customer>? defaultCustomer;
 
   // Business data
   final int? companyId;
@@ -153,6 +155,7 @@ class SalesOrderHeaderState extends Equatable {
     this.uomConversionResult,
     this.lotValidationResult,
     this.validationResult,
+    this.defaultCustomer,
   });
 
   // Getters for status checks
@@ -173,6 +176,7 @@ class SalesOrderHeaderState extends Equatable {
   bool get hasUOMConversionResult => uomConversionResult != null;
   bool get hasLotValidationResult => lotValidationResult != null;
   bool get hasValidationResult => validationResult != null;
+  bool get hasDefaultCustomer => defaultCustomer != null;
 
   // Status check methods
   bool isLoading() => status == SalesOrderHeaderStatus.loading;
@@ -266,6 +270,7 @@ class SalesOrderHeaderState extends Equatable {
     UOMConversionResult? uomConversionResult,
     LotValidationResult? lotValidationResult,
     ValidationResult? validationResult,
+    List<Customer>? defaultCustomer,
   }) {
     return SalesOrderHeaderState(
       status: status ?? this.status,
@@ -325,6 +330,7 @@ class SalesOrderHeaderState extends Equatable {
       uomConversionResult: uomConversionResult ?? this.uomConversionResult,
       lotValidationResult: lotValidationResult ?? this.lotValidationResult,
       validationResult: validationResult ?? this.validationResult,
+      defaultCustomer: defaultCustomer ?? this.defaultCustomer,
     );
   }
 
@@ -377,6 +383,7 @@ class SalesOrderHeaderState extends Equatable {
     String? stateDesc,
     String? regionDesc,
     String? cityDesc,
+    List<Customer>? defaultCustomer,
   }) => copyWith(
     tinNumber: tinNumber,
     phoneNumbers: phoneNumbers,
@@ -384,6 +391,7 @@ class SalesOrderHeaderState extends Equatable {
     stateDesc: stateDesc,
     regionDesc: regionDesc,
     cityDesc: cityDesc,
+    defaultCustomer: defaultCustomer,
   );
 
   @override
@@ -442,6 +450,7 @@ class SalesOrderHeaderState extends Equatable {
     salesOrderDetail,
     lotValidationResult,
     validationResult,
+    defaultCustomer,
   ];
 }
 

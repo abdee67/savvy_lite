@@ -327,13 +327,16 @@ class SalesOrderDetailBloc
   ) async {
     final companyId = authBloc.state.companyId;
     if (companyId == null) return;
-
+    final headerId = headerBloc.state.selected?.id;
+    if (headerId == null) {
+      // Header not prepared yet – nothing to do safely
+      return;
+    }
     final newItem = SalesOrderDetail(
       tempId: _getNextTempId(state.createItems),
       quantity: 1.0,
       company: companyId,
-      salesOrderHeaderId: state.selected!.salesOrderHeaderId,
-      itemsTableId: state.selected!.itemsTableId,
+      salesOrderHeaderId: headerId,
     );
 
     emit(
@@ -342,7 +345,7 @@ class SalesOrderDetailBloc
         selected: newItem,
         selected2: SalesOrderDetail(
           company: companyId,
-          salesOrderHeaderId: state.selected!.salesOrderHeaderId,
+          salesOrderHeaderId: headerId,
           itemsTableId: state.selected!.itemsTableId,
         ),
         availableValidator: {},
@@ -358,12 +361,15 @@ class SalesOrderDetailBloc
   ) async {
     final companyId = authBloc.state.companyId;
     if (companyId == null) return;
-
+    final headerId = headerBloc.state.selected?.id;
+    if (headerId == null) {
+      // Header not prepared yet – nothing to do safely
+      return;
+    }
     final newItem = SalesOrderDetail(
       tempId: _getNextTempId(state.createItems),
       quantity: 1.0,
-      salesOrderHeaderId: state.selected!.salesOrderHeaderId,
-      itemsTableId: state.selected!.itemsTableId,
+      salesOrderHeaderId: headerId,
       company: companyId,
     );
 
@@ -403,13 +409,17 @@ class SalesOrderDetailBloc
   ) async {
     final companyId = authBloc.state.companyId;
     if (companyId == null) return;
+    final headerId = headerBloc.state.selected?.id;
+    if (headerId == null) {
+      // Header not prepared yet – nothing to do safely
+      return;
+    }
 
     final newItem = SalesOrderDetail(
       tempId: _getNextTempId(state.createItems),
       quantity: 1.0,
       company: companyId,
-      salesOrderHeaderId: state.selected!.salesOrderHeaderId,
-      itemsTableId: state.selected!.itemsTableId,
+      salesOrderHeaderId: headerId,
     );
 
     final updatedCreateItems = [...state.createItems, newItem];
