@@ -133,7 +133,7 @@ class ItemUomConversionBloc
       // Set validCell to true like Java does for successful validation
       final validItem = event.item.copyWith(
         validCell: true,
-        createdBy: authBloc.state.userId,
+        createdBy: authBloc.state.userId!.id,
         dateCreated: DateTime.now(),
         company: authBloc.state.companyId,
       );
@@ -231,7 +231,7 @@ class ItemUomConversionBloc
       }
 
       final updatedItem = event.item.copyWith(
-        updatedBy: authBloc.state.userId,
+        updatedBy: authBloc.state.userId!.id,
         dateUpdated: DateTime.now(),
       );
 

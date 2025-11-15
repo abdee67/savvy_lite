@@ -812,7 +812,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     if (_formKey.currentState!.validate()) {
       final userBloc = context.read<UserBloc>();
       final companyId = widget.authBloc.state.companyId!;
-      final createdBy = widget.authBloc.state.userId!;
+      final createdBy = widget.authBloc.state.userId!.id;
 
       if (_isEditMode) {
         // Update existing user

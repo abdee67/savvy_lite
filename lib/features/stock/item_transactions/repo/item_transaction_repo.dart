@@ -81,7 +81,7 @@ class ItemTransactionRepository {
             qty: qty,
             por: por,
             soD: soD,
-            user: user,
+            user: user.id,
             companyId: companyId,
           );
         } else if (loc != null &&
@@ -96,7 +96,7 @@ class ItemTransactionRepository {
             qty: qty,
             por: por,
             soD: soD,
-            user: user,
+            user: user.id,
             companyId: companyId,
           );
         } else if (lm != null &&
@@ -111,7 +111,7 @@ class ItemTransactionRepository {
             qty: qty,
             por: por,
             soD: soD,
-            user: user,
+            user: user.id,
             companyId: companyId,
           );
         }

@@ -1,10 +1,7 @@
 // features/sales/sales_item_entry/widgets/sales_item_entry_form.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:intl/intl.dart';
-import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
-import 'package:savvy_stock/core/widgets/custom_searchable_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_table_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_text_form.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -115,9 +112,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
         (item) => item.id == detail.itemsTableId,
         orElse: () => ItemEntryModel.empty(),
       );
-      if (item.id != null) {
-        _selectedItem = item;
-      }
+      _selectedItem = item;
     }
 
     if (detail.itemInBranch != null) {
@@ -126,14 +121,12 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
         (item) => item.id == detail.itemInBranch,
         orElse: () => ItemInBranchModel.empty(),
       );
-      if (itemInBranch.id != null) {
-        _selectedItemInBranch = itemInBranch;
-        _selectedBranch = itemInBranch.branchRef;
-        _selectedUom = itemInBranch.unitOfMeasure;
-        _availableQuantityController.text =
-            (itemInBranch.quantityAvailable ?? 0).toString();
-        _unitPriceController.text = (itemInBranch.unitPrice ?? 0).toString();
-      }
+      _selectedItemInBranch = itemInBranch;
+      _selectedBranch = itemInBranch.branchRef;
+      _selectedUom = itemInBranch.unitOfMeasure;
+      _availableQuantityController.text = (itemInBranch.quantityAvailable ?? 0)
+          .toString();
+      _unitPriceController.text = (itemInBranch.unitPrice ?? 0).toString();
     }
 
     // Calculate initial extended price

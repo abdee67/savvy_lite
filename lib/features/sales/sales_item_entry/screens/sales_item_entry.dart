@@ -65,7 +65,8 @@ class ItemEntryScreen extends StatelessWidget {
           coordinatorBloc.add(
             PrepareNewSalesOrder(
               companyId: authBloc.state.companyId!,
-              employeeId: authBloc.state.userId!,
+              employeeId: authBloc.state.userId!.id,
+              branchId: authBloc.state.userId!.branch!,
             ),
           );
         }
@@ -83,7 +84,7 @@ class ItemEntryScreenContent extends StatefulWidget {
 
 class _ItemEntryScreenContentState extends State<ItemEntryScreenContent> {
   final List<GlobalKey<FormState>> _formKeys = [];
-  bool _isInitialized = false;
+  final bool _isInitialized = false;
 
   @override
   void initState() {

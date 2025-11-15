@@ -384,7 +384,7 @@ class ItemTransactionsBloc
         amountCost: 0.0,
         beforeAmountCost: 0.0,
         company: authBloc.state.companyId,
-        createdBy: user,
+        createdBy: user!.id,
         tempId: tempId,
       );
       createItems.add(selected);

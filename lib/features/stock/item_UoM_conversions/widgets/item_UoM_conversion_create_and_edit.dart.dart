@@ -232,11 +232,11 @@ class _ItemUomConversionFormState extends State<ItemUomConversionForm> {
 
       if (widget.editingItem == null) {
         _uomConversionBloc.add(
-          SaveItemUomConversion(conversion, widget.authBloc.state.userId!),
+          SaveItemUomConversion(conversion, widget.authBloc.state.userId!.id),
         );
       } else {
         _uomConversionBloc.add(
-          UpdateItemUomConversion(conversion, widget.authBloc.state.userId),
+          UpdateItemUomConversion(conversion, widget.authBloc.state.userId!.id),
         );
       }
 
