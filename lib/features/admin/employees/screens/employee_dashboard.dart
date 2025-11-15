@@ -1026,7 +1026,7 @@ class _EmployeeListPageState extends State<EmployeeListPage>
         userWithRole!.user.id,
         widget.authBloc.state.companyId!,
         finalRoles,
-        widget.authBloc.state.userId!.id!,
+        widget.authBloc.state.userId!.id,
       ),
     );
     // Clear selection and exit role management mode

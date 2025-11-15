@@ -545,6 +545,18 @@ class SalesOrderDetailBloc
     emit(state.copyWith(createItems: updatedCreateItems));
   }
 
+  void _onUpdateInEditItems(
+    UpdateInEditItemsSalesOrderDetails event,
+    Emitter<SalesOrderDetailState> emit,
+  ) {
+    final updatedEditItems = List<SalesOrderDetail>.from(state.editItems);
+    if (event.index < updatedEditItems.length) {
+      updatedEditItems[event.index] = event.item;
+    }
+
+    emit(state.copyWith(editItems: updatedEditItems));
+  }
+
   Future<void> _onRemoveFromCreateItems(
     RemoveFromCreateItemsSalesOrderDetails event,
     Emitter<SalesOrderDetailState> emit,

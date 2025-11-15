@@ -11,8 +11,9 @@ import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_or
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
 
 class SalesItemEntryConfirmedItem extends StatefulWidget {
-  final List<GlobalKey<FormState>> formKeys;
-  const SalesItemEntryConfirmedItem({super.key, required this.formKeys});
+  final Function(SalesOrderDetail, int) onEditItem;
+
+  const SalesItemEntryConfirmedItem({super.key, required this.onEditItem});
 
   @override
   State<SalesItemEntryConfirmedItem> createState() =>
@@ -22,7 +23,6 @@ class SalesItemEntryConfirmedItem extends StatefulWidget {
 class _SalesItemEntryConfirmedItemState
     extends State<SalesItemEntryConfirmedItem> {
   final Map<int, double> _dragOffset = {};
-  final ScrollController _scrollController = ScrollController();
 
   void _safeDeleteItem(BuildContext context, int index) {
     final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
@@ -41,7 +41,7 @@ class _SalesItemEntryConfirmedItemState
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Item?'),
-        content: Text('Are you sure you want to delete this item?'),
+        content: const Text('Are you sure you want to delete this item?'),
         actions: [
           TextButton(
             child: const Text('Cancel'),
@@ -65,18 +65,26 @@ class _SalesItemEntryConfirmedItemState
   }
 
   void _moveToEdit(BuildContext context, int index) {
-    // In this implementation, items are always editable in the form section
-    // This function could be used to highlight or scroll to the item
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Item can be edited in the form above')),
-    );
+    final coordinatorState = context.read<SalesOrderCoordinatorBloc>().state;
+
+    if (index < 0 || index >= coordinatorState.currentDetails.length) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot edit item. Invalid index.')),
+      );
+      return;
+    }
+
+    final itemToEdit = coordinatorState.currentDetails[index];
+    widget.onEditItem(itemToEdit, index);
   }
 
   void _onHorizontalDragUpdate(int index, DragUpdateDetails details) {
     setState(() {
       final current = _dragOffset[index] ?? 0;
       var newOffset = current + details.delta.dx;
+      // Limit swipe to left only (negative values) and maximum swipe distance
       if (newOffset > 0) newOffset = 0;
+      if (newOffset < -120) newOffset = -120; // Limit maximum swipe
       _dragOffset[index] = newOffset;
     });
   }
@@ -86,13 +94,12 @@ class _SalesItemEntryConfirmedItemState
     int index,
     DragEndDetails details,
   ) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final threshold = screenWidth * 0.3;
     final current = _dragOffset[index] ?? 0;
+    final threshold = 80.0; // Fixed threshold instead of screen percentage
 
     if (current.abs() > threshold) {
       setState(() {
-        _dragOffset[index] = -screenWidth;
+        _dragOffset[index] = -120.0; // Swipe to show delete fully
       });
 
       Future.delayed(const Duration(milliseconds: 300), () {
@@ -111,24 +118,6 @@ class _SalesItemEntryConfirmedItemState
   }
 
   void _validateAndProceed(BuildContext context) {
-    // Validate all forms
-    bool allValid = true;
-    for (final formKey in widget.formKeys) {
-      if (formKey.currentState != null && !formKey.currentState!.validate()) {
-        allValid = false;
-        break;
-      }
-    }
-
-    if (!allValid) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please fix validation errors in the forms'),
-        ),
-      );
-      return;
-    }
-
     final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
     final coordinatorState = coordinatorBloc.state;
 
@@ -200,293 +189,270 @@ class _SalesItemEntryConfirmedItemState
             coordinatorState.lastTotalAmount ??
             _calculateTotalAmount(confirmedDetails);
 
-        return Expanded(
-          child: Stack(
-            clipBehavior: Clip.none,
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 8,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: Column(
             children: [
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
+              // Header
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF155888),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.shopping_cart,
+                      color: Colors.white,
+                      size: 24,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, -2),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Confirmed Items',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.only(
-                    top: 50,
-                    left: 16,
-                    right: 16,
-                    bottom: 16,
-                  ),
-                  child: Column(
-                    children: [
-                      // Header
-                      Text(
-                        'Order Summary',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[700],
-                        ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      'Total: \$${totalAmount.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                       ),
-                      const SizedBox(height: 16),
-
-                      // Items List
-                      Expanded(
-                        child: confirmedDetails.isEmpty
-                            ? _buildEmptyState()
-                            : ListView.builder(
-                                controller: _scrollController,
-                                itemCount: confirmedDetails.length,
-                                itemBuilder: (context, index) {
-                                  final item = confirmedDetails[index];
-                                  final offset = _dragOffset[index] ?? 0.0;
-
-                                  return GestureDetector(
-                                    onDoubleTap: () =>
-                                        _moveToEdit(context, index),
-                                    onHorizontalDragUpdate: (details) =>
-                                        _onHorizontalDragUpdate(index, details),
-                                    onHorizontalDragEnd: (details) =>
-                                        _onHorizontalDragEnd(
-                                          context,
-                                          index,
-                                          details,
-                                        ),
-                                    child: Stack(
-                                      children: [
-                                        // Delete background
-                                        Positioned.fill(
-                                          child: Container(
-                                            alignment: Alignment.centerRight,
-                                            decoration: BoxDecoration(
-                                              color: Colors.redAccent,
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 20,
-                                            ),
-                                            margin: const EdgeInsets.only(
-                                              bottom: 8,
-                                            ),
-                                            child: const Icon(
-                                              Icons.delete,
-                                              color: Colors.white,
-                                              size: 28,
-                                            ),
-                                          ),
-                                        ),
-
-                                        // Item card
-                                        AnimatedContainer(
-                                          duration: const Duration(
-                                            milliseconds: 200,
-                                          ),
-                                          transform: Matrix4.translationValues(
-                                            offset,
-                                            0,
-                                            0,
-                                          ),
-                                          curve: Curves.easeOut,
-                                          margin: const EdgeInsets.only(
-                                            bottom: 8,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.black.withOpacity(
-                                                  0.1,
-                                                ),
-                                                blurRadius: 4,
-                                                offset: const Offset(0, 2),
-                                              ),
-                                            ],
-                                          ),
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(16),
-                                            child: Row(
-                                              children: [
-                                                // Item info
-                                                Expanded(
-                                                  flex: 3,
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      Text(
-                                                        'Item ${index + 1}',
-                                                        style: const TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          fontSize: 16,
-                                                        ),
-                                                      ),
-                                                      if (item.extendedPrice !=
-                                                          null)
-                                                        Text(
-                                                          'Total: \$${item.extendedPrice!.toStringAsFixed(2)}',
-                                                          style:
-                                                              const TextStyle(
-                                                                color: Colors
-                                                                    .green,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w500,
-                                                              ),
-                                                        ),
-                                                    ],
-                                                  ),
-                                                ),
-
-                                                // Quantity
-                                                Expanded(
-                                                  child: Text(
-                                                    'Qty: ${item.quantity?.toStringAsFixed(2) ?? '0'}',
-                                                    style: const TextStyle(
-                                                      fontSize: 14,
-                                                    ),
-                                                    textAlign: TextAlign.center,
-                                                  ),
-                                                ),
-
-                                                // Unit Price
-                                                Expanded(
-                                                  child: Text(
-                                                    'Price: \$${item.unitPrice?.toStringAsFixed(2) ?? '0'}',
-                                                    style: const TextStyle(
-                                                      fontSize: 14,
-                                                    ),
-                                                    textAlign: TextAlign.center,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Total Amount
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          color: const Color(0xFF155888),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Grand Total',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                              ),
-                            ),
-                            Text(
-                              '\$${totalAmount.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Continue Button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: confirmedDetails.isNotEmpty
-                              ? () => _validateAndProceed(context)
-                              : null,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF155888),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text(
-                            'Save & Continue to Payment',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
 
-              // Validate & Calculate Button
-              Positioned(
-                right: 16,
-                top: -25,
-                child: SizedBox(
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: confirmedDetails.isNotEmpty
-                        ? () {
-                            context.read<SalesOrderCoordinatorBloc>().add(
-                              const ValidateCompleteStockAvailability(),
-                            );
-                            context.read<SalesOrderCoordinatorBloc>().add(
-                              const CalculateCompleteOrderTotals(),
-                            );
-                          }
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: confirmedDetails.isNotEmpty
-                          ? Colors.orange
-                          : Colors.grey,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(25),
+              // Items List
+              Expanded(
+                child: confirmedDetails.isEmpty
+                    ? _buildEmptyState()
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(8),
+                        itemCount: confirmedDetails.length,
+                        itemBuilder: (context, index) {
+                          final item = confirmedDetails[index];
+                          final offset = _dragOffset[index] ?? 0.0;
+
+                          return Container(
+                            height: 80,
+                            margin: const EdgeInsets.only(bottom: 8),
+                            child: GestureDetector(
+                              onDoubleTap: () => _moveToEdit(context, index),
+                              onHorizontalDragUpdate: (details) =>
+                                  _onHorizontalDragUpdate(index, details),
+                              onHorizontalDragEnd: (details) =>
+                                  _onHorizontalDragEnd(context, index, details),
+                              child: Stack(
+                                children: [
+                                  // Delete background
+                                  Positioned.fill(
+                                    child: Container(
+                                      alignment: Alignment.centerRight,
+                                      decoration: BoxDecoration(
+                                        color: Colors.redAccent,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                      ),
+                                      child: const Icon(
+                                        Icons.delete,
+                                        color: Colors.white,
+                                        size: 28,
+                                      ),
+                                    ),
+                                  ),
+
+                                  // Item card
+                                  AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
+                                    transform: Matrix4.translationValues(
+                                      offset,
+                                      0,
+                                      0,
+                                    ),
+                                    curve: Curves.easeOut,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.1),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(12),
+                                      child: Row(
+                                        children: [
+                                          // Item info
+                                          Expanded(
+                                            flex: 3,
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Text(
+                                                  'Item ${index + 1}',
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 14,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                                if (item.extendedPrice != null)
+                                                  Text(
+                                                    'Total: \$${item.extendedPrice!.toStringAsFixed(2)}',
+                                                    style: const TextStyle(
+                                                      color: Colors.green,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                      fontSize: 12,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+
+                                          // Quantity
+                                          Expanded(
+                                            child: Text(
+                                              'Qty: ${item.quantity?.toStringAsFixed(2) ?? '0'}',
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+
+                                          // Unit Price
+                                          Expanded(
+                                            child: Text(
+                                              'Price: \$${item.unitPrice?.toStringAsFixed(2) ?? '0'}',
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                      elevation: 4,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
+              ),
+
+              // Footer Actions
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, -2),
                     ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    // Action Buttons
+                    Row(
                       children: [
-                        Icon(Icons.calculate, size: 20),
-                        SizedBox(width: 8),
-                        Text(
-                          'Validate & Calculate',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: confirmedDetails.isNotEmpty
+                                ? () {
+                                    context.read<SalesOrderCoordinatorBloc>().add(
+                                      const ValidateCompleteStockAvailability(),
+                                    );
+                                    context
+                                        .read<SalesOrderCoordinatorBloc>()
+                                        .add(
+                                          const CalculateCompleteOrderTotals(),
+                                        );
+                                  }
+                                : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text('Validate & Calculate'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: confirmedDetails.isNotEmpty
+                                ? () => _validateAndProceed(context)
+                                : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF155888),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text('Proceed to Payment'),
+                          ),
                         ),
                       ],
                     ),
-                  ),
+
+                    const SizedBox(height: 8),
+
+                    // Help text
+                    Text(
+                      'Double tap to edit • Swipe to delete',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey[600],
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -509,9 +475,8 @@ class _SalesItemEntryConfirmedItemState
           ),
           const SizedBox(height: 8),
           Text(
-            'Add items above and click "Confirm Item"',
+            'Add items using the form above',
             style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-            textAlign: TextAlign.center,
           ),
         ],
       ),

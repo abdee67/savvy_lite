@@ -79,7 +79,7 @@ class MigrationService {
           final itemsTable = await _processItemsTable(
             item,
             companyId,
-            userId!.id,
+            userId.id,
             txn,
           );
           if (itemsTable == null) {
@@ -95,7 +95,7 @@ class MigrationService {
           final locationMaster = await _processLocationMaster(
             item,
             companyId,
-            userId!.id,
+            userId.id,
             txn,
           );
           if (locationMaster == null) {
@@ -119,7 +119,7 @@ class MigrationService {
             itemsTable.id,
             locationMaster.id!,
             companyId,
-            userId!.id,
+            userId.id,
             txn,
           );
           if (itemLocations == null) {
@@ -133,7 +133,7 @@ class MigrationService {
               itemsTable.id,
               itemLocations.id!,
               companyId,
-              userId!.id,
+              userId.id,
               txn,
             );
             if (lotMaster == null) {

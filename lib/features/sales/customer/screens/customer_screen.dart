@@ -213,8 +213,6 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
       }
     }
 
-    if (defaultCustomer == null) return;
-
     Customer billToMatch = defaultCustomer;
     if (defaultCustomer.id != null) {
       try {
@@ -223,7 +221,7 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
           orElse: () => defaultCustomer!,
         );
       } catch (_) {
-        billToMatch = defaultCustomer!;
+        billToMatch = defaultCustomer;
       }
     }
 

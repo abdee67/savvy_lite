@@ -836,7 +836,7 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
 
     await repository.createItemTransaction({
       'company': authBloc.state.companyId,
-      'created_by': authBloc.state.userId,
+      'created_by': authBloc.state.userId!.id,
       'date_created': DateTime.now().toIso8601String(),
       'quantity_transaction': quantity,
       'remark': remark,

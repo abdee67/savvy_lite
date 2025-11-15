@@ -102,7 +102,8 @@ class PrepareCreate1 extends SalesOrderDetailsEvent {
 }
 
 class PrepareCreateInEdit extends SalesOrderDetailsEvent {
-  const PrepareCreateInEdit();
+  final SalesOrderDetail item;
+  const PrepareCreateInEdit({required this.item});
 }
 
 class PrepareEditSalesOrderDetails extends SalesOrderDetailsEvent {
@@ -133,6 +134,16 @@ class UpdateInCreateItemsSalesOrderDetails extends SalesOrderDetailsEvent {
   final int index;
 
   const UpdateInCreateItemsSalesOrderDetails({
+    required this.item,
+    required this.index,
+  });
+}
+
+class UpdateInEditItemsSalesOrderDetails extends SalesOrderDetailsEvent {
+  final SalesOrderDetail item;
+  final int index;
+
+  const UpdateInEditItemsSalesOrderDetails({
     required this.item,
     required this.index,
   });

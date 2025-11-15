@@ -30,8 +30,7 @@ class ItemEntryScreen extends StatelessWidget {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      resizeToAvoidBottomInset: false,
-      body: const ItemEntryScreenContent(),
+      body: ItemEntryScreenContent(),
     );
   }
 
@@ -43,7 +42,6 @@ class ItemEntryScreen extends StatelessWidget {
     if (customerData != null) {
       final billToCustomer = customerData!['billToCustomer'] as Customer?;
       final shipToCustomer = customerData!['shipToCustomer'] as Customer?;
-      final currentHeader = customerData!['currentHeader'];
 
       if (billToCustomer != null) {
         // Update customer bloc
@@ -54,22 +52,6 @@ class ItemEntryScreen extends StatelessWidget {
 
         // Sync customer to coordinator
         coordinatorBloc.add(SyncCustomerToOrder(customer: billToCustomer));
-      }
-
-      // Validate that we have a current header
-      final coordinatorState = coordinatorBloc.state;
-      if (coordinatorState.currentHeader == null && currentHeader != null) {
-        // If header is not prepared, trigger preparation
-        final authBloc = context.read<AuthBloc>();
-        if (authBloc.state.companyId != null && authBloc.state.userId != null) {
-          coordinatorBloc.add(
-            PrepareNewSalesOrder(
-              companyId: authBloc.state.companyId!,
-              employeeId: authBloc.state.userId!.id,
-              branchId: authBloc.state.userId!.branch!,
-            ),
-          );
-        }
       }
     }
   }
@@ -83,255 +65,213 @@ class ItemEntryScreenContent extends StatefulWidget {
 }
 
 class _ItemEntryScreenContentState extends State<ItemEntryScreenContent> {
-  final List<GlobalKey<FormState>> _formKeys = [];
-  final bool _isInitialized = false;
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  SalesOrderDetail? _currentFormDetail;
+  bool _isEditing = false;
+  int? _editingIndex;
+  SalesOrderDetail? _originalDetail; // Store original detail for cancellation
 
   @override
   void initState() {
     super.initState();
-    _initializeFormKeys();
+    _initializeForm();
   }
 
-  void _initializeFormKeys() {
-    final state = context.read<SalesOrderCoordinatorBloc>().state;
-    _formKeys.clear();
-    _formKeys.addAll(
-      List.generate(
-        state.currentDetails.length,
-        (index) => GlobalKey<FormState>(),
+  void _initializeForm() {
+    // Wait for the coordinator to be ready
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final coordinatorState = context.read<SalesOrderCoordinatorBloc>().state;
+      if (coordinatorState.currentHeader != null) {
+        setState(() {
+          _currentFormDetail = SalesOrderDetail(
+            tempId: DateTime.now().millisecondsSinceEpoch,
+            salesOrderHeaderId: coordinatorState.currentHeader?.id,
+            company: coordinatorState.currentHeader?.company,
+            quantity: 1.0,
+            unitPrice: 0.0,
+            extendedPrice: 0.0,
+          );
+        });
+      } else {
+        // If header not ready, listen for state changes
+        final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
+        coordinatorBloc.stream
+            .firstWhere((state) => state.currentHeader != null)
+            .then((_) {
+              if (mounted) {
+                setState(() {
+                  _currentFormDetail = SalesOrderDetail(
+                    tempId: DateTime.now().millisecondsSinceEpoch,
+                    salesOrderHeaderId: coordinatorBloc.state.currentHeader?.id,
+                    company: coordinatorBloc.state.currentHeader?.company,
+                    quantity: 1.0,
+                    unitPrice: 0.0,
+                    extendedPrice: 0.0,
+                  );
+                });
+              }
+            });
+      }
+    });
+  }
+
+  void _startEditingItem(SalesOrderDetail detail, int index) {
+    setState(() {
+      _currentFormDetail = detail.copyWith(); // Create a copy for editing
+      _isEditing = true;
+      _editingIndex = index;
+      _originalDetail = detail; // Store original for cancellation
+    });
+
+    // Remove the item from confirmed list temporarily while editing
+    context.read<SalesOrderCoordinatorBloc>().add(
+      RemoveDetailFromOrder(detail: detail),
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          'Now editing item. Make changes and click "Update Item".',
+        ),
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(
+          label: 'Cancel',
+          onPressed: _cancelEditing,
+          textColor: Colors.white,
+        ),
+        backgroundColor: Colors.orange,
       ),
     );
+  }
+
+  void _cancelEditing() {
+    if (_isEditing && _originalDetail != null) {
+      // Add the original item back to confirmed list
+      context.read<SalesOrderCoordinatorBloc>().add(
+        AddDetailToOrder(detail: _originalDetail!),
+      );
+
+      // Recalculate totals
+      context.read<SalesOrderCoordinatorBloc>().add(
+        const ValidateCompleteStockAvailability(),
+      );
+      context.read<SalesOrderCoordinatorBloc>().add(
+        const CalculateCompleteOrderTotals(),
+      );
+    }
+
+    _resetForm();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Editing cancelled'),
+        backgroundColor: Colors.blue,
+      ),
+    );
+  }
+
+  void _resetForm() {
+    setState(() {
+      _isEditing = false;
+      _editingIndex = null;
+      _originalDetail = null;
+
+      // Create new empty form
+      final coordinatorState = context.read<SalesOrderCoordinatorBloc>().state;
+      _currentFormDetail = SalesOrderDetail(
+        tempId: DateTime.now().millisecondsSinceEpoch,
+        salesOrderHeaderId: coordinatorState.currentHeader?.id,
+        company: coordinatorState.currentHeader?.company,
+        quantity: 1.0,
+        unitPrice: 0.0,
+        extendedPrice: 0.0,
+      );
+    });
+
+    // Reset form
+    _formKey.currentState?.reset();
+  }
+
+  void _confirmItem() {
+    if (_formKey.currentState?.validate() ?? false) {
+      if (_currentFormDetail != null) {
+        final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
+
+        // Add or update the item in coordinator
+        coordinatorBloc.add(AddDetailToOrder(detail: _currentFormDetail!));
+
+        // Trigger calculations
+        coordinatorBloc.add(const ValidateCompleteStockAvailability());
+        coordinatorBloc.add(const CalculateCompleteOrderTotals());
+
+        _resetForm();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _isEditing
+                  ? 'Item updated successfully'
+                  : 'Item added successfully',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fix validation errors'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _updateFormDetail(SalesOrderDetail updatedDetail) {
+    setState(() {
+      _currentFormDetail = updatedDetail;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocListener(
-      listeners: [
-        // Listen for coordinator state changes
-        BlocListener<SalesOrderCoordinatorBloc, SalesOrderCoordinatorState>(
-          listener: (context, coordinatorState) {
-            // Update form keys when details change
-            if (_formKeys.length != coordinatorState.currentDetails.length &&
-                coordinatorState.status !=
-                    SalesOrderCoordinatorStatus.processing) {
-              setState(() {
-                _initializeFormKeys();
-              });
-            }
+    return BlocBuilder<SalesOrderCoordinatorBloc, SalesOrderCoordinatorState>(
+      builder: (context, coordinatorState) {
+        // Show loading state while preparing
+        if (coordinatorState.pendingOperations.contains('prepare_new_order') ||
+            coordinatorState.currentHeader == null) {
+          return const _OrderPreparationLoader();
+        }
 
-            // Handle errors
-            if (coordinatorState.status == SalesOrderCoordinatorStatus.error) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(coordinatorState.error!),
-                  backgroundColor: Colors.red,
+        return Column(
+          children: [
+            // Form Section - Always visible
+            if (_currentFormDetail != null)
+              Expanded(
+                flex: 3,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: SalesItemEntryForm(
+                    key: ValueKey(_currentFormDetail!.tempId),
+                    detail: _currentFormDetail!,
+                    formKey: _formKey,
+                    isEditing: _isEditing,
+                    onUpdate: _updateFormDetail,
+                    onConfirm: _confirmItem,
+                    onCancel: _isEditing ? _cancelEditing : null,
+                  ),
                 ),
-              );
-            }
+              ),
 
-            // Handle successful operations
-            if (coordinatorState.status ==
-                SalesOrderCoordinatorStatus.success) {
-              if (coordinatorState.lastOperation?.contains('calculated') ==
-                  true) {
-                // Totals calculated successfully
-                print(
-                  'Order totals updated: ${coordinatorState.lastTotalAmount}',
-                );
-              }
-            }
-          },
-        ),
-      ],
-      child: SafeArea(
-        child:
-            BlocBuilder<SalesOrderCoordinatorBloc, SalesOrderCoordinatorState>(
-              builder: (context, coordinatorState) {
-                // Show loading state while preparing
-                if (coordinatorState.pendingOperations.contains(
-                  'prepare_new_order',
-                )) {
-                  return const _OrderPreparationLoader();
-                }
-
-                return Column(
-                  children: [
-                    // Upper Section - Item Entry Forms
-                    Expanded(
-                      flex: 2,
-                      child: Container(
-                        color: Colors.white,
-                        child: Column(
-                          children: [
-                            // Add New Item Button
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Align(
-                                alignment: Alignment.centerRight,
-                                child: ElevatedButton.icon(
-                                  onPressed: () => _addNewItem(context),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF155888),
-                                    foregroundColor: Colors.white,
-                                  ),
-                                  icon: const Icon(Icons.add, size: 20),
-                                  label: const Text('Add New Item'),
-                                ),
-                              ),
-                            ),
-
-                            // Item Entry Forms
-                            Expanded(
-                              child: coordinatorState.currentDetails.isEmpty
-                                  ? _buildEmptyItemsState()
-                                  : ListView.builder(
-                                      padding: const EdgeInsets.all(8),
-                                      itemCount: coordinatorState
-                                          .currentDetails
-                                          .length,
-                                      itemBuilder: (context, index) {
-                                        final detail = coordinatorState
-                                            .currentDetails[index];
-
-                                        // Ensure we have enough form keys
-                                        if (index >= _formKeys.length) {
-                                          _formKeys.add(GlobalKey<FormState>());
-                                        }
-
-                                        return Padding(
-                                          padding: const EdgeInsets.only(
-                                            bottom: 8.0,
-                                          ),
-                                          child: SalesItemEntryForm(
-                                            key: ValueKey(
-                                              detail.tempId ?? detail.id,
-                                            ),
-                                            detail: detail,
-                                            index: index,
-                                            formKey: _formKeys[index],
-                                            onRemove: () =>
-                                                _removeItem(context, index),
-                                            onConfirm: () =>
-                                                _confirmItem(context, index),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // Lower Section - Confirmed Items Summary
-                    SalesItemEntryConfirmedItem(formKeys: _formKeys),
-                  ],
-                );
-              },
+            // Confirmed Items Section
+            Expanded(
+              flex: 2,
+              child: SalesItemEntryConfirmedItem(onEditItem: _startEditingItem),
             ),
-      ),
+          ],
+        );
+      },
     );
-  }
-
-  Widget _buildEmptyItemsState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          Text(
-            'No Items Added',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Click "Add New Item" to start adding products',
-            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _addNewItem(BuildContext context) {
-    final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
-    final coordinatorState = coordinatorBloc.state;
-
-    if (coordinatorState.currentHeader == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please wait for order preparation to complete'),
-        ),
-      );
-      return;
-    }
-
-    // Create a new empty detail
-    final newDetail = SalesOrderDetail(
-      tempId: DateTime.now().millisecondsSinceEpoch, // Temporary ID
-      salesOrderHeaderId: coordinatorState.currentHeader?.id,
-      company: coordinatorState.currentHeader?.company,
-      quantity: 1.0,
-      unitPrice: 0.0,
-      extendedPrice: 0.0,
-    );
-
-    coordinatorBloc.add(AddDetailToOrder(detail: newDetail));
-
-    // Add new form key
-    setState(() {
-      _formKeys.add(GlobalKey<FormState>());
-    });
-  }
-
-  void _removeItem(BuildContext context, int index) {
-    final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
-    final coordinatorState = coordinatorBloc.state;
-
-    if (index < coordinatorState.currentDetails.length) {
-      final detail = coordinatorState.currentDetails[index];
-      coordinatorBloc.add(RemoveDetailFromOrder(detail: detail));
-
-      // Remove form key
-      setState(() {
-        if (index < _formKeys.length) {
-          _formKeys.removeAt(index);
-        }
-      });
-    }
-  }
-
-  void _confirmItem(BuildContext context, int index) {
-    final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
-    final coordinatorState = coordinatorBloc.state;
-
-    if (index < coordinatorState.currentDetails.length) {
-      final detail = coordinatorState.currentDetails[index];
-
-      // Validate the form
-      if (index < _formKeys.length && _formKeys[index].currentState != null) {
-        if (!_formKeys[index].currentState!.validate()) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please fix validation errors')),
-          );
-          return;
-        }
-      }
-
-      // Trigger stock validation and calculations
-      coordinatorBloc.add(const ValidateCompleteStockAvailability());
-      coordinatorBloc.add(const CalculateCompleteOrderTotals());
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Item confirmed successfully')),
-      );
-    }
   }
 }
 
@@ -340,15 +280,15 @@ class _OrderPreparationLoader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(),
-          const SizedBox(height: 16),
+          CircularProgressIndicator(),
+          SizedBox(height: 16),
           Text(
             'Preparing Sales Order...',
-            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            style: TextStyle(fontSize: 16, color: Colors.grey),
           ),
         ],
       ),

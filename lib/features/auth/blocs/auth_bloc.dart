@@ -360,7 +360,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final newToken = _createToken(
         UserWithRole(
           user: UserModel(
-            id: oldState.userId!.id!,
+            id: oldState.userId!.id,
             userName: oldState.username!,
             company: oldState.companyId!,
             password: oldState.password!,
