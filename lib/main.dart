@@ -6,6 +6,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
 import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
+import 'package:savvy_stock/features/sales/invoice/detail/bloc/invoice_detail_bloc.dart';
+import 'package:savvy_stock/features/sales/invoice/header/bloc/invoice_header_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/repo/sales_order_detail_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
@@ -32,8 +34,6 @@ import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
 import 'package:savvy_stock/features/next_number/bloc/next_number_bloc.dart';
 import 'package:savvy_stock/features/next_number/repo/next_number_repo.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
-import 'package:savvy_stock/features/sales/invoice/blocs/invoice_bloc.dart';
-import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_bloc.dart';
 import 'package:savvy_stock/features/stock/item_cost/blocs/item_cost_bloc.dart';
@@ -79,7 +79,7 @@ Future<void> _initializeAndRunApp() async {
       developer.log('💾 Using local database only');
     }
     // Debug database tables (optional - remove in production)
-    await LocalDatabaseService().debugTable('user_table');
+    await LocalDatabaseService().debugTable('items_in_branch');
   } catch (error, stackTrace) {
     developer.log('Initialization error: $error');
     developer.log('Stack trace: $stackTrace');
@@ -140,6 +140,9 @@ class _SavvyStockState extends State<SavvyStock> {
   late LotExpirationColorsRepository _lotExpirationColorsRepository;
   late EmployeeRepository _employeeRepository;
   late ValidateStockAvailabilityService _validateStockAvailabilityService;
+  late SalesOrderCoordinatorBloc _salesOrderCoordinatorBloc;
+  late InvoiceHistoryHeaderBloc _invoiceHistoryHeaderBloc;
+  late InvoiceHistoryDetailBloc _invoiceHistoryDetailBloc;
 
   @override
   void initState() {
@@ -179,6 +182,8 @@ class _SavvyStockState extends State<SavvyStock> {
     _employeeRepository = getIt<EmployeeRepository>();
     _validateStockAvailabilityService =
         getIt<ValidateStockAvailabilityService>();
+    _invoiceHistoryHeaderBloc = getIt<InvoiceHistoryHeaderBloc>();
+    _invoiceHistoryDetailBloc = getIt<InvoiceHistoryDetailBloc>();
     // Ensure system constants are loaded when companyId becomes available.
     final cid = _authBloc.state.companyId;
     if (cid != null) {
@@ -303,10 +308,6 @@ class _SavvyStockState extends State<SavvyStock> {
             ),
           ),
           BlocProvider<ItemEntryBloc>(create: (context) => ItemEntryBloc()),
-          BlocProvider<PaymentBloc>(
-            create: (context) => PaymentBloc(getIt<SystemConstantsService>()),
-          ),
-          BlocProvider<InvoiceBloc>(create: (context) => InvoiceBloc()),
           // Use the singleton from the DI container so everyone shares the same
           // SystemConstantBloc instance (prevents multiple instances with
           // differing states which broke color calculation).
@@ -447,6 +448,10 @@ class _SavvyStockState extends State<SavvyStock> {
             create: (context) => SalesOrderCoordinatorBloc(
               headerBloc: _salesOrderHeaderBloc,
               detailBloc: _salesOrderDetailBloc,
+              invoiceHeaderBloc: _invoiceHistoryHeaderBloc,
+              invoiceDetailBloc: _invoiceHistoryDetailBloc,
+              authBloc: _authBloc,
+              systemConstantBloc: _systemConstantBloc,
             ),
           ),
         ],

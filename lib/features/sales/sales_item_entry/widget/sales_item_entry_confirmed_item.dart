@@ -23,6 +23,22 @@ class SalesItemEntryConfirmedItem extends StatefulWidget {
 class _SalesItemEntryConfirmedItemState
     extends State<SalesItemEntryConfirmedItem> {
   final Map<int, double> _dragOffset = {};
+  static const _containerHeight = 20.0;
+  static const _containerWidth = 20.0;
+  static const _circularProgressStrokeWidth = 2.0;
+  static const _elevatedButtonBorderRadius = 20.0;
+  static const _horizontalPadding32 = 32.0;
+  static const _verticalPadding12 = 12.0;
+  static const _sizedBoxHeight16 = 16.0;
+  static const _sizedBoxHeight8 = 8.0;
+  static const _sizedBoxHeight20 = 20.0;
+  static const _sizedBoxWidth16 = 16.0;
+  static const _appBarFontSize = 25.0;
+  static const _titleFontSize = 16.0;
+  static const _detailLabelWidth = 100.0;
+  static const _cardElevation = 2.0;
+  static const _cardPadding = 16.0;
+  static const _verticalDetailPadding = 4.0;
 
   void _safeDeleteItem(BuildContext context, int index) {
     final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
@@ -120,20 +136,12 @@ class _SalesItemEntryConfirmedItemState
   void _validateAndProceed(BuildContext context) {
     final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
     final coordinatorState = coordinatorBloc.state;
-
+    context.read<SalesOrderCoordinatorBloc>().add(
+      const CalculateCompleteOrderTotals(),
+    );
     if (coordinatorState.currentDetails.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please add at least one item')),
-      );
-      return;
-    }
-
-    // Validate stock availability
-    if (!coordinatorState.isStockValidated) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please validate stock availability first'),
-        ),
       );
       return;
     }
@@ -161,10 +169,8 @@ class _SalesItemEntryConfirmedItemState
       context.push(
         AppRoutes.paymentSummary,
         extra: {
-          'customer': selectedCustomer,
-          'orderDetails': state.currentDetails,
-          'orderHeader': state.currentHeader,
-          'totalAmount': state.lastTotalAmount ?? 0.0,
+          'coordinatorReady': true, // Flag to indicate coordinator has data
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
         },
       );
     } else {
@@ -400,45 +406,35 @@ class _SalesItemEntryConfirmedItemState
                 child: Column(
                   children: [
                     // Action Buttons
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: confirmedDetails.isNotEmpty
-                                ? () {
-                                    context.read<SalesOrderCoordinatorBloc>().add(
-                                      const ValidateCompleteStockAvailability(),
-                                    );
-                                    context
-                                        .read<SalesOrderCoordinatorBloc>()
-                                        .add(
-                                          const CalculateCompleteOrderTotals(),
-                                        );
-                                  }
-                                : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                            child: const Text('Validate & Calculate'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
+                    Container(
+                      alignment: Alignment.bottomRight,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          ElevatedButton(
                             onPressed: confirmedDetails.isNotEmpty
                                 ? () => _validateAndProceed(context)
                                 : null,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF155888),
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  _elevatedButtonBorderRadius,
+                                ),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: _horizontalPadding32,
+                                vertical: _verticalPadding12,
+                              ),
                             ),
-                            child: const Text('Proceed to Payment'),
+                            child: const Text(
+                              'Proceed to payment ',
+                              style: TextStyle(fontSize: _titleFontSize),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
 
                     const SizedBox(height: 8),

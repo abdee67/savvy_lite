@@ -3,9 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
-import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
-import 'package:savvy_stock/features/sales/payment/blocs/payment_state.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
+import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
 
 class PaymentAction extends StatefulWidget {
   const PaymentAction({super.key});
@@ -16,41 +17,81 @@ class PaymentAction extends StatefulWidget {
 
 class _PaymentActionState extends State<PaymentAction> {
   // Add this method to your SalesItemEntryConfirmedItem class
-  void _navigateToInvoice(BuildContext context) {
+  void _navigateToInvoice(
+    BuildContext context,
+    SalesOrderCoordinatorState state,
+  ) {
+    final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
+
+    // Validate final calculations
+    coordinatorBloc.add(const CalculateCompleteOrderTotals());
+
+    // Create the complete sales order
+    coordinatorBloc.add(GenerateInvoiceFromSalesOrder());
+
+    // Show processing state
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Prepapring your invoice...'),
+        duration: Duration(seconds: 3),
+      ),
+    );
+    // Listen for completion
+    coordinatorBloc.stream
+        .firstWhere(
+          (state) =>
+              state.isOrderComplete ||
+              state.status == SalesOrderCoordinatorStatus.error,
+        )
+        .then((finalState) {
+          if (finalState.isOrderComplete && finalState.invoiceGenerated) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Payment completed! Invoice: ${finalState.invoiceFsNumber}',
+                ),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 5),
+              ),
+            );
+
+            // Navigate to success screen or invoice preview
+            _viewInvoice(context, finalState);
+          }
+        });
+  }
+
+  void _viewInvoice(BuildContext context, SalesOrderCoordinatorState state) {
     final customerBloc = context.read<CustomerBloc>();
-    final itemEntryBloc = context.read<ItemEntryBloc>();
-    final paymentBloc = context.read<PaymentBloc>();
+    final selectedCustomer = customerBloc.state.selectedBillToCustomer;
 
-    final customer = customerBloc.state.selectedBillToCustomer;
-    final items = itemEntryBloc.state.confirmedItems;
-
-    print('Selected customer: ${customer!.id} - ${customer.customerName}');
-    print('Confirmed items: ${items.length}');
-    // Update this check to properly verify if a customer is selected
-    if (customer.id == null) {
+    if (selectedCustomer == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a customer first')),
       );
       return;
     }
 
-    if (items.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add items to the order')),
-      );
-      return;
-    }
-
     context.push(
       AppRoutes.salesInvoice,
-      extra: {'confirmedItems': items, 'customer': customer},
+      extra: {
+        'confirmedItems': state.currentDetails,
+        'customer': selectedCustomer,
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<PaymentBloc, PaymentState>(
+    return BlocBuilder<SalesOrderCoordinatorBloc, SalesOrderCoordinatorState>(
       builder: (context, state) {
+        final isValid =
+            state.lastTotalAmount != null &&
+            state.lastTotalAmount! > 0 &&
+            state.paymentType.isNotEmpty &&
+            state.paymentInstrument.isNotEmpty &&
+            (state.paymentType != 'Credit' || state.paymentTerm.isNotEmpty);
+
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -73,9 +114,11 @@ class _PaymentActionState extends State<PaymentAction> {
               ),
             ),
             ElevatedButton(
-              onPressed: state.status == PaymentStatus.processing
+              onPressed:
+                  isValid &&
+                      state.status == SalesOrderCoordinatorStatus.processing
                   ? null
-                  : () => _navigateToInvoice(context),
+                  : () => _navigateToInvoice(context, state),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF155888),
                 foregroundColor: Colors.white,
@@ -87,8 +130,24 @@ class _PaymentActionState extends State<PaymentAction> {
                   borderRadius: BorderRadius.circular(40),
                 ),
               ),
-              child: state.status == PaymentStatus.processing
-                  ? const CircularProgressIndicator(color: Colors.white)
+              child: state.status == SalesOrderCoordinatorStatus.processing
+                  ? const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Text('Processing Payment...'),
+                      ],
+                    )
                   : const Text(
                       'Review',
                       style: TextStyle(

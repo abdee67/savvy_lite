@@ -287,7 +287,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
     if (_selectedItem == null) return [];
     print('selectedItem: ${_selectedItem!.id}');
     final itemsInBranchBloc = context.read<StockItemInBranchBloc>();
-    return itemsInBranchBloc.state.availableItems
+    return itemsInBranchBloc.state.items
         .where((itemInBranch) => itemInBranch.itemNumber == _selectedItem!.id)
         .toList();
   }

@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
+import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
 import 'package:savvy_stock/core/di/injection_container.dart';
 import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
-import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
-import 'package:savvy_stock/features/sales/payment/blocs/payment_event.dart';
-import 'package:savvy_stock/features/sales/payment/blocs/payment_state.dart';
 import 'package:savvy_stock/features/system_constant/repo/system_constant_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 
@@ -36,10 +36,15 @@ class _PaymentDetailsState extends State<PaymentDetails> {
         setState(() {
           _systemConstantsLoaded = true;
         });
-        context.read<PaymentBloc>().add(const LoadFeeSystemConstants());
-        context.read<SystemConstantBloc>().add(
-          LoadSystemConstants(widget.authBloc.state.companyId!),
-        );
+        final companyId = widget.authBloc.state.companyId;
+        if (companyId != null) {
+          context.read<SystemConstantBloc>().add(
+            LoadSystemConstants(companyId),
+          );
+          context.read<SalesOrderCoordinatorBloc>().add(
+            const LoadFeeSystemConstants(),
+          );
+        }
       }
     });
   }
@@ -47,8 +52,44 @@ class _PaymentDetailsState extends State<PaymentDetails> {
   void _onDiscountChanged() {
     if (_discountEnabled) {
       final discountAmount = double.tryParse(_discountController.text) ?? 0;
-      _updateTaxAndFees(discountAmount: discountAmount);
+      _updateFinancialData(discountAmount: discountAmount);
     }
+  }
+
+  void _updateFinancialData({double discountAmount = 0}) {
+    final bloc = context.read<SalesOrderCoordinatorBloc>();
+    final state = bloc.state;
+
+    bloc.add(
+      UpdateTaxAndFees(
+        subtotal: state.lastSubTotal ?? 0.0,
+        discountAmount: discountAmount,
+        isWithholdingEnabled: state.isWithholdingEnabled,
+      ),
+    );
+  }
+
+  void _toggleDiscount(bool enabled) {
+    setState(() {
+      _discountEnabled = enabled;
+      if (!enabled) {
+        _discountController.clear();
+        _updateFinancialData(discountAmount: 0);
+      }
+    });
+  }
+
+  void _toggleWithholding(bool enabled) {
+    final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
+    final state = coordinatorBloc.state;
+
+    coordinatorBloc.add(
+      UpdateTaxAndFees(
+        subtotal: state.lastSubTotal ?? 0.0,
+        discountAmount: state.lastDiscountAmount ?? 0.0,
+        isWithholdingEnabled: enabled,
+      ),
+    );
   }
 
   @override
@@ -65,7 +106,9 @@ class _PaymentDetailsState extends State<PaymentDetails> {
       setState(() {
         _systemConstantsLoaded = true;
       });
-      context.read<PaymentBloc>().add(const LoadFeeSystemConstants());
+      context.read<SalesOrderCoordinatorBloc>().add(
+        const LoadFeeSystemConstants(),
+      );
     }
   }
 
@@ -78,47 +121,31 @@ class _PaymentDetailsState extends State<PaymentDetails> {
     super.dispose();
   }
 
-  void _updateTaxAndFees({double discountAmount = 0}) {
-    final bloc = context.read<PaymentBloc>();
-    final state = bloc.state;
-
-    bloc.add(
-      UpdateTaxAndFees(
-        subtotal: state.subtotal,
-        discountAmount: discountAmount,
-        isWithholdingEnabled: state.isWithholdingEnabled,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<PaymentBloc, PaymentState>(
+    return BlocConsumer<SalesOrderCoordinatorBloc, SalesOrderCoordinatorState>(
       //Sync discount amount with state
       listener: (context, state) {
-        if (state.systemConstantsError != null &&
-            state.systemConstantsError!.contains(
-              'Waiting for system constants',
-            )) {
-          // System constants are still loading, try to load them
-          getIt<SystemConstantsService>().currentSystemConstant;
+        if (state.status == SalesOrderCoordinatorStatus.error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.error!),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
         }
       },
       builder: (context, state) {
-        // SHOW LOADING IF SYSTEM CONSTANTS NOT READY
-        if (!_systemConstantsLoaded) {
-          return _buildLoadingState();
+        // Sync discount controller with state
+        if (state.lastDiscountAmount != null &&
+            _discountController.text.isEmpty &&
+            state.lastDiscountAmount! > 0) {
+          _discountController.text = state.lastDiscountAmount!.toStringAsFixed(
+            2,
+          );
         }
 
-        // SHOW ERROR IF SYSTEM CONSTANTS FAILED TO LOAD
-        if (state.systemConstantsError != null &&
-            !state.systemConstantsError!.contains(
-              'Waiting for system constants',
-            )) {
-          return _buildErrorState(state.systemConstantsError!);
-        }
-
-        // NORMAL RENDERING WHEN SYSTEM CONSTANTS ARE READY
         return _buildPaymentDetails(context, state);
       },
     );
@@ -164,7 +191,9 @@ class _PaymentDetailsState extends State<PaymentDetails> {
           ElevatedButton(
             onPressed: () {
               getIt<SystemConstantsService>().ensureLoaded();
-              context.read<PaymentBloc>().add(const LoadFeeSystemConstants());
+              context.read<SalesOrderCoordinatorBloc>().add(
+                const LoadFeeSystemConstants(),
+              );
             },
             child: Text('Retry'),
           ),
@@ -173,7 +202,10 @@ class _PaymentDetailsState extends State<PaymentDetails> {
     );
   }
 
-  Widget _buildPaymentDetails(BuildContext context, PaymentState state) {
+  Widget _buildPaymentDetails(
+    BuildContext context,
+    SalesOrderCoordinatorState state,
+  ) {
     // YOUR EXISTING UI CODE HERE (the SingleChildScrollView with all the fields)
     final isSmallScreen = MediaQuery.of(context).size.width < 600;
     final padding = isSmallScreen ? 12.0 : 16.0;
@@ -184,32 +216,25 @@ class _PaymentDetailsState extends State<PaymentDetails> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (state.systemConstantsError != null)
-              _buildSystemConstantsWarning(state.systemConstantsError!),
+            // Order Summary Header
+            _buildSectionHeader('Order Summary'),
             const SizedBox(height: 16),
             _buildReadOnlyField(
               context,
               'Subtotal',
-              _currencyFormat.format(state.subtotal),
+              _currencyFormat.format(state.lastSubTotal),
               icon: Icons.shopping_cart,
             ),
             const SizedBox(height: 6),
             _buildDiscountField(context, state, isSmallScreen),
             const SizedBox(height: 16),
-            _buildWithholdingField(
-              context,
-              state,
-              state.canApplyWithholding,
-              state.withholdingRate,
-              state.withholdingInitial,
-              isSmallScreen,
-            ),
+            _buildWithholdingField(context, state, isSmallScreen),
             const SizedBox(height: 16),
-            _buildTaxField(context, state, state.vatRate),
+            _buildTaxField(context, state),
             const SizedBox(height: 16),
             const Divider(height: 1),
             const SizedBox(height: 16),
-            _buildTotalField(context, 'Total', state.grandTotal),
+            _buildTotalField(context, 'Total', state.lastTotalAmount ?? 0.0),
             if (!state.canApplyWithholding && state.isWithholdingEnabled)
               _buildWarningMessage(context, state),
           ],
@@ -242,15 +267,27 @@ class _PaymentDetailsState extends State<PaymentDetails> {
     );
   }
 
+  Widget _buildSectionHeader(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+        color: Color(0xFF155888),
+      ),
+    );
+  }
+
   Widget _buildTaxField(
     BuildContext context,
-    PaymentState state,
-    double vatRate,
+    SalesOrderCoordinatorState state,
   ) {
+    final vatRate = state.vatRate ?? 0.0;
+    final taxAmount = state.lastTax ?? 0.0;
     return _buildReadOnlyField(
       context,
       'Tax (${vatRate.toStringAsFixed(1)}%)',
-      _currencyFormat.format(state.taxAmount),
+      _currencyFormat.format(taxAmount),
       icon: Icons.receipt,
       subtitle: 'VAT rate from system configuration',
     );
@@ -266,57 +303,18 @@ class _PaymentDetailsState extends State<PaymentDetails> {
     );
   }
 
-  // Add this method to show when values are loaded from database
-  Widget _buildDataSourceIndicator(bool fromDatabase) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: fromDatabase
-            ? Colors.green.withOpacity(0.1)
-            : Colors.blue.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(
-          color: fromDatabase ? Colors.green : Colors.blue,
-          width: 0.5,
-        ),
-      ),
-      child: Text(
-        fromDatabase ? '✓ Using database values' : '⚠ Using default values',
-        style: TextStyle(
-          fontSize: 10,
-          color: fromDatabase ? Colors.green : Colors.blue,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
   Widget _buildDiscountField(
     BuildContext context,
-    PaymentState state,
+    SalesOrderCoordinatorState state,
     bool isSmallScreen,
   ) {
-    if (_discountController.text != state.discountAmount.toString() &&
-        state.discountAmount > 0) {
-      _discountController.text = state.discountAmount.toString();
-    }
-
     final theme = Theme.of(context);
     final borderColor = _discountEnabled
         ? theme.colorScheme.primary
         : const Color(0xFF1C1C1C);
 
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          _discountEnabled = !_discountEnabled;
-          if (!_discountEnabled) {
-            _discountController.clear();
-            _updateTaxAndFees(discountAmount: 0);
-          }
-        });
-      },
+      onTap: () => _toggleDiscount(!_discountEnabled),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         height: 45,
@@ -328,7 +326,8 @@ class _PaymentDetailsState extends State<PaymentDetails> {
         ),
         child: Row(
           children: [
-            const Icon(Icons.discount),
+            const Icon(Icons.discount, size: 20),
+            const SizedBox(width: 8),
 
             /// Discount text field (editable only when enabled)
             Expanded(
@@ -363,7 +362,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
                       ),
                     ),
                     onChanged: (value) {
-                      _updateTaxAndFees(
+                      _updateFinancialData(
                         discountAmount: double.tryParse(value) ?? 0,
                       );
                     },
@@ -371,38 +370,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
                 ),
               ),
             ),
-
-            /// Animated toggle knob
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeInOut,
-              width: 36,
-              height: 20,
-              margin: const EdgeInsets.only(left: 10),
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                border: Border.all(color: borderColor, width: 1),
-                borderRadius: BorderRadius.circular(12),
-                color: _discountEnabled
-                    ? theme.colorScheme.primary
-                    : Colors.grey[100],
-              ),
-              child: AnimatedAlign(
-                duration: const Duration(milliseconds: 250),
-                alignment: _discountEnabled
-                    ? Alignment.centerRight
-                    : Alignment.centerLeft,
-                curve: Curves.easeInOut,
-                child: Container(
-                  width: 14,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _discountEnabled ? Colors.white : Colors.grey[700],
-                  ),
-                ),
-              ),
-            ),
+            _buildToggleSwitch(_discountEnabled, borderColor, theme),
           ],
         ),
       ),
@@ -411,20 +379,16 @@ class _PaymentDetailsState extends State<PaymentDetails> {
 
   Widget _buildWithholdingField(
     BuildContext context,
-    PaymentState state,
-    bool canApplyWithholding,
-    double withholdingRate,
-    double withholdingInitial,
+    SalesOrderCoordinatorState state,
     bool isSmallScreen,
   ) {
     final theme = Theme.of(context);
-    final isWithholdingEnabled = state.isWithholdingEnabled;
     final isWithholdingApplied =
         state.canApplyWithholding && state.isWithholdingEnabled;
 
     final borderColor = isWithholdingApplied
         ? theme.colorScheme.primary
-        : isWithholdingEnabled
+        : state.isWithholdingEnabled
         ? theme.colorScheme.primary
         : const Color(0xFF1C1C1C);
 
@@ -433,8 +397,8 @@ class _PaymentDetailsState extends State<PaymentDetails> {
         : '----';
 
     final withholdingDisplayText = isWithholdingApplied
-        ? '$withholdingAmountText (${withholdingRate.toStringAsFixed(1)}%)'
-        : isWithholdingEnabled && !canApplyWithholding
+        ? '$withholdingAmountText (${state.withholdingRate!.toStringAsFixed(1)}%)'
+        : state.isWithholdingEnabled && !state.canApplyWithholding
         ? 'Not applicable'
         : 'Withholding(----)';
 
@@ -442,15 +406,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         GestureDetector(
-          onTap: () {
-            context.read<PaymentBloc>().add(
-              UpdateTaxAndFees(
-                subtotal: state.subtotal,
-                discountAmount: state.discountAmount,
-                isWithholdingEnabled: !isWithholdingEnabled,
-              ),
-            );
-          },
+          onTap: () => _toggleWithholding(!state.isWithholdingEnabled),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 250),
             height: 45,
@@ -463,16 +419,17 @@ class _PaymentDetailsState extends State<PaymentDetails> {
             child: Row(
               children: [
                 const Icon(Icons.account_balance, size: 20),
+                const SizedBox(width: 8),
 
                 /// Withholding display (not editable but reactive)
                 Expanded(
                   child: IgnorePointer(
-                    ignoring: !isWithholdingEnabled,
+                    ignoring: true,
                     child: AnimatedOpacity(
                       duration: const Duration(milliseconds: 200),
-                      opacity: isWithholdingEnabled ? 1.0 : 0.6,
+                      opacity: state.isWithholdingEnabled ? 1.0 : 0.6,
                       child: TextField(
-                        enabled: isWithholdingEnabled,
+                        enabled: false,
                         controller: TextEditingController(
                           text: withholdingDisplayText,
                         ),
@@ -499,40 +456,10 @@ class _PaymentDetailsState extends State<PaymentDetails> {
                   ),
                 ),
 
-                /// Animated toggle knob (matches discount field)
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeInOut,
-                  width: 36,
-                  height: 20,
-                  margin: const EdgeInsets.only(left: 10),
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: borderColor, width: 1),
-                    borderRadius: BorderRadius.circular(12),
-                    color: isWithholdingApplied
-                        ? theme.colorScheme.primary
-                        : isWithholdingEnabled
-                        ? theme.colorScheme.primary
-                        : Colors.grey[100],
-                  ),
-                  child: AnimatedAlign(
-                    duration: const Duration(milliseconds: 250),
-                    alignment: isWithholdingEnabled
-                        ? Alignment.centerRight
-                        : Alignment.centerLeft,
-                    curve: Curves.easeInOut,
-                    child: Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isWithholdingEnabled
-                            ? Colors.white
-                            : Colors.grey[700],
-                      ),
-                    ),
-                  ),
+                _buildToggleSwitch(
+                  state.isWithholdingEnabled,
+                  borderColor,
+                  theme,
                 ),
               ],
             ),
@@ -545,17 +472,17 @@ class _PaymentDetailsState extends State<PaymentDetails> {
         Text(
           isWithholdingApplied
               ? 'Withholding tax is applied to this transaction'
-              : isWithholdingEnabled && !canApplyWithholding
-              ? 'Subtotal must exceed \$${withholdingInitial.toStringAsFixed(2)} to apply withholding'
+              : state.isWithholdingEnabled && !state.canApplyWithholding
+              ? 'Subtotal must exceed \$${state.withholdingInitial!.toStringAsFixed(2)} to apply withholding'
               : 'Withholding tax is disabled',
           style: TextStyle(
             fontSize: 12,
             color: isWithholdingApplied
                 ? theme.colorScheme.primary
-                : isWithholdingEnabled && !canApplyWithholding
+                : state.isWithholdingEnabled && !state.canApplyWithholding
                 ? Colors.amber[800]
                 : theme.colorScheme.onSurface.withOpacity(0.6),
-            fontStyle: isWithholdingApplied || isWithholdingEnabled
+            fontStyle: isWithholdingApplied || state.isWithholdingEnabled
                 ? FontStyle.italic
                 : FontStyle.normal,
           ),
@@ -565,7 +492,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
           Padding(
             padding: const EdgeInsets.only(top: 4.0),
             child: Text(
-              '${withholdingRate.toStringAsFixed(1)}% of subtotal',
+              '${state.withholdingRate!.toStringAsFixed(1)}% of subtotal',
               style: TextStyle(fontSize: 12, color: Colors.grey[700]),
             ),
           ),
@@ -573,7 +500,43 @@ class _PaymentDetailsState extends State<PaymentDetails> {
     );
   }
 
-  Widget _buildWarningMessage(BuildContext context, PaymentState state) {
+  Widget _buildToggleSwitch(
+    bool isEnabled,
+    Color borderColor,
+    ThemeData theme,
+  ) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+      width: 36,
+      height: 20,
+      margin: const EdgeInsets.only(left: 10),
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        border: Border.all(color: borderColor, width: 1),
+        borderRadius: BorderRadius.circular(12),
+        color: isEnabled ? theme.colorScheme.primary : Colors.grey[100],
+      ),
+      child: AnimatedAlign(
+        duration: const Duration(milliseconds: 250),
+        alignment: isEnabled ? Alignment.centerRight : Alignment.centerLeft,
+        curve: Curves.easeInOut,
+        child: Container(
+          width: 14,
+          height: 14,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isEnabled ? Colors.white : Colors.grey[700],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWarningMessage(
+    BuildContext context,
+    SalesOrderCoordinatorState state,
+  ) {
     return Container(
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.all(12),
@@ -632,11 +595,37 @@ class _PaymentDetailsState extends State<PaymentDetails> {
   }
 
   Widget _buildTotalField(BuildContext context, String label, double value) {
-    return CustomTextField(
-      labelText: label,
-      value: _currencyFormat.format(value),
-      readOnly: true,
-      prefixIcon: Icon(Icons.payment),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF155888).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF155888)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.payment, color: Color(0xFF155888)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF155888),
+              ),
+            ),
+          ),
+          Text(
+            '\$${_currencyFormat.format(value)}',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF155888),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

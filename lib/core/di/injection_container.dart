@@ -2,6 +2,10 @@ import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
 import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
+import 'package:savvy_stock/features/sales/invoice/detail/bloc/invoice_detail_bloc.dart';
+import 'package:savvy_stock/features/sales/invoice/detail/repo/invoice_detail_repo.dart';
+import 'package:savvy_stock/features/sales/invoice/header/bloc/invoice_header_bloc.dart';
+import 'package:savvy_stock/features/sales/invoice/header/repo/invoice_header_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/service/sales_order_integration_service.dart';
 import 'package:savvy_stock/features/sales/services/validate_stock_availability.dart';
@@ -22,8 +26,6 @@ import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
 import 'package:savvy_stock/features/next_number/bloc/next_number_bloc.dart';
 import 'package:savvy_stock/features/next_number/repo/next_number_repo.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
-import 'package:savvy_stock/features/sales/invoice/blocs/invoice_bloc.dart';
-import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_bloc.dart';
 import 'package:savvy_stock/features/stock/item_cost/blocs/item_cost_bloc.dart';
@@ -188,9 +190,13 @@ void initDependencies() {
     ),
   );
 
+  getIt.registerLazySingleton<InvoiceHistoryHeaderRepository>(
+    () => InvoiceHistoryHeaderRepository(databaseService: getIt()),
+  );
+  getIt.registerLazySingleton<InvoiceHistoryDetailRepository>(
+    () => InvoiceHistoryDetailRepository(databaseService: getIt()),
+  );
   // BLoCs
-
-  getIt.registerFactory<PaymentBloc>(() => PaymentBloc(getIt()));
 
   getIt.registerLazySingleton<AuthBloc>(
     () => AuthBloc(databaseService: getIt(), secureStorage: getIt()),
@@ -303,14 +309,13 @@ void initDependencies() {
       authBloc: getIt(),
     ),
   );
-  getIt.registerFactory<InvoiceBloc>(() => InvoiceBloc());
   getIt.registerFactory<SalesOrderHeaderBloc>(
     () => SalesOrderHeaderBloc(
-      systemConstantBloc: getIt(),
-      udcDetailRepository: getIt(),
-      employeesRepository: getIt(),
       customerRepository: getIt(),
+      employeesRepository: getIt(),
+      udcDetailRepository: getIt(),
       repository: getIt(),
+      systemConstantBloc: getIt(),
       authBloc: getIt(),
     ),
   );
@@ -345,7 +350,28 @@ void initDependencies() {
       nextNumberBloc: getIt(),
     ),
   );
+  getIt.registerFactory<InvoiceHistoryHeaderBloc>(
+    () => InvoiceHistoryHeaderBloc(
+      repository: getIt(),
+      authBloc: getIt(),
+      udcRepository: getIt(),
+    ),
+  );
+  getIt.registerFactory<InvoiceHistoryDetailBloc>(
+    () => InvoiceHistoryDetailBloc(
+      repository: getIt(),
+      authBloc: getIt(),
+      headerBloc: getIt(),
+    ),
+  );
   getIt.registerFactory<SalesOrderCoordinatorBloc>(
-    () => SalesOrderCoordinatorBloc(headerBloc: getIt(), detailBloc: getIt()),
+    () => SalesOrderCoordinatorBloc(
+      headerBloc: getIt(),
+      detailBloc: getIt(),
+      authBloc: getIt(),
+      invoiceHeaderBloc: getIt(),
+      invoiceDetailBloc: getIt(),
+      systemConstantBloc: getIt(),
+    ),
   );
 }

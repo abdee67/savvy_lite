@@ -165,29 +165,14 @@ class AppRouter {
       ),
       GoRoute(
         path: AppRoutes.paymentSummary,
-        builder: (context, state) {
-          final args = state.extra as Map<String, dynamic>?;
-
-          if (args == null ||
-              args['confirmedItems'] == null ||
-              args['totalAmount'] == null ||
-              args['customer'] == null) {
-            return Scaffold(
-              body: Center(child: Text('Missing payment arguments')),
-            );
-          }
-
-          return PrivilegeRouteGuard(
-            requiredPrivilege: AppRoutes.paymentSummary,
-            parentPrivilege: AppRoutes.salesCustomerInfo,
-            child: PaymentScreen(
-              confirmedItems: args['confirmedItems'] as List<ConfirmedItem>,
-              totalAmount: args['totalAmount'] as double,
-              customer: args['customer'] as Customer,
-              authBloc: authBloc,
-            ),
-          );
-        },
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.paymentSummary,
+          parentPrivilege: AppRoutes.salesCustomerInfo,
+          child: PaymentScreen(
+            authBloc: authBloc,
+            orderData: state.extra as Map<String, dynamic>?,
+          ),
+        ),
         redirect: _protectedRouteRedirect,
       ),
       GoRoute(
@@ -195,7 +180,7 @@ class AppRouter {
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: AppRoutes.salesInvoice,
           parentPrivilege: AppRoutes.salesCustomerInfo,
-          child: InvoiceReviewScreen(),
+          child: Placeholder(),
         ),
         redirect: _protectedRouteRedirect,
       ),

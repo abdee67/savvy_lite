@@ -1,6 +1,8 @@
 // features/sales/sales_order/coordinator/bloc/sales_order_coordinator_state.dart
 import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
+import 'package:savvy_stock/features/sales/invoice/detail/model/invoice_detail_model.dart';
+import 'package:savvy_stock/features/sales/invoice/header/model/invoice_header_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 
@@ -22,52 +24,121 @@ enum SalesOrderCoordinatorStatus {
   error,
   partialError,
   rollback,
+  paymentProcessing,
 }
 
 class SalesOrderCoordinatorState extends Equatable {
   final SalesOrderCoordinatorStatus status;
+  final String? error;
+  final String? lastOperation;
+  final Set<String> pendingOperations;
+
+  // Order Data
   final SalesOrderHeader? currentHeader;
   final List<SalesOrderDetail> currentDetails;
   final List<SalesOrderDetail> lastSavedDetails;
-  final String? error;
-  final String? successMessage;
-  final DateTime? lastSyncTime;
-  final String? lastOperation;
-  final DateTime? lastCalculationTime;
-  final bool isOrderComplete;
-  final bool isStockValidated;
-  final bool isCalculationsComplete;
-  final Map<int, StockValidationResult> stockValidationResults;
+
+  // Financial Calculations
   final double? lastSubTotal;
   final double? lastTax;
   final double? lastWithholdAmount;
-  final double? lastDiscountAmount;
   final double? lastTotalAmount;
-  final Set<String> pendingOperations;
+  final double? lastDiscountAmount;
+  final double? lastAmountOpen;
+  final DateTime? lastCalculationTime;
+
+  // Payment Details
+  final String paymentType;
+  final String paymentMethod;
+  final int paymentStatus;
+  final String paymentInstrument;
+  final String paymentTerm;
+  final String? transactionID;
+
+  // Tax & Fees Configuration
+  final double? vatRate;
+  final double? withholdingRate;
+  final double? withholdingInitial;
+  final bool isWithholdingEnabled;
+  final bool canApplyWithholding;
+
+  // Validation & Status
+  final bool isStockValidated;
+  final bool isCalculationsComplete;
+  final bool isOrderComplete;
+  final Map<int, StockValidationResult> stockValidationResults;
+
+  // System Constants
+  final String? systemConstantsError;
+  final DateTime? lastSyncTime;
+  final String? successMessage;
   final List<Customer>? defaultCustomer;
+
+  // Invoice Generation
+  final bool invoiceGenerated;
+  final InvoiceHistoryHeader? invoiceHeader;
+  final List<InvoiceHistoryDetail> invoiceDetails;
+  final String? invoiceFsNumber;
 
   const SalesOrderCoordinatorState({
     this.status = SalesOrderCoordinatorStatus.initial,
+    this.error,
+    this.lastOperation,
+    this.pendingOperations = const {},
     this.currentHeader,
     this.currentDetails = const [],
     this.lastSavedDetails = const [],
-    this.error,
-    this.successMessage,
-    this.lastSyncTime,
-    this.lastOperation,
-    this.lastCalculationTime,
-    this.isOrderComplete = false,
-    this.isStockValidated = false,
-    this.isCalculationsComplete = false,
-    this.stockValidationResults = const {},
     this.lastSubTotal,
     this.lastTax,
     this.lastWithholdAmount,
-    this.lastDiscountAmount,
     this.lastTotalAmount,
-    this.pendingOperations = const {},
+    this.lastDiscountAmount,
+    this.lastAmountOpen,
+    this.lastCalculationTime,
+    this.paymentType = 'Cash',
+    this.paymentMethod = '',
+    this.paymentStatus = 0,
+    this.paymentInstrument = 'Cash',
+    this.paymentTerm = '',
+    this.transactionID,
+    this.vatRate,
+    this.withholdingRate,
+    this.withholdingInitial,
+    this.isWithholdingEnabled = false,
+    this.canApplyWithholding = false,
+    this.isStockValidated = false,
+    this.isCalculationsComplete = false,
+    this.isOrderComplete = false,
+    this.stockValidationResults = const {},
+    this.systemConstantsError,
+    this.lastSyncTime,
+    this.successMessage,
     this.defaultCustomer,
+    this.invoiceDetails = const [],
+    this.invoiceGenerated = false,
+    this.invoiceHeader,
+    this.invoiceFsNumber,
   });
+
+  // Getters for financial data
+  double get subtotal => lastSubTotal ?? 0.0;
+  double get taxAmount => lastTax ?? 0.0;
+  double get withholdingAmount => lastWithholdAmount ?? 0.0;
+  double get discountAmount => lastDiscountAmount ?? 0.0;
+  double get grandTotal => lastTotalAmount ?? 0.0;
+
+  // Validation getters
+  bool get isValid =>
+      currentHeader != null &&
+      currentDetails.isNotEmpty &&
+      paymentType.isNotEmpty &&
+      paymentInstrument.isNotEmpty &&
+      (paymentType != 'Credit' || paymentTerm.isNotEmpty);
+
+  bool get requiresStockValidation => currentDetails.isNotEmpty;
+  bool get isProcessing => status == SalesOrderCoordinatorStatus.processing;
+  bool get isPaymentProcessing =>
+      status == SalesOrderCoordinatorStatus.paymentProcessing;
 
   @override
   List<Object?> get props => [
@@ -91,6 +162,21 @@ class SalesOrderCoordinatorState extends Equatable {
     lastTotalAmount,
     pendingOperations,
     defaultCustomer,
+    lastAmountOpen,
+    paymentType,
+    paymentMethod,
+    paymentInstrument,
+    paymentTerm,
+    transactionID,
+    vatRate,
+    withholdingRate,
+    withholdingInitial,
+    isWithholdingEnabled,
+    canApplyWithholding,
+    invoiceDetails,
+    invoiceGenerated,
+    invoiceHeader,
+    invoiceFsNumber,
   ];
 
   SalesOrderCoordinatorState copyWith({
@@ -114,6 +200,22 @@ class SalesOrderCoordinatorState extends Equatable {
     double? lastTotalAmount,
     Set<String>? pendingOperations,
     List<Customer>? defaultCustomer,
+    double? lastAmountOpen,
+    String? paymentType,
+    int? paymentStatus,
+    String? paymentMethod,
+    String? paymentInstrument,
+    String? paymentTerm,
+    String? transactionID,
+    double? vatRate,
+    double? withholdingRate,
+    double? withholdingInitial,
+    bool? isWithholdingEnabled,
+    bool? canApplyWithholding,
+    List<InvoiceHistoryDetail>? invoiceDetails,
+    bool? invoiceGenerated,
+    InvoiceHistoryHeader? invoiceHeader,
+    String? invoiceFsNumber,
   }) {
     return SalesOrderCoordinatorState(
       status: status ?? this.status,
@@ -138,6 +240,22 @@ class SalesOrderCoordinatorState extends Equatable {
       lastTotalAmount: lastTotalAmount ?? this.lastTotalAmount,
       pendingOperations: pendingOperations ?? this.pendingOperations,
       defaultCustomer: defaultCustomer ?? this.defaultCustomer,
+      lastAmountOpen: lastAmountOpen ?? this.lastAmountOpen,
+      paymentType: paymentType ?? this.paymentType,
+      paymentStatus: paymentStatus ?? this.paymentStatus,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      paymentInstrument: paymentInstrument ?? this.paymentInstrument,
+      paymentTerm: paymentTerm ?? this.paymentTerm,
+      transactionID: transactionID ?? this.transactionID,
+      vatRate: vatRate ?? this.vatRate,
+      withholdingRate: withholdingRate ?? this.withholdingRate,
+      withholdingInitial: withholdingInitial ?? this.withholdingInitial,
+      isWithholdingEnabled: isWithholdingEnabled ?? this.isWithholdingEnabled,
+      canApplyWithholding: canApplyWithholding ?? this.canApplyWithholding,
+      invoiceDetails: invoiceDetails ?? this.invoiceDetails,
+      invoiceGenerated: invoiceGenerated ?? this.invoiceGenerated,
+      invoiceHeader: invoiceHeader ?? this.invoiceHeader,
+      invoiceFsNumber: invoiceFsNumber ?? this.invoiceFsNumber,
     );
   }
 
@@ -180,6 +298,24 @@ class SalesOrderCoordinatorState extends Equatable {
   SalesOrderCoordinatorState operationComplete(String operation) {
     return copyWith(
       pendingOperations: {...pendingOperations}..remove(operation),
+    );
+  }
+
+  SalesOrderCoordinatorState processingState(String operation) {
+    return copyWith(
+      status: SalesOrderCoordinatorStatus.processing,
+      pendingOperations: {...pendingOperations, operation},
+      error: null,
+      lastOperation: operation,
+    );
+  }
+
+  SalesOrderCoordinatorState paymentProcessingState() {
+    return copyWith(
+      status: SalesOrderCoordinatorStatus.paymentProcessing,
+      pendingOperations: {...pendingOperations, 'process_payment'},
+      error: null,
+      lastOperation: 'Processing payment',
     );
   }
 

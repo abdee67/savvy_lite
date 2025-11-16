@@ -102,7 +102,6 @@ class ItemMasterRepository {
 
     final maps = await db.rawQuery('''
       SELECT im.*,
-             b.description as branch_description,
              cc.description_1 as company_category_description,
              uom.description_1 as defualt_uom_description,
              c01.description_1 as category_code_01_description,
@@ -116,7 +115,6 @@ class ItemMasterRepository {
              c09.description_1 as category_code_09_description,
              c10.description_1 as category_code_10_description
       FROM item_master im
-      LEFT JOIN branch_table b ON im.branch = b.id
       LEFT JOIN udc_details cc ON im.company_category = cc.id
       LEFT JOIN udc_details uom ON im.defualt_uom = uom.id
       LEFT JOIN udc_details c01 ON im.category_code_01 = c01.id
@@ -145,7 +143,7 @@ class ItemMasterRepository {
     final maps = await db.rawQuery(
       '''
       SELECT im.*,
-             b.description as branch_description,
+             --b.description as branch_description,
              cc.description_1 as company_category_description,
              uom.description_1 as defualt_uom_description,
              c01.description_1 as category_code_01_description,
@@ -159,7 +157,7 @@ class ItemMasterRepository {
              c09.description_1 as category_code_09_description,
              c10.description_1 as category_code_10_description
       FROM item_master im
-      LEFT JOIN branch_table b ON im.branch = b.id
+      --LEFT JOIN branch_table b ON im.branch = b.id
       LEFT JOIN udc_details cc ON im.company_category = cc.id
       LEFT JOIN udc_details uom ON im.defualt_uom = uom.id
       LEFT JOIN udc_details c01 ON im.category_code_01 = c01.id
@@ -215,7 +213,7 @@ class ItemMasterRepository {
     final maps = await db.rawQuery(
       '''
       SELECT im.*,
-             b.description as branch_description,
+             --b.description as branch_description,
              cc.description_1 as company_category_description,
              uom.description_1 as defualt_uom_description,
              c01.description_1 as category_code_01_description,
@@ -229,7 +227,7 @@ class ItemMasterRepository {
              c09.description_1 as category_code_09_description,
              c10.description_1 as category_code_10_description
       FROM item_master im
-      LEFT JOIN branch_table b ON im.branch = b.id
+      -- LEFT JOIN branch_table b ON im.branch = b.id
       LEFT JOIN udc_details cc ON im.company_category = cc.id
       LEFT JOIN udc_details uom ON im.defualt_uom = uom.id
       LEFT JOIN udc_details c01 ON im.category_code_01 = c01.id
@@ -268,7 +266,7 @@ class ItemMasterRepository {
 
     final maps = await db.rawQuery('''
       SELECT im.*,
-             b.description as branch_description,
+             --b.description as branch_description,
              cc.description_1 as company_category_description,
              uom.description_1 as defualt_uom_description,
              c01.description_1 as category_code_01_description,
@@ -282,7 +280,7 @@ class ItemMasterRepository {
              c09.description_1 as category_code_09_description,
              c10.description_1 as category_code_10_description
       FROM item_master im
-      LEFT JOIN branch_table b ON im.branch = b.id
+      --LEFT JOIN branch_table b ON im.branch = b.id
       LEFT JOIN udc_details cc ON im.company_category = cc.id
       LEFT JOIN udc_details uom ON im.defualt_uom = uom.id
       LEFT JOIN udc_details c01 ON im.category_code_01 = c01.id

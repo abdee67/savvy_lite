@@ -1,7 +1,6 @@
 // features/sales/sales_item_entry/screens/sales_item_entry_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_event.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
@@ -193,17 +192,17 @@ class _ItemEntryScreenContentState extends State<ItemEntryScreenContent> {
   }
 
   void _confirmItem() {
+    print('=== CONFIRM ITEM STARTED ===');
+    print('Form valid: ${_formKey.currentState?.validate()}');
+    print('Current detail: ${_currentFormDetail?.toString()}');
+
     if (_formKey.currentState?.validate() ?? false) {
       if (_currentFormDetail != null) {
         final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
-
+        print('Dispatching AddDetailToOrder event');
         // Add or update the item in coordinator
         coordinatorBloc.add(AddDetailToOrder(detail: _currentFormDetail!));
-
-        // Trigger calculations
-        coordinatorBloc.add(const ValidateCompleteStockAvailability());
-        coordinatorBloc.add(const CalculateCompleteOrderTotals());
-
+        print('AddDetailToOrder event dispatched');
         _resetForm();
 
         ScaffoldMessenger.of(context).showSnackBar(

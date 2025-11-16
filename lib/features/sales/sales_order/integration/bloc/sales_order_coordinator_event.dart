@@ -84,6 +84,58 @@ class SyncFinancialData extends SalesOrderCoordinatorEvent {
   const SyncFinancialData({this.discountAmount, this.applyWithholding});
 }
 
+// Financial Calculations & Payment Events
+class UpdateTaxAndFees extends SalesOrderCoordinatorEvent {
+  final double subtotal;
+  final double discountAmount;
+  final bool isWithholdingEnabled;
+
+  const UpdateTaxAndFees({
+    required this.subtotal,
+    required this.discountAmount,
+    required this.isWithholdingEnabled,
+  });
+
+  @override
+  List<Object> get props => [subtotal, discountAmount, isWithholdingEnabled];
+}
+
+class ProcessPayment extends SalesOrderCoordinatorEvent {
+  const ProcessPayment();
+
+  @override
+  List<Object> get props => [];
+}
+
+class UpdatePaymentDetails extends SalesOrderCoordinatorEvent {
+  final String paymentType;
+  final String paymentMethod;
+  final String paymentInstrument;
+  final String paymentTerm;
+
+  const UpdatePaymentDetails({
+    required this.paymentType,
+    required this.paymentMethod,
+    required this.paymentInstrument,
+    required this.paymentTerm,
+  });
+
+  @override
+  List<Object> get props => [
+    paymentType,
+    paymentMethod,
+    paymentInstrument,
+    paymentTerm,
+  ];
+}
+
+class LoadFeeSystemConstants extends SalesOrderCoordinatorEvent {
+  const LoadFeeSystemConstants();
+
+  @override
+  List<Object> get props => [];
+}
+
 // Customer & Header Synchronization
 class SyncCustomerToOrder extends SalesOrderCoordinatorEvent {
   final Customer customer;
@@ -162,8 +214,23 @@ class ClearOrderDetails extends SalesOrderCoordinatorEvent {}
 class HeaderStateChanged extends SalesOrderCoordinatorEvent {
   final SalesOrderHeader? selectedHeader;
   final List<SalesOrderHeader> headers;
+  final double? subTotal;
+  final double? tax;
+  final double? withholdAmount;
+  final double? totalAmount;
+  final double? discountAmount;
+  final double? amountOpen;
 
-  const HeaderStateChanged({this.selectedHeader, required this.headers});
+  const HeaderStateChanged({
+    this.selectedHeader,
+    required this.headers,
+    this.subTotal,
+    this.tax,
+    this.withholdAmount,
+    this.totalAmount,
+    this.discountAmount,
+    this.amountOpen,
+  });
 
   @override
   List<Object?> get props => [selectedHeader, headers];
@@ -173,11 +240,13 @@ class DetailStateChanged extends SalesOrderCoordinatorEvent {
   final List<SalesOrderDetail> currentDetails;
   final List<SalesOrderDetail> createItems;
   final List<SalesOrderDetail> editItems;
+  final Map<int, StockValidationResult> stockValidationResults;
 
   const DetailStateChanged({
     required this.currentDetails,
     required this.createItems,
     required this.editItems,
+    required this.stockValidationResults,
   });
 
   @override
@@ -194,4 +263,11 @@ class RetryFailedOperation extends SalesOrderCoordinatorEvent {
 
   @override
   List<Object?> get props => [failedEvent];
+}
+
+class GenerateInvoiceFromSalesOrder extends SalesOrderCoordinatorEvent {
+  const GenerateInvoiceFromSalesOrder();
+
+  @override
+  List<Object> get props => [];
 }

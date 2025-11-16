@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+/*import 'package:flutter/material.dart';
 import 'package:savvy_stock/features/sales/invoice/models/invoice_model.dart';
 
 class InvoiceThirdPart extends StatelessWidget {
@@ -8,7 +8,7 @@ class InvoiceThirdPart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final colorScheme = Theme.of(context).colorScheme;  
 
     return Padding(
       padding: const EdgeInsets.all(8.0),
@@ -235,3 +235,4 @@ class InvoiceThirdPart extends StatelessWidget {
     return 'Large Amount'; // Simplified for very large numbers
   }
 }
+*/

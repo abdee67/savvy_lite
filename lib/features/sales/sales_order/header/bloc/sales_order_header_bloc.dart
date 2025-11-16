@@ -156,7 +156,7 @@ class SalesOrderHeaderBloc
   ) async {
     emit(state.copyWith(systemConstants: event.systemConstants));
 
-    // Recalculate totals if we have existing data
+    /*// Recalculate totals if we have existing data
     if (state.selected != null && state.salesOrderDetail!.isNotEmpty) {
       add(
         CalculateOrderTotals(
@@ -166,7 +166,7 @@ class SalesOrderHeaderBloc
           discountAmount: state.discountAmount,
         ),
       );
-    }
+    }*/
   }
 
   // Enhanced Financial Calculations using System Constants

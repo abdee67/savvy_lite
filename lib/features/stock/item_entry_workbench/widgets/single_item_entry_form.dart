@@ -444,26 +444,67 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
     return BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
       builder: (context, state) {
         if (state.status == UdcDetailsStatus.loading) {
-          return const CustomSearchableDropdown(
-            labelText: 'UoM',
-            options: [],
-            enabled: false,
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (state.details.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8.0),
+            child: Text(
+              'No unit of measure available',
+              style: TextStyle(color: Colors.grey),
+            ),
+          );
+        }
+        final udcList = state.details.toList();
+        if (udcList.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8.0),
+            child: Text(
+              'No valid unit of measure found',
+              style: TextStyle(color: Colors.grey),
+            ),
           );
         }
 
-        final uomList = state.details
-            .where((detail) => detail.udcGroup == 'UM')
-            .toList();
-        return CustomSearchableDropdown(
-          labelText: 'UoM',
-          prefixIcon: Icons.scale,
-          options: uomList.map((uom) => uom.description1 ?? 'Unknown').toList(),
-          onChanged: (value) {
-            setState(() {
-              _items[index] = _items[index].copyWith(
-                defualtUom: int.tryParse(value ?? ''),
-              );
-            });
+        return Builder(
+          builder: (context) {
+            String? currentUomDesc;
+            final selectedUomId = _items[index].defualtUom;
+            if (selectedUomId != null) {
+              final match = udcList.where((u) => u.id == selectedUomId);
+              if (match.isNotEmpty) {
+                currentUomDesc = match.first.description1;
+              }
+            }
+
+            return CustomSearchableDropdown(
+              labelText: 'Unit of Measure *',
+              options: udcList.map((u) => u.description1).toList(),
+              value: currentUomDesc,
+              prefixIcon: Iconsax.ruler,
+              allowCustomEntries: false,
+              onChanged: (value) {
+                setState(() {
+                  if (value == null) {
+                    _items[index] = _items[index].copyWith(defualtUom: null);
+                  } else {
+                    final matches = udcList.where(
+                      (u) => u.description1 == value,
+                    );
+                    final selected = matches.isNotEmpty ? matches.first : null;
+                    _items[index] = _items[index].copyWith(
+                      defualtUom: selected?.id,
+                    );
+                  }
+                });
+              },
+              validator: (value) {
+                if (_items[index].defualtUom == null) {
+                  return 'Please select a unit of measure';
+                }
+                return null;
+              },
+            );
           },
         );
       },

@@ -29,7 +29,7 @@ class SalesOrderIntegrationService {
   }) async {
     try {
       // Step 1: Validate business rules before creation
-      await _validateOrderCreation(header, details);
+      // await _validateOrderCreation(header, details);
 
       // Step 2: Create header first (like JSF's header creation)
       final createdHeader = await _createSalesOrderHeader(header);
@@ -45,9 +45,6 @@ class SalesOrderIntegrationService {
 
       // Step 5: Calculate final totals (like JSF's calQtyWithAmt)
       await _calculateFinalTotals(createdHeader, details);
-
-      // Step 6: Validate complete order state
-      await _validateCompleteOrder(createdHeader, details);
     } catch (e) {
       // Comprehensive rollback on failure
       await _rollbackCreateOperation(header, details);
@@ -226,7 +223,7 @@ class SalesOrderIntegrationService {
       for (final detail in details) {
         if (detail.itemInBranch != null) {
           // Trigger stock validation for each detail
-          detailBloc.add(ValidateStockAvailability(salesOrderDetail: detail));
+          detailBloc.add(ValidateAllStockAvailability(item: detail));
 
           // Small delay to prevent overwhelming the system
           await Future.delayed(const Duration(milliseconds: 100));
@@ -430,7 +427,7 @@ class SalesOrderIntegrationService {
     List<SalesOrderDetail> details,
   ) async {
     // Clear any existing create items
-    detailBloc.add(const ClearCreateItemsSalesOrderDetails());
+    // detailBloc.add(const ClearCreateItemsSalesOrderDetails());
 
     // Add all details with header reference
     for (final detail in details) {
@@ -456,8 +453,11 @@ class SalesOrderIntegrationService {
         }
       }
     });
-
-    detailBloc.add(SaveCreateItems(salesOrderHeaderId: header.id!));
+    if (header.id != null) {
+      detailBloc.add(CreateSalesOrderDetails(details: details.first));
+    } else {
+      detailBloc.add(SaveCreateItems(salesOrderHeaderId: header.id!));
+    }
     await completer.future.timeout(const Duration(seconds: 15));
   }
 
@@ -637,27 +637,6 @@ class SalesOrderIntegrationService {
     await validateAllStock(details);
   }
 
-  Future<void> _validateCompleteOrder(
-    SalesOrderHeader header,
-    List<SalesOrderDetail> details,
-  ) async {
-    // Verify header was created successfully
-    if (header.id == null) {
-      throw Exception('Header creation validation failed');
-    }
-
-    // Verify all details reference the correct header
-    final invalidDetails = details.where(
-      (detail) => detail.salesOrderHeaderId != header.id,
-    );
-    if (invalidDetails.isNotEmpty) {
-      throw Exception('Some details have incorrect header reference');
-    }
-
-    // Verify financial calculations are complete
-    final headerState = headerBloc.state;
-  }
-
   Future<void> _validateVoidOperation(
     SalesOrderHeader header,
     List<SalesOrderDetail> details,
@@ -831,7 +810,7 @@ class SalesOrderIntegrationService {
   Future<void> _updateStockForAllDetails(List<SalesOrderDetail> details) async {
     for (final detail in details) {
       if (detail.itemInBranch != null && detail.quantity != null) {
-        detailBloc.add(UpdateStockForSalesOrder(salesOrderDetail: detail));
+        detailBloc.add(ValidateStockAvailability(salesOrderDetail: detail));
 
         // Small delay to prevent overwhelming the system
         await Future.delayed(const Duration(milliseconds: 50));

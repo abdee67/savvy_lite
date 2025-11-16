@@ -46,10 +46,6 @@ class InvoiceHistoryHeaderBloc
 
     // UI State Management (equivalent to Java preparation methods)
     on<PrepareCreate>(_onPrepareCreate);
-    on<PrepareCopy>(_onPrepareCopy);
-    on<PrepareCreateInCreate>(_onPrepareCreateInCreate);
-    on<PrepareCreate1>(_onPrepareCreate1);
-    on<PrepareCreateInEdit>(_onPrepareCreateInEdit);
     on<PrepareEdit>(_onPrepareEdit);
     on<CancelUpdate>(_onCancelUpdate);
     on<CancelCreate>(_onCancelCreate);
@@ -63,16 +59,13 @@ class InvoiceHistoryHeaderBloc
     // Batch Operations
     on<SaveRow>(_onSaveRow);
     on<SaveInEdit>(_onSaveInEdit);
-    on<CreateInEdit>(_onCreateInEdit);
 
     // Item Management in Lists
     on<RemoveInCreate>(_onRemoveInCreate);
-    on<RemoveInEdit>(_onRemoveInEdit);
     on<RemoveRecord>(_onRemoveRecord);
     on<RemoveList>(_onRemoveList);
 
     // Utility
-    on<RefreshList>(_onRefreshList);
   }
 
   @override
@@ -298,76 +291,6 @@ class InvoiceHistoryHeaderBloc
     );
   }
 
-  Future<void> _onPrepareCopy(
-    PrepareCopy event,
-    Emitter<InvoiceHistoryHeaderState> emit,
-  ) async {
-    if (state.multiselectionItems.isEmpty) return;
-
-    final companyId = authBloc.state.companyId;
-    if (companyId == null) return;
-
-    final copiedItem = state.multiselectionItems.first.copyWith(
-      id: null,
-      company: companyId,
-    );
-
-    final updatedCreateItems = [...state.createItems, copiedItem];
-
-    emit(state.copyWith(createItems: updatedCreateItems, selected: copiedItem));
-  }
-
-  Future<void> _onPrepareCreateInCreate(
-    PrepareCreateInCreate event,
-    Emitter<InvoiceHistoryHeaderState> emit,
-  ) async {
-    final companyId = authBloc.state.companyId;
-    if (companyId == null) return;
-
-    final newItem = InvoiceHistoryHeader(
-      tempId: _getNextTempId(state.createItems),
-      company: companyId,
-    );
-
-    final updatedCreateItems = [...state.createItems, newItem];
-
-    emit(state.copyWith(createItems: updatedCreateItems, selected1: newItem));
-  }
-
-  Future<void> _onPrepareCreate1(
-    PrepareCreate1 event,
-    Emitter<InvoiceHistoryHeaderState> emit,
-  ) async {
-    final companyId = authBloc.state.companyId;
-    if (companyId == null) return;
-
-    final newItem = InvoiceHistoryHeader(
-      tempId: _getNextTempId(state.createItems),
-      company: companyId,
-    );
-
-    final updatedCreateItems = [...state.createItems, newItem];
-
-    emit(state.copyWith(createItems: updatedCreateItems, selected: newItem));
-  }
-
-  Future<void> _onPrepareCreateInEdit(
-    PrepareCreateInEdit event,
-    Emitter<InvoiceHistoryHeaderState> emit,
-  ) async {
-    final companyId = authBloc.state.companyId;
-    if (companyId == null) return;
-
-    final newItem = InvoiceHistoryHeader(
-      tempId: _getNextTempId(state.editItems),
-      company: companyId,
-    );
-
-    final updatedEditItems = [...state.editItems, newItem];
-
-    emit(state.copyWith(editItems: updatedEditItems, selected1: newItem));
-  }
-
   Future<void> _onPrepareEdit(
     PrepareEdit event,
     Emitter<InvoiceHistoryHeaderState> emit,
@@ -589,33 +512,6 @@ class InvoiceHistoryHeaderBloc
     }
   }
 
-  Future<void> _onCreateInEdit(
-    CreateInEdit event,
-    Emitter<InvoiceHistoryHeaderState> emit,
-  ) async {
-    try {
-      state.selected1!.company = authBloc.state.companyId;
-      await repository.createInvoiceHistoryHeader(state.selected1!);
-
-      // Refresh list like Java
-      add(LoadInvoiceHistoryHeaders(companyId: state.companyId!));
-
-      emit(
-        state.copyWith(
-          status: InvoiceHistoryHeaderStatus.success,
-          successMessage: 'Created successfully',
-        ),
-      );
-    } catch (e) {
-      emit(
-        state.copyWith(
-          status: InvoiceHistoryHeaderStatus.failure,
-          errorMessage: 'Failed to create in edit: $e',
-        ),
-      );
-    }
-  }
-
   // Item Management in Lists
   Future<void> _onRemoveInCreate(
     RemoveInCreate event,
@@ -637,26 +533,6 @@ class InvoiceHistoryHeaderBloc
     emit(state.copyWith(createItems: updatedCreateItems));
   }
 
-  Future<void> _onRemoveInEdit(
-    RemoveInEdit event,
-    Emitter<InvoiceHistoryHeaderState> emit,
-  ) async {
-    final updatedEditItems = state.editItems.where((item) {
-      if (item.id == null) {
-        return item.tempId != event.item.tempId;
-      } else {
-        return item.id != event.item.id;
-      }
-    }).toList();
-
-    // If the item has an ID, delete it from database
-    if (event.item.id != null) {
-      add(DeleteInvoiceHistoryHeader(id: event.item.id!));
-    }
-
-    emit(state.copyWith(editItems: updatedEditItems));
-  }
-
   Future<void> _onRemoveRecord(
     RemoveRecord event,
     Emitter<InvoiceHistoryHeaderState> emit,
@@ -675,47 +551,11 @@ class InvoiceHistoryHeaderBloc
     }
   }
 
-  // Utility
-  void _onRefreshList(
-    RefreshList event,
-    Emitter<InvoiceHistoryHeaderState> emit,
-  ) {
-    if (state.companyId != null) {
-      add(LoadInvoiceHistoryHeaders(companyId: state.companyId!));
-    }
-  }
-
-  // Helper Methods
   int _getNextTempId(List<InvoiceHistoryHeader> items) {
     if (items.isEmpty) return 1;
     final maxTempId = items
         .map((e) => e.tempId ?? 0)
         .reduce((a, b) => a > b ? a : b);
     return maxTempId + 1;
-  }
-
-  // Navigation methods like Java's saveAndClose, saveAndAddNew, saveAndAddContinue
-  String saveAndClose(String linkName) {
-    add(const CancelUpdate());
-    add(const CancelCreate());
-    return '$linkName?faces-redirect=true';
-  }
-
-  String saveAndAddNew(String linkName) {
-    add(const CancelCreate());
-    final companyId = authBloc.state.companyId;
-    if (companyId != null) {
-      add(PrepareCreate(companyId: companyId));
-    }
-    return '$linkName?faces-redirect=true';
-  }
-
-  String saveAndAddContinue(String linkName) {
-    add(const CancelCreate());
-    final companyId = authBloc.state.companyId;
-    if (companyId != null && state.selected != null) {
-      add(PrepareCreate1(companyId: companyId));
-    }
-    return '$linkName?faces-redirect=true';
   }
 }
