@@ -1,71 +1,91 @@
-import 'dart:convert';
 import 'dart:developer' as developer;
 import 'package:http/http.dart' as http;
-import 'package:savvy_stock/core/models/udc_details.dart';
+import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 import 'package:sqflite/sqflite.dart';
 
-import '../errors/exceptions.dart';
-
-class UdcRepository {
+class UdcRepository extends BaseRepository {
   final String baseUrl;
-  final LocalDatabaseService localDatabaseService;
+  @override
+  final LocalDatabaseService databaseService;
   final http.Client httpClient;
 
   UdcRepository({
     required this.baseUrl,
-    required this.localDatabaseService,
+    required this.databaseService,
     required this.httpClient,
   });
 
   // Get UDC details by code (offline-first)
-  Future<List<UdcDetails>> getUdcDetailsByCode(String detailCode) async {
+  Future<List<UdcDetails>> getUdcDetailsByCode(
+    String detailCode,
+    String headerCode,
+  ) async {
     try {
-      // First try to get from API
-      final remoteDetails = await _getRemoteUdcDetailsByCode(detailCode);
-
-      // Save to local database
-      await _saveUdcDetailsToLocal(remoteDetails);
-
-      return remoteDetails;
-    } on NetworkException catch (e) {
-      // If API fails, try to get from local database
-      developer.log('API failed, falling back to local database: ${e.message}');
-      return await getLocalUdcDetailsByCode(detailCode);
+      return await getLocalUdcDetailsByCode(detailCode, headerCode);
     } catch (e) {
       developer.log('Unexpected error, trying local database: $e');
-      return await getLocalUdcDetailsByCode(detailCode);
+      return await getLocalUdcDetailsByCode(detailCode, headerCode);
     }
   }
 
   // Get UDC details by header code (offline-first)
   Future<List<UdcDetails>> getUdcDetailsByHeaderCode(String headerCode) async {
     try {
-      // First try to get from API
-      final remoteDetails = await _getRemoteUdcDetailsByHeaderCode(headerCode);
-
-      // Save to local database
-      await _saveUdcDetailsToLocal(remoteDetails);
-
-      return remoteDetails;
-    } on NetworkException catch (e) {
-      // If API fails, try to get from local database
-      developer.log('API failed, falling back to local database: ${e.message}');
       return await getLocalUdcDetailsByHeaderCode(headerCode);
     } catch (e) {
-      developer.log('Unexpected error, trying local database: $e');
       return await getLocalUdcDetailsByHeaderCode(headerCode);
     }
   }
 
-  // Local database operations
-  Future<List<UdcDetails>> getLocalUdcDetailsByCode(String detailCode) async {
-    final db = await localDatabaseService.database;
+  Future<int?> getUdcDetailIdByHeaderCode(String detailCode) async {
     try {
+      final db = await databaseService.database;
       final List<Map<String, dynamic>> maps = await db.query(
         'udc_details',
         where: 'detail_code = ?',
         whereArgs: [detailCode],
+      );
+      developer.log('Found ${maps.length} UDC details for code: $detailCode');
+      return maps.map((map) => UdcDetails.fromJson(map)).toList().first.id;
+    } catch (e) {
+      developer.log('Error getting local UDC details: $e');
+      return null;
+    }
+  }
+
+  Future<UdcDetails?> getUdcDetailById(int? id, {Transaction? txn}) async {
+    if (id == null) return null;
+    try {
+      final db = txn ?? await databaseService.database;
+      final result = await db.rawQuery(
+        '''
+      SELECT * FROM udc_details 
+      WHERE id = ?
+    ''',
+        [id],
+      );
+
+      return result.isNotEmpty ? UdcDetails.fromJson(result.first) : null;
+    } catch (e) {
+      developer.log('Error getting local UDC detail: $e');
+      return null;
+    }
+  }
+
+  // Local database operations
+  Future<List<UdcDetails>> getLocalUdcDetailsByCode(
+    String detailCode,
+    String headerCode, {
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
+    try {
+      final List<Map<String, dynamic>> maps = await db.query(
+        'udc_details',
+        where: 'detail_code = ? AND record_header = ?',
+        whereArgs: [detailCode, headerCode],
       );
       developer.log('Found ${maps.length} UDC details for code: $detailCode');
       return maps.map((map) => UdcDetails.fromJson(map)).toList();
@@ -75,10 +95,38 @@ class UdcRepository {
     }
   }
 
+  Future<int?> getUdcDetailId(
+    String headerCode,
+    String detailCode, {
+    Transaction? txn,
+  }) async {
+    try {
+      final db = txn ?? await databaseService.database;
+      final result = await db.rawQuery(
+        '''
+      SELECT ud.id FROM udc_details ud
+      JOIN udc_header uh ON ud.record_header = uh.id
+      WHERE uh.header_code = ? AND ud.detail_code = ?
+      ''',
+        [headerCode, detailCode],
+      );
+
+      if (result.isNotEmpty) {
+        return result.first['id'] as int?;
+      }
+
+      print('❌ No UDC found for header: $headerCode, detail: $detailCode');
+      return null;
+    } catch (e) {
+      print('❌ Error getting UDC detail ID: $e');
+      return null;
+    }
+  }
+
   Future<List<UdcDetails>> getLocalUdcDetailsByHeaderCode(
     String headerCode,
   ) async {
-    final db = await localDatabaseService.database;
+    final db = await databaseService.database;
     try {
       final List<Map<String, dynamic>> maps = await db.rawQuery(
         '''
@@ -89,83 +137,15 @@ class UdcRepository {
       ''',
         [headerCode],
       );
-
-      developer.log('Found ${maps.length} UDC details for header: $headerCode');
       return maps.map((map) => UdcDetails.fromJson(map)).toList();
     } catch (e) {
-      developer.log('Error getting local UDC details by header: $e');
       return [];
-    }
-  }
-
-  // Remote API operations
-  Future<List<UdcDetails>> _getRemoteUdcDetailsByCode(String detailCode) async {
-    try {
-      final response = await httpClient
-          .get(
-            Uri.parse('$baseUrl/udc-details?detail_code=$detailCode'),
-            headers: await _getAuthHeaders(),
-          )
-          .timeout(const Duration(seconds: 30));
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        developer.log(
-          'Retrieved ${data.length} UDC details from API for code: $detailCode',
-        );
-        return data.map((json) => UdcDetails.fromJson(json)).toList();
-      } else if (response.statusCode == 404) {
-        developer.log('No UDC details found in API for code: $detailCode');
-        return [];
-      } else {
-        throw ServerException(
-          'Failed to load UDC details: ${response.statusCode}',
-          response.statusCode,
-        );
-      }
-    } on ServerException {
-      rethrow;
-    } catch (e) {
-      throw NetworkException('Network error: $e');
-    }
-  }
-
-  Future<List<UdcDetails>> _getRemoteUdcDetailsByHeaderCode(
-    String headerCode,
-  ) async {
-    try {
-      final response = await httpClient
-          .get(
-            Uri.parse('$baseUrl/udc-details?header_code=$headerCode'),
-            headers: await _getAuthHeaders(),
-          )
-          .timeout(const Duration(seconds: 30));
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        developer.log(
-          'Retrieved ${data.length} UDC details from API for header: $headerCode',
-        );
-        return data.map((json) => UdcDetails.fromJson(json)).toList();
-      } else if (response.statusCode == 404) {
-        developer.log('No UDC details found in API for header: $headerCode');
-        return [];
-      } else {
-        throw ServerException(
-          'Failed to load UDC details: ${response.statusCode}',
-          response.statusCode,
-        );
-      }
-    } on ServerException {
-      rethrow;
-    } catch (e) {
-      throw NetworkException('Network error: $e');
     }
   }
 
   // Helper methods
   Future<void> _saveUdcDetailsToLocal(List<UdcDetails> details) async {
-    final db = await localDatabaseService.database;
+    final db = await databaseService.database;
     final batch = db.batch();
 
     for (final detail in details) {

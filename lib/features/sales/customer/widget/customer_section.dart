@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
+import 'package:savvy_stock/core/widgets/custom_table_dropdown.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
-import 'package:savvy_stock/features/sales/customer/widget/add_customer_dialog.dart';
+import 'package:savvy_stock/features/sales/customer/widget/customer_create_edit.dart';
 
 class CustomerSection extends StatelessWidget {
   final String title;
@@ -11,6 +12,7 @@ class CustomerSection extends StatelessWidget {
   final List<Customer> customers;
   final ValueChanged<Customer> onCustomerSelected;
   final bool showAddButton;
+  final AuthBloc authBloc;
 
   const CustomerSection({
     super.key,
@@ -19,6 +21,7 @@ class CustomerSection extends StatelessWidget {
     required this.customers,
     required this.onCustomerSelected,
     required this.showAddButton,
+    required this.authBloc,
   });
 
   @override
@@ -35,20 +38,20 @@ class CustomerSection extends StatelessWidget {
         CustomTableDropdown<Customer>(
           title: title,
           items: customers,
-          displayText: (customer) => customer.name,
+          displayText: (customer) => customer.customerName ?? '',
           selectedValue: selectedCustomer.isNotEmpty ? selectedCustomer : null,
           columns: [
             TableColumnConfig(
               header: 'Name',
-              cellBuilder: (customer) => Text(customer.name),
+              cellBuilder: (customer) => Text(customer.customerName ?? ''),
             ),
             TableColumnConfig(
               header: 'TIN',
-              cellBuilder: (customer) => Text(customer.tin),
+              cellBuilder: (customer) => Text(customer.tinNumber ?? ''),
             ),
             TableColumnConfig(
               header: 'Phone',
-              cellBuilder: (customer) => Text(customer.phone),
+              cellBuilder: (customer) => Text(customer.phoneNumber ?? ''),
             ),
           ],
           onItemSelected: (customer) {
@@ -79,7 +82,7 @@ class CustomerSection extends StatelessWidget {
       context: context,
       builder: (context) => BlocProvider.value(
         value: context.read<CustomerBloc>(),
-        child: const AddCustomerDialog(),
+        child: CustomerCreateEdit(authBloc: authBloc),
       ),
     );
   }

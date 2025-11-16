@@ -1,24 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_event.dart';
 import 'package:savvy_stock/features/sales/payment/blocs/payment_state.dart';
-import 'package:savvy_stock/features/sales/payment/widget/payment_action.dart';
 import 'package:savvy_stock/features/sales/payment/widget/payment_details.dart';
 import 'package:savvy_stock/features/sales/payment/widget/payment_method.dart';
 import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
+import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
+import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_event.dart';
 
 class PaymentScreen extends StatefulWidget {
   final List<ConfirmedItem> confirmedItems;
   final double totalAmount;
   final Customer customer;
+  final AuthBloc authBloc;
 
   const PaymentScreen({
     super.key,
     required this.confirmedItems,
     required this.totalAmount,
     required this.customer,
+    required this.authBloc,
   });
 
   @override
@@ -30,7 +37,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return; // Prevent using context after dispose
       final bloc = context.read<PaymentBloc>();
+      bloc.add(const LoadFeeSystemConstants());
       bloc.add(
         LoadPayment(
           confirmedItems: widget.confirmedItems,
@@ -38,7 +47,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
           customer: widget.customer,
         ),
       );
-      bloc.add(const LoadFeeSystemConstants());
+      context.read<SystemConstantBloc>().add(
+        LoadSystemConstants(widget.authBloc.state.companyId!),
+      );
+      context.read<UdcDetailsBloc>().add(LoadUdcDetailsByGroup('LT'));
     });
   }
 
@@ -50,13 +62,22 @@ class _PaymentScreenState extends State<PaymentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: const Text('Payment'),
+        actions: [
+          IconButton(
+            icon: const Icon(Iconsax.refresh),
+            onPressed: () {
+              context.read<PaymentBloc>().add(const LoadFeeSystemConstants());
+            },
+            tooltip: 'Refresh data',
+          ),
+        ],
         backgroundColor: const Color(0xFF155888),
         foregroundColor: Colors.white,
         elevation: 2,
       ),
-      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: BlocBuilder<PaymentBloc, PaymentState>(
           builder: (context, state) {
@@ -77,34 +98,32 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 ),
               );
             }
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: const [PaymentDetails()],
-              ),
+            return Column(
+              children: [
+                // Upper Section - Order Items
+                Expanded(
+                  flex: 1,
+                  child: Container(
+                    color: Colors.white,
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 4.0),
+                              child: PaymentDetails(authBloc: widget.authBloc),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Lower Section - Order Summary
+                const PaymentMethod(),
+              ],
             );
           },
-        ),
-      ),
-
-      /// ✅ This bottomNavigationBar will now respond to the keyboard
-      bottomNavigationBar: AnimatedPadding(
-        duration: const Duration(milliseconds: 150),
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Divider(height: 1, thickness: 1),
-            const PaymentMethod(),
-            Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              child: const PaymentAction(),
-            ),
-          ],
         ),
       ),
     );
