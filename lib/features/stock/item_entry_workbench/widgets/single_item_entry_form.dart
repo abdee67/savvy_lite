@@ -672,7 +672,7 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
           return Column(
             children: [
               CustomTextField(
-                labelText: 'Effective Date',
+                labelText: 'Effective Date *',
                 controller: _effectiveDateController,
                 readOnly: true,
                 prefixIcon: const Icon(Iconsax.calendar_1),
@@ -692,7 +692,7 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
           return Column(
             children: [
               CustomTextField(
-                labelText: 'Expiration Date',
+                labelText: 'Expiration Date *',
                 controller: _expirationDateController,
                 readOnly: true,
                 prefixIcon: const Icon(Iconsax.calendar_tick),
@@ -701,6 +701,12 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
                   onPressed: () => _selectExpirationDate(index),
                 ),
                 onTap: () => _selectExpirationDate(index),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Expiration date is required';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
             ],
@@ -712,7 +718,7 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
           return Column(
             children: [
               CustomTextField(
-                labelText: 'Received Date',
+                labelText: 'Received Date *',
                 controller: _receivedDateController,
                 readOnly: true,
                 prefixIcon: const Icon(Iconsax.calendar),
@@ -721,6 +727,12 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
                   onPressed: () => _selectReceivedDate(index),
                 ),
                 onTap: () => _selectReceivedDate(index),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Received date is required';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
             ],
@@ -728,7 +740,7 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
         }
         // Default: show Effective and Expiration
         return CustomTextField(
-          labelText: 'Expiration Date',
+          labelText: 'Expiration Date *',
           controller: _expirationDateController,
           readOnly: true,
           prefixIcon: const Icon(Iconsax.calendar_tick),
@@ -737,6 +749,12 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
             onPressed: () => _selectExpirationDate(index),
           ),
           onTap: () => _selectExpirationDate(index),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Expiration date is required';
+            }
+            return null;
+          },
         );
       },
     );
@@ -744,19 +762,13 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
 
   Widget _buildBatchNumberField(int index) {
     return CustomTextField(
-      labelText: 'Batch Number *',
+      labelText: 'Batch Number',
       onChanged: (value) {
         setState(() {
           _items[index] = _items[index].copyWith(batchNumber: value);
         });
       },
       prefixIcon: const Icon(Icons.confirmation_number),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Batch number is required';
-        }
-        return null;
-      },
     );
   }
 

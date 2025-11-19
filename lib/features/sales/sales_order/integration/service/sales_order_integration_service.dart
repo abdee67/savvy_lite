@@ -1,6 +1,15 @@
 // features/sales/sales_order/integration/service/sales_order_integration_service.dart
 import 'dart:async';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/detail/bloc/invoice_detail.event.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/detail/bloc/invoice_detail_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/detail/bloc/invoice_detail_state.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/detail/model/invoice_detail_model.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/header/bloc/invoice_header_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/header/bloc/invoice_header_event.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/header/bloc/invoice_header_state.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/header/model/invoice_header_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_event.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_state.dart';
@@ -14,10 +23,16 @@ import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_
 class SalesOrderIntegrationService {
   final SalesOrderHeaderBloc headerBloc;
   final SalesOrderDetailBloc detailBloc;
+  final InvoiceHistoryHeaderBloc invoiceHeaderBloc;
+  final InvoiceHistoryDetailBloc invoiceDetailBloc;
+  final AuthBloc authBloc;
 
   SalesOrderIntegrationService({
     required this.headerBloc,
     required this.detailBloc,
+    required this.invoiceHeaderBloc,
+    required this.invoiceDetailBloc,
+    required this.authBloc,
   });
 
   // 🎯 COMPLETE ORDER MANAGEMENT
@@ -25,7 +40,9 @@ class SalesOrderIntegrationService {
   /// Creates a complete sales order with header and details (equivalent to JSF's complete order creation)
   Future<void> createSalesOrderWithDetails({
     required SalesOrderHeader header,
+    //required InvoiceHistoryHeader? invoiceHeader,
     required List<SalesOrderDetail> details,
+    //required List<InvoiceHistoryDetail> invoiceDetails,
   }) async {
     try {
       // Step 1: Validate business rules before creation
@@ -40,15 +57,29 @@ class SalesOrderIntegrationService {
       // Step 3: Create all details with header reference
       await _createSalesOrderDetails(createdHeader, details);
 
-      // Step 4: Update stock quantities (like JSF's stock adjustment)
+      // Step 4: Validate stock availability
+      //await validateAllStock(details);
+
+      /*  // Step 5: Create invoice header
+      final createdInvoiceHeader = await _createInvoiceHistoryHeader(invoiceHeader!);
+      if (createdInvoiceHeader == null) {
+        throw Exception('Failed to create invoice header');
+      }
+
+      // Step 6: Create invoice details
+      await _createInvoiceHistoryDetails(createdInvoiceHeader, invoiceDetails);
+
+
+      // Step 7: Update stock quantities (like JSF's stock adjustment)
       await _updateStockForAllDetails(details);
 
-      // Step 5: Calculate final totals (like JSF's calQtyWithAmt)
-      await _calculateFinalTotals(createdHeader, details);
+      // Step 8: Calculate final totals (like JSF's calQtyWithAmt)
+      await _calculateFinalTotals(createdHeader, details);*/
     } catch (e) {
       // Comprehensive rollback on failure
-      await _rollbackCreateOperation(header, details);
-      rethrow;
+      throw Exception('Something goes south $e');
+      // await _rollbackCreateOperation(header, details);
+      // rethrow;
     }
   }
 
@@ -56,6 +87,8 @@ class SalesOrderIntegrationService {
   Future<void> updateSalesOrderWithDetails({
     required SalesOrderHeader header,
     required List<SalesOrderDetail> details,
+    required InvoiceHistoryHeader invoiceHeader,
+    required List<InvoiceHistoryDetail> invoiceDetails,
   }) async {
     try {
       // Step 1: Backup current state for rollback
@@ -227,7 +260,10 @@ class SalesOrderIntegrationService {
 
           // Small delay to prevent overwhelming the system
           await Future.delayed(const Duration(milliseconds: 100));
+        } else {
+          throw Exception('Item branch is null for detail: $detail');
         }
+        print('Stock validation completed for detail: $detail');
       }
 
       // Wait for all validations to complete
@@ -296,17 +332,47 @@ class SalesOrderIntegrationService {
 
       // Load details for the header
       detailBloc.add(LoadSalesOrderDetailsByHeader(headerId: salesOrderId));
-
       // Wait for details to load
       await _waitForDetailsLoadCompletion();
+      invoiceHeaderBloc.add(
+        LoadInvoiceHistoryHeaders(companyId: authBloc.state.companyId!),
+      );
+      invoiceDetailBloc.add(
+        LoadInvoiceHistoryDetails(companyId: authBloc.state.companyId!),
+      );
     } catch (e) {
       throw Exception('Failed to load sales order: $e');
     }
   }
 
+  Future<void> loadAllSalesOrders() async {
+    try {
+      // Load all headers
+      headerBloc.add(
+        LoadSalesOrderHeaders(companyId: authBloc.state.companyId!),
+      );
+      // Wait for headers to load
+      await _waitForHeaderPreparation();
+      // Load all details
+      detailBloc.add(
+        LoadSalesOrderDetails(companyId: authBloc.state.companyId!),
+      );
+      // Wait for details to load
+      await _waitForDetailsLoadCompletion();
+      invoiceHeaderBloc.add(
+        LoadInvoiceHistoryHeaders(companyId: authBloc.state.companyId!),
+      );
+      invoiceDetailBloc.add(
+        LoadInvoiceHistoryDetails(companyId: authBloc.state.companyId!),
+      );
+    } catch (e) {
+      throw Exception('Failed to load sales orders: $e');
+    }
+  }
+
   // 🎯 PRIVATE IMPLEMENTATION METHODS
 
-  // Header Operations
+  //Sales order Header Operations
   Future<SalesOrderHeader?> _createSalesOrderHeader(
     SalesOrderHeader header,
   ) async {
@@ -332,6 +398,58 @@ class SalesOrderIntegrationService {
 
     // Start header creation
     headerBloc.add(CreateSalesOrderHeader(header: header));
+
+    // Timeout handling
+    Future.delayed(const Duration(seconds: 10), () {
+      if (!completer.isCompleted) {
+        completer.complete(null);
+        subscription.cancel();
+      }
+    });
+
+    // Retry mechanism for edge cases
+    final timer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+      retryCount++;
+      if (retryCount >= maxRetries) {
+        timer.cancel();
+        if (!completer.isCompleted) completer.complete(null);
+      }
+    });
+
+    final result = await completer.future;
+    timer.cancel();
+    await subscription.cancel();
+    return result;
+  }
+
+  //Invoice header
+  Future<InvoiceHistoryHeader?> _createInvoiceHistoryHeader(
+    InvoiceHistoryHeader header,
+  ) async {
+    final completer = Completer<InvoiceHistoryHeader?>();
+    late StreamSubscription subscription;
+    int retryCount = 0;
+    const maxRetries = 10;
+
+    subscription = invoiceHeaderBloc.stream.listen((
+      InvoiceHistoryHeaderState headerState,
+    ) {
+      if (headerState.status == InvoiceHistoryHeaderStatus.success &&
+          headerState.selected?.id != null) {
+        if (!completer.isCompleted) {
+          completer.complete(headerState.selected);
+          subscription.cancel();
+        }
+      } else if (headerState.status == InvoiceHistoryHeaderStatus.failure) {
+        if (!completer.isCompleted) {
+          completer.complete(null);
+          subscription.cancel();
+        }
+      }
+    });
+
+    // Start header creation
+    invoiceHeaderBloc.add(CreateInvoiceHistoryHeader(header: header));
 
     // Timeout handling
     Future.delayed(const Duration(seconds: 10), () {
@@ -426,16 +544,16 @@ class SalesOrderIntegrationService {
     SalesOrderHeader header,
     List<SalesOrderDetail> details,
   ) async {
-    // Clear any existing create items
-    // detailBloc.add(const ClearCreateItemsSalesOrderDetails());
+    // Clear any existing create items to avoid mixing previous UI state
+    detailBloc.add(const ClearCreateItemsSalesOrderDetails());
 
-    // Add all details with header reference
+    // Add all details with the newly created header ID
     for (final detail in details) {
       final detailWithHeader = detail.copyWith(salesOrderHeaderId: header.id);
       detailBloc.add(AddToCreateItemsSalesOrderDetails(item: detailWithHeader));
     }
 
-    // Save all details
+    // Save all details in batch through the detail bloc
     final completer = Completer<void>();
     late StreamSubscription subscription;
     subscription = detailBloc.stream.listen((detailState) {
@@ -453,10 +571,48 @@ class SalesOrderIntegrationService {
         }
       }
     });
-    if (header.id != null) {
-      detailBloc.add(CreateSalesOrderDetails(details: details.first));
+    if (header.id == null) {
+      if (!completer.isCompleted) {
+        completer.completeError(
+          'Cannot create sales order details: header ID is null',
+        );
+      }
     } else {
       detailBloc.add(SaveCreateItems(salesOrderHeaderId: header.id!));
+    }
+    await completer.future.timeout(const Duration(seconds: 15));
+  }
+
+  //invoice detail op
+  Future<void> _createInvoiceHistoryDetails(
+    InvoiceHistoryHeader header,
+    List<InvoiceHistoryDetail> details,
+  ) async {
+    // Clear any existing create items
+    // detailBloc.add(const ClearCreateItemsSalesOrderDetails());
+
+    // Add all details with header reference
+
+    // Save all details
+    final completer = Completer<void>();
+    late StreamSubscription subscription;
+    subscription = invoiceDetailBloc.stream.listen((detailState) {
+      if (detailState.status == InvoiceHistoryDetailStatus.success) {
+        if (!completer.isCompleted) {
+          completer.complete();
+          subscription.cancel();
+        }
+      } else if (detailState.status == InvoiceHistoryDetailStatus.failure) {
+        if (!completer.isCompleted) {
+          completer.completeError(
+            detailState.errorMessage ?? 'Invoice Details creation failed',
+          );
+          subscription.cancel();
+        }
+      }
+    });
+    if (header.id != null) {
+      invoiceDetailBloc.add(CreateInvoiceHistoryDetail(detail: details.first));
     }
     await completer.future.timeout(const Duration(seconds: 15));
   }
@@ -614,7 +770,7 @@ class SalesOrderIntegrationService {
     // Check if all stock validations passed
     final detailState = detailBloc.state;
     final allStockValid = detailState.stockValidationResults.values.every(
-      (result) => result.isValid,
+      (result) => result.quantityAvailable! >= 0,
     );
 
     if (!allStockValid) {

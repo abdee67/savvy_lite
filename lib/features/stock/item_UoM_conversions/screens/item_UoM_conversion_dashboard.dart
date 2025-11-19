@@ -102,7 +102,10 @@ class _ItemUomConversionListScreenState
 
     if (itemId != null) {
       context.read<ItemUomConversionBloc>().add(
-        LoadItemUomConversions(widget.authBloc.state.companyId!),
+        LoadItemUomConversionsByItem(
+          widget.authBloc.state.companyId!,
+          _selectedItem!,
+        ),
       );
     }
   }
@@ -500,18 +503,18 @@ class _ItemUomConversionListScreenState
                     prefixIcon: Iconsax.profile_circle,
                     allowCustomEntries: false,
                     onChanged: (value) {
-                      setState(() {
-                        if (value == null) {
-                          _selectedItem = null;
-                        } else {
-                          final matches = item.where(
-                            (b) => b.itemDescription == value,
-                          );
-                          _selectedItem = matches.isNotEmpty
-                              ? matches.first.id
-                              : null;
-                        }
-                      });
+                      int? selectedId;
+
+                      if (value != null) {
+                        final matches = item.where(
+                          (b) => b.itemDescription == value,
+                        );
+                        selectedId = matches.isNotEmpty
+                            ? matches.first.id
+                            : null;
+                      }
+
+                      _onItemChanged(selectedId);
                     },
                     validator: (value) {
                       if (_selectedItem == null) {

@@ -1,10 +1,11 @@
 // features/sales/sales_order/coordinator/bloc/sales_order_coordinator_state.dart
 import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
-import 'package:savvy_stock/features/sales/invoice/detail/model/invoice_detail_model.dart';
-import 'package:savvy_stock/features/sales/invoice/header/model/invoice_header_model.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/detail/model/invoice_detail_model.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/header/model/invoice_header_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 
 enum SalesOrderCoordinatorStatus {
   initial,
@@ -66,7 +67,7 @@ class SalesOrderCoordinatorState extends Equatable {
   final bool isStockValidated;
   final bool isCalculationsComplete;
   final bool isOrderComplete;
-  final Map<int, StockValidationResult> stockValidationResults;
+  final Map<double, ItemInBranchModel> stockValidationResults;
 
   // System Constants
   final String? systemConstantsError;
@@ -79,6 +80,9 @@ class SalesOrderCoordinatorState extends Equatable {
   final InvoiceHistoryHeader? invoiceHeader;
   final List<InvoiceHistoryDetail> invoiceDetails;
   final String? invoiceFsNumber;
+
+  // Filter
+  final String filterQuery;
 
   const SalesOrderCoordinatorState({
     this.status = SalesOrderCoordinatorStatus.initial,
@@ -118,6 +122,7 @@ class SalesOrderCoordinatorState extends Equatable {
     this.invoiceGenerated = false,
     this.invoiceHeader,
     this.invoiceFsNumber,
+    this.filterQuery = '',
   });
 
   // Getters for financial data
@@ -132,6 +137,8 @@ class SalesOrderCoordinatorState extends Equatable {
       currentHeader != null &&
       currentDetails.isNotEmpty &&
       paymentType.isNotEmpty &&
+      invoiceHeader != null &&
+      invoiceDetails.isNotEmpty &&
       paymentInstrument.isNotEmpty &&
       (paymentType != 'Credit' || paymentTerm.isNotEmpty);
 
@@ -177,6 +184,7 @@ class SalesOrderCoordinatorState extends Equatable {
     invoiceGenerated,
     invoiceHeader,
     invoiceFsNumber,
+    filterQuery,
   ];
 
   SalesOrderCoordinatorState copyWith({
@@ -192,7 +200,7 @@ class SalesOrderCoordinatorState extends Equatable {
     bool? isOrderComplete,
     bool? isStockValidated,
     bool? isCalculationsComplete,
-    Map<int, StockValidationResult>? stockValidationResults,
+    Map<double, ItemInBranchModel>? stockValidationResults,
     double? lastSubTotal,
     double? lastTax,
     double? lastWithholdAmount,
@@ -216,6 +224,7 @@ class SalesOrderCoordinatorState extends Equatable {
     bool? invoiceGenerated,
     InvoiceHistoryHeader? invoiceHeader,
     String? invoiceFsNumber,
+    String? filterQuery,
   }) {
     return SalesOrderCoordinatorState(
       status: status ?? this.status,
@@ -256,6 +265,7 @@ class SalesOrderCoordinatorState extends Equatable {
       invoiceGenerated: invoiceGenerated ?? this.invoiceGenerated,
       invoiceHeader: invoiceHeader ?? this.invoiceHeader,
       invoiceFsNumber: invoiceFsNumber ?? this.invoiceFsNumber,
+      filterQuery: filterQuery ?? this.filterQuery,
     );
   }
 

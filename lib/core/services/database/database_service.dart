@@ -1777,6 +1777,7 @@ CREATE INDEX idx_sales_person_company ON salespersons(company);
       AppRoutes.customerEntry,
       AppRoutes.salesCustomerInfo,
       AppRoutes.salesItemEntry,
+      AppRoutes.salesReport,
     ];
 
     for (final uri in salesPrivileges) {

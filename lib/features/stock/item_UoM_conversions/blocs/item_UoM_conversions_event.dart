@@ -15,6 +15,23 @@ class LoadItemUomConversions extends ItemUomConversionEvent {
   List<Object> get props => [companyId];
 }
 
+class LoadItemUomConversionsByItem extends ItemUomConversionEvent {
+  final int companyId;
+  final int itemId;
+  const LoadItemUomConversionsByItem(this.companyId, this.itemId);
+  @override
+  List<Object> get props => [companyId, itemId];
+}
+
+class LoadUomsForItem extends ItemUomConversionEvent {
+  final int itemId;
+  final int companyId;
+  const LoadUomsForItem({required this.itemId, required this.companyId});
+
+  @override
+  List<Object?> get props => [itemId, companyId];
+}
+
 class SaveItemUomConversion extends ItemUomConversionEvent {
   final ItemUomConversion item;
   final int userId;

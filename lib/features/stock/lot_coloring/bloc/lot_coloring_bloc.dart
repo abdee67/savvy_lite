@@ -525,7 +525,6 @@ class LotExpirationColorsBloc
     DateTime? receivedDate,
   ) async {
     if (itemId == null) {
-      print('❌ Item ID is null in color calculation');
       return null;
     }
 
@@ -533,9 +532,6 @@ class LotExpirationColorsBloc
     final systemConstant = systemConstantBloc.state.selected;
     // If Apply Lot Management is disabled, skip color calculation
     if (systemConstant?.applyLotMgmBoolean != true) {
-      print(
-        '⚠️ Apply Lot Management is disabled in system constants - skipping color calculation',
-      );
       return null;
     }
 
@@ -550,34 +546,12 @@ class LotExpirationColorsBloc
       receivedDate,
       lotType,
     );
-
-    print('''
-🎨 COLOR CALCULATION:
-  Branch: $branchId, Item: $itemId
-  Lot Type: $lotType
-  Days Difference: $daysDifference
-  Expiration: $expirationDate
-  Effective: $effectiveDate
-  Received: $receivedDate
-''');
-
     final color = await repository.getLotExpirationColorByDetails(
       companyId: authBloc.state.companyId!,
       branchId: branchId,
       itemId: itemId,
       daysDifference: daysDifference,
     );
-
-    if (color == null) {
-      print('  ❌ No color configuration found for any level');
-      print(
-        '  🔎 Search params -> company: ${authBloc.state.companyId}, branch: $branchId, item: $itemId, lotType: $lotType, daysDifference: $daysDifference',
-      );
-    } else {
-      print(
-        '  🎯 Final Color: ${color.colorTypeName} (${color.colorTypeCode})',
-      );
-    }
 
     return color;
   }

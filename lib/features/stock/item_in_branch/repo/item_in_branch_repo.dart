@@ -250,7 +250,12 @@ class StockItemInBranchRepository extends BaseRepository {
     final db = await databaseService.database;
     return await db.update(
       'items_in_branch',
-      {'quantity_on_hand': quantity},
+      {
+        // Keep both on-hand and available quantities in sync so that
+        // UI (which reads quantity_available) reflects stock changes.
+        'quantity_on_hand': quantity,
+        'quantity_available': quantity,
+      },
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
@@ -510,7 +515,11 @@ class StockItemInBranchRepository extends BaseRepository {
   }) async {
     for (final item in voidedItems) {
       if (item.itemInBranch != null && item.quantity != null) {
-        await updateQuantity(item.itemInBranch!, item.quantity!, companyId);
+        await updateQuantity(
+          item.itemInBranch!.toInt(),
+          item.quantity!,
+          companyId,
+        );
       }
     }
   }

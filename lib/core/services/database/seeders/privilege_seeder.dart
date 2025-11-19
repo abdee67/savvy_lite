@@ -207,6 +207,14 @@ class PrivilegeSeeder {
         'delete_customer',
       ),
 
+      //Sales Report
+      _createPrivilege(
+        'Sales Report',
+        'link',
+        AppRoutes.salesReport,
+        'sales_report',
+      ),
+
       // ==================== STOCK MODULE ====================
       //item entry
       _createPrivilege('Item Entry', 'link', AppRoutes.itemEntry, 'item_entry'),

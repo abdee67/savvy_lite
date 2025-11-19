@@ -2,13 +2,13 @@ import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
 import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
-import 'package:savvy_stock/features/sales/invoice/detail/bloc/invoice_detail_bloc.dart';
-import 'package:savvy_stock/features/sales/invoice/detail/repo/invoice_detail_repo.dart';
-import 'package:savvy_stock/features/sales/invoice/header/bloc/invoice_header_bloc.dart';
-import 'package:savvy_stock/features/sales/invoice/header/repo/invoice_header_repo.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/detail/bloc/invoice_detail_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/detail/repo/invoice_detail_repo.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/header/bloc/invoice_header_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/header/repo/invoice_header_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/service/sales_order_integration_service.dart';
-import 'package:savvy_stock/features/sales/services/validate_stock_availability.dart';
+import 'package:savvy_stock/features/sales/sales_order/integration/service/validate_stock_availability.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/repo/lot_expiration_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
@@ -174,8 +174,13 @@ void initDependencies() {
     () => SalesOrderDetailRepository(databaseService: getIt()),
   );
   getIt.registerLazySingleton<SalesOrderIntegrationService>(
-    () =>
-        SalesOrderIntegrationService(headerBloc: getIt(), detailBloc: getIt()),
+    () => SalesOrderIntegrationService(
+      headerBloc: getIt(),
+      detailBloc: getIt(),
+      authBloc: getIt(),
+      invoiceHeaderBloc: getIt(),
+      invoiceDetailBloc: getIt(),
+    ),
   );
   getIt.registerLazySingleton<ValidateStockAvailabilityService>(
     () => ValidateStockAvailabilityService(

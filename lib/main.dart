@@ -6,12 +6,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
 import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
-import 'package:savvy_stock/features/sales/invoice/detail/bloc/invoice_detail_bloc.dart';
-import 'package:savvy_stock/features/sales/invoice/header/bloc/invoice_header_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/detail/bloc/invoice_detail_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/detail/repo/invoice_detail_repo.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/header/bloc/invoice_header_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/header/repo/invoice_header_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/repo/sales_order_detail_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
-import 'package:savvy_stock/features/sales/services/validate_stock_availability.dart';
+import 'package:savvy_stock/features/sales/sales_order/integration/service/validate_stock_availability.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/repo/lot_expiration_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
@@ -23,7 +25,6 @@ import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/routes/app_router.dart';
 import 'package:savvy_stock/core/services/conectitvity_service.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
-import 'package:savvy_stock/features/system_constant/repo/system_constant_service.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_bloc.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_bloc.dart';
 import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
@@ -34,7 +35,7 @@ import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
 import 'package:savvy_stock/features/next_number/bloc/next_number_bloc.dart';
 import 'package:savvy_stock/features/next_number/repo/next_number_repo.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/blocs/sales_item_entry_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/sales_item_entry/blocs/sales_item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_bloc.dart';
 import 'package:savvy_stock/features/stock/item_cost/blocs/item_cost_bloc.dart';
 import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
@@ -70,7 +71,7 @@ Future<void> _initializeAndRunApp() async {
   try {
     await ConnectivityService().initConnectivity();
     initDependencies();
-    //await LocalDatabaseService().resetDatabase();
+    // await LocalDatabaseService().resetDatabase();
     // await LocalDatabaseService().debugTable('branch_table');
 
     if (AppConfig.isTestMode) {
@@ -79,7 +80,7 @@ Future<void> _initializeAndRunApp() async {
       developer.log('💾 Using local database only');
     }
     // Debug database tables (optional - remove in production)
-    await LocalDatabaseService().debugTable('items_in_branch');
+    await LocalDatabaseService().debugTable('item_uom_conversions');
   } catch (error, stackTrace) {
     developer.log('Initialization error: $error');
     developer.log('Stack trace: $stackTrace');
@@ -143,6 +144,8 @@ class _SavvyStockState extends State<SavvyStock> {
   late SalesOrderCoordinatorBloc _salesOrderCoordinatorBloc;
   late InvoiceHistoryHeaderBloc _invoiceHistoryHeaderBloc;
   late InvoiceHistoryDetailBloc _invoiceHistoryDetailBloc;
+  late InvoiceHistoryDetailRepository _invoiceHistoryDetailRepository;
+  late InvoiceHistoryHeaderRepository _invoiceHistoryHeaderRepository;
 
   @override
   void initState() {
@@ -184,6 +187,8 @@ class _SavvyStockState extends State<SavvyStock> {
         getIt<ValidateStockAvailabilityService>();
     _invoiceHistoryHeaderBloc = getIt<InvoiceHistoryHeaderBloc>();
     _invoiceHistoryDetailBloc = getIt<InvoiceHistoryDetailBloc>();
+    _invoiceHistoryDetailRepository = getIt<InvoiceHistoryDetailRepository>();
+    _invoiceHistoryHeaderRepository = getIt<InvoiceHistoryHeaderRepository>();
     // Ensure system constants are loaded when companyId becomes available.
     final cid = _authBloc.state.companyId;
     if (cid != null) {
@@ -452,6 +457,20 @@ class _SavvyStockState extends State<SavvyStock> {
               invoiceDetailBloc: _invoiceHistoryDetailBloc,
               authBloc: _authBloc,
               systemConstantBloc: _systemConstantBloc,
+            ),
+          ),
+          BlocProvider<InvoiceHistoryHeaderBloc>(
+            create: (context) => InvoiceHistoryHeaderBloc(
+              repository: _invoiceHistoryHeaderRepository,
+              authBloc: _authBloc,
+              udcRepository: _udcRepository,
+            ),
+          ),
+          BlocProvider<InvoiceHistoryDetailBloc>(
+            create: (context) => InvoiceHistoryDetailBloc(
+              repository: _invoiceHistoryDetailRepository,
+              authBloc: _authBloc,
+              headerBloc: _invoiceHistoryHeaderBloc,
             ),
           ),
         ],

@@ -31,10 +31,10 @@ import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/customer/screens/customer_list.dart';
 import 'package:savvy_stock/features/sales/customer/screens/customer_screen.dart';
 import 'package:savvy_stock/features/sales/customer/widget/customer_create_edit.dart';
-import 'package:savvy_stock/features/sales/invoice/screens/invoice_review_screen.dart';
-import 'package:savvy_stock/features/sales/payment/screens/payment_screen.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/screens/sales_item_entry.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/screens/invoice_review_screen.dart';
+import 'package:savvy_stock/features/sales/sales_order/payment/screens/payment_screen.dart';
+import 'package:savvy_stock/features/sales/sales_order/sales_item_entry/screens/sales_item_entry.dart';
+import 'package:savvy_stock/features/sales/sales_order/sales_report.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/models/item_uom_conversions_model.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/screens/item_uom_conversion_dashboard.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/widgets/item_uom_conversion_create_and_edit.dart.dart';
@@ -164,6 +164,15 @@ class AppRouter {
         redirect: _protectedRouteRedirect,
       ),
       GoRoute(
+        path: AppRoutes.salesReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.salesReport,
+          parentPrivilege: AppRoutes.salesDashboard,
+          child: SalesReviewPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
         path: AppRoutes.paymentSummary,
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: AppRoutes.paymentSummary,
@@ -180,7 +189,7 @@ class AppRouter {
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: AppRoutes.salesInvoice,
           parentPrivilege: AppRoutes.salesCustomerInfo,
-          child: Placeholder(),
+          child: InvoiceReviewScreen(),
         ),
         redirect: _protectedRouteRedirect,
       ),
