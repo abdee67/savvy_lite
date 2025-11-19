@@ -1,8 +1,11 @@
 // features/sales/sales_order/coordinator/bloc/sales_order_coordinator_event.dart
 import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/detail/model/invoice_detail_model.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/header/model/invoice_header_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 
 // Base event
 abstract class SalesOrderCoordinatorEvent extends Equatable {
@@ -26,11 +29,15 @@ class CreateCompleteSalesOrder extends SalesOrderCoordinatorEvent {
 class UpdateCompleteSalesOrder extends SalesOrderCoordinatorEvent {
   final SalesOrderHeader header;
   final List<SalesOrderDetail> details;
+  final InvoiceHistoryHeader invoiceHeader;
+  final List<InvoiceHistoryDetail> invoiceDetails;
   final bool validateStock;
 
   const UpdateCompleteSalesOrder({
     required this.header,
     required this.details,
+    required this.invoiceHeader,
+    required this.invoiceDetails,
     this.validateStock = true,
   });
 
@@ -179,6 +186,23 @@ class LoadCompleteSalesOrder extends SalesOrderCoordinatorEvent {
   List<Object?> get props => [salesOrderId];
 }
 
+class LoadAllSalesOrders extends SalesOrderCoordinatorEvent {
+  final int companyId;
+  const LoadAllSalesOrders({required this.companyId});
+
+  @override
+  List<Object?> get props => [companyId];
+}
+
+class FilterCompleteSalesOrder extends SalesOrderCoordinatorEvent {
+  final String query;
+
+  const FilterCompleteSalesOrder({required this.query});
+
+  @override
+  List<Object?> get props => [query];
+}
+
 // Item & Detail Management
 class AddDetailToOrder extends SalesOrderCoordinatorEvent {
   final SalesOrderDetail detail;
@@ -240,7 +264,7 @@ class DetailStateChanged extends SalesOrderCoordinatorEvent {
   final List<SalesOrderDetail> currentDetails;
   final List<SalesOrderDetail> createItems;
   final List<SalesOrderDetail> editItems;
-  final Map<int, StockValidationResult> stockValidationResults;
+  final Map<double, ItemInBranchModel> stockValidationResults;
 
   const DetailStateChanged({
     required this.currentDetails,

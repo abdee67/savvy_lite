@@ -17,7 +17,7 @@ class SalesOrderDetail extends Equatable {
   final String? reference2;
   final int? salesOrderHeaderId;
   final int? itemsTableId;
-  final int? itemInBranch;
+  final double? itemInBranch;
   final int? company;
   final int? lotNumber;
   final double? unitCost;
@@ -74,7 +74,7 @@ class SalesOrderDetail extends Equatable {
       reference2: map['reference2'] as String?,
       salesOrderHeaderId: map['sales_order_header_id'] as int?,
       itemsTableId: map['items_table_id'] as int?,
-      itemInBranch: map['item_in_branch'] as int?,
+      itemInBranch: map['item_in_branch'] as double?,
       company: map['company'] as int?,
       lotNumber: map['lot_number'] as int?,
       unitCost: (map['unit_cost'] as num?)?.toDouble(),
@@ -170,7 +170,7 @@ class SalesOrderDetail extends Equatable {
     String? reference2,
     int? salesOrderHeaderId,
     int? itemsTableId,
-    int? itemInBranch,
+    double? itemInBranch,
     int? company,
     int? lotNumber,
     double? unitCost,

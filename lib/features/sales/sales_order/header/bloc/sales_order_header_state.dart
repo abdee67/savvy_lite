@@ -27,6 +27,7 @@ enum SalesOrderHeaderStatus {
   copying,
   validatingItemInBranch,
   validatingLot,
+  exporting,
 }
 
 class SalesOrderHeaderState extends Equatable {
@@ -53,6 +54,7 @@ class SalesOrderHeaderState extends Equatable {
   final List<SalesOrderHeader> voidedHeaders;
   final String? fsNumber;
   final SystemConstant? systemConstants;
+  final SalesOrderHeader? exportedSales;
 
   // Calculated totals
   final double subTotal;
@@ -156,6 +158,7 @@ class SalesOrderHeaderState extends Equatable {
     this.lotValidationResult,
     this.validationResult,
     this.defaultCustomer,
+    this.exportedSales,
   });
 
   // Getters for status checks
@@ -177,6 +180,7 @@ class SalesOrderHeaderState extends Equatable {
   bool get hasLotValidationResult => lotValidationResult != null;
   bool get hasValidationResult => validationResult != null;
   bool get hasDefaultCustomer => defaultCustomer != null;
+  bool get hasExportedSales => exportedSales != null;
 
   // Status check methods
   bool isLoading() => status == SalesOrderHeaderStatus.loading;
@@ -271,6 +275,7 @@ class SalesOrderHeaderState extends Equatable {
     LotValidationResult? lotValidationResult,
     ValidationResult? validationResult,
     List<Customer>? defaultCustomer,
+    SalesOrderHeader? exportedSales,
   }) {
     return SalesOrderHeaderState(
       status: status ?? this.status,
@@ -331,6 +336,7 @@ class SalesOrderHeaderState extends Equatable {
       lotValidationResult: lotValidationResult ?? this.lotValidationResult,
       validationResult: validationResult ?? this.validationResult,
       defaultCustomer: defaultCustomer ?? this.defaultCustomer,
+      exportedSales: exportedSales ?? this.exportedSales,
     );
   }
 
@@ -451,6 +457,7 @@ class SalesOrderHeaderState extends Equatable {
     lotValidationResult,
     validationResult,
     defaultCustomer,
+    exportedSales,
   ];
 }
 

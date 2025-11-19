@@ -470,3 +470,11 @@ class ClearSelection extends SalesOrderHeaderEvent {
   @override
   List<Object?> get props => [];
 }
+
+class ExportSaleOrder extends SalesOrderHeaderEvent {
+  final SalesOrderHeader salesOrder;
+  final String format;
+  const ExportSaleOrder({required this.salesOrder, required this.format});
+  @override
+  List<Object?> get props => [salesOrder, format];
+}

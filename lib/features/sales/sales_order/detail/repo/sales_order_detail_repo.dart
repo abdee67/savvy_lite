@@ -86,7 +86,7 @@ class SalesOrderDetailRepository {
       // Get related data
       final itemsTable = await _getItemsTableById(detail.itemsTableId!);
       final itemsInBranch = detail.itemInBranch != null
-          ? await _getItemsInBranchById(detail.itemInBranch!)
+          ? await _getItemsInBranchById(detail.itemInBranch!.toInt())
           : null;
       final lotMaster = detail.lotNumber != null
           ? await _getLotMasterById(detail.lotNumber!)
@@ -315,13 +315,13 @@ class SalesOrderDetailRepository {
     for (final detail in details) {
       final itemsTable = await _getItemsTableById(detail.itemsTableId!);
       final itemsInBranch = detail.itemInBranch != null
-          ? await _getItemsInBranchById(detail.itemInBranch!)
+          ? await _getItemsInBranchById(detail.itemInBranch!.toInt())
           : null;
       final lotMaster = detail.lotNumber != null
-          ? await _getLotMasterById(detail.lotNumber!)
+          ? await _getLotMasterById(detail.lotNumber!.toInt())
           : null;
       final unitOfMeasure = detail.unitOfMeasure != null
-          ? await _getUdcDetailsById(detail.unitOfMeasure!)
+          ? await _getUdcDetailsById(detail.unitOfMeasure!.toInt())
           : null;
 
       detailsList.add(

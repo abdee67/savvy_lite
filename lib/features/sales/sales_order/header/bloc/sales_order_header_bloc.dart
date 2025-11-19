@@ -119,6 +119,7 @@ class SalesOrderHeaderBloc
     on<ConvertAmountToWords>(_onConvertAmountToWords);
     on<GenerateNextFsNumber>(_onGenerateNextFsNumber);
     on<RefreshSalesOrderHeaders>(_onRefreshSalesOrderHeaders);
+    on<ExportSaleOrder>(_onExportTransactions);
   }
   @override
   Future<void> close() {
@@ -956,14 +957,6 @@ class SalesOrderHeaderBloc
       final defaultCustomer = await customerRepository.getDefaultCustomer(
         event.companyId,
       );
-      if (defaultCustomer != null) {
-        add(
-          UpdateCustomerInfo(
-            customer: defaultCustomer.first,
-            currentHeader: newHeader,
-          ),
-        );
-      }
       emit(
         state.copyWith(
           status: SalesOrderHeaderStatus.loaded,
@@ -981,6 +974,7 @@ class SalesOrderHeaderBloc
       print(
         'header defaultCustomer: company=${event.companyId}, count=${defaultCustomer?.length ?? 0}',
       );
+      print('header company=${event.companyId}, Header=${newHeader.id}');
     } catch (e) {
       emit(state.errorState('Failed to prepare create: $e'));
     }
@@ -1204,6 +1198,24 @@ class SalesOrderHeaderBloc
         ),
       );
     }
+  }
+
+  void _onExportTransactions(
+    ExportSaleOrder event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) {
+    emit(state.copyWith(status: SalesOrderHeaderStatus.exporting));
+
+    // Simulate export process
+    Future.delayed(const Duration(seconds: 2), () {
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.success,
+          exportedSales: event.salesOrder,
+          successmessage: 'Exported ${event.salesOrder} sales successfully',
+        ),
+      );
+    });
   }
 
   // Helper Methods

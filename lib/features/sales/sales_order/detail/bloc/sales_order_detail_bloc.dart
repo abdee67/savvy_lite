@@ -10,7 +10,8 @@ import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_d
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/repo/sales_order_detail_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/repo/sales_order_header_repo.dart';
-import 'package:savvy_stock/features/sales/services/validate_stock_availability.dart';
+import 'package:savvy_stock/features/sales/sales_order/integration/service/validate_stock_availability.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
 import 'package:savvy_stock/features/stock/item_entry/data/item_repository.dart';
@@ -241,6 +242,7 @@ class SalesOrderDetailBloc
           errorMessage: 'Failed to create sales order details: $e',
         ),
       );
+      print(e);
     }
   }
 
@@ -681,7 +683,7 @@ class SalesOrderDetailBloc
             // Update the first empty item
             newItem = state.createItems.first.copyWith(
               itemsTableId: itemsTable.id,
-              itemInBranch: itemInBranch.id,
+              itemInBranch: itemInBranch.id.toDouble(),
               quantity: 1.0,
               unitOfMeasure: itemInBranch.unitOfMeasure,
             );
@@ -698,7 +700,7 @@ class SalesOrderDetailBloc
             newItem = SalesOrderDetail(
               tempId: _getNextTempId(state.createItems),
               itemsTableId: itemsTable.id,
-              itemInBranch: itemInBranch.id,
+              itemInBranch: itemInBranch.id.toDouble(),
               quantity: 1.0,
               unitOfMeasure: itemInBranch.unitOfMeasure,
               company: state.companyId!,
@@ -804,7 +806,7 @@ class SalesOrderDetailBloc
       final updatedAvailableValidator = Map<int, double>.from(
         state.availableValidator,
       );
-      updatedAvailableValidator[soD.itemInBranch!] = beyondQuantity;
+      updatedAvailableValidator[soD.itemInBranch!.toInt()] = beyondQuantity;
 
       emit(
         state.copyWith(
@@ -812,14 +814,11 @@ class SalesOrderDetailBloc
           availableValidator: updatedAvailableValidator,
           stockValidationResults: {
             ...state.stockValidationResults,
-            soD.itemInBranch!: StockValidationResult(
-              isValid: beyondQuantity <= 0,
-              availableQuantity: availableQuantity,
-              requestedQuantity: totalRequestedQuantity,
-              beyondQuantity: beyondQuantity,
-              message: beyondQuantity > 0
-                  ? 'Quantity Beyond Available (Beyond Quantity is ${beyondQuantity.abs()})!'
-                  : 'Stock is sufficient',
+            soD.itemInBranch!: ItemInBranchModel(
+              id: soD.itemInBranch!.toInt(),
+              itemNumber: soD.itemInBranch!.toInt(),
+              branch: soD.itemInBranch!.toInt(),
+              quantityAvailable: availableQuantity,
             ),
           },
         ),
@@ -849,9 +848,9 @@ class SalesOrderDetailBloc
             ValidateStockAvailability(salesOrderDetail: item),
             emit,
           );
-
-          final result = state.stockValidationResults[item.itemInBranch!];
-          if (result != null && !result.isValid) {
+          final branchKey = item.itemInBranch!.toInt();
+          final beyond = state.availableValidator[branchKey] ?? 0.0;
+          if (beyond > 0) {
             allValid = false;
           }
         }
@@ -938,7 +937,7 @@ class SalesOrderDetailBloc
         final updatedDetail = event.salesOrderDetail.copyWith(
           unitPrice: convertedUnitPrice,
           extendedPrice: event.salesOrderDetail.quantity! * convertedUnitPrice,
-          itemInBranch: event.itemsInBranch!.id,
+          itemInBranch: event.itemsInBranch!.id.toDouble(),
         );
 
         // Update in create items
@@ -994,10 +993,17 @@ class SalesOrderDetailBloc
     try {
       if (event.salesOrderDetail.itemsTableId == null) return;
 
+      // 🎯 Determine company ID safely
+      final effectiveCompanyId = state.companyId ?? authBloc.state.companyId;
+      if (effectiveCompanyId == null) {
+        // Cannot calculate cost without company ID
+        return;
+      }
+
       // 🎯 Get item cost from ItemCostTableBloc
       final itemCost = await itemCostRepository.calculateItemCost(
         item: event.salesOrderDetail,
-        companyId: state.companyId!,
+        companyId: effectiveCompanyId,
       );
 
       final unitCost = itemCost;
@@ -1142,12 +1148,19 @@ class SalesOrderDetailBloc
           salesOrderDetail.quantity != null &&
           salesOrderDetail.quantity != 0.0 &&
           salesOrderDetail.itemInBranch != null) {
+        final companyId = authBloc.state.companyId;
+        if (companyId == null) {
+          throw Exception(
+            'Company ID is required to update stock for sales order',
+          );
+        }
+
         // Get conversion factor
         final factor = await itemUOMConversionsRepository.fromOtherToPrimary(
           salesOrderDetail.itemsTableId!,
           salesOrderDetail.unitOfMeasure ??
               salesOrderDetail.itemBranch!.unitOfMeasure!,
-          authBloc.state.companyId!,
+          companyId,
         );
 
         // Get system constants
@@ -1161,21 +1174,28 @@ class SalesOrderDetailBloc
           await validateStockAvailabilityService.handleSimpleStockUpdate(
             salesOrderDetail,
             factor,
-            authBloc.state.companyId!,
+            companyId,
           );
         } else if (applyLocationMgmt && !applyLotMgmt) {
           // Case 2: Location management only
           await validateStockAvailabilityService.handleLocationStockUpdate(
             salesOrderDetail,
             factor,
-            authBloc.state.companyId!,
+            companyId,
+          );
+        } else if (!applyLocationMgmt && applyLotMgmt) {
+          // Lot management only
+          await validateStockAvailabilityService.handleLotStockUpdate(
+            salesOrderDetail,
+            factor,
+            companyId,
           );
         } else if (applyLocationMgmt && applyLotMgmt) {
           // Case 3: Both location and lot management
           await validateStockAvailabilityService.handleLotStockUpdate(
             salesOrderDetail,
             factor,
-            authBloc.state.companyId!,
+            companyId,
           );
         }
 
@@ -1204,15 +1224,23 @@ class SalesOrderDetailBloc
     try {
       emit(state.copyWith(status: SalesOrderDetailStatus.saving));
 
-      // 1. Validate stock using header's system constants
+      /*  // 1. Validate stock using header's system constants
       final systemConstant = headerBloc.state.systemConstants;
       final applyLotMgmt = systemConstant?.applyLotMgmBoolean ?? false;
 
       bool allStockValid = true;
       for (final item in state.createItems) {
         if (item.itemInBranch != null) {
-          final result = state.stockValidationResults[item.itemInBranch!];
-          if (result == null || !result.isValid) {
+          final branchKey = item.itemInBranch!.toInt();
+
+          final beyond = state.availableValidator[branchKey];
+          if (beyond != null && beyond > 0) {
+            allStockValid = false;
+            break;
+          }
+
+          final stockResult = state.stockValidationResults[item.itemInBranch!];
+          if (stockResult != null && (stockResult.quantityAvailable ?? 0) < 0) {
             allStockValid = false;
             break;
           }
@@ -1234,31 +1262,36 @@ class SalesOrderDetailBloc
           ),
         );
         return;
+      }*/
+      // 🎯 Determine company ID safely for cost calculation
+      final effectiveCompanyId = state.companyId ?? authBloc.state.companyId;
+      if (effectiveCompanyId == null) {
+        throw Exception('Company ID is required to save sales order details');
       }
+
       // 🎯 Calculate all costs before saving
       add(
         CalculateAllItemCosts(
           salesOrderDetail: state.createItems,
-          companyId: state.companyId!,
+          companyId: effectiveCompanyId,
         ),
       );
 
       // 3. Save details
       await repository.createSalesOrderDetailBatch(state.createItems);
 
-      // 4. Update header with calculated totals
-      final subTotal = state.createItems
-          .map((detail) => detail.extendedPrice ?? 0.0)
-          .reduce((a, b) => a + b);
-
-      headerBloc.add(
-        CalculateOrderTotals(
-          header: headerBloc.state.selected!,
-          orderDetails: state.createItems,
-          applyWithholding: headerBloc.state.applyWH ?? false,
-          discountAmount: headerBloc.state.discountAmount ?? 0.0,
-        ),
-      );
+      // 4. Update header with calculated totals when available
+      final selectedHeader = state.selectedHeader ?? headerBloc.state.selected;
+      if (selectedHeader != null) {
+        headerBloc.add(
+          CalculateOrderTotals(
+            header: selectedHeader,
+            orderDetails: state.createItems,
+            applyWithholding: headerBloc.state.applyWH ?? false,
+            discountAmount: headerBloc.state.discountAmount ?? 0.0,
+          ),
+        );
+      }
 
       // 5. Update stock
       for (final item in state.createItems) {
@@ -1280,7 +1313,10 @@ class SalesOrderDetailBloc
       add(RefreshSalesOrderDetails());
     } catch (e) {
       emit(
-        state.copyWith(errorMessage: 'Failed to save sales order details: $e'),
+        state.copyWith(
+          status: SalesOrderDetailStatus.failure,
+          errorMessage: 'Failed to save sales order details: $e',
+        ),
       );
     }
   }

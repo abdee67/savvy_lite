@@ -4,12 +4,12 @@ import 'dart:math';
 import 'package:bloc/bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
-import 'package:savvy_stock/features/sales/invoice/detail/bloc/invoice_detail.event.dart';
-import 'package:savvy_stock/features/sales/invoice/detail/bloc/invoice_detail_bloc.dart';
-import 'package:savvy_stock/features/sales/invoice/detail/model/invoice_detail_model.dart';
-import 'package:savvy_stock/features/sales/invoice/header/bloc/invoice_header_bloc.dart';
-import 'package:savvy_stock/features/sales/invoice/header/bloc/invoice_header_event.dart';
-import 'package:savvy_stock/features/sales/invoice/header/model/invoice_header_model.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/detail/bloc/invoice_detail.event.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/detail/bloc/invoice_detail_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/detail/model/invoice_detail_model.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/header/bloc/invoice_header_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/header/bloc/invoice_header_event.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/header/model/invoice_header_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/service/sales_order_integration_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_bloc.dart';
@@ -35,6 +35,8 @@ class SalesOrderCoordinatorBloc
 
   StreamSubscription<SalesOrderHeaderState>? _headerSubscription;
   StreamSubscription<SalesOrderDetailState>? _detailSubscription;
+  StreamSubscription? _headerEventSubscription;
+  StreamSubscription? _detailEventSubscription;
   StreamSubscription<SystemConstantState>? _systemConstantSubscription;
   StreamSubscription<AuthState>? _authSubscription;
 
@@ -48,6 +50,9 @@ class SalesOrderCoordinatorBloc
   }) : integrationService = SalesOrderIntegrationService(
          headerBloc: headerBloc,
          detailBloc: detailBloc,
+         authBloc: authBloc,
+         invoiceHeaderBloc: invoiceHeaderBloc,
+         invoiceDetailBloc: invoiceDetailBloc,
        ),
        super(const SalesOrderCoordinatorState()) {
     // Listen to state changes from both BLoCs
@@ -125,9 +130,10 @@ class SalesOrderCoordinatorBloc
         header: event.header,
         details: event.details,
       );
-
       final currentHeader = headerBloc.state.selected;
-      final currentDetails = detailBloc.state.createItems;
+      // Use the details that were used to create the order; detailBloc.createItems
+      // may have been cleared by the save process.
+      final currentDetails = event.details;
 
       emit(
         state
@@ -145,6 +151,9 @@ class SalesOrderCoordinatorBloc
               lastSyncTime: DateTime.now(),
             ),
       );
+
+      // Now that coordinator state has header and details, trigger invoice generation
+      add(const GenerateInvoiceFromSalesOrder());
     } catch (e) {
       emit(
         state.errorState(
@@ -170,6 +179,8 @@ class SalesOrderCoordinatorBloc
       await integrationService.updateSalesOrderWithDetails(
         header: event.header,
         details: event.details,
+        invoiceHeader: event.invoiceHeader,
+        invoiceDetails: event.invoiceDetails,
       );
 
       emit(
@@ -300,27 +311,19 @@ class SalesOrderCoordinatorBloc
           discountAmount: state.lastDiscountAmount ?? 0.0,
         ),
       );
-      // Wait for header bloc to finish calculation
-      await Future.delayed(const Duration(milliseconds: 300));
-      final headerState = headerBloc.state;
-
+      // Mark calculation as requested; actual financial values will be
+      // synchronized from the header bloc via _onHeaderStateChangedEvent.
       emit(
         state.copyWith(
-          lastSubTotal: headerState.subTotal,
-          lastTax: headerState.tax,
-          lastWithholdAmount: headerState.withholdAmount,
-          lastTotalAmount: headerState.totalAmount,
           lastCalculationTime: DateTime.now(),
           isCalculationsComplete: true,
-          lastAmountOpen: headerState.amountOpen,
-          lastDiscountAmount: headerState.discountAmount,
           pendingOperations: {...state.pendingOperations}
             ..remove('calculate_totals'),
         ),
       );
 
       print(
-        'Coordinator: Totals calculated - Subtotal: ${headerState.subTotal}, Tax: ${headerState.tax}, Total: ${headerState.totalAmount}',
+        'Coordinator: Totals calculation requested for ${currentDetails.length} items',
       );
     } catch (e) {
       emit(
@@ -545,7 +548,7 @@ class SalesOrderCoordinatorBloc
 
       final detailState = detailBloc.state;
       final allValid = detailState.stockValidationResults.values.every(
-        (result) => result.isValid,
+        (result) => result.quantityAvailable! >= 0,
       );
 
       emit(
@@ -650,28 +653,19 @@ class SalesOrderCoordinatorBloc
     emit(state.loadingState('prepare_new_order'));
 
     try {
-      // Prepare header
-      headerBloc.add(
-        PrepareCreateSalesOrderHeader(
-          companyId: event.companyId,
-          branchId: event.branchId,
-          employeeId: event.employeeId,
-        ),
+      // Prepare header and details (and optional default customer) via integration service
+      await integrationService.prepareNewSalesOrder(
+        companyId: event.companyId,
+        employeeId: event.employeeId,
+        branchId: event.branchId,
+        defaultCustomer: event.defaultCustomer,
       );
 
-      // Wait for header preparation
-      await Future.delayed(const Duration(milliseconds: 300));
-
-      // Prepare details
-      detailBloc.add(PrepareCreateSalesOrderDetails());
-
-      // Load system constants
+      // Load fee-related system constants into coordinator state
       add(const LoadFeeSystemConstants());
 
-      // Set default customer if provided
-      if (event.defaultCustomer != null) {
-        add(SyncCustomerToOrder(customer: event.defaultCustomer!));
-      }
+      final preparedHeader = headerBloc.state.selected;
+      final defaultCustomer = headerBloc.state.defaultCustomer;
 
       emit(
         state
@@ -680,17 +674,19 @@ class SalesOrderCoordinatorBloc
               operation: 'prepare_new_order',
             )
             .copyWith(
-              currentHeader: headerBloc.state.selected,
+              currentHeader: preparedHeader,
               currentDetails: const [],
               paymentType: 'Cash',
               paymentInstrument: 'Cash',
               isOrderComplete: false,
               isStockValidated: false,
               isCalculationsComplete: false,
+              defaultCustomer: defaultCustomer,
             ),
       );
+
       print(
-        'Coordinator: New order prepared - Header: ${headerBloc.state.selected?.id}',
+        'Coordinator: New order prepared - Header: ${preparedHeader?.id}, defaultCustomerCount=${defaultCustomer?.length ?? 0}',
       );
     } catch (e) {
       emit(
@@ -714,25 +710,7 @@ class SalesOrderCoordinatorBloc
         (h) => h.id == event.salesOrderId,
         orElse: () => throw Exception('Sales order not found'),
       );
-
-      headerBloc.add(SelectSalesOrder(header: header));
-
-      // Load details
-      detailBloc.add(
-        LoadSalesOrderDetailsByHeader(headerId: event.salesOrderId),
-      );
-      invoiceHeaderBloc.add(
-        LoadInvoiceHistoryHeaders(companyId: authBloc.state.companyId!),
-      );
-      invoiceDetailBloc.add(
-        LoadInvoiceHistoryDetails(companyId: authBloc.state.companyId!),
-      );
-
-      // Wait for details to load
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      final details = detailBloc.state.items;
-
+      await integrationService.loadCompleteSalesOrder(event.salesOrderId);
       emit(
         state
             .successState(
@@ -741,8 +719,8 @@ class SalesOrderCoordinatorBloc
             )
             .copyWith(
               currentHeader: header,
-              currentDetails: details,
-              lastSavedDetails: details,
+              currentDetails: detailBloc.state.items,
+              lastSavedDetails: detailBloc.state.items,
               isOrderComplete: true,
               isStockValidated: true, // Assuming loaded orders were validated
               isCalculationsComplete: true,
@@ -757,6 +735,35 @@ class SalesOrderCoordinatorBloc
       );
     }
   }
+  /* Future<void> _onLoadAllSalesOrders(
+    LoadAllSalesOrders event,
+    Emitter<SalesOrderCoordinatorState> emit,
+  ) async {
+    emit(state.loadingState('load_all_orders'));
+
+    try {
+      // Load all headers
+      final allSalesOrders = await integrationService.loadAllSalesOrders();
+
+      emit(
+        state.successState(
+          'All sales orders loaded successfully',
+          operation: 'load_all_orders',
+        ).copyWith(
+          orders: allSalesOrders
+          lastSyncTime: DateTime.now(),
+          lastOperation: 'All sales orders loaded',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.errorState(
+          'Failed to load all sales orders: $e',
+          operation: 'load_all_orders',
+        ),
+      );
+    }
+  }*/
 
   // 🎯 DETAIL MANAGEMENT HANDLERS
 
@@ -911,23 +918,27 @@ class SalesOrderCoordinatorBloc
     HeaderStateChanged event,
     Emitter<SalesOrderCoordinatorState> emit,
   ) {
-    if (event.selectedHeader != state.currentHeader) {
-      emit(
-        state.copyWith(
-          currentHeader: event.selectedHeader,
-          lastSubTotal: event.subTotal,
-          lastTax: event.tax,
-          lastWithholdAmount: event.withholdAmount,
-          lastTotalAmount: event.totalAmount,
-          lastDiscountAmount: event.discountAmount,
-          lastAmountOpen: event.amountOpen,
-        ),
-      );
+    final previousHeader = state.currentHeader;
 
-      // If header changed and we have details, sync them
-      if (event.selectedHeader != null && state.currentDetails.isNotEmpty) {
-        add(SyncHeaderToDetails(header: event.selectedHeader));
-      }
+    // Always synchronize financial values from the header bloc state,
+    // even when the selected header instance itself has not changed.
+    emit(
+      state.copyWith(
+        currentHeader: event.selectedHeader ?? previousHeader,
+        lastSubTotal: event.subTotal,
+        lastTax: event.tax,
+        lastWithholdAmount: event.withholdAmount,
+        lastTotalAmount: event.totalAmount,
+        lastDiscountAmount: event.discountAmount,
+        lastAmountOpen: event.amountOpen,
+      ),
+    );
+
+    // Only resync details when the header reference actually changes.
+    if (event.selectedHeader != null &&
+        event.selectedHeader != previousHeader &&
+        state.currentDetails.isNotEmpty) {
+      add(SyncHeaderToDetails(header: event.selectedHeader));
     }
   }
 
@@ -935,13 +946,19 @@ class SalesOrderCoordinatorBloc
     DetailStateChanged event,
     Emitter<SalesOrderCoordinatorState> emit,
   ) {
-    if (event.createItems.length != state.currentDetails.length ||
-        !_areDetailsEqual(event.createItems, state.currentDetails)) {
-      emit(state.copyWith(currentDetails: event.createItems));
+    // Prefer the in-progress createItems while editing; once they are saved
+    // and cleared, fall back to the persisted items list.
+    final sourceDetails = event.createItems.isNotEmpty
+        ? event.createItems
+        : event.currentDetails;
+
+    if (sourceDetails.length != state.currentDetails.length ||
+        !_areDetailsEqual(sourceDetails, state.currentDetails)) {
+      emit(state.copyWith(currentDetails: sourceDetails));
 
       // Update stock validation status
       final allValid = event.stockValidationResults.values.every(
-        (result) => result.isValid,
+        (result) => result.quantityAvailable! >= 0,
       );
 
       if (state.isStockValidated != allValid) {
@@ -1019,7 +1036,7 @@ class SalesOrderCoordinatorBloc
       // Update stock validation status without emitting new events
       if (detailState.stockValidationResults != state.stockValidationResults) {
         final allValid = detailState.stockValidationResults.values.every(
-          (result) => result.isValid,
+          (result) => result.quantityAvailable! >= 0,
         );
 
         // Use the current state to avoid race conditions
@@ -1047,6 +1064,8 @@ class SalesOrderCoordinatorBloc
   Future<void> close() {
     _headerSubscription?.cancel();
     _detailSubscription?.cancel();
+    _headerEventSubscription?.cancel();
+    _detailEventSubscription?.cancel();
     _systemConstantSubscription?.cancel();
     return super.close();
   }
@@ -1059,31 +1078,49 @@ class SalesOrderCoordinatorBloc
     final currentHeader = state.currentHeader;
     final currentDetails = state.currentDetails;
 
-    if (currentHeader == null || currentDetails.isEmpty) {
-      emit(
-        state.errorState(
-          'Cannot generate invoice: No sales order data available',
-        ),
-      );
-      return;
-    }
-
     emit(state.loadingState('generate_invoice'));
 
     try {
+      if (currentHeader == null) {
+        throw Exception(
+          'Cannot generate invoice: sales order header is missing',
+        );
+      }
+
+      if (currentDetails.isEmpty) {
+        throw Exception('Cannot generate invoice: no sales order details');
+      }
+
+      // 🎯 Determine company ID safely for invoice
+      final effectiveCompanyId =
+          currentHeader.company ?? authBloc.state.companyId;
+      if (effectiveCompanyId == null) {
+        throw Exception('Cannot generate invoice: company ID is null');
+      }
+
       // Generate next FS number for invoice
       final nextFsNumber = await _generateNextInvoiceFsNumber(
-        currentHeader.company!,
+        effectiveCompanyId,
       );
+
+      // Derive customer info safely
+      final customerName =
+          currentHeader.customerBillToRef?.customerName ??
+          state.defaultCustomer?.first.contactName ??
+          '';
+      final tinNumber = state.defaultCustomer?.first.tinNumber ?? '';
 
       // Create invoice header from sales order header
       final invoiceHeader = InvoiceHistoryHeader(
-        company: currentHeader.company!,
+        company: effectiveCompanyId,
         fsNumber: nextFsNumber,
         mrcNumber: currentHeader.fsNumber, // Link to sales order
         dateTransaction: DateTime.now(),
-        customerName: currentHeader.customerBillToRef!.customerName,
-        tinNumber: currentHeader.customerBillToRef!.tinNumber,
+        customerName: customerName,
+        tinNumber: tinNumber,
+        city: state.defaultCustomer?.first.city ?? '',
+        country: state.defaultCustomer?.first.country ?? '',
+        region: state.defaultCustomer?.first.region ?? '',
         // salesPerson: currentDetails.first.,
         totalAmount: state.lastTotalAmount ?? 0.0,
         taxAmount: state.lastTax ?? 0.0,
@@ -1108,7 +1145,7 @@ class SalesOrderCoordinatorBloc
       final invoiceDetails = currentDetails.map((salesDetail) {
         return InvoiceHistoryDetail(
           invoiceHistory: createdHeader.id!,
-          company: currentHeader.company!,
+          company: effectiveCompanyId,
           item: salesDetail.item?.itemDescription ?? 'Item',
           quantityTransaction: salesDetail.quantity ?? 0.0,
           amountUnitPrice: salesDetail.unitPrice ?? 0.0,

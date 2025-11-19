@@ -1,6 +1,8 @@
 // features/sales/sales_order_details/blocs/sales_order_details_state.dart
 
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 
 enum SalesOrderDetailStatus {
@@ -39,8 +41,9 @@ class SalesOrderDetailState {
   final bool enablePreview;
   final bool enableFinishingProcess;
   final String? availablitySelections;
-  final Map<int, StockValidationResult> stockValidationResults;
+  final Map<double, ItemInBranchModel> stockValidationResults;
   final SystemConstant? systemConstant;
+  final SalesOrderHeader? selectedHeader;
 
   const SalesOrderDetailState({
     this.status = SalesOrderDetailStatus.initial,
@@ -66,6 +69,7 @@ class SalesOrderDetailState {
     this.availablitySelections,
     this.stockValidationResults = const {},
     this.systemConstant,
+    this.selectedHeader,
   });
 
   SalesOrderDetailState copyWith({
@@ -90,8 +94,9 @@ class SalesOrderDetailState {
     bool? enablePreview,
     bool? enableFinishingProcess,
     String? availablitySelections,
-    Map<int, StockValidationResult>? stockValidationResults,
+    Map<double, ItemInBranchModel>? stockValidationResults,
     SystemConstant? systemConstant,
+    SalesOrderHeader? selectedHeader,
   }) {
     return SalesOrderDetailState(
       status: status ?? this.status,
@@ -121,6 +126,7 @@ class SalesOrderDetailState {
       stockValidationResults:
           stockValidationResults ?? this.stockValidationResults,
       systemConstant: systemConstant ?? this.systemConstant,
+      selectedHeader: selectedHeader ?? this.selectedHeader,
     );
   }
 
@@ -136,4 +142,6 @@ class SalesOrderDetailState {
   bool get hasMultiSelection => multiselectionItems.isNotEmpty;
   bool get canSave => createItems.every((item) => item.isValid);
   bool get canConfirm => enablePreview && createItems.isNotEmpty;
+  bool get canUpdate => enableFinishingProcess && createItems.isNotEmpty;
+  bool get canDelete => enableFinishingProcess && createItems.isNotEmpty;
 }
