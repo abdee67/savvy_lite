@@ -225,6 +225,40 @@ class ItemTransactionModel {
       unitCost: _toDouble(map['unit_cost']) ?? 0.0,
       amountCost: _toDouble(map['amount_cost']) ?? 0.0,
       beforeAmountCost: _toDouble(map['before_amount_cost']) ?? 0.0,
+      unitOfMeasureDetail: map['unit_of_measure'] != null
+          ? UdcDetails(
+              id: _toInt(map['unit_of_measure']) ?? 0,
+              detailCode: map['detail_code']?.toString() ?? '',
+              description1: map['unit_of_measure']?.toString() ?? '',
+            )
+          : null,
+      transactionTypeDetail: map['transaction_type'] != null
+          ? UdcDetails(
+              id: _toInt(map['transaction_type']) ?? 0,
+              detailCode: map['detail_code']?.toString() ?? '',
+              description1: map['transaction_type']?.toString() ?? '',
+            )
+          : null,
+      lotStatusDetail: map['lot_status'] != null
+          ? UdcDetails(
+              id: _toInt(map['lot_status']) ?? 0,
+              detailCode: map['detail_code']?.toString() ?? '',
+              description1: map['lot_status']?.toString() ?? '',
+            )
+          : null,
+      orderTypeDetail: map['order_type'] != null
+          ? UdcDetails(
+              id: _toInt(map['order_type']) ?? 0,
+              detailCode: map['detail_code']?.toString() ?? '',
+              description1: map['order_type']?.toString() ?? '',
+            )
+          : null,
+      branchDetail: map['branch'] != null
+          ? Branch(
+              id: _toInt(map['branch']) ?? 0,
+              description: map['branch_name']?.toString() ?? '',
+            )
+          : null,
     );
   }
 
@@ -315,6 +349,19 @@ class ItemTransactionModel {
         transactionTypeDetail = UdcDetails.fromJson(transactionTypeData.first);
       }
     }
+
+    // Load unit of measure
+    UdcDetails? unitOfMeasureDetail;
+    if (unitOfMeasure != null) {
+      final unitOfMeasureData = await db.query(
+        'udc_details',
+        where: 'id = ?',
+        whereArgs: [unitOfMeasure],
+      );
+      if (unitOfMeasureData.isNotEmpty) {
+        unitOfMeasureDetail = UdcDetails.fromJson(unitOfMeasureData.first);
+      }
+    }
     //
 
     return copyWith(
@@ -323,6 +370,7 @@ class ItemTransactionModel {
       itemBranchDetail: itemBranchDetail,
       item: item,
       transactionTypeDetail: transactionTypeDetail,
+      unitOfMeasureDetail: unitOfMeasureDetail,
     );
   }
 }

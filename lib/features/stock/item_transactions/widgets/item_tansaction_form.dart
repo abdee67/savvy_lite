@@ -2,6 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:savvy_stock/core/widgets/custom_searchable_dropdown.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_bloc.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_event.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_state.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_table_dropdown.dart';
@@ -63,7 +67,7 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
 
   // Transaction items list
   final List<ItemTransactionModel> _transactionItems = [];
-  UdcDetails? _selectedUnitOfMeasure;
+  int? _selectedUom;
 
   @override
   void initState() {
@@ -108,6 +112,7 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
       _transactionNumber = transaction.transactionNumber;
       _selectedFromBranch = transaction.branch;
       _remark = transaction.remark;
+      _selectedUom = transaction.unitOfMeasure;
 
       // Load transaction type
       if (transaction.transactionType != null) {
@@ -210,6 +215,7 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
           amountCost: 0.0,
           beforeAmountCost: 0.0,
           adjustToIncrease: true, // Default to increase for adjustments
+          unitOfMeasure: _selectedUom,
         ),
       );
     });
@@ -367,6 +373,7 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
       unitCost: 0.0,
       amountCost: 0.0,
       beforeAmountCost: 0.0,
+      unitOfMeasure: _selectedUom,
     );
 
     // Execute inventory transactions
@@ -659,36 +666,69 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
                     },
                   ),
                 ),
-
-                const SizedBox(width: 16),
-
-                // Unit of Measure
-                Expanded(
-                  child: BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
-                    builder: (context, state) {
-                      final uomList = state.details
-                          .where((udc) => udc.udcGroup == 'UM')
-                          .toList();
-
-                      return CustomDropdown<int>(
-                        labelText: 'UoM *',
-                        value: item.unitOfMeasure,
-                        items: uomList
-                            .map(
-                              (udc) => DropdownMenuItem<int>(
-                                value: udc.id,
-                                child: Text(udc.description1),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (v) =>
-                            setState(() => item.unitOfMeasure = v),
-                        validator: (v) => v == null ? 'Required' : null,
-                      );
-                    },
-                  ),
-                ),
               ],
+            ),
+            const SizedBox(height: 16),
+            BlocBuilder<ItemUomConversionBloc, ItemUomConversionState>(
+              builder: (context, state) {
+                if (state.isLoadingUomsForItem ||
+                    state.status == ItemUomConversionStatus.loading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final udcList = state.availableUomsForItem;
+
+                if (udcList.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                      'No unit of measure available',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  );
+                }
+
+                return Builder(
+                  builder: (context) {
+                    String? currentUomDesc;
+                    if (_selectedUom != null) {
+                      final match = udcList.where((u) => u.id == _selectedUom);
+                      if (match.isNotEmpty) {
+                        currentUomDesc = match.first.description1;
+                      }
+                    }
+
+                    return CustomSearchableDropdown(
+                      labelText: 'Unit of Measure *',
+                      options: udcList.map((u) => u.description1).toList(),
+                      value: currentUomDesc,
+                      prefixIcon: Iconsax.ruler,
+                      allowCustomEntries: false,
+                      onChanged: (value) {
+                        setState(() {
+                          if (value == null) {
+                            _selectedUom = null;
+                          } else {
+                            final matches = udcList.where(
+                              (u) => u.description1 == value,
+                            );
+                            _selectedUom = matches.isNotEmpty
+                                ? matches.first.id
+                                : null;
+                            item.unitOfMeasure = _selectedUom;
+                          }
+                        });
+                      },
+                      validator: (value) {
+                        if (_selectedUom == null) {
+                          return 'Please select a unit of measure';
+                        }
+                        return null;
+                      },
+                    );
+                  },
+                );
+              },
             ),
           ],
         ),
@@ -737,6 +777,13 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
               // Load lots for the selected item
               context.read<LotMasterBloc>().add(
                 FilterLotMasters(itemId: v, branchId: _selectedFromBranch!),
+              );
+              //load uom for item default from iteminbranch and its conversion from item uom conversion
+              context.read<ItemUomConversionBloc>().add(
+                LoadUomsForItem(
+                  itemId: v,
+                  companyId: widget.authBloc.state.companyId!,
+                ),
               );
             }
           },

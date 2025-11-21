@@ -485,8 +485,8 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
                   );
                 }
 
-                final items = state.details.toList();
-                if (items.isEmpty) {
+                final udcList = state.details.toList();
+                if (udcList.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8.0),
                     child: Text(
@@ -495,20 +495,53 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
                     ),
                   );
                 }
-                final itemDescriptions = state.details
+
+                final options = udcList
                     .where((item) => item.description1.isNotEmpty)
                     .map((item) => item.description1)
                     .toSet()
                     .toList();
 
+                String? currentUomDesc;
+                if (_selectedUom != null) {
+                  // First, treat stored value as an id string
+                  final id = int.tryParse(_selectedUom!);
+                  if (id != null) {
+                    final match = udcList.where((u) => u.id == id);
+                    if (match.isNotEmpty) {
+                      currentUomDesc = match.first.description1;
+                    }
+                  }
+
+                  // Fallback: treat stored value as description text
+                  currentUomDesc ??= () {
+                    final match = udcList.where(
+                      (u) => u.description1 == _selectedUom,
+                    );
+                    if (match.isNotEmpty) {
+                      return match.first.description1;
+                    }
+                    return null;
+                  }();
+                }
+
                 return CustomSearchableDropdown(
                   labelText: 'Unit of Measure *',
-                  value: _selectedUom?.toString(),
+                  value: currentUomDesc,
                   prefixIcon: Icons.scale,
-                  options: itemDescriptions,
+                  options: options,
                   onChanged: (value) {
                     setState(() {
-                      _selectedUom = value;
+                      if (value == null) {
+                        _selectedUom = null;
+                      } else {
+                        final matches = udcList.where(
+                          (u) => u.description1 == value,
+                        );
+                        _selectedUom = matches.isNotEmpty
+                            ? matches.first.id.toString()
+                            : null;
+                      }
                     });
                   },
                   validator: (value) {

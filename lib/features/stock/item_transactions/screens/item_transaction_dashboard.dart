@@ -1009,7 +1009,7 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
           if (transaction.lotNumber != null)
             _buildTransactionInfoItem(
               'Lot Number : ',
-              transaction.lot?.lotNumber?.toString() ?? 'N/A',
+              transaction.lotNumber?.toString() ?? 'N/A',
               Iconsax.tag,
               isCompact,
             ),

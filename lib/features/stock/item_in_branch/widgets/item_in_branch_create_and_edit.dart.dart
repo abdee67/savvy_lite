@@ -15,9 +15,9 @@ import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_bloc.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_state.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_event.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_event.dart';
-import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_state.dart';
 
 class ItemInBranchFormPage extends StatefulWidget {
   final ItemInBranchModel? item;
@@ -119,6 +119,16 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
       _selectedMarginType = null;
       _selectedUom = null;
       _branch = null;
+    }
+
+    // After resolving the underlying ItemEntry id, load available UoMs
+    if (_itemEntryId != null) {
+      context.read<ItemUomConversionBloc>().add(
+        LoadUomsForItem(
+          itemId: _itemEntryId!,
+          companyId: widget.authBloc.state.companyId!,
+        ),
+      );
     }
   }
 
@@ -381,10 +391,14 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
             // Unit of Measure
             BlocBuilder<ItemUomConversionBloc, ItemUomConversionState>(
               builder: (context, state) {
-                if (state.status == ItemUomConversionStatus.loading) {
+                if (state.isLoadingUomsForItem ||
+                    state.status == ItemUomConversionStatus.loading) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                if (state.items.isEmpty) {
+
+                final udcList = state.availableUomsForItem;
+
+                if (udcList.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8.0),
                     child: Text(
@@ -393,7 +407,6 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
                     ),
                   );
                 }
-                final udcList = state.availableUomsForItem;
 
                 return Builder(
                   builder: (context) {
@@ -407,9 +420,7 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
 
                     return CustomSearchableDropdown(
                       labelText: 'Unit of Measure *',
-                      options: udcList
-                          .map((u) => u.description1 ?? '')
-                          .toList(),
+                      options: udcList.map((u) => u.description1).toList(),
                       value: currentUomDesc,
                       prefixIcon: Iconsax.ruler,
                       allowCustomEntries: false,

@@ -1029,10 +1029,11 @@ class ItemTransactionRepository {
              il.location,
              lm.lot_number,
              ib.quantity_available,
-             i.item_description,
+             i.item_description as item_description,
              b.description as branch_name,
-             udt.description_1 as transaction_type_desc,
-             uds.description_1 as status_desc
+             udt.description_1 as transaction_type,
+             uds.description_1 as lot_status,
+             udm.description_1 as unit_of_measure
       FROM item_transactions it
       LEFT JOIN item_location il ON it.item_location = il.id
       LEFT JOIN lot_master lm ON it.lot_number = lm.id
@@ -1041,6 +1042,7 @@ class ItemTransactionRepository {
       LEFT JOIN branch_table b ON it.branch = b.id
       LEFT JOIN udc_details udt ON it.transaction_type = udt.id
       LEFT JOIN udc_details uds ON it.lot_status = uds.id
+      LEFT JOIN udc_details udm ON it.unit_of_measure = udm.id
       WHERE it.company = ?
       ORDER BY it.date_created DESC
     ''',
