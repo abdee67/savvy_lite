@@ -10,6 +10,8 @@ import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
+import 'package:savvy_stock/core/di/injection_container.dart';
+import 'package:savvy_stock/features/sales/sales_order/integration/service/sales_order_integration_service.dart';
 
 class ItemEntryScreen extends StatelessWidget {
   final Map<String, dynamic>? customerData;
@@ -230,6 +232,15 @@ class _ItemEntryScreenContentState extends State<ItemEntryScreenContent> {
     setState(() {
       _currentFormDetail = updatedDetail;
     });
+
+    // Delegate UOM conversion and extended price calculation to integration service
+    if (updatedDetail.itemBranch != null) {
+      final integrationService = getIt<SalesOrderIntegrationService>();
+      integrationService.updateUnitPriceFromItemBranch(
+        updatedDetail.itemBranch!,
+        updatedDetail,
+      );
+    }
   }
 
   @override

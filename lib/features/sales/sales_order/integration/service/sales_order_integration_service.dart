@@ -236,9 +236,6 @@ class SalesOrderIntegrationService {
       ),
     );
 
-    // Auto-recalculate extended price
-    detailBloc.add(CalculateExtendedPrice(item: detail));
-
     // Recalculate order totals after price update
     final currentDetails = detailBloc.state.createItems;
     if (currentDetails.isNotEmpty) {

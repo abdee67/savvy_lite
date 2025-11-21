@@ -915,30 +915,47 @@ class SalesOrderDetailBloc
   ) async {
     try {
       if (event.itemsInBranch == null) return;
+      if (event.salesOrderDetail.unitOfMeasure == null) return;
 
-      // 🎯 Get UOM conversion factor (like Java's fromOtherToAnother)
-      final conversionFactor = await itemUOMConversionsRepository
-          .fromOtherToPrimary(
-            event.itemsInBranch!.itemNumber,
-            event.salesOrderDetail.unitOfMeasure!,
-            event.itemsInBranch!.unitOfMeasure!,
-          );
+      // Resolve company id safely
+      final companyId = state.companyId ?? authBloc.state.companyId;
+      if (companyId == null) return;
 
+      // 🎯 Get UOM conversion factor using the correct company id
+      // Convert from the selected line UOM to the branch/item UOM
+      final sourceUomId = event.salesOrderDetail.unitOfMeasure!;
+      final targetUomId = event.itemsInBranch!.unitOfMeasure;
+
+      double conversionFactor = 1.0;
+      if (targetUomId != null) {
+        conversionFactor = await itemUOMConversionsRepository
+            .fromOtherToAnother(
+              event.itemsInBranch!.itemNumber,
+              sourceUomId,
+              targetUomId,
+              companyId,
+            );
+      }
+
+      // Convert requested quantity into the branch UOM for stock check
       final convertedQuantity =
-          event.salesOrderDetail.quantity! * conversionFactor;
+          (event.salesOrderDetail.quantity ?? 0.0) * conversionFactor;
 
       // 🎯 Check if converted quantity is available
       if (convertedQuantity <= event.itemsInBranch!.quantityAvailable!) {
-        // 🎯 Apply converted unit price (like Java's factor * unitPrice)
-        final convertedUnitPrice = event.itemsInBranch!.unitPrice != null
-            ? (conversionFactor * event.itemsInBranch!.unitPrice!)
-            : 0.0;
+        // 🎯 Apply converted unit price based on branch price and factor
+        final baseUnitPrice = event.itemsInBranch!.unitPrice ?? 0.0;
+        final convertedUnitPrice = conversionFactor * baseUnitPrice;
 
         final updatedDetail = event.salesOrderDetail.copyWith(
           unitPrice: convertedUnitPrice,
-          extendedPrice: event.salesOrderDetail.quantity! * convertedUnitPrice,
+          extendedPrice:
+              (event.salesOrderDetail.quantity ?? 0.0) * convertedUnitPrice,
           itemInBranch: event.itemsInBranch!.id.toDouble(),
         );
+
+        // Expose the recalculated detail so UI can bind to it immediately
+        emit(state.copyWith(selected1: updatedDetail));
 
         // Update in create items
         final itemIndex = state.createItems.indexWhere(
@@ -963,6 +980,9 @@ class SalesOrderDetailBloc
           extendedPrice: 0.0,
           itemInBranch: null,
         );
+
+        // Also expose disabled detail to keep UI in sync
+        emit(state.copyWith(selected1: disabledDetail));
 
         final itemIndex = state.createItems.indexWhere(
           (item) => item.tempId == event.salesOrderDetail.tempId,

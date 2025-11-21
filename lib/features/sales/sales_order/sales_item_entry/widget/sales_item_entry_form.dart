@@ -1,14 +1,20 @@
 // features/sales/sales_item_entry/widgets/sales_item_entry_form.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:savvy_stock/core/widgets/custom_searchable_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_table_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_text_form.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_event.dart';
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_state.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_state.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_state.dart';
@@ -17,9 +23,14 @@ import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_b
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_event.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_state.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_bloc.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_event.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_state.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/models/item_uom_conversions_model.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_event.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_state.dart';
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class SalesItemEntryForm extends StatefulWidget {
   final SalesOrderDetail detail;
@@ -188,14 +199,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
 
   void _calculateExtendedPrice() {
     if (_isInitializing) return;
-
-    final quantity = double.tryParse(_quantityController.text) ?? 0;
-    final unitPrice = double.tryParse(_unitPriceController.text) ?? 0;
-    final extendedPrice = quantity * unitPrice;
-
-    _extendedPriceController.text = extendedPrice.toStringAsFixed(2);
-
-    // Update the detail
+    // Let blocs handle extended price calculation; just push the updated detail
     _updateDetail();
   }
 
@@ -205,6 +209,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
     final updatedDetail = widget.detail.copyWith(
       itemsTableId: _selectedItem?.id,
       itemInBranch: _selectedItemInBranch?.id.toDouble(),
+      itemBranch: _selectedItemInBranch,
       quantity: double.tryParse(_quantityController.text),
       unitPrice: double.tryParse(_unitPriceController.text),
       extendedPrice: double.tryParse(_extendedPriceController.text),
@@ -247,11 +252,22 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
   }
 
   void _onBranchSelected(Branch? branch, ItemInBranchModel? itemInBranch) {
+    final authBloc = context.read<AuthBloc>();
+
     setState(() {
       _selectedBranch = branch;
       _selectedItemInBranch = itemInBranch;
 
       if (itemInBranch != null) {
+        // Load available UOMs for this item via bloc
+        final uomBloc = context.read<ItemUomConversionBloc>();
+        uomBloc.add(
+          LoadUomsForItem(
+            itemId: itemInBranch.itemNumber,
+            companyId: authBloc.state.companyId!,
+          ),
+        );
+
         _selectedUom = itemInBranch.unitOfMeasure;
         _availableQuantityController.text =
             (itemInBranch.quantityAvailable ?? 0).toStringAsFixed(2);
@@ -506,43 +522,155 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
 
           const SizedBox(height: 16),
 
-          // Unit Price (Read-only from branch)
-          CustomTextField(
-            controller: _unitPriceController,
-            labelText: 'Unit Price',
-            readOnly: true,
+          // Unit Price (read-only, driven by SalesOrderDetailBloc)
+          BlocBuilder<SalesOrderDetailBloc, SalesOrderDetailState>(
+            builder: (context, detailState) {
+              SalesOrderDetail effectiveDetail = widget.detail;
+
+              // Prefer the in-progress selected1 detail (for unconfirmed edits)
+              final selectedDetail = detailState.selected1;
+              if (selectedDetail != null &&
+                  ((selectedDetail.id != null &&
+                          selectedDetail.id == widget.detail.id) ||
+                      (selectedDetail.tempId != null &&
+                          selectedDetail.tempId == widget.detail.tempId))) {
+                effectiveDetail = selectedDetail;
+              } else {
+                final matching = detailState.createItems.firstWhere(
+                  (d) =>
+                      (d.id != null && d.id == widget.detail.id) ||
+                      (d.tempId != null && d.tempId == widget.detail.tempId),
+                  orElse: () => widget.detail,
+                );
+
+                effectiveDetail = matching;
+              }
+
+              final unitPrice =
+                  effectiveDetail.unitPrice ??
+                  double.tryParse(_unitPriceController.text) ??
+                  0.0;
+              final formatted = unitPrice.toStringAsFixed(2);
+              if (_unitPriceController.text != formatted) {
+                _unitPriceController.text = formatted;
+              }
+
+              return CustomTextField(
+                controller: _unitPriceController,
+                labelText: 'Unit Price',
+                readOnly: true,
+              );
+            },
           ),
 
           const SizedBox(height: 16),
 
-          // Extended Price (Read-only, calculated)
-          CustomTextField(
-            controller: _extendedPriceController,
-            labelText: 'Line Total',
-            readOnly: true,
+          // Extended Price (read-only, driven by SalesOrderDetailBloc)
+          BlocBuilder<SalesOrderDetailBloc, SalesOrderDetailState>(
+            builder: (context, detailState) {
+              SalesOrderDetail effectiveDetail = widget.detail;
+
+              // Prefer the in-progress selected1 detail (for unconfirmed edits)
+              final selectedDetail = detailState.selected1;
+              if (selectedDetail != null &&
+                  ((selectedDetail.id != null &&
+                          selectedDetail.id == widget.detail.id) ||
+                      (selectedDetail.tempId != null &&
+                          selectedDetail.tempId == widget.detail.tempId))) {
+                effectiveDetail = selectedDetail;
+              } else {
+                final matching = detailState.createItems.firstWhere(
+                  (d) =>
+                      (d.id != null && d.id == widget.detail.id) ||
+                      (d.tempId != null && d.tempId == widget.detail.tempId),
+                  orElse: () => widget.detail,
+                );
+
+                effectiveDetail = matching;
+              }
+
+              final lineTotal =
+                  effectiveDetail.extendedPrice ??
+                  double.tryParse(_extendedPriceController.text) ??
+                  0.0;
+              final formatted = lineTotal.toStringAsFixed(2);
+              if (_extendedPriceController.text != formatted) {
+                _extendedPriceController.text = formatted;
+              }
+
+              return CustomTextField(
+                controller: _extendedPriceController,
+                labelText: 'Line Total',
+                readOnly: true,
+              );
+            },
           ),
 
           const SizedBox(height: 16),
 
           // UOM Selection (from branch)
           if (_selectedItemInBranch != null)
-            BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
-              builder: (context, udcState) {
-                final uomOptions = udcState.details
-                    .where(
-                      (detail) =>
-                          detail.id == _selectedItemInBranch!.unitOfMeasure,
-                    )
-                    .toList();
+            BlocBuilder<ItemUomConversionBloc, ItemUomConversionState>(
+              builder: (context, state) {
+                if (state.isLoadingUomsForItem ||
+                    state.status == ItemUomConversionStatus.loading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-                final uomDescription = uomOptions.isNotEmpty
-                    ? uomOptions.first.description1
-                    : 'Not Available';
+                final udcList = state.availableUomsForItem;
 
-                return CustomTextField(
-                  labelText: 'Unit of Measure',
-                  value: uomDescription,
-                  readOnly: true,
+                if (udcList.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                      'No unit of measure available',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  );
+                }
+
+                return Builder(
+                  builder: (context) {
+                    String? currentUomDesc;
+                    if (_selectedUom != null) {
+                      final match = udcList.where((u) => u.id == _selectedUom);
+                      if (match.isNotEmpty) {
+                        currentUomDesc = match.first.description1;
+                      }
+                    }
+
+                    return CustomSearchableDropdown(
+                      labelText: 'Unit of Measure *',
+                      options: udcList.map((u) => u.description1).toList(),
+                      value: currentUomDesc,
+                      prefixIcon: Iconsax.ruler,
+                      allowCustomEntries: false,
+                      onChanged: (value) {
+                        setState(() {
+                          if (value == null) {
+                            _selectedUom = null;
+                          } else {
+                            final matches = udcList.where(
+                              (u) => u.description1 == value,
+                            );
+                            _selectedUom = matches.isNotEmpty
+                                ? matches.first.id
+                                : null;
+                          }
+                        });
+
+                        // Just push updated UOM to parent detail;
+                        // blocs and repositories handle the actual UOM math.
+                        _updateDetail();
+                      },
+                      validator: (value) {
+                        if (_selectedUom == null) {
+                          return 'Please select a unit of measure';
+                        }
+                        return null;
+                      },
+                    );
+                  },
                 );
               },
             ),
