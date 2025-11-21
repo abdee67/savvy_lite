@@ -71,7 +71,7 @@ Future<void> _initializeAndRunApp() async {
   try {
     await ConnectivityService().initConnectivity();
     initDependencies();
-    // await LocalDatabaseService().resetDatabase();
+    await LocalDatabaseService().resetDatabase();
     // await LocalDatabaseService().debugTable('branch_table');
 
     if (AppConfig.isTestMode) {
@@ -80,7 +80,7 @@ Future<void> _initializeAndRunApp() async {
       developer.log('💾 Using local database only');
     }
     // Debug database tables (optional - remove in production)
-    await LocalDatabaseService().debugTable('item_uom_conversions');
+    await LocalDatabaseService().debugTable('item_transactions');
   } catch (error, stackTrace) {
     developer.log('Initialization error: $error');
     developer.log('Stack trace: $stackTrace');
@@ -189,6 +189,7 @@ class _SavvyStockState extends State<SavvyStock> {
     _invoiceHistoryDetailBloc = getIt<InvoiceHistoryDetailBloc>();
     _invoiceHistoryDetailRepository = getIt<InvoiceHistoryDetailRepository>();
     _invoiceHistoryHeaderRepository = getIt<InvoiceHistoryHeaderRepository>();
+    _salesOrderDetailRepository = getIt<SalesOrderDetailRepository>();
     // Ensure system constants are loaded when companyId becomes available.
     final cid = _authBloc.state.companyId;
     if (cid != null) {
@@ -429,6 +430,8 @@ class _SavvyStockState extends State<SavvyStock> {
               employeesRepository: _employeeRepository,
               udcDetailRepository: _udcRepository,
               systemConstantBloc: _systemConstantBloc,
+              uomConversionsRepository: _itemUomConversionRepository,
+              itemInBranchRepository: _stockItemInBranchRepository,
             ),
           ),
           BlocProvider<SalesOrderDetailBloc>(
@@ -445,7 +448,6 @@ class _SavvyStockState extends State<SavvyStock> {
               itemsTableRepository: _stockItemsEntryRepository,
               udcDetailsRepository: _udcRepository,
               lotMasterRepository: _lotMasterRepository,
-
               systemConstantBloc: _systemConstantBloc,
             ),
           ),
