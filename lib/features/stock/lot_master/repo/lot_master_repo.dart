@@ -1,6 +1,7 @@
 // features/stock/lot_master/repositories/lot_master_repository.dart
 import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -178,6 +179,29 @@ class LotMasterRepository extends BaseRepository {
       ORDER BY lm.date_expiration, lm.lot_number
     ''',
       [companyId, itemNumber, branch],
+    );
+
+    return lots.map((p) => LotMaster.fromMap(p)).toList();
+  }
+
+  Future<List<LotMaster>> getLotMastersByItem({
+    required int companyId,
+    required int itemNumber,
+  }) async {
+    final db = await databaseService.database;
+    final lots = await db.rawQuery(
+      '''
+      SELECT lm.*,
+             it.item_description,
+             ud.detail_code as status_code,
+             ud.description_1 as status_description
+      FROM lot_master lm
+      LEFT JOIN items_table it ON lm.item_number = it.id
+      LEFT JOIN udc_details ud ON lm.lot_status = ud.id
+      WHERE lm.company = ? AND lm.item_number = ?
+      ORDER BY lm.date_expiration, lm.lot_number
+    ''',
+      [companyId, itemNumber],
     );
 
     return lots.map((p) => LotMaster.fromMap(p)).toList();
@@ -473,5 +497,114 @@ class LotMasterRepository extends BaseRepository {
       summary[row['item_number'] as int] = (row['total_qty'] as num).toDouble();
     }
     return summary;
+  }
+
+  Future<void> restoreLotQuantity(
+    int lotNumber,
+    double quantity,
+    int companyId,
+  ) async {
+    final db = await databaseService.database;
+    await db.update(
+      'lot_master',
+      {'quantity_available': quantity},
+      where: 'lot_number = ? AND company = ?',
+      whereArgs: [lotNumber, companyId, quantity],
+    );
+    return;
+  }
+
+  // Get expired lot masters from specific branch and location
+  Future<List<LotMaster>> getExpiredLotMastersFromBranchAndLocation({
+    required int itemId,
+    required int branchId,
+    required int companyId,
+    int? locationId,
+  }) async {
+    final db = await databaseService.database;
+
+    var whereClause = '''
+      WHERE lm.company = ? 
+        AND lm.item_number = ? 
+        AND lm.branch = ?
+        AND lm.date_expiration IS NOT NULL
+        AND lm.date_expiration < ?
+        AND lm.quantity_available > 0
+    ''';
+
+    final whereArgs = <dynamic>[
+      companyId,
+      itemId,
+      branchId,
+      DateTime.now().toIso8601String(),
+    ];
+
+    if (locationId != null) {
+      whereClause += ' AND lm.location = ?';
+      whereArgs.add(locationId);
+    }
+
+    final lots = await db.rawQuery('''
+      SELECT lm.*,
+             it.item_description,
+             b.description as branch_name,
+             loc.location_description,
+             ud.detail_code as status_code,
+             ud.description_1 as status_description
+      FROM lot_master lm
+      LEFT JOIN items_table it ON lm.item_number = it.id
+      LEFT JOIN branch_table b ON lm.branch = b.id
+      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN udc_details ud ON lm.lot_status = ud.id
+      $whereClause
+      ORDER BY lm.date_expiration
+    ''', whereArgs);
+
+    return lots.map((p) => LotMaster.fromMap(p)).toList();
+  }
+
+  // Update lot quantities after sale
+  Future<void> updateLotQuantitiesAfterSale({
+    required List<SalesOrderDetail> soldItems,
+    required int companyId,
+  }) async {
+    for (final item in soldItems) {
+      if (item.lotNumber != null && item.quantity != null) {
+        await updateLotMaster(item.lot!);
+      }
+    }
+  }
+
+  // Restore lot quantities for voided sales
+  Future<void> restoreLotQuantitiesForVoid({
+    required List<SalesOrderDetail> voidedItems,
+    required int companyId,
+  }) async {
+    for (final item in voidedItems) {
+      if (item.lotNumber != null && item.quantity != null) {
+        await restoreLotQuantity(item.lotNumber!, item.quantity!, companyId);
+      }
+    }
+  }
+
+  Future<double> calculateExpiredLotQuantity(
+    SalesOrderDetail soD,
+    int companyId,
+  ) async {
+    try {
+      final lots = await getLotMastersByItemAndBranch(
+        itemNumber: soD.itemsTableId!,
+        branch: soD.itemBranch!.branch,
+        companyId: companyId,
+      );
+
+      // Calculate total quantity in expired lots
+      double totalAvailable = lots
+          .where((lot) => lot.statusCode == 'E') // Expired lots
+          .fold(0.0, (sum, lot) => sum + (lot.quantityAvailable ?? 0.0));
+      return totalAvailable;
+    } catch (e) {
+      return 0.0;
+    }
   }
 }

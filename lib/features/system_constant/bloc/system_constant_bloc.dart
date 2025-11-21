@@ -550,7 +550,7 @@ class SystemConstantBloc
           company: companyId,
           dateLastUpdated: now,
           timeLastUpdated: now,
-          updatedBy: userId,
+          updatedBy: userId!.id,
         );
 
         // Check if we should update or create

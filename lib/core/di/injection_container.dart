@@ -1,6 +1,16 @@
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
-import 'package:savvy_stock/features/stock/item_UoM_conversions/repo/item_uom_conv_repo.dart';
+import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
+import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/detail/bloc/invoice_detail_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/detail/repo/invoice_detail_repo.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/header/bloc/invoice_header_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/header/repo/invoice_header_repo.dart';
+import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/integration/service/sales_order_integration_service.dart';
+import 'package:savvy_stock/features/sales/sales_order/integration/service/validate_stock_availability.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
+import 'package:savvy_stock/features/stock/lot_coloring/repo/lot_expiration_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/core/constants/api_constants.dart';
 import 'package:savvy_stock/features/system_constant/repo/system_constant_repository.dart';
@@ -16,17 +26,15 @@ import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
 import 'package:savvy_stock/features/next_number/bloc/next_number_bloc.dart';
 import 'package:savvy_stock/features/next_number/repo/next_number_repo.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
-import 'package:savvy_stock/features/sales/invoice/blocs/invoice_bloc.dart';
-import 'package:savvy_stock/features/sales/payment/blocs/payment_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_bloc.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_bloc.dart';
 import 'package:savvy_stock/features/stock/item_cost/blocs/item_cost_bloc.dart';
 import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/data/item_repository.dart';
-import 'package:savvy_stock/features/stock/item_entry_workbench.dart/blocs/item_master_bloc.dart';
-import 'package:savvy_stock/features/stock/item_entry_workbench.dart/repo/item_master_repo.dart';
-import 'package:savvy_stock/features/stock/item_entry_workbench.dart/repo/migration_service.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/blocs/item_master_bloc.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/repo/item_master_repo.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/repo/migration_service.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_repo.dart';
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_bloc.dart';
@@ -38,10 +46,10 @@ import 'package:savvy_stock/features/stock/location_entry/repo/location_master_r
 import 'package:savvy_stock/features/stock/lot_coloring/bloc/lot_coloring_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_master/repo/lot_master_repo.dart';
-import 'package:savvy_stock/features/stock/sales_order_detail/bloc/sales_order_detail_bloc.dart';
-import 'package:savvy_stock/features/stock/sales_order_detail/repo/sales_order_detail_repo.dart';
-import 'package:savvy_stock/features/stock/sales_order_header/bloc/sales_order_header_bloc.dart';
-import 'package:savvy_stock/features/stock/sales_order_header/repo/sales_order_header_repo.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/repo/sales_order_detail_repo.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/repo/sales_order_header_repo.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 
 final getIt = GetIt.instance;
@@ -89,12 +97,6 @@ void initDependencies() {
   getIt.registerLazySingleton<StockItemsEntryRepository>(
     () => StockItemsEntryRepository(databaseService: getIt()),
   );
-  getIt.registerLazySingleton<SalesOrderDetailRepository>(
-    () => SalesOrderDetailRepository(databaseService: getIt()),
-  );
-  getIt.registerLazySingleton<SalesOrderHeaderRepository>(
-    () => SalesOrderHeaderRepository(),
-  );
   getIt.registerLazySingleton<ItemLocationsRepository>(
     () => ItemLocationsRepository(databaseService: getIt()),
   );
@@ -110,7 +112,10 @@ void initDependencies() {
   );
 
   getIt.registerLazySingleton<ItemCostRepository>(
-    () => ItemCostRepository(databaseService: getIt()),
+    () => ItemCostRepository(
+      databaseService: getIt(),
+      uomConversionRepository: getIt(),
+    ),
   );
   getIt.registerLazySingleton<StockItemInBranchRepository>(
     () => StockItemInBranchRepository(databaseService: getIt()),
@@ -153,9 +158,50 @@ void initDependencies() {
   getIt.registerLazySingleton<NextNumberRepository>(
     () => NextNumberRepository(databaseService: getIt()),
   );
-  // BLoCs
+  getIt.registerLazySingleton<CustomerRepository>(
+    () => CustomerRepository(databaseService: getIt()),
+  );
+  getIt.registerLazySingleton<EmployeeRepository>(
+    () => EmployeeRepository(databaseService: getIt()),
+  );
+  getIt.registerLazySingleton<LotExpirationColorsRepository>(
+    () => LotExpirationColorsRepository(databaseService: getIt()),
+  );
+  getIt.registerLazySingleton<SalesOrderHeaderRepository>(
+    () => SalesOrderHeaderRepository(),
+  );
+  getIt.registerLazySingleton<SalesOrderDetailRepository>(
+    () => SalesOrderDetailRepository(databaseService: getIt()),
+  );
+  getIt.registerLazySingleton<SalesOrderIntegrationService>(
+    () => SalesOrderIntegrationService(
+      headerBloc: getIt(),
+      detailBloc: getIt(),
+      authBloc: getIt(),
+      invoiceHeaderBloc: getIt(),
+      invoiceDetailBloc: getIt(),
+    ),
+  );
+  getIt.registerLazySingleton<ValidateStockAvailabilityService>(
+    () => ValidateStockAvailabilityService(
+      lotMasterRepository: getIt(),
+      itemLocationsRepository: getIt(),
+      itemTransactionsRepository: getIt(),
+      itemUomConversionsRepository: getIt(),
+      stockItemInBranchRepository: getIt(),
+      systemConstantBloc: getIt(),
+      udcRepository: getIt(),
+      expirationColorsRepository: getIt(),
+    ),
+  );
 
-  getIt.registerFactory<PaymentBloc>(() => PaymentBloc(getIt()));
+  getIt.registerLazySingleton<InvoiceHistoryHeaderRepository>(
+    () => InvoiceHistoryHeaderRepository(databaseService: getIt()),
+  );
+  getIt.registerLazySingleton<InvoiceHistoryDetailRepository>(
+    () => InvoiceHistoryDetailRepository(databaseService: getIt()),
+  );
+  // BLoCs
 
   getIt.registerLazySingleton<AuthBloc>(
     () => AuthBloc(databaseService: getIt(), secureStorage: getIt()),
@@ -164,7 +210,7 @@ void initDependencies() {
     () => UserBloc(databaseService: getIt(), authBloc: getIt()),
   );
   getIt.registerLazySingleton<EmployeeBloc>(
-    () => EmployeeBloc(databaseService: getIt(), authBloc: getIt()),
+    () => EmployeeBloc(repository: getIt(), authBloc: getIt()),
   );
   getIt.registerLazySingleton<PrivilegeBloc>(
     () => PrivilegeBloc(databaseService: getIt(), authBloc: getIt()),
@@ -238,9 +284,9 @@ void initDependencies() {
   );
   getIt.registerFactory<LotExpirationColorsBloc>(
     () => LotExpirationColorsBloc(
-      databaseService: getIt(),
       authBloc: getIt(),
       systemConstantBloc: getIt(),
+      repository: getIt(),
     ),
   );
   getIt.registerFactory<ItemCostBloc>(
@@ -254,25 +300,32 @@ void initDependencies() {
   );
   getIt.registerFactory<SalesOrderDetailBloc>(
     () => SalesOrderDetailBloc(
+      headerBloc: getIt(),
+      itemCostRepository: getIt(),
       repository: getIt(),
-      invoiceHeaderRepository: getIt(),
-      itemBranchRepository: getIt(),
-      itemCostTableRepository: getIt(),
-      itemUomConversionsRepository: getIt(),
-      headerRepository: getIt(),
-      lotExpirationColorsRepository: getIt(),
       lotMasterRepository: getIt(),
-      nextNumberRepository: getIt(),
       udcDetailsRepository: getIt(),
-      customerTableRepository: getIt(),
+      validateStockAvailabilityService: getIt(),
+      itemUOMConversionsRepository: getIt(),
+      itemsInBranchRepository: getIt(),
+      itemsTableRepository: getIt(),
+      salesOrderHeaderRepository: getIt(),
+      systemConstantBloc: getIt(),
+      authBloc: getIt(),
     ),
   );
-  getIt.registerFactory<InvoiceBloc>(() => InvoiceBloc());
   getIt.registerFactory<SalesOrderHeaderBloc>(
-    () => SalesOrderHeaderBloc(repository: getIt(), authBloc: getIt()),
+    () => SalesOrderHeaderBloc(
+      customerRepository: getIt(),
+      employeesRepository: getIt(),
+      udcDetailRepository: getIt(),
+      repository: getIt(),
+      systemConstantBloc: getIt(),
+      authBloc: getIt(),
+    ),
   );
   getIt.registerFactory<CustomerBloc>(
-    () => CustomerBloc(databaseService: getIt(), authBloc: getIt()),
+    () => CustomerBloc(repository: getIt(), authBloc: getIt()),
   );
   getIt.registerFactory<ItemTransactionsBloc>(
     () => ItemTransactionsBloc(
@@ -300,6 +353,30 @@ void initDependencies() {
       itemCostBloc: getIt(),
       udcDetailsBloc: getIt(),
       nextNumberBloc: getIt(),
+    ),
+  );
+  getIt.registerFactory<InvoiceHistoryHeaderBloc>(
+    () => InvoiceHistoryHeaderBloc(
+      repository: getIt(),
+      authBloc: getIt(),
+      udcRepository: getIt(),
+    ),
+  );
+  getIt.registerFactory<InvoiceHistoryDetailBloc>(
+    () => InvoiceHistoryDetailBloc(
+      repository: getIt(),
+      authBloc: getIt(),
+      headerBloc: getIt(),
+    ),
+  );
+  getIt.registerFactory<SalesOrderCoordinatorBloc>(
+    () => SalesOrderCoordinatorBloc(
+      headerBloc: getIt(),
+      detailBloc: getIt(),
+      authBloc: getIt(),
+      invoiceHeaderBloc: getIt(),
+      invoiceDetailBloc: getIt(),
+      systemConstantBloc: getIt(),
     ),
   );
 }

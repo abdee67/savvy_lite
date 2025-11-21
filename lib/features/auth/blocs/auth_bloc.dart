@@ -105,7 +105,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         db,
         user.id,
         user.company!,
+        user.branch!,
         user.userName!,
+
         user.password!,
       );
 
@@ -126,9 +128,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(
         AuthState(
           status: AuthStatus.authenticated,
-          userId: user.id,
+          userId: user,
           username: user.userName,
           companyId: user.company,
+          branchId: user.branch,
           roles: userWithRoles.roles,
           privileges: userWithRoles.allPrivileges,
         ),
@@ -176,6 +179,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Database db,
     int userId,
     int companyId,
+    int branchId,
     String username,
     String password,
   ) async {
@@ -198,6 +202,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         id: userId,
         userName: username,
         company: companyId,
+        branch: branchId,
         password: password,
       ), // Minimal user object
       roles: roles,
@@ -294,7 +299,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(
           AuthState(
             status: AuthStatus.authenticated,
-            userId: user.id,
+            userId: user,
             username: user.userName,
             companyId: user.company,
             roles: roles,
@@ -355,7 +360,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final newToken = _createToken(
         UserWithRole(
           user: UserModel(
-            id: oldState.userId!,
+            id: oldState.userId!.id,
             userName: oldState.username!,
             company: oldState.companyId!,
             password: oldState.password!,
@@ -374,6 +379,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           userId: oldState.userId,
           username: oldState.username,
           companyId: oldState.companyId,
+          branchId: oldState.branchId,
           roles: oldState.roles,
           privileges: oldState.privileges,
           authenticatedAt: DateTime.now(),

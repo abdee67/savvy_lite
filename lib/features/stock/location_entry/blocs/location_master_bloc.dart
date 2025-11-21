@@ -131,7 +131,7 @@ class LocationMasterBloc
       // Create location
       final locationId = await locationMasterRepository.createLocationMaster(
         event.item,
-        userId,
+        userId.id,
         companyId,
       );
 
@@ -140,7 +140,7 @@ class LocationMasterBloc
         await locationMasterRepository.saveItemLocations(
           locationId,
           event.assignedItems,
-          userId,
+          userId.id,
           companyId,
         );
       }
@@ -218,7 +218,7 @@ class LocationMasterBloc
 
       await locationMasterRepository.updateLocationMaster(
         event.item,
-        userId!,
+        userId!.id,
         companyId,
       );
 
@@ -226,7 +226,7 @@ class LocationMasterBloc
       await locationMasterRepository.updateItemLocations(
         event.item.id!,
         event.assignedItems,
-        userId,
+        userId.id,
         companyId,
       );
 

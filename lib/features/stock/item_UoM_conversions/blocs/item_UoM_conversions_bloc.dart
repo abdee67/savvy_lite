@@ -1,11 +1,11 @@
-// features/stock/item_UoM_conversions/blocs/item_UoM_conversions_bloc.dart
+// features/stock/item_uom_conversions/blocs/item_uom_conversions_bloc.dart
 import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_event.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_state.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/models/item_UoM_conversions_model.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/repo/item_uom_conv_repo.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_event.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_state.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/models/item_uom_conversions_model.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 
 class ItemUomConversionBloc
     extends Bloc<ItemUomConversionEvent, ItemUomConversionState> {
@@ -22,6 +22,8 @@ class ItemUomConversionBloc
     });
 
     on<LoadItemUomConversions>(_onLoadItems);
+    on<LoadItemUomConversionsByItem>(_onLoadConversionForItem);
+    on<LoadUomsForItem>(_onLoadUomsForItem);
     on<SaveItemUomConversion>(_onSaveItem);
     on<UpdateItemUomConversion>(_onUpdateItem);
     on<DeleteItemUomConversion>(_onDeleteItem);
@@ -31,10 +33,16 @@ class ItemUomConversionBloc
     on<SetSelectedItem>(_onSetSelectedItem);
     on<SetMultiSelectionItems>(_onSetMultiSelectionItems);
     on<ClearCreateList>(_onClearCreateList);
+
     on<CalculateUomConversion>(_onCalculateUomConversion);
     on<ValidateStructure>(_onValidateStructure);
     on<CheckDuplication>(_onCheckDuplication);
     on<ResetUomConversionStatus>(_onResetUomConversionStatus);
+
+    on<SearchItemUomConversions>(_onSearchItemUomConversions);
+    on<SelectItemUomConversion>(_onSelectItemUomConversion);
+    on<ClearSelection>(_onClearSelection);
+    on<DeleteMultipleItemUomConversions>(_onDeleteMultipleItemUomConversions);
   }
 
   @override
@@ -63,6 +71,63 @@ class ItemUomConversionBloc
         state.copyWith(
           status: ItemUomConversionStatus.failure,
           message: 'Failed to load UoM conversions: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onLoadConversionForItem(
+    LoadItemUomConversionsByItem event,
+    Emitter<ItemUomConversionState> emit,
+  ) async {
+    emit(state.copyWith(status: ItemUomConversionStatus.loading));
+    try {
+      // Repository expects (itemNumber, companyId)
+      final items = await repository.getItemUomConversionsByItem(
+        event.itemId,
+        event.companyId,
+      );
+      emit(
+        state.copyWith(
+          status: ItemUomConversionStatus.loaded,
+          items: items,
+          filteredItems: items,
+          companyId: event.companyId,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemUomConversionStatus.failure,
+          message: 'Failed to load UoM conversions: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onLoadUomsForItem(
+    LoadUomsForItem event,
+    Emitter<ItemUomConversionState> emit,
+  ) async {
+    emit(state.copyWith(status: ItemUomConversionStatus.loading));
+    try {
+      final uoms = await repository.getUomsForItem(
+        event.itemId,
+        event.companyId,
+      );
+      emit(
+        state.copyWith(
+          status: ItemUomConversionStatus.loaded,
+          availableUomsForItem: uoms,
+          isLoadingUomsForItem: false,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemUomConversionStatus.failure,
+          message: 'Failed to load UoMs for item: $e',
+          isLoadingUomsForItem: false,
         ),
       );
     }
@@ -131,11 +196,16 @@ class ItemUomConversionBloc
       }
 
       // Set validCell to true like Java does for successful validation
+      // Also calculate inverse conversion factor
+      final factor = event.item.conversionFactor ?? 1.0;
+      final inverseFactor = factor != 0 ? 1.0 / factor : 0.0;
+
       final validItem = event.item.copyWith(
         validCell: true,
-        createdBy: authBloc.state.userId,
+        createdBy: authBloc.state.userId!.id,
         dateCreated: DateTime.now(),
         company: authBloc.state.companyId,
+        inverseConversion: inverseFactor,
       );
 
       await repository.createItemUomConversion(validItem);
@@ -197,8 +267,11 @@ class ItemUomConversionBloc
       // saved conversions for the same item. Exclude the item being updated
       // from the existing list so we validate the intended final layout.
       final existingForItem = state.items
-          .where((it) =>
-              it.itemNumber == event.item.itemNumber && it.id != event.item.id)
+          .where(
+            (it) =>
+                it.itemNumber == event.item.itemNumber &&
+                it.id != event.item.id,
+          )
           .toList();
 
       // Include only pending create-items that belong to the same item
@@ -227,9 +300,13 @@ class ItemUomConversionBloc
         return;
       }
 
+      final factor = event.item.conversionFactor ?? 1.0;
+      final inverseFactor = factor != 0 ? 1.0 / factor : 0.0;
+
       final updatedItem = event.item.copyWith(
-        updatedBy: authBloc.state.userId,
+        updatedBy: authBloc.state.userId!.id,
         dateUpdated: DateTime.now(),
+        inverseConversion: inverseFactor,
       );
 
       await repository.updateItemUomConversion(updatedItem);
@@ -398,8 +475,11 @@ class ItemUomConversionBloc
   ) async {
     // Determine the item number to validate against. Prefer the currentItem
     // if provided, otherwise infer from the createItems list.
-    final int? itemNumber = event.currentItem?.itemNumber ??
-        (event.createItems.isNotEmpty ? event.createItems.first.itemNumber : null);
+    final int? itemNumber =
+        event.currentItem?.itemNumber ??
+        (event.createItems.isNotEmpty
+            ? event.createItems.first.itemNumber
+            : null);
 
     // Collect existing saved conversions for the same item (if any).
     final existingForItem = itemNumber != null
@@ -483,5 +563,115 @@ class ItemUomConversionBloc
         message: '',
       ),
     );
+  }
+
+  void _onSearchItemUomConversions(
+    SearchItemUomConversions event,
+    Emitter<ItemUomConversionState> emit,
+  ) {
+    emit(state.copyWith(status: ItemUomConversionStatus.searching));
+    try {
+      if (event.query.isEmpty) {
+        emit(
+          state.copyWith(
+            status: ItemUomConversionStatus.loaded,
+            filteredItems: state.items,
+          ),
+        );
+        return;
+      }
+
+      final lowerQuery = event.query.toLowerCase();
+      final filtered = state.items.where((item) {
+        return (item.itemName!.itemDescription!.toLowerCase().contains(
+                  lowerQuery,
+                ) ??
+                false) ||
+            (item.itemName!.unitOfMeasureDescription!.toLowerCase().contains(
+                  lowerQuery,
+                ) ??
+                false) ||
+            (item.itemName!.unitOfMeasureDescription!.toLowerCase().contains(
+                  lowerQuery,
+                ) ??
+                false) ||
+            (item.conversionFactor.toString().contains(lowerQuery));
+      }).toList();
+
+      emit(
+        state.copyWith(
+          status: ItemUomConversionStatus.loaded,
+          filteredItems: filtered,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemUomConversionStatus.failure,
+          message: 'Search failed: $e',
+        ),
+      );
+    }
+  }
+
+  void _onSelectItemUomConversion(
+    SelectItemUomConversion event,
+    Emitter<ItemUomConversionState> emit,
+  ) {
+    final currentSelected = List<ItemUomConversion>.from(
+      state.multiSelectionItems,
+    );
+    if (event.selected) {
+      if (!currentSelected.contains(event.conversion)) {
+        currentSelected.add(event.conversion);
+      }
+    } else {
+      currentSelected.remove(event.conversion);
+    }
+
+    emit(state.copyWith(multiSelectionItems: currentSelected));
+  }
+
+  void _onClearSelection(
+    ClearSelection event,
+    Emitter<ItemUomConversionState> emit,
+  ) {
+    emit(state.copyWith(multiSelectionItems: []));
+  }
+
+  Future<void> _onDeleteMultipleItemUomConversions(
+    DeleteMultipleItemUomConversions event,
+    Emitter<ItemUomConversionState> emit,
+  ) async {
+    emit(state.copyWith(status: ItemUomConversionStatus.deleting));
+    try {
+      final success = await repository.removeBatch(event.conversions);
+
+      if (success) {
+        // Reload items
+        add(LoadItemUomConversions(authBloc.state.companyId!));
+        emit(
+          state.copyWith(
+            status: ItemUomConversionStatus.success,
+            message: 'Selected conversions deleted successfully',
+            multiSelectionItems: [],
+          ),
+        );
+      } else {
+        emit(
+          state.copyWith(
+            status: ItemUomConversionStatus.failure,
+            message: 'Failed to delete some conversions',
+          ),
+        );
+      }
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemUomConversionStatus.failure,
+          message: 'Error deleting conversions: $e',
+        ),
+      );
+    }
   }
 }

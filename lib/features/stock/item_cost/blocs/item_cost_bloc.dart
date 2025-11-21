@@ -1,7 +1,7 @@
 // bloc/item_cost_bloc.dart
 import 'dart:async';
 import 'package:bloc/bloc.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/repo/item_uom_conv_repo.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
@@ -595,7 +595,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
               final updatedItem = item.copyWith(
                 amountUnitCost: double.parse(unitCostAvg),
                 dateUpdated: DateTime.now().millisecondsSinceEpoch,
-                userId: authBloc.state.userId,
+                userId: authBloc.state.userId!.id,
               );
 
               await repository.update(updatedItem);
@@ -604,7 +604,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
             final newItem = ItemCost(
               amountUnitCost: double.parse(cost.toStringAsFixed(2)),
               dateUpdated: DateTime.now().millisecondsSinceEpoch,
-              userId: authBloc.state.userId,
+              userId: authBloc.state.userId!.id,
               company: authBloc.state.companyId,
               itemNumber: p.itemNumber!,
             );

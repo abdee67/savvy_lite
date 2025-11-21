@@ -7,7 +7,6 @@ import 'package:sqflite/sqflite.dart';
 class ItemLocationsRepository extends BaseRepository {
   @override
   final LocalDatabaseService databaseService;
-
   ItemLocationsRepository({required this.databaseService});
 
   // Get all item locations for a company

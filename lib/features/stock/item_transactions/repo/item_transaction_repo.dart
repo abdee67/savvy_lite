@@ -1,5 +1,6 @@
 // repositories/item_transaction_repository.dart
-import 'package:savvy_stock/features/stock/item_UoM_conversions/repo/item_uom_conv_repo.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
@@ -14,8 +15,7 @@ import 'package:savvy_stock/features/stock/item_locations/repo/item_location_rep
 import 'package:savvy_stock/features/stock/item_transactions/model/item_transaction_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/repo/lot_master_repo.dart';
-import 'package:savvy_stock/features/stock/sales_order_detail/model/sales_order_detail.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_bloc.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_bloc.dart';
 
 class ItemTransactionRepository {
   final LocalDatabaseService databaseService;
@@ -81,7 +81,7 @@ class ItemTransactionRepository {
             qty: qty,
             por: por,
             soD: soD,
-            user: user,
+            user: user.id,
             companyId: companyId,
           );
         } else if (loc != null &&
@@ -96,7 +96,7 @@ class ItemTransactionRepository {
             qty: qty,
             por: por,
             soD: soD,
-            user: user,
+            user: user.id,
             companyId: companyId,
           );
         } else if (lm != null &&
@@ -111,7 +111,7 @@ class ItemTransactionRepository {
             qty: qty,
             por: por,
             soD: soD,
-            user: user,
+            user: user.id,
             companyId: companyId,
           );
         }

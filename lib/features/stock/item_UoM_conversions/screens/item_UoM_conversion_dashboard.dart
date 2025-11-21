@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/core/utils/ui_helper.dart';
-import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_searchable_dropdown.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_bloc.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_event.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/blocs/item_UoM_conversions_state.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/models/item_UoM_conversions_model.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/widgets/item_UoM_conversion_create_and_edit.dart.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_bloc.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_event.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_state.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/models/item_uom_conversions_model.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/widgets/item_UoM_conversion_create_and_edit.dart.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart'
     hide ClearSelection;
@@ -103,7 +102,10 @@ class _ItemUomConversionListScreenState
 
     if (itemId != null) {
       context.read<ItemUomConversionBloc>().add(
-        LoadItemUomConversions(widget.authBloc.state.companyId!),
+        LoadItemUomConversionsByItem(
+          widget.authBloc.state.companyId!,
+          _selectedItem!,
+        ),
       );
     }
   }
@@ -501,18 +503,18 @@ class _ItemUomConversionListScreenState
                     prefixIcon: Iconsax.profile_circle,
                     allowCustomEntries: false,
                     onChanged: (value) {
-                      setState(() {
-                        if (value == null) {
-                          _selectedItem = null;
-                        } else {
-                          final matches = item.where(
-                            (b) => b.itemDescription == value,
-                          );
-                          _selectedItem = matches.isNotEmpty
-                              ? matches.first.id
-                              : null;
-                        }
-                      });
+                      int? selectedId;
+
+                      if (value != null) {
+                        final matches = item.where(
+                          (b) => b.itemDescription == value,
+                        );
+                        selectedId = matches.isNotEmpty
+                            ? matches.first.id
+                            : null;
+                      }
+
+                      _onItemChanged(selectedId);
                     },
                     validator: (value) {
                       if (_selectedItem == null) {

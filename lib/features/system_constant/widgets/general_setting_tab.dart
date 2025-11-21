@@ -44,14 +44,14 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
       if (!mounted) return;
       final companyId = widget.authBloc.state.companyId;
       if (companyId == null) {
-        developer.log('companyId is null; skipping LoadSystemConstants until available');
+        developer.log(
+          'companyId is null; skipping LoadSystemConstants until available',
+        );
         // Optionally we could listen to the AuthBloc and retry when companyId becomes available.
         return;
       }
 
-      context.read<SystemConstantBloc>().add(
-        LoadSystemConstants(companyId),
-      );
+      context.read<SystemConstantBloc>().add(LoadSystemConstants(companyId));
       context.read<UdcDetailsBloc>().add(LoadUdcDetailsByGroup('LT'));
     });
   }
@@ -151,9 +151,10 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
             ),
             const SizedBox(height: 16),
             _buildNumberField(
-              label: 'VAT (%)',
-              value: _localSystemConstant.rateVatPercentage ?? 0.0,
-              onChanged: (value) => _updateField(rateVatPercentage: value),
+              label: 'Rate Withhold (%)',
+              value: _localSystemConstant.rateWithholdingPercentage ?? 0.0,
+              onChanged: (value) =>
+                  _updateField(rateWithholdingPercentage: value),
               suffix: '%',
               min: 0,
               max: 100,
@@ -161,10 +162,9 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
             ),
             const SizedBox(height: 16),
             _buildNumberField(
-              label: 'Rate Withhold (%)',
-              value: _localSystemConstant.rateWithholdingPercentage ?? 0.0,
-              onChanged: (value) =>
-                  _updateField(rateWithholdingPercentage: value),
+              label: 'VAT (%)',
+              value: _localSystemConstant.rateVatPercentage ?? 0.0,
+              onChanged: (value) => _updateField(rateVatPercentage: value),
               suffix: '%',
               min: 0,
               max: 100,

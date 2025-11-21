@@ -1,7 +1,8 @@
 // bloc/item_uom_conversion_state.dart
 import 'package:equatable/equatable.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/models/item_UoM_conversions_model.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/models/uom_cconverstion_ui_state.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/models/item_uom_conversions_model.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/models/uom_cconverstion_ui_state.dart';
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 enum ItemUomConversionStatus {
   initial,
@@ -15,6 +16,7 @@ enum ItemUomConversionStatus {
   deleting,
   duplication,
   structureInvalid,
+  validationFailed,
   exporting,
   converting,
 }
@@ -47,8 +49,18 @@ class ItemUomConversionState extends Equatable {
   final double? conversionFactor;
   final String? conversionError;
 
-   final bool? structureValid;
+  final bool? structureValid;
   final bool? hasDuplication;
+  final List<ItemUomConversion> createItems;
+  final List<ItemUomConversion> editItems;
+  final List<ItemUomConversion> multiSelectionItems;
+  final List<ItemUomConversion> filteredValues;
+  final ItemUomConversion? selected;
+  final ItemUomConversion? selected1;
+  final ItemUomConversion? selected2;
+  final int first;
+  final List<UdcDetails> availableUomsForItem;
+  final bool isLoadingUomsForItem;
 
   const ItemUomConversionState({
     this.status = ItemUomConversionStatus.initial,
@@ -70,16 +82,17 @@ class ItemUomConversionState extends Equatable {
     this.conversionError,
     this.structureValid,
     this.hasDuplication,
+    this.createItems = const [],
+    this.editItems = const [],
+    this.multiSelectionItems = const [],
+    this.filteredValues = const [],
+    this.selected,
+    this.selected1,
+    this.selected2,
+    this.first = 0,
+    this.availableUomsForItem = const [],
+    this.isLoadingUomsForItem = false,
   });
-
-  // Helper getters for UI state
-  List<ItemUomConversion> get createItems => uiState.createItems;
-  List<ItemUomConversion> get editItems => uiState.editItems;
-  ItemUomConversion? get selected => uiState.selected;
-  ItemUomConversion? get selected1 => uiState.selected1;
-  ItemUomConversion? get selected2 => uiState.selected2;
-  List<ItemUomConversion> get multiSelectionItems =>
-      uiState.multiSelectionItems;
 
   bool get isLoading => status == ItemUomConversionStatus.loading;
   bool get isSuccess => status == ItemUomConversionStatus.success;
@@ -110,6 +123,10 @@ class ItemUomConversionState extends Equatable {
 
   bool get isSearching => status == ItemUomConversionStatus.searching;
   bool get isDuplicated => status == ItemUomConversionStatus.duplication;
+  bool get isStructureInvalid =>
+      status == ItemUomConversionStatus.structureInvalid;
+  bool get isValidationFailed =>
+      status == ItemUomConversionStatus.validationFailed;
 
   bool get isStructureValid => structureValid ?? false;
   bool get doeshasDuplication => hasDuplication ?? false;
@@ -134,6 +151,16 @@ class ItemUomConversionState extends Equatable {
     String? conversionError,
     bool? structureValid,
     bool? hasDuplication,
+    List<ItemUomConversion>? createItems,
+    List<ItemUomConversion>? editItems,
+    List<ItemUomConversion>? multiSelectionItems,
+    List<ItemUomConversion>? filteredValues,
+    ItemUomConversion? selected,
+    ItemUomConversion? selected1,
+    ItemUomConversion? selected2,
+    int? first,
+    List<UdcDetails>? availableUomsForItem,
+    bool? isLoadingUomsForItem,
   }) {
     return ItemUomConversionState(
       status: status ?? this.status,
@@ -156,6 +183,16 @@ class ItemUomConversionState extends Equatable {
       conversionError: conversionError ?? this.conversionError,
       structureValid: structureValid ?? this.structureValid,
       hasDuplication: hasDuplication ?? this.hasDuplication,
+      createItems: createItems ?? this.createItems,
+      editItems: editItems ?? this.editItems,
+      multiSelectionItems: multiSelectionItems ?? this.multiSelectionItems,
+      filteredValues: filteredValues ?? this.filteredValues,
+      selected: selected ?? this.selected,
+      selected1: selected1 ?? this.selected1,
+      selected2: selected2 ?? this.selected2,
+      first: first ?? this.first,
+      availableUomsForItem: availableUomsForItem ?? this.availableUomsForItem,
+      isLoadingUomsForItem: isLoadingUomsForItem ?? this.isLoadingUomsForItem,
     );
   }
 
@@ -180,5 +217,15 @@ class ItemUomConversionState extends Equatable {
     conversionError,
     structureValid,
     hasDuplication,
+    createItems,
+    editItems,
+    multiSelectionItems,
+    filteredValues,
+    selected,
+    selected1,
+    selected2,
+    first,
+    availableUomsForItem,
+    isLoadingUomsForItem,
   ];
 }

@@ -1,6 +1,7 @@
 // features/stock/item_in_branch/repositories/item_in_branch_repository.dart
 import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -24,8 +25,8 @@ class StockItemInBranchRepository extends BaseRepository {
     return await db.update(
       'items_in_branch',
       item.toMap(),
-      where: 'id = ? AND company = ?',
-      whereArgs: [item.id, item.company],
+      where: 'id = ? AND company = ? AND branch = ? ',
+      whereArgs: [item.id, item.company, item.branch],
     );
   }
 
@@ -34,7 +35,7 @@ class StockItemInBranchRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     return await db.delete(
       'items_in_branch',
-      where: 'id = ? AND company = ?',
+      where: 'id = ? AND company = ? AND branch = ?',
       whereArgs: [id, companyId],
     );
   }
@@ -184,6 +185,28 @@ class StockItemInBranchRepository extends BaseRepository {
     return maps.map((map) => ItemInBranchModel.fromMap(map)).toList();
   }
 
+  //find item from branch by barcode
+  Future<List<ItemInBranchModel>> findByBarcode(
+    String barcode,
+    int companyId,
+  ) async {
+    final db = await databaseService.database;
+    final maps = await db.rawQuery(
+      '''
+      SELECT ib.*, 
+             i.item_description, i.barcode, i.items_id,
+             b.description as branch_description, b.reference_id as branch_reference
+      FROM items_in_branch ib
+      LEFT JOIN items_table i ON ib.item_number = i.id
+      LEFT JOIN branch_table b ON ib.branch = b.id
+      WHERE i.barcode = ? AND ib.company = ?
+    ''',
+      [barcode, companyId],
+    );
+
+    return maps.map((map) => ItemInBranchModel.fromMap(map)).toList();
+  }
+
   // Check if item exists in branch (duplication check)
   Future<bool> existsByItemAndBranch(
     int itemNumber,
@@ -227,7 +250,12 @@ class StockItemInBranchRepository extends BaseRepository {
     final db = await databaseService.database;
     return await db.update(
       'items_in_branch',
-      {'quantity_on_hand': quantity},
+      {
+        // Keep both on-hand and available quantities in sync so that
+        // UI (which reads quantity_available) reflects stock changes.
+        'quantity_on_hand': quantity,
+        'quantity_available': quantity,
+      },
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
@@ -478,5 +506,21 @@ class StockItemInBranchRepository extends BaseRepository {
     // This would need integration with item, branch, and company reorder points
     // For now, just return the item's reorder point
     return item.reorderPoint ?? 0.0;
+  }
+
+  // Restore stock quantities for voided sales
+  Future<void> restoreStockQuantitiesForVoid({
+    required List<SalesOrderDetail> voidedItems,
+    required int companyId,
+  }) async {
+    for (final item in voidedItems) {
+      if (item.itemInBranch != null && item.quantity != null) {
+        await updateQuantity(
+          item.itemInBranch!.toInt(),
+          item.quantity!,
+          companyId,
+        );
+      }
+    }
   }
 }

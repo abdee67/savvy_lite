@@ -31,19 +31,19 @@ import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/customer/screens/customer_list.dart';
 import 'package:savvy_stock/features/sales/customer/screens/customer_screen.dart';
 import 'package:savvy_stock/features/sales/customer/widget/customer_create_edit.dart';
-import 'package:savvy_stock/features/sales/invoice/screens/invoice_review_screen.dart';
-import 'package:savvy_stock/features/sales/payment/screens/payment_screen.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/screens/sales_item_entry.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/models/item_UoM_conversions_model.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/screens/item_UoM_conversion_dashboard.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/widgets/item_UoM_conversion_create_and_edit.dart.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/screens/invoice_review_screen.dart';
+import 'package:savvy_stock/features/sales/sales_order/payment/screens/payment_screen.dart';
+import 'package:savvy_stock/features/sales/sales_order/sales_item_entry/screens/sales_item_entry.dart';
+import 'package:savvy_stock/features/sales/sales_order/sales_report.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/models/item_uom_conversions_model.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/screens/item_uom_conversion_dashboard.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/widgets/item_uom_conversion_create_and_edit.dart.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/screens/item_entry_dashboard.dart';
 import 'package:savvy_stock/features/stock/item_entry/widgets/item_entry_create_and_edit.dart.dart';
-import 'package:savvy_stock/features/stock/item_entry_workbench.dart/screens/item_master_create.dart';
-import 'package:savvy_stock/features/stock/item_entry_workbench.dart/widgets/batch_upload_section.dart';
-import 'package:savvy_stock/features/stock/item_entry_workbench.dart/widgets/single_item_entry_form.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/screens/item_master_create.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/widgets/batch_upload_section.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/widgets/single_item_entry_form.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/screens/item_in_branch_dashboard.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/widgets/item_in_branch_create_and_edit.dart.dart';
@@ -164,30 +164,24 @@ class AppRouter {
         redirect: _protectedRouteRedirect,
       ),
       GoRoute(
+        path: AppRoutes.salesReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.salesReport,
+          parentPrivilege: AppRoutes.salesDashboard,
+          child: SalesReviewPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
         path: AppRoutes.paymentSummary,
-        builder: (context, state) {
-          final args = state.extra as Map<String, dynamic>?;
-
-          if (args == null ||
-              args['confirmedItems'] == null ||
-              args['totalAmount'] == null ||
-              args['customer'] == null) {
-            return Scaffold(
-              body: Center(child: Text('Missing payment arguments')),
-            );
-          }
-
-          return PrivilegeRouteGuard(
-            requiredPrivilege: AppRoutes.paymentSummary,
-            parentPrivilege: AppRoutes.salesCustomerInfo,
-            child: PaymentScreen(
-              confirmedItems: args['confirmedItems'] as List<ConfirmedItem>,
-              totalAmount: args['totalAmount'] as double,
-              customer: args['customer'] as Customer,
-              authBloc: authBloc,
-            ),
-          );
-        },
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.paymentSummary,
+          parentPrivilege: AppRoutes.salesCustomerInfo,
+          child: PaymentScreen(
+            authBloc: authBloc,
+            orderData: state.extra as Map<String, dynamic>?,
+          ),
+        ),
         redirect: _protectedRouteRedirect,
       ),
       GoRoute(
@@ -442,10 +436,15 @@ class AppRouter {
         builder: (context, state) {
           final extra = state.extra;
           final item = extra != null ? extra as ItemInBranchModel? : null;
+          final itemEntry = extra != null ? extra as ItemEntryModel? : null;
           return PrivilegeRouteGuard(
             requiredPrivilege: AppRoutes.editItemInBranch,
             parentPrivilege: AppRoutes.itemInBranch,
-            child: ItemInBranchFormPage(item: item, authBloc: authBloc),
+            child: ItemInBranchFormPage(
+              item: item,
+              itemEntry: itemEntry,
+              authBloc: authBloc,
+            ),
           );
         },
         redirect: _protectedRouteRedirect,

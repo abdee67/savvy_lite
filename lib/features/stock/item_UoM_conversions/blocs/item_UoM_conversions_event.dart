@@ -1,7 +1,7 @@
 // bloc/item_uom_conversion_event.dart
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/models/item_UoM_conversions_model.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/models/item_uom_conversions_model.dart';
 
 @immutable
 abstract class ItemUomConversionEvent extends Equatable {
@@ -13,6 +13,23 @@ class LoadItemUomConversions extends ItemUomConversionEvent {
   const LoadItemUomConversions(this.companyId);
   @override
   List<Object> get props => [companyId];
+}
+
+class LoadItemUomConversionsByItem extends ItemUomConversionEvent {
+  final int companyId;
+  final int itemId;
+  const LoadItemUomConversionsByItem(this.companyId, this.itemId);
+  @override
+  List<Object> get props => [companyId, itemId];
+}
+
+class LoadUomsForItem extends ItemUomConversionEvent {
+  final int itemId;
+  final int companyId;
+  const LoadUomsForItem({required this.itemId, required this.companyId});
+
+  @override
+  List<Object?> get props => [itemId, companyId];
 }
 
 class SaveItemUomConversion extends ItemUomConversionEvent {

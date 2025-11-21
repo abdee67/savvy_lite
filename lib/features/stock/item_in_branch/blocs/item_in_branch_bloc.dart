@@ -2,7 +2,7 @@
 
 import 'dart:async';
 import 'package:bloc/bloc.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/repo/item_uom_conv_repo.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_event.dart';
@@ -73,7 +73,6 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     on<SaveInEdit>(_onSaveInEdit);
 
     // Event handlers - Stock management operations
-    on<UpdateStockForSalesOrder>(_onUpdateStockForSalesOrder);
     //on<UpdateStockForSalesOrderVoid>(_onUpdateStockForSalesOrderVoid);
     on<UpdateStockForPurchaseOrder>(_onUpdateStockForPurchaseOrder);
     on<SetDefaultPrice>(_onSetDefaultPrice);
@@ -100,6 +99,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
   @override
   Future<void> close() {
     _authSubscription?.cancel();
+    _systemConstantSubscription?.cancel();
     return super.close();
   }
 
@@ -503,78 +503,6 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
   }
 
   // ========== STOCK MANAGEMENT OPERATIONS ==========
-
-  Future<void> _onUpdateStockForSalesOrder(
-    UpdateStockForSalesOrder event,
-    Emitter<ItemInBranchState> emit,
-  ) async {
-    // Implementation of updatingStockItemAvailablitySo from Java controller
-    try {
-      final salesOrderDetail = event.salesOrderDetail;
-      if (salesOrderDetail.itemsTableId != null &&
-          salesOrderDetail.quantity != null &&
-          salesOrderDetail.quantity != 0.0 &&
-          salesOrderDetail.itemInBranch != null) {
-        // This would need integration with your sales order system
-        // The Java controller has complex logic for different scenarios:
-        // - Without location/lot management
-        // - With location management only
-        // - With both location and lot management
-
-        // For now, this is a placeholder implementation
-        final factor = await itemUomConversionsBloc.fromOtherToPrimary(
-          salesOrderDetail.itemsTableId!,
-          salesOrderDetail.itemBranch!.unitOfMeasure!,
-          authBloc.state.companyId!,
-        );
-
-        final itemsInBranch = await repository.findByItemAndBranch(
-          salesOrderDetail.itemsTableId!,
-          salesOrderDetail.itemBranch!.branch,
-          authBloc.state.companyId!,
-        );
-
-        if (itemsInBranch != null) {
-          final qtyToSubtract = factor * salesOrderDetail.quantity!;
-          final newQty =
-              (itemsInBranch.quantityAvailable ?? 0.0) - qtyToSubtract;
-
-          await repository.updateQuantity(
-            itemsInBranch.id,
-            newQty,
-            authBloc.state.companyId!,
-          );
-
-          // Create stock card entry
-          await itemTransactionsRepository.stockCardCreation(
-            ib: itemsInBranch,
-            transactionType: 'S',
-            remark: 'Sales Order Stock Deduction',
-            loc: null,
-            lm: null,
-            trNo: salesOrderDetail.orderHeader!.orderNumber,
-            qty: -qtyToSubtract,
-            soD: salesOrderDetail,
-            por: null,
-          );
-        }
-      }
-
-      emit(
-        state.copyWith(
-          status: ItemInBranchStatus.success,
-          message: 'Stock updated for sales order',
-        ),
-      );
-    } catch (e) {
-      emit(
-        state.copyWith(
-          status: ItemInBranchStatus.failure,
-          message: 'Failed to update stock for sales order: $e',
-        ),
-      );
-    }
-  }
 
   Future<void> _onUpdateStockForPurchaseOrder(
     UpdateStockForPurchaseOrder event,

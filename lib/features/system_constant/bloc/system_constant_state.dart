@@ -4,6 +4,7 @@ import 'package:savvy_stock/features/system_constant/models/system_constant.dart
 enum SystemConstantStatus {
   initial,
   loading,
+  loaded,
   success,
   failure,
   syncing,

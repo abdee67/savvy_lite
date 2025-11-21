@@ -13,6 +13,8 @@ import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_e
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_state.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_bloc.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_state.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_event.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_state.dart';
@@ -98,7 +100,9 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
       _unitPriceController.text = entry.unitPrice?.toString() ?? '';
       _marginRateController.text = entry.marginRate?.toString() ?? '';
       final marginType = entry.marginType;
-      if (marginType != null) {
+      if (marginType != null &&
+          marginType.isNotEmpty &&
+          _marginTypes.contains(marginType)) {
         _selectedMarginType = marginType;
       } else {
         _selectedMarginType = null;
@@ -375,12 +379,12 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
             ),
             const SizedBox(height: 16),
             // Unit of Measure
-            BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
+            BlocBuilder<ItemUomConversionBloc, ItemUomConversionState>(
               builder: (context, state) {
-                if (state.status == UdcDetailsStatus.loading) {
+                if (state.status == ItemUomConversionStatus.loading) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                if (state.details.isEmpty) {
+                if (state.items.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8.0),
                     child: Text(
@@ -389,24 +393,16 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
                     ),
                   );
                 }
-                final udcList = state.details.toList();
-                if (udcList.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8.0),
-                    child: Text(
-                      'No valid unit of measure found',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  );
-                }
+                final udcList = state.availableUomsForItem;
 
                 return Builder(
                   builder: (context) {
                     String? currentUomDesc;
                     if (_selectedUom != null) {
                       final match = udcList.where((u) => u.id == _selectedUom);
-                      if (match.isNotEmpty)
+                      if (match.isNotEmpty) {
                         currentUomDesc = match.first.description1;
+                      }
                     }
 
                     return CustomSearchableDropdown(
@@ -493,7 +489,9 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
               onChanged: (value) {
                 _marginRateController.text = value;
               },
-              prefixIcon: const Icon(Icons.attach_money),
+              prefixIcon: _selectedMarginType == 'Percentage'
+                  ? const Icon(Icons.percent)
+                  : const Icon(Icons.attach_money),
             ),
           ],
         ),

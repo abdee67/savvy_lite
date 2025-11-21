@@ -890,6 +890,77 @@ CREATE INDEX idx_item_master_defualt_uom ON item_master(defualt_uom);
 ''');
     developer.log('Created table: item_master');
 
+    //invoice header table
+    await db.execute('''
+CREATE TABLE invoice_history_header (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  fs_number TEXT,
+  customer_name TEXT,
+  tin_number TEXT,
+  phone_number TEXT,
+  country TEXT,
+  city TEXT,
+  region TEXT,
+  tax_amount REAL,
+  withhold_amount REAL,
+  total_amount REAL,
+  date_transaction TEXT, -- store as ISO8601 string (e.g., "2025-11-13")
+  sales_person TEXT,
+  mrc_number TEXT,
+  discount_amount REAL,
+  amount_beforeTax REAL,
+  company INTEGER,
+  FOREIGN KEY (company) REFERENCES company_table(id)
+);
+CREATE INDEX idx_invoice_history_header_company ON invoice_history_header(company);
+
+''');
+    developer.log('Created table: invoice_history_header');
+    //invoice for detail
+    await db.execute('''
+CREATE TABLE invoice_history_detail (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  invoice_history INTEGER,
+  item TEXT,
+  unit_of_measure TEXT,
+  quantity_transaction REAL,
+  amount_unit_price REAL,
+  amount_extended_price REAL,
+  company INTEGER,
+  FOREIGN KEY (invoice_history) REFERENCES invoice_history_header(id),
+  FOREIGN KEY (company) REFERENCES company_table(id)
+);
+CREATE INDEX idx_invoice_history_detail_invoice_history ON invoice_history_detail(invoice_history);
+CREATE INDEX idx_invoice_history_detail_company ON invoice_history_detail(company);
+''');
+    developer.log('Created table: invoice_history_detail');
+
+    //sales person table
+    await db.execute('''
+CREATE TABLE salespersons (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  uuid TEXT NOT NULL,
+  full_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone_number TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  referral_code TEXT NOT NULL,
+  parent_salesperson_id INTEGER,
+  status TEXT NOT NULL DEFAULT 'ACTIVE',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+
+  UNIQUE (uuid),
+  UNIQUE (email),
+  UNIQUE (phone_number),
+  UNIQUE (referral_code),
+
+  FOREIGN KEY (parent_salesperson_id) REFERENCES salespersons(id)
+);
+
+CREATE INDEX idx_sales_person_company ON salespersons(company);
+''');
+    developer.log('Created table: salespersons');
     //. Create sync_queue table
     await db.execute('''
       CREATE TABLE sync_queue (
@@ -1706,6 +1777,7 @@ CREATE INDEX idx_item_master_defualt_uom ON item_master(defualt_uom);
       AppRoutes.customerEntry,
       AppRoutes.salesCustomerInfo,
       AppRoutes.salesItemEntry,
+      AppRoutes.salesReport,
     ];
 
     for (final uri in salesPrivileges) {
@@ -1853,6 +1925,38 @@ CREATE INDEX idx_item_master_defualt_uom ON item_master(defualt_uom);
       await db.insert('user_role', userRole);
     }
     developer.log('Inserted user roles');
+    //insert sales persons
+    final salesPersons = [
+      {
+        'full_name': 'Sales1',
+        'uuid': '1',
+        'email': 'john.doe@gmail.com',
+        'phone_number': '12345678900',
+        'password_hash': argon2Hash,
+        'referral_code': 'ref001',
+        'parent_salesperson_id': 1,
+        'status': 'ACTIVE',
+        'created_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      {
+        'full_name': 'Sales2',
+        'uuid': '2',
+        'email': 'jane.doe@gmail.com',
+        'phone_number': '12345678901',
+        'password_hash': argon2Hash,
+        'referral_code': 'ref002',
+        'parent_salesperson_id': 1,
+        'status': 'ACTIVE',
+        'created_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+    ];
+
+    for (final salesPerson in salesPersons) {
+      await db.insert('salespersons', salesPerson);
+    }
+    developer.log('Inserted sales persons');
 
     await db.execute('''
   CREATE TABLE customer_table (
@@ -1866,6 +1970,7 @@ CREATE INDEX idx_item_master_defualt_uom ON item_master(defualt_uom);
     region TEXT,
     city TEXT,
     tin_number TEXT,
+    defaults_value TEXT,
     address1 TEXT,
     address2 TEXT,
     address3 TEXT,
