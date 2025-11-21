@@ -6,6 +6,8 @@ import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_repo.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_event.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_state.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
@@ -21,6 +23,8 @@ class SalesOrderHeaderBloc
   final UdcRepository udcDetailRepository;
   final CustomerRepository customerRepository;
   final EmployeeRepository employeesRepository;
+  final ItemUomConversionsRepository uomConversionsRepository;
+  final StockItemInBranchRepository itemInBranchRepository;
 
   StreamSubscription? _authSubscription;
   StreamSubscription? _systemConstantsSubscription;
@@ -35,6 +39,8 @@ class SalesOrderHeaderBloc
     required this.customerRepository,
     required this.employeesRepository,
     required this.udcDetailRepository,
+    required this.uomConversionsRepository,
+    required this.itemInBranchRepository,
   }) : super(const SalesOrderHeaderState()) {
     // Listen to authentication state
     _authSubscription = authBloc.stream.listen((authState) {
@@ -190,7 +196,10 @@ class SalesOrderHeaderBloc
 
       // Calculate subtotal and taxable amount (equivalent to Java's calQtyWithAmt)
       for (final detail in event.orderDetails) {
+        // Rely on each line's extendedPrice already including any UOM
+        // conversion done by the detail bloc/repositories.
         final extendedPrice = detail.extendedPrice ?? 0.0;
+
         subTotal += extendedPrice;
 
         // Check if item is taxable (like Java's item.getItemsTableId().getTaxableBoolean())
@@ -954,27 +963,45 @@ class SalesOrderHeaderBloc
       );
 
       // Set default customer if available
+
       final defaultCustomer = await customerRepository.getDefaultCustomer(
         event.companyId,
       );
-      emit(
-        state.copyWith(
-          status: SalesOrderHeaderStatus.loaded,
-          createItems: [newHeader],
-          selected: newHeader,
-          nextOrderNumber: nextOrderNumber,
-          paymentType: 'Cash',
-          applyWH: systemConstantBloc.systemConstantService
-              .shouldApplyWithholding(0.0),
-          defaultCustomer: defaultCustomer,
-          successmessage:
-              'header defaultCustomer: company=${event.companyId}, count=${defaultCustomer?.length ?? 0}',
-        ),
-      );
-      print(
-        'header defaultCustomer: company=${event.companyId}, count=${defaultCustomer?.length ?? 0}',
-      );
-      print('header company=${event.companyId}, Header=${newHeader.id}');
+      if (defaultCustomer == null) {
+        emit(
+          state.copyWith(
+            status: SalesOrderHeaderStatus.loaded,
+            createItems: [newHeader],
+            selected: newHeader,
+            nextOrderNumber: nextOrderNumber,
+            paymentType: 'Cash',
+            applyWH: systemConstantBloc.systemConstantService
+                .shouldApplyWithholding(0.0),
+            defaultCustomer: state.defaultCustomer,
+            successmessage:
+                'header defaultCustomer: company=${event.companyId}, count=${defaultCustomer ?? 0}',
+          ),
+        );
+      } else {
+        emit(
+          state.copyWith(
+            status: SalesOrderHeaderStatus.loaded,
+            createItems: [newHeader],
+            selected: newHeader,
+            nextOrderNumber: nextOrderNumber,
+            paymentType: 'Cash',
+            applyWH: systemConstantBloc.systemConstantService
+                .shouldApplyWithholding(0.0),
+            defaultCustomer: defaultCustomer,
+            successmessage:
+                'header defaultCustomer: company=${event.companyId}, count=${defaultCustomer ?? 0}',
+          ),
+        );
+        print(
+          'header defaultCustomer: company=${event.companyId}, count=${defaultCustomer ?? 0}',
+        );
+        print('header company=${event.companyId}, Header=${newHeader.id}');
+      }
     } catch (e) {
       emit(state.errorState('Failed to prepare create: $e'));
     }
@@ -1038,17 +1065,32 @@ class SalesOrderHeaderBloc
       final defaultCustomer = await customerRepository.getDefaultCustomer(
         event.companyId,
       );
-
+      //if defaultCustomer is not null, set defaultCustomer to first customer
       if (defaultCustomer != null) {
         add(
           UpdateCustomerInfo(
-            customer: defaultCustomer.first,
+            customer: defaultCustomer,
             currentHeader: state.selected,
           ),
         );
       }
+      //if defaultCustomer is null, set defaultCustomer to first customer
+      if (defaultCustomer == null) {
+        add(
+          UpdateCustomerInfo(
+            customer: state.defaultCustomer!,
+            currentHeader: state.selected,
+          ),
+        );
+      }
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loaded,
+          selected: state.selected,
+        ),
+      );
     } catch (e) {
-      emit(state.errorState('Failed to set default customer: $e'));
+      emit(state.errorState('Failed to set customer: $e'));
     }
   }
 

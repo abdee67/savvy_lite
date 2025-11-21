@@ -73,7 +73,7 @@ class SalesOrderCoordinatorState extends Equatable {
   final String? systemConstantsError;
   final DateTime? lastSyncTime;
   final String? successMessage;
-  final List<Customer>? defaultCustomer;
+  final Customer? defaultCustomer;
 
   // Invoice Generation
   final bool invoiceGenerated;
@@ -207,7 +207,7 @@ class SalesOrderCoordinatorState extends Equatable {
     double? lastDiscountAmount,
     double? lastTotalAmount,
     Set<String>? pendingOperations,
-    List<Customer>? defaultCustomer,
+    Customer? defaultCustomer,
     double? lastAmountOpen,
     String? paymentType,
     int? paymentStatus,

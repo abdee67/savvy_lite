@@ -686,7 +686,7 @@ class SalesOrderCoordinatorBloc
       );
 
       print(
-        'Coordinator: New order prepared - Header: ${preparedHeader?.id}, defaultCustomerCount=${defaultCustomer?.length ?? 0}',
+        'Coordinator: New order prepared - Header: ${preparedHeader?.id}, defaultCustomerCount=${defaultCustomer ?? 0}',
       );
     } catch (e) {
       emit(
@@ -1106,9 +1106,9 @@ class SalesOrderCoordinatorBloc
       // Derive customer info safely
       final customerName =
           currentHeader.customerBillToRef?.customerName ??
-          state.defaultCustomer?.first.contactName ??
+          state.defaultCustomer?.contactName ??
           '';
-      final tinNumber = state.defaultCustomer?.first.tinNumber ?? '';
+      final tinNumber = state.defaultCustomer?.tinNumber ?? '';
 
       // Create invoice header from sales order header
       final invoiceHeader = InvoiceHistoryHeader(
@@ -1118,9 +1118,9 @@ class SalesOrderCoordinatorBloc
         dateTransaction: DateTime.now(),
         customerName: customerName,
         tinNumber: tinNumber,
-        city: state.defaultCustomer?.first.city ?? '',
-        country: state.defaultCustomer?.first.country ?? '',
-        region: state.defaultCustomer?.first.region ?? '',
+        city: state.defaultCustomer?.city ?? '',
+        country: state.defaultCustomer?.country ?? '',
+        region: state.defaultCustomer?.region ?? '',
         // salesPerson: currentDetails.first.,
         totalAmount: state.lastTotalAmount ?? 0.0,
         taxAmount: state.lastTax ?? 0.0,

@@ -84,7 +84,7 @@ class SalesOrderHeaderState extends Equatable {
   final String? stateDesc;
   final String? regionDesc;
   final String? cityDesc;
-  final List<Customer>? defaultCustomer;
+  final Customer? defaultCustomer;
 
   // Business data
   final int? companyId;
@@ -274,7 +274,7 @@ class SalesOrderHeaderState extends Equatable {
     UOMConversionResult? uomConversionResult,
     LotValidationResult? lotValidationResult,
     ValidationResult? validationResult,
-    List<Customer>? defaultCustomer,
+    Customer? defaultCustomer,
     SalesOrderHeader? exportedSales,
   }) {
     return SalesOrderHeaderState(
@@ -389,7 +389,7 @@ class SalesOrderHeaderState extends Equatable {
     String? stateDesc,
     String? regionDesc,
     String? cityDesc,
-    List<Customer>? defaultCustomer,
+    Customer? defaultCustomer,
   }) => copyWith(
     tinNumber: tinNumber,
     phoneNumbers: phoneNumbers,
