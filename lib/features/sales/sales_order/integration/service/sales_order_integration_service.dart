@@ -68,13 +68,13 @@ class SalesOrderIntegrationService {
 
       // Step 6: Create invoice details
       await _createInvoiceHistoryDetails(createdInvoiceHeader, invoiceDetails);
-
+      */
 
       // Step 7: Update stock quantities (like JSF's stock adjustment)
-      await _updateStockForAllDetails(details);
+      await updateStockForAllDetails(details);
 
       // Step 8: Calculate final totals (like JSF's calQtyWithAmt)
-      await _calculateFinalTotals(createdHeader, details);*/
+      await _calculateFinalTotals(createdHeader, details);
     } catch (e) {
       // Comprehensive rollback on failure
       throw Exception('Something goes south $e');
@@ -233,6 +233,7 @@ class SalesOrderIntegrationService {
       UpdateUnitPriceWithUom(
         salesOrderDetail: detail,
         itemsInBranch: itemBranch,
+        manualUnitPrice: detail.unitPrice,
       ),
     );
 
@@ -272,14 +273,41 @@ class SalesOrderIntegrationService {
 
   /// Updates stock for all details in the order
   Future<void> updateStockForAllDetails(List<SalesOrderDetail> details) async {
-    for (final detail in details) {
-      if (detail.itemInBranch != null && detail.quantity != null) {
-        detailBloc.add(UpdateStockForSalesOrder(salesOrderDetail: detail));
+    final completer = Completer<void>();
+    late StreamSubscription subscription;
 
-        // Small delay to prevent database contention
-        await Future.delayed(const Duration(milliseconds: 50));
+    subscription = detailBloc.stream.listen((state) {
+      if (state.status == SalesOrderDetailStatus.success &&
+          state.successMessage == 'Stock updated for all items') {
+        if (!completer.isCompleted) {
+          completer.complete();
+          subscription.cancel();
+        }
+      } else if (state.status == SalesOrderDetailStatus.failure &&
+          (state.errorMessage?.startsWith('Failed to update stock') ?? false)) {
+        if (!completer.isCompleted) {
+          completer.completeError(state.errorMessage ?? 'Stock update failed');
+          subscription.cancel();
+        }
       }
+    });
+
+    // Filter valid details for stock update
+    final validDetails = details
+        .where(
+          (detail) => detail.itemInBranch != null && detail.quantity != null,
+        )
+        .toList();
+
+    if (validDetails.isEmpty) {
+      subscription.cancel();
+      if (!completer.isCompleted) completer.complete();
+      return;
     }
+
+    detailBloc.add(UpdateStockForSalesOrderBatch(details: validDetails));
+
+    await completer.future.timeout(const Duration(seconds: 30));
   }
 
   // 🎯 ORDER PREPARATION & INITIALIZATION

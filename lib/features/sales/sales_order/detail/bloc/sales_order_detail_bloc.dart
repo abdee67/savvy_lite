@@ -131,6 +131,7 @@ class SalesOrderDetailBloc
     // Batch Operations
     on<SaveCreateItems>(_onSaveCreateItems);
     on<UpdateStockForSalesOrder>(_onUpdateStockForSalesOrder);
+    on<UpdateStockForSalesOrderBatch>(_onUpdateStockForSalesOrderBatch);
     on<SaveEditItems>(_onSaveEditItems);
     on<SaveRow>(_onSaveRow);
 
@@ -234,7 +235,7 @@ class SalesOrderDetailBloc
           successMessage: 'Sales order details created successfully',
         ),
       );
-      add(RefreshSalesOrderDetails());
+      //add(RefreshSalesOrderDetails());
     } catch (e) {
       emit(
         state.copyWith(
@@ -921,7 +922,7 @@ class SalesOrderDetailBloc
       final companyId = state.companyId ?? authBloc.state.companyId;
       if (companyId == null) return;
 
-      // 🎯 Get UOM conversion factor using the correct company id
+      // Get UOM conversion factor using the correct company id
       // Convert from the selected line UOM to the branch/item UOM
       final sourceUomId = event.salesOrderDetail.unitOfMeasure!;
       final targetUomId = event.itemsInBranch!.unitOfMeasure;
@@ -941,16 +942,18 @@ class SalesOrderDetailBloc
       final convertedQuantity =
           (event.salesOrderDetail.quantity ?? 0.0) * conversionFactor;
 
-      // 🎯 Check if converted quantity is available
+      // Check if converted quantity is available
       if (convertedQuantity <= event.itemsInBranch!.quantityAvailable!) {
-        // 🎯 Apply converted unit price based on branch price and factor
+        // Apply converted unit price based on branch price and factor,
+        // or respect a manually entered unit price from the UI when provided
         final baseUnitPrice = event.itemsInBranch!.unitPrice ?? 0.0;
         final convertedUnitPrice = conversionFactor * baseUnitPrice;
+        final effectiveUnitPrice = event.manualUnitPrice ?? convertedUnitPrice;
 
         final updatedDetail = event.salesOrderDetail.copyWith(
-          unitPrice: convertedUnitPrice,
+          unitPrice: effectiveUnitPrice,
           extendedPrice:
-              (event.salesOrderDetail.quantity ?? 0.0) * convertedUnitPrice,
+              (event.salesOrderDetail.quantity ?? 0.0) * effectiveUnitPrice,
           itemInBranch: event.itemsInBranch!.id.toDouble(),
         );
 
@@ -1236,6 +1239,90 @@ class SalesOrderDetailBloc
     }
   }
 
+  Future<void> _onUpdateStockForSalesOrderBatch(
+    UpdateStockForSalesOrderBatch event,
+    Emitter<SalesOrderDetailState> emit,
+  ) async {
+    emit(state.copyWith(status: SalesOrderDetailStatus.processing));
+
+    try {
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) {
+        throw Exception(
+          'Company ID is required to update stock for sales order',
+        );
+      }
+
+      // Get system constants once
+      final systemConstant = systemConstantBloc.state.selected;
+      final applyLocationMgmt =
+          systemConstant?.applyLocationMgmBoolean ?? false;
+      final applyLotMgmt = systemConstant?.applyLotMgmBoolean ?? false;
+
+      for (final salesOrderDetail in event.details) {
+        if (salesOrderDetail.itemsTableId != null &&
+            salesOrderDetail.quantity != null &&
+            salesOrderDetail.quantity != 0.0 &&
+            salesOrderDetail.itemInBranch != null) {
+          // Get conversion factor
+          final factor = await itemUOMConversionsRepository.fromOtherToPrimary(
+            salesOrderDetail.itemsTableId!,
+            salesOrderDetail.unitOfMeasure ??
+                salesOrderDetail.itemBranch!.unitOfMeasure!,
+            companyId,
+          );
+
+          if (!applyLocationMgmt && !applyLotMgmt) {
+            // Case 1: No location or lot management
+            await validateStockAvailabilityService.handleSimpleStockUpdate(
+              salesOrderDetail,
+              factor,
+              companyId,
+            );
+          } else if (applyLocationMgmt && !applyLotMgmt) {
+            // Case 2: Location management only
+            await validateStockAvailabilityService.handleLocationStockUpdate(
+              salesOrderDetail,
+              factor,
+              companyId,
+            );
+          } else if (!applyLocationMgmt && applyLotMgmt) {
+            // Lot management only
+            await validateStockAvailabilityService.handleLotStockUpdate(
+              salesOrderDetail,
+              factor,
+              companyId,
+            );
+          } else if (applyLocationMgmt && applyLotMgmt) {
+            // Case 3: Both location and lot management
+            await validateStockAvailabilityService.handleLotStockUpdate(
+              salesOrderDetail,
+              factor,
+              companyId,
+            );
+          }
+
+          // Small delay to prevent database contention
+          await Future.delayed(const Duration(milliseconds: 50));
+        }
+      }
+
+      emit(
+        state.copyWith(
+          status: SalesOrderDetailStatus.success,
+          successMessage: 'Stock updated for all items',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: SalesOrderDetailStatus.failure,
+          errorMessage: 'Failed to update stock for sales order: $e',
+        ),
+      );
+    }
+  }
+
   // Batch Operations
   Future<void> _onSaveCreateItems(
     SaveCreateItems event,
@@ -1299,26 +1386,6 @@ class SalesOrderDetailBloc
 
       // 3. Save details
       await repository.createSalesOrderDetailBatch(state.createItems);
-
-      // 4. Update header with calculated totals when available
-      final selectedHeader = state.selectedHeader ?? headerBloc.state.selected;
-      if (selectedHeader != null) {
-        headerBloc.add(
-          CalculateOrderTotals(
-            header: selectedHeader,
-            orderDetails: state.createItems,
-            applyWithholding: headerBloc.state.applyWH ?? false,
-            discountAmount: headerBloc.state.discountAmount ?? 0.0,
-          ),
-        );
-      }
-
-      // 5. Update stock
-      for (final item in state.createItems) {
-        if (item.itemInBranch != null && item.quantity != null) {
-          add(UpdateStockForSalesOrder(salesOrderDetail: item));
-        }
-      }
 
       emit(
         state.copyWith(
