@@ -322,6 +322,8 @@ void initDependencies() {
       repository: getIt(),
       systemConstantBloc: getIt(),
       authBloc: getIt(),
+      uomConversionsRepository: getIt(),
+      itemInBranchRepository: getIt(),
     ),
   );
   getIt.registerFactory<CustomerBloc>(

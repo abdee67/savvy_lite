@@ -77,6 +77,9 @@ class ValidateStockAvailabilityService {
         companyId,
         lotTypeCodeId,
       );
+      print(
+        'DEBUG: Found ${lotMasterList.length} valid lots for sales. Total available: ${lotMasterList.fold(0.0, (sum, lot) => sum + (lot.quantityAvailable ?? 0))}',
+      );
     }
 
     double remainingQty = factor * soD.quantity!;
@@ -88,20 +91,21 @@ class ValidateStockAvailabilityService {
         lot.id!,
         companyId,
       );
-      final availableQty = currentLot?.quantityAvailable ?? 0.0;
+
+      if (currentLot == null) {
+        print('DEBUG: Lot not found in DB: ${lot.id}');
+        continue;
+      }
+
+      final availableQty = currentLot.quantityAvailable ?? 0.0;
 
       if (availableQty >= remainingQty) {
         // This lot has enough stock
-        final newQty = availableQty - remainingQty;
-        final updatedLot = currentLot?.copyWith(quantityAvailable: newQty);
-
-        await lotMasterRepository.updateLotMaster(updatedLot!);
-
         // Create transaction for this lot
         await itemTransactionsRepository.stockCardCreation(
           ib: null,
           loc: null,
-          lm: updatedLot,
+          lm: currentLot,
           transactionType: 'I',
           trNo: soD.orderHeader?.orderNumber,
           remark: 'Sales',
@@ -113,14 +117,11 @@ class ValidateStockAvailabilityService {
         remainingQty = 0;
       } else {
         // Take all available from this lot
-        final updatedLot = currentLot?.copyWith(quantityAvailable: 0.0);
-        await lotMasterRepository.updateLotMaster(updatedLot!);
-
         // Create transaction for this lot
         await itemTransactionsRepository.stockCardCreation(
           ib: null,
           loc: null,
-          lm: updatedLot,
+          lm: currentLot,
           transactionType: 'I',
           trNo: soD.orderHeader?.orderNumber,
           remark: 'Sales',
@@ -139,8 +140,8 @@ class ValidateStockAvailabilityService {
       );
     }
 
-    // Update the main item branch quantity
-    await updateItemBranchQuantity(soD, factor, companyId);
+    // Update the main item branch quantity(made it comment cuz it update in stock card creation)
+    //  await updateItemBranchQuantity(soD, factor, companyId);
   }
 
   // Helper method to filter and sort lots for sales
@@ -205,27 +206,31 @@ class ValidateStockAvailabilityService {
     try {
       LotExpirationColor? expirationColor;
 
+      // Safety check for dates based on lot type
+      if ((lotType == null || lotType == 'X') && lot.dateExpiration == null) {
+        return true; // No expiration date, assume active
+      }
+      if (lotType == 'F' && lot.dateEffective == null) return true;
+      if (lotType == 'R' && lot.dateReceived == null) return true;
+
       if (lotType == null || lotType == 'X') {
         expirationColor = await expirationColorsRepository
             .getLotExpirationColorByDetails(
               branchId: soD.itemBranch!.branch,
               itemId: soD.itemsTableId!,
               companyId: companyId,
-              daysDifference: int.parse(
-                lot.dateExpiration!
-                    .difference(DateTime.now())
-                    .inDays
-                    .toString(),
-              ),
+              daysDifference: lot.dateExpiration!
+                  .difference(DateTime.now())
+                  .inDays,
             );
       } else if (lotType == 'F') {
         expirationColor = await expirationColorsRepository
             .getLotExpirationColorByDetails(
               branchId: soD.itemBranch!.branch,
               itemId: soD.itemsTableId!,
-              daysDifference: int.parse(
-                lot.dateEffective!.difference(DateTime.now()).inDays.toString(),
-              ),
+              daysDifference: lot.dateEffective!
+                  .difference(DateTime.now())
+                  .inDays,
               companyId: companyId,
             );
       } else if (lotType == 'R') {
@@ -233,16 +238,22 @@ class ValidateStockAvailabilityService {
             .getLotExpirationColorByDetails(
               branchId: soD.itemBranch!.branch,
               itemId: soD.itemsTableId!,
-              daysDifference: int.parse(
-                lot.dateReceived!.difference(DateTime.now()).inDays.toString(),
-              ),
+              daysDifference: lot.dateReceived!
+                  .difference(DateTime.now())
+                  .inDays,
               companyId: companyId,
             );
       }
+      final isActive =
+          expirationColor == null || expirationColor.activeForSalesFlag == 'Y';
 
-      // If no expiration color rule exists, or if it exists and allows sales
-      return expirationColor == null ||
-          expirationColor.activeForSalesFlag == 'Y';
+      if (!isActive) {
+        print(
+          'DEBUG: Lot ${lot.lotNumber} excluded by expiration rule: $expirationColor',
+        );
+      }
+
+      return isActive;
     } catch (e) {
       // If there's an error checking, assume it's active for sales
       return true;
@@ -399,17 +410,10 @@ class ValidateStockAvailabilityService {
 
       if (availableQty >= remainingQty) {
         // This location has enough stock
-        final newQty = availableQty - remainingQty;
-        final updatedLocation = currentLocation?.copyWith(
-          quantityOnHand: newQty,
-        );
-
-        await itemLocationsRepository.updateItemLocation(updatedLocation!);
-
         // Create transaction for this location
         await itemTransactionsRepository.stockCardCreation(
           ib: null,
-          loc: updatedLocation,
+          loc: currentLocation,
           lm: null,
           transactionType: 'I',
           trNo: soD.orderHeader?.orderNumber,
@@ -422,13 +426,10 @@ class ValidateStockAvailabilityService {
         remainingQty = 0;
       } else {
         // Take all available from this location
-        final updatedLocation = currentLocation?.copyWith(quantityOnHand: 0.0);
-        await itemLocationsRepository.updateItemLocation(updatedLocation!);
-
         // Create transaction for this location
         await itemTransactionsRepository.stockCardCreation(
           ib: null,
-          loc: updatedLocation,
+          loc: currentLocation,
           lm: null,
           transactionType: 'I',
           trNo: soD.orderHeader?.orderNumber,
@@ -449,7 +450,7 @@ class ValidateStockAvailabilityService {
     }
 
     // Update the main item branch quantity
-    await updateItemBranchQuantity(soD, factor, companyId);
+    // await updateItemBranchQuantity(soD, factor, companyId);
   }
 
   Future<({double availableQty, String message, bool isValid})>
@@ -501,16 +502,6 @@ class ValidateStockAvailabilityService {
     );
 
     if (itemsInBranch != null) {
-      final qtyToSubtract = factor * soD.quantity!;
-      final newQty = (itemsInBranch.quantityAvailable ?? 0.0) - qtyToSubtract;
-
-      // Update item branch quantity
-      await stockItemInBranchRepository.updateQuantity(
-        itemsInBranch.id,
-        newQty,
-        companyId,
-      );
-
       // Create stock card entry - equivalent to Java's stockCARDCreation
       await itemTransactionsRepository.stockCardCreation(
         ib: itemsInBranch,
@@ -519,7 +510,7 @@ class ValidateStockAvailabilityService {
         transactionType: 'I', // 'I' for Issue/Sales
         trNo: soD.orderHeader?.orderNumber,
         remark: 'Sales',
-        qty: -soD.quantity!, // Negative quantity for sales
+        qty: -(soD.quantity ?? 0.0), // Negative quantity for sales
         por: null,
         soD: soD,
       );
@@ -625,20 +616,11 @@ class ValidateStockAvailabilityService {
         );
       }
 
-      // Convert back to primary UoM if needed
-      final reverseFactor = await itemUomConversionsRepository
-          .fromPrimaryToOther(
-            soD.itemsTableId!,
-            soD.unitOfMeasure ?? soD.itemBranch!.unitOfMeasure!,
-            companyId,
-          );
-
-      final convertedQty = totalAvailable * reverseFactor;
-
-      // Update item branch
+      // Update item branch with the total available quantity from lots/locations
+      // This assumes lots and locations are stored in the primary UOM, which matches itemsInBranch
       await stockItemInBranchRepository.updateQuantity(
         itemsInBranch.id,
-        convertedQty,
+        totalAvailable,
         companyId,
       );
     }

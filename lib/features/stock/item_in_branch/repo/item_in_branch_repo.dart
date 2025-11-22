@@ -253,7 +253,7 @@ class StockItemInBranchRepository extends BaseRepository {
       {
         // Keep both on-hand and available quantities in sync so that
         // UI (which reads quantity_available) reflects stock changes.
-        'quantity_on_hand': quantity,
+        //  'quantity_on_hand': quantity,
         'quantity_available': quantity,
       },
       where: 'id = ? AND company = ?',
@@ -336,7 +336,7 @@ class StockItemInBranchRepository extends BaseRepository {
     final db = await databaseService.database;
 
     String whereClause =
-        'ib.quantity_on_hand <= ib.reorder_level AND ib.company = ?';
+        'ib.quantity_available <= ib.reorder_level AND ib.company = ?';
     List<dynamic> whereArgs = [companyId];
 
     if (branchId != null) {
@@ -352,7 +352,7 @@ class StockItemInBranchRepository extends BaseRepository {
       LEFT JOIN items_table i ON ib.item_number = i.id
       LEFT JOIN branch_table b ON ib.branch = b.id
       WHERE $whereClause
-      ORDER BY ib.quantity_on_hand ASC
+      ORDER BY ib.quantity_available ASC
     ''', whereArgs);
 
     return maps.map((map) => ItemInBranchModel.fromMap(map)).toList();
@@ -365,7 +365,7 @@ class StockItemInBranchRepository extends BaseRepository {
   }) async {
     final db = await databaseService.database;
 
-    String whereClause = 'ib.quantity_on_hand <= 0 AND ib.company = ?';
+    String whereClause = 'ib.quantity_available <= 0 AND ib.company = ?';
     List<dynamic> whereArgs = [companyId];
 
     if (branchId != null) {

@@ -250,6 +250,7 @@ class SalesOrderDetailRepository {
         '''
       SELECT sd.*
       FROM sales_order_details sd
+      
       INNER JOIN sales_order_header soh ON sd.sales_order_header_id = soh.id
       WHERE $whereClause
     ''';
@@ -423,11 +424,13 @@ class SalesOrderDetailRepository {
            it.barcode as barcode,
            ib.quantity_available as quantity_available,
            lm.quantity_available as lot_quantity_available,
-           lm.date_expiration as lot_expiration
+           lm.date_expiration as lot_expiration,
+           u.description_1 as unit_of_measure_description
     FROM sales_order_details sod
     LEFT JOIN items_table it ON sod.items_table_id = it.id
     LEFT JOIN items_in_branch ib ON sod.item_in_branch = ib.id
     LEFT JOIN lot_master lm ON sod.lot_number = lm.id
+    LEFT JOIN udc_details u ON sod.unit_of_measure = u.id
     WHERE sod.company = ?
   ''';
 

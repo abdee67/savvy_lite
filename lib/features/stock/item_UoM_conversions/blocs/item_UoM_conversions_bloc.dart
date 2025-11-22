@@ -109,7 +109,13 @@ class ItemUomConversionBloc
     LoadUomsForItem event,
     Emitter<ItemUomConversionState> emit,
   ) async {
-    emit(state.copyWith(status: ItemUomConversionStatus.loading));
+    emit(
+      state.copyWith(
+        status: ItemUomConversionStatus.loading,
+        isLoadingUomsForItem: true,
+        availableUomsForItem: const [],
+      ),
+    );
     try {
       final uoms = await repository.getUomsForItem(
         event.itemId,

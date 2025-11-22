@@ -436,15 +436,11 @@ class AppRouter {
         builder: (context, state) {
           final extra = state.extra;
           final item = extra != null ? extra as ItemInBranchModel? : null;
-          final itemEntry = extra != null ? extra as ItemEntryModel? : null;
+          // final itemEntry = extra != null ? extra as ItemEntryModel? : null;
           return PrivilegeRouteGuard(
             requiredPrivilege: AppRoutes.editItemInBranch,
             parentPrivilege: AppRoutes.itemInBranch,
-            child: ItemInBranchFormPage(
-              item: item,
-              itemEntry: itemEntry,
-              authBloc: authBloc,
-            ),
+            child: ItemInBranchFormPage(item: item, authBloc: authBloc),
           );
         },
         redirect: _protectedRouteRedirect,

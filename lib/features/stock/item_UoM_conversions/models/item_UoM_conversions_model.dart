@@ -45,6 +45,24 @@ class ItemUomConversion extends Equatable {
     this.validCell,
   });
 
+  factory ItemUomConversion.empty() {
+    return ItemUomConversion(
+      id: null,
+      branch: null,
+      itemNumber: null,
+      conversionFactor: null,
+      createdBy: null,
+      dateCreated: null,
+      updatedBy: null,
+      dateUpdated: null,
+      fromUom: null,
+      toUom: null,
+      uomStructureLevel: null,
+      inverseConversion: null,
+      company: null,
+    );
+  }
+
   factory ItemUomConversion.fromMap(Map<String, dynamic> map) {
     return ItemUomConversion(
       id: map['id'] as int?,

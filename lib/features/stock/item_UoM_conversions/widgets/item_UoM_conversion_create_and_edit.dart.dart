@@ -76,8 +76,8 @@ class _ItemUomConversionFormState extends State<ItemUomConversionForm> {
   String? _uomsError;
 
   // Batch mode state
-  List<ItemUomConversion> _batchItems = [];
-  int _currentBatchIndex = 0;
+  final List<ItemUomConversion> _batchItems = [];
+  final int _currentBatchIndex = 0;
 
   @override
   void initState() {
@@ -190,11 +190,9 @@ class _ItemUomConversionFormState extends State<ItemUomConversionForm> {
           (item) => item.id == _selectedItem,
           orElse: () => ItemEntryModel.empty(),
         );
-        if (item != null) {
-          setState(() {
-            _selectedItemDescription = item.itemDescription ?? 'Whattt';
-          });
-        }
+        setState(() {
+          _selectedItemDescription = item.itemDescription ?? 'Whattt';
+        });
       } catch (e) {
         // Silently handle error
       }
@@ -208,11 +206,9 @@ class _ItemUomConversionFormState extends State<ItemUomConversionForm> {
           (uom) => uom.id == _fromUom,
           orElse: () => UdcDetails.empty(),
         );
-        if (fromUom != null) {
-          setState(() {
-            _fromUomDescription = fromUom.description1;
-          });
-        }
+        setState(() {
+          _fromUomDescription = fromUom.description1;
+        });
       } catch (e) {
         // Silently handle error
       }
@@ -224,11 +220,9 @@ class _ItemUomConversionFormState extends State<ItemUomConversionForm> {
           (uom) => uom.id == _toUom,
           orElse: () => UdcDetails.empty(),
         );
-        if (toUom != null) {
-          setState(() {
-            _toUomDescription = toUom.description1;
-          });
-        }
+        setState(() {
+          _toUomDescription = toUom.description1;
+        });
       } catch (e) {
         // Silently handle error
       }

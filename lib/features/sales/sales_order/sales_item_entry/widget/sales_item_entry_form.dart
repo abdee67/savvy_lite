@@ -1,13 +1,18 @@
 // features/sales/sales_item_entry/widgets/sales_item_entry_form.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:savvy_stock/core/widgets/custom_searchable_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_table_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_text_form.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_event.dart';
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_event.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_state.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
@@ -17,9 +22,11 @@ import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_b
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_event.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_state.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_bloc.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_event.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_state.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_event.dart';
-import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_state.dart';
 
 class SalesItemEntryForm extends StatefulWidget {
   final SalesOrderDetail detail;
@@ -188,14 +195,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
 
   void _calculateExtendedPrice() {
     if (_isInitializing) return;
-
-    final quantity = double.tryParse(_quantityController.text) ?? 0;
-    final unitPrice = double.tryParse(_unitPriceController.text) ?? 0;
-    final extendedPrice = quantity * unitPrice;
-
-    _extendedPriceController.text = extendedPrice.toStringAsFixed(2);
-
-    // Update the detail
+    // Let blocs handle extended price calculation; just push the updated detail
     _updateDetail();
   }
 
@@ -205,6 +205,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
     final updatedDetail = widget.detail.copyWith(
       itemsTableId: _selectedItem?.id,
       itemInBranch: _selectedItemInBranch?.id.toDouble(),
+      itemBranch: _selectedItemInBranch,
       quantity: double.tryParse(_quantityController.text),
       unitPrice: double.tryParse(_unitPriceController.text),
       extendedPrice: double.tryParse(_extendedPriceController.text),
@@ -247,11 +248,22 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
   }
 
   void _onBranchSelected(Branch? branch, ItemInBranchModel? itemInBranch) {
+    final authBloc = context.read<AuthBloc>();
+
     setState(() {
       _selectedBranch = branch;
       _selectedItemInBranch = itemInBranch;
 
       if (itemInBranch != null) {
+        // Load available UOMs for this item via bloc
+        final uomBloc = context.read<ItemUomConversionBloc>();
+        uomBloc.add(
+          LoadUomsForItem(
+            itemId: itemInBranch.itemNumber,
+            companyId: authBloc.state.companyId!,
+          ),
+        );
+
         _selectedUom = itemInBranch.unitOfMeasure;
         _availableQuantityController.text =
             (itemInBranch.quantityAvailable ?? 0).toStringAsFixed(2);
@@ -271,7 +283,27 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
       }
     });
 
-    _calculateExtendedPrice();
+    // Dispatch event to calculate price with UOM
+    if (itemInBranch != null) {
+      // Create a temporary detail with current values to send for calculation
+      final currentDetail = widget.detail.copyWith(
+        itemsTableId: _selectedItem?.id,
+        itemInBranch: itemInBranch.id.toDouble(),
+        itemBranch: itemInBranch,
+        quantity: double.tryParse(_quantityController.text) ?? 0.0,
+        unitOfMeasure: _selectedUom,
+        item: _selectedItem,
+      );
+
+      context.read<SalesOrderDetailBloc>().add(
+        UpdateUnitPriceWithUom(
+          salesOrderDetail: currentDetail,
+          itemsInBranch: itemInBranch,
+        ),
+      );
+    } else {
+      _calculateExtendedPrice();
+    }
   }
 
   void _showNoBranchesSnackbar() {
@@ -313,141 +345,115 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
 
     return Form(
       key: widget.formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: Row(
-              children: [
-                Icon(
-                  widget.isEditing ? Icons.edit : Icons.add,
-                  color: widget.isEditing
-                      ? Colors.orange
-                      : const Color(0xFF155888),
-                  size: 24,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  widget.isEditing ? 'Editing Item' : 'Add New Item',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+      child: BlocListener<SalesOrderDetailBloc, SalesOrderDetailState>(
+        listener: (context, state) {
+          // Listen for updates to selected1 (which holds the calculated detail)
+          if (state.selected1 != null &&
+              state.selected1!.tempId == widget.detail.tempId) {
+            final updatedDetail = state.selected1!;
+
+            // Update controllers if values changed
+            if (updatedDetail.unitPrice != null) {
+              final newPrice = updatedDetail.unitPrice!.toStringAsFixed(2);
+              if (_unitPriceController.text != newPrice) {
+                _unitPriceController.text = newPrice;
+              }
+            }
+
+            if (updatedDetail.extendedPrice != null) {
+              final newExtended = updatedDetail.extendedPrice!.toStringAsFixed(
+                2,
+              );
+              if (_extendedPriceController.text != newExtended) {
+                _extendedPriceController.text = newExtended;
+              }
+            }
+
+            // Also call onUpdate to propagate changes up
+            widget.onUpdate(updatedDetail);
+          }
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Row(
+                children: [
+                  Icon(
+                    widget.isEditing ? Icons.edit : Icons.add,
                     color: widget.isEditing
                         ? Colors.orange
                         : const Color(0xFF155888),
+                    size: 24,
                   ),
-                ),
-                const Spacer(),
-                if (widget.isEditing && widget.onCancel != null)
-                  TextButton(
-                    onPressed: widget.onCancel,
-                    child: const Text(
-                      'Cancel',
-                      style: TextStyle(color: Colors.red),
+                  const SizedBox(width: 8),
+                  Text(
+                    widget.isEditing ? 'Editing Item' : 'Add New Item',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: widget.isEditing
+                          ? Colors.orange
+                          : const Color(0xFF155888),
                     ),
                   ),
-              ],
-            ),
-          ),
-
-          // Item Selection
-          BlocBuilder<StockItemsEntryBloc, ItemEntryState>(
-            builder: (context, itemsState) {
-              return CustomTableDropdown<ItemEntryModel>(
-                title: 'Select Item *',
-                items: itemsState.items,
-                displayText: (item) => item.itemDescription ?? 'No Description',
-                selectedValue: _selectedItem,
-                showSearch: true,
-                searchHint: 'Search items...',
-                leadingIcon: const Icon(Icons.inventory_2, size: 16),
-                columns: [
-                  TableColumnConfig(
-                    header: 'Item Name',
-                    flex: 3,
-                    cellBuilder: (item) => Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.itemDescription ?? 'No Description',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        if (item.itemsId != null)
-                          Text(
-                            'ID: ${item.itemsId!}',
-                            style: const TextStyle(
-                              fontSize: 9,
-                              color: Colors.grey,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  TableColumnConfig(
-                    header: 'Price',
-                    flex: 1,
-                    cellBuilder: (item) => Text(
-                      '\$${(item.unitPrice ?? 0).toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
+                  const Spacer(),
+                  if (widget.isEditing && widget.onCancel != null)
+                    TextButton(
+                      onPressed: widget.onCancel,
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(color: Colors.red),
                       ),
                     ),
-                  ),
                 ],
-                onItemSelected: _onItemSelected,
-              );
-            },
-          ),
+              ),
+            ),
 
-          const SizedBox(height: 16),
-
-          // Branch Selection (only show if item is selected)
-          if (_selectedItem != null) ...[
-            BlocBuilder<StockItemInBranchBloc, ItemInBranchState>(
-              builder: (context, branchState) {
-                return CustomTableDropdown<ItemInBranchModel>(
-                  title: 'Select Branch *',
-                  items: availableBranches,
-                  displayText: (itemInBranch) =>
-                      itemInBranch.branchRef?.description ?? 'No Branch',
-                  selectedValue: _selectedItemInBranch,
-                  // emptyMessage: 'No branches available for selected item',
+            // Item Selection
+            BlocBuilder<StockItemsEntryBloc, ItemEntryState>(
+              builder: (context, itemsState) {
+                return CustomTableDropdown<ItemEntryModel>(
+                  title: 'Select Item *',
+                  items: itemsState.items,
+                  displayText: (item) =>
+                      item.itemDescription ?? 'No Description',
+                  selectedValue: _selectedItem,
+                  showSearch: true,
+                  searchHint: 'Search items...',
+                  leadingIcon: const Icon(Icons.inventory_2, size: 16),
                   columns: [
                     TableColumnConfig(
-                      header: 'Branch',
-                      flex: 2,
-                      cellBuilder: (itemInBranch) => Text(
-                        itemInBranch.branchRef?.description ?? 'No Branch',
-                        style: const TextStyle(fontSize: 10),
-                      ),
-                    ),
-                    TableColumnConfig(
-                      header: 'Available',
-                      flex: 1,
-                      cellBuilder: (itemInBranch) => Text(
-                        (itemInBranch.quantityAvailable ?? 0).toStringAsFixed(
-                          0,
-                        ),
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: (itemInBranch.quantityAvailable ?? 0) > 0
-                              ? Colors.green
-                              : Colors.red,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      header: 'Item Name',
+                      flex: 3,
+                      cellBuilder: (item) => Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.itemDescription ?? 'No Description',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          if (item.itemsId != null)
+                            Text(
+                              'ID: ${item.itemsId!}',
+                              style: const TextStyle(
+                                fontSize: 9,
+                                color: Colors.grey,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                     TableColumnConfig(
                       header: 'Price',
                       flex: 1,
-                      cellBuilder: (itemInBranch) => Text(
-                        '\$${(itemInBranch.unitPrice ?? 0).toStringAsFixed(2)}',
+                      cellBuilder: (item) => Text(
+                        '\$${(item.unitPrice ?? 0).toStringAsFixed(2)}',
                         style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
@@ -455,156 +461,388 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
                       ),
                     ),
                   ],
-                  onItemSelected: (itemInBranch) {
-                    _onBranchSelected(itemInBranch?.branchRef, itemInBranch);
+                  onItemSelected: _onItemSelected,
+                );
+              },
+            ),
+
+            const SizedBox(height: 16),
+
+            // Branch Selection (only show if item is selected)
+            if (_selectedItem != null) ...[
+              BlocBuilder<StockItemInBranchBloc, ItemInBranchState>(
+                builder: (context, branchState) {
+                  return CustomTableDropdown<ItemInBranchModel>(
+                    title: 'Select Branch *',
+                    items: availableBranches,
+                    displayText: (itemInBranch) =>
+                        itemInBranch.branchRef?.description ?? 'No Branch',
+                    selectedValue: _selectedItemInBranch,
+                    // emptyMessage: 'No branches available for selected item',
+                    columns: [
+                      TableColumnConfig(
+                        header: 'Branch',
+                        flex: 2,
+                        cellBuilder: (itemInBranch) => Text(
+                          itemInBranch.branchRef?.description ?? 'No Branch',
+                          style: const TextStyle(fontSize: 10),
+                        ),
+                      ),
+                      TableColumnConfig(
+                        header: 'Available',
+                        flex: 1,
+                        cellBuilder: (itemInBranch) => Text(
+                          (itemInBranch.quantityAvailable ?? 0).toStringAsFixed(
+                            0,
+                          ),
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: (itemInBranch.quantityAvailable ?? 0) > 0
+                                ? Colors.green
+                                : Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      TableColumnConfig(
+                        header: 'Price',
+                        flex: 1,
+                        cellBuilder: (itemInBranch) => Text(
+                          '\$${(itemInBranch.unitPrice ?? 0).toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                    onItemSelected: (itemInBranch) {
+                      _onBranchSelected(itemInBranch?.branchRef, itemInBranch);
+                    },
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Quantity Input
+            CustomTextField(
+              controller: _quantityController,
+              labelText: 'Quantity *',
+              keyboardType: TextInputType.number,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter quantity';
+                }
+                final quantity = double.tryParse(value);
+                if (quantity == null || quantity <= 0) {
+                  return 'Please enter valid quantity';
+                }
+
+                // Check stock availability
+                if (_selectedItemInBranch != null) {
+                  final availableQty =
+                      _selectedItemInBranch!.quantityAvailable ?? 0;
+                  if (quantity > availableQty) {
+                    return 'Quantity exceeds available stock ($availableQty)';
+                  }
+                }
+
+                return null;
+              },
+              onChanged: (value) {
+                // Dispatch update for price recalculation
+                if (_selectedItemInBranch != null) {
+                  final currentDetail = widget.detail.copyWith(
+                    itemsTableId: _selectedItem?.id,
+                    itemInBranch: _selectedItemInBranch?.id.toDouble(),
+                    itemBranch: _selectedItemInBranch,
+                    quantity: double.tryParse(value) ?? 0.0,
+                    unitOfMeasure: _selectedUom,
+                    item: _selectedItem,
+                  );
+
+                  context.read<SalesOrderDetailBloc>().add(
+                    UpdateUnitPriceWithUom(
+                      salesOrderDetail: currentDetail,
+                      itemsInBranch: _selectedItemInBranch,
+                      manualUnitPrice: double.tryParse(
+                        _unitPriceController.text,
+                      ),
+                    ),
+                  );
+                } else {
+                  _calculateExtendedPrice();
+                }
+              },
+            ),
+
+            const SizedBox(height: 16),
+            // UOM Selection (from branch)
+            if (_selectedItemInBranch != null)
+              BlocBuilder<ItemUomConversionBloc, ItemUomConversionState>(
+                builder: (context, state) {
+                  if (state.isLoadingUomsForItem ||
+                      state.status == ItemUomConversionStatus.loading) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final udcList = state.availableUomsForItem;
+
+                  if (udcList.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8.0),
+                      child: Text(
+                        'No unit of measure available',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    );
+                  }
+
+                  return Builder(
+                    builder: (context) {
+                      String? currentUomDesc;
+                      if (_selectedUom != null) {
+                        final match = udcList.where(
+                          (u) => u.id == _selectedUom,
+                        );
+                        if (match.isNotEmpty) {
+                          currentUomDesc = match.first.description1;
+                        }
+                      }
+
+                      return CustomSearchableDropdown(
+                        labelText: 'Unit of Measure *',
+                        options: udcList.map((u) => u.description1).toList(),
+                        value: currentUomDesc,
+                        prefixIcon: Iconsax.ruler,
+                        allowCustomEntries: false,
+                        onChanged: (value) {
+                          setState(() {
+                            if (value == null) {
+                              _selectedUom = null;
+                            } else {
+                              final matches = udcList.where(
+                                (u) => u.description1 == value,
+                              );
+                              _selectedUom = matches.isNotEmpty
+                                  ? matches.first.id
+                                  : null;
+                            }
+                          });
+
+                          // Dispatch update for price recalculation
+                          if (_selectedItemInBranch != null) {
+                            final currentDetail = widget.detail.copyWith(
+                              itemsTableId: _selectedItem?.id,
+                              itemInBranch: _selectedItemInBranch?.id
+                                  .toDouble(),
+                              itemBranch: _selectedItemInBranch,
+                              quantity:
+                                  double.tryParse(_quantityController.text) ??
+                                  0.0,
+                              unitOfMeasure: _selectedUom,
+                              item: _selectedItem,
+                            );
+
+                            context.read<SalesOrderDetailBloc>().add(
+                              UpdateUnitPriceWithUom(
+                                salesOrderDetail: currentDetail,
+                                itemsInBranch: _selectedItemInBranch,
+                              ),
+                            );
+                          } else {
+                            _updateDetail();
+                          }
+                        },
+                        validator: (value) {
+                          if (_selectedUom == null) {
+                            return 'Please select a unit of measure';
+                          }
+                          return null;
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+
+            const SizedBox(height: 24),
+
+            // Available Quantity (Read-only)
+            CustomTextField(
+              controller: _availableQuantityController,
+              labelText: 'Available Quantity',
+              readOnly: true,
+            ),
+
+            const SizedBox(height: 16),
+
+            // Unit Price (read-only, driven by SalesOrderDetailBloc)
+            BlocBuilder<SalesOrderDetailBloc, SalesOrderDetailState>(
+              builder: (context, detailState) {
+                SalesOrderDetail effectiveDetail = widget.detail;
+
+                // Prefer the in-progress selected1 detail (for unconfirmed edits)
+                final selectedDetail = detailState.selected1;
+                if (selectedDetail != null &&
+                    ((selectedDetail.id != null &&
+                            selectedDetail.id == widget.detail.id) ||
+                        (selectedDetail.tempId != null &&
+                            selectedDetail.tempId == widget.detail.tempId))) {
+                  effectiveDetail = selectedDetail;
+                } else {
+                  final matching = detailState.createItems.firstWhere(
+                    (d) =>
+                        (d.id != null && d.id == widget.detail.id) ||
+                        (d.tempId != null && d.tempId == widget.detail.tempId),
+                    orElse: () => widget.detail,
+                  );
+
+                  effectiveDetail = matching;
+                }
+
+                final unitPrice =
+                    effectiveDetail.unitPrice ??
+                    double.tryParse(_unitPriceController.text) ??
+                    0.0;
+                final formatted = unitPrice.toStringAsFixed(2);
+                if (_unitPriceController.text != formatted) {
+                  _unitPriceController.text = formatted;
+                }
+
+                return CustomTextField(
+                  controller: _unitPriceController,
+                  labelText: 'Unit Price',
+                  keyboardType: TextInputType.number,
+                  onChanged: (value) {
+                    if (_selectedItemInBranch != null) {
+                      final currentDetail = widget.detail.copyWith(
+                        itemsTableId: _selectedItem?.id,
+                        itemInBranch: _selectedItemInBranch?.id.toDouble(),
+                        itemBranch: _selectedItemInBranch,
+                        quantity:
+                            double.tryParse(_quantityController.text) ?? 0.0,
+                        unitOfMeasure: _selectedUom,
+                        item: _selectedItem,
+                      );
+
+                      context.read<SalesOrderDetailBloc>().add(
+                        UpdateUnitPriceWithUom(
+                          salesOrderDetail: currentDetail,
+                          itemsInBranch: _selectedItemInBranch,
+                          manualUnitPrice: double.tryParse(value) ?? 0.0,
+                        ),
+                      );
+                    }
                   },
                 );
               },
             ),
+
             const SizedBox(height: 16),
-          ],
 
-          // Quantity Input
-          CustomTextField(
-            controller: _quantityController,
-            labelText: 'Quantity *',
-            keyboardType: TextInputType.number,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter quantity';
-              }
-              final quantity = double.tryParse(value);
-              if (quantity == null || quantity <= 0) {
-                return 'Please enter valid quantity';
-              }
+            // Extended Price (read-only, driven by SalesOrderDetailBloc)
+            BlocBuilder<SalesOrderDetailBloc, SalesOrderDetailState>(
+              builder: (context, detailState) {
+                SalesOrderDetail effectiveDetail = widget.detail;
 
-              // Check stock availability
-              if (_selectedItemInBranch != null) {
-                final availableQty =
-                    _selectedItemInBranch!.quantityAvailable ?? 0;
-                if (quantity > availableQty) {
-                  return 'Quantity exceeds available stock ($availableQty)';
+                // Prefer the in-progress selected1 detail (for unconfirmed edits)
+                final selectedDetail = detailState.selected1;
+                if (selectedDetail != null &&
+                    ((selectedDetail.id != null &&
+                            selectedDetail.id == widget.detail.id) ||
+                        (selectedDetail.tempId != null &&
+                            selectedDetail.tempId == widget.detail.tempId))) {
+                  effectiveDetail = selectedDetail;
+                } else {
+                  final matching = detailState.createItems.firstWhere(
+                    (d) =>
+                        (d.id != null && d.id == widget.detail.id) ||
+                        (d.tempId != null && d.tempId == widget.detail.tempId),
+                    orElse: () => widget.detail,
+                  );
+
+                  effectiveDetail = matching;
                 }
-              }
 
-              return null;
-            },
-            onChanged: (value) {
-              _calculateExtendedPrice();
-            },
-          ),
-
-          const SizedBox(height: 16),
-
-          // Available Quantity (Read-only)
-          CustomTextField(
-            controller: _availableQuantityController,
-            labelText: 'Available Quantity',
-            readOnly: true,
-          ),
-
-          const SizedBox(height: 16),
-
-          // Unit Price (Read-only from branch)
-          CustomTextField(
-            controller: _unitPriceController,
-            labelText: 'Unit Price',
-            readOnly: true,
-          ),
-
-          const SizedBox(height: 16),
-
-          // Extended Price (Read-only, calculated)
-          CustomTextField(
-            controller: _extendedPriceController,
-            labelText: 'Line Total',
-            readOnly: true,
-          ),
-
-          const SizedBox(height: 16),
-
-          // UOM Selection (from branch)
-          if (_selectedItemInBranch != null)
-            BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
-              builder: (context, udcState) {
-                final uomOptions = udcState.details
-                    .where(
-                      (detail) =>
-                          detail.id == _selectedItemInBranch!.unitOfMeasure,
-                    )
-                    .toList();
-
-                final uomDescription = uomOptions.isNotEmpty
-                    ? uomOptions.first.description1
-                    : 'Not Available';
+                final lineTotal =
+                    effectiveDetail.extendedPrice ??
+                    double.tryParse(_extendedPriceController.text) ??
+                    0.0;
+                final formatted = lineTotal.toStringAsFixed(2);
+                if (_extendedPriceController.text != formatted) {
+                  _extendedPriceController.text = formatted;
+                }
 
                 return CustomTextField(
-                  labelText: 'Unit of Measure',
-                  value: uomDescription,
+                  controller: _extendedPriceController,
+                  labelText: 'Line Total',
                   readOnly: true,
                 );
               },
             ),
 
-          const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
-          // Confirm Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _isFormValid()
-                  ? () {
-                      if (widget.formKey.currentState!.validate()) {
-                        widget.onConfirm();
+            // Confirm Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isFormValid()
+                    ? () {
+                        if (widget.formKey.currentState!.validate()) {
+                          widget.onConfirm();
+                        }
                       }
-                    }
-                  : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _isFormValid()
-                    ? const Color(0xFF155888)
-                    : Colors.grey,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isFormValid()
+                      ? const Color(0xFF155888)
+                      : Colors.grey,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      widget.isEditing ? Icons.save : Icons.check_circle,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      widget.isEditing ? 'Update Item' : 'Confirm Item',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    widget.isEditing ? Icons.save : Icons.check_circle,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    widget.isEditing ? 'Update Item' : 'Confirm Item',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+            ),
+
+            const SizedBox(height: 8),
+
+            // Help text
+            Text(
+              widget.isEditing
+                  ? 'Item will be updated in the confirmed list below'
+                  : 'Item will be added to the confirmed list below',
+              style: const TextStyle(
+                fontSize: 12,
+                color: Colors.grey,
+                fontStyle: FontStyle.italic,
               ),
+              textAlign: TextAlign.center,
             ),
-          ),
-
-          const SizedBox(height: 8),
-
-          // Help text
-          Text(
-            widget.isEditing
-                ? 'Item will be updated in the confirmed list below'
-                : 'Item will be added to the confirmed list below',
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.grey,
-              fontStyle: FontStyle.italic,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

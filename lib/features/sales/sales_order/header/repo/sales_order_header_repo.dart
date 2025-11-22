@@ -20,7 +20,7 @@ class SalesOrderHeaderRepository {
     try {
       return await db.insert('sales_order_header', header.toMap());
     } catch (e) {
-      throw Exception('Failed to create sales order: $e');
+      throw Exception('Failed to create sales order header: $e');
     }
   }
 
@@ -538,7 +538,7 @@ class SalesOrderHeaderRepository {
     try {
       return await db.insert('sales_order_header', header.toMap());
     } catch (e) {
-      throw Exception('Failed to create sales order: $e');
+      throw Exception('Failed to create sales order header: $e');
     }
   }
 

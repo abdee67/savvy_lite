@@ -68,6 +68,12 @@ class UpdateStockForSalesOrder extends SalesOrderDetailsEvent {
   const UpdateStockForSalesOrder({required this.salesOrderDetail});
 }
 
+class UpdateStockForSalesOrderBatch extends SalesOrderDetailsEvent {
+  final List<SalesOrderDetail> details;
+
+  const UpdateStockForSalesOrderBatch({required this.details});
+}
+
 class DeleteSalesOrderDetails extends SalesOrderDetailsEvent {
   final int id;
 
@@ -236,10 +242,12 @@ class CalculateAllExtendedPrices extends SalesOrderDetailsEvent {
 class UpdateUnitPriceWithUom extends SalesOrderDetailsEvent {
   final SalesOrderDetail salesOrderDetail;
   final ItemInBranchModel? itemsInBranch;
+  final double? manualUnitPrice;
 
   const UpdateUnitPriceWithUom({
     required this.salesOrderDetail,
     this.itemsInBranch,
+    this.manualUnitPrice,
   });
 }
 

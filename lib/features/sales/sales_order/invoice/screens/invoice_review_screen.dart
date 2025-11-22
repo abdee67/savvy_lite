@@ -156,7 +156,7 @@ class _InvoiceReviewContent extends StatelessWidget {
 
     // Prefer joined customer ref when available, otherwise use defaultCustomer from coordinator state
     final Customer? customer =
-        header.customerBillToRef ?? state.defaultCustomer?.first;
+        header.customerBillToRef ?? state.defaultCustomer;
 
     if (customer == null) {
       return _buildErrorScreen(

@@ -84,9 +84,14 @@ class ItemUomConversionsRepository {
       // Get all unique UoM IDs used for this item
       final uomIdsResult = await db.rawQuery(
         '''
-      -- Get item's primary UoM
-      SELECT unit_of_measure as uom_id FROM items_table 
-      WHERE id = ? AND company = ? AND unit_of_measure IS NOT NULL
+      -- Get item's primary UoM, resolving either id, detail_code, or description_1
+      SELECT ud.id as uom_id
+      FROM items_table it
+      LEFT JOIN udc_details ud
+        ON ud.id = it.unit_of_measure
+        OR ud.detail_code = it.unit_of_measure
+        OR ud.description_1 = it.unit_of_measure
+      WHERE it.id = ? AND it.company = ? AND it.unit_of_measure IS NOT NULL
       
       UNION
       
@@ -107,10 +112,18 @@ class ItemUomConversionsRepository {
         return [];
       }
 
-      // Extract UoM IDs
+      int? asInt(dynamic v) {
+        if (v == null) return null;
+        if (v is int) return v;
+        if (v is String) return int.tryParse(v);
+        return null;
+      }
+
+      // Extract UoM IDs (handle both int and string values)
       final uomIds = uomIdsResult
-          .map((row) => row['uom_id'] as int)
-          .where((id) => id != null)
+          .map((row) => asInt(row['uom_id']))
+          .whereType<int>()
+          .toSet()
           .toList();
 
       if (uomIds.isEmpty) {

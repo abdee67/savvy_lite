@@ -39,7 +39,6 @@ class CustomerInfoScreenContent extends StatefulWidget {
   const CustomerInfoScreenContent({super.key, required this.authBloc});
 
   @override
-
   State<CustomerInfoScreenContent> createState() =>
       _CustomerInfoScreenContentState();
 }
@@ -199,7 +198,7 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
 
     final defaults = state.defaultCustomer;
     if (defaults != null && defaults.isNotEmpty) {
-      defaultCustomer = defaults.first;
+      defaultCustomer = defaults;
     }
 
     if (defaultCustomer == null) {

@@ -74,7 +74,7 @@ class SalesOrderDetail extends Equatable {
       reference2: map['reference2'] as String?,
       salesOrderHeaderId: map['sales_order_header_id'] as int?,
       itemsTableId: map['items_table_id'] as int?,
-      itemInBranch: map['item_in_branch'] as double?,
+      itemInBranch: (map['item_in_branch'] as num?)?.toDouble(),
       company: map['company'] as int?,
       lotNumber: map['lot_number'] as int?,
       unitCost: (map['unit_cost'] as num?)?.toDouble(),
@@ -131,6 +131,13 @@ class SalesOrderDetail extends Equatable {
               quantityAvailable: map['quantity_available'],
               company: map['company'],
               unitOfMeasure: map['unit_of_measure'],
+            )
+          : null,
+      uom: map['unit_of_measure'] != null
+          ? UdcDetails(
+              id: map['unit_of_measure'],
+              description1: map['unit_of_measure_description'],
+              detailCode: map['unit_of_measure_code'],
             )
           : null,
     );
