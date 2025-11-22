@@ -1369,8 +1369,8 @@ class SalesOrderHeaderBloc
     // Get default sales order type from UDC
     try {
       final defaultOrderType = await udcDetailRepository.getUdcDetailsByCode(
-        "OT",
         "S",
+        "OT",
       );
       if (defaultOrderType.isEmpty) {
         return null;

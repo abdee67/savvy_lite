@@ -89,10 +89,10 @@ class InvoiceSecondPart extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${item.quantity!.toStringAsFixed(2)} ${item.item?.unitOfMeasureDescription}',
+                  '${item.quantity!.toStringAsFixed(2)} ${item.uom?.description1}',
                 ),
                 Text(
-                  '${unitPrice.toStringAsFixed(2)} Birr/${item.item?.unitOfMeasureDescription}',
+                  '${unitPrice.toStringAsFixed(2)} Birr/${item.uom?.description1}',
                 ),
               ],
             ),
@@ -158,7 +158,9 @@ class InvoiceSecondPart extends StatelessWidget {
                 DataCell(
                   Align(
                     alignment: Alignment.centerRight,
-                    child: Text('${item.quantity!.toStringAsFixed(2)} PCS'),
+                    child: Text(
+                      '${item.quantity!.toStringAsFixed(2)} ${item.uom?.description1 ?? ''}',
+                    ),
                   ),
                 ),
                 DataCell(
@@ -229,7 +231,11 @@ class InvoiceSecondPart extends StatelessWidget {
                     child: Text(item.quantity!.toStringAsFixed(2)),
                   ),
                 ),
-                DataCell(Text(item.item?.unitOfMeasure ?? 'N/A')),
+                DataCell(
+                  Text(
+                    item.uom?.description1 ?? item.item?.unitOfMeasure ?? 'N/A',
+                  ),
+                ),
                 DataCell(
                   Align(
                     alignment: Alignment.centerRight,

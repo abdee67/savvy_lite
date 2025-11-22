@@ -21,7 +21,6 @@ class ItemCost {
     this.dateUpdated,
     this.fromUOM,
     this.tempId,
-
   });
   factory ItemCost.empty() {
     return ItemCost(
@@ -45,8 +44,8 @@ class ItemCost {
       userId: map['user_id'],
       dateUpdated: map['date_updated'],
       tempId: map['temp_id'],
-      fromUOM: ItemInBranchModel.fromMap(map),
-        );
+      fromUOM: map['branch'] != null ? ItemInBranchModel.fromMap(map) : null,
+    );
   }
 
   Map<String, dynamic> toMap() {
