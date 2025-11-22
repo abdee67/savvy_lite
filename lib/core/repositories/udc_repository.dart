@@ -82,10 +82,14 @@ class UdcRepository extends BaseRepository {
   }) async {
     final db = txn ?? await databaseService.database;
     try {
-      final List<Map<String, dynamic>> maps = await db.query(
-        'udc_details',
-        where: 'detail_code = ? AND record_header = ?',
-        whereArgs: [detailCode, headerCode],
+      final List<Map<String, dynamic>> maps = await db.rawQuery(
+        '''
+        SELECT udc_details.* 
+        FROM udc_details 
+        INNER JOIN udc_header ON udc_details.record_header = udc_header.id 
+        WHERE udc_details.detail_code = ? AND udc_header.header_code = ?
+        ''',
+        [detailCode, headerCode],
       );
       developer.log('Found ${maps.length} UDC details for code: $detailCode');
       return maps.map((map) => UdcDetails.fromJson(map)).toList();
