@@ -41,7 +41,7 @@ class SalesOrderDetailState {
   final bool enablePreview;
   final bool enableFinishingProcess;
   final String? availablitySelections;
-  final Map<double, ItemInBranchModel> stockValidationResults;
+  final Map<int, ItemInBranchModel> stockValidationResults;
   final SystemConstant? systemConstant;
   final SalesOrderHeader? selectedHeader;
 
@@ -94,7 +94,7 @@ class SalesOrderDetailState {
     bool? enablePreview,
     bool? enableFinishingProcess,
     String? availablitySelections,
-    Map<double, ItemInBranchModel>? stockValidationResults,
+    Map<int, ItemInBranchModel>? stockValidationResults,
     SystemConstant? systemConstant,
     SalesOrderHeader? selectedHeader,
   }) {

@@ -1,15 +1,24 @@
 // features/stock/lot_master/repositories/lot_master_repository.dart
 import 'package:savvy_stock/core/repositories/base_repo.dart';
+import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 import 'package:sqflite/sqflite.dart';
 
 class LotMasterRepository extends BaseRepository {
   @override
   final LocalDatabaseService databaseService;
+  final UdcRepository udcRepository;
+  final SystemConstantBloc systemConstantBloc;
 
-  LotMasterRepository({required this.databaseService});
+  LotMasterRepository({
+    required this.databaseService,
+    required this.udcRepository,
+    required this.systemConstantBloc,
+  });
 
   // Get all lot masters for a company
   Future<List<LotMaster>> getLotMasters(
@@ -477,6 +486,96 @@ class LotMasterRepository extends BaseRepository {
     );
 
     return lots.map((p) => LotMaster.fromMap(p)).toList();
+  }
+
+  //get active lots('A')
+  Future<List<LotMaster>> getActiveLotMasters(int companyId) async {
+    final db = await databaseService.database;
+    final lots = await db.rawQuery(
+      '''
+      SELECT lm.*,
+             it.item_description,
+             b.description as branch_name,
+             loc.location_description,
+             ud.detail_code as status_code,
+             ud.description_1 as status_description
+      FROM lot_master lm
+      LEFT JOIN items_table it ON lm.item_number = it.id
+      LEFT JOIN branch_table b ON lm.branch = b.id
+      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN udc_details ud ON lm.lot_status = ud.id
+      WHERE lm.company = ? 
+        AND lm.status_code = 'A'
+      ORDER BY it.item_description, lm.lot_number
+    ''',
+      [companyId],
+    );
+
+    return lots.map((p) => LotMaster.fromMap(p)).toList();
+  }
+
+  Future<String?> identifyLotStatus(LotMaster item) async {
+    UdcDetails? lotStatus;
+
+    if (item.branch != null && item.itemNumber != null) {
+      // Get system constant and lot type
+      final systemConstant = systemConstantBloc.state.selected;
+      final lotTypeDetail = await udcRepository.getUdcDetailById(
+        systemConstant?.lotType,
+      );
+      final lotType = lotTypeDetail?.detailCode;
+
+      bool valid = false;
+      DateTime? targetDate;
+
+      // Determine which date to use based on lot type (EXACT Java logic)
+      if (lotType == 'X' && item.dateExpiration != null) {
+        valid = true;
+        targetDate = item.dateExpiration;
+      } else if (lotType == 'F' && item.dateEffective != null) {
+        valid = true;
+        targetDate = item.dateEffective;
+      } else if (lotType == 'R' && item.dateReceived != null) {
+        valid = true;
+        targetDate = item.dateReceived;
+      }
+
+      if (valid && targetDate != null) {
+        final currentDate = DateTime.now();
+
+        // Calculate days difference (same as Java's ChronoUnit.DAYS.between)
+        final difference = targetDate.difference(currentDate);
+        final days = difference.inDays;
+
+        // Apply the same business rules as Java
+        if (lotType != 'R') {
+          if (days <= 0) {
+            // Expired or past effective date
+            lotStatus = await udcRepository.getSingleUdcDetailsByCode(
+              'LS',
+              'E',
+            );
+          } else {
+            // Active - preserve existing status unless it's expired
+            if (item.lotStatus == null || item.statusCode == 'E') {
+              lotStatus = await udcRepository.getSingleUdcDetailsByCode(
+                'LS',
+                'A',
+              );
+            } else {
+              lotStatus!.detailCode = item.statusCode!;
+            }
+          }
+        } else {
+          // For 'R' (Received) type, always set to Active if null
+          lotStatus = item.statusCode != null
+              ? await udcRepository.getSingleUdcDetailsByCode('LS', 'A')
+              : null;
+        }
+      }
+    }
+
+    return lotStatus?.description1;
   }
 
   // Get lot quantity summary by item

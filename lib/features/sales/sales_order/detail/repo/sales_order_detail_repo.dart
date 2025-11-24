@@ -1,18 +1,31 @@
 /// features/sales/sales_order_details/repositories/sales_order_details_repository.dart
 library;
 
+import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
-import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
-import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
-import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
-import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
+import 'package:savvy_stock/features/stock/item_entry/data/item_repository.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_repo.dart';
+import 'package:savvy_stock/features/stock/lot_master/repo/lot_master_repo.dart';
 import 'package:sqflite/sqflite.dart';
 
 class SalesOrderDetailRepository {
   final LocalDatabaseService databaseService;
+  final StockItemsEntryRepository itemEntryRepository;
+  final StockItemInBranchRepository itemInBranchRepository;
+  final LotMasterRepository lotMasterRepository;
+  final UdcRepository udcDetailsRepository;
+  final AuthBloc authBloc;
 
-  SalesOrderDetailRepository({required this.databaseService});
+  SalesOrderDetailRepository({
+    required this.databaseService,
+    required this.itemEntryRepository,
+    required this.itemInBranchRepository,
+    required this.lotMasterRepository,
+    required this.udcDetailsRepository,
+    required this.authBloc,
+  });
 
   // Create
   Future<int> createSalesOrderDetail(SalesOrderDetail details) async {
@@ -84,20 +97,39 @@ class SalesOrderDetailRepository {
 
     for (final detail in details) {
       // Get related data
-      final itemsTable = await _getItemsTableById(detail.itemsTableId!);
-      final itemsInBranch = detail.itemInBranch != null
-          ? await _getItemsInBranchById(detail.itemInBranch!.toInt())
+      final itemsTable = await itemEntryRepository.findById(
+        detail.itemsTableId!,
+        companyId,
+      );
+      var itemsInBranch = detail.itemInBranch != null
+          ? await itemInBranchRepository.findById(
+              detail.itemInBranch!.toInt(),
+              companyId,
+            )
           : null;
+
+      // Fallback if not found by ID (data integrity issue)
+      if (itemsInBranch == null && detail.itemsTableId != null) {
+        final matches = await itemInBranchRepository.findByItem(
+          detail.itemsTableId!,
+          companyId,
+        );
+        if (matches.isNotEmpty) {
+          itemsInBranch = matches.first;
+        }
+      }
       final lotMaster = detail.lotNumber != null
-          ? await _getLotMasterById(detail.lotNumber!)
+          ? await lotMasterRepository.getLotMasterById(
+              detail.lotNumber!,
+              companyId,
+            )
           : null;
       final unitOfMeasure = detail.unitOfMeasure != null
-          ? await _getUdcDetailsById(detail.unitOfMeasure!)
+          ? await udcDetailsRepository.getUdcDetailById(detail.unitOfMeasure)
           : null;
 
       result.add(
-        SalesOrderDetail(
-          orderHeader: detail.orderHeader,
+        detail.copyWith(
           item: itemsTable,
           itemBranch: itemsInBranch,
           lot: lotMaster,
@@ -314,15 +346,26 @@ class SalesOrderDetailRepository {
     // Get relations for each detail
     final detailsList = <SalesOrderDetail>[];
     for (final detail in details) {
-      final itemsTable = await _getItemsTableById(detail.itemsTableId!);
+      final itemsTable = await itemEntryRepository.findById(
+        detail.itemsTableId!,
+        authBloc.state.companyId!,
+      );
       final itemsInBranch = detail.itemInBranch != null
-          ? await _getItemsInBranchById(detail.itemInBranch!.toInt())
+          ? await itemInBranchRepository.findById(
+              detail.itemInBranch!.toInt(),
+              authBloc.state.companyId!,
+            )
           : null;
       final lotMaster = detail.lotNumber != null
-          ? await _getLotMasterById(detail.lotNumber!.toInt())
+          ? await lotMasterRepository.getLotMasterById(
+              detail.lotNumber!.toInt(),
+              authBloc.state.companyId!,
+            )
           : null;
       final unitOfMeasure = detail.unitOfMeasure != null
-          ? await _getUdcDetailsById(detail.unitOfMeasure!.toInt())
+          ? await udcDetailsRepository.getUdcDetailById(
+              detail.unitOfMeasure!.toInt(),
+            )
           : null;
 
       detailsList.add(
@@ -337,47 +380,6 @@ class SalesOrderDetailRepository {
     }
 
     return detailsList;
-  }
-
-  // Helper methods to get related entities
-  Future<ItemEntryModel?> _getItemsTableById(int id) async {
-    final maps = await databaseService.database;
-    final result = await maps.query(
-      'items_table',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    return result.isNotEmpty ? ItemEntryModel.fromMap(result.first) : null;
-  }
-
-  Future<ItemInBranchModel?> _getItemsInBranchById(int id) async {
-    final maps = await databaseService.database;
-    final result = await maps.query(
-      'items_in_branch',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    return result.isNotEmpty ? ItemInBranchModel.fromMap(result.first) : null;
-  }
-
-  Future<LotMaster?> _getLotMasterById(int id) async {
-    final maps = await databaseService.database;
-    final result = await maps.query(
-      'lot_master',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    return result.isNotEmpty ? LotMaster.fromMap(result.first) : null;
-  }
-
-  Future<UdcDetails?> _getUdcDetailsById(int id) async {
-    final maps = await databaseService.database;
-    final result = await maps.query(
-      'udc_details',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    return result.isNotEmpty ? UdcDetails.fromJson(result.first) : null;
   }
 
   // Get extended price sum for a sales order header
@@ -442,50 +444,6 @@ class SalesOrderDetailRepository {
     return List.generate(maps.length, (i) {
       final data = maps[i];
       return SalesOrderDetail.fromMap(data);
-    });
-  }
-
-  // Get items by barcode
-  Future<List<ItemInBranchModel>> getItemsByBarcode(
-    String barcode,
-    int branchId,
-  ) async {
-    final query = '''
-      SELECT ib.*, it.*
-      FROM items_in_branch ib
-      INNER JOIN items_table it ON ib.item_number = it.id
-      WHERE it.barcode = ? AND ib.branch = ?
-    ''';
-
-    final db = await databaseService.database;
-    final result = await db.rawQuery(query, [barcode, branchId]);
-
-    // Convert to ItemsInBranch objects
-    return List.generate(result.length, (i) {
-      final data = result[i];
-      return ItemInBranchModel.fromMap(data);
-    });
-  }
-
-  // Get lot masters for item and branch
-  Future<List<LotMaster>> getLotMastersForItem(
-    int itemId,
-    int branchId,
-    int companyId,
-  ) async {
-    final query = '''
-      SELECT lm.*
-      FROM lot_master lm
-      WHERE lm.item_number = ? AND lm.branch = ? AND lm.company = ?
-      AND lm.lot_status IN (SELECT id FROM udc_details WHERE detail_code <> 'E')
-    ''';
-
-    final db = await databaseService.database;
-    final result = await db.rawQuery(query, [itemId, branchId, companyId]);
-
-    return List.generate(result.length, (i) {
-      final data = result[i];
-      return LotMaster.fromMap(data);
     });
   }
 }

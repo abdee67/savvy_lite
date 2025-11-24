@@ -6,6 +6,9 @@ import 'package:savvy_stock/features/sales/sales_order/payment/widget/payment_ac
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
+import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
+import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_event.dart';
+import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_state.dart';
 
 class PaymentMethod extends StatefulWidget {
   const PaymentMethod({super.key});
@@ -17,10 +20,14 @@ class PaymentMethod extends StatefulWidget {
 class _PaymentMethodState extends State<PaymentMethod> {
   final TextEditingController _paymentTermController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  int? _selectedPaymentInstrument;
   @override
   void initState() {
     super.initState();
     _paymentTermController.addListener(_onPaymentTermChanged);
+    context.read<UdcDetailsBloc>().add(
+      LoadAllUdcDetails(),
+    ); // for Unit of Measure and lot status
   }
 
   void _onPaymentTermChanged() {
@@ -29,7 +36,6 @@ class _PaymentMethodState extends State<PaymentMethod> {
 
     bloc.add(
       UpdatePaymentDetails(
-        paymentType: currentState.paymentType,
         paymentMethod: currentState.paymentMethod,
         paymentInstrument: currentState.paymentInstrument,
         paymentTerm: _paymentTermController.text,
@@ -37,35 +43,33 @@ class _PaymentMethodState extends State<PaymentMethod> {
     );
   }
 
-  void _selectPaymentType(BuildContext context, String paymentType) {
+  void _selectpaymentMethod(BuildContext context, String paymentMethod) {
     final bloc = context.read<SalesOrderCoordinatorBloc>();
     final currentState = bloc.state;
 
     bloc.add(
       UpdatePaymentDetails(
-        paymentType: paymentType,
-        paymentMethod: currentState.paymentMethod,
+        paymentMethod: paymentMethod,
         paymentInstrument: currentState.paymentInstrument,
-        paymentTerm: paymentType == 'Credit' ? currentState.paymentTerm : '',
+        paymentTerm: paymentMethod == 'Credit' ? currentState.paymentTerm : '',
       ),
     );
 
     // Clear payment term if switching from Credit
-    if (paymentType != 'Credit') {
+    if (paymentMethod != 'Credit') {
       _paymentTermController.clear();
     }
   }
 
-  void _updatePaymentInstrument(BuildContext context, String? instrument) {
+  void _updatePaymentInstrument(BuildContext context, int? instrument) {
     if (instrument == null) return;
 
     final bloc = context.read<SalesOrderCoordinatorBloc>();
     final currentState = bloc.state;
     bloc.add(
       UpdatePaymentDetails(
-        paymentType: currentState.paymentType,
         paymentMethod: currentState.paymentMethod,
-        paymentInstrument: instrument,
+        paymentInstrument: currentState.paymentInstrument,
         paymentTerm: currentState.paymentTerm,
       ),
     );
@@ -77,7 +81,6 @@ class _PaymentMethodState extends State<PaymentMethod> {
 
     bloc.add(
       UpdatePaymentDetails(
-        paymentType: currentState.paymentType,
         paymentMethod: currentState.paymentMethod,
         paymentInstrument: currentState.paymentInstrument,
         paymentTerm: term,
@@ -135,7 +138,7 @@ class _PaymentMethodState extends State<PaymentMethod> {
         }
       },
       builder: (context, state) {
-        final isCreditSelected = state.paymentType == 'Credit';
+        final isCreditSelected = state.paymentMethod == 'Credit';
 
         return Container(
           constraints: BoxConstraints(
@@ -172,19 +175,44 @@ class _PaymentMethodState extends State<PaymentMethod> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildPaymentTypeSelector(context, state),
+                _buildpaymentMethodSelector(context, state),
                 const SizedBox(height: 16),
                 if (isCreditSelected) ...[
                   _buildPaymentTermField(context),
                   const SizedBox(height: 16),
                 ],
-                _buildPaymentInstrumentDropdown(context, state),
-                const SizedBox(height: 8),
-                if (state.paymentInstrument.isNotEmpty)
-                  Text(
-                    _getInstrumentDescription(state.paymentInstrument),
-                    style: const TextStyle(color: Colors.white, fontSize: 12),
-                  ),
+                BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
+                  builder: (context, state) {
+                    final paymentInstrument = state.details
+                        .where((udc) => udc.udcGroup == 'PI')
+                        .toList();
+
+                    return CustomDropdown(
+                      labelText: 'Payment Instrument',
+                      value: _selectedPaymentInstrument,
+                      validator: (value) {
+                        if (value == null) {
+                          return 'Please select a payment instrument';
+                        }
+                        return null;
+                      },
+                      prefixIcon: const Icon(Icons.credit_card),
+                      items: paymentInstrument.map((udc) {
+                        return DropdownMenuItem<int>(
+                          value: udc.id,
+                          child: Text(udc.description1),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        _updatePaymentInstrument(context, newValue);
+                        setState(() {
+                          _selectedPaymentInstrument = newValue;
+                        });
+                      },
+                    );
+                  },
+                ),
+
                 const PaymentAction(),
               ],
             ),
@@ -224,77 +252,24 @@ class _PaymentMethodState extends State<PaymentMethod> {
     );
   }
 
-  Widget _buildPaymentInstrumentDropdown(
+  Widget _buildpaymentMethodSelector(
     BuildContext context,
     SalesOrderCoordinatorState state,
   ) {
-    const allInstruments = ['Cash', 'Check', 'Credit Card', 'Bank Transfer'];
-
-    // Filter available instruments based on payment type
-    List<String> availableInstruments;
-    switch (state.paymentType) {
-      case 'Cash':
-        availableInstruments = ['Cash'];
-        break;
-      case 'Credit':
-        availableInstruments = ['Check', 'Credit Card', 'Bank Transfer'];
-        break;
-      case 'Advance':
-        availableInstruments = ['Cash', 'Bank Transfer'];
-        break;
-      default:
-        availableInstruments = allInstruments;
-    }
-
-    // Reset instrument if current selection is not available
-    if (!availableInstruments.contains(state.paymentInstrument) &&
-        state.paymentInstrument.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _updatePaymentInstrument(context, availableInstruments.first);
-      });
-    }
-
-    return CustomDropdown<String>(
-      labelText: 'Payment Instrument',
-      value:
-          state.paymentInstrument.isNotEmpty &&
-              availableInstruments.contains(state.paymentInstrument)
-          ? state.paymentInstrument
-          : availableInstruments.first,
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please select a payment instrument';
-        }
-        return null;
-      },
-      prefixIcon: const Icon(Icons.credit_card),
-      items: availableInstruments.map((String value) {
-        return DropdownMenuItem<String>(value: value, child: Text(value));
-      }).toList(),
-      onChanged: (String? newValue) {
-        _updatePaymentInstrument(context, newValue);
-      },
-    );
-  }
-
-  Widget _buildPaymentTypeSelector(
-    BuildContext context,
-    SalesOrderCoordinatorState state,
-  ) {
-    const paymentTypes = ['Cash', 'Credit', 'Advance'];
+    const paymentMethods = ['Cash', 'Credit', 'Advance'];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Payment Type',
+          'Payment Methods',
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: paymentTypes.map((type) {
-            final isSelected = state.paymentType == type;
+          children: paymentMethods.map((type) {
+            final isSelected = state.paymentMethod == type;
             return ChoiceChip(
               label: Text(
                 type,
@@ -303,7 +278,7 @@ class _PaymentMethodState extends State<PaymentMethod> {
                 ),
               ),
               selected: isSelected,
-              onSelected: (_) => _selectPaymentType(context, type),
+              onSelected: (_) => _selectpaymentMethod(context, type),
               backgroundColor: Colors.white,
               selectedColor: const Color(0xFF155888),
               shape: RoundedRectangleBorder(
@@ -315,20 +290,5 @@ class _PaymentMethodState extends State<PaymentMethod> {
         ),
       ],
     );
-  }
-
-  String _getInstrumentDescription(String instrument) {
-    switch (instrument) {
-      case 'Cash':
-        return 'Immediate payment with physical currency';
-      case 'Check':
-        return 'Payment via written check';
-      case 'Credit Card':
-        return 'Payment via credit/debit card';
-      case 'Bank Transfer':
-        return 'Electronic funds transfer';
-      default:
-        return '';
-    }
   }
 }

@@ -71,7 +71,7 @@ class SalesOrderHeaderState extends Equatable {
   final DateTime? dateOrderEnd;
   final DateTime? dateForCreditFrom;
   final DateTime? dateForCreditTo;
-  final String? paymentType;
+  final String? paymentMethod;
   final String? orderStatus;
   final bool applyWH;
   final bool discountval;
@@ -135,7 +135,7 @@ class SalesOrderHeaderState extends Equatable {
     this.dateOrderEnd,
     this.dateForCreditFrom,
     this.dateForCreditTo,
-    this.paymentType,
+    this.paymentMethod,
     this.orderStatus,
     this.applyWH = false,
     this.discountval = false,
@@ -251,7 +251,7 @@ class SalesOrderHeaderState extends Equatable {
     DateTime? dateOrderEnd,
     DateTime? dateForCreditFrom,
     DateTime? dateForCreditTo,
-    String? paymentType,
+    String? paymentMethod,
     String? orderStatus,
     bool? applyWH,
     bool? discountval,
@@ -311,7 +311,7 @@ class SalesOrderHeaderState extends Equatable {
       dateOrderEnd: dateOrderEnd ?? this.dateOrderEnd,
       dateForCreditFrom: dateForCreditFrom ?? this.dateForCreditFrom,
       dateForCreditTo: dateForCreditTo ?? this.dateForCreditTo,
-      paymentType: paymentType ?? this.paymentType,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
       orderStatus: orderStatus ?? this.orderStatus,
       applyWH: applyWH ?? this.applyWH,
       discountval: discountval ?? this.discountval,
@@ -435,7 +435,7 @@ class SalesOrderHeaderState extends Equatable {
     dateOrderEnd,
     dateForCreditFrom,
     dateForCreditTo,
-    paymentType,
+    paymentMethod,
     orderStatus,
     applyWH,
     discountval,

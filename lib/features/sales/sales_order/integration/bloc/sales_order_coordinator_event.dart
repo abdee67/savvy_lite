@@ -115,25 +115,18 @@ class ProcessPayment extends SalesOrderCoordinatorEvent {
 }
 
 class UpdatePaymentDetails extends SalesOrderCoordinatorEvent {
-  final String paymentType;
   final String paymentMethod;
-  final String paymentInstrument;
+  final int paymentInstrument;
   final String paymentTerm;
 
   const UpdatePaymentDetails({
-    required this.paymentType,
     required this.paymentMethod,
     required this.paymentInstrument,
     required this.paymentTerm,
   });
 
   @override
-  List<Object> get props => [
-    paymentType,
-    paymentMethod,
-    paymentInstrument,
-    paymentTerm,
-  ];
+  List<Object> get props => [paymentMethod, paymentInstrument, paymentTerm];
 }
 
 class LoadFeeSystemConstants extends SalesOrderCoordinatorEvent {
@@ -264,7 +257,7 @@ class DetailStateChanged extends SalesOrderCoordinatorEvent {
   final List<SalesOrderDetail> currentDetails;
   final List<SalesOrderDetail> createItems;
   final List<SalesOrderDetail> editItems;
-  final Map<double, ItemInBranchModel> stockValidationResults;
+  final Map<int, ItemInBranchModel> stockValidationResults;
 
   const DetailStateChanged({
     required this.currentDetails,
