@@ -204,7 +204,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
 
     final updatedDetail = widget.detail.copyWith(
       itemsTableId: _selectedItem?.id,
-      itemInBranch: _selectedItemInBranch?.id.toDouble(),
+      itemInBranch: _selectedItemInBranch?.id,
       itemBranch: _selectedItemInBranch,
       quantity: double.tryParse(_quantityController.text),
       unitPrice: double.tryParse(_unitPriceController.text),
@@ -288,7 +288,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
       // Create a temporary detail with current values to send for calculation
       final currentDetail = widget.detail.copyWith(
         itemsTableId: _selectedItem?.id,
-        itemInBranch: itemInBranch.id.toDouble(),
+        itemInBranch: itemInBranch.id,
         itemBranch: itemInBranch,
         quantity: double.tryParse(_quantityController.text) ?? 0.0,
         unitOfMeasure: _selectedUom,
@@ -556,7 +556,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
                 if (_selectedItemInBranch != null) {
                   final currentDetail = widget.detail.copyWith(
                     itemsTableId: _selectedItem?.id,
-                    itemInBranch: _selectedItemInBranch?.id.toDouble(),
+                    itemInBranch: _selectedItemInBranch?.id,
                     itemBranch: _selectedItemInBranch,
                     quantity: double.tryParse(value) ?? 0.0,
                     unitOfMeasure: _selectedUom,
@@ -636,8 +636,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
                           if (_selectedItemInBranch != null) {
                             final currentDetail = widget.detail.copyWith(
                               itemsTableId: _selectedItem?.id,
-                              itemInBranch: _selectedItemInBranch?.id
-                                  .toDouble(),
+                              itemInBranch: _selectedItemInBranch?.id,
                               itemBranch: _selectedItemInBranch,
                               quantity:
                                   double.tryParse(_quantityController.text) ??
@@ -720,7 +719,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
                     if (_selectedItemInBranch != null) {
                       final currentDetail = widget.detail.copyWith(
                         itemsTableId: _selectedItem?.id,
-                        itemInBranch: _selectedItemInBranch?.id.toDouble(),
+                        itemInBranch: _selectedItemInBranch?.id,
                         itemBranch: _selectedItemInBranch,
                         quantity:
                             double.tryParse(_quantityController.text) ?? 0.0,

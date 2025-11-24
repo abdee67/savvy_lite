@@ -1,6 +1,6 @@
 class UdcDetails {
   int id;
-  final String detailCode;
+  String detailCode;
   final String description1;
   final String? description2;
   final int? recordHeader;

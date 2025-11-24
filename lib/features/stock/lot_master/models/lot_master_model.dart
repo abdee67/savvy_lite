@@ -15,10 +15,10 @@ class LotMaster {
   DateTime? dateReceived;
   final int? branch;
   final int? location;
-  final int? lotStatus;
+  int? lotStatus;
   final String? batchNumberSupplier;
 
-  final String? statusCode; //A, E, I
+  String? statusCode; //A, E, I
   final String? statusDescription; //Active, Expired, Inactive
   LotExpirationColor? tempColorType;
   ItemEntryModel? itemRef;

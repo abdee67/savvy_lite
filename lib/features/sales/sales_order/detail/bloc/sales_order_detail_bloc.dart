@@ -4,7 +4,6 @@ import 'package:bloc/bloc.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_bloc.dart';
-import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_event.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_event.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_state.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
@@ -684,7 +683,7 @@ class SalesOrderDetailBloc
             // Update the first empty item
             newItem = state.createItems.first.copyWith(
               itemsTableId: itemsTable.id,
-              itemInBranch: itemInBranch.id.toDouble(),
+              itemInBranch: itemInBranch.id,
               quantity: 1.0,
               unitOfMeasure: itemInBranch.unitOfMeasure,
             );
@@ -701,7 +700,7 @@ class SalesOrderDetailBloc
             newItem = SalesOrderDetail(
               tempId: _getNextTempId(state.createItems),
               itemsTableId: itemsTable.id,
-              itemInBranch: itemInBranch.id.toDouble(),
+              itemInBranch: itemInBranch.id,
               quantity: 1.0,
               unitOfMeasure: itemInBranch.unitOfMeasure,
               company: state.companyId!,
@@ -820,6 +819,7 @@ class SalesOrderDetailBloc
               itemNumber: soD.itemInBranch!.toInt(),
               branch: soD.itemInBranch!.toInt(),
               quantityAvailable: availableQuantity,
+              unitOfMeasure: soD.unitOfMeasure,
             ),
           },
         ),
@@ -954,7 +954,7 @@ class SalesOrderDetailBloc
           unitPrice: effectiveUnitPrice,
           extendedPrice:
               (event.salesOrderDetail.quantity ?? 0.0) * effectiveUnitPrice,
-          itemInBranch: event.itemsInBranch!.id.toDouble(),
+          itemInBranch: event.itemsInBranch!.id,
         );
 
         // Expose the recalculated detail so UI can bind to it immediately
