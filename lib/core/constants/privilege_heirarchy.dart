@@ -48,6 +48,9 @@ class PrivilegeHierarchy {
     //Sales Report (child of Sales Dashboard)
     AppRoutes.salesReport: AppRoutes.salesDashboard,
 
+    //Sales Return (child of Sales Dashboard)
+    AppRoutes.salesReturn: AppRoutes.salesDashboard,
+
     // Customer Entry (child of Sales Dashboard)
     AppRoutes.customerEntry: AppRoutes.salesDashboard,
     AppRoutes.customerCreate: AppRoutes.customerEntry,

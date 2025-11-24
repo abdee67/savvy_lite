@@ -63,6 +63,8 @@ class AppRoutes {
 
   static const String salesReport = '$salesDashboard/sales-report';
 
+  static const String salesReturn = '$salesDashboard/sales-return';
+
   //Role sub-routes
   static const String roleCreation = '$roleManagement/add-role';
   static const String roleEdit = '$roleManagement/edit-role';
