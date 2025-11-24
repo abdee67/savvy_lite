@@ -35,6 +35,7 @@ import 'package:savvy_stock/features/sales/sales_order/invoice/screens/invoice_r
 import 'package:savvy_stock/features/sales/sales_order/payment/screens/payment_screen.dart';
 import 'package:savvy_stock/features/sales/sales_order/sales_item_entry/screens/sales_item_entry.dart';
 import 'package:savvy_stock/features/sales/sales_order/sales_report.dart';
+import 'package:savvy_stock/features/sales/void%20sales/screens/sales_return_screen.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/models/item_uom_conversions_model.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/screens/item_uom_conversion_dashboard.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/widgets/item_uom_conversion_create_and_edit.dart.dart';
@@ -190,6 +191,15 @@ class AppRouter {
           requiredPrivilege: AppRoutes.salesInvoice,
           parentPrivilege: AppRoutes.salesCustomerInfo,
           child: InvoiceReviewScreen(),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.salesReturn,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.salesReturn,
+          parentPrivilege: AppRoutes.salesDashboard,
+          child: SalesReturnScreen(authBloc: authBloc),
         ),
         redirect: _protectedRouteRedirect,
       ),

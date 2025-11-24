@@ -214,6 +214,12 @@ class PrivilegeSeeder {
         AppRoutes.salesReport,
         'sales_report',
       ),
+      _createPrivilege(
+        'Sales Return',
+        'link',
+        AppRoutes.salesReturn,
+        'sales_return',
+      ),
 
       // ==================== STOCK MODULE ====================
       //item entry
