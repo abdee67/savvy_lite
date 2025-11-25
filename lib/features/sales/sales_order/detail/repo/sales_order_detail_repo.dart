@@ -51,6 +51,9 @@ class SalesOrderDetailRepository {
         details.toMap(),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
+      print(
+        '🎯 DEBUG: Inserting detail - Lot: ${details.lotNumber}, Taxable: ${details.taxable}',
+      );
     }
 
     await batch.commit(noResult: true);

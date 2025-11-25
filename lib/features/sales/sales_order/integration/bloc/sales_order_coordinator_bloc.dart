@@ -142,7 +142,7 @@ class SalesOrderCoordinatorBloc
         // Populate payment data
         paymentMethod: state.paymentMethod,
         paymentInstrument: state.paymentInstrument,
-        withHoldApply: state.withholdingAmount != null ? 'Y' : 'N',
+        withHoldApply: 'Y',
         paymentTerm: int.tryParse(state.paymentTerm) ?? 0,
         requiredDate: headerToCreate.requiredDate ?? DateTime.now(),
         shippedDate: headerToCreate.shippedDate ?? DateTime.now(),
