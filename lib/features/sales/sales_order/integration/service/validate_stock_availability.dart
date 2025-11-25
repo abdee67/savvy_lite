@@ -48,10 +48,30 @@ class ValidateStockAvailabilityService {
     final lotTypeCodeId = lotTypeCode?.detailCode;
     List<LotMaster> lotMasterList = [];
 
+    // Validate required fields
+    if (soD.itemsTableId == null ||
+        soD.itemBranch == null ||
+        soD.quantity == null) {
+      throw Exception('Missing required fields: item, branch, or quantity');
+    }
+
     // Check if manual lot selection is enabled and lot is provided
     if (!(systemConstant?.lotQtyAutoForSalesBoolean ?? true) &&
         soD.lotNumber != null) {
-      lotMasterList.add(soD.lot!);
+      if (soD.lot != null) {
+        lotMasterList.add(soD.lot!);
+      } else {
+        // Fetch lot if object is missing but ID is present
+        final fetchedLot = await lotMasterRepository.getLotMasterById(
+          soD.lotNumber!,
+          companyId,
+        );
+        if (fetchedLot != null) {
+          lotMasterList.add(fetchedLot);
+        } else {
+          throw Exception('Lot not found for ID: ${soD.lotNumber}');
+        }
+      }
     } else {
       // Automatic lot selection - get all available lots
       lotMasterList = await lotMasterRepository.getLotMastersByItemAndBranch(
@@ -98,40 +118,45 @@ class ValidateStockAvailabilityService {
       }
 
       final availableQty = currentLot.quantityAvailable ?? 0.0;
+      double qtyToDeduct;
+      double newQty;
 
       if (availableQty >= remainingQty) {
         // This lot has enough stock
-        // Create transaction for this lot
-        await itemTransactionsRepository.stockCardCreation(
-          ib: null,
-          loc: null,
-          lm: currentLot,
-          transactionType: 'I',
-          trNo: soD.orderHeader?.orderNumber,
-          remark: 'Sales',
-          qty: -remainingQty,
-          por: null,
-          soD: soD,
-        );
-
+        qtyToDeduct = remainingQty;
+        newQty = availableQty - remainingQty;
         remainingQty = 0;
       } else {
         // Take all available from this lot
-        // Create transaction for this lot
-        await itemTransactionsRepository.stockCardCreation(
-          ib: null,
-          loc: null,
-          lm: currentLot,
-          transactionType: 'I',
-          trNo: soD.orderHeader?.orderNumber,
-          remark: 'Sales',
-          qty: -availableQty,
-          por: null,
-          soD: soD,
-        );
-
+        qtyToDeduct = availableQty;
+        newQty = 0.0;
         remainingQty -= availableQty;
       }
+
+      // Update lot using cascading save - this will update lot, location, and branch
+      final updatedLot = currentLot.copyWith(quantityAvailable: newQty);
+
+      await lotMasterRepository.saveLotForSalesOrder(
+        lot: updatedLot,
+        transactionType: 'I',
+        trNo: soD.orderHeader?.orderNumber,
+        remark: 'Sales',
+        soD: soD,
+        companyId: companyId,
+      );
+
+      // Create transaction AFTER cascading update completes
+      await itemTransactionsRepository.stockCardCreation(
+        ib: null,
+        loc: null,
+        lm: currentLot,
+        transactionType: 'I',
+        trNo: soD.orderHeader?.orderNumber,
+        remark: 'Sales',
+        qty: -qtyToDeduct,
+        por: null,
+        soD: soD,
+      );
     }
 
     if (remainingQty > 0) {
@@ -140,8 +165,8 @@ class ValidateStockAvailabilityService {
       );
     }
 
-    // Update the main item branch quantity(made it comment cuz it update in stock card creation)
-    //  await updateItemBranchQuantity(soD, factor, companyId);
+    // Note: Item branch quantity is now automatically updated by cascading
+    // No need for manual updateItemBranchQuantity call
   }
 
   // Helper method to filter and sort lots for sales
@@ -157,17 +182,33 @@ class ValidateStockAvailabilityService {
     final lotTypeCodeId = lotTypeCode?.detailCode;
     List<LotMaster> filteredLots = [];
 
+    print(
+      'DEBUG: Filtering ${lots.length} lots for sales. LotType: $lotTypeCodeId',
+    );
+
     for (final lot in lots) {
+      print(
+        'DEBUG: Checking lot ${lot.lotNumber} - Status: ${lot.statusCode}, Qty: ${lot.quantityAvailable}, Exp: ${lot.dateExpiration}',
+      );
+
       bool isActiveForSales = await _isLotActiveForSales(
         soD,
         lot,
         lotTypeCodeId,
         companyId,
       );
+
       if (isActiveForSales) {
         filteredLots.add(lot);
+        print('DEBUG: ✓ Lot ${lot.lotNumber} PASSED filter');
+      } else {
+        print('DEBUG: ✗ Lot ${lot.lotNumber} FAILED filter');
       }
     }
+
+    print(
+      'DEBUG: Filter result: ${filteredLots.length} of ${lots.length} lots available',
+    );
 
     // Sort based on lot type
     if (lotTypeCodeId == null || lotTypeCodeId == 'X') {
@@ -261,7 +302,14 @@ class ValidateStockAvailabilityService {
   }
 
   // Helper method for lot-level validation
-  Future<({double availableQty, String message, bool isValid})>
+  Future<
+    ({
+      List<LotMaster> availableLots,
+      double availableQty,
+      String message,
+      bool isValid,
+    })
+  >
   validateLotLevelAvailability(SalesOrderDetail soD, int companyId) async {
     try {
       // Get available lots for this item and branch
@@ -294,12 +342,59 @@ class ValidateStockAvailabilityService {
         companyId,
         lotTypeCodeId,
       );
+      // 🎯 CALCULATE EXPIRED QUANTITY (JAVA LOGIC)
+      double expiredQuantity = 0.0;
+      try {
+        final expiredLots = await lotMasterRepository
+            .getLotMastersByItemAndBranch(
+              itemNumber: soD.itemsTableId!,
+              branch: soD.itemBranch!.branch,
+              companyId: companyId,
+            )
+            .then(
+              (lots) => lots.where((lot) => lot.statusCode == 'E').toList(),
+            );
+
+        expiredQuantity = expiredLots.fold(
+          0.0,
+          (sum, lot) => sum + (lot.quantityAvailable ?? 0.0),
+        );
+
+        // 🎯 ADD LOT EXPIRATION COLOR FILTERING (JAVA LOGIC)
+        final nonExpiredLots = availableLots
+            .where((lot) => lot.statusCode != 'E')
+            .toList();
+        double notAvailableDueToExpiration = 0.0;
+
+        for (final lot in nonExpiredLots) {
+          final expirationColor = await expirationColorsRepository
+              .getLotExpirationColorByDetails(
+                branchId: soD.itemBranch!.branch,
+                itemId: soD.itemsTableId!,
+                companyId: companyId,
+                daysDifference:
+                    lot.dateExpiration?.difference(DateTime.now()).inDays ?? 0,
+              );
+
+          // Only add to "not available" if the lot is NOT active for sales
+          if (expirationColor != null &&
+              expirationColor.activeForSalesFlag == 'N') {
+            notAvailableDueToExpiration += lot.quantityAvailable ?? 0.0;
+          }
+        }
+
+        expiredQuantity += notAvailableDueToExpiration;
+      } catch (e) {
+        print('Error calculating expired quantity: $e');
+      }
 
       // Calculate total available quantity from valid lots
-      double totalAvailable = availableLots.fold(
-        0.0,
-        (sum, lot) => sum + (lot.quantityAvailable ?? 0.0),
-      );
+      double totalAvailable =
+          availableLots.fold(
+            0.0,
+            (sum, lot) => sum + (lot.quantityAvailable ?? 0.0),
+          ) -
+          expiredQuantity;
 
       // Check if specific lot is selected (manual lot selection)
       if (!(systemConstant?.lotQtyAutoForSalesBoolean ?? true) &&
@@ -311,6 +406,7 @@ class ValidateStockAvailabilityService {
 
         if (selectedLot.id == null) {
           return (
+            availableLots: availableLots,
             availableQty: 0.0,
             message: 'Selected lot not available for sales',
             isValid: false,
@@ -319,6 +415,7 @@ class ValidateStockAvailabilityService {
 
         final lotQty = selectedLot.quantityAvailable ?? 0.0;
         return (
+          availableLots: availableLots,
           availableQty: lotQty,
           message:
               'Lot-level: ${lotQty.toStringAsFixed(2)} available in selected lot',
@@ -327,6 +424,7 @@ class ValidateStockAvailabilityService {
       }
 
       return (
+        availableLots: availableLots,
         availableQty: totalAvailable,
         message:
             'Lot-level: ${totalAvailable.toStringAsFixed(2)} available across ${availableLots.length} lots',
@@ -334,6 +432,7 @@ class ValidateStockAvailabilityService {
       );
     } catch (e) {
       return (
+        availableLots: <LotMaster>[],
         availableQty: 0.0,
         message: 'Error checking lot availability: $e',
         isValid: false,
@@ -384,6 +483,13 @@ class ValidateStockAvailabilityService {
     double factor,
     int companyId,
   ) async {
+    // Validate required fields
+    if (soD.itemsTableId == null ||
+        soD.itemBranch == null ||
+        soD.quantity == null) {
+      throw Exception('Missing required fields: item, branch, or quantity');
+    }
+
     // Get all item locations for this item and branch
     final itemLocationsList = await itemLocationsRepository
         .getItemLocationsByBranchAndItem(
@@ -406,41 +512,52 @@ class ValidateStockAvailabilityService {
         location.id!,
         companyId,
       );
-      final availableQty = currentLocation?.quantityOnHand ?? 0.0;
+
+      if (currentLocation == null) {
+        print('DEBUG: Location not found in DB: ${location.id}');
+        continue;
+      }
+
+      final availableQty = currentLocation.quantityOnHand ?? 0.0;
+      double qtyToDeduct;
+      double newQty;
 
       if (availableQty >= remainingQty) {
         // This location has enough stock
-        // Create transaction for this location
-        await itemTransactionsRepository.stockCardCreation(
-          ib: null,
-          loc: currentLocation,
-          lm: null,
-          transactionType: 'I',
-          trNo: soD.orderHeader?.orderNumber,
-          remark: 'Sales',
-          qty: -remainingQty,
-          por: null,
-          soD: soD,
-        );
-
+        qtyToDeduct = remainingQty;
+        newQty = availableQty - remainingQty;
         remainingQty = 0;
       } else {
         // Take all available from this location
-        // Create transaction for this location
-        await itemTransactionsRepository.stockCardCreation(
-          ib: null,
-          loc: currentLocation,
-          lm: null,
-          transactionType: 'I',
-          trNo: soD.orderHeader?.orderNumber,
-          remark: 'Sales',
-          qty: -availableQty,
-          por: null,
-          soD: soD,
-        );
-
+        qtyToDeduct = availableQty;
+        newQty = 0.0;
         remainingQty -= availableQty;
       }
+
+      // Update location using cascading save - this will update location and branch
+      final updatedLocation = currentLocation.copyWith(quantityOnHand: newQty);
+
+      await itemLocationsRepository.saveLocationForSalesOrder(
+        location: updatedLocation,
+        transactionType: 'I',
+        trNo: soD.orderHeader?.orderNumber,
+        remark: 'Sales',
+        soD: soD,
+        companyId: companyId,
+      );
+
+      // Create transaction AFTER cascading update completes
+      await itemTransactionsRepository.stockCardCreation(
+        ib: null,
+        loc: currentLocation,
+        lm: null,
+        transactionType: 'I',
+        trNo: soD.orderHeader?.orderNumber,
+        remark: 'Sales',
+        qty: -qtyToDeduct,
+        por: null,
+        soD: soD,
+      );
     }
 
     if (remainingQty > 0) {
@@ -449,8 +566,8 @@ class ValidateStockAvailabilityService {
       );
     }
 
-    // Update the main item branch quantity
-    // await updateItemBranchQuantity(soD, factor, companyId);
+    // Note: Item branch quantity is now automatically updated by cascading
+    // No need for manual updateItemBranchQuantity call
   }
 
   Future<({double availableQty, String message, bool isValid})>
@@ -495,9 +612,23 @@ class ValidateStockAvailabilityService {
     double factor,
     int companyId,
   ) async {
+    // Validate required fields
+    if (soD.itemsTableId == null || soD.itemBranch == null) {
+      throw Exception('Missing required fields: item or branch');
+    }
+
     final itemsInBranch = await stockItemInBranchRepository.findByItemAndBranch(
       soD.itemsTableId!,
       soD.itemBranch!.branch,
+      companyId,
+    );
+    final qtyToSubtract = factor * soD.quantity!;
+    final newQty = (itemsInBranch!.quantityAvailable ?? 0.0) - qtyToSubtract;
+
+    // Update item branch quantity
+    await stockItemInBranchRepository.updateQuantity(
+      itemsInBranch.id,
+      newQty,
       companyId,
     );
 
@@ -510,7 +641,7 @@ class ValidateStockAvailabilityService {
         transactionType: 'I', // 'I' for Issue/Sales
         trNo: soD.orderHeader?.orderNumber,
         remark: 'Sales',
-        qty: -(soD.quantity ?? 0.0), // Negative quantity for sales
+        qty: -qtyToSubtract, // Negative quantity for sales
         por: null,
         soD: soD,
       );
@@ -570,61 +701,7 @@ class ValidateStockAvailabilityService {
   }
 
   // Helper method to update item branch quantity after location/lot updates
-  Future<void> updateItemBranchQuantity(
-    SalesOrderDetail soD,
-    double factor,
-    int companyId,
-  ) async {
-    final itemsInBranch = await stockItemInBranchRepository.findByItemAndBranch(
-      soD.itemsTableId!,
-      soD.itemBranch!.branch,
-      companyId,
-    );
-
-    if (itemsInBranch != null) {
-      // Recalculate total available quantity from locations/lots
-      double totalAvailable = 0.0;
-      final systemConstant = systemConstantBloc.state.selected;
-      final applyLocationMgmt =
-          systemConstant?.applyLocationMgmBoolean ?? false;
-      final applyLotMgmt = systemConstant?.applyLotMgmBoolean ?? false;
-
-      if (applyLocationMgmt && !applyLotMgmt) {
-        // Location management only: derive branch quantity from locations
-        final locations = await itemLocationsRepository
-            .getItemLocationsByBranchAndItem(
-              branchId: soD.itemBranch!.branch,
-              itemId: soD.itemsTableId!,
-              companyId: companyId,
-            );
-        totalAvailable = locations.fold(
-          0.0,
-          (sum, location) => sum + (location.quantityOnHand ?? 0.0),
-        );
-      } else if (applyLotMgmt) {
-        // Lot management enabled (with or without locations):
-        // derive branch quantity from lot balances so that
-        // items_in_branch reflects lot-level changes.
-        final lots = await lotMasterRepository.getLotMastersByItemAndBranch(
-          branch: soD.itemBranch!.branch,
-          itemNumber: soD.itemsTableId!,
-          companyId: companyId,
-        );
-        totalAvailable = lots.fold(
-          0.0,
-          (sum, lot) => sum + (lot.quantityAvailable ?? 0.0),
-        );
-      }
-
-      // Update item branch with the total available quantity from lots/locations
-      // This assumes lots and locations are stored in the primary UOM, which matches itemsInBranch
-      await stockItemInBranchRepository.updateQuantity(
-        itemsInBranch.id,
-        totalAvailable,
-        companyId,
-      );
-    }
-  }
+  // Note: updateItemBranchQuantity method removed - now handled automatically by cascading saves
 
   double _validateLotManagement(SalesOrderDetail item) {
     final errors = <String>[];

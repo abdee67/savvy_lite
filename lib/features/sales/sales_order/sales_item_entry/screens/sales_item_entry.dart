@@ -207,7 +207,7 @@ class _ItemEntryScreenContentState extends State<ItemEntryScreenContent> {
         print('AddDetailToOrder event dispatched');
         _resetForm();
 
-        ScaffoldMessenger.of(context).showSnackBar(
+        /*  ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               _isEditing
@@ -216,7 +216,7 @@ class _ItemEntryScreenContentState extends State<ItemEntryScreenContent> {
             ),
             backgroundColor: Colors.green,
           ),
-        );
+        );*/
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

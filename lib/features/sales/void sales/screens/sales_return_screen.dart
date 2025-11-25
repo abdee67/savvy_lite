@@ -589,7 +589,7 @@ class _SalesReturnScreen extends State<SalesReturnScreen> {
               final index = entry.key;
               final item = entry.value;
               return _buildItemCard(item, index);
-            }).toList(),
+            }),
           ],
         ),
       ),
@@ -626,11 +626,10 @@ class _SalesReturnScreen extends State<SalesReturnScreen> {
                 ),
               ),
               const Spacer(),
-              if (item.itemsTableId != null)
-                Text(
-                  'ID: ${item.itemsTableId}',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
+              Text(
+                'ID: ${item.itemsTableId}',
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
             ],
           ),
           const SizedBox(height: 12),

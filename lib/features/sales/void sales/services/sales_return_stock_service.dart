@@ -59,6 +59,7 @@ class SalesReturnStockService {
 
       // 3. Create sales return details
       // await salesReturnRepository.createSalesReturnDetailsBatch(returnDetails, createdReturnHeader.id!);
+      // await _adjustStockForReturnDetails(returnDetails, companyId);
     } catch (e) {
       throw Exception('Failed to process sales return: $e');
     }
@@ -133,7 +134,12 @@ class SalesReturnStockService {
     SalesOrderDetail soD,
     int companyId,
   ) async {
-    var itemsInBranch = await itemsInBranchRepository.findById(
+    var itemsInBranch = await itemsInBranchRepository.findByItemAndBranch(
+      soD.itemsTableId!,
+      soD.itemInBranch!,
+      companyId,
+    );
+    itemsInBranch ??= await itemsInBranchRepository.findById(
       soD.itemInBranch!,
       companyId,
     );
@@ -233,10 +239,23 @@ class SalesReturnStockService {
           soD.unitOfMeasure!,
           companyId,
         );
-        final qty = item.quantityOnHand! + (qtyTr * factor);
-        item.quantityOnHand = qty;
 
-        // Save location and create transaction (like Java's saveRow)
+        final changeQty = qtyTr * factor;
+        final newQty = (item.quantityOnHand ?? 0.0) + changeQty;
+
+        final updatedLoc = item.copyWith(quantityOnHand: newQty);
+
+        // Cascading Save - Updates Location and Branch
+        await itemLocationsRepository.saveLocationForSalesOrder(
+          location: updatedLoc,
+          transactionType: 'A',
+          trNo: soD.orderHeader?.orderNumber,
+          remark: 'Void',
+          soD: soD,
+          companyId: companyId,
+        );
+
+        // Create stock card transaction
         await itemTransactionsRepository.stockCardCreation(
           ib: null,
           loc: item,
@@ -244,10 +263,13 @@ class SalesReturnStockService {
           transactionType: 'A',
           trNo: soD.orderHeader?.orderNumber,
           remark: 'Void',
-          qty: soD.quantity! * factor,
+          qty: changeQty,
           por: null,
           soD: soD,
         );
+
+        // Break after updating one location to prevent duplicating stock across all locations
+        break;
       }
     }
   }
@@ -290,32 +312,60 @@ class SalesReturnStockService {
     lt.statusCode = await lotMasterRepository.identifyLotStatus(lt);
 
     // final originalQuantity = await lotMasterRepository.getLotMasterById(item.id!, companyId);
+    // 🎯 FIX: Get UOM if it's null (might not be loaded from database)
+    int? uomId = salesOrderDetail.unitOfMeasure;
+    if (uomId == null && salesOrderDetail.itemInBranch != null) {
+      // Fetch item branch to get default UOM
+      final itemBranch = await itemsInBranchRepository.findById(
+        salesOrderDetail.itemInBranch!,
+        companyId,
+      );
+      uomId = itemBranch?.unitOfMeasure;
+    }
+    if (uomId == null) {
+      throw Exception('Unit of measure not found for sales order detail');
+    }
 
     if (lt.id == null) {
       // Create new lot
       if (lt.quantityAvailable == null || lt.quantityAvailable == 0.0) {
         lt.quantityAvailable = 0.0;
       }
-      final factor = await itemUomConversionsRepository.fromOtherToPrimary(
-        salesOrderDetail.itemsTableId!,
-        salesOrderDetail.unitOfMeasure!,
-        companyId,
-      );
-      final qty = lt.quantityAvailable! + (salesOrderDetail.quantity! * factor);
-      lt.quantityAvailable = qty;
-
-      // Create stock card transaction
-      await itemTransactionsRepository.stockCardCreation(
-        ib: null,
-        loc: null,
-        lm: lt,
-        transactionType: 'R',
-        trNo: salesOrderDetail.orderHeader?.orderNumber,
-        remark: 'Void',
-        qty: qty * factor,
-        por: null,
-        soD: salesOrderDetail,
-      );
+      await lotMasterRepository.createLotMaster(lt);
     }
+
+    final factor = await itemUomConversionsRepository.fromOtherToPrimary(
+      salesOrderDetail.itemsTableId!,
+      uomId,
+      companyId,
+    );
+
+    final changeQty = salesOrderDetail.quantity! * factor;
+    final newTotal = (lt.quantityAvailable ?? 0.0) + changeQty;
+
+    final updatedLot = lt.copyWith(quantityAvailable: newTotal);
+
+    // Cascading Save - Updates Lot, Location, and Branch
+    await lotMasterRepository.saveLotForSalesOrder(
+      lot: updatedLot,
+      transactionType: 'A',
+      trNo: salesOrderDetail.orderHeader?.orderNumber,
+      remark: 'Void',
+      soD: salesOrderDetail,
+      companyId: companyId,
+    );
+
+    // Create stock card transaction
+    await itemTransactionsRepository.stockCardCreation(
+      ib: null,
+      loc: null,
+      lm: lt,
+      transactionType: 'A',
+      trNo: salesOrderDetail.orderHeader?.orderNumber,
+      remark: 'Void',
+      qty: changeQty,
+      por: null,
+      soD: salesOrderDetail,
+    );
   }
 }

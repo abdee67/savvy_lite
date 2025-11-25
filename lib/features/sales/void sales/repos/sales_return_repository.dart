@@ -282,7 +282,7 @@ class SalesReturnRepository {
     );
 
     final dynamic rawValue = maps.first['max_ref_note'];
-    final String? maxRefNote = rawValue != null ? rawValue.toString() : null;
+    final String? maxRefNote = rawValue?.toString();
     return maxRefNote;
   }
 }

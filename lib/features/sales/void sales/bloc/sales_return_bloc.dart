@@ -161,7 +161,9 @@ class SalesReturnBloc extends Bloc<SalesReturnEvent, SalesReturnState> {
                 itemEntryRef: detail.item,
                 itemInBranchRef: detail.itemBranch,
                 unitOfMeasureRef: detail.uom,
-                lotNumberRef: detail.lot,
+                lotNumber: detail.lotNumber,
+                amountCost: detail.amountCost,
+                returnQuantity: detail.quantity,
               ),
             )
             .toList();
@@ -552,7 +554,7 @@ class SalesReturnBloc extends Bloc<SalesReturnEvent, SalesReturnState> {
             ),
       );
 
-      add(RefreshSalesReturns(companyId: authBloc.state.companyId ?? 0));
+      // add(RefreshSalesReturns(companyId: authBloc.state.companyId ?? 0));
     } catch (e) {
       emit(state.errorState('Failed to submit sales return: $e'));
     }

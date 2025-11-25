@@ -161,10 +161,6 @@ class ItemTransactionRepository {
 
     trNumber ??= await nextNumberBloc.generateFormattedNumber('TN');
 
-    if (udc.id == null) {
-      throw Exception('UDC ID is null for transaction type: $transactionType');
-    }
-
     // Calculate quantities and costs
     if (ib.itemNumber == 0 || ib.branch == 0) {
       throw Exception('Item branch missing item number or branch: ${ib.id}');
@@ -227,8 +223,8 @@ class ItemTransactionRepository {
     await db.insert('item_transactions', transaction.toMap());
 
     // Update item branch quantity
-    final updatedIb = ib.copyWith(quantityAvailable: qtyAvInStore);
-    await itemInBranchRepository.update(updatedIb);
+    // final updatedIb = ib.copyWith(quantityAvailable: qtyAvInStore);(Not necessary fpr sales order it will update there not here)
+    //await itemInBranchRepository.update(updatedIb);
   }
 
   Future<void> _createLocationTransaction({
@@ -273,22 +269,12 @@ class ItemTransactionRepository {
       );
     }
 
-    if (ib.id == null) {
-      throw Exception(
-        'Item branch ID is null for item: ${loc.itemNumber}, branch: ${loc.branch}',
-      );
-    }
-
     // Set transaction number
     int? trNumber = por != null
         ? por.poDetailRef?.orderNumber
         : (soD != null ? soD.orderHeader?.orderNumber : trNo);
 
     trNumber ??= await nextNumberBloc.generateFormattedNumber('TN');
-
-    if (udc.id == null) {
-      throw Exception('UDC ID is null for transaction type: $transactionType');
-    }
 
     // Checks moved to top of function
 
@@ -353,13 +339,9 @@ class ItemTransactionRepository {
     final updatedLoc = loc.copyWith(
       quantityOnHand: (loc.quantityOnHand ?? 0.0) + qty,
     );
-    await itemLocationsRepository.updateItemLocation(updatedLoc);
+    // await itemLocationsRepository.updateItemLocation(updatedLoc);//Not necessary fpr sales order it will update there not here
 
-    // Update item branch quantity
-    final updatedIb = ib.copyWith(
-      quantityAvailable: qtyAvInStore + (factorP * qty),
-    );
-    await itemInBranchRepository.update(updatedIb);
+    // Note: Item branch quantity update removed - now handled by cascading save in location repository
   }
 
   Future<void> _createLotTransaction({
@@ -410,22 +392,12 @@ class ItemTransactionRepository {
       );
     }
 
-    if (ib.id == null) {
-      throw Exception(
-        'Item branch ID is null for item: ${lm.itemNumber}, branch: ${lm.branch}',
-      );
-    }
-
     // Set transaction number
     int? trNumber = por != null
         ? por.poDetailRef?.orderNumber
         : (soD != null ? soD.orderHeader?.orderNumber : trNo);
 
     trNumber ??= await nextNumberBloc.generateFormattedNumber('TN');
-
-    if (udc.id == null) {
-      throw Exception('UDC ID is null for transaction type: $transactionType');
-    }
 
     // Calculate quantities and costs
     final qtyAvInStore = ib.quantityAvailable ?? 0.0;
@@ -502,13 +474,13 @@ class ItemTransactionRepository {
     final updatedLm = lm.copyWith(
       quantityAvailable: (lm.quantityAvailable ?? 0.0) + qty,
     );
-    await lotMasterRepository.updateLotMaster(updatedLm);
+    //await lotMasterRepository.updateLotMaster(updatedLm);//Not necessary for sales order it will update there not here
 
     // Update item branch quantity
     final updatedIb = ib.copyWith(
       quantityAvailable: qtyAvInStore + (factorP * qty),
     );
-    await itemInBranchRepository.update(updatedIb);
+    //await itemInBranchRepository.update(updatedIb);//Not necessary for sales order it will update there not here
   }
 
   // Complex inventory transactions - FIXED implementation
