@@ -1095,6 +1095,151 @@ ON sales_return_detail (item_id);
 ''');
     developer.log('Created table: sales_return_detail');
 
+    //crete proforma header table
+    await db.execute('''
+CREATE TABLE quote_order_header (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_number INTEGER NOT NULL,
+  order_date TEXT,
+  conversion_date TEXT,
+  required_date TEXT,
+  shipped_date TEXT,
+  sales_type TEXT,
+  quotation_validation_in_days INTEGER DEFAULT 30,
+  payment_method TEXT,
+  payment_instrument INTEGER,
+  payment_term INTEGER,
+  payment_status INTEGER,
+  credit_date_topay TEXT,
+  currency_code TEXT DEFAULT 'ETB',
+  exchange_rate REAL DEFAULT 1,
+  discount TEXT,
+  discount_amount REAL,
+  discount_in_percent REAL,
+  add_on TEXT,
+  tax REAL,
+  with_hold_apply TEXT,
+  withhold_amount REAL,
+  amount_total REAL,
+  amount_open REAL,
+  unit_cost REAL,
+  amount_cost REAL,
+  order_type INTEGER,
+  order_status TEXT DEFAULT 'Draft',
+  conversion_status TEXT,
+  prforma_status TEXT,
+  void_indicator TEXT,
+  reference_note1 TEXT,
+  reference_note_2 TEXT,
+  reference_note3 TEXT,
+  reference_note4 TEXT,
+  external_ref_number TEXT,
+  fs_number TEXT,
+  sales_represent TEXT,
+  converted_items TEXT,
+  customer_bill_to INTEGER NOT NULL,
+  customer_table_id INTEGER NOT NULL,
+  employees_id INTEGER NOT NULL,
+  company INTEGER,
+  branch_id INTEGER,
+  created_at TEXT,
+  updated_at TEXT,
+  created_by INTEGER,
+  updated_by INTEGER,
+  comments_reason TEXT,
+
+  -- FOREIGN KEYS
+  FOREIGN KEY (customer_bill_to) REFERENCES customer_table(id),
+  FOREIGN KEY (customer_table_id) REFERENCES customer_table(id),
+  FOREIGN KEY (employees_id) REFERENCES employees(id),
+  FOREIGN KEY (company) REFERENCES company_table(id),
+  FOREIGN KEY (branch_id) REFERENCES branch(id),
+  FOREIGN KEY (payment_instrument) REFERENCES udc_details(id),
+  FOREIGN KEY (payment_status) REFERENCES udc_details(id),
+  FOREIGN KEY (order_type) REFERENCES udc_details(id),
+  FOREIGN KEY (prforma_status) REFERENCES udc_details(id)
+);
+CREATE UNIQUE INDEX idx_proforma_header_id_unique
+ON proforma_header (id);
+
+CREATE INDEX idx_ph_customer_bill_to
+ON proforma_header (customer_bill_to);
+
+CREATE INDEX idx_ph_customer_table_id
+ON proforma_header (customer_table_id);
+
+CREATE INDEX idx_ph_employees_id
+ON proforma_header (employees_id);
+
+CREATE INDEX idx_ph_company
+ON proforma_header (company);
+
+CREATE INDEX idx_ph_payment_instrument
+ON proforma_header (payment_instrument);
+
+CREATE INDEX idx_ph_payment_status
+ON proforma_header (payment_status);
+
+CREATE INDEX idx_ph_order_type
+ON proforma_header (order_type);
+
+CREATE INDEX idx_ph_prforma_status
+ON proforma_header (prforma_status);
+    ''');
+    developer.log('Created table: proforma_header');
+
+    //create quote order detail table
+    await db.execute('''
+CREATE TABLE quote_order_detail (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+  quote_order_header_id INTEGER NOT NULL,
+  items_table_id INTEGER NOT NULL,
+  item_in_branch INTEGER,
+  company INTEGER,
+  unit_price REAL,
+  quantity REAL,
+  extended_price REAL,
+  unit_cost REAL,
+  amount_cost REAL,
+  taxable TEXT,
+  discount_percent REAL,
+  discount_amount REAL,
+  unit_of_measure INTEGER,
+  line_status TEXT DEFAULT 'Open',
+  reference1 TEXT,
+  reference2 TEXT,
+  prforma_status INTEGER,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  created_by INTEGER,
+  updated_by INTEGER,
+
+  -- FOREIGN KEYS
+  FOREIGN KEY (quote_order_header_id) REFERENCES quote_order_header(id),
+  FOREIGN KEY (items_table_id) REFERENCES items_table(id),
+  FOREIGN KEY (item_in_branch) REFERENCES items_in_branch(id),
+  FOREIGN KEY (company) REFERENCES company_table(id),
+  FOREIGN KEY (unit_of_measure) REFERENCES udc_details(id),
+  FOREIGN KEY (prforma_status) REFERENCES udc_details(id),
+);
+
+CREATE INDEX idx_qod_quote_order_header_id
+ON quote_order_detail (quote_order_header_id);
+
+CREATE INDEX idx_qod_item_id
+ON quote_order_detail (item_in_branch);
+
+CREATE INDEX idx_qod_company
+ON quote_order_detail (company);
+
+CREATE INDEX idx_qod_unit_of_measure
+ON quote_order_detail (unit_of_measure);
+
+CREATE INDEX idx_qod_prforma_status
+ON quote_order_detail (prforma_status);
+    ''');
+    developer.log('Created table: quote_order_detail');
+
     //. Create sync_queue table
     await db.execute('''
       CREATE TABLE sync_queue (

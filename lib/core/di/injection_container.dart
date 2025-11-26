@@ -9,9 +9,9 @@ import 'package:savvy_stock/features/sales/sales_order/invoice/header/repo/invoi
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/service/sales_order_integration_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/service/validate_stock_availability.dart';
-import 'package:savvy_stock/features/sales/void%20sales/bloc/sales_return_bloc.dart';
-import 'package:savvy_stock/features/sales/void%20sales/repos/sales_return_repository.dart';
-import 'package:savvy_stock/features/sales/void%20sales/services/sales_return_stock_service.dart';
+import 'package:savvy_stock/features/sales/sales_return/bloc/sales_return_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_return/repos/sales_return_repository.dart';
+import 'package:savvy_stock/features/sales/sales_return/services/sales_return_stock_service.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/repo/lot_expiration_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';

@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/repo/sales_order_header_repo.dart';
-import 'package:savvy_stock/features/sales/void%20sales/bloc/sales_return_event.dart';
-import 'package:savvy_stock/features/sales/void%20sales/bloc/sales_return_state.dart';
-import 'package:savvy_stock/features/sales/void%20sales/models/void_sales_details.dart';
-import 'package:savvy_stock/features/sales/void%20sales/models/void_sales_header.dart';
-import 'package:savvy_stock/features/sales/void%20sales/repos/sales_return_repository.dart';
-import 'package:savvy_stock/features/sales/void%20sales/services/sales_return_stock_service.dart';
+import 'package:savvy_stock/features/sales/sales_return/bloc/sales_return_event.dart';
+import 'package:savvy_stock/features/sales/sales_return/bloc/sales_return_state.dart';
+import 'package:savvy_stock/features/sales/sales_return/models/void_sales_details.dart';
+import 'package:savvy_stock/features/sales/sales_return/models/void_sales_header.dart';
+import 'package:savvy_stock/features/sales/sales_return/repos/sales_return_repository.dart';
+import 'package:savvy_stock/features/sales/sales_return/services/sales_return_stock_service.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 
 class SalesReturnBloc extends Bloc<SalesReturnEvent, SalesReturnState> {

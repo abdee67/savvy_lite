@@ -1,7 +1,7 @@
 // features/sales/sales_return/repo/sales_return_repository.dart
 import 'package:savvy_stock/core/services/database/database_service.dart';
-import 'package:savvy_stock/features/sales/void%20sales/models/void_sales_details.dart';
-import 'package:savvy_stock/features/sales/void%20sales/models/void_sales_header.dart';
+import 'package:savvy_stock/features/sales/sales_return/models/void_sales_details.dart';
+import 'package:savvy_stock/features/sales/sales_return/models/void_sales_header.dart';
 import 'package:sqflite/sqflite.dart';
 
 class SalesReturnRepository {

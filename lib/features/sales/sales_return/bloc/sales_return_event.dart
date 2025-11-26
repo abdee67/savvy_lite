@@ -1,8 +1,8 @@
 // features/sales/sales_return/bloc/sales_return_event.dart
 
 import 'package:flutter/foundation.dart';
-import 'package:savvy_stock/features/sales/void%20sales/models/void_sales_details.dart';
-import 'package:savvy_stock/features/sales/void%20sales/models/void_sales_header.dart';
+import 'package:savvy_stock/features/sales/sales_return/models/void_sales_details.dart';
+import 'package:savvy_stock/features/sales/sales_return/models/void_sales_header.dart';
 
 @immutable
 abstract class SalesReturnEvent {}
