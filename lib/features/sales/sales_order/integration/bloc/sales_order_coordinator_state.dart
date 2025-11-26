@@ -49,10 +49,9 @@ class SalesOrderCoordinatorState extends Equatable {
   final DateTime? lastCalculationTime;
 
   // Payment Details
-  final String paymentType;
   final String paymentMethod;
   final int paymentStatus;
-  final String paymentInstrument;
+  final int paymentInstrument;
   final String paymentTerm;
   final String? transactionID;
 
@@ -67,7 +66,7 @@ class SalesOrderCoordinatorState extends Equatable {
   final bool isStockValidated;
   final bool isCalculationsComplete;
   final bool isOrderComplete;
-  final Map<double, ItemInBranchModel> stockValidationResults;
+  final Map<int, ItemInBranchModel> stockValidationResults;
 
   // System Constants
   final String? systemConstantsError;
@@ -99,10 +98,9 @@ class SalesOrderCoordinatorState extends Equatable {
     this.lastDiscountAmount,
     this.lastAmountOpen,
     this.lastCalculationTime,
-    this.paymentType = 'Cash',
-    this.paymentMethod = '',
+    this.paymentMethod = 'Cash',
     this.paymentStatus = 0,
-    this.paymentInstrument = 'Cash',
+    this.paymentInstrument = 0,
     this.paymentTerm = '',
     this.transactionID,
     this.vatRate,
@@ -136,11 +134,11 @@ class SalesOrderCoordinatorState extends Equatable {
   bool get isValid =>
       currentHeader != null &&
       currentDetails.isNotEmpty &&
-      paymentType.isNotEmpty &&
+      paymentMethod.isNotEmpty &&
       invoiceHeader != null &&
       invoiceDetails.isNotEmpty &&
-      paymentInstrument.isNotEmpty &&
-      (paymentType != 'Credit' || paymentTerm.isNotEmpty);
+      paymentInstrument != 0 &&
+      (paymentMethod != 'Credit' || paymentTerm.isNotEmpty);
 
   bool get requiresStockValidation => currentDetails.isNotEmpty;
   bool get isProcessing => status == SalesOrderCoordinatorStatus.processing;
@@ -170,7 +168,6 @@ class SalesOrderCoordinatorState extends Equatable {
     pendingOperations,
     defaultCustomer,
     lastAmountOpen,
-    paymentType,
     paymentMethod,
     paymentInstrument,
     paymentTerm,
@@ -200,7 +197,7 @@ class SalesOrderCoordinatorState extends Equatable {
     bool? isOrderComplete,
     bool? isStockValidated,
     bool? isCalculationsComplete,
-    Map<double, ItemInBranchModel>? stockValidationResults,
+    Map<int, ItemInBranchModel>? stockValidationResults,
     double? lastSubTotal,
     double? lastTax,
     double? lastWithholdAmount,
@@ -209,10 +206,9 @@ class SalesOrderCoordinatorState extends Equatable {
     Set<String>? pendingOperations,
     Customer? defaultCustomer,
     double? lastAmountOpen,
-    String? paymentType,
     int? paymentStatus,
     String? paymentMethod,
-    String? paymentInstrument,
+    int? paymentInstrument,
     String? paymentTerm,
     String? transactionID,
     double? vatRate,
@@ -250,7 +246,6 @@ class SalesOrderCoordinatorState extends Equatable {
       pendingOperations: pendingOperations ?? this.pendingOperations,
       defaultCustomer: defaultCustomer ?? this.defaultCustomer,
       lastAmountOpen: lastAmountOpen ?? this.lastAmountOpen,
-      paymentType: paymentType ?? this.paymentType,
       paymentStatus: paymentStatus ?? this.paymentStatus,
       paymentMethod: paymentMethod ?? this.paymentMethod,
       paymentInstrument: paymentInstrument ?? this.paymentInstrument,

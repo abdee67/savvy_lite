@@ -339,12 +339,12 @@ class UpdateCustomerInfo extends SalesOrderHeaderEvent {
   List<Object?> get props => [customer, currentHeader];
 }
 
-class UpdatePaymentType extends SalesOrderHeaderEvent {
-  final String paymentType;
+class UpdatePaymentMethod extends SalesOrderHeaderEvent {
+  final String paymentMethod;
 
-  const UpdatePaymentType({required this.paymentType});
+  const UpdatePaymentMethod({required this.paymentMethod});
   @override
-  List<Object?> get props => [paymentType];
+  List<Object?> get props => [paymentMethod];
 }
 
 class UpdatePaymentStatus extends SalesOrderHeaderEvent {

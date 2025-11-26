@@ -45,9 +45,8 @@ class _PaymentActionState extends State<PaymentAction> {
         final isValid =
             state.lastTotalAmount != null &&
             state.lastTotalAmount! > 0 &&
-            state.paymentType.isNotEmpty &&
-            state.paymentInstrument.isNotEmpty &&
-            (state.paymentType != 'Credit' || state.paymentTerm.isNotEmpty);
+            state.paymentMethod.isNotEmpty &&
+            (state.paymentMethod != 'Credit' || state.paymentTerm.isNotEmpty);
 
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,

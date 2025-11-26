@@ -4,7 +4,6 @@ import 'package:bloc/bloc.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_bloc.dart';
-import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_event.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_event.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_state.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
@@ -16,6 +15,7 @@ import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_co
 import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
 import 'package:savvy_stock/features/stock/item_entry/data/item_repository.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_repo.dart';
+import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/repo/lot_master_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
@@ -350,6 +350,8 @@ class SalesOrderDetailBloc
           company: companyId,
           salesOrderHeaderId: headerId,
           itemsTableId: state.selected!.itemsTableId,
+          lotNumber: state.selected!.lotNumber,
+          taxable: state.selected?.item?.taxable ?? 'Y',
         ),
         availableValidator: {},
         barCode: '',
@@ -532,6 +534,9 @@ class SalesOrderDetailBloc
     );
 
     final updatedCreateItems = [...state.createItems, newItem];
+    print(
+      '🎯 DEBUG: Added item to create - Lot: ${newItem.lotNumber}, Taxable: ${newItem.taxable}',
+    );
 
     emit(state.copyWith(createItems: updatedCreateItems, selected1: newItem));
   }
@@ -544,6 +549,9 @@ class SalesOrderDetailBloc
     if (event.index < updatedCreateItems.length) {
       updatedCreateItems[event.index] = event.item;
     }
+    print(
+      '🎯 DEBUG: Updated item in create - Lot: ${event.item.lotNumber}, Taxable: ${event.item.taxable}',
+    );
 
     emit(state.copyWith(createItems: updatedCreateItems));
   }
@@ -684,7 +692,7 @@ class SalesOrderDetailBloc
             // Update the first empty item
             newItem = state.createItems.first.copyWith(
               itemsTableId: itemsTable.id,
-              itemInBranch: itemInBranch.id.toDouble(),
+              itemInBranch: itemInBranch.id,
               quantity: 1.0,
               unitOfMeasure: itemInBranch.unitOfMeasure,
             );
@@ -701,7 +709,7 @@ class SalesOrderDetailBloc
             newItem = SalesOrderDetail(
               tempId: _getNextTempId(state.createItems),
               itemsTableId: itemsTable.id,
-              itemInBranch: itemInBranch.id.toDouble(),
+              itemInBranch: itemInBranch.id,
               quantity: 1.0,
               unitOfMeasure: itemInBranch.unitOfMeasure,
               company: state.companyId!,
@@ -778,6 +786,7 @@ class SalesOrderDetailBloc
       double availableQuantity = 0.0;
       String validationMessage = '';
       bool isValid = false;
+      List<LotMaster> availableLots = [];
       // Check availability based on system configuration
       if (applyLocationMgmt && applyLotMgmt) {
         // Case 1: Both location and lot management
@@ -786,6 +795,39 @@ class SalesOrderDetailBloc
         availableQuantity = lotAvailability.availableQty;
         validationMessage = lotAvailability.message;
         isValid = lotAvailability.isValid;
+        availableLots = lotAvailability.availableLots;
+        // 🎯 AUTO-ASSIGN LOT NUMBER IN AUTO MODE
+        if (applyLotMgmt &&
+            (systemConstant?.lotQtyAutoForSalesBoolean ?? true) &&
+            soD.lotNumber == null && // Don't overwrite manual selection
+            availableLots.isNotEmpty) {
+          // Auto-assign the first available lot when in auto mode
+          final firstAvailableLot = availableLots.first;
+          final updatedDetail = soD.copyWith(lotNumber: firstAvailableLot.id);
+
+          // Update in create items if it exists there
+          // 🎯 FIX: PROPERLY UPDATE THE CREATE ITEMS LIST
+          final updatedCreateItems = state.createItems.map((item) {
+            if ((item.id != null && item.id == soD.id) ||
+                (item.tempId != null && item.tempId == soD.tempId)) {
+              return updatedDetail;
+            }
+            return item;
+          }).toList();
+
+          // 🎯 EMIT THE UPDATED STATE
+          emit(
+            state.copyWith(
+              createItems: updatedCreateItems,
+              status: SalesOrderDetailStatus
+                  .validatingStock, // Keep validating status
+            ),
+          );
+
+          print(
+            '🎯 DEBUG: Auto-assigned lot number ${firstAvailableLot.id} for item ${soD.itemsTableId}',
+          );
+        }
       } else if (applyLocationMgmt && !applyLotMgmt) {
         // 🎯 Get actual available quantity from ItemsInBranch
         final locationAvailability = await validateStockAvailabilityService
@@ -820,6 +862,7 @@ class SalesOrderDetailBloc
               itemNumber: soD.itemInBranch!.toInt(),
               branch: soD.itemInBranch!.toInt(),
               quantityAvailable: availableQuantity,
+              unitOfMeasure: soD.unitOfMeasure,
             ),
           },
         ),
@@ -954,7 +997,7 @@ class SalesOrderDetailBloc
           unitPrice: effectiveUnitPrice,
           extendedPrice:
               (event.salesOrderDetail.quantity ?? 0.0) * effectiveUnitPrice,
-          itemInBranch: event.itemsInBranch!.id.toDouble(),
+          itemInBranch: event.itemsInBranch!.id,
         );
 
         // Expose the recalculated detail so UI can bind to it immediately
@@ -1324,6 +1367,7 @@ class SalesOrderDetailBloc
   }
 
   // Batch Operations
+  // In SalesOrderDetailBloc - Update _onSaveCreateItems method
   Future<void> _onSaveCreateItems(
     SaveCreateItems event,
     Emitter<SalesOrderDetailState> emit,
@@ -1331,60 +1375,70 @@ class SalesOrderDetailBloc
     try {
       emit(state.copyWith(status: SalesOrderDetailStatus.saving));
 
-      /*  // 1. Validate stock using header's system constants
-      final systemConstant = headerBloc.state.systemConstants;
-      final applyLotMgmt = systemConstant?.applyLotMgmBoolean ?? false;
+      // 🎯 VALIDATE STOCK BEFORE SAVING (JAVA LOGIC)
+      bool allValid = true;
+      double beyondQuantity = 0.0;
 
-      bool allStockValid = true;
       for (final item in state.createItems) {
+        // Check if item has item branch
         if (item.itemInBranch != null) {
+          // Validate stock availability
+          await _onValidateStockAvailability(
+            ValidateStockAvailability(salesOrderDetail: item),
+            emit,
+          );
+
           final branchKey = item.itemInBranch!.toInt();
+          beyondQuantity = state.availableValidator[branchKey] ?? 0.0;
 
-          final beyond = state.availableValidator[branchKey];
-          if (beyond != null && beyond > 0) {
-            allStockValid = false;
-            break;
-          }
-
-          final stockResult = state.stockValidationResults[item.itemInBranch!];
-          if (stockResult != null && (stockResult.quantityAvailable ?? 0) < 0) {
-            allStockValid = false;
-            break;
-          }
-
-          // Additional lot validation if enabled
-          if (applyLotMgmt && item.lotNumber == null) {
-            allStockValid = false;
+          // 🎯 JAVA VALIDATION CONDITIONS
+          if (beyondQuantity > 0.0 ||
+              item.quantity == null ||
+              item.quantity! < 0.0 ||
+              (systemConstantBloc.state.selected?.applyLotMgmBoolean == true &&
+                  !(systemConstantBloc
+                          .state
+                          .selected
+                          ?.lotQtyAutoForSalesBoolean ??
+                      true) &&
+                  (item.lotNumber == null ||
+                      (item.lot?.quantityAvailable ?? 0.0) < item.quantity!))) {
+            allValid = false;
             break;
           }
         }
       }
 
-      if (!allStockValid) {
-        emit(
-          state.copyWith(
-            status: SalesOrderDetailStatus.failure,
-            errorMessage:
-                'Some items have insufficient stock. Please check quantities.',
-          ),
+      if (!allValid) {
+        print(
+          'Quantity beyond available (Beyond quantity is ${beyondQuantity.abs()})!',
         );
-        return;
-      }*/
-      // 🎯 Determine company ID safely for cost calculation
+        throw Exception(
+          'Quantity beyond available (Beyond quantity is ${beyondQuantity.abs()})!',
+        );
+      }
+
+      // 🎯 DETERMINE COMPANY ID SAFELY
       final effectiveCompanyId = state.companyId ?? authBloc.state.companyId;
       if (effectiveCompanyId == null) {
         throw Exception('Company ID is required to save sales order details');
       }
 
-      // 🎯 Calculate all costs before saving
+      // 🎯 CALCULATE ALL COSTS BEFORE SAVING
       add(
         CalculateAllItemCosts(
           salesOrderDetail: state.createItems,
           companyId: effectiveCompanyId,
         ),
       );
-
-      // 3. Save details
+      // 🎯 DEBUG: PRINT DETAILS BEFORE SAVING
+      print('🎯 DEBUG: Saving ${state.createItems.length} sales order details');
+      for (final detail in state.createItems) {
+        print(
+          '🎯 DEBUG: Detail - Lot: ${detail.lotNumber}, Taxable: ${detail.taxable}, Item: ${detail.itemsTableId}, Branch: ${detail.itemInBranch}',
+        );
+      }
+      // 🎯 SAVE DETAILS
       await repository.createSalesOrderDetailBatch(state.createItems);
 
       emit(
@@ -1396,7 +1450,7 @@ class SalesOrderDetailBloc
         ),
       );
 
-      // 🎯 Refresh the list
+      // 🎯 REFRESH THE LIST
       add(RefreshSalesOrderDetails());
     } catch (e) {
       emit(

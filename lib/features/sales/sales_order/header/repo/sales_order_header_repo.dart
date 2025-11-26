@@ -585,4 +585,18 @@ class SalesOrderHeaderRepository {
     );
     return maps.map((map) => SalesOrderHeader.fromMap(map)).toList();
   }
+
+  //get sales order by fs number which it doesnt have void indicator
+  Future<SalesOrderHeader?> getSalesOrderByFsNumber(
+    String fsNumber,
+    int companyId,
+  ) async {
+    final db = await _db;
+    final maps = await db.query(
+      'sales_order_header',
+      where: 'fs_number = ? AND void_indicator IS NULL AND company = ?',
+      whereArgs: [fsNumber, companyId],
+    );
+    return maps.isNotEmpty ? SalesOrderHeader.fromMap(maps.first) : null;
+  }
 }

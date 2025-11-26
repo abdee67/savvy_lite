@@ -44,7 +44,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
 
     // Load payment terms
-    context.read<UdcDetailsBloc>().add(LoadUdcDetailsByGroup('LT'));
+    context.read<UdcDetailsBloc>().add(LoadAllUdcDetails());
 
     // Initialize payment data in coordinator
     final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();

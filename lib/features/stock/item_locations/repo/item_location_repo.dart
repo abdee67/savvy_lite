@@ -1,6 +1,7 @@
 // features/stock/item_locations/repositories/item_locations_repository.dart
 import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -186,5 +187,92 @@ class ItemLocationsRepository extends BaseRepository {
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+  }
+
+  /// Saves item location for sales order and cascades to branch
+  /// Equivalent to Java's ItemLocationsController.saveRow
+  Future<void> saveLocationForSalesOrder({
+    required ItemLocation location,
+    required String transactionType,
+    required int? trNo,
+    required String? remark,
+    required SalesOrderDetail? soD,
+    required int companyId,
+  }) async {
+    double qtyChange = 0.0;
+
+    if (location.id == null) {
+      // New location
+      await createItemLocation(location);
+      qtyChange = location.quantityOnHand ?? 0.0;
+    } else {
+      // Existing location - calculate quantity change
+      final existingLocation = await getItemLocationById(
+        location.id!,
+        companyId,
+      );
+      final oldQty = existingLocation?.quantityOnHand ?? 0.0;
+      final newQty = location.quantityOnHand ?? 0.0;
+
+      qtyChange = newQty - oldQty;
+
+      await updateItemLocation(location);
+      print('Quantity on hand updated: ${location.quantityOnHand}');
+    }
+
+    // Only cascade if quantity changed
+    if (qtyChange != 0.0) {
+      await updatingItemsInBranchQuantityFromLocation(
+        location: location,
+        transactionType: transactionType,
+        trNo: trNo,
+        remark: remark,
+        qtyChange: qtyChange,
+        soD: soD,
+        companyId: companyId,
+      );
+    }
+  }
+
+  /// Updates item in branch from location changes
+  /// Equivalent to Java's ItemLocationsController.updatingItemsInBranchQuantity
+  Future<void> updatingItemsInBranchQuantityFromLocation({
+    required ItemLocation location,
+    required String transactionType,
+    required int? trNo,
+    required String? remark,
+    required double qtyChange,
+    required SalesOrderDetail? soD,
+    required int companyId,
+  }) async {
+    if (location.itemNumber == null || location.branch == null) {
+      throw Exception('Location missing item number or branch');
+    }
+
+    final db = await databaseService.database;
+
+    // 1. Query all locations for this branch and item
+    final locations = await getItemLocationsByBranchAndItem(
+      companyId: companyId,
+      branchId: location.branch!,
+      itemId: location.itemNumber!,
+    );
+
+    // 2. Sum quantities from all locations
+    final totalLocationQty = locations.fold(
+      0.0,
+      (sum, loc) => sum + (loc.quantityOnHand ?? 0.0),
+    );
+
+    // 3. Update items in branch
+    await db.update(
+      'items_in_branch',
+      {'quantity_available': totalLocationQty},
+      where: 'company = ? AND item_number = ? AND branch = ?',
+      whereArgs: [companyId, location.itemNumber, location.branch],
+    );
+
+    // 4. Transaction creation will be handled by item_transaction_repo
+    // to avoid circular dependency
   }
 }

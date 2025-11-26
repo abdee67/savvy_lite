@@ -17,7 +17,7 @@ class SalesOrderDetail extends Equatable {
   final String? reference2;
   final int? salesOrderHeaderId;
   final int? itemsTableId;
-  final double? itemInBranch;
+  final int? itemInBranch;
   final int? company;
   final int? lotNumber;
   final double? unitCost;
@@ -69,12 +69,12 @@ class SalesOrderDetail extends Equatable {
       unitPrice: (map['unit_price'] as num?)?.toDouble(),
       quantity: (map['quantity'] as num?)?.toDouble(),
       extendedPrice: (map['extended_price'] as num?)?.toDouble(),
-      taxable: map['taxable'] as String?,
-      reference1: map['reference1'] as String?,
-      reference2: map['reference2'] as String?,
+      taxable: map['taxable']?.toString(),
+      reference1: map['reference1']?.toString(),
+      reference2: map['reference2']?.toString(),
       salesOrderHeaderId: map['sales_order_header_id'] as int?,
       itemsTableId: map['items_table_id'] as int?,
-      itemInBranch: (map['item_in_branch'] as num?)?.toDouble(),
+      itemInBranch: (map['item_in_branch'] as num?)?.toInt(),
       company: map['company'] as int?,
       lotNumber: map['lot_number'] as int?,
       unitCost: (map['unit_cost'] as num?)?.toDouble(),
@@ -87,7 +87,7 @@ class SalesOrderDetail extends Equatable {
       tempId: map['temp_id'] as int?,
 
       // 👇 Joined objects (optional)
-      item: map['items_table_id'] != null
+      item: map['items_id'] != null
           ? ItemEntryModel(
               id: map['items_table_id'],
               itemsId: map['items_id'],
@@ -106,7 +106,7 @@ class SalesOrderDetail extends Equatable {
               unitOfMeasureDescription: map['unit_of_measure_description'],
             )
           : null,
-      lot: map['lot_number'] != null
+      lot: map['lot_number'] != null && map['batch_number_supplier'] != null
           ? LotMaster(
               id: map['lot_number'],
               batchNumberSupplier: map['batch_number_supplier'],
@@ -123,7 +123,7 @@ class SalesOrderDetail extends Equatable {
               quantityAvailable: map['quantity_available'],
             )
           : null,
-      itemBranch: map['item_in_branch'] != null
+      itemBranch: map['item_in_branch'] != null && map['item_number'] != null
           ? ItemInBranchModel(
               id: map['item_in_branch'],
               itemNumber: map['item_number'],
@@ -133,7 +133,9 @@ class SalesOrderDetail extends Equatable {
               unitOfMeasure: map['unit_of_measure'],
             )
           : null,
-      uom: map['unit_of_measure'] != null
+      uom:
+          map['unit_of_measure'] != null &&
+              map['unit_of_measure_description'] != null
           ? UdcDetails(
               id: map['unit_of_measure'],
               description1: map['unit_of_measure_description'],
@@ -177,7 +179,7 @@ class SalesOrderDetail extends Equatable {
     String? reference2,
     int? salesOrderHeaderId,
     int? itemsTableId,
-    double? itemInBranch,
+    int? itemInBranch,
     int? company,
     int? lotNumber,
     double? unitCost,

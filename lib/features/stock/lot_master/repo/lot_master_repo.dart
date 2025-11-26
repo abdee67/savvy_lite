@@ -1,15 +1,24 @@
 // features/stock/lot_master/repositories/lot_master_repository.dart
 import 'package:savvy_stock/core/repositories/base_repo.dart';
+import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 import 'package:sqflite/sqflite.dart';
 
 class LotMasterRepository extends BaseRepository {
   @override
   final LocalDatabaseService databaseService;
+  final UdcRepository udcRepository;
+  final SystemConstantBloc systemConstantBloc;
 
-  LotMasterRepository({required this.databaseService});
+  LotMasterRepository({
+    required this.databaseService,
+    required this.udcRepository,
+    required this.systemConstantBloc,
+  });
 
   // Get all lot masters for a company
   Future<List<LotMaster>> getLotMasters(
@@ -479,6 +488,102 @@ class LotMasterRepository extends BaseRepository {
     return lots.map((p) => LotMaster.fromMap(p)).toList();
   }
 
+  //get active lots('A')
+  Future<List<LotMaster>> getActiveLotMasters(int companyId) async {
+    final db = await databaseService.database;
+    final lots = await db.rawQuery(
+      '''
+      SELECT lm.*,
+             it.item_description,
+             b.description as branch_name,
+             loc.location_description,
+             ud.detail_code as status_code,
+             ud.description_1 as status_description
+      FROM lot_master lm
+      LEFT JOIN items_table it ON lm.item_number = it.id
+      LEFT JOIN branch_table b ON lm.branch = b.id
+      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN udc_details ud ON lm.lot_status = ud.id
+      WHERE lm.company = ? 
+        AND lm.status_code = 'A'
+      ORDER BY it.item_description, lm.lot_number
+    ''',
+      [companyId],
+    );
+
+    return lots.map((p) => LotMaster.fromMap(p)).toList();
+  }
+
+  Future<String?> identifyLotStatus(LotMaster item) async {
+    UdcDetails? lotStatus;
+
+    if (item.branch != null && item.itemNumber != null) {
+      // Get system constant and lot type
+      final systemConstant = systemConstantBloc.state.selected;
+      final lotTypeDetail = await udcRepository.getUdcDetailById(
+        systemConstant?.lotType,
+      );
+      final lotType = lotTypeDetail?.detailCode;
+
+      bool valid = false;
+      DateTime? targetDate;
+
+      // Determine which date to use based on lot type (EXACT Java logic)
+      if (lotType == 'X' && item.dateExpiration != null) {
+        valid = true;
+        targetDate = item.dateExpiration;
+      } else if (lotType == 'F' && item.dateEffective != null) {
+        valid = true;
+        targetDate = item.dateEffective;
+      } else if (lotType == 'R' && item.dateReceived != null) {
+        valid = true;
+        targetDate = item.dateReceived;
+      }
+
+      if (valid && targetDate != null) {
+        final currentDate = DateTime.now();
+
+        // Calculate days difference (same as Java's ChronoUnit.DAYS.between)
+        final difference = targetDate.difference(currentDate);
+        final days = difference.inDays;
+
+        // Apply the same business rules as Java
+        if (lotType != 'R') {
+          if (days <= 0) {
+            // Expired or past effective date
+            lotStatus = await udcRepository.getSingleUdcDetailsByCode(
+              'LS',
+              'E',
+            );
+          } else {
+            // Active - preserve existing status unless it's expired
+            if (item.lotStatus == null || item.statusCode == 'E') {
+              lotStatus = await udcRepository.getSingleUdcDetailsByCode(
+                'LS',
+                'A',
+              );
+            } else {
+              // Preserve existing status
+              if (item.statusCode != null) {
+                lotStatus = await udcRepository.getSingleUdcDetailsByCode(
+                  'LS',
+                  item.statusCode!,
+                );
+              }
+            }
+          }
+        } else {
+          // For 'R' (Received) type, always set to Active if null
+          lotStatus = item.statusCode != null
+              ? await udcRepository.getSingleUdcDetailsByCode('LS', 'A')
+              : null;
+        }
+      }
+    }
+
+    return lotStatus?.detailCode;
+  }
+
   // Get lot quantity summary by item
   Future<Map<int, double>> getLotQuantitySummaryByItem(int companyId) async {
     final db = await databaseService.database;
@@ -606,5 +711,147 @@ class LotMasterRepository extends BaseRepository {
     } catch (e) {
       return 0.0;
     }
+  }
+
+  /// Saves lot master for sales order and cascades updates to location and branch
+  /// Equivalent to Java's LotMasterController.saveRow
+  Future<void> saveLotForSalesOrder({
+    required LotMaster lot,
+    required String transactionType,
+    required int? trNo,
+    required String? remark,
+    required SalesOrderDetail? soD,
+    required int companyId,
+  }) async {
+    if (lot.lotNumber == null) {
+      throw Exception('Lot number should not be empty!');
+    }
+
+    // Validate lot dates based on lot type
+    final systemConstant = systemConstantBloc.state.selected;
+    final lotTypeDetail = await udcRepository.getUdcDetailById(
+      systemConstant?.lotType,
+    );
+    final lotTypeCode = lotTypeDetail?.detailCode;
+
+    bool hasValidDate = false;
+    if (lotTypeCode == 'X' && lot.dateExpiration != null) {
+      hasValidDate = true;
+    } else if (lotTypeCode == 'F' && lot.dateEffective != null) {
+      hasValidDate = true;
+    } else if (lotTypeCode == 'R' && lot.dateReceived != null) {
+      hasValidDate = true;
+    }
+
+    if (!hasValidDate) {
+      throw Exception('The Effective Date & Expiration Date not Correct!');
+    }
+
+    // Identify lot status
+    final lotStatus = await identifyLotStatus(lot);
+    final updatedLot = lot.statusCode != null
+        ? lot.copyWith(statusCode: lotStatus)
+        : lot;
+
+    double qtyChange = 0.0;
+
+    if (lot.id == null) {
+      // New lot
+      final newId = await createLotMaster(updatedLot);
+      qtyChange = lot.quantityAvailable ?? 0.0;
+
+      if (systemConstantBloc.state.selected?.applyLotMgmBoolean == true) {
+        await updatingItemLocationQuantityFromLot(
+          lot: lot.copyWith(id: newId),
+          transactionType: transactionType,
+          trNo: trNo,
+          remark: remark,
+          qtyChange: qtyChange,
+          soD: soD,
+          companyId: companyId,
+        );
+      }
+    } else {
+      // Existing lot - calculate quantity change
+      final existingLot = await getLotMasterById(lot.id!, companyId);
+      final oldQty = existingLot?.quantityAvailable ?? 0.0;
+      final newQty = lot.quantityAvailable ?? 0.0;
+
+      qtyChange = newQty - oldQty;
+
+      await updateLotMaster(updatedLot);
+
+      if (systemConstantBloc.state.selected?.applyLotMgmBoolean == true &&
+          qtyChange != 0.0) {
+        await updatingItemLocationQuantityFromLot(
+          lot: updatedLot,
+          transactionType: transactionType,
+          trNo: trNo,
+          remark: remark,
+          qtyChange: qtyChange,
+          soD: soD,
+          companyId: companyId,
+        );
+      }
+    }
+  }
+
+  /// Updates item location and branch from lot changes
+  /// Equivalent to Java's LotMasterController.updatingItemLocationQuantity
+  Future<void> updatingItemLocationQuantityFromLot({
+    required LotMaster lot,
+    required String transactionType,
+    required int? trNo,
+    required String? remark,
+    required double qtyChange,
+    required SalesOrderDetail? soD,
+    required int companyId,
+  }) async {
+    if (lot.itemNumber == null || lot.branch == null || lot.location == null) {
+      throw Exception('Lot missing required fields: item, branch, or location');
+    }
+
+    final db = await databaseService.database;
+
+    // 1. Sum all lots for this location
+    final lotQtySum = await getTotalQuantityForLocation(
+      companyId,
+      lot.itemNumber!,
+      lot.branch!,
+      lot.location!,
+    );
+
+    // 2. Update item location quantity
+    await db.update(
+      'item_location',
+      {'quantity_on_hand': lotQtySum},
+      where: 'company = ? AND item_number = ? AND branch = ? AND location = ?',
+      whereArgs: [companyId, lot.itemNumber, lot.branch, lot.location],
+    );
+
+    // 3. Create transaction for lot (this is done HERE, not in handleLotStockUpdate)
+    // This will be called from item_transaction_repo, so we skip it here to avoid circular dependency
+    // The transaction creation will be handled by the calling code
+
+    // 4. Query all locations for this branch
+    final locationResults = await db.rawQuery(
+      '''
+      SELECT SUM(quantity_on_hand) as total_qty 
+      FROM item_location 
+      WHERE company = ? AND item_number = ? AND branch = ?
+    ''',
+      [companyId, lot.itemNumber, lot.branch],
+    );
+
+    final branchQtySum =
+        (locationResults.first['total_qty'] as num?)?.toDouble() ?? 0.0;
+
+    // 5. Update items in branch
+    await db.update(
+      'items_in_branch',
+      {'quantity_available': branchQtySum},
+      where: 'company = ? AND item_number = ? AND branch = ?',
+      whereArgs: [companyId, lot.itemNumber, lot.branch],
+    );
   }
 }

@@ -961,6 +961,140 @@ CREATE TABLE salespersons (
 CREATE INDEX idx_sales_person_company ON salespersons(company);
 ''');
     developer.log('Created table: salespersons');
+
+    // create sales retrun header table
+    await db.execute('''
+  CREATE TABLE sales_return_header (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+  order_date TEXT,
+  required_date TEXT,
+  shipped_date TEXT,
+  return_date TEXT,
+
+  sales_type TEXT,
+  payment_method TEXT,
+  payment_instrument INTEGER,
+  discount TEXT,
+  add_on TEXT,
+  tax REAL,
+  with_hold_apply TEXT,
+  withhold_amount REAL,
+  discount_amount REAL,
+  discount_in_percent REAL,
+
+  reference_note1 TEXT,
+  reference_note_2 TEXT,
+  reference_note3 TEXT,
+  reference_note4 TEXT,
+
+  comments_sales TEXT,
+  credit_date_topay TEXT,
+  fs_number TEXT,
+  void_indicator TEXT,
+
+  customer_bill_to INTEGER NOT NULL,
+  customer_table_id INTEGER NOT NULL,
+  employees_id INTEGER NOT NULL,
+
+  amount_total REAL,
+  company INTEGER,
+  payment_term INTEGER,
+  payment_status INTEGER,
+  order_number INTEGER,
+  amount_open REAL,
+  order_type INTEGER,
+  unit_cost REAL,
+  amount_cost REAL,
+  return_status INTEGER,
+  sales_represent TEXT,
+  comment_for_return TEXT,
+
+  -- FOREIGN KEYS
+  FOREIGN KEY (customer_bill_to) REFERENCES customer_table(id),
+  FOREIGN KEY (customer_table_id) REFERENCES customer_table(id),
+  FOREIGN KEY (employees_id) REFERENCES employees(id),
+  FOREIGN KEY (company) REFERENCES company_table(id),
+  FOREIGN KEY (payment_instrument) REFERENCES udc_details(id),
+  FOREIGN KEY (payment_status) REFERENCES udc_details(id),
+  FOREIGN KEY (order_type) REFERENCES udc_details(id),
+  FOREIGN KEY (return_status) REFERENCES udc_details(id)
+);
+CREATE UNIQUE INDEX idx_sales_return_header_id_unique
+ON sales_return_header (id);
+
+CREATE INDEX idx_srh_customer_bill_to
+ON sales_return_header (customer_bill_to);
+
+CREATE INDEX idx_srh_customer_table_id
+ON sales_return_header (customer_table_id);
+
+CREATE INDEX idx_srh_employees_id
+ON sales_return_header (employees_id);
+
+CREATE INDEX idx_srh_company
+ON sales_return_header (company);
+
+CREATE INDEX idx_srh_payment_instrument
+ON sales_return_header (payment_instrument);
+
+CREATE INDEX idx_srh_payment_status
+ON sales_return_header (payment_status);
+
+CREATE INDEX idx_srh_order_type
+ON sales_return_header (order_type);
+
+CREATE INDEX idx_srh_return_status
+ON sales_return_header (return_status);
+
+''');
+    developer.log('Created table: sales_return_header');
+    //sales return detail table
+    await db.execute('''
+CREATE TABLE sales_return_details (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  unit_price REAL,
+  quantity REAL,
+  extended_price REAL,
+  taxable TEXT,
+  reference1 TEXT,
+  reference2 TEXT,
+  sales_return_header_id INTEGER NOT NULL,
+  items_table_id INTEGER NOT NULL,
+  item_in_branch INTEGER,
+  company INTEGER,
+  lot_number INTEGER,
+  unit_cost REAL,
+  return_quantity REAL,
+  return_amount_cost REAL,
+  return_amount_price REAL,
+  return_extended_price REAL,
+  amount_cost REAL,
+  unit_of_measure INTEGER,
+  return_status INTEGER,
+  return_reason INTEGER,
+
+  -- FOREIGN KEYS
+  FOREIGN KEY (sales_return_header_id) REFERENCES sales_return_header(id),
+  FOREIGN KEY (items_table_id) REFERENCES items_table(id),
+  FOREIGN KEY (item_in_branch) REFERENCES items_in_branch(id),
+  FOREIGN KEY (company) REFERENCES company_table(id),
+  FOREIGN KEY (lot_number) REFERENCES lot_master(id),
+  FOREIGN KEY (unit_of_measure) REFERENCES udc_details(id),
+  FOREIGN KEY (return_status) REFERENCES udc_details(id),
+  FOREIGN KEY (return_reason) REFERENCES udc_details(id)
+);
+
+
+CREATE INDEX idx_srd_sales_return_header_id
+ON sales_return_detail (sales_return_header_id);
+
+CREATE INDEX idx_srd_item_id
+ON sales_return_detail (item_id);
+
+''');
+    developer.log('Created table: sales_return_detail');
+
     //. Create sync_queue table
     await db.execute('''
       CREATE TABLE sync_queue (
@@ -974,7 +1108,6 @@ CREATE INDEX idx_sales_person_company ON salespersons(company);
         last_attempt INTEGER
       )
     ''');
-    developer.log('Created table: sync_queue');
 
     // Add indexes for better performance
     await db.execute('CREATE INDEX idx_company ON company_table(id)');
@@ -1049,6 +1182,7 @@ CREATE INDEX idx_sales_person_company ON salespersons(company);
       {'id': 19, 'header_code': 'C9', 'udc_description': 'Item Category 9'},
       {'id': 20, 'header_code': 'C10', 'udc_description': 'Item Category 10'},
       {'id': 21, 'header_code': 'LT', 'udc_description': 'Lot Type'},
+      {'id': 22, 'header_code': 'SR', 'udc_description': 'Sales Return Status'},
     ];
 
     for (final udcHeader in udcHeaderSeedData) {
@@ -1196,15 +1330,15 @@ CREATE INDEX idx_sales_person_company ON salespersons(company);
       // --- Payment Status (PS) ---
       {
         'id': 17,
-        'detail_code': 'PENDING',
-        'description_1': 'Pending',
+        'detail_code': 'N',
+        'description_1': 'Not paid',
         'description_2': null,
         'record_header': 5,
         'udc_group': 'PS',
       },
       {
         'id': 18,
-        'detail_code': 'PAID',
+        'detail_code': 'P',
         'description_1': 'Paid',
         'description_2': null,
         'record_header': 5,
@@ -1212,8 +1346,8 @@ CREATE INDEX idx_sales_person_company ON salespersons(company);
       },
       {
         'id': 19,
-        'detail_code': 'OVERDUE',
-        'description_1': 'Overdue',
+        'detail_code': 'S',
+        'description_1': 'Partially paid',
         'description_2': null,
         'record_header': 5,
         'udc_group': 'PS',
@@ -1525,6 +1659,317 @@ CREATE INDEX idx_sales_person_company ON salespersons(company);
         'record_header': 21,
         'udc_group': 'LT',
       },
+      {
+        'id': 44,
+        'detail_code': 'DG',
+        'description_1': 'Damaged Goods',
+        'description_2': 'Product arrived broken or defective',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 45,
+        'detail_code': 'EG',
+        'description_1': 'Expired Goods',
+        'description_2': 'Expired items (pharmacy, food, etc.)',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 46,
+        'detail_code': 'WI',
+        'description_1': 'Wrong Item Supplied',
+        'description_2': 'Item mismatch compared to customer order',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 47,
+        'detail_code': 'WQ',
+        'description_1': 'Wrong Quantity Supplied',
+        'description_2': 'More or fewer units supplied than ordered',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 48,
+        'detail_code': 'QI',
+        'description_1': 'Quality Issues',
+        'description_2': 'Customer not satisfied with product quality',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 49,
+        'detail_code': 'PR',
+        'description_1': 'Product Recall',
+        'description_2': 'Manufacturer recall due to safety/defect issues',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 50,
+        'detail_code': 'CM',
+        'description_1': 'Customer Changed Mind',
+        'description_2': 'Return allowed within grace period',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 51,
+        'detail_code': 'OC',
+        'description_1': 'Order Cancellation',
+        'description_2': 'Customer canceled after invoicing but before usage',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 52,
+        'detail_code': 'LD',
+        'description_1': 'Late Delivery',
+        'description_2': 'Goods delivered outside agreed time',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 53,
+        'detail_code': 'PI',
+        'description_1': 'Packaging Issues',
+        'description_2': 'Leaking, tampered, or opened package',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 54,
+        'detail_code': 'WC',
+        'description_1': 'Warranty / Guarantee Claim',
+        'description_2': 'Returned within warranty terms',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 55,
+        'detail_code': 'ND',
+        'description_1': 'Not as Described',
+        'description_2': 'Product specs don’t match description',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 56,
+        'detail_code': 'DS',
+        'description_1': 'Duplicate Sale',
+        'description_2': 'Mistaken duplicate invoice/order',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 57,
+        'detail_code': 'W1',
+        'description_1': 'Wrong Customer Selected',
+        'description_2': 'Sale recorded under wrong customer',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 58,
+        'detail_code': 'W2',
+        'description_1': 'Wrong Item Selected',
+        'description_2': 'Wrong product/service chosen before finalizing sale',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 59,
+        'detail_code': 'W3',
+        'description_1': 'Wrong Price Applied',
+        'description_2': 'Pricing error discovered immediately',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 60,
+        'detail_code': 'D1',
+        'description_1': 'Discount Mistake',
+        'description_2': 'Wrong discount percentage applied',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 61,
+        'detail_code': 'P2',
+        'description_1': 'Payment Error',
+        'description_2':
+            'Customer payment failed or incorrect payment recorded',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 62,
+        'detail_code': 'C3',
+        'description_1': 'Cashier Mistake',
+        'description_2': 'Accidental entry (e.g., double billing)',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 63,
+        'detail_code': 'T4',
+        'description_1': 'Training/Test Transaction',
+        'description_2': 'Dummy transactions during training/testing',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 64,
+        'detail_code': 'S5',
+        'description_1': 'System Error / Power Failure',
+        'description_2': 'Technical issue during transaction',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 65,
+        'detail_code': 'C6',
+        'description_1': 'Customer Walked Away / No Payment',
+        'description_2': 'Customer didn’t complete purchase',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 66,
+        'detail_code': 'FP',
+        'description_1': 'Fraud Prevention',
+        'description_2': 'Suspicious sale identified and canceled',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 67,
+        'detail_code': 'DI',
+        'description_1': 'Duplicate Invoice',
+        'description_2': 'Accidentally issued two invoices for same order',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 68,
+        'detail_code': 'O7',
+        'description_1': 'Order Cancelled Before Fulfillment',
+        'description_2': 'Sale voided before goods delivered',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 69,
+        'detail_code': 'S1',
+        'description_1': 'Incorrect Size/Variant',
+        'description_2':
+            'Product returned due to wrong size, color, or variant selection',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 70,
+        'detail_code': 'S2',
+        'description_1': 'Late Defect Discovery',
+        'description_2': 'Customer discovers a defect after initial inspection',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 71,
+        'detail_code': 'S3',
+        'description_1': 'Allergic Reaction / Health Issue',
+        'description_2':
+            'Returned due to personal health issues (pharma, food, etc.)',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 72,
+        'detail_code': 'S4',
+        'description_1': 'Price/Offer Mismatch',
+        'description_2':
+            'Customer returns because of price difference or promotion mismatch',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 73,
+        'detail_code': 'S8',
+        'description_1': 'Gift Return',
+        'description_2':
+            'Returned because it was gifted, not wanted by recipient',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 74,
+        'detail_code': 'S6',
+        'description_1': 'Shipping Damage (Carrier Fault)',
+        'description_2':
+            'Product damaged during transit, not manufacturer fault',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 75,
+        'detail_code': 'S7',
+        'description_1': 'Seasonal / Promotional Return',
+        'description_2': 'Customer returns a promotional or seasonal item',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 76,
+        'detail_code': 'V1',
+        'description_1': 'Customer Changed Mind Before Payment',
+        'description_2': 'Sale canceled before payment attempt',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 77,
+        'detail_code': 'V2',
+        'description_1': 'System Timeout / Session Expiry',
+        'description_2': 'Transaction aborted due to system timeout',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 78,
+        'detail_code': 'V3',
+        'description_1': 'Inventory Not Available',
+        'description_2': 'Sale voided because stock was not actually available',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 79,
+        'detail_code': 'V4',
+        'description_1': 'Duplicate Entry Detected Before Invoice',
+        'description_2': 'Mistaken entry detected before invoicing',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 80,
+        'detail_code': 'V5',
+        'description_1': 'Promotional / Discount Override Error',
+        'description_2':
+            'Sale voided because a promotion or discount was misapplied',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 81,
+        'detail_code': 'OT',
+        'description_1': 'Others',
+        'description_2': 'Other Reason',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
     ];
 
     for (final lotType in udcDetailsSeedData) {
@@ -1778,6 +2223,7 @@ CREATE INDEX idx_sales_person_company ON salespersons(company);
       AppRoutes.salesCustomerInfo,
       AppRoutes.salesItemEntry,
       AppRoutes.salesReport,
+      AppRoutes.salesReturn,
     ];
 
     for (final uri in salesPrivileges) {

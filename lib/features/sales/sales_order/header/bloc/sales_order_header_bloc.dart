@@ -108,7 +108,7 @@ class SalesOrderHeaderBloc
     on<SetDefaultCustomer>(_onSetDefaultCustomer);
 
     // Payment & Workflow
-    on<UpdatePaymentType>(_onUpdatePaymentType);
+    on<UpdatePaymentMethod>(_onUpdatePaymentMethod);
     on<UpdatePaymentStatus>(_onUpdatePaymentStatus);
     on<SetPaymentTerm>(_onSetPaymentTerm);
 
@@ -426,7 +426,10 @@ class SalesOrderHeaderBloc
         header.orderDate!,
       );
 
-      final paymentStatus = await _getPaymentStatus('N');
+      final paymentStatus = await udcDetailRepository.getSingleUdcDetailsByCode(
+        'N',
+        "PS",
+      );
 
       final discount = header.discountAmount ?? 0.0;
       final total = header.amountTotal ?? 0.0;
@@ -436,6 +439,7 @@ class SalesOrderHeaderBloc
         creditDateToPay: dueDate,
         paymentStatus: paymentStatus?.id,
         amountOpen: openAmount,
+        orderType: header.orderType,
       );
     }
 
@@ -974,7 +978,7 @@ class SalesOrderHeaderBloc
             createItems: [newHeader],
             selected: newHeader,
             nextOrderNumber: nextOrderNumber,
-            paymentType: 'Cash',
+            paymentMethod: 'Cash',
             applyWH: systemConstantBloc.systemConstantService
                 .shouldApplyWithholding(0.0),
             defaultCustomer: state.defaultCustomer,
@@ -989,7 +993,7 @@ class SalesOrderHeaderBloc
             createItems: [newHeader],
             selected: newHeader,
             nextOrderNumber: nextOrderNumber,
-            paymentType: 'Cash',
+            paymentMethod: 'Cash',
             applyWH: systemConstantBloc.systemConstantService
                 .shouldApplyWithholding(0.0),
             defaultCustomer: defaultCustomer,
@@ -1035,7 +1039,7 @@ class SalesOrderHeaderBloc
           createItems: [newHeader],
           selected: newHeader,
           nextOrderNumber: nextOrderNumber,
-          paymentType: 'Cash',
+          paymentMethod: 'Cash',
         ),
       );
     } catch (e) {
@@ -1108,7 +1112,10 @@ class SalesOrderHeaderBloc
       );
 
       // Update payment status for credit sales
-      final paymentStatus = await _getPaymentStatus('N'); // 'N' for Not Paid
+      final paymentStatus = await udcDetailRepository.getSingleUdcDetailsByCode(
+        'N',
+        "PS",
+      ); // 'N' for Not Paid
 
       final updatedHeader = state.selected?.copyWith(
         creditDateToPay: dueDate,
@@ -1152,14 +1159,14 @@ class SalesOrderHeaderBloc
     }
   }
 
-  void _onUpdatePaymentType(
-    UpdatePaymentType event,
+  void _onUpdatePaymentMethod(
+    UpdatePaymentMethod event,
     Emitter<SalesOrderHeaderState> emit,
   ) {
-    emit(state.copyWith(paymentType: event.paymentType));
+    emit(state.copyWith(paymentMethod: event.paymentMethod));
 
     // If switching to credit, ensure payment term is set
-    if (event.paymentType == 'Credit' && state.selected != null) {
+    if (event.paymentMethod == 'Credit' && state.selected != null) {
       // Trigger credit due date calculation
       add(
         CalculateCreditDueDate(
@@ -1379,21 +1386,5 @@ class SalesOrderHeaderBloc
     } catch (e) {
       return null;
     }
-  }
-
-  Future<UdcDetails?> _getPaymentStatus(String statusCode) async {
-    // Get payment status from UDC
-    try {
-      final paymentStatus = await udcDetailRepository.getUdcDetailsByCode(
-        "PS",
-        statusCode,
-      );
-      if (paymentStatus.isEmpty) {
-        return null;
-      }
-    } catch (e) {
-      return null;
-    }
-    return null;
   }
 }

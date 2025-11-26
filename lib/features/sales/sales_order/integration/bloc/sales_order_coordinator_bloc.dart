@@ -126,8 +126,48 @@ class SalesOrderCoordinatorBloc
     emit(state.loadingState('create_order'));
 
     try {
+      // 1. Prepare the header with latest data from state
+      var headerToCreate = event.header;
+
+      // Populate financial data
+      headerToCreate = headerToCreate.copyWith(
+        amountTotal: state.lastTotalAmount,
+        amountOpen: state.lastAmountOpen,
+        tax: state.lastTax,
+        withholdAmount: state.lastWithholdAmount,
+        discountAmount: state.lastDiscountAmount,
+        // Ensure defaults if null
+        discount: headerToCreate.discount ?? '0',
+        addOn: headerToCreate.addOn ?? '0',
+        // Populate payment data
+        paymentMethod: state.paymentMethod,
+        paymentInstrument: state.paymentInstrument,
+        withHoldApply: 'Y',
+        paymentTerm: int.tryParse(state.paymentTerm) ?? 0,
+        requiredDate: headerToCreate.requiredDate ?? DateTime.now(),
+        shippedDate: headerToCreate.shippedDate ?? DateTime.now(),
+        salesType: headerToCreate.salesType ?? 'Unknown',
+      );
+
+      // Handle payment term if it's a date string (for Credit)
+      if (state.paymentMethod == 'Credit' && state.paymentTerm.isNotEmpty) {
+        try {
+          final creditDate = DateTime.parse(state.paymentTerm);
+          headerToCreate = headerToCreate.copyWith(creditDateToPay: creditDate);
+        } catch (e) {
+          print('Error parsing credit date: $e');
+        }
+      }
+
+      // Calculate total cost from details
+      double totalCost = 0.0;
+      for (final detail in event.details) {
+        totalCost += (detail.amountCost ?? 0.0);
+      }
+      headerToCreate = headerToCreate.copyWith(amountCost: totalCost);
+
       await integrationService.createSalesOrderWithDetails(
-        header: event.header,
+        header: headerToCreate,
         details: event.details,
       );
       final currentHeader = headerBloc.state.selected;
@@ -437,15 +477,14 @@ class SalesOrderCoordinatorBloc
     Emitter<SalesOrderCoordinatorState> emit,
   ) {
     print(
-      'Coordinator: Updating payment details - Type: ${event.paymentType}, Instrument: ${event.paymentInstrument}',
+      'Coordinator: Updating payment details - Type: ${event.paymentMethod}, Instrument: ${event.paymentInstrument}',
     );
 
     emit(
       state.copyWith(
-        paymentType: event.paymentType,
         paymentMethod: event.paymentMethod,
         paymentInstrument: event.paymentInstrument,
-        paymentTerm: event.paymentTerm,
+        paymentTerm: event.paymentTerm.toString(),
         lastOperation: 'Payment details updated',
         lastSyncTime: DateTime.now(),
       ),
@@ -453,9 +492,9 @@ class SalesOrderCoordinatorBloc
 
     // Update header with payment details if header exists
     if (state.currentHeader != null) {
-      headerBloc.add(UpdatePaymentType(paymentType: event.paymentType));
+      headerBloc.add(UpdatePaymentMethod(paymentMethod: event.paymentMethod));
 
-      if (event.paymentTerm.isNotEmpty) {
+      if (event.paymentTerm.toString().isNotEmpty) {
         headerBloc.add(
           SetPaymentTerm(paymentTermId: int.parse(event.paymentTerm)),
         );
@@ -513,7 +552,7 @@ class SalesOrderCoordinatorBloc
 
     // Update header with payment details
     final updatedHeader = currentHeader.copyWith(
-      paymentMethod: state.paymentType,
+      paymentMethod: state.paymentMethod,
       paymentTerm: int.parse(state.paymentTerm),
       referenceNote1: transactionID,
       paymentStatus: state.paymentStatus,
@@ -666,6 +705,7 @@ class SalesOrderCoordinatorBloc
 
       final preparedHeader = headerBloc.state.selected;
       final defaultCustomer = headerBloc.state.defaultCustomer;
+      final paymentInstrument = state.paymentInstrument;
 
       emit(
         state
@@ -676,8 +716,8 @@ class SalesOrderCoordinatorBloc
             .copyWith(
               currentHeader: preparedHeader,
               currentDetails: const [],
-              paymentType: 'Cash',
-              paymentInstrument: 'Cash',
+              paymentMethod: 'Cash',
+              paymentInstrument: paymentInstrument,
               isOrderComplete: false,
               isStockValidated: false,
               isCalculationsComplete: false,
