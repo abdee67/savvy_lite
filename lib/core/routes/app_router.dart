@@ -31,6 +31,9 @@ import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/customer/screens/customer_list.dart';
 import 'package:savvy_stock/features/sales/customer/screens/sales_customer_screen.dart';
 import 'package:savvy_stock/features/sales/customer/widget/customer_create_edit.dart';
+import 'package:savvy_stock/features/sales/quotation_order/screens/quote_customer_screen/quote_customer_entry.dart';
+import 'package:savvy_stock/features/sales/quotation_order/screens/quote_item_entry_screen/quote_item_entry.dart';
+import 'package:savvy_stock/features/sales/quotation_order/screens/quote_payment_screen/quote_payment_screen.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/screens/invoice_review_screen.dart';
 import 'package:savvy_stock/features/sales/sales_order/payment/screens/payment_screen.dart';
 import 'package:savvy_stock/features/sales/sales_order/sales_item_entry/screens/sales_item_entry.dart';
@@ -200,6 +203,37 @@ class AppRouter {
           requiredPrivilege: AppRoutes.salesReturn,
           parentPrivilege: AppRoutes.salesDashboard,
           child: SalesReturnScreen(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Quotation Order
+      GoRoute(
+        path: AppRoutes.quotationOrder,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.quotationOrder,
+          parentPrivilege: AppRoutes.salesDashboard,
+          child: QuotationCustomerInfoScreen(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.quotatioItemEntry,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.quotatioItemEntry,
+          parentPrivilege: AppRoutes.quotationOrder,
+          child: QuotationItemEntryScreen(),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.quotationOrderPayment,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.quotationOrderPayment,
+          parentPrivilege: AppRoutes.quotationOrder,
+          child: QuotePaymentScreen(
+            authBloc: authBloc,
+            orderData: state.extra as Map<String, dynamic>?,
+          ),
         ),
         redirect: _protectedRouteRedirect,
       ),

@@ -10,6 +10,14 @@ import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_
 import 'package:savvy_stock/features/sales/quotation_order/model/quotation_order_detail.dart';
 import 'package:savvy_stock/features/sales/quotation_order/model/quotation_order_header.dart';
 import 'package:savvy_stock/features/sales/quotation_order/repo/quotation_order_repo.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/detail/bloc/invoice_detail.event.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/detail/bloc/invoice_detail_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/detail/model/invoice_detail_model.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/detail/repo/invoice_detail_repo.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/header/bloc/invoice_header_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/header/bloc/invoice_header_event.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/header/model/invoice_header_model.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/header/repo/invoice_header_repo.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_repo.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
@@ -24,6 +32,10 @@ class QuotationOrderBloc
   final CustomerRepository customerRepository;
   final ItemUomConversionsRepository uomConversionsRepository;
   final StockItemInBranchRepository itemInBranchRepository;
+  final InvoiceHistoryDetailBloc invoiceDetailBloc;
+  final InvoiceHistoryHeaderBloc invoiceHeaderBloc;
+  final InvoiceHistoryDetailRepository invoiceDetailRepository;
+  final InvoiceHistoryHeaderRepository invoiceHeaderRepository;
   final UdcRepository udcRepository;
 
   StreamSubscription? _authSubscription;
@@ -36,6 +48,10 @@ class QuotationOrderBloc
     required this.customerRepository,
     required this.uomConversionsRepository,
     required this.itemInBranchRepository,
+    required this.invoiceDetailBloc,
+    required this.invoiceHeaderBloc,
+    required this.invoiceDetailRepository,
+    required this.invoiceHeaderRepository,
     required this.udcRepository,
   }) : super(const QuotationOrderState()) {
     _authSubscription = authBloc.stream.listen((authState) {
@@ -78,13 +94,13 @@ class QuotationOrderBloc
 
     on<SelectQuotationOrder>(_onSelectQuotationOrder);
     on<SelectMultipleQuotationOrders>(_onSelectMultipleQuotationOrders);
-    on<ClearSelection>(_onClearSelection);
+    on<ClearQuotationSelection>(_onClearSelection);
     on<CancelQuotationOrder>(_onCancelQuotationOrder);
     on<PrepareCreateQuotationOrder>(_onPrepareCreate);
     on<PrepareEditQuotationOrder>(_onPrepareEdit);
-    on<CancelUpdate>(_onCancelUpdate);
-    on<CancelCreate>(_onCancelCreate);
-    on<DiscardChanges>(_onDiscardChanges);
+    on<CancelQuotationUpdate>(_onCancelUpdate);
+    on<CancelQuotationCreate>(_onCancelCreate);
+    on<DiscardQuotationChanges>(_onDiscardChanges);
 
     // Detail events
     on<LoadQuotationOrderDetails>(_onLoadQuotationOrderDetails);
@@ -102,6 +118,7 @@ class QuotationOrderBloc
     on<UpdateCustomerInfo>(_onUpdateCustomerInfo);
     on<UpdateUnitPriceWithUom>(_onUpdateUnitPriceWithUom);
     on<CalculateExtendedPrice>(_onCalculateExtendedPrice);
+    on<LoadFeeSystemConstants>(_onLoadFeeSystemConstants);
 
     // ✅ ADDING MISSING FINANCIAL EVENTS
     on<ApplyWithholdingTax>(_onApplyWithholdingTax);
@@ -119,7 +136,7 @@ class QuotationOrderBloc
 
     // Filter events
     on<FilterQuotationOrders>(_onFilterQuotationOrders);
-    on<ClearFilters>(_onClearFilters);
+    on<ClearQuotationFilters>(_onClearFilters);
 
     // ✅ ADDING MISSING FILTER EVENTS
     on<SearchQuotationOrders>(_onSearchQuotationOrders);
@@ -178,7 +195,7 @@ class QuotationOrderBloc
         CalculateQuotationTotals(
           header: state.selectedHeader!,
           details: state.createDetailItems,
-          applyWithholding: state.applyWH,
+          applyWithholding: state.canApplyWithholding,
           discountAmount: state.discountAmount,
         ),
       );
@@ -191,7 +208,7 @@ class QuotationOrderBloc
     LoadQuotationOrders event,
     Emitter<QuotationOrderState> emit,
   ) async {
-    emit(state.loadingState());
+    emit(state.loadingState('load_quotation_order'));
 
     try {
       final headers = await repository.getQuotationOrderHeaders(
@@ -218,7 +235,7 @@ class QuotationOrderBloc
     CreateQuotationOrderHeader event,
     Emitter<QuotationOrderState> emit,
   ) async {
-    emit(state.loadingState());
+    emit(state.loadingState('create_quotation_order_header'));
 
     try {
       // Get next order number
@@ -277,7 +294,7 @@ class QuotationOrderBloc
     UpdateQuotationOrderHeader event,
     Emitter<QuotationOrderState> emit,
   ) async {
-    emit(state.loadingState());
+    emit(state.loadingState('update_quotation_order_header'));
 
     try {
       await repository.updateQuotationOrderHeader(event.header);
@@ -291,15 +308,20 @@ class QuotationOrderBloc
           .toList();
 
       emit(
-        state.copyWith(
-          status: QuotationOrderStatus.success,
-          headers: updatedHeaders,
-          filteredHeaders: updatedHeaders,
-          editItems: updatedEditItems,
-          selectedHeader: event.header,
-          successMessage: 'Quotation order updated successfully',
-          error: null,
-        ),
+        state
+            .successState(
+              'Quotation order updated successfully',
+              operation: 'update_quotation_order_header',
+            )
+            .copyWith(
+              status: QuotationOrderStatus.success,
+              headers: updatedHeaders,
+              filteredHeaders: updatedHeaders,
+              editItems: updatedEditItems,
+              selectedHeader: event.header,
+              successMessage: 'Quotation order updated successfully',
+              error: null,
+            ),
       );
     } catch (e) {
       emit(state.errorState('Failed to update quotation order: $e'));
@@ -310,7 +332,7 @@ class QuotationOrderBloc
     DeleteQuotationOrderHeader event,
     Emitter<QuotationOrderState> emit,
   ) async {
-    emit(state.copyWith(status: QuotationOrderStatus.deleting));
+    emit(state.loadingState('delete_quotation_order_header'));
 
     try {
       await repository.deleteQuotationOrderHeader(event.id);
@@ -323,16 +345,21 @@ class QuotationOrderBloc
           .toList();
 
       emit(
-        state.copyWith(
-          status: QuotationOrderStatus.success,
-          headers: updatedHeaders,
-          filteredHeaders: updatedFilteredHeaders,
-          selectedHeader: state.selectedHeader?.id == event.id
-              ? null
-              : state.selectedHeader,
-          successMessage: 'Quotation order deleted successfully',
-          error: null,
-        ),
+        state
+            .successState(
+              'Quotation order deleted successfully',
+              operation: 'delete_quotation_order_header',
+            )
+            .copyWith(
+              status: QuotationOrderStatus.success,
+              headers: updatedHeaders,
+              filteredHeaders: updatedFilteredHeaders,
+              selectedHeader: state.selectedHeader?.id == event.id
+                  ? null
+                  : state.selectedHeader,
+              successMessage: 'Quotation order deleted successfully',
+              error: null,
+            ),
       );
     } catch (e) {
       emit(state.errorState('Failed to delete quotation order: $e'));
@@ -434,7 +461,7 @@ class QuotationOrderBloc
   }
 
   void _onClearSelection(
-    ClearSelection event,
+    ClearQuotationSelection event,
     Emitter<QuotationOrderState> emit,
   ) {
     emit(
@@ -450,7 +477,7 @@ class QuotationOrderBloc
     CancelQuotationOrder event,
     Emitter<QuotationOrderState> emit,
   ) async {
-    emit(state.loadingState());
+    emit(state.loadingState('cancel_quotation_order'));
 
     try {
       final cancelledHeader = event.header.copyWith(
@@ -484,7 +511,7 @@ class QuotationOrderBloc
     LoadQuotationOrderDetails event,
     Emitter<QuotationOrderState> emit,
   ) async {
-    emit(state.loadingState());
+    emit(state.loadingState('load_quotation_order_details'));
 
     try {
       final details = await repository.getQuotationOrderDetailsByHeaderId(
@@ -528,7 +555,7 @@ class QuotationOrderBloc
         CalculateQuotationTotals(
           header: state.selectedHeader!,
           details: updatedDetails,
-          applyWithholding: state.applyWH,
+          applyWithholding: state.canApplyWithholding,
           discountAmount: state.discountAmount,
         ),
       );
@@ -554,7 +581,7 @@ class QuotationOrderBloc
         CalculateQuotationTotals(
           header: state.selectedHeader!,
           details: updatedDetails,
-          applyWithholding: state.applyWH,
+          applyWithholding: state.canApplyWithholding,
           discountAmount: state.discountAmount,
         ),
       );
@@ -565,24 +592,33 @@ class QuotationOrderBloc
     RemoveQuotationOrderDetail event,
     Emitter<QuotationOrderState> emit,
   ) {
-    final updatedDetails = state.createDetailItems.where((detail) {
-      if (detail.id == null) {
-        return detail.tempId != event.detail.tempId;
-      } else {
-        return detail.id != event.detail.id;
+    try {
+      final updatedDetails = state.createDetailItems.where((detail) {
+        if (detail.id == null) {
+          return detail.tempId != event.detail.tempId;
+        } else {
+          return detail.id != event.detail.id;
+        }
+      }).toList();
+
+      emit(state.copyWith(createDetailItems: updatedDetails));
+
+      // Recalculate totals
+      if (state.selectedHeader != null && updatedDetails.isNotEmpty) {
+        add(
+          CalculateQuotationTotals(
+            header: state.selectedHeader!,
+            details: updatedDetails,
+            applyWithholding: state.canApplyWithholding,
+            discountAmount: state.discountAmount,
+          ),
+        );
       }
-    }).toList();
-
-    emit(state.copyWith(createDetailItems: updatedDetails));
-
-    // Recalculate totals
-    if (state.selectedHeader != null && updatedDetails.isNotEmpty) {
-      add(
-        CalculateQuotationTotals(
-          header: state.selectedHeader!,
-          details: updatedDetails,
-          applyWithholding: state.applyWH,
-          discountAmount: state.discountAmount,
+    } catch (e) {
+      emit(
+        state.errorState(
+          'Failed to remove quotation order detail: $e',
+          operation: 'remove_quotation_order_detail',
         ),
       );
     }
@@ -664,7 +700,7 @@ class QuotationOrderBloc
     CalculateQuotationTotals event,
     Emitter<QuotationOrderState> emit,
   ) async {
-    emit(state.calculatingState());
+    emit(state.paymentProcessingState('calculate_quotation_order_totals'));
 
     try {
       final systemConstant = systemConstantBloc.state.selected;
@@ -701,7 +737,8 @@ class QuotationOrderBloc
 
       // Calculate withholding
       double withHoldAmount = 0.0;
-      final applyWithholding = event.applyWithholding ?? state.applyWH ?? false;
+      final applyWithholding =
+          event.applyWithholding ?? state.canApplyWithholding ?? false;
       if (applyWithholding && roundedSubTotal >= withHoldInitials) {
         withHoldAmount = _roundToDecimalPlaces(
           roundedSubTotal * withHoldRate,
@@ -727,7 +764,7 @@ class QuotationOrderBloc
           withholdAmount: withHoldAmount,
           totalAmount: totalAmount,
           discountAmount: discountAmount,
-          applyWH: applyWithholding,
+          canApplyWithholding: applyWithholding,
         ),
       );
     } catch (e) {
@@ -740,7 +777,7 @@ class QuotationOrderBloc
     ApplyWithholdingTax event,
     Emitter<QuotationOrderState> emit,
   ) {
-    emit(state.copyWith(applyWH: event.applyWithholding));
+    emit(state.copyWith(canApplyWithholding: event.applyWithholding));
 
     // Recalculate totals if withholding tax changes
     if (state.selectedHeader != null && state.createDetailItems.isNotEmpty) {
@@ -767,7 +804,7 @@ class QuotationOrderBloc
         CalculateQuotationTotals(
           header: state.selectedHeader!,
           details: state.createDetailItems,
-          applyWithholding: state.applyWH ?? false,
+          applyWithholding: state.canApplyWithholding ?? false,
           discountAmount: event.discountAmount,
         ),
       );
@@ -778,14 +815,88 @@ class QuotationOrderBloc
     UpdateTaxSettings event,
     Emitter<QuotationOrderState> emit,
   ) {
-    // Recalculate totals when tax settings change
-    if (state.createDetailItems.isNotEmpty) {
-      add(
-        CalculateQuotationTotals(
-          header: state.selectedHeader!,
-          details: state.createDetailItems,
-          applyWithholding: event.applyWithholding,
-          discountAmount: state.discountAmount,
+    try {
+      print(
+        'Coordinator: Updating tax and fees - Discount: ${event.discountAmount}, Withholding: ${event.applyWithholding}',
+      );
+
+      // Update withholding in header bloc
+      add(ApplyWithholdingTax(applyWithholding: event.applyWithholding));
+
+      // Update discount in header bloc
+      add(ApplyDiscount(discountAmount: event.discountAmount));
+
+      // Check if withholding can be applied
+      final canApplyWithholding =
+          event.subTotal >= (state.withholdAmount ?? 0.0);
+
+      emit(
+        state.copyWith(
+          totalAmount: event.discountAmount,
+          isWithholdingEnabled: event.applyWithholding,
+          canApplyWithholding: canApplyWithholding,
+          lastOperation: 'Tax and fees updated',
+        ),
+      );
+
+      // Recalculate totals with new settings
+      if (state.createDetailItems.isNotEmpty) {
+        add(
+          CalculateQuotationTotals(
+            header: state.selectedHeader!,
+            details: state.createDetailItems,
+            applyWithholding: state.canApplyWithholding ?? false,
+            discountAmount: state.discountAmount,
+          ),
+        );
+      }
+    } catch (e) {
+      emit(state.errorState('Failed to update tax and fees: $e'));
+    }
+  }
+
+  Future<void> _onLoadFeeSystemConstants(
+    LoadFeeSystemConstants event,
+    Emitter<QuotationOrderState> emit,
+  ) async {
+    try {
+      final systemConstantsService = systemConstantBloc.systemConstantService;
+
+      // Ensure system constants are loaded
+      await systemConstantsService.ensureLoaded();
+
+      final vatRate = systemConstantsService.vatRate;
+      final withholdingRate = systemConstantsService.withholdingRate;
+      final withholdingInitial = systemConstantsService.withholdingInitial;
+
+      print(
+        'Coordinator: Loaded system constants - VAT: $vatRate, Withholding Rate: $withholdingRate, Withholding Initial: $withholdingInitial',
+      );
+
+      emit(
+        state.copyWith(
+          taxRate: vatRate,
+          withholdingRate: withholdingRate,
+          withholdingInitial: withholdingInitial,
+          lastOperation: 'System constants loaded',
+        ),
+      );
+
+      // Recalculate with new rates if we have existing data
+      if (state.createDetailItems.isNotEmpty) {
+        add(
+          CalculateQuotationTotals(
+            header: state.selectedHeader!,
+            details: state.createDetailItems,
+            applyWithholding: state.canApplyWithholding ?? false,
+            discountAmount: state.discountAmount,
+          ),
+        );
+      }
+    } catch (e) {
+      emit(
+        state.copyWith(
+          error: 'Failed to load system constants: ${e.toString()}',
         ),
       );
     }
@@ -882,7 +993,7 @@ class QuotationOrderBloc
   ) async {
     if (state.barCode.isEmpty) return;
 
-    emit(state.loadingState());
+    emit(state.loadingState('scan_barcode_for_quotation_order'));
 
     try {
       // Find item by barcode
@@ -917,7 +1028,7 @@ class QuotationOrderBloc
           // Add new item
           newDetail = QuotationOrderDetail(
             tempId: _getNextTempId(state.createDetailItems),
-            itemsTableId: itemInBranch.itemNumber!,
+            itemsTableId: itemInBranch.itemNumber,
             itemInBranch: itemInBranch.id,
             quantity: 1.0,
             unitOfMeasure: itemInBranch.unitOfMeasure,
@@ -955,11 +1066,9 @@ class QuotationOrderBloc
       final itemInBranch = event.itemInBranch;
       final detail = event.detail;
 
-      if (itemInBranch.itemNumber == null) return;
-
       // Get UOM conversion factor
       final factor = await uomConversionsRepository.fromOtherToAnother(
-        itemInBranch.itemNumber!,
+        itemInBranch.itemNumber,
         detail.unitOfMeasure ?? itemInBranch.unitOfMeasure!,
         itemInBranch.unitOfMeasure!,
         state.companyId!,
@@ -1096,8 +1205,7 @@ class QuotationOrderBloc
           header.referenceNote1?.toLowerCase().contains(query) == true ||
           header.referenceNote2?.toLowerCase().contains(query) == true ||
           header.referenceNote3?.toLowerCase().contains(query) == true ||
-          (header.orderNumber != null &&
-              header.orderNumber.toString().contains(query));
+          (header.orderNumber.toString().contains(query));
     }).toList();
 
     emit(state.copyWith(searchQuery: event.query, filteredHeaders: filtered));
@@ -1115,7 +1223,10 @@ class QuotationOrderBloc
     );
   }
 
-  void _onClearFilters(ClearFilters event, Emitter<QuotationOrderState> emit) {
+  void _onClearFilters(
+    ClearQuotationFilters event,
+    Emitter<QuotationOrderState> emit,
+  ) {
     emit(state.clearFiltersState());
   }
 
@@ -1125,7 +1236,7 @@ class QuotationOrderBloc
     PrepareCreateQuotationOrder event,
     Emitter<QuotationOrderState> emit,
   ) async {
-    emit(state.loadingState());
+    emit(state.loadingState('prepare_new_quotation_order'));
 
     try {
       final nextOrderNumber = await repository.getNextOrderNumber(
@@ -1166,44 +1277,52 @@ class QuotationOrderBloc
       final defaultCustomer = await customerRepository.getDefaultCustomer(
         event.companyId,
       );
-
       // Create initial detail
       final newDetail = QuotationOrderDetail(
         tempId: 1,
-        quoteOrderHeaderId: 0,
+        quoteOrderHeaderId: newHeader.id ?? 0,
         itemsTableId: 0,
         company: event.companyId,
         quantity: 1.0,
         lineStatus: 'Open',
       );
+      print('Quoation detail header id is : ${newDetail.quoteOrderHeaderId}');
 
       emit(
-        state.copyWith(
-          status: QuotationOrderStatus.loaded,
-          createItems: [newHeader],
-          selectedHeader: newHeader,
-          createDetailItems: [newDetail],
-          selectedDetail: newDetail,
-          // Reset financial values
-          subTotal: null,
-          tax: null,
-          withholdAmount: null,
-          totalAmount: null,
-          discountAmount: null,
-          applyWH: systemConstantBloc.systemConstantService
-              .shouldApplyWithholding(0.0),
-          // Reset customer info
-          tinNumber: null,
-          phoneNumbers: null,
-          countryDesc: null,
-          stateDesc: null,
-          regionDesc: null,
-          cityDesc: null,
-          // defaultCustomer: defaultCustomer,
-          // Reset barcode
-          useBarcode: false,
-          barCode: '',
-        ),
+        state
+            .successState(
+              'New quotation order prepared',
+              operation: 'prepare_new_quotation_order',
+            )
+            .copyWith(
+              status: QuotationOrderStatus.loaded,
+              createItems: [newHeader],
+              selectedHeader: newHeader,
+              createDetailItems: [newDetail],
+              selectedDetail: newDetail,
+              // Reset financial values
+              subTotal: null,
+              tax: null,
+              withholdAmount: null,
+              totalAmount: null,
+              discountAmount: null,
+              canApplyWithholding: systemConstantBloc.systemConstantService
+                  .shouldApplyWithholding(0.0),
+              // Reset customer info
+              tinNumber: null,
+              phoneNumbers: null,
+              countryDesc: null,
+              stateDesc: null,
+              regionDesc: null,
+              cityDesc: null,
+              defaultCustomer: defaultCustomer,
+              // Reset barcode
+              useBarcode: false,
+              barCode: '',
+            ),
+      );
+      print(
+        'Coordinator: New order prepared - Header: ${newHeader.id}, defaultCustomerCount=${defaultCustomer ?? 0}',
       );
     } catch (e) {
       emit(state.errorState('Failed to prepare create: $e'));
@@ -1234,7 +1353,10 @@ class QuotationOrderBloc
     }
   }
 
-  void _onCancelUpdate(CancelUpdate event, Emitter<QuotationOrderState> emit) {
+  void _onCancelUpdate(
+    CancelQuotationUpdate event,
+    Emitter<QuotationOrderState> emit,
+  ) {
     emit(
       state.copyWith(
         selected1: null,
@@ -1244,7 +1366,10 @@ class QuotationOrderBloc
     );
   }
 
-  void _onCancelCreate(CancelCreate event, Emitter<QuotationOrderState> emit) {
+  void _onCancelCreate(
+    CancelQuotationCreate event,
+    Emitter<QuotationOrderState> emit,
+  ) {
     emit(
       state.copyWith(
         selectedHeader: null,
@@ -1256,7 +1381,7 @@ class QuotationOrderBloc
   }
 
   void _onDiscardChanges(
-    DiscardChanges event,
+    DiscardQuotationChanges event,
     Emitter<QuotationOrderState> emit,
   ) {
     final unsavedCreateItems = state.createItems
@@ -1289,7 +1414,7 @@ class QuotationOrderBloc
     SaveQuotationOrder event,
     Emitter<QuotationOrderState> emit,
   ) async {
-    emit(state.copyWith(status: QuotationOrderStatus.saving));
+    emit(state.loadingState('save_quotation_order'));
 
     try {
       if (event.header.id == null) {
@@ -1302,8 +1427,24 @@ class QuotationOrderBloc
       if (event.details.isNotEmpty) {
         await _saveQuotationDetails(event.header.id ?? 0, event.details);
       }
+      final updatedHeaders = state.selectedHeader;
+      final updatedDetails = state.createDetailItems;
 
-      emit(state.successState('Quotation order saved successfully'));
+      emit(
+        state
+            .successState(
+              'Quotation order saved successfully',
+              operation: 'save_quotation_order',
+            )
+            .copyWith(
+              createDetailItems: updatedDetails,
+              selectedHeader: updatedHeaders,
+              isOrderComplete: true,
+              //isStockValidated: true,
+              isCalculationsComplete: true,
+            ),
+      );
+      add(GenerateInvoiceFromQuotation());
     } catch (e) {
       emit(state.errorState('Failed to save quotation order: $e'));
     }
@@ -1313,11 +1454,16 @@ class QuotationOrderBloc
     SaveQuotationDetails event,
     Emitter<QuotationOrderState> emit,
   ) async {
-    emit(state.copyWith(status: QuotationOrderStatus.saving));
+    emit(state.loadingState('save_quotation_details'));
 
     try {
       await _saveQuotationDetails(event.headerId, state.createDetailItems);
-      emit(state.successState('Quotation details saved successfully'));
+      emit(
+        state.successState(
+          'Quotation details saved successfully',
+          operation: 'save_quotation_details',
+        ),
+      );
     } catch (e) {
       emit(state.errorState('Failed to save quotation details: $e'));
     }
@@ -1386,7 +1532,7 @@ class QuotationOrderBloc
     GetNextOrderNumber event,
     Emitter<QuotationOrderState> emit,
   ) async {
-    emit(state.loadingState());
+    emit(state.loadingState('get_next_quotation_order_number'));
 
     try {
       final nextOrderNumber = await repository.getNextOrderNumber(
@@ -1409,7 +1555,7 @@ class QuotationOrderBloc
     GenerateNextFsNumber event,
     Emitter<QuotationOrderState> emit,
   ) async {
-    emit(state.loadingState());
+    emit(state.loadingState('generate_next_quotation_order_fs_number'));
 
     try {
       final nextFsNumber = await repository.generateNextFsNumber(
@@ -1506,6 +1652,133 @@ class QuotationOrderBloc
       return defaultOrderType.first;
     } catch (e) {
       return null;
+    }
+  }
+
+  Future<void> _onGenerateInvoiceFromQuotation(
+    GenerateInvoiceFromQuotation event,
+    Emitter<QuotationOrderState> emit,
+  ) async {
+    final currentHeader = state.selectedHeader;
+    final currentDetails = state.createDetailItems;
+
+    emit(state.loadingState('generate_invoice'));
+
+    try {
+      if (currentHeader == null) {
+        throw Exception(
+          'Cannot generate invoice: sales order header is missing',
+        );
+      }
+
+      if (currentDetails.isEmpty) {
+        throw Exception('Cannot generate invoice: no sales order details');
+      }
+
+      // 🎯 Determine company ID safely for invoice
+      final effectiveCompanyId =
+          currentHeader.company ?? authBloc.state.companyId;
+      if (effectiveCompanyId == null) {
+        throw Exception('Cannot generate invoice: company ID is null');
+      }
+
+      // Generate next FS number for invoice
+      final nextFsNumber = await _generateNextInvoiceFsNumber(
+        effectiveCompanyId,
+      );
+
+      // Derive customer info safely
+      final customerName =
+          currentHeader.customerBillToRef?.customerName ??
+          state.defaultCustomer?.contactName ??
+          '';
+      final tinNumber = state.defaultCustomer?.tinNumber ?? '';
+
+      // Create invoice header from sales order header
+      final invoiceHeader = InvoiceHistoryHeader(
+        company: effectiveCompanyId,
+        fsNumber: nextFsNumber,
+        mrcNumber: currentHeader.fsNumber, // Link to sales order
+        dateTransaction: DateTime.now(),
+        customerName: customerName,
+        tinNumber: tinNumber,
+        city: state.defaultCustomer?.city ?? '',
+        country: state.defaultCustomer?.country ?? '',
+        region: state.defaultCustomer?.region ?? '',
+        // salesPerson: currentDetails.first.,
+        totalAmount: state.totalAmount ?? 0.0,
+        taxAmount: state.tax ?? 0.0,
+        withholdAmount: state.withholdAmount ?? 0.0,
+        discountAmount: state.discountAmount ?? 0.0,
+        amountBeforeTax: state.subTotal,
+      );
+
+      // Create invoice header
+      invoiceHeaderBloc.add(CreateInvoiceHistoryHeader(header: invoiceHeader));
+
+      // Wait for header creation
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Get the created header ID
+      final createdHeader = invoiceHeaderBloc.state.selected;
+      if (createdHeader == null || createdHeader.id == null) {
+        throw Exception('Failed to create invoice header');
+      }
+
+      // Create invoice details from sales order details
+      final invoiceDetails = currentDetails.map((salesDetail) {
+        return InvoiceHistoryDetail(
+          invoiceHistory: createdHeader.id!,
+          company: effectiveCompanyId,
+          item: salesDetail.itemTableRef?.itemDescription ?? 'Item',
+          quantityTransaction: salesDetail.quantity ?? 0.0,
+          amountUnitPrice: salesDetail.unitPrice ?? 0.0,
+          amountExtendedPrice: salesDetail.extendedPrice ?? 0.0,
+          unitOfMeasure: salesDetail.itemTableRef?.unitOfMeasure ?? 'PCS',
+        );
+      }).toList();
+
+      // Create all invoice details
+      for (final detail in invoiceDetails) {
+        invoiceDetailBloc.add(CreateInvoiceHistoryDetail(detail: detail));
+      }
+
+      emit(
+        state
+            .successState(
+              'Invoice generated successfully',
+              operation: 'generate_invoice',
+            )
+            .copyWith(
+              invoiceGenerated: true,
+              invoiceHeader: createdHeader,
+              invoiceDetails: invoiceDetails,
+              lastOperation: 'Invoice generated - $nextFsNumber',
+            ),
+      );
+
+      print(
+        'Coordinator: Invoice generated - FS Number: $nextFsNumber, Items: ${invoiceDetails.length}',
+      );
+    } catch (e) {
+      emit(
+        state.errorState(
+          'Failed to generate invoice: $e',
+          operation: 'generate_invoice',
+        ),
+      );
+    }
+  }
+
+  Future<String> _generateNextInvoiceFsNumber(int companyId) async {
+    try {
+      // Use the invoice repository to generate next FS number
+      final invoiceRepo = invoiceHeaderBloc.repository;
+      return await invoiceRepo.generateNextFsNumber(companyId);
+    } catch (e) {
+      // Fallback: Generate based on timestamp
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      return 'INV${timestamp.toString().substring(7)}';
     }
   }
 }

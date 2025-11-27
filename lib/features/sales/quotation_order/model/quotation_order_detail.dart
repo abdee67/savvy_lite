@@ -67,6 +67,9 @@ class QuotationOrderDetail {
     this.quoteOrderHeaderRef,
   });
 
+  bool get isValid => itemsTableId != 0 && quantity != null && quantity! > 0;
+  bool get hasExtendedPrice => extendedPrice != null && extendedPrice! > 0;
+
   factory QuotationOrderDetail.fromMap(Map<String, dynamic> map) {
     return QuotationOrderDetail(
       id: map['id'],

@@ -212,7 +212,7 @@ class SalesReturnStockService {
       }
     }
 
-    if (itemInBranchRecord == null || itemInBranchRecord.branch == null) return;
+    if (itemInBranchRecord == null) return;
 
     final itemLocationsList = await itemLocationsRepository
         .getItemLocationsByBranchAndItem(

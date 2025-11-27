@@ -2,6 +2,8 @@ import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
 import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_bloc.dart';
+import 'package:savvy_stock/features/sales/quotation_order/repo/quotation_order_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/detail/bloc/invoice_detail_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/detail/repo/invoice_detail_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/header/bloc/invoice_header_bloc.dart';
@@ -232,6 +234,9 @@ void initDependencies() {
       lotMasterRepository: getIt(),
     ),
   );
+  getIt.registerLazySingleton<QuotationOrderRepository>(
+    () => QuotationOrderRepository(),
+  );
   // BLoCs
 
   getIt.registerLazySingleton<AuthBloc>(
@@ -419,6 +424,21 @@ void initDependencies() {
       systemConstantBloc: getIt(),
       salesOrderHeaderRepository: getIt(),
       salesReturnStockService: getIt(),
+    ),
+  );
+  getIt.registerFactory<QuotationOrderBloc>(
+    () => QuotationOrderBloc(
+      repository: getIt(),
+      authBloc: getIt(),
+      systemConstantBloc: getIt(),
+      customerRepository: getIt(),
+      uomConversionsRepository: getIt(),
+      itemInBranchRepository: getIt(),
+      invoiceDetailBloc: getIt(),
+      invoiceDetailRepository: getIt(),
+      invoiceHeaderBloc: getIt(),
+      invoiceHeaderRepository: getIt(),
+      udcRepository: getIt(),
     ),
   );
 }

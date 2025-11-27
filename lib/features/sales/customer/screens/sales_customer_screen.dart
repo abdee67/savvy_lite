@@ -167,7 +167,8 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
   ) {
     // Handle order preparation completion
     if (coordinatorState.status == SalesOrderCoordinatorStatus.success &&
-        coordinatorState.lastOperation?.contains('prepared') == true) {
+        coordinatorState.lastOperation?.contains('sales order prepared') ==
+            true) {
       setState(() {
         _isOrderPrepared = true;
       });
@@ -180,7 +181,8 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
 
     // Handle successful operations
     if (coordinatorState.status == SalesOrderCoordinatorStatus.success &&
-        coordinatorState.lastOperation?.contains('prepared') == true) {
+        coordinatorState.lastOperation?.contains('sales order prepared') ==
+            true) {
       _showSuccessSnackBar(context, 'New sales order prepared successfully');
     }
   }

@@ -65,6 +65,11 @@ class AppRoutes {
 
   static const String salesReturn = '$salesDashboard/sales-return';
 
+  static const String quotationOrder = '$salesDashboard/quotation-order';
+  static const String quotatioItemEntry =
+      '$quotationOrder/quotation-item-entry';
+  static const String quotationOrderPayment = '$quotationOrder/payment-summary';
+
   //Role sub-routes
   static const String roleCreation = '$roleManagement/add-role';
   static const String roleEdit = '$roleManagement/edit-role';

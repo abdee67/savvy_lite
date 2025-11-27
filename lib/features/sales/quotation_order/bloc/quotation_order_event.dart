@@ -114,23 +114,23 @@ class PrepareEditQuotationOrder extends QuotationOrderEvent {
   List<Object?> get props => [companyId, employeeId, branchId];
 }
 
-class CancelUpdate extends QuotationOrderEvent {
+class CancelQuotationUpdate extends QuotationOrderEvent {
   final QuotationOrderHeader header;
 
-  const CancelUpdate({required this.header});
+  const CancelQuotationUpdate({required this.header});
   @override
   List<Object?> get props => [header];
 }
 
-class CancelCreate extends QuotationOrderEvent {
+class CancelQuotationCreate extends QuotationOrderEvent {
   final QuotationOrderHeader header;
 
-  const CancelCreate({required this.header});
+  const CancelQuotationCreate({required this.header});
   @override
   List<Object?> get props => [header];
 }
 
-class DiscardChanges extends QuotationOrderEvent {}
+class DiscardQuotationChanges extends QuotationOrderEvent {}
 
 // Detail Events
 class LoadQuotationOrderDetails extends QuotationOrderEvent {
@@ -193,6 +193,8 @@ class CalculateQuotationTotals extends QuotationOrderEvent {
     discountAmount,
   ];
 }
+
+class LoadFeeSystemConstants extends QuotationOrderEvent {}
 
 class UpdateCustomerInfo extends QuotationOrderEvent {
   final Customer customer;
@@ -281,7 +283,7 @@ class FilterQuotationOrders extends QuotationOrderEvent {
   ];
 }
 
-class ClearFilters extends QuotationOrderEvent {}
+class ClearQuotationFilters extends QuotationOrderEvent {}
 
 class ResetQuotationState extends QuotationOrderEvent {}
 
@@ -339,6 +341,8 @@ class LoadQuotations extends QuotationOrderEvent {
   @override
   List<Object?> get props => [companyId];
 }
+
+class GenerateInvoiceFromQuotation extends QuotationOrderEvent {}
 
 // CRUD
 class CreateQuotation extends QuotationOrderEvent {
@@ -488,7 +492,7 @@ class SelectMultipleQuotationOrders extends QuotationOrderEvent {
   const SelectMultipleQuotationOrders({required this.headers});
 }
 
-class ClearSelection extends QuotationOrderEvent {}
+class ClearQuotationSelection extends QuotationOrderEvent {}
 
 // ============ QUOTATION STATUS MANAGEMENT ============
 
@@ -513,10 +517,12 @@ class ApplyDiscount extends QuotationOrderEvent {
 }
 
 class UpdateTaxSettings extends QuotationOrderEvent {
+  final double subTotal;
   final bool applyWithholding;
   final double discountAmount;
 
   const UpdateTaxSettings({
+    required this.subTotal,
     required this.applyWithholding,
     required this.discountAmount,
   });

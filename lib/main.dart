@@ -6,6 +6,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
 import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_bloc.dart';
+import 'package:savvy_stock/features/sales/quotation_order/repo/quotation_order_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/detail/bloc/invoice_detail_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/detail/repo/invoice_detail_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/header/bloc/invoice_header_bloc.dart';
@@ -74,7 +76,7 @@ Future<void> _initializeAndRunApp() async {
   try {
     await ConnectivityService().initConnectivity();
     initDependencies();
-    //\\await LocalDatabaseService().resetDatabase();
+    // await LocalDatabaseService().resetDatabase();
     // await LocalDatabaseService().debugTable('branch_table');
 
     if (AppConfig.isTestMode) {
@@ -160,6 +162,7 @@ class _SavvyStockState extends State<SavvyStock> {
   late InvoiceHistoryHeaderRepository _invoiceHistoryHeaderRepository;
   late SalesReturnStockService _salesReturnStockService;
   late SalesReturnRepository _salesReturnRepository;
+  late QuotationOrderRepository _quotationOrderRepository;
 
   @override
   void initState() {
@@ -206,6 +209,7 @@ class _SavvyStockState extends State<SavvyStock> {
     _salesOrderDetailRepository = getIt<SalesOrderDetailRepository>();
     _salesReturnStockService = getIt<SalesReturnStockService>();
     _salesReturnRepository = getIt<SalesReturnRepository>();
+    _quotationOrderRepository = getIt<QuotationOrderRepository>();
     // Ensure system constants are loaded when companyId becomes available.
     final cid = _authBloc.state.companyId;
     if (cid != null) {
@@ -498,6 +502,21 @@ class _SavvyStockState extends State<SavvyStock> {
               systemConstantBloc: _systemConstantBloc,
               salesReturnStockService: _salesReturnStockService,
               salesOrderHeaderRepository: _salesOrderHeaderRepository,
+            ),
+          ),
+          BlocProvider<QuotationOrderBloc>(
+            create: (context) => QuotationOrderBloc(
+              repository: _quotationOrderRepository,
+              authBloc: _authBloc,
+              systemConstantBloc: _systemConstantBloc,
+              customerRepository: _customerRepository,
+              uomConversionsRepository: _itemUomConversionRepository,
+              itemInBranchRepository: _stockItemInBranchRepository,
+              invoiceDetailBloc: _invoiceHistoryDetailBloc,
+              invoiceDetailRepository: _invoiceHistoryDetailRepository,
+              invoiceHeaderBloc: _invoiceHistoryHeaderBloc,
+              invoiceHeaderRepository: _invoiceHistoryHeaderRepository,
+              udcRepository: _udcRepository,
             ),
           ),
         ],

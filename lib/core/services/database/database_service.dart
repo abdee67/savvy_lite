@@ -1220,7 +1220,7 @@ CREATE TABLE quote_order_detail (
   FOREIGN KEY (item_in_branch) REFERENCES items_in_branch(id),
   FOREIGN KEY (company) REFERENCES company_table(id),
   FOREIGN KEY (unit_of_measure) REFERENCES udc_details(id),
-  FOREIGN KEY (prforma_status) REFERENCES udc_details(id),
+  FOREIGN KEY (prforma_status) REFERENCES udc_details(id)
 );
 
 CREATE INDEX idx_qod_quote_order_header_id
@@ -2369,6 +2369,9 @@ ON quote_order_detail (prforma_status);
       AppRoutes.salesItemEntry,
       AppRoutes.salesReport,
       AppRoutes.salesReturn,
+      AppRoutes.quotationOrder,
+      AppRoutes.quotatioItemEntry,
+      AppRoutes.quotationOrderPayment,
     ];
 
     for (final uri in salesPrivileges) {

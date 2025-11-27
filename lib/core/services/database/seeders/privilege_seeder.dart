@@ -220,6 +220,24 @@ class PrivilegeSeeder {
         AppRoutes.salesReturn,
         'sales_return',
       ),
+      _createPrivilege(
+        'Quotation Order',
+        'link',
+        AppRoutes.quotationOrder,
+        'quotation_order',
+      ),
+      _createPrivilege(
+        'Quotation Item Entry',
+        'link',
+        AppRoutes.quotatioItemEntry,
+        'quotatio_item_entry',
+      ),
+      _createPrivilege(
+        'Quotation Order Payment',
+        'link',
+        AppRoutes.quotationOrderPayment,
+        'quotation_order_payment',
+      ),
 
       // ==================== STOCK MODULE ====================
       //item entry

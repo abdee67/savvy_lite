@@ -354,18 +354,18 @@ class _CustomTableDropdownState<T> extends State<CustomTableDropdown<T>>
           Expanded(
             child: _filteredItems.isEmpty
                 ? _buildEmptyState()
-                : SingleChildScrollView(
+                : ListView.builder(
                     physics: const BouncingScrollPhysics(),
-                    child: Column(
-                      children: _filteredItems.map((item) {
-                        final bool isSelected =
-                            _selectedItem == item ||
-                            (widget.selectedValue != null &&
-                                item == widget.selectedValue);
+                    itemCount: _filteredItems.length,
+                    itemBuilder: (context, index) {
+                      final item = _filteredItems[index];
+                      final bool isSelected =
+                          _selectedItem == item ||
+                          (widget.selectedValue != null &&
+                              item == widget.selectedValue);
 
-                        return _buildItemCard(item, isSelected);
-                      }).toList(),
-                    ),
+                      return _buildItemCard(item, isSelected);
+                    },
                   ),
           ),
         ],

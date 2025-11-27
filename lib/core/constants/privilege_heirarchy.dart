@@ -51,6 +51,11 @@ class PrivilegeHierarchy {
     //Sales Return (child of Sales Dashboard)
     AppRoutes.salesReturn: AppRoutes.salesDashboard,
 
+    //Quotation Order (child of Sales Dashboard)
+    AppRoutes.quotationOrder: AppRoutes.salesDashboard,
+    AppRoutes.quotatioItemEntry: AppRoutes.quotatioItemEntry,
+    AppRoutes.quotationOrderPayment: AppRoutes.quotationOrderPayment,
+
     // Customer Entry (child of Sales Dashboard)
     AppRoutes.customerEntry: AppRoutes.salesDashboard,
     AppRoutes.customerCreate: AppRoutes.customerEntry,
