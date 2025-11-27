@@ -2,27 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_bloc.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_event.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_state.dart';
 
-class PaymentAction extends StatefulWidget {
-  const PaymentAction({super.key});
+class QuotePaymentAction extends StatefulWidget {
+  const QuotePaymentAction({super.key});
 
   @override
-  State<PaymentAction> createState() => _PaymentActionState();
+  State<QuotePaymentAction> createState() => _QuotePaymentActionState();
 }
 
-class _PaymentActionState extends State<PaymentAction> {
+class _QuotePaymentActionState extends State<QuotePaymentAction> {
   // Add this method to your SalesItemEntryConfirmedItem class
-  void _navigateToInvoice(
-    BuildContext context,
-    SalesOrderCoordinatorState state,
-  ) {
-    final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
+  void _navigateToInvoice(BuildContext context, QuotationOrderState state) {
+    final coordinatorBloc = context.read<QuotationOrderBloc>();
+    final coordinatorState = coordinatorBloc.state;
 
     // Validate final calculations
-    coordinatorBloc.add(const CalculateCompleteOrderTotals());
+    coordinatorBloc.add(
+      CalculateQuotationTotals(
+        header: coordinatorState.selectedHeader!,
+        details: coordinatorState.createDetailItems,
+      ),
+    );
 
     /* Create the complete sales order
     coordinatorBloc.add(GenerateInvoiceFromSalesOrder());
@@ -40,13 +43,9 @@ class _PaymentActionState extends State<PaymentAction> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<SalesOrderCoordinatorBloc, SalesOrderCoordinatorState>(
+    return BlocBuilder<QuotationOrderBloc, QuotationOrderState>(
       builder: (context, state) {
-        final isValid =
-            state.lastTotalAmount != null &&
-            state.lastTotalAmount! > 0 &&
-            state.paymentMethod.isNotEmpty &&
-            (state.paymentMethod != 'Credit' || state.paymentTerm.isNotEmpty);
+        final isValid = state.totalAmount != null && state.totalAmount! > 0;
 
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -71,8 +70,7 @@ class _PaymentActionState extends State<PaymentAction> {
             ),
             ElevatedButton(
               onPressed:
-                  isValid &&
-                      state.status == SalesOrderCoordinatorStatus.processing
+                  isValid && state.status == QuotationOrderStatus.processing
                   ? null
                   : () => _navigateToInvoice(context, state),
               style: ElevatedButton.styleFrom(
@@ -86,7 +84,7 @@ class _PaymentActionState extends State<PaymentAction> {
                   borderRadius: BorderRadius.circular(40),
                 ),
               ),
-              child: state.status == SalesOrderCoordinatorStatus.processing
+              child: state.status == QuotationOrderStatus.processing
                   ? const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [

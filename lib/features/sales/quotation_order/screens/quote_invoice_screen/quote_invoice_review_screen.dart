@@ -3,34 +3,33 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
+import 'package:savvy_stock/features/sales/quotation_order/screens/quote_invoice_screen/quote_invoice_second_part.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/widget/invoice_action.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/widget/invoice_first_part.dart';
-import 'package:savvy_stock/features/sales/sales_order/invoice/widget/invoice_second_part.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/widget/invoice_third_part.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_bloc.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_state.dart';
 
-class InvoiceReviewScreen extends StatelessWidget {
-  const InvoiceReviewScreen({super.key});
+class QuotationInvoiceReviewScreen extends StatelessWidget {
+  const QuotationInvoiceReviewScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     // Get data from global blocs
-    return BlocConsumer<SalesOrderCoordinatorBloc, SalesOrderCoordinatorState>(
+    return BlocConsumer<QuotationOrderBloc, QuotationOrderState>(
       listener: (context, state) {
         // Validate that we have all necessary data
-        if (state.currentHeader == null) {
+        if (state.selectedHeader == null) {
           _buildErrorScreen(
             title: 'No Order Data',
             message:
-                'Sales order header is not available. Please complete the order process.',
+                'Quotation order header is not available. Please complete the order process.',
             icon: Icons.error_outline,
           );
         }
 
         final hasAnyDetails =
-            state.currentDetails.isNotEmpty ||
-            state.lastSavedDetails.isNotEmpty;
+            state.createDetailItems.isNotEmpty || state.details.isNotEmpty;
 
         if (!hasAnyDetails) {
           _buildErrorScreen(
@@ -41,11 +40,11 @@ class InvoiceReviewScreen extends StatelessWidget {
           );
         }
 
-        if (state.lastTotalAmount == null || state.lastTotalAmount! <= 0) {
+        if (state.totalAmount == null || state.totalAmount! <= 0) {
           _buildErrorScreen(
             title: 'Calculation Required',
             message:
-                'Order totals need to be calculated. Please wait or go back to recalculate.',
+                'Quotation order totals need to be calculated. Please wait or go back to recalculate.',
             icon: Icons.calculate_outlined,
           );
         }
@@ -108,27 +107,27 @@ Widget _buildErrorScreen({
 }
 
 class _InvoiceReviewContent extends StatelessWidget {
-  final SalesOrderCoordinatorState state;
+  final QuotationOrderState state;
 
   const _InvoiceReviewContent({required this.state});
 
   @override
   Widget build(BuildContext context) {
     // Safely extract header
-    final header = state.currentHeader;
+    final header = state.selectedHeader;
 
     // Prefer live currentDetails; fall back to lastSavedDetails after order
     // creation so that the invoice review has items even if currentDetails
     // was cleared by detail bloc refreshes.
-    final effectiveDetails = state.currentDetails.isNotEmpty
-        ? state.currentDetails
-        : state.lastSavedDetails;
+    final effectiveDetails = state.createDetailItems.isNotEmpty
+        ? state.createDetailItems
+        : state.details;
 
     if (header == null) {
       return _buildErrorScreen(
         title: 'No Order Data',
         message:
-            'Sales order header is not available. Please complete the order process.',
+            'Quotation order header is not available. Please complete the order process.',
         icon: Icons.error_outline,
         context: context,
       );
@@ -144,11 +143,11 @@ class _InvoiceReviewContent extends StatelessWidget {
       );
     }
 
-    if (state.lastTotalAmount == null || state.lastTotalAmount! <= 0) {
+    if (state.totalAmount == null || state.totalAmount! <= 0) {
       return _buildErrorScreen(
         title: 'Calculation Required',
         message:
-            'Order totals need to be calculated. Please go back and recalculate before reviewing the invoice.',
+            'Quotation order totals need to be calculated. Please go back and recalculate before reviewing the invoice.',
         icon: Icons.calculate_outlined,
         context: context,
       );
@@ -255,21 +254,19 @@ class _InvoiceReviewContent extends StatelessWidget {
                     const SizedBox(height: 16),
 
                     // Order Items
-                    InvoiceSecondPart(
+                    QuotationInvoiceSecondPart(
                       items: effectiveDetails,
-                      subtotal: state.lastSubTotal ?? 0.0,
+                      subtotal: state.subTotal ?? 0.0,
                     ),
                     const SizedBox(height: 16),
 
                     // Payment Information
                     InvoiceThirdPart(
-                      subtotal: state.lastSubTotal ?? 0.0,
-                      discountAmount: state.lastDiscountAmount ?? 0.0,
-                      taxAmount: state.lastTax ?? 0.0,
-                      withholdingAmount: state.lastWithholdAmount ?? 0.0,
-                      totalAmount: state.lastTotalAmount ?? 0.0,
-                      paymentType: state.paymentMethod,
-                      paymentInstrument: state.paymentInstrument.toString(),
+                      subtotal: state.subTotal ?? 0.0,
+                      discountAmount: state.discountAmount ?? 0.0,
+                      taxAmount: state.tax ?? 0.0,
+                      withholdingAmount: state.withholdAmount ?? 0.0,
+                      totalAmount: state.totalAmount ?? 0.0,
                     ),
                   ],
                 ),
@@ -300,7 +297,7 @@ class _InvoiceReviewContent extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Sales Order: ${state.currentHeader!.fsNumber ?? 'N/A'}',
+                  'Quotation Order: ${state.selectedHeader!.fsNumber ?? 'N/A'}',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,

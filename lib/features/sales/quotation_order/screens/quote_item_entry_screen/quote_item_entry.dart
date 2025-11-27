@@ -4,45 +4,55 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_event.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
-import 'package:savvy_stock/features/sales/sales_order/sales_item_entry/widget/sales_item_entry_confirmed_item.dart';
-import 'package:savvy_stock/features/sales/sales_order/sales_item_entry/widget/sales_item_entry_form.dart';
-import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
-import 'package:savvy_stock/core/di/injection_container.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/service/sales_order_integration_service.dart';
+import 'package:savvy_stock/features/sales/quotation_order/screens/quote_item_entry_screen/quote_item_entry_confirmed_item.dart';
+import 'package:savvy_stock/features/sales/quotation_order/screens/quote_item_entry_screen/quote_item_entry_form.dart';
+import 'package:savvy_stock/features/sales/quotation_order/model/quotation_order_detail.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_bloc.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_event.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_state.dart';
 
-class ItemEntryScreen extends StatelessWidget {
+class QuotationItemEntryScreen extends StatefulWidget {
   final Map<String, dynamic>? customerData;
-  const ItemEntryScreen({super.key, this.customerData});
+  const QuotationItemEntryScreen({super.key, this.customerData});
 
   @override
-  Widget build(BuildContext context) {
+  State<QuotationItemEntryScreen> createState() =>
+      _QuotationItemEntryScreenState();
+}
+
+class _QuotationItemEntryScreenState extends State<QuotationItemEntryScreen> {
+  @override
+  void initState() {
+    super.initState();
     // Initialize coordinator with customer data from previous screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeCoordinator(context);
     });
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sales Item Entry'),
+        title: const Text('Quotation Item Entry'),
         backgroundColor: const Color(0xFF155888),
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: ItemEntryScreenContent(),
+      body: const QuotationItemEntryScreenContent(),
     );
   }
 
   void _initializeCoordinator(BuildContext context) {
-    final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
+    final coordinatorBloc = context.read<QuotationOrderBloc>();
     final customerBloc = context.read<CustomerBloc>();
 
     // Set customers from previous screen data
-    if (customerData != null) {
-      final billToCustomer = customerData!['billToCustomer'] as Customer?;
-      final shipToCustomer = customerData!['shipToCustomer'] as Customer?;
+    if (widget.customerData != null) {
+      final billToCustomer =
+          widget.customerData!['billToCustomer'] as Customer?;
+      final shipToCustomer =
+          widget.customerData!['shipToCustomer'] as Customer?;
 
       if (billToCustomer != null) {
         // Update customer bloc
@@ -52,25 +62,28 @@ class ItemEntryScreen extends StatelessWidget {
         }
 
         // Sync customer to coordinator
-        coordinatorBloc.add(SyncCustomerToOrder(customer: billToCustomer));
+        coordinatorBloc.add(UpdateCustomerInfo(customer: billToCustomer));
       }
     }
   }
 }
 
-class ItemEntryScreenContent extends StatefulWidget {
-  const ItemEntryScreenContent({super.key});
+class QuotationItemEntryScreenContent extends StatefulWidget {
+  const QuotationItemEntryScreenContent({super.key});
 
   @override
-  State<ItemEntryScreenContent> createState() => _ItemEntryScreenContentState();
+  State<QuotationItemEntryScreenContent> createState() =>
+      _QuotationItemEntryScreenContentState();
 }
 
-class _ItemEntryScreenContentState extends State<ItemEntryScreenContent> {
+class _QuotationItemEntryScreenContentState
+    extends State<QuotationItemEntryScreenContent> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  SalesOrderDetail? _currentFormDetail;
+  QuotationOrderDetail? _currentFormDetail;
   bool _isEditing = false;
   int? _editingIndex;
-  SalesOrderDetail? _originalDetail; // Store original detail for cancellation
+  QuotationOrderDetail?
+  _originalDetail; // Store original detail for cancellation
 
   @override
   void initState() {
@@ -81,13 +94,14 @@ class _ItemEntryScreenContentState extends State<ItemEntryScreenContent> {
   void _initializeForm() {
     // Wait for the coordinator to be ready
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final coordinatorState = context.read<SalesOrderCoordinatorBloc>().state;
-      if (coordinatorState.currentHeader != null) {
+      final coordinatorState = context.read<QuotationOrderBloc>().state;
+      if (coordinatorState.selectedHeader != null) {
         setState(() {
-          _currentFormDetail = SalesOrderDetail(
+          _currentFormDetail = QuotationOrderDetail(
             tempId: DateTime.now().millisecondsSinceEpoch,
-            salesOrderHeaderId: coordinatorState.currentHeader?.id,
-            company: coordinatorState.currentHeader?.company,
+            quoteOrderHeaderId: coordinatorState.selectedHeader!.id!,
+            company: coordinatorState.selectedHeader!.company,
+            itemsTableId: 0,
             quantity: 1.0,
             unitPrice: 0.0,
             extendedPrice: 0.0,
@@ -95,16 +109,18 @@ class _ItemEntryScreenContentState extends State<ItemEntryScreenContent> {
         });
       } else {
         // If header not ready, listen for state changes
-        final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
+        final coordinatorBloc = context.read<QuotationOrderBloc>();
         coordinatorBloc.stream
-            .firstWhere((state) => state.currentHeader != null)
+            .firstWhere((state) => state.selectedHeader != null)
             .then((_) {
               if (mounted) {
                 setState(() {
-                  _currentFormDetail = SalesOrderDetail(
+                  _currentFormDetail = QuotationOrderDetail(
                     tempId: DateTime.now().millisecondsSinceEpoch,
-                    salesOrderHeaderId: coordinatorBloc.state.currentHeader?.id,
-                    company: coordinatorBloc.state.currentHeader?.company,
+                    quoteOrderHeaderId:
+                        coordinatorBloc.state.selectedHeader!.id!,
+                    company: coordinatorBloc.state.selectedHeader!.company,
+                    itemsTableId: 0,
                     quantity: 1.0,
                     unitPrice: 0.0,
                     extendedPrice: 0.0,
@@ -116,7 +132,7 @@ class _ItemEntryScreenContentState extends State<ItemEntryScreenContent> {
     });
   }
 
-  void _startEditingItem(SalesOrderDetail detail, int index) {
+  void _startEditingItem(QuotationOrderDetail detail, int index) {
     setState(() {
       _currentFormDetail = detail.copyWith(); // Create a copy for editing
       _isEditing = true;
@@ -125,8 +141,8 @@ class _ItemEntryScreenContentState extends State<ItemEntryScreenContent> {
     });
 
     // Remove the item from confirmed list temporarily while editing
-    context.read<SalesOrderCoordinatorBloc>().add(
-      RemoveDetailFromOrder(detail: detail),
+    context.read<QuotationOrderBloc>().add(
+      RemoveQuotationOrderDetail(detail: detail),
     );
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -148,16 +164,22 @@ class _ItemEntryScreenContentState extends State<ItemEntryScreenContent> {
   void _cancelEditing() {
     if (_isEditing && _originalDetail != null) {
       // Add the original item back to confirmed list
-      context.read<SalesOrderCoordinatorBloc>().add(
-        AddDetailToOrder(detail: _originalDetail!),
+      final coordinatorBloc = context.read<QuotationOrderBloc>();
+      final coordinatorState = coordinatorBloc.state;
+
+      context.read<QuotationOrderBloc>().add(
+        AddQuotationOrderDetail(detail: _originalDetail!),
       );
 
       // Recalculate totals
-      context.read<SalesOrderCoordinatorBloc>().add(
+      /*    context.read<QuotationOrderBloc>().add(
         const ValidateCompleteStockAvailability(),
-      );
-      context.read<SalesOrderCoordinatorBloc>().add(
-        const CalculateCompleteOrderTotals(),
+      );*/
+      context.read<QuotationOrderBloc>().add(
+        CalculateQuotationTotals(
+          header: coordinatorState.selectedHeader!,
+          details: coordinatorState.createDetailItems,
+        ),
       );
     }
 
@@ -178,11 +200,12 @@ class _ItemEntryScreenContentState extends State<ItemEntryScreenContent> {
       _originalDetail = null;
 
       // Create new empty form
-      final coordinatorState = context.read<SalesOrderCoordinatorBloc>().state;
-      _currentFormDetail = SalesOrderDetail(
+      final coordinatorState = context.read<QuotationOrderBloc>().state;
+      _currentFormDetail = QuotationOrderDetail(
         tempId: DateTime.now().millisecondsSinceEpoch,
-        salesOrderHeaderId: coordinatorState.currentHeader?.id,
-        company: coordinatorState.currentHeader?.company,
+        quoteOrderHeaderId: coordinatorState.selectedHeader!.id!,
+        company: coordinatorState.selectedHeader?.company,
+        itemsTableId: 0,
         quantity: 1.0,
         unitPrice: 0.0,
         extendedPrice: 0.0,
@@ -200,10 +223,12 @@ class _ItemEntryScreenContentState extends State<ItemEntryScreenContent> {
 
     if (_formKey.currentState?.validate() ?? false) {
       if (_currentFormDetail != null) {
-        final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
+        final coordinatorBloc = context.read<QuotationOrderBloc>();
         print('Dispatching AddDetailToOrder event');
         // Add or update the item in coordinator
-        coordinatorBloc.add(AddDetailToOrder(detail: _currentFormDetail!));
+        coordinatorBloc.add(
+          AddQuotationOrderDetail(detail: _currentFormDetail!),
+        );
         print('AddDetailToOrder event dispatched');
         _resetForm();
 
@@ -228,28 +253,38 @@ class _ItemEntryScreenContentState extends State<ItemEntryScreenContent> {
     }
   }
 
-  void _updateFormDetail(SalesOrderDetail updatedDetail) {
+  void _updateFormDetail(QuotationOrderDetail updatedDetail) {
     setState(() {
       _currentFormDetail = updatedDetail;
     });
 
     // Delegate UOM conversion and extended price calculation to integration service
-    if (updatedDetail.itemBranch != null) {
-      final integrationService = getIt<SalesOrderIntegrationService>();
-      integrationService.updateUnitPriceFromItemBranch(
-        updatedDetail.itemBranch!,
-        updatedDetail,
+    if (updatedDetail.itemInBranch != null) {
+      final coordinatorState = context.read<QuotationOrderBloc>().state;
+      context.read<QuotationOrderBloc>().add(
+        UpdateUnitPriceWithUom(
+          detail: updatedDetail,
+          itemInBranch: updatedDetail.itemBranchRef!,
+        ),
+      );
+      context.read<QuotationOrderBloc>().add(
+        CalculateQuotationTotals(
+          header: coordinatorState.selectedHeader!,
+          details: coordinatorState.createDetailItems,
+        ),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<SalesOrderCoordinatorBloc, SalesOrderCoordinatorState>(
+    return BlocBuilder<QuotationOrderBloc, QuotationOrderState>(
       builder: (context, coordinatorState) {
         // Show loading state while preparing
-        if (coordinatorState.pendingOperations.contains('prepare_new_order') ||
-            coordinatorState.currentHeader == null) {
+        if (coordinatorState.pendingOperations.contains(
+              'prepare_new_quotation_order',
+            ) ||
+            coordinatorState.selectedHeader == null) {
           return const _OrderPreparationLoader();
         }
 
@@ -261,7 +296,7 @@ class _ItemEntryScreenContentState extends State<ItemEntryScreenContent> {
                 flex: 3,
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
-                  child: SalesItemEntryForm(
+                  child: QuoteItemEntryForm(
                     key: ValueKey(_currentFormDetail!.tempId),
                     detail: _currentFormDetail!,
                     formKey: _formKey,
@@ -276,7 +311,7 @@ class _ItemEntryScreenContentState extends State<ItemEntryScreenContent> {
             // Confirmed Items Section
             Expanded(
               flex: 2,
-              child: SalesItemEntryConfirmedItem(onEditItem: _startEditingItem),
+              child: QuoteItemEntryConfirmedItem(onEditItem: _startEditingItem),
             ),
           ],
         );
@@ -297,7 +332,7 @@ class _OrderPreparationLoader extends StatelessWidget {
           CircularProgressIndicator(),
           SizedBox(height: 16),
           Text(
-            'Preparing Sales Order...',
+            'Preparing Quotation Order...',
             style: TextStyle(fontSize: 16, color: Colors.grey),
           ),
         ],

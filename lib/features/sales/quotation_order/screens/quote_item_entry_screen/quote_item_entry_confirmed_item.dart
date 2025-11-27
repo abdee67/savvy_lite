@@ -5,23 +5,23 @@ import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
-import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
+import 'package:savvy_stock/features/sales/quotation_order/model/quotation_order_detail.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_bloc.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_event.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_state.dart';
 
-class SalesItemEntryConfirmedItem extends StatefulWidget {
-  final Function(SalesOrderDetail, int) onEditItem;
+class QuoteItemEntryConfirmedItem extends StatefulWidget {
+  final Function(QuotationOrderDetail, int) onEditItem;
 
-  const SalesItemEntryConfirmedItem({super.key, required this.onEditItem});
+  const QuoteItemEntryConfirmedItem({super.key, required this.onEditItem});
 
   @override
-  State<SalesItemEntryConfirmedItem> createState() =>
-      _SalesItemEntryConfirmedItemState();
+  State<QuoteItemEntryConfirmedItem> createState() =>
+      _QuoteItemEntryConfirmedItemState();
 }
 
-class _SalesItemEntryConfirmedItemState
-    extends State<SalesItemEntryConfirmedItem> {
+class _QuoteItemEntryConfirmedItemState
+    extends State<QuoteItemEntryConfirmedItem> {
   final Map<int, double> _dragOffset = {};
   static const _containerHeight = 20.0;
   static const _containerWidth = 20.0;
@@ -41,17 +41,17 @@ class _SalesItemEntryConfirmedItemState
   static const _verticalDetailPadding = 4.0;
 
   void _safeDeleteItem(BuildContext context, int index) {
-    final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
+    final coordinatorBloc = context.read<QuotationOrderBloc>();
     final coordinatorState = coordinatorBloc.state;
 
-    if (index < 0 || index >= coordinatorState.currentDetails.length) {
+    if (index < 0 || index >= coordinatorState.createDetailItems.length) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cannot delete item. Invalid index.')),
       );
       return;
     }
 
-    final itemToDelete = coordinatorState.currentDetails[index];
+    final itemToDelete = coordinatorState.createDetailItems[index];
 
     showDialog(
       context: context,
@@ -66,7 +66,9 @@ class _SalesItemEntryConfirmedItemState
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              coordinatorBloc.add(RemoveDetailFromOrder(detail: itemToDelete));
+              coordinatorBloc.add(
+                RemoveQuotationOrderDetail(detail: itemToDelete),
+              );
 
               ScaffoldMessenger.of(
                 context,
@@ -81,16 +83,16 @@ class _SalesItemEntryConfirmedItemState
   }
 
   void _moveToEdit(BuildContext context, int index) {
-    final coordinatorState = context.read<SalesOrderCoordinatorBloc>().state;
+    final coordinatorState = context.read<QuotationOrderBloc>().state;
 
-    if (index < 0 || index >= coordinatorState.currentDetails.length) {
+    if (index < 0 || index >= coordinatorState.createDetailItems.length) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cannot edit item. Invalid index.')),
       );
       return;
     }
 
-    final itemToEdit = coordinatorState.currentDetails[index];
+    final itemToEdit = coordinatorState.createDetailItems[index];
     widget.onEditItem(itemToEdit, index);
   }
 
@@ -134,12 +136,15 @@ class _SalesItemEntryConfirmedItemState
   }
 
   void _validateAndProceed(BuildContext context) {
-    final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
+    final coordinatorBloc = context.read<QuotationOrderBloc>();
     final coordinatorState = coordinatorBloc.state;
-    context.read<SalesOrderCoordinatorBloc>().add(
-      const CalculateCompleteOrderTotals(),
+    context.read<QuotationOrderBloc>().add(
+      CalculateQuotationTotals(
+        header: coordinatorState.selectedHeader!,
+        details: coordinatorState.createDetailItems,
+      ),
     );
-    if (coordinatorState.currentDetails.isEmpty) {
+    if (coordinatorState.createDetailItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please add at least one item')),
       );
@@ -149,10 +154,7 @@ class _SalesItemEntryConfirmedItemState
     _navigateToSummary(context, coordinatorState);
   }
 
-  void _navigateToSummary(
-    BuildContext context,
-    SalesOrderCoordinatorState state,
-  ) {
+  void _navigateToSummary(BuildContext context, QuotationOrderState state) {
     final customerBloc = context.read<CustomerBloc>();
     final selectedCustomer = customerBloc.state.selectedBillToCustomer;
 
@@ -164,23 +166,23 @@ class _SalesItemEntryConfirmedItemState
     }
 
     if (context.read<AuthBloc>().state.hasAccessToPrivilege(
-      AppRoutes.paymentSummary,
+      AppRoutes.quotationOrderPayment,
     )) {
       context.push(
-        AppRoutes.paymentSummary,
+        AppRoutes.quotationOrderPayment,
         extra: {
-          'coordinatorReady': true, // Flag to indicate coordinator has data
+          'quotationOrderReady': true, // Flag to indicate coordinator has data
           'timestamp': DateTime.now().millisecondsSinceEpoch,
         },
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No access to payment summary')),
+        const SnackBar(content: Text('No access to quotation order payment')),
       );
     }
   }
 
-  double _calculateTotalAmount(List<SalesOrderDetail> details) {
+  double _calculateTotalAmount(List<QuotationOrderDetail> details) {
     return details.fold<double>(0.0, (sum, detail) {
       return sum + (detail.extendedPrice ?? 0.0);
     });
@@ -188,11 +190,11 @@ class _SalesItemEntryConfirmedItemState
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<SalesOrderCoordinatorBloc, SalesOrderCoordinatorState>(
+    return BlocBuilder<QuotationOrderBloc, QuotationOrderState>(
       builder: (context, coordinatorState) {
-        final confirmedDetails = coordinatorState.currentDetails;
+        final confirmedDetails = coordinatorState.createDetailItems;
         final totalAmount =
-            coordinatorState.lastTotalAmount ??
+            coordinatorState.totalAmount ??
             _calculateTotalAmount(confirmedDetails);
 
         return Container(

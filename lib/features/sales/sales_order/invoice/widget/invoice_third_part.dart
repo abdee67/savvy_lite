@@ -7,8 +7,8 @@ class InvoiceThirdPart extends StatelessWidget {
   final double taxAmount;
   final double withholdingAmount;
   final double totalAmount;
-  final String paymentType;
-  final String paymentInstrument;
+  final String? paymentType;
+  final String? paymentInstrument;
 
   const InvoiceThirdPart({
     super.key,
@@ -17,8 +17,8 @@ class InvoiceThirdPart extends StatelessWidget {
     required this.taxAmount,
     required this.withholdingAmount,
     required this.totalAmount,
-    required this.paymentType,
-    required this.paymentInstrument,
+    this.paymentType,
+    this.paymentInstrument,
   });
 
   @override

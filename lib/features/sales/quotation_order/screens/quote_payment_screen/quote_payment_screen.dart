@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_bloc.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_event.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_state.dart';
+import 'package:savvy_stock/features/sales/quotation_order/model/quotation_order_detail.dart';
+import 'package:savvy_stock/features/sales/quotation_order/model/quotation_order_header.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -13,21 +15,21 @@ import 'package:savvy_stock/features/sales/sales_order/payment/widget/payment_me
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_event.dart';
 
-class PaymentScreen extends StatefulWidget {
+class QuotePaymentScreen extends StatefulWidget {
   final AuthBloc authBloc;
   final Map<String, dynamic>? orderData;
 
-  const PaymentScreen({
+  const QuotePaymentScreen({
     super.key,
     required this.authBloc,
     required this.orderData,
   });
 
   @override
-  State<PaymentScreen> createState() => _PaymentScreenState();
+  State<QuotePaymentScreen> createState() => _QuotePaymentScreenState();
 }
 
-class _PaymentScreenState extends State<PaymentScreen> {
+class _QuotePaymentScreenState extends State<QuotePaymentScreen> {
   @override
   void initState() {
     super.initState();
@@ -47,19 +49,23 @@ class _PaymentScreenState extends State<PaymentScreen> {
     context.read<UdcDetailsBloc>().add(LoadAllUdcDetails());
 
     // Initialize payment data in coordinator
-    final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
+    final coordinatorBloc = context.read<QuotationOrderBloc>();
     final customer = widget.orderData?['customer'] as Customer?;
-    final orderDetails = widget.orderData?['orderDetails'] as List<dynamic>?;
-    final orderHeader = widget.orderData?['orderHeader'] as dynamic;
+    final orderDetails =
+        widget.orderData?['orderDetails'] as List<QuotationOrderDetail>?;
+    final orderHeader =
+        widget.orderData?['orderHeader'] as QuotationOrderHeader;
     final totalAmount = widget.orderData?['totalAmount'] as double?;
 
     if (customer != null) {
-      coordinatorBloc.add(SyncCustomerToOrder(customer: customer));
+      coordinatorBloc.add(UpdateCustomerInfo(customer: customer));
     }
 
     // Initialize payment calculations
-    coordinatorBloc.add(const CalculateCompleteOrderTotals());
-    coordinatorBloc.add(const LoadFeeSystemConstants());
+    coordinatorBloc.add(
+      CalculateQuotationTotals(header: orderHeader, details: orderDetails!),
+    );
+    coordinatorBloc.add(LoadFeeSystemConstants());
   }
 
   @override
@@ -77,8 +83,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
           IconButton(
             icon: const Icon(Iconsax.refresh),
             onPressed: () {
-              context.read<SalesOrderCoordinatorBloc>().add(
-                const CalculateCompleteOrderTotals(),
+              final quoteState = context.read<QuotationOrderBloc>().state;
+              context.read<QuotationOrderBloc>().add(
+                CalculateQuotationTotals(
+                  header: quoteState.selectedHeader!,
+                  details: quoteState.createDetailItems,
+                ),
               );
             },
             tooltip: 'Refresh calculations',
@@ -89,47 +99,44 @@ class _PaymentScreenState extends State<PaymentScreen> {
         elevation: 2,
       ),
       body: SafeArea(
-        child:
-            BlocListener<SalesOrderCoordinatorBloc, SalesOrderCoordinatorState>(
-              listener: (context, state) {
-                if (state.status == SalesOrderCoordinatorStatus.error) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(state.error!),
-                      backgroundColor: Colors.red,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              },
-              child: Column(
-                children: [
-                  // Upper Section - Order Items
-                  Expanded(
-                    flex: 1,
-                    child: Container(
-                      color: Colors.white,
-                      child: Column(
-                        children: [
-                          Expanded(
-                            child: SingleChildScrollView(
-                              child: Padding(
-                                padding: const EdgeInsets.only(bottom: 4.0),
-                                child: PaymentDetails(
-                                  authBloc: widget.authBloc,
-                                ),
-                              ),
-                            ),
+        child: BlocListener<QuotationOrderBloc, QuotationOrderState>(
+          listener: (context, state) {
+            if (state.status == QuotationOrderStatus.error) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.error!),
+                  backgroundColor: Colors.red,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          },
+          child: Column(
+            children: [
+              // Upper Section - Order Items
+              Expanded(
+                flex: 1,
+                child: Container(
+                  color: Colors.white,
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 4.0),
+                            child: PaymentDetails(authBloc: widget.authBloc),
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                  // Lower Section - Order Summary
-                  const PaymentMethod(),
-                ],
+                ),
               ),
-            ),
+              // Lower Section - Order Summary
+              const PaymentMethod(),
+            ],
+          ),
+        ),
       ),
     );
   }

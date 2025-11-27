@@ -268,7 +268,7 @@ class QuotationOrderHeader {
   }
 
   Map<String, dynamic> toMap() {
-    String? toDate(DateTime? dt) => dt == null ? null : dt.toIso8601String();
+    String? toDate(DateTime? dt) => dt?.toIso8601String();
 
     return {
       'id': id,

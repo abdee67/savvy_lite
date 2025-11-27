@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/sales/quotation_order/model/quotation_order_detail.dart';
 
-class InvoiceSecondPart extends StatelessWidget {
-  final List<SalesOrderDetail> items;
+class QuotationInvoiceSecondPart extends StatelessWidget {
+  final List<QuotationOrderDetail> items;
   final double subtotal;
 
-  const InvoiceSecondPart({
+  const QuotationInvoiceSecondPart({
     super.key,
     required this.items,
     required this.subtotal,
@@ -24,7 +24,7 @@ class InvoiceSecondPart extends StatelessWidget {
               Icon(Icons.list_alt, size: 20, color: colorScheme.primary),
               const SizedBox(width: 8),
               Text(
-                'ORDER ITEMS',
+                'QUOTATION ORDER ITEMS',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: colorScheme.primary,
@@ -79,7 +79,7 @@ class InvoiceSecondPart extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              item.item?.itemDescription ?? 'N/A',
+              item.itemTableRef?.itemDescription ?? 'N/A',
               style: const TextStyle(fontWeight: FontWeight.bold),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -89,10 +89,10 @@ class InvoiceSecondPart extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${item.quantity!.toStringAsFixed(2)} ${item.uom?.description1}',
+                  '${item.quantity!.toStringAsFixed(2)} ${item.uomRef?.description1}',
                 ),
                 Text(
-                  '${unitPrice.toStringAsFixed(2)} Birr/${item.uom?.description1}',
+                  '${unitPrice.toStringAsFixed(2)} Birr/${item.uomRef?.description1}',
                 ),
               ],
             ),
@@ -148,7 +148,7 @@ class InvoiceSecondPart extends StatelessWidget {
                   SizedBox(
                     width: 100, // Fixed width for item name
                     child: Text(
-                      item.item?.itemDescription ?? 'N/A',
+                      item.itemTableRef?.itemDescription ?? 'N/A',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontWeight: FontWeight.w500),
@@ -159,7 +159,7 @@ class InvoiceSecondPart extends StatelessWidget {
                   Align(
                     alignment: Alignment.centerRight,
                     child: Text(
-                      '${item.quantity!.toStringAsFixed(2)} ${item.uom?.description1 ?? ''}',
+                      '${item.quantity!.toStringAsFixed(2)} ${item.uomRef?.description1 ?? ''}',
                     ),
                   ),
                 ),
@@ -221,7 +221,7 @@ class InvoiceSecondPart extends StatelessWidget {
               cells: [
                 DataCell(
                   Text(
-                    item.item?.itemDescription ?? 'N/A',
+                    item.itemTableRef?.itemDescription ?? 'N/A',
                     style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
                 ),
@@ -233,7 +233,9 @@ class InvoiceSecondPart extends StatelessWidget {
                 ),
                 DataCell(
                   Text(
-                    item.uom?.description1 ?? item.item?.unitOfMeasure ?? 'N/A',
+                    item.uomRef?.description1 ??
+                        item.itemTableRef?.unitOfMeasure ??
+                        'N/A',
                   ),
                 ),
                 DataCell(

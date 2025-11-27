@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:intl/intl.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_bloc.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_event.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_state.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
 import 'package:savvy_stock/core/di/injection_container.dart';
@@ -12,15 +12,15 @@ import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
 import 'package:savvy_stock/features/system_constant/repo/system_constant_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 
-class PaymentDetails extends StatefulWidget {
+class QuotePaymentDetails extends StatefulWidget {
   final AuthBloc authBloc;
-  const PaymentDetails({super.key, required this.authBloc});
+  const QuotePaymentDetails({super.key, required this.authBloc});
 
   @override
-  State<PaymentDetails> createState() => _PaymentDetailsState();
+  State<QuotePaymentDetails> createState() => _QuotePaymentDetailsState();
 }
 
-class _PaymentDetailsState extends State<PaymentDetails> {
+class _QuotePaymentDetailsState extends State<QuotePaymentDetails> {
   final NumberFormat _currencyFormat = NumberFormat('#,##0.00');
   final TextEditingController _discountController = TextEditingController();
   bool _discountEnabled = false;
@@ -41,9 +41,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
           context.read<SystemConstantBloc>().add(
             LoadSystemConstants(companyId),
           );
-          context.read<SalesOrderCoordinatorBloc>().add(
-            const LoadFeeSystemConstants(),
-          );
+          context.read<QuotationOrderBloc>().add(LoadFeeSystemConstants());
         }
       }
     });
@@ -57,14 +55,14 @@ class _PaymentDetailsState extends State<PaymentDetails> {
   }
 
   void _updateFinancialData({double discountAmount = 0}) {
-    final bloc = context.read<SalesOrderCoordinatorBloc>();
+    final bloc = context.read<QuotationOrderBloc>();
     final state = bloc.state;
 
     bloc.add(
-      UpdateTaxAndFees(
-        subtotal: state.lastSubTotal ?? 0.0,
+      UpdateTaxSettings(
+        subTotal: state.subTotal ?? 0.0,
         discountAmount: discountAmount,
-        isWithholdingEnabled: state.isWithholdingEnabled,
+        applyWithholding: state.canApplyWithholding!,
       ),
     );
   }
@@ -80,14 +78,14 @@ class _PaymentDetailsState extends State<PaymentDetails> {
   }
 
   void _toggleWithholding(bool enabled) {
-    final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
-    final state = coordinatorBloc.state;
+    final bloc = context.read<QuotationOrderBloc>();
+    final state = bloc.state;
 
-    coordinatorBloc.add(
-      UpdateTaxAndFees(
-        subtotal: state.lastSubTotal ?? 0.0,
-        discountAmount: state.lastDiscountAmount ?? 0.0,
-        isWithholdingEnabled: enabled,
+    bloc.add(
+      UpdateTaxSettings(
+        subTotal: state.subTotal ?? 0.0,
+        discountAmount: state.discountAmount ?? 0.0,
+        applyWithholding: enabled,
       ),
     );
   }
@@ -106,9 +104,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
       setState(() {
         _systemConstantsLoaded = true;
       });
-      context.read<SalesOrderCoordinatorBloc>().add(
-        const LoadFeeSystemConstants(),
-      );
+      context.read<QuotationOrderBloc>().add(LoadFeeSystemConstants());
     }
   }
 
@@ -123,10 +119,10 @@ class _PaymentDetailsState extends State<PaymentDetails> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<SalesOrderCoordinatorBloc, SalesOrderCoordinatorState>(
+    return BlocConsumer<QuotationOrderBloc, QuotationOrderState>(
       //Sync discount amount with state
       listener: (context, state) {
-        if (state.status == SalesOrderCoordinatorStatus.error) {
+        if (state.status == QuotationOrderStatus.error) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.error!),
@@ -138,12 +134,10 @@ class _PaymentDetailsState extends State<PaymentDetails> {
       },
       builder: (context, state) {
         // Sync discount controller with state
-        if (state.lastDiscountAmount != null &&
+        if (state.discountAmount != null &&
             _discountController.text.isEmpty &&
-            state.lastDiscountAmount! > 0) {
-          _discountController.text = state.lastDiscountAmount!.toStringAsFixed(
-            2,
-          );
+            state.discountAmount! > 0) {
+          _discountController.text = state.discountAmount!.toStringAsFixed(2);
         }
 
         return _buildPaymentDetails(context, state);
@@ -191,9 +185,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
           ElevatedButton(
             onPressed: () {
               getIt<SystemConstantsService>().ensureLoaded();
-              context.read<SalesOrderCoordinatorBloc>().add(
-                const LoadFeeSystemConstants(),
-              );
+              context.read<QuotationOrderBloc>().add(LoadFeeSystemConstants());
             },
             child: Text('Retry'),
           ),
@@ -202,10 +194,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
     );
   }
 
-  Widget _buildPaymentDetails(
-    BuildContext context,
-    SalesOrderCoordinatorState state,
-  ) {
+  Widget _buildPaymentDetails(BuildContext context, QuotationOrderState state) {
     // YOUR EXISTING UI CODE HERE (the SingleChildScrollView with all the fields)
     final isSmallScreen = MediaQuery.of(context).size.width < 600;
     final padding = isSmallScreen ? 12.0 : 16.0;
@@ -221,7 +210,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
             _buildReadOnlyField(
               context,
               'Subtotal',
-              _currencyFormat.format(state.lastSubTotal),
+              _currencyFormat.format(state.subTotal),
               icon: Icons.shopping_cart,
             ),
             const SizedBox(height: 6),
@@ -233,8 +222,8 @@ class _PaymentDetailsState extends State<PaymentDetails> {
             const SizedBox(height: 16),
             const Divider(height: 1),
             const SizedBox(height: 16),
-            _buildTotalField(context, 'Total', state.lastTotalAmount ?? 0.0),
-            if (!state.canApplyWithholding && state.isWithholdingEnabled)
+            _buildTotalField(context, 'Total', state.totalAmount ?? 0.0),
+            if (!state.canApplyWithholding! && state.isWithholdingEnabled!)
               _buildWarningMessage(context, state),
           ],
         ),
@@ -277,12 +266,9 @@ class _PaymentDetailsState extends State<PaymentDetails> {
     );
   }
 
-  Widget _buildTaxField(
-    BuildContext context,
-    SalesOrderCoordinatorState state,
-  ) {
-    final vatRate = state.vatRate ?? 0.0;
-    final taxAmount = state.lastTax ?? 0.0;
+  Widget _buildTaxField(BuildContext context, QuotationOrderState state) {
+    final vatRate = state.taxRate ?? 0.0;
+    final taxAmount = state.tax ?? 0.0;
     return _buildReadOnlyField(
       context,
       'Tax (${vatRate.toStringAsFixed(1)}%)',
@@ -304,7 +290,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
 
   Widget _buildDiscountField(
     BuildContext context,
-    SalesOrderCoordinatorState state,
+    QuotationOrderState state,
     bool isSmallScreen,
   ) {
     final theme = Theme.of(context);
@@ -378,26 +364,26 @@ class _PaymentDetailsState extends State<PaymentDetails> {
 
   Widget _buildWithholdingField(
     BuildContext context,
-    SalesOrderCoordinatorState state,
+    QuotationOrderState state,
     bool isSmallScreen,
   ) {
     final theme = Theme.of(context);
     final isWithholdingApplied =
-        state.canApplyWithholding && state.isWithholdingEnabled;
+        state.canApplyWithholding! && state.isWithholdingEnabled!;
 
     final borderColor = isWithholdingApplied
         ? theme.colorScheme.primary
-        : state.isWithholdingEnabled
+        : state.isWithholdingEnabled!
         ? theme.colorScheme.primary
         : const Color(0xFF1C1C1C);
 
     final withholdingAmountText = isWithholdingApplied
-        ? _currencyFormat.format(state.withholdingAmount)
+        ? _currencyFormat.format(state.withholdAmount)
         : '----';
 
     final withholdingDisplayText = isWithholdingApplied
         ? '$withholdingAmountText (${state.withholdingRate!.toStringAsFixed(1)}%)'
-        : state.isWithholdingEnabled && !state.canApplyWithholding
+        : state.isWithholdingEnabled! && !state.canApplyWithholding!
         ? 'Not applicable'
         : 'Withholding(----)';
 
@@ -405,7 +391,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         GestureDetector(
-          onTap: () => _toggleWithholding(!state.isWithholdingEnabled),
+          onTap: () => _toggleWithholding(!state.isWithholdingEnabled!),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 250),
             height: 45,
@@ -426,7 +412,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
                     ignoring: true,
                     child: AnimatedOpacity(
                       duration: const Duration(milliseconds: 200),
-                      opacity: state.isWithholdingEnabled ? 1.0 : 0.6,
+                      opacity: state.isWithholdingEnabled! ? 1.0 : 0.6,
                       child: TextField(
                         enabled: false,
                         controller: TextEditingController(
@@ -456,7 +442,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
                 ),
 
                 _buildToggleSwitch(
-                  state.isWithholdingEnabled,
+                  state.isWithholdingEnabled!,
                   borderColor,
                   theme,
                 ),
@@ -471,17 +457,17 @@ class _PaymentDetailsState extends State<PaymentDetails> {
         Text(
           isWithholdingApplied
               ? 'Withholding tax is applied to this transaction'
-              : state.isWithholdingEnabled && !state.canApplyWithholding
+              : state.isWithholdingEnabled! && !state.canApplyWithholding!
               ? 'Subtotal must exceed \$${state.withholdingInitial!.toStringAsFixed(2)} to apply withholding'
               : 'Withholding tax is disabled',
           style: TextStyle(
             fontSize: 12,
             color: isWithholdingApplied
                 ? theme.colorScheme.primary
-                : state.isWithholdingEnabled && !state.canApplyWithholding
+                : state.isWithholdingEnabled! && !state.canApplyWithholding!
                 ? Colors.amber[800]
                 : theme.colorScheme.onSurface.withOpacity(0.6),
-            fontStyle: isWithholdingApplied || state.isWithholdingEnabled
+            fontStyle: isWithholdingApplied || state.isWithholdingEnabled!
                 ? FontStyle.italic
                 : FontStyle.normal,
           ),
@@ -532,10 +518,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
     );
   }
 
-  Widget _buildWarningMessage(
-    BuildContext context,
-    SalesOrderCoordinatorState state,
-  ) {
+  Widget _buildWarningMessage(BuildContext context, QuotationOrderState state) {
     return Container(
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.all(12),

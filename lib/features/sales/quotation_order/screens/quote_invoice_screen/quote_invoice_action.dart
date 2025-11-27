@@ -8,9 +8,9 @@ import 'package:savvy_stock/features/sales/sales_order/invoice/widget/dialogs/er
 import 'package:savvy_stock/features/sales/sales_order/invoice/widget/dialogs/order_confirmation_dialog.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/widget/dialogs/order_processing_dialog.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/widget/dialogs/order_success_dialog.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_bloc.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_event.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_state.dart';
 
 // features/sales/invoice/widgets/invoice_action.dart
 import 'package:go_router/go_router.dart';
@@ -24,7 +24,7 @@ class InvoiceAction extends StatefulWidget {
 
 class _InvoiceActionState extends State<InvoiceAction> {
   //final _logger = AppLogger('InvoiceAction');
-  StreamSubscription<SalesOrderCoordinatorState>? _orderSubscription;
+  StreamSubscription<QuotationOrderState>? _orderSubscription;
 
   @override
   void dispose() {
@@ -34,26 +34,23 @@ class _InvoiceActionState extends State<InvoiceAction> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<SalesOrderCoordinatorBloc, SalesOrderCoordinatorState>(
+    return BlocConsumer<QuotationOrderBloc, QuotationOrderState>(
       listener: _handleStateChanges, // 🎯 Better than manual stream listening
       builder: (context, state) {
         final isProcessing =
-            state.status == SalesOrderCoordinatorStatus.processing ||
-            state.status == SalesOrderCoordinatorStatus.paymentProcessing;
+            state.status == QuotationOrderStatus.processing ||
+            state.status == QuotationOrderStatus.paymentProcessing;
 
         return _buildActionBar(context, isProcessing, state);
       },
     );
   }
 
-  void _handleStateChanges(
-    BuildContext context,
-    SalesOrderCoordinatorState state,
-  ) {
+  void _handleStateChanges(BuildContext context, QuotationOrderState state) {
     // 🎯 Centralized state handling prevents race conditions
     if (state.isOrderComplete && state.invoiceGenerated) {
       _showSuccessDialog(context, state);
-    } else if (state.status == SalesOrderCoordinatorStatus.error &&
+    } else if (state.status == QuotationOrderStatus.error &&
         state.error != null) {
       _showErrorDialog(context, state.error ?? 'Unknown error occurred');
     }
@@ -62,7 +59,7 @@ class _InvoiceActionState extends State<InvoiceAction> {
   Widget _buildActionBar(
     BuildContext context,
     bool isProcessing,
-    SalesOrderCoordinatorState state,
+    QuotationOrderState state,
   ) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -90,7 +87,7 @@ class _InvoiceActionState extends State<InvoiceAction> {
   Widget _buildFinishButton(
     BuildContext context,
     bool isProcessing,
-    SalesOrderCoordinatorState state,
+    QuotationOrderState state,
   ) {
     return Expanded(
       child: ElevatedButton(
@@ -110,7 +107,7 @@ class _InvoiceActionState extends State<InvoiceAction> {
     Navigator.of(context).pop();
   }
 
-  void _finalizeOrder(BuildContext context, SalesOrderCoordinatorState state) {
+  void _finalizeOrder(BuildContext context, QuotationOrderState state) {
     if (!_validateOrder(state)) {
       return;
     }
@@ -118,22 +115,22 @@ class _InvoiceActionState extends State<InvoiceAction> {
     _showConfirmationDialog(context, state);
   }
 
-  bool _validateOrder(SalesOrderCoordinatorState state) {
-    return state.currentHeader != null &&
-        state.currentDetails.isNotEmpty &&
-        state.currentDetails.every((detail) => detail.isValid);
+  bool _validateOrder(QuotationOrderState state) {
+    return state.selectedHeader != null &&
+        state.createDetailItems.isNotEmpty &&
+        state.createDetailItems.every((detail) => detail.isValid);
   }
 
   void _showConfirmationDialog(
     BuildContext context,
-    SalesOrderCoordinatorState state,
+    QuotationOrderState state,
   ) {
     showDialog(
       context: context,
       barrierDismissible: false, // 🎯 Prevent accidental dismissal
       builder: (context) => OrderConfirmationDialog(
-        orderNumber: state.currentHeader?.fsNumber,
-        totalAmount: state.lastTotalAmount,
+        orderNumber: state.selectedHeader?.fsNumber,
+        totalAmount: state.totalAmount,
         onConfirm: () => _processFinalization(context),
         onCancel: () => Navigator.of(context).pop(),
       ),
@@ -141,7 +138,7 @@ class _InvoiceActionState extends State<InvoiceAction> {
   }
 
   void _processFinalization(BuildContext context) {
-    final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
+    final coordinatorBloc = context.read<QuotationOrderBloc>();
     final state = coordinatorBloc.state;
 
     if (!_validateOrder(state)) {
@@ -153,9 +150,9 @@ class _InvoiceActionState extends State<InvoiceAction> {
 
     // 🎯 Dispatch the event - this is what was missing!
     coordinatorBloc.add(
-      CreateCompleteSalesOrder(
-        header: state.currentHeader!,
-        details: state.currentDetails,
+      SaveQuotationOrder(
+        header: state.selectedHeader!,
+        details: state.createDetailItems,
       ),
     );
 
@@ -164,7 +161,7 @@ class _InvoiceActionState extends State<InvoiceAction> {
       context: context,
       barrierDismissible: false,
       builder: (context) =>
-          BlocConsumer<SalesOrderCoordinatorBloc, SalesOrderCoordinatorState>(
+          BlocConsumer<QuotationOrderBloc, QuotationOrderState>(
             listener: (context, state) {
               if (state.isOrderComplete && state.invoiceGenerated) {
                 Navigator.of(context).pop(); // Close processing dialog
@@ -186,17 +183,14 @@ class _InvoiceActionState extends State<InvoiceAction> {
     );
   }
 
-  void _showSuccessDialog(
-    BuildContext context,
-    SalesOrderCoordinatorState state,
-  ) {
+  void _showSuccessDialog(BuildContext context, QuotationOrderState state) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => OrderSuccessDialog(
-        orderNumber: state.currentHeader?.fsNumber,
+        orderNumber: state.selectedHeader?.fsNumber,
         invoiceNumber: state.invoiceFsNumber,
-        totalAmount: state.lastTotalAmount,
+        totalAmount: state.totalAmount,
         onDone: () => _navigateToHome(context),
       ),
     );
@@ -230,8 +224,8 @@ class _InvoiceActionState extends State<InvoiceAction> {
 
     // 🎯 Clear state after successful navigation
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<SalesOrderCoordinatorBloc>().add(ClearOrderDetails());
-      context.read<SalesOrderCoordinatorBloc>().add(ResetCoordinatorState());
+      context.read<QuotationOrderBloc>().add(ClearQuotationOrderDetails());
+      context.read<QuotationOrderBloc>().add(ResetQuotationDetails());
     });
   }
 }

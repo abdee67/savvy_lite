@@ -10,14 +10,14 @@ import 'package:savvy_stock/features/sales/customer/blocs/customer_state.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/customer/widget/customer_section.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_person.model.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
-import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_bloc.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_event.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_state.dart';
 
-class CustomerInfoScreen extends StatelessWidget {
+class QuotationCustomerInfoScreen extends StatelessWidget {
   final AuthBloc authBloc;
 
-  const CustomerInfoScreen({super.key, required this.authBloc});
+  const QuotationCustomerInfoScreen({super.key, required this.authBloc});
 
   @override
   Widget build(BuildContext context) {
@@ -29,21 +29,22 @@ class CustomerInfoScreen extends StatelessWidget {
       });
     }
 
-    return CustomerInfoScreenContent(authBloc: authBloc);
+    return QuotationCustomerInfoScreenContent(authBloc: authBloc);
   }
 }
 
-class CustomerInfoScreenContent extends StatefulWidget {
+class QuotationCustomerInfoScreenContent extends StatefulWidget {
   final AuthBloc authBloc;
 
-  const CustomerInfoScreenContent({super.key, required this.authBloc});
+  const QuotationCustomerInfoScreenContent({super.key, required this.authBloc});
 
   @override
-  State<CustomerInfoScreenContent> createState() =>
-      _CustomerInfoScreenContentState();
+  State<QuotationCustomerInfoScreenContent> createState() =>
+      _QuotationCustomerInfoScreenContentState();
 }
 
-class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
+class _QuotationCustomerInfoScreenContentState
+    extends State<QuotationCustomerInfoScreenContent> {
   static const _containerHeight = 20.0;
   static const _containerWidth = 20.0;
   static const _circularProgressStrokeWidth = 2.0;
@@ -86,8 +87,8 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
     final branchId = widget.authBloc.state.userId?.branch;
 
     if (companyId != null && userId != null && branchId != null) {
-      context.read<SalesOrderCoordinatorBloc>().add(
-        PrepareNewSalesOrder(
+      context.read<QuotationOrderBloc>().add(
+        PrepareCreateQuotationOrder(
           companyId: companyId,
           employeeId: userId,
           branchId: branchId,
@@ -112,11 +113,11 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
   Widget build(BuildContext context) {
     return MultiBlocListener(
       listeners: [
-        BlocListener<SalesOrderCoordinatorBloc, SalesOrderCoordinatorState>(
+        BlocListener<QuotationOrderBloc, QuotationOrderState>(
           listenWhen: (previous, current) =>
               previous.status != current.status ||
               previous.lastOperation != current.lastOperation,
-          listener: _handleCoordinatorStateChange,
+          listener: _handleQuotationOrderStateChange,
         ),
       ],
       child: Scaffold(
@@ -124,31 +125,28 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
         appBar: _buildAppBar(context),
         body: BlocBuilder<CustomerBloc, CustomerState>(
           builder: (context, customerState) {
-            return BlocBuilder<
-              SalesOrderCoordinatorBloc,
-              SalesOrderCoordinatorState
-            >(
-              builder: (context, coordinatorState) {
+            return BlocBuilder<QuotationOrderBloc, QuotationOrderState>(
+              builder: (context, quotationState) {
                 // Use post-frame callback to initialize default customer AFTER build
                 if (!_isInitialized &&
-                    coordinatorState.defaultCustomer != null &&
-                    coordinatorState.defaultCustomer!.isNotEmpty &&
+                    quotationState.defaultCustomer != null &&
+                    quotationState.defaultCustomer!.isNotEmpty &&
                     customerState.customers.isNotEmpty) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
-                    _initializeDefaultCustomer(coordinatorState, customerState);
+                    _initializeDefaultCustomer(quotationState, customerState);
                   });
                 }
 
                 final isValid =
                     _selectedBillToCustomer != null &&
                     _selectedShipToCustomer != null &&
-                    coordinatorState.currentHeader != null;
+                    quotationState.selectedHeader != null;
 
                 return Stack(
                   children: [
-                    _buildContent(coordinatorState, isValid, customerState),
-                    if (coordinatorState.pendingOperations.contains(
-                      'prepare_new_order',
+                    _buildContent(quotationState, isValid, customerState),
+                    if (quotationState.pendingOperations.contains(
+                      'prepare_new_quotation_order',
                     ))
                       const _LoadingOverlay(),
                   ],
@@ -161,32 +159,37 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
     );
   }
 
-  void _handleCoordinatorStateChange(
+  void _handleQuotationOrderStateChange(
     BuildContext context,
-    SalesOrderCoordinatorState coordinatorState,
+    QuotationOrderState quotationState,
   ) {
     // Handle order preparation completion
-    if (coordinatorState.status == SalesOrderCoordinatorStatus.success &&
-        coordinatorState.lastOperation?.contains('prepared') == true) {
+    if (quotationState.status == QuotationOrderStatus.success &&
+        quotationState.lastOperation?.contains('quotation order prepared') ==
+            true) {
       setState(() {
         _isOrderPrepared = true;
       });
     }
 
     // Handle errors
-    if (coordinatorState.status == SalesOrderCoordinatorStatus.error) {
-      _showErrorSnackBar(context, coordinatorState.error!);
+    if (quotationState.status == QuotationOrderStatus.error) {
+      _showErrorSnackBar(context, quotationState.error!);
     }
 
     // Handle successful operations
-    if (coordinatorState.status == SalesOrderCoordinatorStatus.success &&
-        coordinatorState.lastOperation?.contains('prepared') == true) {
-      _showSuccessSnackBar(context, 'New sales order prepared successfully');
+    if (quotationState.status == QuotationOrderStatus.success &&
+        quotationState.lastOperation?.contains('quotation order prepared') ==
+            true) {
+      _showSuccessSnackBar(
+        context,
+        'New quotation order prepared successfully',
+      );
     }
   }
 
   void _initializeDefaultCustomer(
-    SalesOrderCoordinatorState state,
+    QuotationOrderState state,
     CustomerState customerState,
   ) {
     if (_isInitialized) return;
@@ -236,8 +239,8 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
     context.read<CustomerBloc>().add(SelectBillToCustomer(billToMatch));
     context.read<CustomerBloc>().add(SelectShipToCustomer(billToMatch));
 
-    context.read<SalesOrderCoordinatorBloc>().add(
-      SyncCustomerToOrder(customer: billToMatch),
+    context.read<QuotationOrderBloc>().add(
+      UpdateCustomerInfo(customer: billToMatch),
     );
   }
 
@@ -254,13 +257,9 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
       backgroundColor: const Color(0xFF155888),
       elevation: 0,
       actions: [
-        BlocSelector<
-          SalesOrderCoordinatorBloc,
-          SalesOrderCoordinatorState,
-          bool
-        >(
+        BlocSelector<QuotationOrderBloc, QuotationOrderState, bool>(
           selector: (state) =>
-              state.pendingOperations.contains('prepare_new_order'),
+              state.pendingOperations.contains('prepare_new_quotation_order'),
           builder: (context, isLoading) {
             if (!isLoading) return const SizedBox.shrink();
 
@@ -284,7 +283,7 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
   }
 
   Widget _buildContent(
-    SalesOrderCoordinatorState coordinatorState,
+    QuotationOrderState quotationState,
     bool isValid,
     CustomerState customerState,
   ) {
@@ -293,17 +292,19 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (coordinatorState.pendingOperations.contains('prepare_new_order'))
+          if (quotationState.pendingOperations.contains(
+            'prepare_new_quotation_order',
+          ))
             const _OrderPreparationLoader(),
 
-          _buildCustomerSections(coordinatorState, customerState),
+          _buildCustomerSections(quotationState, customerState),
           const SizedBox(height: _sizedBoxHeight16),
-          _buildOrderInformationSection(coordinatorState),
+          _buildOrderInformationSection(quotationState),
           const SizedBox(height: _sizedBoxHeight20),
           if (_selectedBillToCustomer != null)
             _buildCustomerDetails(_selectedBillToCustomer!),
           const SizedBox(height: _sizedBoxHeight20),
-          _buildNextButton(isValid, coordinatorState),
+          _buildNextButton(isValid, quotationState),
           const SizedBox(height: _sizedBoxHeight20),
         ],
       ),
@@ -311,7 +312,7 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
   }
 
   Widget _buildCustomerSections(
-    SalesOrderCoordinatorState coordinatorState,
+    QuotationOrderState quotationState,
     CustomerState customerState,
   ) {
     return Column(
@@ -342,8 +343,8 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
       _selectedBillToCustomer = customer;
     });
 
-    context.read<SalesOrderCoordinatorBloc>().add(
-      SyncCustomerToOrder(customer: customer),
+    context.read<QuotationOrderBloc>().add(
+      UpdateCustomerInfo(customer: customer),
     );
 
     context.read<CustomerBloc>().add(SelectBillToCustomer(customer));
@@ -365,31 +366,29 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
     context.read<CustomerBloc>().add(SelectShipToCustomer(customer));
   }
 
-  Widget _buildOrderInformationSection(
-    SalesOrderCoordinatorState coordinatorState,
-  ) {
+  Widget _buildOrderInformationSection(QuotationOrderState quotationState) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Order Information:',
+          'Quotation Order Information:',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: _titleFontSize,
           ),
         ),
         const SizedBox(height: _sizedBoxHeight8),
-        _buildSalesReferenceField(coordinatorState),
+        _buildSalesReferenceField(quotationState),
         const SizedBox(height: _sizedBoxHeight8),
-        _buildOrderDateField(coordinatorState),
+        _buildOrderDateField(quotationState),
         const SizedBox(height: _sizedBoxHeight8),
-        _buildSalesPersonField(coordinatorState),
+        _buildSalesPersonField(quotationState),
       ],
     );
   }
 
-  Widget _buildSalesReferenceField(SalesOrderCoordinatorState state) {
-    final fsNumber = state.currentHeader?.fsNumber ?? '';
+  Widget _buildSalesReferenceField(QuotationOrderState state) {
+    final fsNumber = state.selectedHeader?.fsNumber ?? '';
     if (fsNumber.isNotEmpty && _salesRefController.text.isEmpty) {
       _salesRefController.text = fsNumber;
     }
@@ -401,8 +400,8 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
     );
   }
 
-  Widget _buildOrderDateField(SalesOrderCoordinatorState state) {
-    final orderDate = state.currentHeader?.orderDate ?? DateTime.now();
+  Widget _buildOrderDateField(QuotationOrderState state) {
+    final orderDate = state.selectedHeader?.orderDate ?? DateTime.now();
     if (_orderDateController.text.isEmpty) {
       _orderDateController.text =
           '${orderDate.year}-${orderDate.month.toString().padLeft(2, '0')}-${orderDate.day.toString().padLeft(2, '0')}';
@@ -415,8 +414,8 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
     );
   }
 
-  Widget _buildSalesPersonField(SalesOrderCoordinatorState state) {
-    final salesPerson = state.currentHeader?.employee?.fullName ?? '';
+  Widget _buildSalesPersonField(QuotationOrderState state) {
+    final salesPerson = state.selectedHeader?.employeeRef?.fullName ?? '';
     if (salesPerson.isNotEmpty && _salesPersonController.text.isEmpty) {
       _salesPersonController.text = salesPerson;
     }
@@ -476,14 +475,11 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
     );
   }
 
-  Widget _buildNextButton(
-    bool isValid,
-    SalesOrderCoordinatorState coordinatorState,
-  ) {
+  Widget _buildNextButton(bool isValid, QuotationOrderState quotationState) {
     final isProcessing =
-        coordinatorState.status == SalesOrderCoordinatorStatus.processing;
-    final isPreparingOrder = coordinatorState.pendingOperations.contains(
-      'prepare_new_order',
+        quotationState.status == QuotationOrderStatus.processing;
+    final isPreparingOrder = quotationState.pendingOperations.contains(
+      'prepare_new_quotation_order',
     );
 
     return Container(
@@ -528,26 +524,30 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
       _showErrorSnackBar(context, 'Please select a customer first');
       return;
     }
+    final header = context.read<QuotationOrderBloc>().state.selectedHeader;
 
-    context.read<SalesOrderCoordinatorBloc>().add(
-      SyncCustomerToOrder(customer: _selectedBillToCustomer!),
+    context.read<QuotationOrderBloc>().add(
+      UpdateCustomerInfo(
+        customer: _selectedBillToCustomer!,
+        currentHeader: header,
+      ),
     );
 
     if (context.read<AuthBloc>().state.hasAccessToPrivilege(
-      AppRoutes.salesItemEntry,
+      AppRoutes.quotatioItemEntry,
     )) {
       final customerData = {
         'billToCustomer': _selectedBillToCustomer,
         'shipToCustomer': _selectedShipToCustomer,
         'currentHeader': context
-            .read<SalesOrderCoordinatorBloc>()
+            .read<QuotationOrderBloc>()
             .state
-            .currentHeader,
+            .selectedHeader,
       };
 
-      context.push(AppRoutes.salesItemEntry, extra: customerData);
+      context.push(AppRoutes.quotatioItemEntry, extra: customerData);
     } else {
-      _showErrorSnackBar(context, 'No access to sales item entry');
+      _showErrorSnackBar(context, 'No access to quotation item entry');
     }
   }
 

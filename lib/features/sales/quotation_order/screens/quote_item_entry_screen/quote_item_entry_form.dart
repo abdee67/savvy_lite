@@ -10,10 +10,10 @@ import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_event.dart';
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
-import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_bloc.dart';
-import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_event.dart';
-import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_state.dart';
-import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_bloc.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_event.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_state.dart';
+import 'package:savvy_stock/features/sales/quotation_order/model/quotation_order_detail.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_state.dart';
@@ -28,15 +28,15 @@ import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_c
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_event.dart';
 
-class SalesItemEntryForm extends StatefulWidget {
-  final SalesOrderDetail detail;
+class QuoteItemEntryForm extends StatefulWidget {
+  final QuotationOrderDetail detail;
   final GlobalKey<FormState> formKey;
   final bool isEditing;
-  final Function(SalesOrderDetail) onUpdate;
+  final Function(QuotationOrderDetail) onUpdate;
   final VoidCallback onConfirm;
   final VoidCallback? onCancel;
 
-  const SalesItemEntryForm({
+  const QuoteItemEntryForm({
     super.key,
     required this.detail,
     required this.formKey,
@@ -47,10 +47,10 @@ class SalesItemEntryForm extends StatefulWidget {
   });
 
   @override
-  State<SalesItemEntryForm> createState() => _SalesItemEntryFormState();
+  State<QuoteItemEntryForm> createState() => _QuoteItemEntryFormState();
 }
 
-class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
+class _QuoteItemEntryFormState extends State<QuoteItemEntryForm> {
   late TextEditingController _quantityController;
   late TextEditingController _unitPriceController;
   late TextEditingController _extendedPriceController;
@@ -138,7 +138,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
     _calculateExtendedPrice();
   }
 
-  void _populateExistingData(SalesOrderDetail detail) {
+  void _populateExistingData(QuotationOrderDetail detail) {
     // Try to find the item from ItemEntryBloc
     final itemsBloc = context.read<StockItemsEntryBloc>();
     final items = itemsBloc.state.items;
@@ -205,12 +205,12 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
     final updatedDetail = widget.detail.copyWith(
       itemsTableId: _selectedItem?.id,
       itemInBranch: _selectedItemInBranch?.id,
-      itemBranch: _selectedItemInBranch,
+      itemBranchRef: _selectedItemInBranch,
       quantity: double.tryParse(_quantityController.text),
       unitPrice: double.tryParse(_unitPriceController.text),
       extendedPrice: double.tryParse(_extendedPriceController.text),
       unitOfMeasure: _selectedUom,
-      item: _selectedItem, // Include the full item object
+      itemTableRef: _selectedItem, // Include the full item object
     );
 
     widget.onUpdate(updatedDetail);
@@ -289,16 +289,16 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
       final currentDetail = widget.detail.copyWith(
         itemsTableId: _selectedItem?.id,
         itemInBranch: itemInBranch.id,
-        itemBranch: itemInBranch,
+        itemBranchRef: itemInBranch,
         quantity: double.tryParse(_quantityController.text) ?? 0.0,
         unitOfMeasure: _selectedUom,
-        item: _selectedItem,
+        itemTableRef: _selectedItem,
       );
 
-      context.read<SalesOrderDetailBloc>().add(
+      context.read<QuotationOrderBloc>().add(
         UpdateUnitPriceWithUom(
-          salesOrderDetail: currentDetail,
-          itemsInBranch: itemInBranch,
+          detail: currentDetail,
+          itemInBranch: itemInBranch,
         ),
       );
     } else {
@@ -345,12 +345,12 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
 
     return Form(
       key: widget.formKey,
-      child: BlocListener<SalesOrderDetailBloc, SalesOrderDetailState>(
+      child: BlocListener<QuotationOrderBloc, QuotationOrderState>(
         listener: (context, state) {
           // Listen for updates to selected1 (which holds the calculated detail)
-          if (state.selected1 != null &&
-              state.selected1!.tempId == widget.detail.tempId) {
-            final updatedDetail = state.selected1!;
+          if (state.selectedDetail != null &&
+              state.selectedDetail1!.tempId == widget.detail.tempId) {
+            final updatedDetail = state.selectedDetail1!;
 
             // Update controllers if values changed
             if (updatedDetail.unitPrice != null) {
@@ -557,16 +557,16 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
                   final currentDetail = widget.detail.copyWith(
                     itemsTableId: _selectedItem?.id,
                     itemInBranch: _selectedItemInBranch?.id,
-                    itemBranch: _selectedItemInBranch,
+                    itemBranchRef: _selectedItemInBranch,
                     quantity: double.tryParse(value) ?? 0.0,
                     unitOfMeasure: _selectedUom,
-                    item: _selectedItem,
+                    itemTableRef: _selectedItem,
                   );
 
-                  context.read<SalesOrderDetailBloc>().add(
+                  context.read<QuotationOrderBloc>().add(
                     UpdateUnitPriceWithUom(
-                      salesOrderDetail: currentDetail,
-                      itemsInBranch: _selectedItemInBranch,
+                      detail: currentDetail,
+                      itemInBranch: _selectedItemInBranch!,
                       manualUnitPrice: double.tryParse(
                         _unitPriceController.text,
                       ),
@@ -637,18 +637,18 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
                             final currentDetail = widget.detail.copyWith(
                               itemsTableId: _selectedItem?.id,
                               itemInBranch: _selectedItemInBranch?.id,
-                              itemBranch: _selectedItemInBranch,
+                              itemBranchRef: _selectedItemInBranch,
                               quantity:
                                   double.tryParse(_quantityController.text) ??
                                   0.0,
                               unitOfMeasure: _selectedUom,
-                              item: _selectedItem,
+                              itemTableRef: _selectedItem,
                             );
 
-                            context.read<SalesOrderDetailBloc>().add(
+                            context.read<QuotationOrderBloc>().add(
                               UpdateUnitPriceWithUom(
-                                salesOrderDetail: currentDetail,
-                                itemsInBranch: _selectedItemInBranch,
+                                detail: currentDetail,
+                                itemInBranch: _selectedItemInBranch!,
                               ),
                             );
                           } else {
@@ -678,13 +678,13 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
 
             const SizedBox(height: 16),
 
-            // Unit Price (read-only, driven by SalesOrderDetailBloc)
-            BlocBuilder<SalesOrderDetailBloc, SalesOrderDetailState>(
+            // Unit Price (read-only, driven by QuotationOrderBloc)
+            BlocBuilder<QuotationOrderBloc, QuotationOrderState>(
               builder: (context, detailState) {
-                SalesOrderDetail effectiveDetail = widget.detail;
+                QuotationOrderDetail effectiveDetail = widget.detail;
 
                 // Prefer the in-progress selected1 detail (for unconfirmed edits)
-                final selectedDetail = detailState.selected1;
+                final selectedDetail = detailState.selectedDetail;
                 if (selectedDetail != null &&
                     ((selectedDetail.id != null &&
                             selectedDetail.id == widget.detail.id) ||
@@ -692,7 +692,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
                             selectedDetail.tempId == widget.detail.tempId))) {
                   effectiveDetail = selectedDetail;
                 } else {
-                  final matching = detailState.createItems.firstWhere(
+                  final matching = detailState.createDetailItems.firstWhere(
                     (d) =>
                         (d.id != null && d.id == widget.detail.id) ||
                         (d.tempId != null && d.tempId == widget.detail.tempId),
@@ -720,17 +720,17 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
                       final currentDetail = widget.detail.copyWith(
                         itemsTableId: _selectedItem?.id,
                         itemInBranch: _selectedItemInBranch?.id,
-                        itemBranch: _selectedItemInBranch,
+                        itemBranchRef: _selectedItemInBranch,
                         quantity:
                             double.tryParse(_quantityController.text) ?? 0.0,
                         unitOfMeasure: _selectedUom,
-                        item: _selectedItem,
+                        itemTableRef: _selectedItem,
                       );
 
-                      context.read<SalesOrderDetailBloc>().add(
+                      context.read<QuotationOrderBloc>().add(
                         UpdateUnitPriceWithUom(
-                          salesOrderDetail: currentDetail,
-                          itemsInBranch: _selectedItemInBranch,
+                          detail: currentDetail,
+                          itemInBranch: _selectedItemInBranch!,
                           manualUnitPrice: double.tryParse(value) ?? 0.0,
                         ),
                       );
@@ -742,13 +742,13 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
 
             const SizedBox(height: 16),
 
-            // Extended Price (read-only, driven by SalesOrderDetailBloc)
-            BlocBuilder<SalesOrderDetailBloc, SalesOrderDetailState>(
+            // Extended Price (read-only, driven by QuotationOrderBloc)
+            BlocBuilder<QuotationOrderBloc, QuotationOrderState>(
               builder: (context, detailState) {
-                SalesOrderDetail effectiveDetail = widget.detail;
+                QuotationOrderDetail effectiveDetail = widget.detail;
 
                 // Prefer the in-progress selected1 detail (for unconfirmed edits)
-                final selectedDetail = detailState.selected1;
+                final selectedDetail = detailState.selectedDetail;
                 if (selectedDetail != null &&
                     ((selectedDetail.id != null &&
                             selectedDetail.id == widget.detail.id) ||
@@ -756,7 +756,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
                             selectedDetail.tempId == widget.detail.tempId))) {
                   effectiveDetail = selectedDetail;
                 } else {
-                  final matching = detailState.createItems.firstWhere(
+                  final matching = detailState.createDetailItems.firstWhere(
                     (d) =>
                         (d.id != null && d.id == widget.detail.id) ||
                         (d.tempId != null && d.tempId == widget.detail.tempId),
