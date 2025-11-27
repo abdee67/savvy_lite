@@ -911,17 +911,20 @@ class QuotationOrderBloc
     try {
       final customer = event.customer;
 
-      // Build phone numbers string (like Java)
-      final phoneNumbers =
-          customer.phoneNumber! +
-          (customer.phone2 != null && customer.phone2!.isNotEmpty
-              ? ', ${customer.phone2}'
-              : '');
+      // Build phone numbers string safely (handle null phoneNumber)
+      final primaryPhone = customer.phoneNumber ?? '';
+      final secondaryPhone = customer.phone2;
+
+      final phoneNumbers = primaryPhone.isNotEmpty
+          ? (secondaryPhone != null && secondaryPhone.isNotEmpty
+                ? '$primaryPhone, $secondaryPhone'
+                : primaryPhone)
+          : (secondaryPhone ?? '');
 
       // Update customer info in state
       final updatedState = state.updateCustomerInfo(
         tinNumber: customer.tinNumber,
-        phoneNumbers: phoneNumbers,
+        phoneNumbers: phoneNumbers.isNotEmpty ? phoneNumbers : null,
         countryDesc: customer.country,
         stateDesc: customer.state,
         regionDesc: customer.region,
@@ -929,8 +932,16 @@ class QuotationOrderBloc
       );
 
       // Update selected header with customer
-      if (event.currentHeader != null) {
+      if (event.currentHeader != null && customer.id != null) {
         final updatedHeader = event.currentHeader!.copyWith(
+          customerTableId: customer.id!,
+          customerBillTo: customer.id!,
+        );
+
+        emit(updatedState.copyWith(selectedHeader: updatedHeader));
+      } else if (state.selectedHeader != null && customer.id != null) {
+        // Fallback: use state's selectedHeader if currentHeader not provided
+        final updatedHeader = state.selectedHeader!.copyWith(
           customerTableId: customer.id!,
           customerBillTo: customer.id!,
         );

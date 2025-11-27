@@ -23,15 +23,19 @@ class QuotationItemEntryScreen extends StatefulWidget {
 class _QuotationItemEntryScreenState extends State<QuotationItemEntryScreen> {
   @override
   void initState() {
+    print('🟢 ITEM ENTRY: initState called');
     super.initState();
     // Initialize coordinator with customer data from previous screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      print('🟢 ITEM ENTRY: PostFrameCallback executing');
       _initializeCoordinator(context);
+      print('🟢 ITEM ENTRY: initializeCoordinator complete');
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    print('🟢 ITEM ENTRY: build() called');
     return Scaffold(
       appBar: AppBar(
         title: const Text('Quotation Item Entry'),
@@ -44,7 +48,6 @@ class _QuotationItemEntryScreenState extends State<QuotationItemEntryScreen> {
   }
 
   void _initializeCoordinator(BuildContext context) {
-    final coordinatorBloc = context.read<QuotationOrderBloc>();
     final customerBloc = context.read<CustomerBloc>();
 
     // Set customers from previous screen data
@@ -61,8 +64,9 @@ class _QuotationItemEntryScreenState extends State<QuotationItemEntryScreen> {
           customerBloc.add(SelectShipToCustomer(shipToCustomer));
         }
 
-        // Sync customer to coordinator
-        coordinatorBloc.add(UpdateCustomerInfo(customer: billToCustomer));
+        // Note: UpdateCustomerInfo is already called in the previous screen
+        // before navigation, so we don't need to dispatch it again here.
+        // The quotation bloc already has the customer info.
       }
     }
   }
@@ -95,12 +99,14 @@ class _QuotationItemEntryScreenContentState
     // Wait for the coordinator to be ready
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final coordinatorState = context.read<QuotationOrderBloc>().state;
-      if (coordinatorState.selectedHeader != null) {
+      final selectedHeader = coordinatorState.selectedHeader;
+
+      if (selectedHeader != null && selectedHeader.id != null) {
         setState(() {
           _currentFormDetail = QuotationOrderDetail(
             tempId: DateTime.now().millisecondsSinceEpoch,
-            quoteOrderHeaderId: coordinatorState.selectedHeader!.id!,
-            company: coordinatorState.selectedHeader!.company,
+            quoteOrderHeaderId: selectedHeader.id!,
+            company: selectedHeader.company,
             itemsTableId: 0,
             quantity: 1.0,
             unitPrice: 0.0,
@@ -111,21 +117,27 @@ class _QuotationItemEntryScreenContentState
         // If header not ready, listen for state changes
         final coordinatorBloc = context.read<QuotationOrderBloc>();
         coordinatorBloc.stream
-            .firstWhere((state) => state.selectedHeader != null)
+            .firstWhere(
+              (state) =>
+                  state.selectedHeader != null &&
+                  state.selectedHeader!.id != null,
+            )
             .then((_) {
               if (mounted) {
-                setState(() {
-                  _currentFormDetail = QuotationOrderDetail(
-                    tempId: DateTime.now().millisecondsSinceEpoch,
-                    quoteOrderHeaderId:
-                        coordinatorBloc.state.selectedHeader!.id!,
-                    company: coordinatorBloc.state.selectedHeader!.company,
-                    itemsTableId: 0,
-                    quantity: 1.0,
-                    unitPrice: 0.0,
-                    extendedPrice: 0.0,
-                  );
-                });
+                final header = coordinatorBloc.state.selectedHeader;
+                if (header != null && header.id != null) {
+                  setState(() {
+                    _currentFormDetail = QuotationOrderDetail(
+                      tempId: DateTime.now().millisecondsSinceEpoch,
+                      quoteOrderHeaderId: header.id!,
+                      company: header.company,
+                      itemsTableId: 0,
+                      quantity: 1.0,
+                      unitPrice: 0.0,
+                      extendedPrice: 0.0,
+                    );
+                  });
+                }
               }
             });
       }
@@ -201,15 +213,19 @@ class _QuotationItemEntryScreenContentState
 
       // Create new empty form
       final coordinatorState = context.read<QuotationOrderBloc>().state;
-      _currentFormDetail = QuotationOrderDetail(
-        tempId: DateTime.now().millisecondsSinceEpoch,
-        quoteOrderHeaderId: coordinatorState.selectedHeader!.id!,
-        company: coordinatorState.selectedHeader?.company,
-        itemsTableId: 0,
-        quantity: 1.0,
-        unitPrice: 0.0,
-        extendedPrice: 0.0,
-      );
+      final selectedHeader = coordinatorState.selectedHeader;
+
+      if (selectedHeader != null && selectedHeader.id != null) {
+        _currentFormDetail = QuotationOrderDetail(
+          tempId: DateTime.now().millisecondsSinceEpoch,
+          quoteOrderHeaderId: selectedHeader.id!,
+          company: selectedHeader.company,
+          itemsTableId: 0,
+          quantity: 1.0,
+          unitPrice: 0.0,
+          extendedPrice: 0.0,
+        );
+      }
     });
 
     // Reset form

@@ -200,7 +200,7 @@ class _QuotationCustomerInfoScreenContentState
     Customer? defaultCustomer;
 
     final defaults = state.defaultCustomer;
-    if (defaults != null && defaults.isNotEmpty) {
+    if (defaults != null) {
       defaultCustomer = defaults;
     }
 
@@ -519,23 +519,35 @@ class _QuotationCustomerInfoScreenContentState
     );
   }
 
-  void _goToNextPage(BuildContext context) {
+  void _goToNextPage(BuildContext context) async {
+    print('🔵 NAVIGATION: Starting _goToNextPage');
+
     if (_selectedBillToCustomer == null) {
       _showErrorSnackBar(context, 'Please select a customer first');
       return;
     }
-    final header = context.read<QuotationOrderBloc>().state.selectedHeader;
 
+    print('🔵 NAVIGATION: Customer selected, getting header');
+    final header = context.read<QuotationOrderBloc>().state.selectedHeader;
+    print('🔵 NAVIGATION: Header obtained: ${header?.fsNumber}');
+
+    print('🔵 NAVIGATION: Dispatching UpdateCustomerInfo');
     context.read<QuotationOrderBloc>().add(
       UpdateCustomerInfo(
         customer: _selectedBillToCustomer!,
         currentHeader: header,
       ),
     );
+    print('🔵 NAVIGATION: UpdateCustomerInfo dispatched');
+
+    // Wait a frame to ensure the event is processed
+    await Future.delayed(const Duration(milliseconds: 50));
+    print('🔵 NAVIGATION: Delay complete');
 
     if (context.read<AuthBloc>().state.hasAccessToPrivilege(
       AppRoutes.quotatioItemEntry,
     )) {
+      print('🔵 NAVIGATION: Access granted, preparing customer data');
       final customerData = {
         'billToCustomer': _selectedBillToCustomer,
         'shipToCustomer': _selectedShipToCustomer,
@@ -545,8 +557,15 @@ class _QuotationCustomerInfoScreenContentState
             .selectedHeader,
       };
 
-      context.push(AppRoutes.quotatioItemEntry, extra: customerData);
+      print('🔵 NAVIGATION: About to push route');
+      if (mounted) {
+        context.push(AppRoutes.quotatioItemEntry, extra: customerData);
+        print('🔵 NAVIGATION: Route pushed successfully');
+      } else {
+        print('❌ NAVIGATION: Widget not mounted');
+      }
     } else {
+      print('❌ NAVIGATION: No access to quotation item entry');
       _showErrorSnackBar(context, 'No access to quotation item entry');
     }
   }

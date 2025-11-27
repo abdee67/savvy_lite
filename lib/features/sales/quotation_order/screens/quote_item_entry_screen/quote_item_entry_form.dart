@@ -84,17 +84,29 @@ class _QuoteItemEntryFormState extends State<QuoteItemEntryForm> {
     final companyId = authBloc.state.companyId;
 
     if (companyId != null) {
-      // Load branches
-      context.read<BranchBloc>().add(LoadBranchs(companyId));
+      // Only load branches if not already loaded
+      final branchBloc = context.read<BranchBloc>();
+      if (branchBloc.state.branchs.isEmpty) {
+        branchBloc.add(LoadBranchs(companyId));
+      }
 
-      // Load UDC details for UOM
-      context.read<UdcDetailsBloc>().add(LoadAllUdcDetails());
+      // Only load UDC details if not already loaded
+      final udcBloc = context.read<UdcDetailsBloc>();
+      if (udcBloc.state.details.isEmpty) {
+        udcBloc.add(LoadAllUdcDetails());
+      }
 
-      // Load items
-      context.read<StockItemsEntryBloc>().add(LoadItems(companyId));
+      // Only load items if not already loaded
+      final itemsBloc = context.read<StockItemsEntryBloc>();
+      if (itemsBloc.state.items.isEmpty) {
+        itemsBloc.add(LoadItems(companyId));
+      }
 
-      // Load items in branches
-      context.read<StockItemInBranchBloc>().add(LoadItemsFromBranch(companyId));
+      // Only load items in branches if not already loaded
+      final itemsInBranchBloc = context.read<StockItemInBranchBloc>();
+      if (itemsInBranchBloc.state.items.isEmpty) {
+        itemsInBranchBloc.add(LoadItemsFromBranch(companyId));
+      }
     }
 
     // Initialize form with existing data
@@ -337,12 +349,18 @@ class _QuoteItemEntryFormState extends State<QuoteItemEntryForm> {
 
   @override
   Widget build(BuildContext context) {
+    print('🟡 FORM: build() called, _isInitializing=$_isInitializing');
+
+    print('🟡 FORM: Getting available branches');
     final availableBranches = _getAvailableBranchesForItem();
+    print('🟡 FORM: Available branches count: ${availableBranches.length}');
 
     if (_isInitializing) {
+      print('🟡 FORM: Still initializing, showing progress indicator');
       return const Center(child: CircularProgressIndicator());
     }
 
+    print('🟡 FORM: Building form widget');
     return Form(
       key: widget.formKey,
       child: BlocListener<QuotationOrderBloc, QuotationOrderState>(
@@ -415,6 +433,9 @@ class _QuoteItemEntryFormState extends State<QuoteItemEntryForm> {
             // Item Selection
             BlocBuilder<StockItemsEntryBloc, ItemEntryState>(
               builder: (context, itemsState) {
+                print(
+                  '🔴 DROPDOWN: Building item dropdown with ${itemsState.items.length} items',
+                );
                 return CustomTableDropdown<ItemEntryModel>(
                   title: 'Select Item *',
                   items: itemsState.items,
