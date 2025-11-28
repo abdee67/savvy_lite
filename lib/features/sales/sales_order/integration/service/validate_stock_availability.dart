@@ -632,24 +632,18 @@ class ValidateStockAvailabilityService {
       companyId,
     );
 
-    if (itemsInBranch != null) {
-      // Create stock card entry - equivalent to Java's stockCARDCreation
-      await itemTransactionsRepository.stockCardCreation(
-        ib: itemsInBranch,
-        loc: null,
-        lm: null,
-        transactionType: 'I', // 'I' for Issue/Sales
-        trNo: soD.orderHeader?.orderNumber,
-        remark: 'Sales',
-        qty: -qtyToSubtract, // Negative quantity for sales
-        por: null,
-        soD: soD,
-      );
-    } else {
-      throw Exception(
-        'Item branch not found for item: ${soD.itemsTableId}, branch: ${soD.itemBranch!.branch}',
-      );
-    }
+    // Create stock card entry - equivalent to Java's stockCARDCreation
+    await itemTransactionsRepository.stockCardCreation(
+      ib: itemsInBranch,
+      loc: null,
+      lm: null,
+      transactionType: 'I', // 'I' for Issue/Sales
+      trNo: soD.orderHeader?.orderNumber,
+      remark: 'Sales',
+      qty: -qtyToSubtract, // Negative quantity for sales
+      por: null,
+      soD: soD,
+    );
   }
 
   Future<({double availableQty, String message, bool isValid})>

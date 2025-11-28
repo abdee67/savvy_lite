@@ -99,10 +99,23 @@ class QuotationOrderDetail {
       createdBy: map['created_by'],
       updatedBy: map['updated_by'],
       tempId: map['temp_id'],
-      itemTableRef: map['item_table']
+      itemTableRef: map['items_id']
           ? ItemEntryModel(
               id: map['item_table'],
+              itemsId: map['items_id'],
               itemDescription: map['item_description'],
+              unitOfMeasure: map['unit_of_measure'],
+              unitPrice: map['unit_price'],
+              taxable: map['taxable'],
+              barcode: map['barcode'],
+              company: map['company'],
+              marginRate: map['margin_rate'],
+              marginType: map['margin_type'],
+              reorderPoint: map['reorder_point'],
+              referenceId: map['reference_id'],
+              tempId: map['temp_id'],
+              validCell: map['valid_cell'],
+              unitOfMeasureDescription: map['unit_of_measure_description'],
             )
           : null,
       itemBranchRef: map['item_branch']
@@ -112,7 +125,7 @@ class QuotationOrderDetail {
               branch: map['branch'],
             )
           : null,
-      uomRef: map['unit_of_measure']
+      uomRef: map['unit_of_measure_description']
           ? UdcDetails(
               id: map['unit_of_measure'],
               description1: map['unit_of_measure_description'],
@@ -162,7 +175,6 @@ class QuotationOrderDetail {
       'updated_at': updatedAt?.toIso8601String(),
       'created_by': createdBy,
       'updated_by': updatedBy,
-      if (tempId != null) 'temp_id': tempId,
     };
   }
 

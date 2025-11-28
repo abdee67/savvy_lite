@@ -32,7 +32,7 @@ class QuotationOrderHeader {
   final String? addOn;
   final double? tax;
 
-  final String? withHoldApply;
+  final bool? withHoldApply;
   final double? withholdAmount;
 
   final double? amountTotal;
@@ -344,7 +344,7 @@ class QuotationOrderHeader {
     double? discountInPercent,
     String? addOn,
     double? tax,
-    String? withHoldApply,
+    bool? withHoldApply,
     double? withholdAmount,
     double? amountTotal,
     double? amountOpen,

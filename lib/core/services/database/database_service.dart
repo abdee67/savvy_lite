@@ -2372,6 +2372,7 @@ ON quote_order_detail (prforma_status);
       AppRoutes.quotationOrder,
       AppRoutes.quotatioItemEntry,
       AppRoutes.quotationOrderPayment,
+      AppRoutes.quotationInvoiceReview,
     ];
 
     for (final uri in salesPrivileges) {

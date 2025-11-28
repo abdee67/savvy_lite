@@ -176,14 +176,16 @@ class ClearQuotationOrderDetails extends QuotationOrderEvent {}
 class CalculateQuotationTotals extends QuotationOrderEvent {
   final QuotationOrderHeader header;
   final List<QuotationOrderDetail> details;
-  final bool? applyWithholding;
-  final double? discountAmount;
+  final bool applyWithholding;
+  final double discountAmount;
+  final SystemConstant? systemConstants;
 
   const CalculateQuotationTotals({
     required this.header,
     required this.details,
-    this.applyWithholding,
-    this.discountAmount,
+    required this.applyWithholding,
+    required this.discountAmount,
+    this.systemConstants,
   });
   @override
   List<Object?> get props => [
@@ -518,12 +520,12 @@ class ApplyDiscount extends QuotationOrderEvent {
 
 class UpdateTaxSettings extends QuotationOrderEvent {
   final double subTotal;
-  final bool applyWithholding;
+  final bool isWithholdingEnabled;
   final double discountAmount;
 
   const UpdateTaxSettings({
     required this.subTotal,
-    required this.applyWithholding,
+    required this.isWithholdingEnabled,
     required this.discountAmount,
   });
 }

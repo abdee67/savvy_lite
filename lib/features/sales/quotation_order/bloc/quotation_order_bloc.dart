@@ -150,6 +150,7 @@ class QuotationOrderBloc
     on<GetNextOrderNumber>(_onGetNextOrderNumber);
     on<GenerateNextFsNumber>(_onGenerateNextFsNumber);
     on<RefreshQuotationOrders>(_onRefreshQuotationOrders);
+    on<GenerateInvoiceFromQuotation>(_onGenerateInvoiceFromQuotation);
 
     // ✅ ADDING MISSING UTILITY EVENTS
     on<SetDefaultCustomer>(_onSetDefaultCustomer);
@@ -195,8 +196,8 @@ class QuotationOrderBloc
         CalculateQuotationTotals(
           header: state.selectedHeader!,
           details: state.createDetailItems,
-          applyWithholding: state.canApplyWithholding,
-          discountAmount: state.discountAmount,
+          applyWithholding: state.canApplyWithholding!,
+          discountAmount: state.discountAmount!,
         ),
       );
     }
@@ -536,27 +537,77 @@ class QuotationOrderBloc
     AddQuotationOrderDetail event,
     Emitter<QuotationOrderState> emit,
   ) {
-    final newDetail = event.detail.copyWith(
-      tempId: _getNextTempId(state.createDetailItems),
-    );
+    try {
+      // Check if an item with the same itemsTableId and unitOfMeasure already exists
+      final existingIndex = state.createDetailItems.indexWhere(
+        (detail) =>
+            detail.itemsTableId == event.detail.itemsTableId &&
+            detail.unitOfMeasure == event.detail.unitOfMeasure,
+      );
 
-    final updatedDetails = [...state.createDetailItems, newDetail];
+      List<QuotationOrderDetail> updatedDetails;
 
-    emit(
-      state.copyWith(
-        createDetailItems: updatedDetails,
-        selectedDetail: newDetail,
-      ),
-    );
+      if (existingIndex != -1) {
+        // ✅ Merge with existing item - sum quantities and extended prices
+        final existingDetail = state.createDetailItems[existingIndex];
+        final mergedQuantity =
+            (existingDetail.quantity ?? 0.0) + (event.detail.quantity ?? 0.0);
+        final mergedExtendedPrice =
+            (existingDetail.extendedPrice ?? 0.0) +
+            (event.detail.extendedPrice ?? 0.0);
 
-    // Recalculate totals
-    if (state.selectedHeader != null) {
-      add(
-        CalculateQuotationTotals(
-          header: state.selectedHeader!,
-          details: updatedDetails,
-          applyWithholding: state.canApplyWithholding,
-          discountAmount: state.discountAmount,
+        final mergedDetail = existingDetail.copyWith(
+          quantity: mergedQuantity,
+          extendedPrice: mergedExtendedPrice,
+        );
+
+        updatedDetails = List.from(state.createDetailItems);
+        updatedDetails[existingIndex] = mergedDetail;
+
+        emit(
+          state.copyWith(
+            createDetailItems: updatedDetails,
+            selectedDetail: mergedDetail,
+            status: QuotationOrderStatus.success,
+            successMessage: 'Item quantity updated',
+            lastOperation: 'merge_quotation_order_detail',
+          ),
+        );
+      } else {
+        // ✅ Add as new item
+        final newDetail = event.detail.copyWith(
+          tempId: _getNextTempId(state.createDetailItems),
+        );
+
+        updatedDetails = [...state.createDetailItems, newDetail];
+
+        emit(
+          state.copyWith(
+            createDetailItems: updatedDetails,
+            selectedDetail: newDetail,
+            status: QuotationOrderStatus.success,
+            successMessage: 'Quotation order detail added successfully',
+            lastOperation: 'add_quotation_order_detail',
+          ),
+        );
+      }
+
+      // Recalculate totals
+      if (state.selectedHeader != null) {
+        add(
+          CalculateQuotationTotals(
+            header: state.selectedHeader!,
+            details: updatedDetails,
+            applyWithholding: state.canApplyWithholding!,
+            discountAmount: state.discountAmount!,
+          ),
+        );
+      }
+    } catch (e) {
+      emit(
+        state.errorState(
+          'Failed to add quotation order detail: $e',
+          operation: 'add_quotation_order_detail',
         ),
       );
     }
@@ -581,8 +632,8 @@ class QuotationOrderBloc
         CalculateQuotationTotals(
           header: state.selectedHeader!,
           details: updatedDetails,
-          applyWithholding: state.canApplyWithholding,
-          discountAmount: state.discountAmount,
+          applyWithholding: state.canApplyWithholding!,
+          discountAmount: state.discountAmount!,
         ),
       );
     }
@@ -609,8 +660,8 @@ class QuotationOrderBloc
           CalculateQuotationTotals(
             header: state.selectedHeader!,
             details: updatedDetails,
-            applyWithholding: state.canApplyWithholding,
-            discountAmount: state.discountAmount,
+            applyWithholding: state.canApplyWithholding!,
+            discountAmount: state.discountAmount!,
           ),
         );
       }
@@ -703,14 +754,11 @@ class QuotationOrderBloc
     emit(state.paymentProcessingState('calculate_quotation_order_totals'));
 
     try {
-      final systemConstant = systemConstantBloc.state.selected;
+      final systemConstants =
+          systemConstantBloc.systemConstantService.currentSystemConstant;
 
-      // Get decimal places from system constants
-      final decimalPlaces = systemConstant?.decimalPlaces ?? 2;
-      final vatRate = (systemConstant?.rateVatPercentage ?? 0.0) / 100.0;
-      final withHoldRate =
-          (systemConstant?.rateWithholdingPercentage ?? 0.0) / 100.0;
-      final withHoldInitials = systemConstant?.withHoldInitials ?? 0.0;
+      // Get decimal places from system constants (like Java)
+      final decimalPlaces = systemConstants?.decimalPlaces ?? 2;
 
       double subTotal = 0.0;
       double taxableAmount = 0.0;
@@ -727,34 +775,29 @@ class QuotationOrderBloc
       }
 
       // Round subtotal
-      final roundedSubTotal = _roundToDecimalPlaces(subTotal, decimalPlaces);
+      final roundedSubTotal = systemConstantBloc.systemConstantService
+          .roundToDecimalPlaces(subTotal, decimalPlaces);
 
       // Calculate VAT
-      final taxAmount = _roundToDecimalPlaces(
-        taxableAmount * vatRate,
-        decimalPlaces,
-      );
+      final taxAmount = systemConstantBloc.systemConstantService
+          .calculateTaxAmount(taxableAmount);
 
       // Calculate withholding
       double withHoldAmount = 0.0;
-      final applyWithholding =
-          event.applyWithholding ?? state.canApplyWithholding ?? false;
-      if (applyWithholding && roundedSubTotal >= withHoldInitials) {
-        withHoldAmount = _roundToDecimalPlaces(
-          roundedSubTotal * withHoldRate,
-          decimalPlaces,
-        );
+      if (event.applyWithholding) {
+        withHoldAmount = systemConstantBloc.systemConstantService
+            .calculateWithholdingAmount(roundedSubTotal);
       }
 
       // Ensure discount is not null
-      final discountAmount =
-          event.discountAmount ?? state.discountAmount ?? 0.0;
+      final discountAmount = event.discountAmount;
 
       // Compute total
-      final totalAmount = _roundToDecimalPlaces(
-        roundedSubTotal + taxAmount - withHoldAmount - discountAmount,
-        decimalPlaces,
-      );
+      final totalAmount = systemConstantBloc.systemConstantService
+          .roundToDecimalPlaces(
+            roundedSubTotal + taxAmount - withHoldAmount - discountAmount,
+            decimalPlaces,
+          );
 
       emit(
         state.copyWith(
@@ -764,7 +807,8 @@ class QuotationOrderBloc
           withholdAmount: withHoldAmount,
           totalAmount: totalAmount,
           discountAmount: discountAmount,
-          canApplyWithholding: applyWithholding,
+          canApplyWithholding: event.applyWithholding,
+          systemConstants: event.systemConstants,
         ),
       );
     } catch (e) {
@@ -786,7 +830,8 @@ class QuotationOrderBloc
           header: state.selectedHeader!,
           details: state.createDetailItems,
           applyWithholding: event.applyWithholding,
-          discountAmount: state.discountAmount,
+          discountAmount: state.discountAmount!,
+          systemConstants: state.systemConstants,
         ),
       );
     }
@@ -817,11 +862,11 @@ class QuotationOrderBloc
   ) {
     try {
       print(
-        'Coordinator: Updating tax and fees - Discount: ${event.discountAmount}, Withholding: ${event.applyWithholding}',
+        'Coordinator: Updating tax and fees - Discount: ${event.discountAmount}, Withholding: ${event.isWithholdingEnabled}',
       );
 
       // Update withholding in header bloc
-      add(ApplyWithholdingTax(applyWithholding: event.applyWithholding));
+      add(ApplyWithholdingTax(applyWithholding: event.isWithholdingEnabled));
 
       // Update discount in header bloc
       add(ApplyDiscount(discountAmount: event.discountAmount));
@@ -833,7 +878,7 @@ class QuotationOrderBloc
       emit(
         state.copyWith(
           totalAmount: event.discountAmount,
-          isWithholdingEnabled: event.applyWithholding,
+          isWithholdingEnabled: event.isWithholdingEnabled,
           canApplyWithholding: canApplyWithholding,
           lastOperation: 'Tax and fees updated',
         ),
@@ -845,8 +890,8 @@ class QuotationOrderBloc
           CalculateQuotationTotals(
             header: state.selectedHeader!,
             details: state.createDetailItems,
-            applyWithholding: state.canApplyWithholding ?? false,
-            discountAmount: state.discountAmount,
+            applyWithholding: event.isWithholdingEnabled,
+            discountAmount: event.discountAmount,
           ),
         );
       }
@@ -888,8 +933,8 @@ class QuotationOrderBloc
           CalculateQuotationTotals(
             header: state.selectedHeader!,
             details: state.createDetailItems,
-            applyWithholding: state.canApplyWithholding ?? false,
-            discountAmount: state.discountAmount,
+            applyWithholding: state.canApplyWithholding!,
+            discountAmount: state.discountAmount!,
           ),
         );
       }
@@ -1074,38 +1119,53 @@ class QuotationOrderBloc
     Emitter<QuotationOrderState> emit,
   ) async {
     try {
-      final itemInBranch = event.itemInBranch;
-      final detail = event.detail;
+      if (event.itemInBranch == null) return;
+      if (event.detail.unitOfMeasure == null) return;
 
-      // Get UOM conversion factor
-      final factor = await uomConversionsRepository.fromOtherToAnother(
-        itemInBranch.itemNumber,
-        detail.unitOfMeasure ?? itemInBranch.unitOfMeasure!,
-        itemInBranch.unitOfMeasure!,
-        state.companyId!,
-      );
+      // Resolve company id safely
+      final companyId = state.companyId ?? authBloc.state.companyId;
+      if (companyId == null) return;
 
-      final convertedQuantity = (detail.quantity ?? 0.0) * factor;
+      // Get UOM conversion factor using the correct company id
+      // Convert from the selected line UOM to the branch/item UOM
+      final sourceUomId = event.detail.unitOfMeasure!;
+      final targetUomId = event.itemInBranch.unitOfMeasure;
 
-      // Check stock availability (for quotation, we might just validate without deducting)
-      if (convertedQuantity <= (itemInBranch.quantityAvailable ?? 0.0)) {
-        final unitPrice = itemInBranch.unitPrice != null
-            ? (factor * itemInBranch.unitPrice!)
-            : 0.0;
-        final effectiveUnitPrice = event.manualUnitPrice ?? unitPrice;
+      double conversionFactor = 1.0;
+      if (targetUomId != null) {
+        conversionFactor = await uomConversionsRepository.fromOtherToAnother(
+          event.itemInBranch.itemNumber,
+          sourceUomId,
+          targetUomId,
+          companyId,
+        );
+      }
 
-        final updatedDetail = detail.copyWith(
+      // Convert requested quantity into the branch UOM for stock check
+      final convertedQuantity =
+          (event.detail.quantity ?? 0.0) * conversionFactor;
+
+      // Check if converted quantity is available
+      if (convertedQuantity <= event.itemInBranch.quantityAvailable!) {
+        // Apply converted unit price based on branch price and factor,
+        // or respect a manually entered unit price from the UI when provided
+        final baseUnitPrice = event.itemInBranch.unitPrice ?? 0.0;
+        final convertedUnitPrice = conversionFactor * baseUnitPrice;
+        final effectiveUnitPrice = event.manualUnitPrice ?? convertedUnitPrice;
+
+        final updatedDetail = event.detail.copyWith(
           unitPrice: effectiveUnitPrice,
-          extendedPrice: (detail.quantity ?? 0.0) * effectiveUnitPrice,
-          itemInBranch: itemInBranch.id,
-          unitOfMeasure: detail.unitOfMeasure ?? itemInBranch.unitOfMeasure,
+          extendedPrice: (event.detail.quantity ?? 0.0) * effectiveUnitPrice,
+          itemInBranch: event.itemInBranch.id,
+          taxable:
+              event.detail.itemTableRef?.taxable, // ✅ Copy taxable from item
         );
 
         emit(state.copyWith(selectedDetail: updatedDetail));
 
         // Update in create items if it exists there
         final itemIndex = state.createDetailItems.indexWhere(
-          (item) => item.tempId == detail.tempId,
+          (item) => item.tempId == event.detail.tempId,
         );
 
         if (itemIndex != -1) {
@@ -1115,7 +1175,7 @@ class QuotationOrderBloc
         }
       } else {
         // Insufficient stock
-        final disabledDetail = detail.copyWith(
+        final disabledDetail = event.detail.copyWith(
           unitPrice: 0.0,
           extendedPrice: 0.0,
           itemInBranch: null,
@@ -1124,7 +1184,7 @@ class QuotationOrderBloc
         emit(state.copyWith(selectedDetail: disabledDetail));
 
         final itemIndex = state.createDetailItems.indexWhere(
-          (item) => item.tempId == detail.tempId,
+          (item) => item.tempId == event.detail.tempId,
         );
 
         if (itemIndex != -1) {
@@ -1288,16 +1348,6 @@ class QuotationOrderBloc
       final defaultCustomer = await customerRepository.getDefaultCustomer(
         event.companyId,
       );
-      // Create initial detail
-      final newDetail = QuotationOrderDetail(
-        tempId: 1,
-        quoteOrderHeaderId: newHeader.id ?? 0,
-        itemsTableId: 0,
-        company: event.companyId,
-        quantity: 1.0,
-        lineStatus: 'Open',
-      );
-      print('Quoation detail header id is : ${newDetail.quoteOrderHeaderId}');
 
       emit(
         state
@@ -1309,8 +1359,8 @@ class QuotationOrderBloc
               status: QuotationOrderStatus.loaded,
               createItems: [newHeader],
               selectedHeader: newHeader,
-              createDetailItems: [newDetail],
-              selectedDetail: newDetail,
+              createDetailItems: const [], // ✅ Start with empty list
+              //selectedDetail: null,
               // Reset financial values
               subTotal: null,
               tax: null,
@@ -1433,6 +1483,8 @@ class QuotationOrderBloc
       } else {
         add(UpdateQuotationOrderHeader(header: event.header));
       }
+      emit(state.copyWith(selectedHeader: event.header));
+      await Future.delayed(const Duration(seconds: 5));
 
       // Save details
       if (event.details.isNotEmpty) {
@@ -1654,8 +1706,8 @@ class QuotationOrderBloc
     // Get default quotation order type from UDC
     try {
       final defaultOrderType = await udcRepository.getUdcDetailsByCode(
-        'OT',
         'Q',
+        'OT',
       );
       if (defaultOrderType.isEmpty) {
         return null;

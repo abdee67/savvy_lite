@@ -238,6 +238,12 @@ class PrivilegeSeeder {
         AppRoutes.quotationOrderPayment,
         'quotation_order_payment',
       ),
+      _createPrivilege(
+        'Quotation Invoice Review',
+        'link',
+        AppRoutes.quotationInvoiceReview,
+        'quotation_invoice_review',
+      ),
 
       // ==================== STOCK MODULE ====================
       //item entry

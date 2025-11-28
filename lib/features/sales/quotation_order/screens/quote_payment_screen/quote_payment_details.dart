@@ -62,7 +62,7 @@ class _QuotePaymentDetailsState extends State<QuotePaymentDetails> {
       UpdateTaxSettings(
         subTotal: state.subTotal ?? 0.0,
         discountAmount: discountAmount,
-        applyWithholding: state.canApplyWithholding!,
+        isWithholdingEnabled: state.canApplyWithholding ?? false,
       ),
     );
   }
@@ -85,7 +85,7 @@ class _QuotePaymentDetailsState extends State<QuotePaymentDetails> {
       UpdateTaxSettings(
         subTotal: state.subTotal ?? 0.0,
         discountAmount: state.discountAmount ?? 0.0,
-        applyWithholding: enabled,
+        isWithholdingEnabled: enabled,
       ),
     );
   }
@@ -223,45 +223,11 @@ class _QuotePaymentDetailsState extends State<QuotePaymentDetails> {
             const Divider(height: 1),
             const SizedBox(height: 16),
             _buildTotalField(context, 'Total', state.totalAmount ?? 0.0),
-            if (!state.canApplyWithholding! && state.isWithholdingEnabled!)
+            if (!(state.canApplyWithholding ?? false) &&
+                (state.isWithholdingEnabled ?? false))
               _buildWarningMessage(context, state),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildSystemConstantsWarning(String error) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.amber.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.amber),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.warning, color: Colors.amber, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              error,
-              style: const TextStyle(color: Colors.amber, fontSize: 12),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        color: Color(0xFF155888),
       ),
     );
   }
@@ -275,16 +241,6 @@ class _QuotePaymentDetailsState extends State<QuotePaymentDetails> {
       _currencyFormat.format(taxAmount),
       icon: Icons.receipt,
       subtitle: 'VAT rate from system configuration',
-    );
-  }
-
-  Widget _buildSectionTitle(String title, BuildContext context) {
-    return Text(
-      title,
-      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-        fontWeight: FontWeight.bold,
-        color: Theme.of(context).colorScheme.primary,
-      ),
     );
   }
 
@@ -368,12 +324,13 @@ class _QuotePaymentDetailsState extends State<QuotePaymentDetails> {
     bool isSmallScreen,
   ) {
     final theme = Theme.of(context);
-    final isWithholdingApplied =
-        state.canApplyWithholding! && state.isWithholdingEnabled!;
+    final canApplyWithholding = state.canApplyWithholding ?? false;
+    final isWithholdingEnabled = state.isWithholdingEnabled ?? false;
+    final isWithholdingApplied = canApplyWithholding && isWithholdingEnabled;
 
     final borderColor = isWithholdingApplied
         ? theme.colorScheme.primary
-        : state.isWithholdingEnabled!
+        : isWithholdingEnabled
         ? theme.colorScheme.primary
         : const Color(0xFF1C1C1C);
 
@@ -381,9 +338,10 @@ class _QuotePaymentDetailsState extends State<QuotePaymentDetails> {
         ? _currencyFormat.format(state.withholdAmount)
         : '----';
 
+    final withholdingRate = state.withholdingRate ?? 0.0;
     final withholdingDisplayText = isWithholdingApplied
-        ? '$withholdingAmountText (${state.withholdingRate!.toStringAsFixed(1)}%)'
-        : state.isWithholdingEnabled! && !state.canApplyWithholding!
+        ? '$withholdingAmountText (${withholdingRate.toStringAsFixed(1)}%)'
+        : isWithholdingEnabled && !canApplyWithholding
         ? 'Not applicable'
         : 'Withholding(----)';
 
@@ -391,7 +349,7 @@ class _QuotePaymentDetailsState extends State<QuotePaymentDetails> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         GestureDetector(
-          onTap: () => _toggleWithholding(!state.isWithholdingEnabled!),
+          onTap: () => _toggleWithholding(!isWithholdingEnabled),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 250),
             height: 45,
@@ -412,7 +370,7 @@ class _QuotePaymentDetailsState extends State<QuotePaymentDetails> {
                     ignoring: true,
                     child: AnimatedOpacity(
                       duration: const Duration(milliseconds: 200),
-                      opacity: state.isWithholdingEnabled! ? 1.0 : 0.6,
+                      opacity: isWithholdingEnabled ? 1.0 : 0.6,
                       child: TextField(
                         enabled: false,
                         controller: TextEditingController(
@@ -441,11 +399,7 @@ class _QuotePaymentDetailsState extends State<QuotePaymentDetails> {
                   ),
                 ),
 
-                _buildToggleSwitch(
-                  state.isWithholdingEnabled!,
-                  borderColor,
-                  theme,
-                ),
+                _buildToggleSwitch(isWithholdingEnabled, borderColor, theme),
               ],
             ),
           ),
@@ -457,17 +411,17 @@ class _QuotePaymentDetailsState extends State<QuotePaymentDetails> {
         Text(
           isWithholdingApplied
               ? 'Withholding tax is applied to this transaction'
-              : state.isWithholdingEnabled! && !state.canApplyWithholding!
-              ? 'Subtotal must exceed \$${state.withholdingInitial!.toStringAsFixed(2)} to apply withholding'
+              : isWithholdingEnabled && !canApplyWithholding
+              ? 'Subtotal must exceed \$${(state.withholdingInitial ?? 0.0).toStringAsFixed(2)} to apply withholding'
               : 'Withholding tax is disabled',
           style: TextStyle(
             fontSize: 12,
             color: isWithholdingApplied
                 ? theme.colorScheme.primary
-                : state.isWithholdingEnabled! && !state.canApplyWithholding!
+                : isWithholdingEnabled && !canApplyWithholding
                 ? Colors.amber[800]
                 : theme.colorScheme.onSurface.withOpacity(0.6),
-            fontStyle: isWithholdingApplied || state.isWithholdingEnabled!
+            fontStyle: isWithholdingApplied || isWithholdingEnabled
                 ? FontStyle.italic
                 : FontStyle.normal,
           ),
@@ -477,7 +431,7 @@ class _QuotePaymentDetailsState extends State<QuotePaymentDetails> {
           Padding(
             padding: const EdgeInsets.only(top: 4.0),
             child: Text(
-              '${state.withholdingRate!.toStringAsFixed(1)}% of subtotal',
+              '${withholdingRate.toStringAsFixed(1)}% of subtotal',
               style: TextStyle(fontSize: 12, color: Colors.grey[700]),
             ),
           ),
