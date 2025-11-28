@@ -85,16 +85,28 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
 
     if (companyId != null) {
       // Load branches
-      context.read<BranchBloc>().add(LoadBranchs(companyId));
+      final branchBloc = context.read<BranchBloc>();
+      if (branchBloc.state.branchs.isEmpty) {
+        branchBloc.add(LoadBranchs(companyId));
+      }
 
       // Load UDC details for UOM
-      context.read<UdcDetailsBloc>().add(LoadAllUdcDetails());
+      final udcDetailsBloc = context.read<UdcDetailsBloc>();
+      if (udcDetailsBloc.state.details.isEmpty) {
+        udcDetailsBloc.add(LoadAllUdcDetails());
+      }
 
       // Load items
-      context.read<StockItemsEntryBloc>().add(LoadItems(companyId));
+      final stockItemsEntryBloc = context.read<StockItemsEntryBloc>();
+      if (stockItemsEntryBloc.state.items.isEmpty) {
+        stockItemsEntryBloc.add(LoadItems(companyId));
+      }
 
       // Load items in branches
-      context.read<StockItemInBranchBloc>().add(LoadItemsFromBranch(companyId));
+      final stockItemInBranchBloc = context.read<StockItemInBranchBloc>();
+      if (stockItemInBranchBloc.state.items.isEmpty) {
+        stockItemInBranchBloc.add(LoadItemsFromBranch(companyId));
+      }
     }
 
     // Initialize form with existing data

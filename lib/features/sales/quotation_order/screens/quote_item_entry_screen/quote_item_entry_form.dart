@@ -155,7 +155,7 @@ class _QuoteItemEntryFormState extends State<QuoteItemEntryForm> {
     final itemsBloc = context.read<StockItemsEntryBloc>();
     final items = itemsBloc.state.items;
 
-    if (detail.itemsTableId != null && items.isNotEmpty) {
+    if (items.isNotEmpty) {
       try {
         final existingItem = items.firstWhere(
           (item) => item.id == detail.itemsTableId,
@@ -366,7 +366,7 @@ class _QuoteItemEntryFormState extends State<QuoteItemEntryForm> {
       child: BlocListener<QuotationOrderBloc, QuotationOrderState>(
         listener: (context, state) {
           // Listen for updates to selected1 (which holds the calculated detail)
-          if (state.selectedDetail != null &&
+          if (state.selectedDetail1 != null &&
               state.selectedDetail1!.tempId == widget.detail.tempId) {
             final updatedDetail = state.selectedDetail1!;
 
@@ -729,7 +729,12 @@ class _QuoteItemEntryFormState extends State<QuoteItemEntryForm> {
                     0.0;
                 final formatted = unitPrice.toStringAsFixed(2);
                 if (_unitPriceController.text != formatted) {
-                  _unitPriceController.text = formatted;
+                  // Schedule the update for after build completes
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && _unitPriceController.text != formatted) {
+                      _unitPriceController.text = formatted;
+                    }
+                  });
                 }
 
                 return CustomTextField(
@@ -793,7 +798,12 @@ class _QuoteItemEntryFormState extends State<QuoteItemEntryForm> {
                     0.0;
                 final formatted = lineTotal.toStringAsFixed(2);
                 if (_extendedPriceController.text != formatted) {
-                  _extendedPriceController.text = formatted;
+                  // Schedule the update for after build completes
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && _extendedPriceController.text != formatted) {
+                      _extendedPriceController.text = formatted;
+                    }
+                  });
                 }
 
                 return CustomTextField(

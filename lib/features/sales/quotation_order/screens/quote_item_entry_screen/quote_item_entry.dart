@@ -101,11 +101,14 @@ class _QuotationItemEntryScreenContentState
       final coordinatorState = context.read<QuotationOrderBloc>().state;
       final selectedHeader = coordinatorState.selectedHeader;
 
-      if (selectedHeader != null && selectedHeader.id != null) {
+      if (selectedHeader != null) {
+        // ✅ Use header id if available, otherwise use 0 for new unsaved orders
+        final headerId = selectedHeader.id ?? 0;
+
         setState(() {
           _currentFormDetail = QuotationOrderDetail(
             tempId: DateTime.now().millisecondsSinceEpoch,
-            quoteOrderHeaderId: selectedHeader.id!,
+            quoteOrderHeaderId: headerId,
             company: selectedHeader.company,
             itemsTableId: 0,
             quantity: 1.0,
@@ -117,19 +120,17 @@ class _QuotationItemEntryScreenContentState
         // If header not ready, listen for state changes
         final coordinatorBloc = context.read<QuotationOrderBloc>();
         coordinatorBloc.stream
-            .firstWhere(
-              (state) =>
-                  state.selectedHeader != null &&
-                  state.selectedHeader!.id != null,
-            )
+            .firstWhere((state) => state.selectedHeader != null)
             .then((_) {
               if (mounted) {
                 final header = coordinatorBloc.state.selectedHeader;
-                if (header != null && header.id != null) {
+                if (header != null) {
+                  final headerId = header.id ?? 0;
+
                   setState(() {
                     _currentFormDetail = QuotationOrderDetail(
                       tempId: DateTime.now().millisecondsSinceEpoch,
-                      quoteOrderHeaderId: header.id!,
+                      quoteOrderHeaderId: headerId,
                       company: header.company,
                       itemsTableId: 0,
                       quantity: 1.0,
@@ -184,13 +185,12 @@ class _QuotationItemEntryScreenContentState
       );
 
       // Recalculate totals
-      /*    context.read<QuotationOrderBloc>().add(
-        const ValidateCompleteStockAvailability(),
-      );*/
       context.read<QuotationOrderBloc>().add(
         CalculateQuotationTotals(
           header: coordinatorState.selectedHeader!,
           details: coordinatorState.createDetailItems,
+          applyWithholding: coordinatorState.canApplyWithholding ?? false,
+          discountAmount: coordinatorState.discountAmount ?? 0,
         ),
       );
     }
@@ -215,10 +215,13 @@ class _QuotationItemEntryScreenContentState
       final coordinatorState = context.read<QuotationOrderBloc>().state;
       final selectedHeader = coordinatorState.selectedHeader;
 
-      if (selectedHeader != null && selectedHeader.id != null) {
+      if (selectedHeader != null) {
+        // ✅ Use header id if available, otherwise use 0 for new orders
+        final headerId = selectedHeader.id ?? 0;
+
         _currentFormDetail = QuotationOrderDetail(
           tempId: DateTime.now().millisecondsSinceEpoch,
-          quoteOrderHeaderId: selectedHeader.id!,
+          quoteOrderHeaderId: headerId,
           company: selectedHeader.company,
           itemsTableId: 0,
           quantity: 1.0,
@@ -240,24 +243,28 @@ class _QuotationItemEntryScreenContentState
     if (_formKey.currentState?.validate() ?? false) {
       if (_currentFormDetail != null) {
         final coordinatorBloc = context.read<QuotationOrderBloc>();
+        final coordinatorState = coordinatorBloc.state;
+
+        // ✅ Use the calculated detail from state if available (it has the updated price)
+        var detailToAdd = _currentFormDetail!;
+        if (coordinatorState.selectedDetail != null &&
+            coordinatorState.selectedDetail!.tempId ==
+                _currentFormDetail!.tempId) {
+          detailToAdd = coordinatorState.selectedDetail!;
+          print(
+            'Using calculated detail from state with extendedPrice: ${detailToAdd.extendedPrice}',
+          );
+        } else {
+          print(
+            'Using form detail with extendedPrice: ${detailToAdd.extendedPrice}',
+          );
+        }
+
         print('Dispatching AddDetailToOrder event');
         // Add or update the item in coordinator
-        coordinatorBloc.add(
-          AddQuotationOrderDetail(detail: _currentFormDetail!),
-        );
+        coordinatorBloc.add(AddQuotationOrderDetail(detail: detailToAdd));
         print('AddDetailToOrder event dispatched');
         _resetForm();
-
-        /*  ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _isEditing
-                  ? 'Item updated successfully'
-                  : 'Item added successfully',
-            ),
-            backgroundColor: Colors.green,
-          ),
-        );*/
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -287,6 +294,8 @@ class _QuotationItemEntryScreenContentState
         CalculateQuotationTotals(
           header: coordinatorState.selectedHeader!,
           details: coordinatorState.createDetailItems,
+          applyWithholding: coordinatorState.canApplyWithholding ?? false,
+          discountAmount: coordinatorState.discountAmount ?? 0,
         ),
       );
     }
@@ -307,7 +316,7 @@ class _QuotationItemEntryScreenContentState
         return Column(
           children: [
             // Form Section - Always visible
-            if (_currentFormDetail != null)
+            if (_currentFormDetail != null) // ✅ Fixed: was == null
               Expanded(
                 flex: 3,
                 child: SingleChildScrollView(

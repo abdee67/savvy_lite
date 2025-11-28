@@ -142,6 +142,8 @@ class _QuoteItemEntryConfirmedItemState
       CalculateQuotationTotals(
         header: coordinatorState.selectedHeader!,
         details: coordinatorState.createDetailItems,
+        applyWithholding: coordinatorState.canApplyWithholding ?? false,
+        discountAmount: coordinatorState.discountAmount ?? 0,
       ),
     );
     if (coordinatorState.createDetailItems.isEmpty) {
@@ -328,7 +330,10 @@ class _QuoteItemEntryConfirmedItemState
                                                   MainAxisAlignment.center,
                                               children: [
                                                 Text(
-                                                  'Item ${index + 1}',
+                                                  item
+                                                          .itemTableRef
+                                                          ?.itemDescription ??
+                                                      'item ${index + 1}',
                                                   style: const TextStyle(
                                                     fontWeight: FontWeight.bold,
                                                     fontSize: 14,
@@ -356,27 +361,38 @@ class _QuoteItemEntryConfirmedItemState
 
                                           // Quantity
                                           Expanded(
-                                            child: Text(
-                                              'Qty: ${item.quantity?.toStringAsFixed(2) ?? '0'}',
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                              ),
-                                              textAlign: TextAlign.center,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
+                                            flex: 3,
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.end,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Text(
+                                                  'Qty: ${item.quantity?.toStringAsFixed(2) ?? '0'}',
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
 
-                                          // Unit Price
-                                          Expanded(
-                                            child: Text(
-                                              'Price: \$${item.unitPrice?.toStringAsFixed(2) ?? '0'}',
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                              ),
-                                              textAlign: TextAlign.center,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
+                                                // Unit Price
+                                                Expanded(
+                                                  child: Text(
+                                                    '${item.unitPrice?.toStringAsFixed(2) ?? '0'} Birr/${item.uomRef?.description1 ?? 'unit'}',
+                                                    style: const TextStyle(
+                                                      fontSize: 12,
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ],

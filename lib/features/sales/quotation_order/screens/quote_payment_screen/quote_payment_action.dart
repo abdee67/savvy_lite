@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_bloc.dart';
 import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_event.dart';
 import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_state.dart';
@@ -24,6 +25,9 @@ class _QuotePaymentActionState extends State<QuotePaymentAction> {
       CalculateQuotationTotals(
         header: coordinatorState.selectedHeader!,
         details: coordinatorState.createDetailItems,
+        applyWithholding: coordinatorState.canApplyWithholding!,
+        discountAmount: coordinatorState.discountAmount!,
+        systemConstants: coordinatorState.systemConstants!,
       ),
     );
 
@@ -38,7 +42,18 @@ class _QuotePaymentActionState extends State<QuotePaymentAction> {
       ),
     );*/
     // Listen for completion
-    context.push(AppRoutes.salesInvoice);
+
+    if (context.read<AuthBloc>().state.hasAccessToPrivilege(
+      AppRoutes.quotationInvoiceReview,
+    )) {
+      if (mounted) {
+        context.push(AppRoutes.quotationInvoiceReview);
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No access to quotation invoice review')),
+      );
+    }
   }
 
   @override
@@ -47,27 +62,9 @@ class _QuotePaymentActionState extends State<QuotePaymentAction> {
       builder: (context, state) {
         final isValid = state.totalAmount != null && state.totalAmount! > 0;
 
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  vertical: 16,
-                  horizontal: 24,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(40),
-                ),
-              ),
-              child: const Text(
-                'Back',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
             ElevatedButton(
               onPressed:
                   isValid && state.status == QuotationOrderStatus.processing

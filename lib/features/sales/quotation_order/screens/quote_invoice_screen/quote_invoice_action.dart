@@ -15,14 +15,14 @@ import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_
 // features/sales/invoice/widgets/invoice_action.dart
 import 'package:go_router/go_router.dart';
 
-class InvoiceAction extends StatefulWidget {
-  const InvoiceAction({super.key});
+class QuoteInvoiceAction extends StatefulWidget {
+  const QuoteInvoiceAction({super.key});
 
   @override
-  State<InvoiceAction> createState() => _InvoiceActionState();
+  State<QuoteInvoiceAction> createState() => _QuoteInvoiceActionState();
 }
 
-class _InvoiceActionState extends State<InvoiceAction> {
+class _QuoteInvoiceActionState extends State<QuoteInvoiceAction> {
   //final _logger = AppLogger('InvoiceAction');
   StreamSubscription<QuotationOrderState>? _orderSubscription;
 
@@ -160,26 +160,24 @@ class _InvoiceActionState extends State<InvoiceAction> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) =>
-          BlocConsumer<QuotationOrderBloc, QuotationOrderState>(
-            listener: (context, state) {
-              if (state.isOrderComplete && state.invoiceGenerated) {
-                Navigator.of(context).pop(); // Close processing dialog
-                _showSuccessDialog(context, state);
-              } else {
-                Navigator.of(context).pop(); // Close processing dialog
-                _showErrorDialog(
-                  context,
-                  state.error ?? 'Unknown error occurred',
-                );
-              }
-              //print(state.error!);
-            },
+      builder: (context) => BlocConsumer<QuotationOrderBloc, QuotationOrderState>(
+        listener: (context, state) {
+          // ✅ Only close dialog and show result when order is complete OR there's an error
+          if (state.isOrderComplete && state.invoiceGenerated) {
+            Navigator.of(context).pop(); // Close processing dialog
+            _showSuccessDialog(context, state);
+          } else if (state.status == QuotationOrderStatus.error &&
+              state.error != null) {
+            Navigator.of(context).pop(); // Close processing dialog
+            _showErrorDialog(context, state.error!);
+          }
+          // ✅ Don't do anything for intermediate states (processing, etc.)
+        },
 
-            builder: (context, state) {
-              return OrderProcessingDialog();
-            },
-          ),
+        builder: (context, state) {
+          return OrderProcessingDialog();
+        },
+      ),
     );
   }
 
@@ -225,7 +223,7 @@ class _InvoiceActionState extends State<InvoiceAction> {
     // 🎯 Clear state after successful navigation
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<QuotationOrderBloc>().add(ClearQuotationOrderDetails());
-      context.read<QuotationOrderBloc>().add(ResetQuotationDetails());
+      context.read<QuotationOrderBloc>().add(ResetQuotationState());
     });
   }
 }

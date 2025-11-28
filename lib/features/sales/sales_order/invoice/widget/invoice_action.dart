@@ -169,12 +169,10 @@ class _InvoiceActionState extends State<InvoiceAction> {
               if (state.isOrderComplete && state.invoiceGenerated) {
                 Navigator.of(context).pop(); // Close processing dialog
                 _showSuccessDialog(context, state);
-              } else {
+              } else if (state.status == SalesOrderCoordinatorStatus.error &&
+                  state.error != null) {
                 Navigator.of(context).pop(); // Close processing dialog
-                _showErrorDialog(
-                  context,
-                  state.error ?? 'Unknown error occurred',
-                );
+                _showErrorDialog(context, state.error!);
               }
               //print(state.error!);
             },

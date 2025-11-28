@@ -31,7 +31,7 @@ class OrderConfirmationDialog extends StatelessWidget {
             Text('Total: ETB ${totalAmount!.toStringAsFixed(2)}'),
           const SizedBox(height: 16),
           const Text(
-            'This will complete the sales order, generate an invoice, and update inventory. This action cannot be undone.',
+            'This will complete the order, generate an invoice, and update inventory. This action cannot be undone.',
             style: TextStyle(color: Colors.grey),
           ),
         ],

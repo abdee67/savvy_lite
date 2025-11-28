@@ -74,31 +74,32 @@ class InvoiceThirdPart extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Payment Method
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.credit_card, size: 16, color: Colors.grey),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Payment Method:',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '$paymentType - $paymentInstrument',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+            if (paymentType != null && paymentInstrument != null)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.credit_card, size: 16, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Payment Method:',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    Text(
+                      '$paymentType - $paymentInstrument',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),

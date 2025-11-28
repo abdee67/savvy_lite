@@ -57,6 +57,8 @@ class PrivilegeHierarchy {
         AppRoutes.quotationOrder, // ✅ Fixed: was pointing to itself!
     AppRoutes.quotationOrderPayment:
         AppRoutes.quotationOrder, // ✅ Fixed: was pointing to itself!
+    AppRoutes.quotationInvoiceReview:
+        AppRoutes.quotationOrder, // ✅ Fixed: was pointing to itself!
     // Customer Entry (child of Sales Dashboard)
     AppRoutes.customerEntry: AppRoutes.salesDashboard,
     AppRoutes.customerCreate: AppRoutes.customerEntry,

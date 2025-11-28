@@ -6,12 +6,12 @@ import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_
 import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_state.dart';
 import 'package:savvy_stock/features/sales/quotation_order/model/quotation_order_detail.dart';
 import 'package:savvy_stock/features/sales/quotation_order/model/quotation_order_header.dart';
+import 'package:savvy_stock/features/sales/quotation_order/screens/quote_payment_screen/quote_payment_action.dart';
+import 'package:savvy_stock/features/sales/quotation_order/screens/quote_payment_screen/quote_payment_details.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
-import 'package:savvy_stock/features/sales/sales_order/payment/widget/payment_details.dart';
-import 'package:savvy_stock/features/sales/sales_order/payment/widget/payment_method.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_event.dart';
 
@@ -63,7 +63,12 @@ class _QuotePaymentScreenState extends State<QuotePaymentScreen> {
 
     // Initialize payment calculations
     coordinatorBloc.add(
-      CalculateQuotationTotals(header: orderHeader, details: orderDetails!),
+      CalculateQuotationTotals(
+        header: orderHeader,
+        details: orderDetails!,
+        applyWithholding: orderHeader.withHoldApply!,
+        discountAmount: orderHeader.discountAmount!,
+      ),
     );
     coordinatorBloc.add(LoadFeeSystemConstants());
   }
@@ -88,6 +93,8 @@ class _QuotePaymentScreenState extends State<QuotePaymentScreen> {
                 CalculateQuotationTotals(
                   header: quoteState.selectedHeader!,
                   details: quoteState.createDetailItems,
+                  applyWithholding: quoteState.canApplyWithholding!,
+                  discountAmount: quoteState.discountAmount!,
                 ),
               );
             },
@@ -124,7 +131,9 @@ class _QuotePaymentScreenState extends State<QuotePaymentScreen> {
                         child: SingleChildScrollView(
                           child: Padding(
                             padding: const EdgeInsets.only(bottom: 4.0),
-                            child: PaymentDetails(authBloc: widget.authBloc),
+                            child: QuotePaymentDetails(
+                              authBloc: widget.authBloc,
+                            ),
                           ),
                         ),
                       ),
@@ -133,7 +142,7 @@ class _QuotePaymentScreenState extends State<QuotePaymentScreen> {
                 ),
               ),
               // Lower Section - Order Summary
-              const PaymentMethod(),
+              const QuotePaymentAction(),
             ],
           ),
         ),

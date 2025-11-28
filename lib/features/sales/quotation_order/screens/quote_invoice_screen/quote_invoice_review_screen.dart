@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
+import 'package:savvy_stock/features/sales/quotation_order/screens/quote_invoice_screen/quote_invoice_action.dart';
 import 'package:savvy_stock/features/sales/quotation_order/screens/quote_invoice_screen/quote_invoice_second_part.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/widget/invoice_action.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/widget/invoice_first_part.dart';
@@ -274,7 +275,7 @@ class _InvoiceReviewContent extends StatelessWidget {
             ),
 
             // Action buttons
-            const InvoiceAction(),
+            const QuoteInvoiceAction(),
           ],
         ),
       ),
