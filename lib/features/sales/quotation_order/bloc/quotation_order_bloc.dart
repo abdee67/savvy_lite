@@ -1119,7 +1119,6 @@ class QuotationOrderBloc
     Emitter<QuotationOrderState> emit,
   ) async {
     try {
-      if (event.itemInBranch == null) return;
       if (event.detail.unitOfMeasure == null) return;
 
       // Resolve company id safely
@@ -1478,20 +1477,71 @@ class QuotationOrderBloc
     emit(state.loadingState('save_quotation_order'));
 
     try {
-      if (event.header.id == null) {
-        add(CreateQuotationOrderHeader(header: event.header));
-      } else {
-        add(UpdateQuotationOrderHeader(header: event.header));
-      }
-      emit(state.copyWith(selectedHeader: event.header));
-      await Future.delayed(const Duration(seconds: 5));
+      // ✅ Get current user and timestamp for audit fields
+      final currentUser = authBloc.state.userId?.id;
+      final currentTime = DateTime.now();
 
-      // Save details
-      if (event.details.isNotEmpty) {
-        await _saveQuotationDetails(event.header.id ?? 0, event.details);
+      // ✅ Prepare header with all calculated values from state
+      var headerToSave = event.header.copyWith(
+        // Financial values from state calculations
+        tax: state.tax,
+        withholdAmount: state.withholdAmount,
+        discountAmount: state.discountAmount,
+        amountTotal: state.totalAmount,
+        amountOpen: state.totalAmount, // Initially equals total
+        withHoldApply: state.canApplyWithholding == true ? 'Y' : 'N',
+
+        // Audit fields (only override if not already set)
+        createdBy: event.header.createdBy ?? currentUser,
+        updatedBy: currentUser,
+        createdAt: event.header.createdAt ?? currentTime,
+        updatedAt: currentTime,
+      );
+
+      // ✅ Create or update header SYNCHRONOUSLY to get the ID
+      QuotationOrderHeader savedHeader;
+
+      if (event.header.id == null) {
+        // ✅ For new orders, generate a unique FS number
+        final nextFsNumber = await repository.generateNextFsNumber(
+          event.header.company!,
+          event.header.branchId!,
+        );
+
+        headerToSave = headerToSave.copyWith(fsNumber: nextFsNumber);
+
+        // ✅ Call repository directly and await to get ID
+        final headerId = await repository.createQuotationOrderHeader(
+          headerToSave,
+        );
+        savedHeader = headerToSave.copyWith(id: headerId);
+
+        // Update state lists
+        final updatedHeaders = [savedHeader, ...state.headers];
+        final updatedCreateItems = state.createItems
+            .where((item) => item.tempId != savedHeader.tempId)
+            .toList();
+
+        emit(
+          state.copyWith(
+            headers: updatedHeaders,
+            filteredHeaders: updatedHeaders,
+            createItems: updatedCreateItems,
+            selectedHeader: savedHeader,
+          ),
+        );
+      } else {
+        // Update existing header
+        await repository.updateQuotationOrderHeader(headerToSave);
+        savedHeader = headerToSave;
+
+        emit(state.copyWith(selectedHeader: savedHeader));
       }
-      final updatedHeaders = state.selectedHeader;
-      final updatedDetails = state.createDetailItems;
+
+      // ✅ Now save details with the correct header ID
+      if (event.details.isNotEmpty) {
+        await _saveQuotationDetails(savedHeader.id!, event.details);
+      }
 
       emit(
         state
@@ -1500,13 +1550,13 @@ class QuotationOrderBloc
               operation: 'save_quotation_order',
             )
             .copyWith(
-              createDetailItems: updatedDetails,
-              selectedHeader: updatedHeaders,
+              selectedHeader: savedHeader,
+              createDetailItems: event.details,
               isOrderComplete: true,
-              //isStockValidated: true,
               isCalculationsComplete: true,
             ),
       );
+
       add(GenerateInvoiceFromQuotation());
     } catch (e) {
       emit(state.errorState('Failed to save quotation order: $e'));
@@ -1692,12 +1742,24 @@ class QuotationOrderBloc
     int headerId,
     List<QuotationOrderDetail> details,
   ) async {
+    // ✅ Get current user and timestamp for audit fields
+    final currentUser = authBloc.state.userId?.id;
+    final currentTime = DateTime.now();
+
     for (final detail in details) {
-      final detailWithHeader = detail.copyWith(quoteOrderHeaderId: headerId);
+      final detailToSave = detail.copyWith(
+        quoteOrderHeaderId: headerId,
+        // ✅ Set audit fields
+        createdBy: detail.createdBy ?? currentUser,
+        updatedBy: currentUser,
+        createdAt: detail.createdAt ?? currentTime,
+        updatedAt: currentTime,
+      );
+
       if (detail.id == null) {
-        await repository.createQuotationOrderDetail(detailWithHeader);
+        await repository.createQuotationOrderDetail(detailToSave);
       } else {
-        await repository.updateQuotationOrderDetail(detailWithHeader);
+        await repository.updateQuotationOrderDetail(detailToSave);
       }
     }
   }

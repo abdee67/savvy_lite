@@ -66,7 +66,7 @@ class _QuotePaymentScreenState extends State<QuotePaymentScreen> {
       CalculateQuotationTotals(
         header: orderHeader,
         details: orderDetails!,
-        applyWithholding: orderHeader.withHoldApply!,
+        applyWithholding: orderHeader.withHoldApply == 'N',
         discountAmount: orderHeader.discountAmount!,
       ),
     );

@@ -109,15 +109,25 @@ class QuotationOrderRepository {
   Future<String> generateNextFsNumber(int companyId, int branchId) async {
     final db = await _db;
 
+    // ✅ Get the maximum fs_number by extracting numeric part from 'P00000000001'
     final result = await db.rawQuery(
-      'SELECT MAX(CAST(fs_number AS INTEGER)) as max_fs FROM quote_order_header WHERE company = ?',
+      '''SELECT fs_number 
+         FROM quote_order_header 
+         WHERE company = ? AND fs_number IS NOT NULL 
+         ORDER BY CAST(SUBSTR(fs_number, 2) AS INTEGER) DESC 
+         LIMIT 1''',
       [companyId],
     );
 
-    final maxFs = result.first['max_fs'] as int?;
-    final nextFs = (maxFs ?? 0) + 1;
+    int nextNumber = 1;
+    if (result.isNotEmpty && result.first['fs_number'] != null) {
+      final currentFs = result.first['fs_number'] as String;
+      // Extract numeric part (remove 'P' prefix)
+      final numericPart = currentFs.substring(1);
+      nextNumber = (int.tryParse(numericPart) ?? 0) + 1;
+    }
 
-    return 'P${nextFs.toString().padLeft(11, '0')}';
+    return 'P${nextNumber.toString().padLeft(11, '0')}';
   }
 
   // ============ BATCH HEADER OPERATIONS ============
