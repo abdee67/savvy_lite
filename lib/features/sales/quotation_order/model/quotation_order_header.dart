@@ -202,19 +202,19 @@ class QuotationOrderHeader {
       createdBy: map['created_by'],
       updatedBy: map['updated_by'],
       commentsReason: map['comments_reason'],
-      customerBillToRef: map['customer_bill_to']
+      customerBillToRef: map['customer_bill_to_name'] != null
           ? Customer(
               id: map['customer_bill_to'],
               customerName: map['customer_bill_to_name'],
             )
           : null,
-      customerTableRef: map['customer_table_id']
+      customerTableRef: map['customer_table_name'] != null
           ? Customer(
               id: map['customer_table_id'],
               customerName: map['customer_table_name'],
             )
           : null,
-      employeeRef: map['employees_id']
+      employeeRef: map['employee_first_name'] != null
           ? Employee(
               id: map['employees_id'],
               nameFirst: map['employee_first_name'],
@@ -226,42 +226,42 @@ class QuotationOrderHeader {
               city: map['employee_city'],
             )
           : null,
-      paymentInstrumentRef: map['payment_instrument']
+      paymentInstrumentRef: map['payment_instrument_description1'] != null
           ? UdcDetails(
               id: map['payment_instrument'],
               description1: map['payment_instrument_description1'],
               detailCode: map['payment_instrument_detail_code'],
             )
           : null,
-      paymentTermRef: map['payment_term']
+      paymentTermRef: map['payment_term'] != null
           ? UdcDetails(
               id: map['payment_term'],
               description1: map['payment_term_description1'],
               detailCode: map['payment_term_detail_code'],
             )
           : null,
-      paymentStatusRef: map['payment_status']
+      paymentStatusRef: map['payment_status_description1'] != null
           ? UdcDetails(
               id: map['payment_status'],
               description1: map['payment_status_description1'],
               detailCode: map['payment_status_detail_code'],
             )
           : null,
-      paymentMethodRef: map['payment_method']
+      paymentMethodRef: map['payment_method_description1'] != null
           ? UdcDetails(
               id: map['payment_method'],
               description1: map['payment_method_description1'],
               detailCode: map['payment_method_detail_code'],
             )
           : null,
-      orderTypeRef: map['order_type']
+      orderTypeRef: map['order_type_description1'] != null
           ? UdcDetails(
               id: map['order_type'],
               description1: map['order_type_description1'],
               detailCode: map['order_type_detail_code'],
             )
           : null,
-      branchRef: map['branch_id']
+      branchRef: map['branch_name'] != null
           ? Branch(id: map['branch_id'], description: map['branch_name'])
           : null,
     );

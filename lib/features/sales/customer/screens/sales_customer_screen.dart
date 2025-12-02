@@ -16,8 +16,9 @@ import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_or
 
 class CustomerInfoScreen extends StatelessWidget {
   final AuthBloc authBloc;
+  final Map<String, dynamic>? extra;
 
-  const CustomerInfoScreen({super.key, required this.authBloc});
+  const CustomerInfoScreen({super.key, required this.authBloc, this.extra});
 
   @override
   Widget build(BuildContext context) {
@@ -29,14 +30,19 @@ class CustomerInfoScreen extends StatelessWidget {
       });
     }
 
-    return CustomerInfoScreenContent(authBloc: authBloc);
+    return CustomerInfoScreenContent(authBloc: authBloc, extra: extra);
   }
 }
 
 class CustomerInfoScreenContent extends StatefulWidget {
   final AuthBloc authBloc;
+  final Map<String, dynamic>? extra;
 
-  const CustomerInfoScreenContent({super.key, required this.authBloc});
+  const CustomerInfoScreenContent({
+    super.key,
+    required this.authBloc,
+    this.extra,
+  });
 
   @override
   State<CustomerInfoScreenContent> createState() =>
@@ -81,6 +87,27 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
   }
 
   void _initializeOrderPreparation() {
+    // Check if we have converted quotation data
+    if (widget.extra != null &&
+        widget.extra!.containsKey('header') &&
+        widget.extra!.containsKey('details')) {
+      // Initialize from converted quotation
+      final header = widget.extra!['header'];
+      final details = widget.extra!['details'];
+
+      print(
+        'DEBUG CustomerInfo: Found converted data - header: $header, details count: ${details?.length}',
+      );
+
+      context.read<SalesOrderCoordinatorBloc>().add(
+        InitializeFromQuotation(header: header, details: details),
+      );
+      print('DEBUG CustomerInfo: Dispatched InitializeFromQuotation event');
+      return;
+    }
+
+    print('DEBUG CustomerInfo: No converted data found, preparing new order');
+    // Otherwise, prepare a new sales order
     final companyId = widget.authBloc.state.companyId;
     final userId = widget.authBloc.state.userId?.id;
     final branchId = widget.authBloc.state.userId?.branch;
@@ -296,14 +323,15 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (coordinatorState.pendingOperations.contains('prepare_new_order'))
-            const _OrderPreparationLoader(),
+            const _LoadingOverlay(),
 
           _buildCustomerSections(coordinatorState, customerState),
           const SizedBox(height: _sizedBoxHeight16),
           _buildOrderInformationSection(coordinatorState),
           const SizedBox(height: _sizedBoxHeight20),
-          if (_selectedBillToCustomer != null)
-            _buildCustomerDetails(_selectedBillToCustomer!),
+          if (_selectedBillToCustomer != null ||
+              coordinatorState.currentHeader?.customerBillToRef != null)
+            _buildCustomerDetails(_selectedBillToCustomer, coordinatorState),
           const SizedBox(height: _sizedBoxHeight20),
           _buildNextButton(isValid, coordinatorState),
           const SizedBox(height: _sizedBoxHeight20),
@@ -430,7 +458,19 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
     );
   }
 
-  Widget _buildCustomerDetails(Customer customer) {
+  Widget _buildCustomerDetails(
+    Customer? customer,
+    SalesOrderCoordinatorState state,
+  ) {
+    // Use customer from header if available (especially for converted orders)
+    final displayCustomer = state.currentHeader?.customerBillToRef != null
+        ? Customer.fromMap(
+            state.currentHeader!.customerBillToRef!.toMap(),
+          ) // Create copy to avoid reference issues
+        : customer;
+
+    if (displayCustomer == null) return const SizedBox.shrink();
+
     return Card(
       elevation: _cardElevation,
       child: Padding(
@@ -446,13 +486,13 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
               ),
             ),
             const SizedBox(height: _sizedBoxHeight8),
-            _buildDetailRow('Name', customer.customerName),
-            _buildDetailRow('TIN Number', customer.tinNumber),
-            _buildDetailRow('Phone', customer.phoneNumber),
-            _buildDetailRow('Country', customer.country),
-            _buildDetailRow('Region', customer.region),
-            _buildDetailRow('City', customer.city),
-            if (customer.defaultsValue == 'Y')
+            _buildDetailRow('Name', displayCustomer.customerName),
+            _buildDetailRow('TIN Number', displayCustomer.tinNumber),
+            _buildDetailRow('Phone', displayCustomer.phoneNumber),
+            _buildDetailRow('Country', displayCustomer.country),
+            _buildDetailRow('Region', displayCustomer.region),
+            _buildDetailRow('City', displayCustomer.city),
+            if (displayCustomer.defaultsValue == 'Y')
               _buildDetailRow('Status', 'Default Customer'),
           ],
         ),
@@ -526,14 +566,23 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
   }
 
   void _goToNextPage(BuildContext context) {
-    if (_selectedBillToCustomer == null) {
+    if (_selectedBillToCustomer == null &&
+        context
+                .read<SalesOrderCoordinatorBloc>()
+                .state
+                .currentHeader
+                ?.customerBillToRef ==
+            null) {
       _showErrorSnackBar(context, 'Please select a customer first');
       return;
     }
 
-    context.read<SalesOrderCoordinatorBloc>().add(
-      SyncCustomerToOrder(customer: _selectedBillToCustomer!),
-    );
+    // If we have a selected customer, sync it. If not, we might be relying on the header's customer (converted order)
+    if (_selectedBillToCustomer != null) {
+      context.read<SalesOrderCoordinatorBloc>().add(
+        SyncCustomerToOrder(customer: _selectedBillToCustomer!),
+      );
+    }
 
     if (context.read<AuthBloc>().state.hasAccessToPrivilege(
       AppRoutes.salesItemEntry,
@@ -580,55 +629,16 @@ class _LoadingOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.black54,
+      color: Colors.white.withOpacity(0.8),
       child: const Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-            ),
+            CircularProgressIndicator(),
             SizedBox(height: 16),
             Text(
-              'Preparing New Order...',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _OrderPreparationLoader extends StatelessWidget {
-  const _OrderPreparationLoader();
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: Colors.blue[50],
-      child: const Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-            SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                'Setting up new sales order...',
-                style: TextStyle(
-                  fontWeight: FontWeight.w500,
-                  color: Colors.blue,
-                ),
-              ),
+              'Setting up new sales order...',
+              style: TextStyle(fontWeight: FontWeight.w500, color: Colors.blue),
             ),
           ],
         ),

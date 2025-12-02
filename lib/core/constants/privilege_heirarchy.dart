@@ -53,12 +53,11 @@ class PrivilegeHierarchy {
 
     //Quotation Order (child of Sales Dashboard)
     AppRoutes.quotationOrder: AppRoutes.salesDashboard,
-    AppRoutes.quotatioItemEntry:
-        AppRoutes.quotationOrder, // ✅ Fixed: was pointing to itself!
-    AppRoutes.quotationOrderPayment:
-        AppRoutes.quotationOrder, // ✅ Fixed: was pointing to itself!
-    AppRoutes.quotationInvoiceReview:
-        AppRoutes.quotationOrder, // ✅ Fixed: was pointing to itself!
+    AppRoutes.quotationItemEntry: AppRoutes.quotationOrder,
+    AppRoutes.quotationOrderPayment: AppRoutes.quotationOrder,
+    AppRoutes.quotationInvoiceReview: AppRoutes.quotationOrder,
+
+    AppRoutes.quotationOrderReview: AppRoutes.salesDashboard,
     // Customer Entry (child of Sales Dashboard)
     AppRoutes.customerEntry: AppRoutes.salesDashboard,
     AppRoutes.customerCreate: AppRoutes.customerEntry,

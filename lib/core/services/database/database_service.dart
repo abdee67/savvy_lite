@@ -30,7 +30,7 @@ class LocalDatabaseService {
     String path = join(await getDatabasesPath(), 'savvy_stock.db');
     return await openDatabase(
       path,
-      version: 1, // Increment this for future migrations
+      version: 2, // Incremented for proforma fields migration
       onCreate: _onCreate,
       onUpgrade: _onUpgrade, // Add upgrade handler
       onOpen: (db) async {
@@ -43,10 +43,17 @@ class LocalDatabaseService {
     developer.log('Upgrading database from $oldVersion to $newVersion');
 
     if (oldVersion < 2) {
-      // Example migration for version 2
+      // Add proforma fields to sales_order_header for quotation conversion tracking
+      developer.log(
+        'Adding proforma_flag and proforma_reference columns to sales_order_header',
+      );
       await db.execute('''
-      ALTER TABLE system_constant ADD COLUMN new_column TEXT DEFAULT NULL
-    ''');
+        ALTER TABLE sales_order_header ADD COLUMN proforma_flag TEXT
+      ''');
+      await db.execute('''
+        ALTER TABLE sales_order_header ADD COLUMN proforma_reference TEXT
+      ''');
+      developer.log('Successfully added proforma fields to sales_order_header');
     }
 
     if (oldVersion < 3) {
@@ -776,6 +783,8 @@ CREATE INDEX idx_next_number_company ON next_number(company);
   reference_note_2 TEXT,
   reference_note3 TEXT,
   reference_note4 TEXT,
+  proforma_flag TEXT,
+  proforma_reference TEXT,
   credit_date_topay TEXT,
   fs_number TEXT,
   void_indicator TEXT,
@@ -2370,9 +2379,10 @@ ON quote_order_detail (prforma_status);
       AppRoutes.salesReport,
       AppRoutes.salesReturn,
       AppRoutes.quotationOrder,
-      AppRoutes.quotatioItemEntry,
+      AppRoutes.quotationItemEntry,
       AppRoutes.quotationOrderPayment,
       AppRoutes.quotationInvoiceReview,
+      AppRoutes.quotationOrderReview,
     ];
 
     for (final uri in salesPrivileges) {

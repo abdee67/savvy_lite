@@ -31,6 +31,7 @@ import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/customer/screens/customer_list.dart';
 import 'package:savvy_stock/features/sales/customer/screens/sales_customer_screen.dart';
 import 'package:savvy_stock/features/sales/customer/widget/customer_create_edit.dart';
+import 'package:savvy_stock/features/sales/quotation_order/screens/quotation_review.dart';
 import 'package:savvy_stock/features/sales/quotation_order/screens/quote_customer_screen/quote_customer_entry.dart';
 import 'package:savvy_stock/features/sales/quotation_order/screens/quote_invoice_screen/quote_invoice_review_screen.dart';
 import 'package:savvy_stock/features/sales/quotation_order/screens/quote_item_entry_screen/quote_item_entry.dart';
@@ -155,7 +156,10 @@ class AppRouter {
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: AppRoutes.salesCustomerInfo,
           parentPrivilege: AppRoutes.salesDashboard,
-          child: CustomerInfoScreen(authBloc: authBloc),
+          child: CustomerInfoScreen(
+            authBloc: authBloc,
+            extra: state.extra as Map<String, dynamic>?,
+          ),
         ),
         redirect: _protectedRouteRedirect,
       ),
@@ -218,9 +222,9 @@ class AppRouter {
         redirect: _protectedRouteRedirect,
       ),
       GoRoute(
-        path: AppRoutes.quotatioItemEntry,
+        path: AppRoutes.quotationItemEntry,
         builder: (context, state) => PrivilegeRouteGuard(
-          requiredPrivilege: AppRoutes.quotatioItemEntry,
+          requiredPrivilege: AppRoutes.quotationItemEntry,
           parentPrivilege: AppRoutes.quotationOrder,
           child: QuotationItemEntryScreen(),
         ),
@@ -247,7 +251,15 @@ class AppRouter {
         ),
         redirect: _protectedRouteRedirect,
       ),
-
+      GoRoute(
+        path: AppRoutes.quotationOrderReview,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.quotationOrderReview,
+          parentPrivilege: AppRoutes.salesDashboard,
+          child: QuotationReviewPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
       // Admin Routes
       GoRoute(
         path: AppRoutes.roleManagement,

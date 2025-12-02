@@ -229,7 +229,7 @@ class PrivilegeSeeder {
       _createPrivilege(
         'Quotation Item Entry',
         'link',
-        AppRoutes.quotatioItemEntry,
+        AppRoutes.quotationItemEntry,
         'quotatio_item_entry',
       ),
       _createPrivilege(
@@ -243,6 +243,12 @@ class PrivilegeSeeder {
         'link',
         AppRoutes.quotationInvoiceReview,
         'quotation_invoice_review',
+      ),
+      _createPrivilege(
+        'Quotation Order Review',
+        'link',
+        AppRoutes.quotationOrderReview,
+        'quotation_report',
       ),
 
       // ==================== STOCK MODULE ====================

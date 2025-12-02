@@ -2,6 +2,8 @@
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/quotation_order/model/quotation_order_detail.dart';
 import 'package:savvy_stock/features/sales/quotation_order/model/quotation_order_header.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/detail/model/invoice_detail_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/header/model/invoice_header_model.dart';
 import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
@@ -42,12 +44,15 @@ class QuotationOrderState {
   final List<QuotationOrderDetail> createDetailItems;
   final List<QuotationOrderDetail> editDetailItems;
   final QuotationOrderHeader? selectedHeader;
+  final List<QuotationOrderHeader> selectedHeaders;
   final QuotationOrderHeader? selected1;
   final QuotationOrderHeader? selected2;
   final QuotationOrderHeader? selected3;
   final QuotationOrderDetail? selectedDetail;
   final QuotationOrderDetail? selectedDetail1;
   final QuotationOrderDetail? selectedDetail2;
+  final List<QuotationOrderDetail> selectedDetails;
+
   final int? companyId;
   final String? error;
   final String? successMessage;
@@ -115,12 +120,14 @@ class QuotationOrderState {
     this.createDetailItems = const [],
     this.editDetailItems = const [],
     this.selectedHeader,
+    this.selectedHeaders = const [],
     this.selected1,
     this.selected2,
     this.selected3,
     this.selectedDetail,
     this.selectedDetail1,
     this.selectedDetail2,
+    this.selectedDetails = const [],
     this.companyId,
     this.error,
     this.successMessage,
@@ -161,7 +168,12 @@ class QuotationOrderState {
     this.isOrderComplete = false,
     this.isStockValidated = false,
     this.isCalculationsComplete = false,
+    this.convertedSalesHeader,
+    this.convertedSalesDetails = const [],
   });
+
+  final SalesOrderHeader? convertedSalesHeader;
+  final List<SalesOrderDetail> convertedSalesDetails;
 
   QuotationOrderState copyWith({
     QuotationOrderStatus? status,
@@ -174,12 +186,14 @@ class QuotationOrderState {
     List<QuotationOrderDetail>? createDetailItems,
     List<QuotationOrderDetail>? editDetailItems,
     QuotationOrderHeader? selectedHeader,
+    List<QuotationOrderHeader>? selectedHeaders,
     QuotationOrderHeader? selected1,
     QuotationOrderHeader? selected2,
     QuotationOrderHeader? selected3,
     QuotationOrderDetail? selectedDetail,
     QuotationOrderDetail? selectedDetail1,
     QuotationOrderDetail? selectedDetail2,
+    List<QuotationOrderDetail>? selectedDetails,
     int? companyId,
     String? error,
     String? successMessage,
@@ -220,6 +234,8 @@ class QuotationOrderState {
     bool? isOrderComplete,
     bool? isStockValidated,
     bool? isCalculationsComplete,
+    SalesOrderHeader? convertedSalesHeader,
+    List<SalesOrderDetail>? convertedSalesDetails,
   }) {
     return QuotationOrderState(
       status: status ?? this.status,
@@ -232,12 +248,14 @@ class QuotationOrderState {
       createDetailItems: createDetailItems ?? this.createDetailItems,
       editDetailItems: editDetailItems ?? this.editDetailItems,
       selectedHeader: selectedHeader ?? this.selectedHeader,
+      selectedHeaders: selectedHeaders ?? this.selectedHeaders,
       selected1: selected1 ?? this.selected1,
       selected2: selected2 ?? this.selected2,
       selected3: selected3 ?? this.selected3,
       selectedDetail: selectedDetail ?? this.selectedDetail,
       selectedDetail1: selectedDetail1 ?? this.selectedDetail1,
       selectedDetail2: selectedDetail2 ?? this.selectedDetail2,
+      selectedDetails: selectedDetails ?? this.selectedDetails,
       companyId: companyId ?? this.companyId,
       error: error,
       successMessage: successMessage,
@@ -279,6 +297,9 @@ class QuotationOrderState {
       isStockValidated: isStockValidated ?? this.isStockValidated,
       isCalculationsComplete:
           isCalculationsComplete ?? this.isCalculationsComplete,
+      convertedSalesHeader: convertedSalesHeader ?? this.convertedSalesHeader,
+      convertedSalesDetails:
+          convertedSalesDetails ?? this.convertedSalesDetails,
     );
   }
 

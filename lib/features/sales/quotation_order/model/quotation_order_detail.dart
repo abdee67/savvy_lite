@@ -73,8 +73,8 @@ class QuotationOrderDetail {
   factory QuotationOrderDetail.fromMap(Map<String, dynamic> map) {
     return QuotationOrderDetail(
       id: map['id'],
-      quoteOrderHeaderId: map['quote_order_header_id'],
-      itemsTableId: map['items_table_id'],
+      quoteOrderHeaderId: map['quote_order_header_id'] ?? 0,
+      itemsTableId: map['items_table_id'] ?? 0,
       itemInBranch: map['item_in_branch'],
       company: map['company'],
       unitPrice: map['unit_price'],
@@ -99,9 +99,9 @@ class QuotationOrderDetail {
       createdBy: map['created_by'],
       updatedBy: map['updated_by'],
       tempId: map['temp_id'],
-      itemTableRef: map['items_id']
+      itemTableRef: map['items_id'] != null
           ? ItemEntryModel(
-              id: map['item_table'],
+              id: map['items_table_id'] ?? 0,
               itemsId: map['items_id'],
               itemDescription: map['item_description'],
               unitOfMeasure: map['unit_of_measure'],
@@ -118,28 +118,28 @@ class QuotationOrderDetail {
               unitOfMeasureDescription: map['unit_of_measure_description'],
             )
           : null,
-      itemBranchRef: map['item_branch']
+      itemBranchRef: map['item_in_branch'] != null
           ? ItemInBranchModel(
-              id: map['item_branch'],
+              id: map['item_in_branch'],
               itemNumber: map['item_number'],
               branch: map['branch'],
             )
           : null,
-      uomRef: map['unit_of_measure_description']
+      uomRef: map['unit_of_measure_description'] != null
           ? UdcDetails(
               id: map['unit_of_measure'],
               description1: map['unit_of_measure_description'],
               detailCode: map['unit_of_measure_code'],
             )
           : null,
-      proformaStatusRef: map['proforma_status']
+      proformaStatusRef: map['prforma_status'] != null
           ? UdcDetails(
-              id: map['proforma_status'],
-              description1: map['proforma_status_description'],
-              detailCode: map['proforma_status_code'],
+              id: map['prforma_status'],
+              description1: map['prforma_status_description'],
+              detailCode: map['prforma_status_code'],
             )
           : null,
-      quoteOrderHeaderRef: map['quote_order_header']
+      quoteOrderHeaderRef: map['quote_order_header'] != null
           ? QuotationOrderHeader(
               id: map['quote_order_header'],
               orderNumber: map['order_number'],

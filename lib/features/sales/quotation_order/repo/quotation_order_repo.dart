@@ -24,36 +24,96 @@ class QuotationOrderRepository {
   }
 
   Future<List<QuotationOrderHeader>> getQuotationOrderHeaders({
-    required int companyId,
+    int? companyId,
+    int? customerBillTo,
+    String? fsNumber,
     DateTime? startDate,
     DateTime? endDate,
+    bool? voidIndicator,
     bool includeVoided = false,
   }) async {
     final db = await _db;
 
-    String where = 'company = ?';
-    List<dynamic> whereArgs = [companyId];
+    String where = '1=1';
+    List<dynamic> whereArgs = [];
 
+    if (companyId != null) {
+      where += ' AND qoh.company = ?';
+      whereArgs.add(companyId);
+    }
+    if (customerBillTo != null) {
+      where += ' AND qoh.customer_bill_to = ?';
+      whereArgs.add(customerBillTo);
+    }
+    if (fsNumber != null) {
+      where += ' AND qoh.fs_number = ?';
+      whereArgs.add(fsNumber);
+    }
+    if (voidIndicator != null) {
+      where += ' AND qoh.void_indicator = ?';
+      whereArgs.add(voidIndicator);
+    }
     if (startDate != null) {
-      where += ' AND order_date >= ?';
+      where += ' AND qoh.order_date >= ?';
       whereArgs.add(startDate.toIso8601String());
     }
 
     if (endDate != null) {
-      where += ' AND order_date <= ?';
+      where += ' AND qoh.order_date <= ?';
       whereArgs.add(endDate.toIso8601String());
     }
 
     if (!includeVoided) {
-      where += ' AND (void_indicator IS NULL OR void_indicator = "")';
+      where += ' AND (qoh.void_indicator IS NULL OR qoh.void_indicator = "")';
+    } else if (voidIndicator != null) {
+      if (voidIndicator) {
+        where +=
+            ' AND qoh.void_indicator IS NOT NULL AND qoh.void_indicator != ""';
+      } else {
+        where += ' AND (qoh.void_indicator IS NULL OR qoh.void_indicator = "")';
+      }
     }
 
-    final maps = await db.query(
-      'quote_order_header',
-      where: where,
-      whereArgs: whereArgs,
-      orderBy: 'id DESC',
-    );
+    // Build comprehensive query with all JOINs
+    final query =
+        '''
+      SELECT 
+        qoh.*,
+        cb.customer_name as customer_bill_to_name,
+        ct.customer_name as customer_table_name,
+        e.name_first as employee_first_name,
+        e.name_middle as employee_middle_name,
+        e.name_last as employee_last_name,
+        e.email as employee_email,
+        e.phone as employee_phone,
+        e.address as employee_address,
+        e.city as employee_city,
+        pi.description_1 as payment_instrument_description1,
+        pi.detail_code as payment_instrument_detail_code,
+        pt.description_1 as payment_term_description1,
+        pt.detail_code as payment_term_detail_code,
+        ps.description_1 as payment_status_description1,
+        ps.detail_code as payment_status_detail_code,
+        pm.description_1 as payment_method_description1,
+        pm.detail_code as payment_method_detail_code,
+        ot.description_1 as order_type_description1,
+        ot.detail_code as order_type_detail_code,
+        b.description as branch_name
+      FROM quote_order_header qoh
+      LEFT JOIN customer_table cb ON qoh.customer_bill_to = cb.id
+      LEFT JOIN customer_table ct ON qoh.customer_table_id = ct.id
+      LEFT JOIN employees e ON qoh.employees_id = e.id
+      LEFT JOIN udc_details pi ON qoh.payment_instrument = pi.id
+      LEFT JOIN udc_details pt ON qoh.payment_term = pt.id
+      LEFT JOIN udc_details ps ON qoh.payment_status = ps.id
+      LEFT JOIN udc_details pm ON qoh.payment_method = pm.id
+      LEFT JOIN udc_details ot ON qoh.order_type = ot.id
+      LEFT JOIN branch_table b ON qoh.branch_id = b.id
+      WHERE $where
+      ORDER BY qoh.id DESC
+    ''';
+
+    final maps = await db.rawQuery(query, whereArgs);
 
     return maps.map((map) => QuotationOrderHeader.fromMap(map)).toList();
   }
@@ -196,22 +256,55 @@ class QuotationOrderRepository {
     int companyId,
   ) async {
     final db = await _db;
-    final maps = await db.query(
-      'quote_order_detail',
-      where: 'quote_order_header_id = ? AND company = ?',
-      whereArgs: [headerId, companyId],
+    final maps = await db.rawQuery(
+      '''
+      SELECT 
+        qod.*,
+        it.item_description as item_description,
+        ib.branch as branch,
+        ib.item_number as item_number,
+        ps.description_1 as prforma_status_description,
+        ps.detail_code as prforma_status_code,
+        uom.description_1 as unit_of_measure_description,
+        uom.detail_code as unit_of_measure_code
+      FROM quote_order_detail qod
+      LEFT JOIN items_table it ON qod.items_table_id = it.id
+      LEFT JOIN items_in_branch ib ON qod.item_in_branch = ib.id
+      LEFT JOIN udc_details ps ON qod.prforma_status = ps.id
+      LEFT JOIN udc_details uom ON qod.unit_of_measure = uom.id
+      WHERE qod.quote_order_header_id = ? AND qod.company = ?
+      ORDER BY qod.id DESC
+    ''',
+      [headerId, companyId],
     );
-
-    return maps.map((map) => QuotationOrderDetail.fromMap(map)).toList();
+    if (maps.isNotEmpty) {
+      return maps.map((map) => QuotationOrderDetail.fromMap(map)).toList();
+    }
+    return [];
   }
 
   // ✅ ADDING MISSING: Get quotation detail by ID
   Future<QuotationOrderDetail?> getQuotationOrderDetailById(int id) async {
     final db = await _db;
-    final maps = await db.query(
-      'quote_order_detail',
-      where: 'id = ?',
-      whereArgs: [id],
+    final maps = await db.rawQuery(
+      '''
+      SELECT 
+        qod.*,
+        it.item_description as item_description,
+        ib.branch as branch,
+        ps.description_1 as prforma_status_description,
+        ps.detail_code as prforma_status_code,
+        uom.description_1 as unit_of_measure_description,
+        uom.detail_code as unit_of_measure_code
+      FROM quote_order_detail qod
+      LEFT JOIN items_table it ON qod.items_table_id = it.id
+      LEFT JOIN items_in_branch ib ON qod.item_in_branch = ib.id
+      LEFT JOIN udc_details ps ON qod.prforma_status = ps.id
+      LEFT JOIN udc_details uom ON qod.unit_of_measure = uom.id
+      WHERE qod.id = ? AND qod.company = ?
+      ORDER BY qod.id DESC
+    ''',
+      [id],
     );
     if (maps.isNotEmpty) {
       return QuotationOrderDetail.fromMap(maps.first);

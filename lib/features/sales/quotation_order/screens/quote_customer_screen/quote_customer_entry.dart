@@ -545,7 +545,7 @@ class _QuotationCustomerInfoScreenContentState
     print('🔵 NAVIGATION: Delay complete');
 
     if (context.read<AuthBloc>().state.hasAccessToPrivilege(
-      AppRoutes.quotatioItemEntry,
+      AppRoutes.quotationItemEntry,
     )) {
       print('🔵 NAVIGATION: Access granted, preparing customer data');
       final customerData = {
@@ -559,7 +559,7 @@ class _QuotationCustomerInfoScreenContentState
 
       print('🔵 NAVIGATION: About to push route');
       if (mounted) {
-        context.push(AppRoutes.quotatioItemEntry, extra: customerData);
+        context.push(AppRoutes.quotationItemEntry, extra: customerData);
         print('🔵 NAVIGATION: Route pushed successfully');
       } else {
         print('❌ NAVIGATION: Widget not mounted');
