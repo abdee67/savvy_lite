@@ -23,6 +23,8 @@ class SalesOrderHeader extends Equatable {
   final String? referenceNote2;
   final String? referenceNote3;
   final String? referenceNote4;
+  final String? proformaFlag;
+  final String? proformaReference;
   final DateTime? creditDateToPay;
   final String? fsNumber;
   final String? voidIndicator;
@@ -68,6 +70,8 @@ class SalesOrderHeader extends Equatable {
     this.referenceNote2,
     this.referenceNote3,
     this.referenceNote4,
+    this.proformaFlag,
+    this.proformaReference,
     this.creditDateToPay,
     this.fsNumber,
     this.voidIndicator,
@@ -100,13 +104,13 @@ class SalesOrderHeader extends Equatable {
     }
 
     return SalesOrderHeader(
-      id: map['id'] as int?,
+      id: (map['id'] as num?)?.toInt(),
       orderDate: parseDate(map['order_date']),
       requiredDate: parseDate(map['required_date']),
       shippedDate: parseDate(map['shipped_date']),
       salesType: map['sales_type']?.toString(),
       paymentMethod: map['payment_method']?.toString(),
-      paymentInstrument: map['payment_instrument'] as int?,
+      paymentInstrument: (map['payment_instrument'] as num?)?.toInt(),
       discount: map['discount']?.toString(),
       addOn: map['add_on']?.toString(),
       tax: (map['tax'] as num?)?.toDouble(),
@@ -118,45 +122,50 @@ class SalesOrderHeader extends Equatable {
       referenceNote2: map['reference_note_2']?.toString(),
       referenceNote3: map['reference_note3']?.toString(),
       referenceNote4: map['reference_note4']?.toString(),
+      proformaFlag: map['proforma_flag']?.toString(),
+      proformaReference: map['proforma_reference']?.toString(),
       creditDateToPay: parseDate(map['credit_date_topay']),
       fsNumber: map['fs_number']?.toString(),
       voidIndicator: map['void_indicator']?.toString(),
-      customerBillTo: map['customer_bill_to'] as int?,
-      customerTableId: map['customer_table_id'] as int?,
-      employeesId: map['employees_id'] as int?,
+      customerBillTo: (map['customer_bill_to'] as num?)?.toInt(),
+      customerTableId: (map['customer_table_id'] as num?)?.toInt(),
+      employeesId: (map['employees_id'] as num?)?.toInt(),
       amountTotal: (map['amount_total'] as num?)?.toDouble(),
-      company: map['company'] as int?,
-      paymentTerm: map['payment_term'] as int?,
-      paymentStatus: map['payment_status'] as int?,
-      orderNumber: map['order_number'] as int?,
+      company: (map['company'] as num?)?.toInt(),
+      paymentTerm: (map['payment_term'] as num?)?.toInt(),
+      paymentStatus: (map['payment_status'] as num?)?.toInt(),
+      orderNumber: (map['order_number'] as num?)?.toInt(),
       amountOpen: (map['amount_open'] as num?)?.toDouble(),
-      orderType: map['order_type'] as int?,
+      orderType: (map['order_type'] as num?)?.toInt(),
       unitCost: (map['unit_cost'] as num?)?.toDouble(),
       amountCost: (map['amount_cost'] as num?)?.toDouble(),
-      tempId: map['temp_id'] as int?,
+      tempId: (map['temp_id'] as num?)?.toInt(),
 
       // 👇 Handle joined fields (if joined SELECT is used)
       customerBillToRef: map['customer_bill_to_name'] != null
-          ? Customer.fromMap({
-              'id': map['customer_bill_to'],
-              'name': map['customer_bill_to_name'],
-              'email': map['customer_bill_to_email'],
-            })
+          ? Customer(
+              id: map['customer_bill_to'],
+              customerName: map['customer_bill_to_name'],
+              phoneNumber: map['customer_bill_to_phone'],
+              tinNumber: map['customer_bill_to_tin'],
+            )
           : null,
       employee: map['employee_name'] != null
-          ? Employee.fromMap({
-              'id': map['employees_id'],
-              'name': map['employee_name'],
-              'nameFirst': map['employee_name_first'],
-              'nameLast': map['employee_name_last'],
-            })
+          ? Employee(
+              id: map['employees_id'],
+              nameFirst: map['employee_name_first'] ?? map['employee_name'],
+              nameMiddle: map['employee_name_middle'] ?? '',
+              nameLast: map['employee_name_last'] ?? '',
+              phone: map['employee_phone'] ?? '',
+              email: map['employee_email'] ?? '',
+            )
           : null,
       paymentStatusRef: map['payment_status_code'] != null
-          ? UdcDetails.fromJson({
-              'id': map['payment_status'],
-              'code': map['payment_status_code'],
-              'description': map['payment_status_description'],
-            })
+          ? UdcDetails(
+              id: map['payment_status'],
+              detailCode: map['payment_status_code'] ?? '',
+              description1: map['payment_status_description'] ?? '',
+            )
           : null,
     );
   }
@@ -181,6 +190,8 @@ class SalesOrderHeader extends Equatable {
       'reference_note_2': referenceNote2,
       'reference_note3': referenceNote3,
       'reference_note4': referenceNote4,
+      'proforma_flag': proformaFlag,
+      'proforma_reference': proformaReference,
       'credit_date_topay': creditDateToPay?.toIso8601String(),
       'fs_number': fsNumber,
       'void_indicator': voidIndicator,
@@ -218,6 +229,8 @@ class SalesOrderHeader extends Equatable {
     String? referenceNote2,
     String? referenceNote3,
     String? referenceNote4,
+    String? proformaFlag,
+    String? proformaReference,
     DateTime? creditDateToPay,
     String? fsNumber,
     String? voidIndicator,
@@ -261,6 +274,8 @@ class SalesOrderHeader extends Equatable {
       referenceNote2: referenceNote2 ?? this.referenceNote2,
       referenceNote3: referenceNote3 ?? this.referenceNote3,
       referenceNote4: referenceNote4 ?? this.referenceNote4,
+      proformaFlag: proformaFlag ?? this.proformaFlag,
+      proformaReference: proformaReference ?? this.proformaReference,
       creditDateToPay: creditDateToPay ?? this.creditDateToPay,
       fsNumber: fsNumber ?? this.fsNumber,
       voidIndicator: voidIndicator ?? this.voidIndicator,
@@ -307,6 +322,8 @@ class SalesOrderHeader extends Equatable {
     referenceNote2,
     referenceNote3,
     referenceNote4,
+    proformaFlag,
+    proformaReference,
     creditDateToPay,
     fsNumber,
     voidIndicator,

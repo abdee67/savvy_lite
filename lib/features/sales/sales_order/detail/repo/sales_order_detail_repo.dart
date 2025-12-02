@@ -81,13 +81,27 @@ class SalesOrderDetailRepository {
     int companyId,
   ) async {
     final db = await databaseService.database;
-    final maps = await db.query(
-      'sales_order_details',
-      where: 'sales_order_header_id = ? AND company = ?',
-      whereArgs: [headerId, companyId],
-    );
+    final query = '''
+    SELECT sod.*, 
+           it.item_description as item_description,
+           it.barcode as barcode,
+           ib.quantity_available as quantity_available,
+           lm.quantity_available as lot_quantity_available,
+           lm.date_expiration as lot_expiration,
+           u.description_1 as unit_of_measure_description
+    FROM sales_order_details sod
+    LEFT JOIN items_table it ON sod.items_table_id = it.id
+    LEFT JOIN items_in_branch ib ON sod.item_in_branch = ib.id
+    LEFT JOIN lot_master lm ON sod.lot_number = lm.id
+    LEFT JOIN udc_details u ON sod.unit_of_measure = u.id
+    WHERE sod.sales_order_header_id = ? AND sod.company = ?
+  ''';
+    final maps = await db.rawQuery(query, [headerId, companyId]);
 
-    return maps.map((map) => SalesOrderDetail.fromMap(map)).toList();
+    return List.generate(maps.length, (i) {
+      final data = maps[i];
+      return SalesOrderDetail.fromMap(data);
+    });
   }
 
   // Get with relations by Header ID

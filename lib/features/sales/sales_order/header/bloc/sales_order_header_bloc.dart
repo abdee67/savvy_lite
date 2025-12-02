@@ -203,7 +203,9 @@ class SalesOrderHeaderBloc
         subTotal += extendedPrice;
 
         // Check if item is taxable (like Java's item.getItemsTableId().getTaxableBoolean())
-        if (detail.item?.taxable == 'Y') {
+        // Use detail.taxable as fallback if detail.item is not populated
+        final isTaxable = detail.item?.taxable == 'Y' || detail.taxable == 'Y';
+        if (isTaxable) {
           taxableAmount += extendedPrice;
         }
       }
@@ -380,9 +382,19 @@ class SalesOrderHeaderBloc
       );
 
       // Process header with business logic
-      final processedHeader = await _processHeaderBusinessLogic(
-        event.header.copyWith(orderNumber: nextOrderNumber),
-      );
+      var headerToCreate = event.header.copyWith(orderNumber: nextOrderNumber);
+
+      // Generate FS Number if missing (e.g. during conversion)
+      if (headerToCreate.fsNumber == null || headerToCreate.fsNumber!.isEmpty) {
+        final branchId = authBloc.state.branchId ?? 1;
+        final nextFsNumber = await repository.generateNextFsNumber(
+          headerToCreate.company!,
+          branchId,
+        );
+        headerToCreate = headerToCreate.copyWith(fsNumber: nextFsNumber);
+      }
+
+      final processedHeader = await _processHeaderBusinessLogic(headerToCreate);
 
       final id = await repository.createSalesOrderHeader(processedHeader);
       final createdHeader = processedHeader.copyWith(id: id);
