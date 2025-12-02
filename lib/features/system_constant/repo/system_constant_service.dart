@@ -136,7 +136,8 @@ class SystemConstantsService with ChangeNotifier {
       throw Exception('No local system constants found');
     } catch (e) {
       // Return a default if everything fails
-      return SystemConstant(
+      // Return a default if everything fails
+      final defaultConstant = SystemConstant(
         applyLotMgm: 'N',
         applyLocationMgm: 'Y',
         decimalPlaces: 2,
@@ -150,7 +151,18 @@ class SystemConstantsService with ChangeNotifier {
         taxInfoDisplay: 'N',
         reorderPointUomType: 'I',
         locationCategoryLevel: 1,
+        // Ensure company ID is set if possible, or handle it upstream
+        company: 1, // Default company ID or fetch from auth if possible
       );
+
+      // Try to persist this default so we don't keep creating it
+      try {
+        await _repository.createSystemConstant(defaultConstant);
+      } catch (e) {
+        developer.log('Failed to persist default constants: $e');
+      }
+
+      return defaultConstant;
     }
   }
 
@@ -227,7 +239,7 @@ class SystemConstantsService with ChangeNotifier {
   double roundToDecimalPlaces(double value, int decimalPlaces) {
     try {
       final factor = pow(10, decimalPlaces);
-    return (value * factor).round() / factor;
+      return (value * factor).round() / factor;
     } catch (e) {
       developer.log('Error in formatNumber: $e');
       return value;
