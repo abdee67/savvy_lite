@@ -58,6 +58,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
 
     // Initialize payment calculations
+    print('DEBUG: PaymentScreen initializing data');
+    print(
+      'DEBUG: Coordinator state has header: ${coordinatorBloc.state.currentHeader != null}',
+    );
+    print(
+      'DEBUG: Coordinator state has details: ${coordinatorBloc.state.currentDetails.length}',
+    );
+
     coordinatorBloc.add(const CalculateCompleteOrderTotals());
     coordinatorBloc.add(const LoadFeeSystemConstants());
   }

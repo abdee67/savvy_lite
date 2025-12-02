@@ -18,8 +18,23 @@ class SalesOrderHeaderRepository {
   Future<int> createSalesOrderHeader(SalesOrderHeader header) async {
     final db = await _db;
     try {
-      return await db.insert('sales_order_header', header.toMap());
-    } catch (e) {
+      final headerMap = header.toMap();
+
+      // Log the data being inserted for debugging
+      print('DEBUG: Creating sales order header with data: $headerMap');
+
+      final id = await db.insert(
+        'sales_order_header',
+        headerMap,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+
+      print('DEBUG: Sales order header created successfully with ID: $id');
+      return id;
+    } catch (e, stackTrace) {
+      print('ERROR: Failed to create sales order header: $e');
+      print('ERROR: Stack trace: $stackTrace');
+      print('ERROR: Header data: ${header.toMap()}');
       throw Exception('Failed to create sales order header: $e');
     }
   }
