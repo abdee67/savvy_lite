@@ -197,7 +197,7 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
                   color: const Color(0xFF155888),
                 ),
               ),
-              ElevatedButton.icon(
+              /* ElevatedButton.icon(
                 onPressed: _addNewItem,
                 icon: const Icon(Icons.add, size: 20),
                 label: const Text('Add Item'),
@@ -208,7 +208,7 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                 ),
-              ),
+              ),*/
             ],
           ),
         ),

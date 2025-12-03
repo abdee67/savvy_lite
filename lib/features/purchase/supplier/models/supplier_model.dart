@@ -11,9 +11,9 @@ class SupplierModel {
   final String? email;
   final int? company;
   final int? createdBy;
-  final String? dateCreated;
+  final DateTime? dateCreated;
   final int? userId;
-  final String? dateUpdated;
+  final DateTime? dateUpdated;
   final String? tinNumber;
   final String? contactPerson;
   final String? contactTitle;
@@ -83,5 +83,48 @@ class SupplierModel {
       'contact_person': contactPerson,
       'contact_title': contactTitle,
     };
+  }
+
+  /// CopyWith for safe updates
+  SupplierModel copyWith({
+    int? id,
+    String? supplierName,
+    String? city,
+    String? region,
+    String? state,
+    String? country,
+    String? phoneNo1,
+    String? phoneNo2,
+    String? addressLine,
+    String? email,
+    int? company,
+    int? createdBy,
+    DateTime? dateCreated,
+    int? userId,
+    DateTime? dateUpdated,
+    String? tinNumber,
+    String? contactPerson,
+    String? contactTitle,
+  }) {
+    return SupplierModel(
+      id: id ?? this.id,
+      supplierName: supplierName ?? this.supplierName,
+      city: city ?? this.city,
+      region: region ?? this.region,
+      state: state ?? this.state,
+      country: country ?? this.country,
+      phoneNo1: phoneNo1 ?? this.phoneNo1,
+      phoneNo2: phoneNo2 ?? this.phoneNo2,
+      addressLine: addressLine ?? this.addressLine,
+      email: email ?? this.email,
+      company: company ?? this.company,
+      createdBy: createdBy ?? this.createdBy,
+      dateCreated: dateCreated ?? this.dateCreated,
+      userId: userId ?? this.userId,
+      dateUpdated: dateUpdated ?? this.dateUpdated,
+      tinNumber: tinNumber ?? this.tinNumber,
+      contactPerson: contactPerson ?? this.contactPerson,
+      contactTitle: contactTitle ?? this.contactTitle,
+    );
   }
 }
