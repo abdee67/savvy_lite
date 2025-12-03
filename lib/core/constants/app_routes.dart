@@ -151,6 +151,13 @@ class AppRoutes {
   static const String branchEdit = '$branchManagement/edit-branch';
   static const String branchDelete = '$branchManagement/delete-branch';
 
+  //////////Purchase ROUTES///////////////
+
+  static const String supplierEntry = '$purchase/supplier-dashboard';
+  static const String supplierCreate = '$supplierEntry/edit-supplier';
+  static const String supplierEdit = '$supplierEntry/edit-supplier';
+  static const String supplierDelete = '$supplierEntry/delete-supplier';
+
   // Helper method to get all dashboard routes
   static List<String> get dashboardRoutes => [
     adminDashboard,

@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_header_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
 
 class PurchaseOrderReceiverModel extends Equatable {
   final int? id;
@@ -24,12 +24,8 @@ class PurchaseOrderReceiverModel extends Equatable {
   final String? batchNumberSupplier;
 
   final PurchaseOrderHeaderModel? poDetailRef;
-  
 
-
-
-
-const PurchaseOrderReceiverModel({
+  const PurchaseOrderReceiverModel({
     this.id,
     this.poDetail,
     this.itemNumber,
@@ -93,8 +89,7 @@ const PurchaseOrderReceiverModel({
               'payment_status': map['po_detail_ref']['payment_status'],
               'order_number': map['po_detail_ref']['order_number'],
               'order_type': map['po_detail_ref']['order_type'],
-          
-  })
+            })
           : null,
     );
   }
@@ -126,25 +121,25 @@ const PurchaseOrderReceiverModel({
 
   @override
   List<Object?> get props => [
-        id,
-        poDetail,
-        itemNumber,
-        quantityTransaction,
-        unitCost,
-        amountExtendedCost,
-        quantityOpen,
-        amountOpen,
-        quantityRecieved,
-        amountReceived,
-        dateReceived,
-        company,
-        userId,
-        dateUpdated,
-        branchRecieved,
-        dateEffective,
-        dateExpiration,
-        location,
-        unitOfMeasure,
-        batchNumberSupplier,
-      ];
+    id,
+    poDetail,
+    itemNumber,
+    quantityTransaction,
+    unitCost,
+    amountExtendedCost,
+    quantityOpen,
+    amountOpen,
+    quantityRecieved,
+    amountReceived,
+    dateReceived,
+    company,
+    userId,
+    dateUpdated,
+    branchRecieved,
+    dateEffective,
+    dateExpiration,
+    location,
+    unitOfMeasure,
+    batchNumberSupplier,
+  ];
 }

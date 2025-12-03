@@ -1,4 +1,7 @@
-class SupplierModel {
+// lib/features/purchase/supplier/models/supplier_model.dart
+import 'package:equatable/equatable.dart';
+
+class SupplierModel extends Equatable {
   final int? id;
   final String? supplierName;
   final String? city;
@@ -17,8 +20,9 @@ class SupplierModel {
   final String? tinNumber;
   final String? contactPerson;
   final String? contactTitle;
+  final int? tempId; // For temporary records during creation
 
-  SupplierModel({
+  const SupplierModel({
     this.id,
     this.supplierName,
     this.city,
@@ -37,6 +41,7 @@ class SupplierModel {
     this.tinNumber,
     this.contactPerson,
     this.contactTitle,
+    this.tempId,
   });
 
   factory SupplierModel.fromMap(Map<String, dynamic> map) {
@@ -53,12 +58,17 @@ class SupplierModel {
       email: map['email'],
       company: map['company'],
       createdBy: map['created_by'],
-      dateCreated: map['date_created'],
+      dateCreated: map['date_created'] != null
+          ? DateTime.parse(map['date_created'])
+          : null,
       userId: map['user_id'],
-      dateUpdated: map['date_updated'],
+      dateUpdated: map['date_updated'] != null
+          ? DateTime.parse(map['date_updated'])
+          : null,
       tinNumber: map['tin_number'],
       contactPerson: map['contact_person'],
       contactTitle: map['contact_title'],
+      tempId: map['temp_id'],
     );
   }
 
@@ -76,16 +86,15 @@ class SupplierModel {
       'email': email,
       'company': company,
       'created_by': createdBy,
-      'date_created': dateCreated,
+      'date_created': dateCreated?.toIso8601String(),
       'user_id': userId,
-      'date_updated': dateUpdated,
+      'date_updated': dateUpdated?.toIso8601String(),
       'tin_number': tinNumber,
       'contact_person': contactPerson,
       'contact_title': contactTitle,
     };
   }
 
-  /// CopyWith for safe updates
   SupplierModel copyWith({
     int? id,
     String? supplierName,
@@ -105,6 +114,7 @@ class SupplierModel {
     String? tinNumber,
     String? contactPerson,
     String? contactTitle,
+    int? tempId,
   }) {
     return SupplierModel(
       id: id ?? this.id,
@@ -125,6 +135,32 @@ class SupplierModel {
       tinNumber: tinNumber ?? this.tinNumber,
       contactPerson: contactPerson ?? this.contactPerson,
       contactTitle: contactTitle ?? this.contactTitle,
+      tempId: tempId ?? this.tempId,
     );
   }
+
+  static SupplierModel empty() => const SupplierModel();
+
+  @override
+  List<Object?> get props => [
+    id,
+    supplierName,
+    city,
+    region,
+    state,
+    country,
+    phoneNo1,
+    phoneNo2,
+    addressLine,
+    email,
+    company,
+    createdBy,
+    dateCreated,
+    userId,
+    dateUpdated,
+    tinNumber,
+    contactPerson,
+    contactTitle,
+    tempId,
+  ];
 }
