@@ -1,11 +1,13 @@
 import 'package:equatable/equatable.dart';
+import 'package:savvy_stock/features/company/models/company_model.dart';
+import 'package:savvy_stock/features/purchase/supplier_entry/models/supplier_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
-class PurchaseOrderHeaderModel extends Equatable {
+class PurchaseOrderHeader extends Equatable {
   final int? id;
   final int? supplierId;
-  final String? dateTransaction;
-  final String? dateDelivery;
+  final DateTime? dateTransaction;
+  final DateTime? dateDelivery;
   final int? poReceiveStatus;
   final int? company;
   final double? taxableAmount;
@@ -18,19 +20,22 @@ class PurchaseOrderHeaderModel extends Equatable {
   final int? paymentStatus;
   final int? paymentInstrument;
   final int? userId;
-  final String? dateUpdated;
+  final DateTime? dateUpdated;
   final double? amountOpenCredit;
   final int? orderNumber;
   final int? paymentTerm;
   final int? orderType;
-  final String? creditDueDate;
+  final DateTime? creditDueDate;
+  final String? invoiceNumber;
+  final int? tempId;
 
+  // Navigation properties
+  final SupplierModel? supplierRef;
+  final UdcDetails? poReceiveStatusRef;
   final UdcDetails? paymentStatusRef;
-  final UdcDetails? paymentInstrumentRef;
   final UdcDetails? orderTypeRef;
 
-
-  const PurchaseOrderHeaderModel({
+  const PurchaseOrderHeader({
     this.id,
     this.supplierId,
     this.dateTransaction,
@@ -52,14 +57,17 @@ class PurchaseOrderHeaderModel extends Equatable {
     this.orderNumber,
     this.paymentTerm,
     this.orderType,
+    this.tempId,
     this.creditDueDate,
+    this.invoiceNumber,
     this.paymentStatusRef,
-    this.paymentInstrumentRef,
     this.orderTypeRef,
+    this.supplierRef,
+    this.poReceiveStatusRef,
   });
 
-  factory PurchaseOrderHeaderModel.fromMap(Map<String, dynamic> map) {
-    return PurchaseOrderHeaderModel(
+  factory PurchaseOrderHeader.fromMap(Map<String, dynamic> map) {
+    return PurchaseOrderHeader(
       id: map['id'],
       supplierId: map['supplier_id'],
       dateTransaction: map['date_transation'],
@@ -81,10 +89,36 @@ class PurchaseOrderHeaderModel extends Equatable {
       orderNumber: map['order_number'],
       paymentTerm: map['payment_term'],
       orderType: map['order_type'],
+      tempId: map['temp_id'],
       creditDueDate: map['credit_due_date'],
-      paymentStatusRef: UdcDetails.fromJson(map['payment_status_ref']),
-      paymentInstrumentRef: UdcDetails.fromJson(map['payment_instrument_ref']),
-      orderTypeRef: UdcDetails.fromJson(map['order_type_ref']),
+      invoiceNumber: map['invoice_number'],
+      paymentStatusRef: map['payment_status_ref'] == null
+          ? UdcDetails(
+              id: map['payment_status']['id'],
+              description1: map['payment_status_description'],
+              detailCode: map['payment_status_code'],
+            )
+          : null,
+      orderTypeRef: map['order_type_ref'] == null
+          ? UdcDetails(
+              id: map['order_type']['id'],
+              description1: map['order_type_description'],
+              detailCode: map['order_type_code'],
+            )
+          : null,
+      supplierRef: map['supplier_name'] == null
+          ? SupplierModel(
+              id: map['supplier_id'],
+              supplierName: map['supplier_name'],
+            )
+          : null,
+      poReceiveStatusRef: map['po_receive_status_description'] == null
+          ? UdcDetails(
+              id: map['po_receive_status'],
+              description1: map['po_receive_status_description'],
+              detailCode: map['po_receive_status_code'],
+            )
+          : null,
     );
   }
 
@@ -92,8 +126,8 @@ class PurchaseOrderHeaderModel extends Equatable {
     return {
       'id': id,
       'supplier_id': supplierId,
-      'date_transation': dateTransaction,
-      'date_delivery': dateDelivery,
+      'date_transation': dateTransaction?.toIso8601String(),
+      'date_delivery': dateDelivery?.toIso8601String(),
       'po_receive_status': poReceiveStatus,
       'company': company,
       'taxable_amount': taxableAmount,
@@ -106,37 +140,108 @@ class PurchaseOrderHeaderModel extends Equatable {
       'payment_status': paymentStatus,
       'payment_instrument': paymentInstrument,
       'user_id': userId,
-      'date_updated': dateUpdated,
+      'date_updated': dateUpdated?.toIso8601String(),
       'amount_open_credit': amountOpenCredit,
       'order_number': orderNumber,
       'payment_term': paymentTerm,
       'order_type': orderType,
-      'credit_due_date': creditDueDate,
+      'credit_due_date': creditDueDate?.toIso8601String(),
+      'invoice_number': invoiceNumber,
     };
   }
+
+  //CopyWith
+  PurchaseOrderHeader copyWith({
+    int? id,
+    int? supplierId,
+    DateTime? dateTransaction,
+    DateTime? dateDelivery,
+    int? poReceiveStatus,
+    int? company,
+    double? taxableAmount,
+    double? taxAmount,
+    double? amountWithhold,
+    double? amountDiscount,
+    double? amountGross,
+    double? amountOtherCosts,
+    double? amountGrandTotalCost,
+    int? paymentStatus,
+    int? paymentInstrument,
+    int? userId,
+    DateTime? dateUpdated,
+    double? amountOpenCredit,
+    int? orderNumber,
+    int? paymentTerm,
+    int? orderType,
+    DateTime? creditDueDate,
+    String? invoiceNumber,
+    int? tempId,
+    UdcDetails? paymentStatusRef,
+    UdcDetails? orderTypeRef,
+    SupplierModel? supplierRef,
+    UdcDetails? poReceiveStatusRef,
+  }) {
+    return PurchaseOrderHeader(
+      id: id ?? this.id,
+      supplierId: supplierId ?? this.supplierId,
+      dateTransaction: dateTransaction ?? this.dateTransaction,
+      dateDelivery: dateDelivery ?? this.dateDelivery,
+      poReceiveStatus: poReceiveStatus ?? this.poReceiveStatus,
+      company: company ?? this.company,
+      taxableAmount: taxableAmount ?? this.taxableAmount,
+      taxAmount: taxAmount ?? this.taxAmount,
+      amountWithhold: amountWithhold ?? this.amountWithhold,
+      amountDiscount: amountDiscount ?? this.amountDiscount,
+      amountGross: amountGross ?? this.amountGross,
+      amountOtherCosts: amountOtherCosts ?? this.amountOtherCosts,
+      amountGrandTotalCost: amountGrandTotalCost ?? this.amountGrandTotalCost,
+      paymentStatus: paymentStatus ?? this.paymentStatus,
+      paymentInstrument: paymentInstrument ?? this.paymentInstrument,
+      userId: userId ?? this.userId,
+      dateUpdated: dateUpdated ?? this.dateUpdated,
+      amountOpenCredit: amountOpenCredit ?? this.amountOpenCredit,
+      orderNumber: orderNumber ?? this.orderNumber,
+      paymentTerm: paymentTerm ?? this.paymentTerm,
+      orderType: orderType ?? this.orderType,
+      creditDueDate: creditDueDate ?? this.creditDueDate,
+      invoiceNumber: invoiceNumber ?? this.invoiceNumber,
+      tempId: tempId ?? this.tempId,
+      paymentStatusRef: paymentStatusRef ?? this.paymentStatusRef,
+      orderTypeRef: orderTypeRef ?? this.orderTypeRef,
+      supplierRef: supplierRef ?? this.supplierRef,
+      poReceiveStatusRef: poReceiveStatusRef ?? this.poReceiveStatusRef,
+    );
+  }
+
   @override
   List<Object?> get props => [
-        id,
-        supplierId,
-        dateTransaction,
-        dateDelivery,
-        poReceiveStatus,
-        company,
-        taxableAmount,
-        taxAmount,
-        amountWithhold,
-        amountDiscount,
-        amountGross,
-        amountOtherCosts,
-        amountGrandTotalCost,
-        paymentStatus,
-        paymentInstrument,
-        userId,
-        dateUpdated,
-        amountOpenCredit,
-        orderNumber,
-        paymentTerm,
-        orderType,
-        creditDueDate,
-      ];
+    id,
+    supplierId,
+    dateTransaction,
+    dateDelivery,
+    poReceiveStatus,
+    company,
+    taxableAmount,
+    taxAmount,
+    amountWithhold,
+    amountDiscount,
+    amountGross,
+    amountOtherCosts,
+    amountGrandTotalCost,
+    paymentStatus,
+    paymentInstrument,
+    userId,
+    dateUpdated,
+    amountOpenCredit,
+    orderNumber,
+    paymentTerm,
+    orderType,
+    tempId,
+    creditDueDate,
+    invoiceNumber,
+    paymentStatusRef,
+    orderTypeRef,
+    supplierRef,
+    poReceiveStatusRef,
+  ];
 }
