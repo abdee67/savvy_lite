@@ -2,7 +2,7 @@
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 import 'package:savvy_stock/features/company/models/company_model.dart';
-import 'package:savvy_stock/features/purchase/supplier/models/supplier_model.dart';
+import 'package:savvy_stock/features/purchase/supplier_entry/models/supplier_model.dart';
 import 'package:savvy_stock/features/stock/inventory_transaction_entry/models/inventory_transaction_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';

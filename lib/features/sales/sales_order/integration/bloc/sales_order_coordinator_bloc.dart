@@ -33,6 +33,7 @@ class SalesOrderCoordinatorBloc
   final InvoiceHistoryDetailBloc invoiceDetailBloc;
   final AuthBloc authBloc;
   final SalesOrderIntegrationService integrationService;
+  final QuotationOrderRepository quotationRepo;
 
   StreamSubscription<SalesOrderHeaderState>? _headerSubscription;
   StreamSubscription<SalesOrderDetailState>? _detailSubscription;
@@ -48,6 +49,7 @@ class SalesOrderCoordinatorBloc
     required this.invoiceDetailBloc,
     required this.systemConstantBloc,
     required this.authBloc,
+    required this.quotationRepo,
   }) : integrationService = SalesOrderIntegrationService(
          headerBloc: headerBloc,
          detailBloc: detailBloc,
@@ -184,7 +186,6 @@ class SalesOrderCoordinatorBloc
           currentHeader?.fsNumber != null) {
         try {
           final quotationFsNumber = headerToCreate.proformaReference!;
-          final quotationRepo = QuotationOrderRepository();
 
           // Query quotation by fs_number (matching Java implementation)
           final quotationHeaders = await quotationRepo.getQuotationOrderHeaders(

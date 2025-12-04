@@ -5,12 +5,12 @@ import 'package:savvy_stock/features/sales/quotation_order/model/quotation_order
 import 'package:sqflite/sqflite.dart';
 
 class QuotationOrderRepository {
-  static final QuotationOrderRepository _instance =
-      QuotationOrderRepository._internal();
-  factory QuotationOrderRepository() => _instance;
-  QuotationOrderRepository._internal();
+  final LocalDatabaseService _databaseService;
 
-  Future<Database> get _db async => LocalDatabaseService().database;
+  QuotationOrderRepository({required LocalDatabaseService databaseService})
+    : _databaseService = databaseService;
+
+  Future<Database> get _db async => _databaseService.database;
 
   // ============ HEADER CRUD OPERATIONS ============
 

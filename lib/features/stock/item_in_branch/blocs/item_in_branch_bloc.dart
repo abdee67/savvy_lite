@@ -546,7 +546,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
             remark: 'Purchase Order Stock Addition',
             loc: null,
             lm: null,
-            trNo: purchaseOrderReceiver.poDetailRef!.orderNumber,
+            trNo: purchaseOrderReceiver.poDetailRef!.poHeaderRef!.orderNumber,
             qty: qtyToAdd,
             soD: null,
             por: purchaseOrderReceiver,

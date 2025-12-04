@@ -1,11 +1,11 @@
 // features/stock/lot_master/blocs/lot_master_bloc.dart
 import 'dart:async';
 import 'package:bloc/bloc.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/next_number/bloc/next_number_bloc.dart';
-import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/bloc/lot_coloring_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/model/lot_coloring_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_event.dart';
@@ -790,10 +790,7 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
     return false;
   }
 
-  bool _validatePurchaseOrderDates(
-    PurchaseOrderReceiverModel por,
-    String? lotType,
-  ) {
+  bool _validatePurchaseOrderDates(PurchaseOrderReceiver por, String? lotType) {
     if (lotType == null || lotType.toUpperCase() == 'X') {
       return por.dateExpiration != null;
     } else if (lotType.toUpperCase() == 'F') {
