@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
+import 'package:savvy_stock/features/purchase/supplier_entry/blocs/supplier_bloc.dart';
+import 'package:savvy_stock/features/purchase/supplier_entry/repo/supplier_repo.dart';
 import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
 import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_bloc.dart';
 import 'package:savvy_stock/features/sales/quotation_order/repo/quotation_order_repo.dart';
@@ -76,7 +78,7 @@ Future<void> _initializeAndRunApp() async {
   try {
     await ConnectivityService().initConnectivity();
     initDependencies();
-    await LocalDatabaseService().resetDatabase();
+    //await LocalDatabaseService().resetDatabase();
     // await LocalDatabaseService().debugTable('branch_table');
 
     if (AppConfig.isTestMode) {
@@ -96,6 +98,7 @@ Future<void> _initializeAndRunApp() async {
     //await LocalDatabaseService().debugTable('item_transactions');
     await LocalDatabaseService().debugTable('quote_order_header');
     await LocalDatabaseService().debugTable('quote_order_detail');
+    await LocalDatabaseService().debugTable('supplier_table');
   } catch (error, stackTrace) {
     developer.log('Initialization error: $error');
     developer.log('Stack trace: $stackTrace');
@@ -164,6 +167,7 @@ class _SavvyStockState extends State<SavvyStock> {
   late SalesReturnStockService _salesReturnStockService;
   late SalesReturnRepository _salesReturnRepository;
   late QuotationOrderRepository _quotationOrderRepository;
+  late SupplierRepository _supplierRepository;
 
   @override
   void initState() {
@@ -211,6 +215,7 @@ class _SavvyStockState extends State<SavvyStock> {
     _salesReturnStockService = getIt<SalesReturnStockService>();
     _salesReturnRepository = getIt<SalesReturnRepository>();
     _quotationOrderRepository = getIt<QuotationOrderRepository>();
+    _supplierRepository = getIt<SupplierRepository>();
     // Ensure system constants are loaded when companyId becomes available.
     final cid = _authBloc.state.companyId;
     if (cid != null) {
@@ -480,6 +485,7 @@ class _SavvyStockState extends State<SavvyStock> {
               invoiceDetailBloc: _invoiceHistoryDetailBloc,
               authBloc: _authBloc,
               systemConstantBloc: _systemConstantBloc,
+              quotationRepo: _quotationOrderRepository,
             ),
           ),
           BlocProvider<InvoiceHistoryHeaderBloc>(
@@ -518,6 +524,13 @@ class _SavvyStockState extends State<SavvyStock> {
               invoiceHeaderBloc: _invoiceHistoryHeaderBloc,
               invoiceHeaderRepository: _invoiceHistoryHeaderRepository,
               udcRepository: _udcRepository,
+            ),
+          ),
+          // Purchase Blocs
+          BlocProvider<SupplierBloc>(
+            create: (context) => SupplierBloc(
+              repository: _supplierRepository,
+              authBloc: _authBloc,
             ),
           ),
         ],

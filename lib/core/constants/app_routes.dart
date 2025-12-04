@@ -154,7 +154,7 @@ class AppRoutes {
   //////////Purchase ROUTES///////////////
 
   static const String supplierEntry = '$purchase/supplier-dashboard';
-  static const String supplierCreate = '$supplierEntry/edit-supplier';
+  static const String supplierCreate = '$supplierEntry/create-supplier';
   static const String supplierEdit = '$supplierEntry/edit-supplier';
   static const String supplierDelete = '$supplierEntry/delete-supplier';
 

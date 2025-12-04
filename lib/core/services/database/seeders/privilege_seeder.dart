@@ -495,6 +495,32 @@ class PrivilegeSeeder {
         AppRoutes.branchDelete,
         'delete_branch',
       ),
+
+      // ==================== PURCHASE MODULE ====================
+      _createPrivilege(
+        'Supplier Entry',
+        'link',
+        AppRoutes.supplierEntry,
+        'supplier_entry',
+      ),
+      _createPrivilege(
+        'Add Supplier',
+        'button',
+        AppRoutes.supplierCreate,
+        'create_supplier',
+      ),
+      _createPrivilege(
+        'Edit Supplier',
+        'button',
+        AppRoutes.supplierEdit,
+        'edit_supplier',
+      ),
+      _createPrivilege(
+        'Delete Supplier',
+        'button',
+        AppRoutes.supplierDelete,
+        'delete_supplier',
+      ),
     ];
 
     for (final privilege in privileges) {

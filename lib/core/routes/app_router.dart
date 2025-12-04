@@ -27,6 +27,9 @@ import 'package:savvy_stock/features/branch_list/widgets/branch_list_create_and_
 import 'package:savvy_stock/features/dashboards/screens/home_page.dart';
 import 'package:savvy_stock/features/onboarding/screens/welcome_screen.dart';
 import 'package:savvy_stock/features/onboarding/widgets/getStarted.dart';
+import 'package:savvy_stock/features/purchase/supplier_entry/models/supplier_model.dart';
+import 'package:savvy_stock/features/purchase/supplier_entry/screens/supplier_list.dart';
+import 'package:savvy_stock/features/purchase/supplier_entry/widget/supplier_create_edit.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/customer/screens/customer_list.dart';
 import 'package:savvy_stock/features/sales/customer/screens/sales_customer_screen.dart';
@@ -771,6 +774,40 @@ class AppRouter {
             requiredPrivilege: AppRoutes.branchEdit,
             parentPrivilege: AppRoutes.branchManagement,
             child: BranchFormPage(branch: branch, authBloc: authBloc),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      // Purchase Routes
+      GoRoute(
+        path: AppRoutes.supplierEntry,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.supplierEntry,
+          parentPrivilege: AppRoutes.purchaseDashboard,
+          child: SupplierListPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.supplierCreate,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.supplierCreate,
+          parentPrivilege: AppRoutes.supplierEntry,
+          child: SupplierEntryScreen(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.supplierEdit,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final supplier = extra != null
+              ? extra['supplier'] as SupplierModel?
+              : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.supplierEdit,
+            parentPrivilege: AppRoutes.supplierEntry,
+            child: SupplierEntryScreen(authBloc: authBloc, supplier: supplier),
           );
         },
         redirect: _protectedRouteRedirect,

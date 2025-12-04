@@ -1,6 +1,8 @@
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
+import 'package:savvy_stock/features/purchase/supplier_entry/blocs/supplier_bloc.dart';
+import 'package:savvy_stock/features/purchase/supplier_entry/repo/supplier_repo.dart';
 import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
 import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_bloc.dart';
 import 'package:savvy_stock/features/sales/quotation_order/repo/quotation_order_repo.dart';
@@ -235,7 +237,10 @@ void initDependencies() {
     ),
   );
   getIt.registerLazySingleton<QuotationOrderRepository>(
-    () => QuotationOrderRepository(),
+    () => QuotationOrderRepository(databaseService: getIt()),
+  );
+  getIt.registerLazySingleton<SupplierRepository>(
+    () => SupplierRepositoryImpl(getIt()),
   );
   // BLoCs
 
@@ -415,6 +420,7 @@ void initDependencies() {
       invoiceHeaderBloc: getIt(),
       invoiceDetailBloc: getIt(),
       systemConstantBloc: getIt(),
+      quotationRepo: getIt(),
     ),
   );
   getIt.registerFactory<SalesReturnBloc>(
@@ -440,5 +446,9 @@ void initDependencies() {
       invoiceHeaderRepository: getIt(),
       udcRepository: getIt(),
     ),
+  );
+  // Purchase
+  getIt.registerFactory<SupplierBloc>(
+    () => SupplierBloc(repository: getIt(), authBloc: getIt()),
   );
 }
