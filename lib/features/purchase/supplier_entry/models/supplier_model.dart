@@ -43,6 +43,9 @@ class SupplierModel extends Equatable {
     this.contactTitle,
     this.tempId,
   });
+  // Proper empty checks: consider missing id or no name as empty
+  bool get isEmpty => id == null || id == 0 || (supplierName?.isEmpty ?? true);
+  bool get isNotEmpty => !isEmpty;
 
   factory SupplierModel.fromMap(Map<String, dynamic> map) {
     return SupplierModel(

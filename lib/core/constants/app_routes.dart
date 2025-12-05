@@ -158,6 +158,13 @@ class AppRoutes {
   static const String supplierEdit = '$supplierEntry/edit-supplier';
   static const String supplierDelete = '$supplierEntry/delete-supplier';
 
+  //static const String purchaseEntry = '$purchase/purchase-dashboard';
+  static const String purchaseReview = '$purchase/purchase-review';
+  static const String purchaseSupplierInfo =
+      '$purchaseReview/purchase-supplier-info';
+  static const String purchaseItemEntry = '$purchaseReview/purchase-item-entry';
+  static const String purchaseOrderPayment = '$purchaseReview/payment-summary';
+
   // Helper method to get all dashboard routes
   static List<String> get dashboardRoutes => [
     adminDashboard,

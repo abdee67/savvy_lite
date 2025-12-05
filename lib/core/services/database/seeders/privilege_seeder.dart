@@ -521,6 +521,36 @@ class PrivilegeSeeder {
         AppRoutes.supplierDelete,
         'delete_supplier',
       ),
+      /*  _createPrivilege(
+        'Purchase Order Entry',
+        'link',
+        AppRoutes.purchaseEntry,
+        'purchase_order_entry',
+      ),*/
+      _createPrivilege(
+        'Purchase Order',
+        'button',
+        AppRoutes.purchaseReview,
+        'review_purchase_order',
+      ),
+      _createPrivilege(
+        'Supplier Info',
+        'button',
+        AppRoutes.purchaseSupplierInfo,
+        'purchase_supplier_info',
+      ),
+      _createPrivilege(
+        'Purchase Item Entry',
+        'button',
+        AppRoutes.purchaseItemEntry,
+        'purchase_item_entry',
+      ),
+      _createPrivilege(
+        'Purchase Payment',
+        'button',
+        AppRoutes.purchaseOrderPayment,
+        'purchase_order_payment',
+      ),
     ];
 
     for (final privilege in privileges) {

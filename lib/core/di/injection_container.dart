@@ -1,6 +1,9 @@
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_repository.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/services/purchase_order_stock_service.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/blocs/supplier_bloc.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/repo/supplier_repo.dart';
 import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
@@ -242,7 +245,23 @@ void initDependencies() {
   getIt.registerLazySingleton<SupplierRepository>(
     () => SupplierRepositoryImpl(getIt()),
   );
-  // BLoCs
+  getIt.registerLazySingleton<PurchaseOrderRepository>(
+    () => PurchaseOrderRepository(databaseService: getIt()),
+  );
+  getIt.registerLazySingleton<PurchaseOrderStockService>(
+    () => PurchaseOrderStockService(
+      itemLocationsRepository: getIt(),
+      udcRepository: getIt(),
+      itemUomConversionsRepository: getIt(),
+      itemTransactionsRepository: getIt(),
+      systemConstantBloc: getIt(),
+      lotMasterRepository: getIt(),
+      stockItemInBranchRepository: getIt(),
+      expirationColorsRepository: getIt(),
+    ),
+  );
+
+  ///////////// BLoCs///////////////
 
   getIt.registerLazySingleton<AuthBloc>(
     () => AuthBloc(databaseService: getIt(), secureStorage: getIt()),
@@ -450,5 +469,18 @@ void initDependencies() {
   // Purchase
   getIt.registerFactory<SupplierBloc>(
     () => SupplierBloc(repository: getIt(), authBloc: getIt()),
+  );
+  getIt.registerFactory<PurchaseOrderBloc>(
+    () => PurchaseOrderBloc(
+      repository: getIt(),
+      authBloc: getIt(),
+      systemConstantBloc: getIt(),
+      udcRepository: getIt(),
+      nextNumberRepository: getIt(),
+      stockService: getIt(),
+      itemsTableRepository: getIt(),
+      itemCostsRepository: getIt(),
+      supplierRepository: getIt(),
+    ),
   );
 }

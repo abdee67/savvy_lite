@@ -555,7 +555,7 @@ CREATE INDEX idx_supplier_table_user_id ON supplier_table(user_id);
   CREATE TABLE purchase_order_header (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     supplier_id INTEGER,
-    date_transation TEXT,
+    date_transaction TEXT,
     date_delivery TEXT,
     po_receive_status INTEGER,
     company INTEGER,
@@ -575,6 +575,7 @@ CREATE INDEX idx_supplier_table_user_id ON supplier_table(user_id);
     payment_term INTEGER,
     order_type INTEGER,
     credit_due_date TEXT,
+    invoice_number TEXT,
     FOREIGN KEY (supplier_id) REFERENCES supplier_table (id),
     FOREIGN KEY (company) REFERENCES company_table (id),
     FOREIGN KEY (po_receive_status) REFERENCES udc_details (id),
@@ -1424,7 +1425,7 @@ ON quote_order_detail (prforma_status);
       // --- Purchased Receive Status (PR) ---
       {
         'id': 10,
-        'detail_code': 'NEW',
+        'detail_code': 'N',
         'description_1': 'New',
         'description_2': null,
         'record_header': 3,
@@ -1432,7 +1433,7 @@ ON quote_order_detail (prforma_status);
       },
       {
         'id': 11,
-        'detail_code': 'PARTIAL',
+        'detail_code': 'P',
         'description_1': 'Partially Received',
         'description_2': null,
         'record_header': 3,
@@ -1440,7 +1441,7 @@ ON quote_order_detail (prforma_status);
       },
       {
         'id': 12,
-        'detail_code': 'COMPLETE',
+        'detail_code': 'C',
         'description_1': 'Completely Received',
         'description_2': null,
         'record_header': 3,

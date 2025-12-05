@@ -184,7 +184,7 @@ class RemoveFromCreateList extends LotMasterEvent {
 }
 
 class AutoCreateLotForPO extends LotMasterEvent {
-  final PurchaseOrderReceiverModel por;
+  final PurchaseOrderReceiver por;
   final int transactionNumber;
   const AutoCreateLotForPO(this.por, this.transactionNumber);
 }

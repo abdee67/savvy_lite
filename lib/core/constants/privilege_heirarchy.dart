@@ -135,6 +135,12 @@ class PrivilegeHierarchy {
     AppRoutes.supplierCreate: AppRoutes.supplierEntry,
     AppRoutes.supplierEdit: AppRoutes.supplierEntry,
     AppRoutes.supplierDelete: AppRoutes.supplierEntry,
+
+    // AppRoutes.purchaseEntry: AppRoutes.purchaseDashboard,
+    AppRoutes.purchaseReview: AppRoutes.purchaseDashboard,
+    AppRoutes.purchaseSupplierInfo: AppRoutes.purchaseReview,
+    AppRoutes.purchaseItemEntry: AppRoutes.purchaseReview,
+    AppRoutes.purchaseOrderPayment: AppRoutes.purchaseReview,
   };
 
   /// Get the parent privilege for a given privilege URI

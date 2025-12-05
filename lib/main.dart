@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_repository.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/services/purchase_order_stock_service.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/blocs/supplier_bloc.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/repo/supplier_repo.dart';
 import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
@@ -78,7 +81,7 @@ Future<void> _initializeAndRunApp() async {
   try {
     await ConnectivityService().initConnectivity();
     initDependencies();
-    //await LocalDatabaseService().resetDatabase();
+    await LocalDatabaseService().resetDatabase();
     // await LocalDatabaseService().debugTable('branch_table');
 
     if (AppConfig.isTestMode) {
@@ -168,6 +171,8 @@ class _SavvyStockState extends State<SavvyStock> {
   late SalesReturnRepository _salesReturnRepository;
   late QuotationOrderRepository _quotationOrderRepository;
   late SupplierRepository _supplierRepository;
+  late PurchaseOrderStockService _purchaseStockService;
+  late PurchaseOrderRepository _purchaseOrderRepository;
 
   @override
   void initState() {
@@ -216,6 +221,8 @@ class _SavvyStockState extends State<SavvyStock> {
     _salesReturnRepository = getIt<SalesReturnRepository>();
     _quotationOrderRepository = getIt<QuotationOrderRepository>();
     _supplierRepository = getIt<SupplierRepository>();
+    _purchaseOrderRepository = getIt<PurchaseOrderRepository>();
+    _purchaseStockService = getIt<PurchaseOrderStockService>();
     // Ensure system constants are loaded when companyId becomes available.
     final cid = _authBloc.state.companyId;
     if (cid != null) {
@@ -531,6 +538,20 @@ class _SavvyStockState extends State<SavvyStock> {
             create: (context) => SupplierBloc(
               repository: _supplierRepository,
               authBloc: _authBloc,
+            ),
+          ),
+          // Purchase Blocs
+          BlocProvider<PurchaseOrderBloc>(
+            create: (context) => PurchaseOrderBloc(
+              repository: _purchaseOrderRepository,
+              authBloc: _authBloc,
+              systemConstantBloc: _systemConstantBloc,
+              udcRepository: _udcRepository,
+              itemCostsRepository: _itemCostRepository,
+              itemsTableRepository: _stockItemsEntryRepository,
+              supplierRepository: _supplierRepository,
+              nextNumberRepository: _nextNumberRepository,
+              stockService: _purchaseStockService,
             ),
           ),
         ],

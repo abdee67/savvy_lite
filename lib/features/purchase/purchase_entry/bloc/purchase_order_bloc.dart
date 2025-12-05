@@ -24,7 +24,6 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
   final SystemConstantBloc systemConstantBloc;
   final SupplierRepository supplierRepository;
   final StockItemsEntryRepository itemsTableRepository;
-  final StockItemsEntryRepository itemsInBranchRepository;
   final ItemCostRepository itemCostsRepository;
   final UdcRepository udcRepository;
   final NextNumberRepository nextNumberRepository;
@@ -39,7 +38,6 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     required this.systemConstantBloc,
     required this.supplierRepository,
     required this.itemsTableRepository,
-    required this.itemsInBranchRepository,
     required this.itemCostsRepository,
     required this.udcRepository,
     required this.nextNumberRepository,
@@ -261,14 +259,14 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
 
       // Get default order type (P for Purchase)
       final defaultOrderType = await udcRepository.getUdcDetailsByCode(
+        'PO',
         'OT',
-        'P',
       );
 
       // Get default purchase receive status (N for Not Received)
       final defaultReceiveStatus = await udcRepository.getUdcDetailsByCode(
-        'PR',
         'N',
+        'PR',
       );
 
       // Create new header
@@ -1167,7 +1165,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
   }
 
   Future<void> _onPrepareAutoReceipt(
-    PrepareAutoReceipt event,
+    event,
     Emitter<PurchaseOrderState> emit,
   ) async {
     emit(state.loadingState('prepare_auto_receipt'));
