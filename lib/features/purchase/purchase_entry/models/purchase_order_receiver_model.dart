@@ -1,7 +1,12 @@
 import 'package:equatable/equatable.dart';
+import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
+import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
-class PurchaseOrderReceiverModel extends Equatable {
+class PurchaseOrderReceiver extends Equatable {
   final int? id;
   final int? poDetail;
   final int? itemNumber;
@@ -22,10 +27,17 @@ class PurchaseOrderReceiverModel extends Equatable {
   final int? location;
   final int? unitOfMeasure;
   final String? batchNumberSupplier;
+  final int? tempId;
+  final bool? validCell;
 
-  final PurchaseOrderHeaderModel? poDetailRef;
+  // Navigation properties
+  final PurchaseOrderDetail? poDetailRef;
+  final ItemEntryModel? itemNumberRef;
+  final Branch? branchRecievedRef;
+  final ItemLocation? locationRef;
+  final UdcDetails? unitOfMeasureRef;
 
-  const PurchaseOrderReceiverModel({
+  const PurchaseOrderReceiver({
     this.id,
     this.poDetail,
     this.itemNumber,
@@ -47,10 +59,16 @@ class PurchaseOrderReceiverModel extends Equatable {
     this.unitOfMeasure,
     this.batchNumberSupplier,
     this.poDetailRef,
+    this.itemNumberRef,
+    this.branchRecievedRef,
+    this.locationRef,
+    this.unitOfMeasureRef,
+    this.tempId,
+    this.validCell,
   });
 
-  factory PurchaseOrderReceiverModel.fromMap(Map<String, dynamic> map) {
-    return PurchaseOrderReceiverModel(
+  factory PurchaseOrderReceiver.fromMap(Map<String, dynamic> map) {
+    return PurchaseOrderReceiver(
       id: map['id'],
       poDetail: map['po_detail'],
       itemNumber: map['item_number'],
@@ -80,16 +98,41 @@ class PurchaseOrderReceiverModel extends Equatable {
       unitOfMeasure: map['unit_of_measure'],
       batchNumberSupplier: map['batch_number_supplier'],
       poDetailRef: map['po_detail_ref'] != null
-          ? PurchaseOrderHeaderModel.fromMap({
-              'id': map['po_detail_ref']['id'],
-              'supplier_id': map['po_detail_ref']['supplier_id'],
-              'date_transation': map['po_detail_ref']['date_transation'],
-              'date_delivery': map['po_detail_ref']['date_delivery'],
-              'po_receive_status': map['po_detail_ref']['po_receive_status'],
-              'payment_status': map['po_detail_ref']['payment_status'],
-              'order_number': map['po_detail_ref']['order_number'],
-              'order_type': map['po_detail_ref']['order_type'],
-            })
+          ? PurchaseOrderDetail(
+              id: map['po_detail']['id'],
+              dateEffective: map['date_effective'],
+              dateDelivery: map['date_delivery'],
+              poReceiveStatus: map['po_receive_status'],
+              quantityTransaction: map['quantity_transaction'],
+              unitCost: map['unit_cost'],
+              amountExtendedCost: map['amount_extended_cost'],
+            )
+          : null,
+      itemNumberRef: map['item_description'] != null
+          ? ItemEntryModel(
+              id: map['item_number'],
+              itemDescription: map['item_description'],
+              barcode: map['item_code'],
+            )
+          : null,
+      branchRecievedRef: map['branch_recieved_description'] != null
+          ? Branch(
+              id: map['branch_recieved']['id'],
+              description: map['branch_recieved_description'],
+            )
+          : null,
+      locationRef: map['location_description'] != null
+          ? ItemLocation(
+              id: map['location']['id'],
+              locationDescription: map['location']['location_description'],
+            )
+          : null,
+      unitOfMeasureRef: map['unit_of_measure_description'] != null
+          ? UdcDetails(
+              id: map['unit_of_measure']['id'],
+              description1: map['unit_of_measure_description']['description'],
+              detailCode: map['unit_of_measure_code']['detail_code'],
+            )
           : null,
     );
   }
@@ -119,6 +162,67 @@ class PurchaseOrderReceiverModel extends Equatable {
     };
   }
 
+  //CopyWith
+  PurchaseOrderReceiver copyWith({
+    int? id,
+    int? poDetail,
+    int? itemNumber,
+    double? quantityTransaction,
+    double? unitCost,
+    double? amountExtendedCost,
+    double? quantityOpen,
+    double? amountOpen,
+    double? quantityRecieved,
+    double? amountReceived,
+    DateTime? dateReceived,
+    int? company,
+    int? userId,
+    DateTime? dateUpdated,
+    int? branchRecieved,
+    DateTime? dateEffective,
+    DateTime? dateExpiration,
+    int? location,
+    int? unitOfMeasure,
+    String? batchNumberSupplier,
+    PurchaseOrderDetail? poDetailRef,
+    ItemEntryModel? itemNumberRef,
+    Branch? branchRecievedRef,
+    ItemLocation? locationRef,
+    UdcDetails? unitOfMeasureRef,
+    int? tempId,
+    bool? validCell,
+  }) {
+    return PurchaseOrderReceiver(
+      id: id ?? this.id,
+      poDetail: poDetail ?? this.poDetail,
+      itemNumber: itemNumber ?? this.itemNumber,
+      quantityTransaction: quantityTransaction ?? this.quantityTransaction,
+      unitCost: unitCost ?? this.unitCost,
+      amountExtendedCost: amountExtendedCost ?? this.amountExtendedCost,
+      quantityOpen: quantityOpen ?? this.quantityOpen,
+      amountOpen: amountOpen ?? this.amountOpen,
+      quantityRecieved: quantityRecieved ?? this.quantityRecieved,
+      amountReceived: amountReceived ?? this.amountReceived,
+      dateReceived: dateReceived ?? this.dateReceived,
+      company: company ?? this.company,
+      userId: userId ?? this.userId,
+      dateUpdated: dateUpdated ?? this.dateUpdated,
+      branchRecieved: branchRecieved ?? this.branchRecieved,
+      dateEffective: dateEffective ?? this.dateEffective,
+      dateExpiration: dateExpiration ?? this.dateExpiration,
+      location: location ?? this.location,
+      unitOfMeasure: unitOfMeasure ?? this.unitOfMeasure,
+      batchNumberSupplier: batchNumberSupplier ?? this.batchNumberSupplier,
+      poDetailRef: poDetailRef ?? this.poDetailRef,
+      itemNumberRef: itemNumberRef ?? this.itemNumberRef,
+      branchRecievedRef: branchRecievedRef ?? this.branchRecievedRef,
+      locationRef: locationRef ?? this.locationRef,
+      unitOfMeasureRef: unitOfMeasureRef ?? this.unitOfMeasureRef,
+      tempId: tempId ?? this.tempId,
+      validCell: validCell ?? this.validCell,
+    );
+  }
+
   @override
   List<Object?> get props => [
     id,
@@ -141,5 +245,12 @@ class PurchaseOrderReceiverModel extends Equatable {
     location,
     unitOfMeasure,
     batchNumberSupplier,
+    poDetailRef,
+    itemNumberRef,
+    branchRecievedRef,
+    locationRef,
+    unitOfMeasureRef,
+    tempId,
+    validCell,
   ];
 }

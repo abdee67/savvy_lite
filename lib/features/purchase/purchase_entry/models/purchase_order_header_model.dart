@@ -25,7 +25,7 @@ class PurchaseOrderHeader extends Equatable {
   final int? orderNumber;
   final int? paymentTerm;
   final int? orderType;
-  final DateTime? creditDueDate;
+  DateTime? creditDueDate;
   final String? invoiceNumber;
   final int? tempId;
 
@@ -35,7 +35,7 @@ class PurchaseOrderHeader extends Equatable {
   final UdcDetails? paymentStatusRef;
   final UdcDetails? orderTypeRef;
 
-  const PurchaseOrderHeader({
+  PurchaseOrderHeader({
     this.id,
     this.supplierId,
     this.dateTransaction,
@@ -70,7 +70,7 @@ class PurchaseOrderHeader extends Equatable {
     return PurchaseOrderHeader(
       id: map['id'],
       supplierId: map['supplier_id'],
-      dateTransaction: map['date_transation'],
+      dateTransaction: map['date_transaction'],
       dateDelivery: map['date_delivery'],
       poReceiveStatus: map['po_receive_status'],
       company: map['company'],
@@ -126,7 +126,7 @@ class PurchaseOrderHeader extends Equatable {
     return {
       'id': id,
       'supplier_id': supplierId,
-      'date_transation': dateTransaction?.toIso8601String(),
+      'date_transaction': dateTransaction?.toIso8601String(),
       'date_delivery': dateDelivery?.toIso8601String(),
       'po_receive_status': poReceiveStatus,
       'company': company,
