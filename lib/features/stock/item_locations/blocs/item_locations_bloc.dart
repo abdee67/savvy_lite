@@ -24,6 +24,7 @@ class StockItemLocationBloc
 
     on<LoadItemLocations>(_onLoadItemLocations);
     on<LoadItemLocationsByBranchAndItem>(_onLoadItemLocationsByBranchAndItem);
+    on<LoadItemLocationsForBranch>(_onLoadItemLocationsForBranch);
     on<CreateItemLocation>(_onCreateItemLocation);
     on<UpdateItemLocation>(_onUpdateItemLocation);
     on<DeleteItemLocation>(_onDeleteItemLocation);
@@ -76,6 +77,35 @@ class StockItemLocationBloc
         companyId: event.companyId,
         branchId: event.branchId,
         itemId: event.itemId,
+      );
+      emit(
+        state.copyWith(
+          status: ItemLocationsStatus.success,
+          items: items,
+          filteredItems: items,
+          companyId: event.companyId,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemLocationsStatus.failure,
+          message: 'Failed to load item locations: $e',
+        ),
+      );
+    }
+  }
+
+  //load locations for branchs
+  Future<void> _onLoadItemLocationsForBranch(
+    LoadItemLocationsForBranch event,
+    Emitter<ItemLocationsState> emit,
+  ) async {
+    emit(state.copyWith(status: ItemLocationsStatus.loading));
+    try {
+      final items = await repository.getItemLocationsForBranch(
+        companyId: event.companyId,
+        branchId: event.branchId,
       );
       emit(
         state.copyWith(

@@ -35,6 +35,18 @@ class LoadItemLocationsByBranchAndItem extends ItemLocationsEvent {
   List<Object> get props => [companyId, branchId, itemId];
 }
 
+class LoadItemLocationsForBranch extends ItemLocationsEvent {
+  final int companyId;
+  final int branchId;
+  const LoadItemLocationsForBranch({
+    required this.companyId,
+    required this.branchId,
+  });
+
+  @override
+  List<Object> get props => [companyId, branchId];
+}
+
 class CreateItemLocation extends ItemLocationsEvent {
   final ItemLocation item;
   const CreateItemLocation(this.item);
@@ -111,7 +123,7 @@ class SaveItemLocationRow extends ItemLocationsEvent {
   final String action;
   final int? transactionNumber;
   final String? remark;
-  final PurchaseOrderReceiverModel? por;
+  final PurchaseOrderReceiver? por;
   final SalesOrderDetail? soD;
   const SaveItemLocationRow(
     this.item, {

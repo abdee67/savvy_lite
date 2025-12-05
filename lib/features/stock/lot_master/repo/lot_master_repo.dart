@@ -854,4 +854,99 @@ class LotMasterRepository extends BaseRepository {
       whereArgs: [companyId, lot.itemNumber, lot.branch],
     );
   }
+
+  //get lot maser by expiration date
+  Future<List<LotMaster>> getLotMastersByExpirationDate({
+    required int companyId,
+    required DateTime dateExpiration,
+  }) async {
+    final db = await databaseService.database;
+    final lots = await db.rawQuery(
+      '''
+      SELECT lm.*,
+             it.item_description as item_description,
+             b.description as branch_name,
+             loc.location_description,
+             ls.detail_code as status_code,
+             ls.description_1 as status_description
+      FROM lot_master lm
+      LEFT JOIN items_table it ON lm.item_number = it.id
+      LEFT JOIN branch_table b ON lm.branch = b.id
+      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN udc_details ls ON lm.lot_status = ls.id
+      WHERE lm.date_expiration = ? AND lm.company = ?
+      ORDER BY it.item_description, lm.lot_number
+    ''',
+      [dateExpiration.toIso8601String(), companyId],
+    );
+
+    return lots.map((p) => LotMaster.fromMap(p)).toList();
+  }
+
+  //get lot maser by effective date
+  Future<List<LotMaster>> getLotMastersByEffectiveDate({
+    required int companyId,
+    required DateTime dateEffective,
+  }) async {
+    final db = await databaseService.database;
+    final lots = await db.rawQuery(
+      '''
+      SELECT lm.*,
+             it.item_description as item_description,
+             b.description as branch_name,
+             loc.location_description,
+             ls.detail_code as status_code,
+             ls.description_1 as status_description
+      FROM lot_master lm
+      LEFT JOIN items_table it ON lm.item_number = it.id
+      LEFT JOIN branch_table b ON lm.branch = b.id
+      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN udc_details ls ON lm.lot_status = ls.id
+      WHERE lm.date_effective = ? AND lm.company = ?
+      ORDER BY it.item_description, lm.lot_number
+    ''',
+      [dateEffective.toIso8601String(), companyId],
+    );
+
+    return lots.map((p) => LotMaster.fromMap(p)).toList();
+  }
+
+  //get lot maser by received date
+  Future<List<LotMaster>> getLotMastersByReceivedDate({
+    required int companyId,
+    required DateTime dateReceived,
+  }) async {
+    final db = await databaseService.database;
+    final lots = await db.rawQuery(
+      '''
+      SELECT lm.*,
+             it.item_description as item_description,
+             b.description as branch_name,
+             loc.location_description,
+             ls.detail_code as status_code,
+             ls.description_1 as status_description
+      FROM lot_master lm
+      LEFT JOIN items_table it ON lm.item_number = it.id
+      LEFT JOIN branch_table b ON lm.branch = b.id
+      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN udc_details ls ON lm.lot_status = ls.id
+      WHERE lm.date_received = ? AND lm.company = ?
+      ORDER BY it.item_description, lm.lot_number
+    ''',
+      [dateReceived.toIso8601String(), companyId],
+    );
+
+    return lots.map((p) => LotMaster.fromMap(p)).toList();
+  }
+
+  //get next lot number
+  Future<int?> getNextLotNumber({required int companyId}) async {
+    final db = await databaseService.database;
+    final result = await db.rawQuery(
+      'SELECT MAX(lot_number) as next_lot_number FROM lot_master WHERE company = ?',
+      [companyId],
+    );
+    final nextLotNumber = result.first['next_lot_number'] as int?;
+    return nextLotNumber;
+  }
 }
