@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_event.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_state.dart';
@@ -190,32 +189,6 @@ class _PurchasePaymentActionState extends State<PurchasePaymentAction> {
             ],
           ),
         ),
-
-        // Save Draft Button
-        OutlinedButton(
-          onPressed: _isProcessing ? null : _navigateBack,
-          style: OutlinedButton.styleFrom(
-            side: const BorderSide(color: Color(0xFF155888)),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          child: const Row(
-            children: [
-              Icon(Icons.save, color: Color(0xFF155888)),
-              SizedBox(width: 8),
-              Text(
-                'Save Draft',
-                style: TextStyle(
-                  color: Color(0xFF155888),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-
         // Complete Order Button
         ElevatedButton(
           onPressed: _isProcessing || !canComplete

@@ -1,7 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
-import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';

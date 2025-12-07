@@ -1,9 +1,9 @@
 import 'package:equatable/equatable.dart';
-import 'package:savvy_stock/features/company/models/company_model.dart';
+import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/models/supplier_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
-class PurchaseOrderHeader extends Equatable {
+class PurchaseOrderHeader {
   final int? id;
   final int? supplierId;
   final DateTime? dateTransaction;
@@ -34,6 +34,7 @@ class PurchaseOrderHeader extends Equatable {
   final UdcDetails? poReceiveStatusRef;
   final UdcDetails? paymentStatusRef;
   final UdcDetails? orderTypeRef;
+  final UserModel? userRef;
 
   PurchaseOrderHeader({
     this.id,
@@ -64,14 +65,19 @@ class PurchaseOrderHeader extends Equatable {
     this.orderTypeRef,
     this.supplierRef,
     this.poReceiveStatusRef,
+    this.userRef,
   });
 
   factory PurchaseOrderHeader.fromMap(Map<String, dynamic> map) {
     return PurchaseOrderHeader(
       id: map['id'],
       supplierId: map['supplier_id'],
-      dateTransaction: map['date_transaction'],
-      dateDelivery: map['date_delivery'],
+      dateTransaction: map['date_transaction'] == null
+          ? null
+          : DateTime.parse(map['date_transaction']),
+      dateDelivery: map['date_delivery'] == null
+          ? null
+          : DateTime.parse(map['date_delivery']),
       poReceiveStatus: map['po_receive_status'],
       company: map['company'],
       taxableAmount: map['taxable_amount'],
@@ -84,39 +90,50 @@ class PurchaseOrderHeader extends Equatable {
       paymentStatus: map['payment_status'],
       paymentInstrument: map['payment_instrument'],
       userId: map['user_id'],
-      dateUpdated: map['date_updated'],
+      dateUpdated: map['date_updated'] == null
+          ? null
+          : DateTime.parse(map['date_updated']),
       amountOpenCredit: map['amount_open_credit'],
       orderNumber: map['order_number'],
       paymentTerm: map['payment_term'],
       orderType: map['order_type'],
       tempId: map['temp_id'],
-      creditDueDate: map['credit_due_date'],
+      creditDueDate: map['credit_due_date'] == null
+          ? null
+          : DateTime.parse(map['credit_due_date']),
       invoiceNumber: map['invoice_number'],
-      paymentStatusRef: map['payment_status_ref'] == null
+      paymentStatusRef: map['payment_status_description'] != null
           ? UdcDetails(
-              id: map['payment_status']['id'],
+              id: map['payment_status'],
               description1: map['payment_status_description'],
               detailCode: map['payment_status_code'],
             )
           : null,
-      orderTypeRef: map['order_type_ref'] == null
+      orderTypeRef: map['order_type_description'] != null
           ? UdcDetails(
-              id: map['order_type']['id'],
+              id: map['order_type'],
               description1: map['order_type_description'],
               detailCode: map['order_type_code'],
             )
           : null,
-      supplierRef: map['supplier_name'] == null
+      supplierRef: map['supplier_name'] != null
           ? SupplierModel(
               id: map['supplier_id'],
               supplierName: map['supplier_name'],
             )
           : null,
-      poReceiveStatusRef: map['po_receive_status_description'] == null
+      poReceiveStatusRef: map['po_receive_status_description'] != null
           ? UdcDetails(
               id: map['po_receive_status'],
               description1: map['po_receive_status_description'],
               detailCode: map['po_receive_status_code'],
+            )
+          : null,
+      userRef: map['user_name'] != null
+          ? UserModel(
+              id: map['user_id'],
+              userName: map['user_name'],
+              password: map['password'],
             )
           : null,
     );

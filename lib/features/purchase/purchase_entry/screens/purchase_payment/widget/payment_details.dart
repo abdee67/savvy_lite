@@ -406,7 +406,7 @@ class _PurchasePaymentDetailsState extends State<PurchasePaymentDetails> {
             Switch(
               value: enabled,
               onChanged: onToggle,
-              activeColor: const Color(0xFF155888),
+              activeThumbColor: const Color(0xFF155888),
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
           ],

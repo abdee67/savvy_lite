@@ -14,6 +14,7 @@ import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_event.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_state.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_state.dart';
@@ -35,7 +36,7 @@ class PurchaseItemEntryForm extends StatefulWidget {
   final GlobalKey<FormState> formKey;
   final bool isEditing;
   final Function(PurchaseOrderDetail) onUpdate;
-  final VoidCallback onConfirm;
+  final Function(PurchaseOrderDetail) onConfirm;
   final VoidCallback? onCancel;
   final Map<String, dynamic> orderData; // Contains autoReceipt flag
 
@@ -72,7 +73,6 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
 
   bool _isInitializing = true;
   bool _showBranchLocationFields = false;
-  List<ItemLocation> _availableLocations = [];
 
   @override
   void initState() {
@@ -87,7 +87,9 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
     _batchNumberController = TextEditingController();
 
     // Determine if we should show branch/location fields
-    _showBranchLocationFields = widget.orderData['autoReceipt'] != true;
+    _showBranchLocationFields =
+        widget.orderData['autoReceipt'] ==
+        true; // Show fields when autoReceipt is ON
 
     // Load initial data after widget is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -132,7 +134,8 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
         purchaseState.autoReceipt ?? widget.orderData['autoReceipt'] == true;
 
     setState(() {
-      _showBranchLocationFields = !autoReceipt;
+      _showBranchLocationFields =
+          autoReceipt; // Show fields when autoReceipt is ON
     });
 
     // Set initial values
@@ -294,14 +297,15 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
   }
 
   void _onBranchSelected(Branch? branch) {
+    print('🔔 Branch selected: ${branch?.description} (ID: ${branch?.id})');
     setState(() {
       _selectedBranch = branch;
       _selectedLocation = null;
-      _availableLocations = [];
     });
 
     if (branch != null) {
       // Load locations for selected branch
+      print('📍 Loading locations for branch ID: ${branch.id}');
       _loadBranchLocations(branch.id!);
     }
   }
@@ -311,20 +315,15 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
     final companyId = authBloc.state.companyId;
 
     if (companyId != null) {
+      print(
+        '🔄 Dispatching LoadItemLocationsForBranch - Branch: $branchId, Company: $companyId',
+      );
       final locationsBloc = context.read<StockItemLocationBloc>();
       locationsBloc.add(
         LoadItemLocationsForBranch(branchId: branchId, companyId: companyId),
       );
-
-      // Listen for location data
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final locationsState = locationsBloc.state;
-        if (locationsState.status == ItemLocationsStatus.success) {
-          setState(() {
-            _availableLocations = locationsState.items;
-          });
-        }
-      });
+    } else {
+      print('❌ Company ID is null');
     }
   }
 
@@ -399,6 +398,35 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
         (double.tryParse(_quantityController.text) ?? 0) > 0 &&
         _unitCostController.text.isNotEmpty &&
         (double.tryParse(_unitCostController.text) ?? 0) >= 0;
+  }
+
+  PurchaseOrderDetail _getCurrentDetail() {
+    final detail =
+        widget.initialDetail ??
+        PurchaseOrderDetail(
+          tempId: DateTime.now().millisecondsSinceEpoch,
+          company: context.read<AuthBloc>().state.companyId,
+        );
+
+    return detail.copyWith(
+      itemNumber: _selectedItem?.id,
+      quantityTransaction: double.tryParse(_quantityController.text),
+      unitCost: double.tryParse(_unitCostController.text),
+      amountExtendedCost: double.tryParse(_extendedAmountController.text),
+      unitOfMeasure: _selectedUom?.id,
+      dateEffective: _effectiveDate,
+      dateExpiration: _expirationDate,
+      batchNumberSupplier: _batchNumberController.text.isNotEmpty
+          ? _batchNumberController.text
+          : null,
+      autoReceiptReceiver:
+          (_selectedBranch != null || _selectedLocation != null)
+          ? PurchaseOrderReceiver(
+              branchRecieved: _selectedBranch?.id,
+              location: _selectedLocation?.id,
+            )
+          : null,
+    );
   }
 
   @override
@@ -596,10 +624,10 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
                         value: _selectedUom?.description1,
                         prefixIcon: Iconsax.ruler,
                         allowCustomEntries: false,
-                        onChanged: (uom) {
+                        onChanged: (selectedUom) {
                           _onUomSelected(
                             availableUoms.firstWhere(
-                              (uom) => uom.description1 == uom,
+                              (uom) => uom.description1 == selectedUom,
                             ),
                           );
                         },
@@ -629,10 +657,14 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
                       value: _selectedBranch?.description,
                       prefixIcon: Icons.business,
                       allowCustomEntries: false,
-                      onChanged: (branch) {
+                      onChanged: (selectedBranchDesc) {
+                        print(
+                          '🔹 Branch dropdown changed to: $selectedBranchDesc',
+                        );
                         _onBranchSelected(
                           branchState.branchs.firstWhere(
-                            (branch) => branch.description == branch,
+                            (branch) =>
+                                branch.description == selectedBranchDesc,
                           ),
                         );
                       },
@@ -653,22 +685,36 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
                 if (_selectedBranch != null) ...[
                   BlocBuilder<StockItemLocationBloc, ItemLocationsState>(
                     builder: (context, locationState) {
+                      print(
+                        '📋 BlocBuilder rebuilt - Status: ${locationState.status}, Items count: ${locationState.items.length}',
+                      );
                       return CustomSearchableDropdown(
                         labelText: 'Location',
                         options: locationState.items
                             .map(
                               (location) =>
-                                  location.locationDescription ?? 'No Name',
+                                  location
+                                      .locationDescription
+                                      ?.locationDescription ??
+                                  'No Name',
                             )
                             .toList(),
-                        value: _selectedLocation?.locationDescription,
+                        value: _selectedLocation
+                            ?.locationDescription
+                            ?.locationDescription,
                         prefixIcon: Icons.location_on,
                         allowCustomEntries: false,
-                        onChanged: (location) {
+                        onChanged: (selectedLocationDesc) {
+                          print(
+                            '🔹 Location dropdown changed to: $selectedLocationDesc',
+                          );
                           _onLocationSelected(
                             locationState.items.firstWhere(
                               (location) =>
-                                  location.locationDescription == location,
+                                  location
+                                      .locationDescription
+                                      ?.locationDescription ==
+                                  selectedLocationDesc,
                             ),
                           );
                         },
@@ -761,7 +807,8 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
                   onPressed: _isFormValid()
                       ? () {
                           if (widget.formKey.currentState!.validate()) {
-                            widget.onConfirm();
+                            final detail = _getCurrentDetail();
+                            widget.onConfirm(detail);
                           }
                         }
                       : null,

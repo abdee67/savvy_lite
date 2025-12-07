@@ -146,6 +146,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     on<PrepareCopyPurchaseOrder>(_onPrepareCopy);
     on<PrepareCreateInCreate>(_onPrepareCreateInCreate);
     on<PrepareCreateInEdit>(_onPrepareCreateInEdit);
+    on<SetPurchaseOrderAutoReceipt>(_onSetPurchaseOrderAutoReceipt);
   }
 
   @override
@@ -377,9 +378,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         tempId: _getNextHeaderTempId(state.createHeaders),
         dateTransaction: DateTime.now(),
         dateUpdated: DateTime.now(),
-        poReceiveStatus: await _getUdcDetailId('PR', 'N'),
+        poReceiveStatus: await _getUdcDetailId('N', 'PR'),
         paymentStatus: originalHeader.paymentTerm != null
-            ? await _getUdcDetailId('PS', 'N')
+            ? await _getUdcDetailId('N', 'PS')
             : null,
         creditDueDate: _calculateCreditDueDate(
           originalHeader.paymentTerm,
@@ -392,7 +393,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         originalHeader.id!,
         originalHeader.company!,
       );
-      final poReceiveStatus = await _getUdcDetailId('PR', 'N');
+      final poReceiveStatus = await _getUdcDetailId('N', 'PR');
 
       final copiedDetails = originalDetails.map((detail) {
         return detail.copyWith(
@@ -467,8 +468,8 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     PurchaseOrderHeader header,
   ) async {
     // Get default statuses
-    final notReceivedStatus = await _getUdcDetailId('PR', 'N');
-    final notPaidStatus = await _getUdcDetailId('PS', 'N');
+    final notReceivedStatus = await _getUdcDetailId('N', 'PR');
+    final notPaidStatus = await _getUdcDetailId('N', 'PS');
 
     // Calculate credit due date if payment term exists
     DateTime? creditDueDate;
@@ -511,26 +512,46 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     emit(state.loadingState('update_purchase_order_header'));
 
     try {
-      await repository.updatePurchaseOrderHeader(event.header);
+      if (event.header.id != null) {
+        await repository.updatePurchaseOrderHeader(event.header);
 
-      // Update in lists
-      final updatedHeaders = state.headers
-          .map((h) => h.id == event.header.id ? event.header : h)
-          .toList();
-      final updatedEditHeaders = state.editHeaders
-          .where((item) => item.id != event.header.id)
-          .toList();
+        // Update in lists for existing headers
+        final updatedHeaders = state.headers
+            .map((h) => h.id == event.header.id ? event.header : h)
+            .toList();
+        final updatedEditHeaders = state.editHeaders
+            .where((item) => item.id != event.header.id)
+            .toList();
 
-      emit(
-        state.copyWith(
-          status: PurchaseOrderStatus.success,
-          headers: updatedHeaders,
-          filteredHeaders: updatedHeaders,
-          editHeaders: updatedEditHeaders,
-          selectedHeader: event.header,
-          successMessage: 'Purchase order updated successfully',
-        ),
-      );
+        emit(
+          state.copyWith(
+            status: PurchaseOrderStatus.success,
+            headers: updatedHeaders,
+            filteredHeaders: updatedHeaders,
+            editHeaders: updatedEditHeaders,
+            selectedHeader: event.header,
+            successMessage: 'Purchase order updated successfully',
+          ),
+        );
+      } else {
+        // For new headers (id == null), just update the state
+        // Find and update in createHeaders if it exists
+        final updatedCreateHeaders = state.createHeaders.map((h) {
+          // Match by tempId or reference
+          if (h.tempId == event.header.tempId) {
+            return event.header;
+          }
+          return h;
+        }).toList();
+
+        emit(
+          state.copyWith(
+            status: PurchaseOrderStatus.success,
+            createHeaders: updatedCreateHeaders,
+            selectedHeader: event.header,
+          ),
+        );
+      }
     } catch (e) {
       emit(state.errorState('Failed to update purchase order: $e'));
     }
@@ -608,16 +629,21 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
             quantityTransaction: detail.quantityTransaction,
             unitCost: detail.unitCost,
             amountExtendedCost: detail.amountExtendedCost,
-            quantityOpen: detail.quantityOpen ?? detail.quantityTransaction,
-            amountOpen: detail.amountOpen ?? detail.amountExtendedCost,
+            quantityOpen: detail
+                .quantityTransaction, // Use transaction qty for new receivers
+            amountOpen: detail
+                .amountExtendedCost, // Use extended cost for new receivers
             quantityRecieved: detail.quantityTransaction,
             company: savedHeader.company,
             dateReceived: state.receivingDates ?? DateTime.now(),
             userId: state.userId,
             dateUpdated: DateTime.now(),
-            //  branchRecieved: savedHeader.branchReceive,
+            branchRecieved: detail.autoReceiptReceiver?.branchRecieved,
             unitOfMeasure: detail.unitOfMeasure,
-            // location: detail.itemLocationsSelect,
+            location: detail.autoReceiptReceiver?.location,
+            dateEffective: detail.dateEffective,
+            dateExpiration: detail.dateExpiration,
+            batchNumberSupplier: detail.batchNumberSupplier,
             tempId: detail.tempId, // Use detail's tempId
           );
         }).toList();
@@ -670,7 +696,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         company: state.selectedHeader!.company,
         dateUpdated: DateTime.now(),
         userId: state.userId,
-        poReceiveStatus: await _getUdcDetailId('PR', 'N'),
+        poReceiveStatus: await _getUdcDetailId('N', 'PR'),
         quantityOpen: detail.quantityTransaction,
         amountOpen: detail.amountExtendedCost,
         dateDelivery: state.selectedHeader!.dateDelivery,
@@ -782,7 +808,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
           createDetails: updatedDetails,
           selectedDetail: newDetail,
           status: PurchaseOrderStatus.success,
-          successMessage: 'Purchase order detail added',
+          //  successMessage: 'Purchase order detail added',
         ),
       );
 
@@ -903,7 +929,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
           company: state.selectedHeader!.company,
           dateUpdated: DateTime.now(),
           userId: state.userId,
-          poReceiveStatus: await _getUdcDetailId('PR', 'N'),
+          poReceiveStatus: await _getUdcDetailId('N', 'PR'),
           quantityOpen: detail.quantityTransaction,
           amountOpen: detail.amountExtendedCost,
           dateDelivery: state.selectedHeader!.dateDelivery,
@@ -972,7 +998,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
 
       // Update in create details
       final index = state.createDetails.indexWhere(
-        (d) => d.tempId == detail.tempId || d.id == detail.id,
+        (d) =>
+            d.tempId == detail.tempId ||
+            (detail.id != null && d.id == detail.id),
       );
 
       if (index != -1) {
@@ -985,7 +1013,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
 
       // Update in edit details if exists
       final editIndex = state.editDetails.indexWhere(
-        (d) => d.tempId == detail.tempId || d.id == detail.id,
+        (d) =>
+            d.tempId == detail.tempId ||
+            (detail.id != null && d.id == detail.id),
       );
 
       if (editIndex != -1) {
@@ -1021,7 +1051,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
 
             // Update in state
             final index = state.createDetails.indexWhere(
-              (d) => d.tempId == event.detail.tempId || d.id == event.detail.id,
+              (d) =>
+                  d.tempId == event.detail.tempId ||
+                  (event.detail.id != null && d.id == event.detail.id),
             );
 
             if (index != -1) {
@@ -1059,7 +1091,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       id: null,
       tempId: _getNextDetailTempId(state.createDetails),
       poHeader: state.selectedHeader?.id,
-      poReceiveStatus: await _getUdcDetailId('PR', 'N'),
+      poReceiveStatus: await _getUdcDetailId('N', 'PR'),
       quantityOpen: originalDetail.quantityTransaction,
       amountOpen: originalDetail.amountExtendedCost,
       quantityRecieved: 0.0,
@@ -1165,7 +1197,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
   }
 
   Future<void> _onPrepareAutoReceipt(
-    event,
+    PrepareAutoReceipt event,
     Emitter<PurchaseOrderState> emit,
   ) async {
     emit(state.loadingState('prepare_auto_receipt'));
@@ -1175,6 +1207,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       final receivers = <PurchaseOrderReceiver>[];
 
       for (final detail in details) {
+        // Use branch and location from detail if provided (from form selection)
         final receiver = PurchaseOrderReceiver(
           poDetail: detail.id,
           itemNumber: detail.itemNumber,
@@ -1186,20 +1219,17 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
           company: detail.company,
           dateReceived: state.receivingDates ?? DateTime.now(),
           quantityRecieved: detail.quantityTransaction,
-          branchRecieved: //state.userId != null
-          await _getUserBranchId(
-            state.userId!,
-          ),
-          //: state.selectedHeader?.branchReceive,
+          branchRecieved:
+              detail.autoReceiptReceiver?.branchRecieved ??
+              await _getUserBranchId(state.userId!),
+          location: detail.autoReceiptReceiver?.location,
+          dateEffective: detail.dateEffective,
+          dateExpiration: detail.dateExpiration,
+          batchNumberSupplier: detail.batchNumberSupplier,
           userId: state.userId,
           dateUpdated: DateTime.now(),
           tempId: _getNextReceiverTempId(receivers),
         );
-
-        // Apply location if system setting enabled
-        if (state.systemConstants?.applyLocationMgmBoolean == true) {
-          // receiver = receiver.copyWith(location: detail.itemLocationsSelect);
-        }
 
         receivers.add(receiver);
       }
@@ -1446,8 +1476,8 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       quantityRecieved: detailQuantityReceived,
       amountReceived: detailAmountReceived,
       poReceiveStatus: quantityOpen == 0
-          ? await _getUdcDetailId('PR', 'R')
-          : await _getUdcDetailId('PR', 'P'),
+          ? await _getUdcDetailId('R', 'PR')
+          : await _getUdcDetailId('P', 'PR'),
       dateUpdated: DateTime.now(),
       userId: state.userId,
     );
@@ -1463,18 +1493,35 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     final effectiveDate = receiver.dateEffective;
     final expirationDate = receiver.dateExpiration;
 
+    print('🔍 Validating receiver:');
+    print('  itemNumber: ${receiver.itemNumber}');
+    print('  unitOfMeasure: ${receiver.unitOfMeasure}');
+    print('  quantityRecieved: $quantityRecieved');
+    print('  quantityOpen: $quantityOpen');
+    print('  effectiveDate: $effectiveDate');
+    print('  expirationDate: $expirationDate');
+    print('  branchRecieved: ${receiver.branchRecieved}');
+    print('  location: ${receiver.location}');
+
     // Basic quantity validation
     if (quantityRecieved <= 0 || quantityRecieved > quantityOpen) {
+      print(
+        '❌ Quantity validation failed: recieved=$quantityRecieved, open=$quantityOpen',
+      );
       return false;
     }
 
     // Date validation (same as Java)
     if (effectiveDate != null && expirationDate != null) {
       if (effectiveDate.isAfter(expirationDate)) {
+        print(
+          '❌ Date validation failed: effective=$effectiveDate > expiration=$expirationDate',
+        );
         return false;
       }
     }
 
+    print('✅ Receiver validation passed');
     return true;
   }
 
@@ -1524,8 +1571,8 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         quantityRecieved: detailQuantityReceived,
         amountReceived: detailAmountReceived,
         poReceiveStatus: quantityOpen == 0
-            ? await _getUdcDetailId('PR', 'R')
-            : await _getUdcDetailId('PR', 'P'),
+            ? await _getUdcDetailId('R', 'PR')
+            : await _getUdcDetailId('P', 'PR'),
         dateUpdated: DateTime.now(),
         userId: state.userId,
       );
@@ -2250,11 +2297,11 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     return maxTempId + 1;
   }
 
-  Future<int?> _getUdcDetailId(String udcHeader, String detailCode) async {
+  Future<int?> _getUdcDetailId(String detailCode, String udcHeader) async {
     try {
       final udcDetails = await udcRepository.getUdcDetailsByCode(
-        udcHeader,
         detailCode,
+        udcHeader,
       );
       return udcDetails.isNotEmpty ? udcDetails.first.id : null;
     } catch (e) {
@@ -2279,5 +2326,17 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
   double _roundToDecimalPlaces(double value, int decimalPlaces) {
     final factor = pow(10, decimalPlaces);
     return (value * factor).roundToDouble() / factor;
+  }
+
+  Future<void> _onSetPurchaseOrderAutoReceipt(
+    SetPurchaseOrderAutoReceipt event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        autoReceipt: event.autoReceipt,
+        receivingDates: event.autoReceipt ? DateTime.now() : null,
+      ),
+    );
   }
 }

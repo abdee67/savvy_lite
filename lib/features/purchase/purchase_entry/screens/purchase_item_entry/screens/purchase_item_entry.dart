@@ -39,14 +39,15 @@ class _PurchaseItemEntryScreenContentState
     extends State<PurchaseItemEntryScreenContent> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   PurchaseOrderDetail? _editingDetail;
+  late PurchaseOrderDetail _newItemDetail; // Stable instance for new item
   bool _isEditing = false;
-  int? _editingIndex;
 
   @override
   void initState() {
     super.initState();
 
     // Load necessary data for the screen
+    _createNewItemDetail(); // Initialize the stable new item detail
     _loadInitialData();
   }
 
@@ -67,11 +68,27 @@ class _PurchaseItemEntryScreenContentState
     }
   }
 
+  void _createNewItemDetail() {
+    _newItemDetail = PurchaseOrderDetail(
+      tempId: DateTime.now().millisecondsSinceEpoch,
+      poHeader: widget
+          .orderData['headerId'], // Assuming id is reachable or will be updated in build
+      // We can't access bloc state easily here for header/company without context in initState sometimes,
+      // but we can update it in build if needed, or just let the form populate defaults.
+      // Better to initialize with minimal unique ID.
+      quantityTransaction: 1.0,
+      unitCost: 0.0,
+      amountExtendedCost: 0.0,
+      quantityOpen: 1.0,
+      amountOpen: 0.0,
+      dateDelivery: widget.orderData['deliveryDate'],
+    );
+  }
+
   void _startEditingItem(PurchaseOrderDetail detail, int index) {
     setState(() {
       _editingDetail = detail;
       _isEditing = true;
-      _editingIndex = index;
     });
 
     // Remove the item from confirmed list temporarily while editing
@@ -117,29 +134,22 @@ class _PurchaseItemEntryScreenContentState
   void _resetForm() {
     setState(() {
       _isEditing = false;
-      _editingIndex = null;
       _editingDetail = null;
     });
 
     // Reset form
+    _createNewItemDetail(); // Generate fresh ID for next new item
     _formKey.currentState?.reset();
   }
 
   void _confirmItem(PurchaseOrderDetail detail) {
     if (_formKey.currentState?.validate() ?? false) {
       if (_isEditing && _editingDetail != null) {
-        // Update existing item
-        final purchaseBloc = context.read<PurchaseOrderBloc>();
-        final currentDetails = List<PurchaseOrderDetail>.from(
-          purchaseBloc.state.createDetails,
+        // Update existing item - since it was removed on edit start, we just add it back
+        // The index check against flawed current list state is removed
+        context.read<PurchaseOrderBloc>().add(
+          AddPurchaseOrderDetail(detail: detail),
         );
-
-        // Find the index of the item we're editing
-        final index = _editingIndex;
-        if (index != null && index < currentDetails.length) {
-          // For editing, we already removed the item, so just add the updated one
-          purchaseBloc.add(AddPurchaseOrderDetail(detail: detail));
-        }
 
         _showSuccessSnackBar('Item updated successfully');
       } else {
@@ -152,6 +162,7 @@ class _PurchaseItemEntryScreenContentState
       }
 
       _resetForm();
+      _createNewItemDetail(); // Ensure next item has fresh ID
 
       // Recalculate totals
       context.read<PurchaseOrderBloc>().add(CalculatePurchaseOrderTotals());
@@ -279,19 +290,14 @@ class _PurchaseItemEntryScreenContentState
             purchaseState.autoReceipt ??
             widget.orderData['autoReceipt'] == true;
 
-        // Create initial form detail
+        // Create initial form detail - use stable instance
+        // We update the stable instance with latest header/company info if needed,
+        // but avoid changing tempId unless explicitly reset.
         final initialFormDetail =
             _editingDetail ??
-            PurchaseOrderDetail(
-              tempId: DateTime.now().millisecondsSinceEpoch,
+            _newItemDetail.copyWith(
               poHeader: purchaseState.selectedHeader?.id,
               company: purchaseState.selectedHeader?.company,
-              quantityTransaction: 1.0,
-              unitCost: 0.0,
-              amountExtendedCost: 0.0,
-              quantityOpen: 1.0,
-              amountOpen: 0.0,
-              dateDelivery: widget.orderData['deliveryDate'],
             );
 
         return Scaffold(
@@ -344,16 +350,16 @@ class _PurchaseItemEntryScreenContentState
 
               // Main Content (Form + Confirmed Items)
               Expanded(
-                child: Row(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Form Section
                     Expanded(
-                      flex: 3,
+                      flex: 4,
                       child: Container(
                         decoration: BoxDecoration(
                           border: Border(
-                            right: BorderSide(
+                            bottom: BorderSide(
                               color: Colors.grey.shade300,
                               width: 1,
                             ),
@@ -366,12 +372,9 @@ class _PurchaseItemEntryScreenContentState
                             formKey: _formKey,
                             isEditing: _isEditing,
                             onUpdate: _updateFormDetail,
-                            onConfirm: () {
-                              // When form is confirmed, use the latest detail from state or local
-                              final latestDetail =
-                                  purchaseState.selectedDetail ??
-                                  initialFormDetail;
-                              _confirmItem(latestDetail);
+                            onConfirm: (detail) {
+                              // When form is confirmed, use the detail passed from the form
+                              _confirmItem(detail);
                             },
                             onCancel: _isEditing ? _cancelEditing : null,
                             orderData: {

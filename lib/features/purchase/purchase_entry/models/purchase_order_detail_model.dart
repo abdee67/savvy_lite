@@ -1,5 +1,6 @@
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
@@ -26,14 +27,14 @@ class PurchaseOrderDetail {
   final int? unitOfMeasure;
   final String? batchNumberSupplier;
   final int? tempId;
+  final PurchaseOrderReceiver?
+  autoReceiptReceiver; // Transient field for auto-receipt data
 
   // Navigation properties
   final PurchaseOrderHeader? poHeaderRef;
   final ItemEntryModel? itemNumberRef;
   final UdcDetails? poReceiveStatusRef;
   final UdcDetails? unitOfMeasureRef;
-  final Branch? branchReceiveRef;
-  final ItemLocation? itemLocationsSelectRef;
 
   PurchaseOrderDetail({
     this.id,
@@ -57,12 +58,11 @@ class PurchaseOrderDetail {
     this.unitOfMeasure,
     this.batchNumberSupplier,
     this.tempId,
+    this.autoReceiptReceiver,
     this.poHeaderRef,
     this.itemNumberRef,
     this.poReceiveStatusRef,
     this.unitOfMeasureRef,
-    this.branchReceiveRef,
-    this.itemLocationsSelectRef,
   });
 
   factory PurchaseOrderDetail.fromMap(Map<String, dynamic> map) {
@@ -78,16 +78,28 @@ class PurchaseOrderDetail {
       amountOpen: map['amount_open'],
       quantityRecieved: map['quantity_recieved'],
       amountReceived: map['amount_received'],
-      dateReceived: map['date_received'],
-      dateDelivery: map['date_delivery'],
+      dateReceived: map['date_received'] == null
+          ? null
+          : DateTime.parse(map['date_received']),
+      dateDelivery: map['date_delivery'] == null
+          ? null
+          : DateTime.parse(map['date_delivery']),
       company: map['company'],
       userId: map['user_id'],
-      dateUpdated: map['date_updated'],
-      dateEffective: map['date_effective'],
-      dateExpiration: map['date_expiration'],
+      dateUpdated: map['date_updated'] == null
+          ? null
+          : DateTime.parse(map['date_updated']),
+      dateEffective: map['date_effective'] == null
+          ? null
+          : DateTime.parse(map['date_effective']),
+      dateExpiration: map['date_expiration'] == null
+          ? null
+          : DateTime.parse(map['date_expiration']),
       unitOfMeasure: map['unit_of_measure'],
       batchNumberSupplier: map['batch_number_supplier'],
       tempId: map['temp_id'],
+      // autoReceiptReceiver is not mapped from DB columns directly unless joined,
+      // but here we are strictly removing the column mapping as requested.
       poHeaderRef: map['order_number'] != null
           ? PurchaseOrderHeader(
               id: map['po_header']['id'],
@@ -113,18 +125,6 @@ class PurchaseOrderDetail {
               itemDescription: map['item_description'],
               barcode: map['item_code'],
               taxable: map['taxable'],
-            )
-          : null,
-      branchReceiveRef: map['branch_recieved_description'] != null
-          ? Branch(
-              id: map['branch_recieved']['id'],
-              description: map['branch_recieved_description'],
-            )
-          : null,
-      itemLocationsSelectRef: map['location_description'] != null
-          ? ItemLocation(
-              id: map['location']['id'],
-              locationDescription: map['location']['location_description'],
             )
           : null,
       unitOfMeasureRef: map['unit_of_measure_description'] != null
@@ -159,6 +159,7 @@ class PurchaseOrderDetail {
       'date_expiration': dateExpiration?.toIso8601String(),
       'unit_of_measure': unitOfMeasure,
       'batch_number_supplier': batchNumberSupplier,
+      // autoReceiptReceiver is NOT persisted TO the detail table
     };
   }
 
@@ -185,6 +186,7 @@ class PurchaseOrderDetail {
     int? unitOfMeasure,
     String? batchNumberSupplier,
     int? tempId,
+    PurchaseOrderReceiver? autoReceiptReceiver,
     PurchaseOrderHeader? poHeaderRef,
     ItemEntryModel? itemNumberRef,
     UdcDetails? poReceiveStatusRef,
@@ -212,6 +214,7 @@ class PurchaseOrderDetail {
       unitOfMeasure: unitOfMeasure ?? this.unitOfMeasure,
       batchNumberSupplier: batchNumberSupplier ?? this.batchNumberSupplier,
       tempId: tempId ?? this.tempId,
+      autoReceiptReceiver: autoReceiptReceiver ?? this.autoReceiptReceiver,
       poHeaderRef: poHeaderRef ?? this.poHeaderRef,
       itemNumberRef: itemNumberRef ?? this.itemNumberRef,
       poReceiveStatusRef: poReceiveStatusRef ?? this.poReceiveStatusRef,

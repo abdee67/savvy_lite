@@ -275,7 +275,7 @@ class _SupplierEntryScreenState extends State<SupplierEntryScreen> {
               setState(() {
                 // Store either the ID or description based on your preference
                 _selectedCountry = selectedUdc.id
-                    ?.toString(); // or selectedUdc.description1
+                    .toString(); // or selectedUdc.description1
               });
             }
           },

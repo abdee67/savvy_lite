@@ -68,7 +68,7 @@ class PurchaseOrderRepository {
           poh.*,
           st.supplier_name,
           st.tin_number as supplier_tin,
-          st.phone as supplier_phone,
+          st.phone_no_1 as supplier_phone,
           pr.description_1 as po_receive_status_desc,
           pr.detail_code as po_receive_status_code,
           ps.description_1 as payment_status_desc,
@@ -77,8 +77,7 @@ class PurchaseOrderRepository {
           pi.detail_code as payment_instrument_code,
           ot.description_1 as order_type_desc,
           ot.detail_code as order_type_code,
-          u.name_first as user_first_name,
-          u.name_last as user_last_name,
+          u.user_name as user_name,
           ct.company_name
         FROM purchase_order_header poh
         LEFT JOIN supplier_table st ON poh.supplier_id = st.id
@@ -1186,7 +1185,7 @@ class PurchaseOrderRepository {
           poh.amount_open_credit,
           DATEDAY(?, poh.credit_due_date) as days_overdue,
           st.supplier_name,
-          st.phone as supplier_phone,
+          st.phone_no_1 as supplier_phone,
           ps.description_1 as payment_status_desc
         FROM purchase_order_header poh
         LEFT JOIN supplier_table st ON poh.supplier_id = st.id

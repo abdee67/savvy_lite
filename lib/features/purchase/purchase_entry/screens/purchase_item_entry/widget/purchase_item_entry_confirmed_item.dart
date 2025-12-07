@@ -253,7 +253,7 @@ class _PurchaseItemEntryConfirmedItemState
                         ),
                         const SizedBox(width: 8),
                         const Text(
-                          'Confirmed Purchase Items',
+                          'Confirmed',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 18,
@@ -279,95 +279,26 @@ class _PurchaseItemEntryConfirmedItemState
                           ),
                         ),
                         const Spacer(),
-                        if (itemCount > 0)
-                          IconButton(
-                            icon: const Icon(
-                              Icons.delete_sweep,
-                              color: Colors.white,
-                            ),
-                            tooltip: 'Clear All',
-                            onPressed: () => _clearAllItems(context),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Summary Row
-                    Row(
-                      children: [
                         // Total Amount
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Order Total',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 12,
-                                ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Order Total',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
                               ),
-                              Text(
-                                '\$${totalAmount.toStringAsFixed(2)}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            ),
+                            Text(
+                              '${totalAmount.toStringAsFixed(2)} Birr',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
                               ),
-                            ],
-                          ),
-                        ),
-
-                        // Auto Receipt Status
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Receipt Mode',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: autoReceipt
-                                      ? Colors.green
-                                      : Colors.orange,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      autoReceipt
-                                          ? Icons.auto_awesome
-                                          : Icons.work_outline,
-                                      size: 14,
-                                      color: Colors.white,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      autoReceipt
-                                          ? 'Auto Receipt'
-                                          : 'Manual Receipt',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -708,7 +639,7 @@ class _PurchaseItemEntryConfirmedItemState
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.inventory_outlined, size: 64, color: Colors.grey.shade300),
+          // Icon(Icons.inventory_outlined, size: 64, color: Colors.grey.shade300),
           const SizedBox(height: 16),
           Text(
             'No items added yet',
@@ -725,21 +656,6 @@ class _PurchaseItemEntryConfirmedItemState
               'Add purchase items using the form above to build your purchase order',
               style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
               textAlign: TextAlign.center,
-            ),
-          ),
-          const SizedBox(height: 16),
-          OutlinedButton.icon(
-            onPressed: () {
-              // Scroll to form or show form
-              if (widget.onProceed != null) {
-                widget.onProceed!();
-              }
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('Add First Item'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF155888),
-              side: const BorderSide(color: Color(0xFF155888)),
             ),
           ),
         ],

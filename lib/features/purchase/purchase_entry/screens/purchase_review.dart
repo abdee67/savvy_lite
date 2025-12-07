@@ -227,14 +227,14 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
       body: BlocConsumer<PurchaseOrderBloc, PurchaseOrderState>(
         listener: (context, state) {
           if (state.status == PurchaseOrderStatus.success) {
-            ScaffoldMessenger.of(context).showSnackBar(
+            /*ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
                   state.successMessage ?? 'Operation completed successfully',
                 ),
                 backgroundColor: Colors.green,
               ),
-            );
+            );*/
           }
 
           if (state.status == PurchaseOrderStatus.error) {
@@ -599,7 +599,7 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
                                       ),
                                     ),
                                     child: Text(
-                                      'From ${_formatDateTime(purchaseOrder.dateTransaction ?? DateTime.now())}',
+                                      'From ${_formatDateTime(purchaseOrder.dateTransaction!)}',
                                       style: TextStyle(
                                         fontSize: 10,
                                         color: Colors.blue[800],

@@ -7,7 +7,7 @@ import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_event.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_state.dart';
-import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
+
 import 'package:savvy_stock/features/purchase/supplier_entry/blocs/supplier_bloc.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/blocs/supplier_event.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/blocs/supplier_state.dart';
@@ -67,7 +67,7 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
   static const _cardPadding = 16.0;
   static const _verticalDetailPadding = 4.0;
 
-  bool _isInitialized = false;
+  final bool _isInitialized = false;
   bool _isOrderPrepared = false;
   late final TextEditingController _orderNumberController;
   late final TextEditingController _transactionDateController;
@@ -246,17 +246,9 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
                   activeColor: Colors.green,
                   inactiveThumbColor: Colors.grey,
                   onChanged: (value) {
-                    // We'll use SetDefaultSettingForAuto event to update autoReceipt
-                    // Since we don't have a detail, we'll create a dummy one just for the event
-                    final dummyDetail = PurchaseOrderDetail(
-                      tempId: 1,
-                      company: state.companyId,
-                    );
                     context.read<PurchaseOrderBloc>().add(
-                      SetDefaultSettingForAuto(detail: dummyDetail),
+                      SetPurchaseOrderAutoReceipt(autoReceipt: value),
                     );
-                    // Update local state
-                    setState(() {});
                   },
                 ),
                 const SizedBox(width: 8),
@@ -313,7 +305,7 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
           const SizedBox(height: _sizedBoxHeight20),
           if (_selectedSupplier != null ||
               purchaseState.selectedHeader?.supplierRef != null)
-            _buildSupplierDetails(_selectedSupplier!, purchaseState),
+            _buildSupplierDetails(_selectedSupplier, purchaseState),
           const SizedBox(height: _sizedBoxHeight20),
           _buildNextButton(isValid, purchaseState),
           const SizedBox(height: _sizedBoxHeight20),
@@ -381,8 +373,9 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
                 // Auto receipt indicator using existing state field
                 BlocBuilder<PurchaseOrderBloc, PurchaseOrderState>(
                   builder: (context, state) {
-                    if (!(state.autoReceipt ?? false))
+                    if (!(state.autoReceipt ?? false)) {
                       return const SizedBox.shrink();
+                    }
                     return Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -429,7 +422,7 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
             // Show receiving date based on autoReceipt state
             BlocBuilder<PurchaseOrderBloc, PurchaseOrderState>(
               builder: (context, state) {
-                if (state.autoReceipt == true) return const SizedBox.shrink();
+                if (state.autoReceipt != true) return const SizedBox.shrink();
                 return Column(
                   children: [
                     _buildReceivingDateField(purchaseState),
@@ -815,7 +808,7 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
                         )
                       else
                         const Text(
-                          'Next: Add Items',
+                          'Add Items',
                           style: TextStyle(fontSize: _titleFontSize),
                         ),
                       if (!isProcessing) const SizedBox(width: 8),

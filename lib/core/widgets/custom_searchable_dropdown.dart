@@ -47,7 +47,12 @@ class _CustomSearchableDropdownState extends State<CustomSearchableDropdown> {
   void didUpdateWidget(covariant CustomSearchableDropdown oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.value != widget.value) {
-      _controller.text = widget.value ?? '';
+      // Defer state update to next frame to avoid "setState() called during build" error
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _controller.text = widget.value ?? '';
+        }
+      });
     }
     if (oldWidget.options != widget.options) {
       _filteredOptions = widget.options;

@@ -324,7 +324,7 @@ class _PurchasePaymentMethodState extends State<PurchasePaymentMethod> {
   }
 
   Widget _buildPaymentTypeSelector() {
-    const paymentTypes = ['Cash', 'Credit', 'Advance', 'Bank Transfer'];
+    const paymentTypes = ['Cash', 'Credit'];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -335,8 +335,8 @@ class _PurchasePaymentMethodState extends State<PurchasePaymentMethod> {
         ),
         const SizedBox(height: 8),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: 18,
+          runSpacing: 18,
           children: paymentTypes.map((type) {
             final isSelected = _selectedPaymentType == type;
             return ChoiceChip(

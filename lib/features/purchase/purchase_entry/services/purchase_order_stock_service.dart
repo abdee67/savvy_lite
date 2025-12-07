@@ -98,6 +98,12 @@ class PurchaseOrderStockService {
     required int companyId,
     required int orderNumber,
   }) async {
+    // Validate unitOfMeasure is not null
+    if (receiver.unitOfMeasure == null) {
+      print('⚠️ UnitOfMeasure is null for receiver, skipping stock update');
+      return;
+    }
+
     // Find ItemsInBranch by company, item number, and branch (same as Java)
     final itemsInBranchList = await stockItemInBranchRepository
         .findByItemAndBranch(
@@ -107,6 +113,12 @@ class PurchaseOrderStockService {
         );
 
     if (itemsInBranchList != null) {
+      // Validate that branch has unitOfMeasure set
+      if (itemsInBranchList.unitOfMeasure == null) {
+        print('⚠️ ItemsInBranch.unitOfMeasure is null, skipping stock update');
+        return;
+      }
+
       // Get conversion factor from receiver UOM to branch UOM
       final factor = await itemUomConversionsRepository.fromOtherToAnother(
         receiver.itemNumber!,
