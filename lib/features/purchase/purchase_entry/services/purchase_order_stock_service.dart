@@ -41,11 +41,18 @@ class PurchaseOrderStockService {
     required int orderNumber,
   }) async {
     try {
+      print('📦 Starting stock update for receiver:');
+      print('  itemNumber: ${receiver.itemNumber}');
+      print('  branchRecieved: ${receiver.branchRecieved}');
+      print('  location: ${receiver.location}');
+      print('  unitOfMeasure: ${receiver.unitOfMeasure}');
+
       // Validate receiver (same as Java)
       if (receiver.itemNumber == null ||
           receiver.quantityRecieved == null ||
           receiver.quantityRecieved == 0.0 ||
           receiver.branchRecieved == null) {
+        print('⚠️ Receiver validation failed, skipping stock update');
         return; // Same early return as Java
       }
 
@@ -57,8 +64,12 @@ class PurchaseOrderStockService {
       final applyLocationMgmt = systemConstant.applyLocationMgmBoolean;
       final applyLotMgmt = systemConstant.applyLotMgmBoolean;
 
+      print('  applyLocationMgmt: $applyLocationMgmt');
+      print('  applyLotMgmt: $applyLotMgmt');
+
       // Case 1: No location or lot management
       if (!applyLocationMgmt && !applyLotMgmt) {
+        print('📍 Using simple stock update (no location/lot mgmt)');
         await _handleSimpleStockUpdateForPurchase(
           receiver: receiver,
           systemConstant: systemConstant,
@@ -70,6 +81,7 @@ class PurchaseOrderStockService {
       else if (applyLocationMgmt &&
           !applyLotMgmt &&
           receiver.location != null) {
+        print('📍 Using location stock update');
         await _handleLocationStockUpdateForPurchase(
           receiver: receiver,
           systemConstant: systemConstant,
@@ -79,15 +91,19 @@ class PurchaseOrderStockService {
       }
       // Case 3: Both location and lot management
       else if (applyLocationMgmt && applyLotMgmt && receiver.location != null) {
+        print('📍 Using lot management');
         await _handleLotManagementForPurchase(
           receiver: receiver,
           orderNumber: orderNumber,
           companyId: companyId,
         );
       }
-    } catch (e) {
-      print('Error updating stock for purchase order: $e');
-      // Don't rethrow - same as Java's try-catch with error message
+
+      print('✅ Stock update completed successfully');
+    } catch (e, stackTrace) {
+      print('❌ Error updating stock for purchase order: $e');
+      print('Stack trace: $stackTrace');
+      rethrow; // Rethrow to see the error in the bloc
     }
   }
 
