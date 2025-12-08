@@ -154,10 +154,11 @@ class ItemTransactionRepository {
     }
     final udc = udcList.first;
 
-    // Set transaction number
-    int? trNumber = por != null
-        ? por.poDetailRef?.poHeaderRef!.orderNumber
-        : (soD != null ? soD.orderHeader?.orderNumber : trNo);
+    // Set transaction number - prefer linked header, fall back to provided trNo
+    int? trNumber =
+        por?.poDetailRef?.poHeaderRef?.orderNumber ??
+        soD?.orderHeader?.orderNumber ??
+        trNo;
 
     trNumber ??= await nextNumberBloc.generateFormattedNumber('TN');
 
@@ -214,9 +215,9 @@ class ItemTransactionRepository {
       itemNumber: ib.itemNumber,
       branch: ib.branch,
       unitOfMeasure: ib.unitOfMeasure,
-      supplier: por?.poDetailRef?.poHeaderRef!.supplierId,
+      supplier: por?.poDetailRef?.poHeaderRef?.supplierId,
       orderType:
-          por?.poDetailRef?.poHeaderRef!.orderType ??
+          por?.poDetailRef?.poHeaderRef?.orderType ??
           soD?.orderHeader?.orderTypeRef?.id,
       customer: soD?.orderHeader?.customerTableRef?.id,
     );
@@ -270,10 +271,11 @@ class ItemTransactionRepository {
       );
     }
 
-    // Set transaction number
-    int? trNumber = por != null
-        ? por.poDetailRef?.poHeaderRef!.orderNumber
-        : (soD != null ? soD.orderHeader?.orderNumber : trNo);
+    // Set transaction number - prefer linked header, fall back to provided trNo
+    int? trNumber =
+        por?.poDetailRef?.poHeaderRef?.orderNumber ??
+        soD?.orderHeader?.orderNumber ??
+        trNo;
 
     trNumber ??= await nextNumberBloc.generateFormattedNumber('TN');
 
@@ -330,7 +332,7 @@ class ItemTransactionRepository {
       unitOfMeasure: ib.unitOfMeasure ?? uom,
       supplier: por?.poDetailRef?.poHeaderRef?.supplierId,
       orderType:
-          por?.poDetailRef?.poHeaderRef!.orderType ??
+          por?.poDetailRef?.poHeaderRef?.orderType ??
           soD?.orderHeader?.orderTypeRef?.id,
       customer: soD?.orderHeader?.customerTableRef?.id,
     );
@@ -394,10 +396,11 @@ class ItemTransactionRepository {
       );
     }
 
-    // Set transaction number
-    int? trNumber = por != null
-        ? por.poDetailRef?.poHeaderRef!.orderNumber
-        : (soD != null ? soD.orderHeader?.orderNumber : trNo);
+    // Set transaction number - prefer linked header, fall back to provided trNo
+    int? trNumber =
+        por?.poDetailRef?.poHeaderRef?.orderNumber ??
+        soD?.orderHeader?.orderNumber ??
+        trNo;
 
     trNumber ??= await nextNumberBloc.generateFormattedNumber('TN');
 
@@ -463,9 +466,9 @@ class ItemTransactionRepository {
       itemNumber: lm.itemNumber,
       branch: lm.branch,
       unitOfMeasure: ib.unitOfMeasure ?? uom,
-      supplier: por?.poDetailRef?.poHeaderRef!.supplierId,
+      supplier: por?.poDetailRef?.poHeaderRef?.supplierId,
       orderType:
-          por?.poDetailRef?.poHeaderRef!.orderType ??
+          por?.poDetailRef?.poHeaderRef?.orderType ??
           soD?.orderHeader?.orderTypeRef?.id,
       customer: soD?.orderHeader?.customerBillToRef?.id,
     );

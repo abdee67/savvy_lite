@@ -1459,7 +1459,8 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
           add(
             LoadPurchaseOrderDetails(
               headerId: state.selectedHeader!.id!,
-              companyId: state.selectedHeader!.company!,
+              companyId:
+                  state.selectedHeader!.company ?? authBloc.state.companyId!,
             ),
           );
         }

@@ -353,12 +353,13 @@ class PurchaseOrderStockService {
         ),
       );
 
-      // Save the lot
-      await lotMasterRepository.createLotMaster(newLot);
+      // Save the lot and capture its ID
+      final newLotId = await lotMasterRepository.createLotMaster(newLot);
+      final persistedLot = newLot.copyWith(id: newLotId);
 
       // Update item location quantity (same as Java's updatingItemLocationQuantity)
       await _updateItemLocationQuantity(
-        lot: newLot,
+        lot: persistedLot,
         transactionType: 'A',
         trNo: orderNumber,
         remark: 'Purchase',
@@ -438,42 +439,30 @@ class PurchaseOrderStockService {
     required double qtyTr,
     required PurchaseOrderReceiver por,
   }) async {
-    if (lot.itemNumber == null || lot.branch == null || lot.location == null) {
+    if (lot.itemNumber == null ||
+        lot.branch == null ||
+        lot.location == null ||
+        lot.company == null) {
       return;
     }
 
     try {
-      // Get all lots for this item, branch, and location
-      final lotMasterList = await lotMasterRepository
-          .getExpiredLotMastersFromBranchAndLocation(
-            itemId: lot.itemNumber!,
-            branchId: lot.branch!,
-            locationId: lot.location!,
-            companyId: lot.company!,
-          );
-
-      // Calculate total quantity from all lots
-      final totalQuantity = lotMasterList
-          .where((l) => l.quantityAvailable != null)
-          .map((l) => l.quantityAvailable!)
-          .fold(0.0, (sum, qty) => sum + qty);
-
-      // Get and update the location
-      final location = await itemLocationsRepository.getItemLocationById(
-        lot.location!,
-        lot.company!,
+      // 1) Cascade lot quantities to item_location and items_in_branch
+      //    (sums ALL lots for this item/branch/location, not only expired ones)
+      await lotMasterRepository.updatingItemLocationQuantityFromLot(
+        lot: lot,
+        transactionType: transactionType,
+        trNo: trNo,
+        remark: remark,
+        qtyChange: qtyTr,
+        soD: null,
+        companyId: lot.company!,
       );
 
-      if (location != null) {
-        await itemLocationsRepository.updateItemLocation(
-          location.copyWith(quantityOnHand: totalQuantity),
-        );
-      }
-
-      // Create stock card entry
+      // 2) Create stock card entry based on the lot movement
       await itemTransactionsRepository.stockCardCreation(
         ib: null,
-        loc: location,
+        loc: null,
         lm: lot,
         transactionType: transactionType,
         trNo: trNo,
@@ -481,13 +470,6 @@ class PurchaseOrderStockService {
         qty: qtyTr,
         por: por,
         soD: null,
-      );
-
-      // Update ItemsInBranch total quantity
-      await _updateItemsInBranchTotalQuantity(
-        itemNumber: lot.itemNumber!,
-        branchId: lot.branch!,
-        companyId: lot.company!,
       );
     } catch (e) {
       print('Error updating item location quantity: $e');
