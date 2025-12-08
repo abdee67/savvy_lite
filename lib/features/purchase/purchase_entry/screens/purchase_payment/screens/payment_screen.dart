@@ -81,12 +81,16 @@ class _PurchasePaymentScreenState extends State<PurchasePaymentScreen> {
         if (state.status == PurchaseOrderStatus.success &&
             state.successMessage != null &&
             state.successMessage!.contains('saved')) {
-          // Navigate back to purchase orders list after a delay
-          Future.delayed(const Duration(milliseconds: 1500), () {
-            if (mounted) {
-              context.push(AppRoutes.purchaseReview);
-            }
-          });
+          final purchaseBloc = context.read<PurchaseOrderBloc>();
+
+          // Clear create/edit state so the next entry starts fresh
+          purchaseBloc.add(const CancelPurchaseOrderCreate());
+          purchaseBloc.add(const ClearPurchaseOrderSelection());
+
+          // Navigate back to purchase order home (review) screen
+          if (mounted) {
+            context.go(AppRoutes.purchaseReview);
+          }
         }
       },
       builder: (context, purchaseState) {

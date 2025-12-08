@@ -28,6 +28,31 @@ class _PurchasePaymentActionState extends State<PurchasePaymentAction> {
   bool _isProcessing = false;
 
   void _completePurchaseOrder() async {
+    // Ask for user confirmation before completing the purchase
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Complete Purchase?'),
+        content: const Text(
+          'Are you sure you want to complete this purchase order and save it?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
     // Validate form
     if (!widget.formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -62,17 +87,7 @@ class _PurchasePaymentActionState extends State<PurchasePaymentAction> {
       await _updateHeaderWithFinalAmounts();
 
       // Save the purchase order (this includes auto-receipt if enabled)
-      purchaseBloc.add(SavePurchaseOrder());
-
-      // Show success message (listener in main screen will handle navigation)
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Purchase order saved successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
+      purchaseBloc.add(const SavePurchaseOrder());
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
