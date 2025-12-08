@@ -220,7 +220,7 @@ class _PurchaseItemEntryScreenContentState
     }
 
     // Navigate to review screen
-    context.go(AppRoutes.purchaseOrderPayment, extra: widget.orderData);
+    context.push(AppRoutes.purchaseOrderPayment, extra: widget.orderData);
   }
 
   void _clearAllItems() {

@@ -84,7 +84,7 @@ class _PurchasePaymentScreenState extends State<PurchasePaymentScreen> {
           // Navigate back to purchase orders list after a delay
           Future.delayed(const Duration(milliseconds: 1500), () {
             if (mounted) {
-              context.go(AppRoutes.purchaseReview);
+              context.push(AppRoutes.purchaseReview);
             }
           });
         }

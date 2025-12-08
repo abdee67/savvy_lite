@@ -833,6 +833,10 @@ class LotMasterRepository extends BaseRepository {
     // This will be called from item_transaction_repo, so we skip it here to avoid circular dependency
     // The transaction creation will be handled by the calling code
 
+    // HOWEVER, if we are calling this from _autoCreateLotForPurchaseOrder, we need to manually trigger the transaction if needed
+    // But since _autoCreateLotForPurchaseOrder calls _updateItemLocationQuantity which then calls this...
+    // Let's stick to the separation of concerns. The caller handles the transaction.
+
     // 4. Query all locations for this branch
     final locationResults = await db.rawQuery(
       '''
@@ -947,6 +951,6 @@ class LotMasterRepository extends BaseRepository {
       [companyId],
     );
     final nextLotNumber = result.first['next_lot_number'] as int?;
-    return nextLotNumber;
+    return nextLotNumber != null ? nextLotNumber + 1 : 1;
   }
 }

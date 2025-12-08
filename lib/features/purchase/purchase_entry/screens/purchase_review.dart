@@ -128,7 +128,7 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
     context.read<PurchaseOrderBloc>().add(
       PrepareCreatePurchaseOrder(companyId: companyId!, branchId: branchId),
     );
-    context.go(AppRoutes.purchaseSupplierInfo);
+    context.push(AppRoutes.purchaseSupplierInfo);
   }
 
   void _safeVoid(

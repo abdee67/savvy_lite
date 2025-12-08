@@ -892,7 +892,7 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
     };
 
     // Navigate to purchase item entry screen
-    context.go(AppRoutes.purchaseItemEntry, extra: orderData);
+    context.push(AppRoutes.purchaseItemEntry, extra: orderData);
   }
 
   void _showErrorSnackBar(BuildContext context, String message) {

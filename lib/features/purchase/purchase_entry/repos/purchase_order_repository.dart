@@ -930,7 +930,8 @@ class PurchaseOrderRepository {
           por.item_number,
           por.unit_cost,
           por.quantity_recieved,
-          por.date_received
+          por.date_received,
+          por.company
         FROM purchase_order_receiver por
         LEFT JOIN purchase_order_detail pod ON por.po_detail = pod.id
         WHERE pod.po_header = ? AND por.quantity_recieved > 0
@@ -958,6 +959,7 @@ class PurchaseOrderRepository {
           'unit_cost': unitCost,
           'quantity': quantity,
           'date_received': dateReceived,
+          'company': receiver['company'],
         });
       }
 
@@ -1000,6 +1002,7 @@ class PurchaseOrderRepository {
             await db.insert('item_cost', {
               'item_number': itemNumber,
               'amount_unit_cost': weightedAverageCost,
+              'company': transactions.first['company'],
               'date_updated': DateTime.now().toIso8601String(),
             });
           }
