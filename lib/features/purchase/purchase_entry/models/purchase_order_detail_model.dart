@@ -1,8 +1,6 @@
-import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
-import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class PurchaseOrderDetail {
@@ -102,20 +100,24 @@ class PurchaseOrderDetail {
       // but here we are strictly removing the column mapping as requested.
       poHeaderRef: map['order_number'] != null
           ? PurchaseOrderHeader(
-              id: map['po_header']['id'],
+              id: map['po_header'],
               orderNumber: map['order_number'],
-              dateDelivery: map['date_delivery'],
+              dateDelivery: map['date_delivery'] == null
+                  ? null
+                  : DateTime.parse(map['date_delivery']),
               poReceiveStatus: map['po_receive_status'],
-              dateTransaction: map['date_transaction'],
+              dateTransaction: map['date_transaction'] == null
+                  ? null
+                  : DateTime.parse(map['date_transaction']),
               invoiceNumber: map['invoice_number'],
               orderType: map['order_type'],
             )
           : null,
-      poReceiveStatusRef: map['po_receive_status'] != null
+      poReceiveStatusRef: map['po_receive_status_description'] != null
           ? UdcDetails(
-              id: map['po_receive_status']['id'],
-              description1: map['po_receive_status']['description'],
-              detailCode: map['po_receive_status_code']['detail_code'],
+              id: map['po_receive_status'],
+              description1: map['po_receive_status_description'],
+              detailCode: map['po_receive_status_code'],
             )
           : null,
 
@@ -129,9 +131,9 @@ class PurchaseOrderDetail {
           : null,
       unitOfMeasureRef: map['unit_of_measure_description'] != null
           ? UdcDetails(
-              id: map['unit_of_measure']['id'],
-              description1: map['unit_of_measure_description']['description'],
-              detailCode: map['unit_of_measure_code']['detail_code'],
+              id: map['unit_of_measure'],
+              description1: map['unit_of_measure_description'],
+              detailCode: map['unit_of_measure_code'],
             )
           : null,
     );

@@ -128,7 +128,7 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
     context.read<PurchaseOrderBloc>().add(
       PrepareCreatePurchaseOrder(companyId: companyId!, branchId: branchId),
     );
-    context.push(AppRoutes.purchaseSupplierInfo);
+    context.go(AppRoutes.purchaseSupplierInfo);
   }
 
   void _safeVoid(
@@ -677,7 +677,7 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
                               context.read<PurchaseOrderBloc>().add(
                                 const PrepareEditPurchaseOrder(),
                               );
-                              context.push(AppRoutes.purchaseOrder);
+                              context.go(AppRoutes.purchaseOrder);
                             },
                             tooltip: 'Edit',
                           ),*/

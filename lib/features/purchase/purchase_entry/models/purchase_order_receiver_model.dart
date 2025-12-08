@@ -96,9 +96,9 @@ class PurchaseOrderReceiver extends Equatable {
       location: map['location'],
       unitOfMeasure: map['unit_of_measure'],
       batchNumberSupplier: map['batch_number_supplier'],
-      poDetailRef: map['po_detail_ref'] != null
+      poDetailRef: map['quantity_transaction'] != null
           ? PurchaseOrderDetail(
-              id: map['po_detail']['id'],
+              id: map['po_detail'],
               dateEffective: map['date_effective'],
               dateDelivery: map['date_delivery'],
               poReceiveStatus: map['po_receive_status'],
@@ -116,21 +116,21 @@ class PurchaseOrderReceiver extends Equatable {
           : null,
       branchRecievedRef: map['branch_recieved_description'] != null
           ? Branch(
-              id: map['branch_recieved']['id'],
+              id: map['branch_recieved'],
               description: map['branch_recieved_description'],
             )
           : null,
       locationRef: map['location_description'] != null
           ? ItemLocation(
-              id: map['location']['id'],
-              locationDescription: map['location']['location_description'],
+              id: map['location'],
+              locationDescription: map['location_description'],
             )
           : null,
       unitOfMeasureRef: map['unit_of_measure_description'] != null
           ? UdcDetails(
-              id: map['unit_of_measure']['id'],
-              description1: map['unit_of_measure_description']['description'],
-              detailCode: map['unit_of_measure_code']['detail_code'],
+              id: map['unit_of_measure'],
+              description1: map['unit_of_measure_description'],
+              detailCode: map['unit_of_measure_code'],
             )
           : null,
     );

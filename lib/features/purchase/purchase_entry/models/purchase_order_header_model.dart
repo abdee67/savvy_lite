@@ -1,4 +1,3 @@
-import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/models/supplier_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';

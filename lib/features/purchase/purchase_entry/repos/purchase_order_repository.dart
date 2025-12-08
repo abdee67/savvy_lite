@@ -1,4 +1,5 @@
 // features/purchase_order/repositories/purchase_order_repository.dart
+import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
@@ -7,9 +8,13 @@ import 'package:savvy_stock/core/services/database/database_service.dart';
 
 class PurchaseOrderRepository {
   final LocalDatabaseService _databaseService;
+  final UdcRepository _udcRepository;
 
-  PurchaseOrderRepository({required LocalDatabaseService databaseService})
-    : _databaseService = databaseService;
+  PurchaseOrderRepository({
+    required LocalDatabaseService databaseService,
+    required UdcRepository udcRepository,
+  }) : _databaseService = databaseService,
+       _udcRepository = udcRepository;
 
   Future<Database> get _db async => _databaseService.database;
 
@@ -384,17 +389,13 @@ class PurchaseOrderRepository {
           pr.description_1 as po_receive_status_desc,
           pr.detail_code as po_receive_status_code,
           uom.description_1 as unit_of_measure_desc,
-          uom.detail_code as unit_of_measure_code,
-          br.branch as branch_received,
-          il.location as location_description,
+          uom.detail_code as unit_of_measure_code
           
         FROM purchase_order_detail pod
         LEFT JOIN purchase_order_header poh ON pod.po_header = poh.id
         LEFT JOIN items_table it ON pod.item_number = it.id
         LEFT JOIN udc_details pr ON pod.po_receive_status = pr.id
         LEFT JOIN udc_details uom ON pod.unit_of_measure = uom.id
-        LEFT JOIN branch_table br ON pod.branch_receive = br.id
-        LEFT JOIN item_location il ON pod.item_locations_select = il.id
         WHERE pod.id = ?
         ''',
         [id],
@@ -428,17 +429,13 @@ class PurchaseOrderRepository {
           pr.description_1 as po_receive_status_desc,
           pr.detail_code as po_receive_status_code,
           uom.description_1 as unit_of_measure_desc,
-          uom.detail_code as unit_of_measure_code,
-          br.branch as branch_received,
-          il.location as location_description,
+          uom.detail_code as unit_of_measure_code
           
         FROM purchase_order_detail pod
         LEFT JOIN purchase_order_header poh ON pod.po_header = poh.id
         LEFT JOIN items_table it ON pod.item_number = it.id
         LEFT JOIN udc_details pr ON pod.po_receive_status = pr.id
         LEFT JOIN udc_details uom ON pod.unit_of_measure = uom.id
-        LEFT JOIN branch_table br ON pod.branch_receive = br.id
-        LEFT JOIN item_location il ON pod.item_locations_select = il.id
         WHERE pod.po_header = ? AND pod.company = ?
         ORDER BY pod.id
         ''',
@@ -507,17 +504,13 @@ class PurchaseOrderRepository {
           pr.description_1 as po_receive_status_desc,
           pr.detail_code as po_receive_status_code,
           uom.description_1 as unit_of_measure_desc,
-          uom.detail_code as unit_of_measure_code,
-          br.branch as branch_received,
-          il.location as location_description,
+          uom.detail_code as unit_of_measure_code
           
         FROM purchase_order_detail pod
         LEFT JOIN purchase_order_header poh ON pod.po_header = poh.id
         LEFT JOIN items_table it ON pod.item_number = it.id
         LEFT JOIN udc_details pr ON pod.po_receive_status = pr.id
         LEFT JOIN udc_details uom ON pod.unit_of_measure = uom.id
-        LEFT JOIN branch_table br ON pod.branch_receive = br.id
-        LEFT JOIN item_location il ON pod.item_locations_select = il.id
         WHERE $where
         ORDER BY pod.id DESC
       ''';
@@ -606,13 +599,14 @@ class PurchaseOrderRepository {
     String statusCode,
   ) async {
     final db = await _db;
+    int? recordHeaderId = await _udcRepository.getRecordHeaderId('PR');
 
     try {
       // Get UDC id for the status
       final udcResult = await db.query(
         'udc_details',
-        where: 'detail_code = ? AND udc_header = ?',
-        whereArgs: [statusCode, 'PR'], // PR = Purchase Receive status
+        where: 'detail_code = ? AND record_header = ?',
+        whereArgs: [statusCode, recordHeaderId], // PR = Purchase Receive status
       );
 
       if (udcResult.isNotEmpty) {
@@ -881,7 +875,7 @@ class PurchaseOrderRepository {
         if (statusCode == 'P') {
           // Partially received
           partiallyReceived++;
-        } else if (statusCode == 'R' || quantityOpen == 0.0) {
+        } else if (statusCode == 'C' || quantityOpen == 0.0) {
           // Fully received
           fullyReceived++;
         }
@@ -892,17 +886,18 @@ class PurchaseOrderRepository {
       if (partiallyReceived > 0) {
         newStatusCode = 'P'; // Partially received
       } else if (fullyReceived == totalDetails) {
-        newStatusCode = 'R'; // Fully received
+        newStatusCode = 'C'; // Fully received
       } else if (fullyReceived == 0 && partiallyReceived == 0) {
         newStatusCode = 'N'; // Not received
       }
+      int? recordHeaderId = await _udcRepository.getRecordHeaderId('PR');
 
-      if (newStatusCode != null) {
+      if (newStatusCode != null && recordHeaderId != null) {
         // Get UDC id for the new status
         final udcResult = await db.query(
           'udc_details',
-          where: 'detail_code = ? AND udc_header = ?',
-          whereArgs: [newStatusCode, 'PR'],
+          where: 'detail_code = ? AND record_header = ?',
+          whereArgs: [newStatusCode, recordHeaderId],
         );
 
         if (udcResult.isNotEmpty) {
@@ -984,32 +979,28 @@ class PurchaseOrderRepository {
         if (totalQuantity > 0) {
           final weightedAverageCost = totalCost / totalQuantity;
 
-          // Update or insert in item_costs table
+          // Update or insert in item_cost table
           final existingCost = await db.query(
-            'item_costs',
+            'item_cost',
             where: 'item_number = ?',
             whereArgs: [itemNumber],
           );
 
           if (existingCost.isNotEmpty) {
             await db.update(
-              'item_costs',
+              'item_cost',
               {
-                'unit_cost': weightedAverageCost,
-                'last_purchase_date': DateTime.now().toIso8601String(),
-                'last_purchase_cost': weightedAverageCost,
+                'amount_unit_cost': weightedAverageCost,
+                'date_updated': DateTime.now().toIso8601String(),
               },
               where: 'item_number = ?',
               whereArgs: [itemNumber],
             );
           } else {
-            await db.insert('item_costs', {
+            await db.insert('item_cost', {
               'item_number': itemNumber,
-              'unit_cost': weightedAverageCost,
-              'last_purchase_date': DateTime.now().toIso8601String(),
-              'last_purchase_cost': weightedAverageCost,
-              'created_at': DateTime.now().toIso8601String(),
-              'updated_at': DateTime.now().toIso8601String(),
+              'amount_unit_cost': weightedAverageCost,
+              'date_updated': DateTime.now().toIso8601String(),
             });
           }
         }
@@ -1109,7 +1100,7 @@ class PurchaseOrderRepository {
           COUNT(*) as total_orders,
           SUM(amount_grand_total_cost) as total_amount,
           AVG(amount_grand_total_cost) as average_order,
-          COUNT(CASE WHEN po_receive_status IN (SELECT id FROM udc_details WHERE detail_code = 'R') THEN 1 END) as fully_received,
+          COUNT(CASE WHEN po_receive_status IN (SELECT id FROM udc_details WHERE detail_code = 'C') THEN 1 END) as fully_received,
           COUNT(CASE WHEN po_receive_status IN (SELECT id FROM udc_details WHERE detail_code = 'P') THEN 1 END) as partially_received,
           COUNT(CASE WHEN po_receive_status IN (SELECT id FROM udc_details WHERE detail_code = 'N') THEN 1 END) as not_received,
           COUNT(CASE WHEN payment_term IS NOT NULL THEN 1 END) as credit_orders,

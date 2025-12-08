@@ -276,7 +276,7 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
 
       // Load UOM conversions for this item
       if (item != null) {
-        _loadUomConversions(item.id!);
+        _loadUomConversions(item.id);
       }
     });
 
@@ -306,7 +306,7 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
     if (branch != null) {
       // Load locations for selected branch
       print('📍 Loading locations for branch ID: ${branch.id}');
-      _loadBranchLocations(branch.id!);
+      _loadBranchLocations(branch.id);
     }
   }
 
@@ -605,8 +605,7 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
                                 _selectedItem!.unitOfMeasure,
                             orElse: () => UdcDetails.empty(),
                           );
-                          if (defaultUom.id != null &&
-                              !availableUoms.contains(defaultUom)) {
+                          if (!availableUoms.contains(defaultUom)) {
                             availableUoms.add(defaultUom);
                           }
                         }

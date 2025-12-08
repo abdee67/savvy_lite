@@ -151,7 +151,7 @@ class _PurchaseItemEntryConfirmedItemState
     final authState = context.read<AuthBloc>().state;
 
     if (authState.hasAccessToPrivilege(AppRoutes.purchaseOrderPayment)) {
-      context.push(AppRoutes.purchaseOrderPayment);
+      context.go(AppRoutes.purchaseOrderPayment);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No access to payment screen')),

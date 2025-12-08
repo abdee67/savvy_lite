@@ -6,7 +6,7 @@ class ItemCost {
   double? amountUnitCost;
   int? company;
   int? userId;
-  int? dateUpdated;
+  DateTime? dateUpdated;
   int? tempId;
 
   //from join
@@ -42,7 +42,9 @@ class ItemCost {
       amountUnitCost: map['amount_unit_cost'],
       company: map['company'],
       userId: map['user_id'],
-      dateUpdated: map['date_updated'],
+      dateUpdated: map['date_updated'] != null
+          ? DateTime.parse(map['date_updated'])
+          : null,
       tempId: map['temp_id'],
       fromUOM: map['branch'] != null ? ItemInBranchModel.fromMap(map) : null,
     );
@@ -55,7 +57,7 @@ class ItemCost {
       'amount_unit_cost': amountUnitCost,
       'company': company,
       'user_id': userId,
-      'date_updated': dateUpdated,
+      'date_updated': dateUpdated?.toIso8601String(),
     };
   }
 
@@ -65,7 +67,7 @@ class ItemCost {
     double? amountUnitCost,
     int? company,
     int? userId,
-    int? dateUpdated,
+    DateTime? dateUpdated,
     int? tempId,
   }) {
     return ItemCost(

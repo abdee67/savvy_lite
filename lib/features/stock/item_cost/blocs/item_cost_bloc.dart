@@ -594,7 +594,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
 
               final updatedItem = item.copyWith(
                 amountUnitCost: double.parse(unitCostAvg),
-                dateUpdated: DateTime.now().millisecondsSinceEpoch,
+                dateUpdated: DateTime.now(),
                 userId: authBloc.state.userId!.id,
               );
 
@@ -603,7 +603,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
           } else {
             final newItem = ItemCost(
               amountUnitCost: double.parse(cost.toStringAsFixed(2)),
-              dateUpdated: DateTime.now().millisecondsSinceEpoch,
+              dateUpdated: DateTime.now(),
               userId: authBloc.state.userId!.id,
               company: authBloc.state.companyId,
               itemNumber: p.itemNumber!,

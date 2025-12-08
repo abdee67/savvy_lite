@@ -149,10 +149,10 @@ class PurchaseOrderStockService {
           factor * (receiver.quantityRecieved ?? 0.0);
 
       // Apply decimal places rounding if needed (from system constant)
-      final decimalPlaces = systemConstant.decimalPlaces;
+      final decimalPlaces = systemConstant.decimalPlaces ?? 2;
       final roundedReceivedQuantity = _roundToDecimalPlaces(
         receivedQuantityInBranchUom,
-        decimalPlaces!,
+        decimalPlaces,
       );
 
       final newQuantity = currentQuantity + roundedReceivedQuantity;
@@ -169,7 +169,7 @@ class PurchaseOrderStockService {
         ib: itemsInBranchList,
         loc: null,
         lm: null,
-        transactionType: 'R', // 'R' for Receipt/Purchase
+        transactionType: 'C', // 'C' for Receipt/Purchase//C IS COMPLETE
         trNo: orderNumber,
         remark: 'Purchase',
         qty: roundedReceivedQuantity, // Positive quantity for purchase
@@ -214,7 +214,7 @@ class PurchaseOrderStockService {
         final receivedQuantity = factor * (receiver.quantityRecieved ?? 0.0);
         final roundedReceivedQuantity = _roundToDecimalPlaces(
           receivedQuantity,
-          systemConstant.decimalPlaces!,
+          systemConstant.decimalPlaces ?? 2,
         );
 
         final newQuantity = currentQuantity + roundedReceivedQuantity;
@@ -261,6 +261,7 @@ class PurchaseOrderStockService {
       if (systemConstant == null) return;
 
       final lotType = systemConstant.lotType;
+      if (lotType == null) return;
       final lotTypeDetail = await udcRepository.getUdcDetailById(lotType);
       final lotTypeCodeId = lotTypeDetail?.detailCode;
 
@@ -358,7 +359,7 @@ class PurchaseOrderStockService {
       // Update item location quantity (same as Java's updatingItemLocationQuantity)
       await _updateItemLocationQuantity(
         lot: newLot,
-        transactionType: 'R',
+        transactionType: 'A',
         trNo: orderNumber,
         remark: 'Purchase',
         qtyTr: qty,
@@ -381,6 +382,7 @@ class PurchaseOrderStockService {
     if (systemConstant == null) return null;
 
     final lotType = systemConstant.lotType;
+    if (lotType == null) return null;
     final lotTypeDetail = await udcRepository.getUdcDetailById(lotType);
     final lotTypeCodeId = lotTypeDetail?.detailCode;
 
@@ -405,7 +407,7 @@ class PurchaseOrderStockService {
       if (lotTypeCodeId != 'R') {
         if (daysDifference <= 0) {
           // Expired status
-          return await _getUdcDetailId('LS', 'E');
+          return await _getUdcDetailId('E', 'LS');
         } else {
           // Active status, preserve current if not expired
           if (currentStatusId != null) {
@@ -416,11 +418,11 @@ class PurchaseOrderStockService {
               return currentStatusId;
             }
           }
-          return await _getUdcDetailId('LS', 'A');
+          return await _getUdcDetailId('A', 'LS');
         }
       } else {
         // Received date type - always active unless explicitly set
-        return currentStatusId ?? await _getUdcDetailId('LS', 'A');
+        return currentStatusId ?? await _getUdcDetailId('A', 'LS');
       }
     }
 
@@ -584,11 +586,11 @@ class PurchaseOrderStockService {
     }
   }
 
-  Future<int?> _getUdcDetailId(String udcHeader, String detailCode) async {
+  Future<int?> _getUdcDetailId(String detailCode, String udcHeader) async {
     try {
       final udcDetails = await udcRepository.getUdcDetailsByCode(
-        udcHeader,
         detailCode,
+        udcHeader,
       );
       return udcDetails.isNotEmpty ? udcDetails.first.id : null;
     } catch (e) {

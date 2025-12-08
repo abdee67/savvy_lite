@@ -246,7 +246,10 @@ void initDependencies() {
     () => SupplierRepositoryImpl(getIt()),
   );
   getIt.registerLazySingleton<PurchaseOrderRepository>(
-    () => PurchaseOrderRepository(databaseService: getIt()),
+    () => PurchaseOrderRepository(
+      databaseService: getIt(),
+      udcRepository: getIt(),
+    ),
   );
   getIt.registerLazySingleton<PurchaseOrderStockService>(
     () => PurchaseOrderStockService(
