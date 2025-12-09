@@ -3,6 +3,7 @@ import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
+import 'package:savvy_stock/features/stock/location_entry/models/location_master_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class PurchaseOrderReceiver extends Equatable {
@@ -33,7 +34,7 @@ class PurchaseOrderReceiver extends Equatable {
   final PurchaseOrderDetail? poDetailRef;
   final ItemEntryModel? itemNumberRef;
   final Branch? branchRecievedRef;
-  final ItemLocation? locationRef;
+  final LocationMaster? locationRef;
   final UdcDetails? unitOfMeasureRef;
 
   const PurchaseOrderReceiver({
@@ -99,8 +100,12 @@ class PurchaseOrderReceiver extends Equatable {
       poDetailRef: map['quantity_transaction'] != null
           ? PurchaseOrderDetail(
               id: map['po_detail'],
-              dateEffective: map['date_effective'],
-              dateDelivery: map['date_delivery'],
+              dateEffective: map['date_effective'] != null
+                  ? DateTime.parse(map['date_effective'])
+                  : null,
+              dateDelivery: map['date_delivery'] != null
+                  ? DateTime.parse(map['date_delivery'])
+                  : null,
               poReceiveStatus: map['po_receive_status'],
               quantityTransaction: map['quantity_transaction'],
               unitCost: map['unit_cost'],
@@ -121,7 +126,7 @@ class PurchaseOrderReceiver extends Equatable {
             )
           : null,
       locationRef: map['location_description'] != null
-          ? ItemLocation(
+          ? LocationMaster(
               id: map['location'],
               locationDescription: map['location_description'],
             )
@@ -186,7 +191,7 @@ class PurchaseOrderReceiver extends Equatable {
     PurchaseOrderDetail? poDetailRef,
     ItemEntryModel? itemNumberRef,
     Branch? branchRecievedRef,
-    ItemLocation? locationRef,
+    LocationMaster? locationRef,
     UdcDetails? unitOfMeasureRef,
     int? tempId,
     bool? validCell,

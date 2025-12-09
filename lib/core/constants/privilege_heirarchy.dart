@@ -141,6 +141,7 @@ class PrivilegeHierarchy {
     AppRoutes.purchaseSupplierInfo: AppRoutes.purchaseReview,
     AppRoutes.purchaseItemEntry: AppRoutes.purchaseReview,
     AppRoutes.purchaseOrderPayment: AppRoutes.purchaseReview,
+    AppRoutes.purchaseOrderReceive: AppRoutes.purchaseReview,
   };
 
   /// Get the parent privilege for a given privilege URI

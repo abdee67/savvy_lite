@@ -29,6 +29,7 @@ import 'package:savvy_stock/features/onboarding/screens/welcome_screen.dart';
 import 'package:savvy_stock/features/onboarding/widgets/getStarted.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/screens/purchase_item_entry/screens/purchase_item_entry.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/screens/purchase_payment/screens/payment_screen.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/screens/purchase_receive/purchase_receive_screen.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/screens/purchase_review.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/models/supplier_model.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/screens/supplier_info_screen.dart';
@@ -856,6 +857,7 @@ class AppRouter {
         ),
         redirect: _protectedRouteRedirect,
       ),
+
       // System Constants
       GoRoute(
         path: AppRoutes.systemConstants,

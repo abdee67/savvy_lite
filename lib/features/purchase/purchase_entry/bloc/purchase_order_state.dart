@@ -36,6 +36,7 @@ class PurchaseOrderState extends Equatable {
   final PurchaseOrderHeader? selectedHeader;
   final PurchaseOrderHeader? selectedHeader1;
   final PurchaseOrderHeader? selectedHeader2;
+  final List<PurchaseOrderHeader>? selectedHeaders;
 
   // Detail data
   final List<PurchaseOrderDetail> details;
@@ -46,6 +47,8 @@ class PurchaseOrderState extends Equatable {
   final PurchaseOrderDetail? selectedDetail;
   final PurchaseOrderDetail? selectedDetail1;
   final PurchaseOrderDetail? selectedDetail2;
+  final List<PurchaseOrderDetail>? selectedDetails;
+
   final PurchaseOrderDetail? selectedOpApply;
 
   // Receiver data
@@ -56,6 +59,7 @@ class PurchaseOrderState extends Equatable {
   final PurchaseOrderReceiver? selectedReceiver;
   final PurchaseOrderReceiver? selectedReceiver1;
   final PurchaseOrderReceiver? selectedReceiver2;
+  final List<PurchaseOrderReceiver>? selectedReceivers;
 
   // Company and user info
   final int? companyId;
@@ -186,6 +190,9 @@ class PurchaseOrderState extends Equatable {
     this.statistics,
     this.agingReport,
     this.supplierSummary,
+    this.selectedDetails = const [],
+    this.selectedHeaders = const [],
+    this.selectedReceivers = const [],
   });
 
   @override
@@ -216,6 +223,9 @@ class PurchaseOrderState extends Equatable {
     selectedReceiver,
     selectedReceiver1,
     selectedReceiver2,
+    selectedDetails,
+    selectedHeaders,
+    selectedReceivers,
     companyId,
     userId,
     totalAmount,
@@ -288,6 +298,10 @@ class PurchaseOrderState extends Equatable {
     PurchaseOrderReceiver? selectedReceiver,
     PurchaseOrderReceiver? selectedReceiver1,
     PurchaseOrderReceiver? selectedReceiver2,
+    List<PurchaseOrderHeader>? selectedHeaders,
+    List<PurchaseOrderReceiver>? selectedReceivers,
+    List<PurchaseOrderDetail>? selectedDetails,
+
     int? companyId,
     int? userId,
     double? totalAmount,
@@ -407,6 +421,9 @@ class PurchaseOrderState extends Equatable {
       statistics: statistics ?? this.statistics,
       agingReport: agingReport ?? this.agingReport,
       supplierSummary: supplierSummary ?? this.supplierSummary,
+      selectedDetails: selectedDetails ?? this.selectedDetails,
+      selectedHeaders: selectedHeaders ?? this.selectedHeaders,
+      selectedReceivers: selectedReceivers ?? this.selectedReceivers,
     );
   }
 

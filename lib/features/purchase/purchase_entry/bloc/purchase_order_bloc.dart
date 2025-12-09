@@ -145,6 +145,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     on<PrepareCopyPurchaseOrder>(_onPrepareCopy);
     on<PrepareCreateInCreate>(_onPrepareCreateInCreate);
     on<PrepareCreateInEdit>(_onPrepareCreateInEdit);
+    on<ResetPurchaseOrderSettings>(_onReset);
     on<SetPurchaseOrderAutoReceipt>(_onSetPurchaseOrderAutoReceipt);
   }
 
@@ -207,12 +208,23 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         endDate: event.endDate ?? state.thrudateForPO,
         purchaseType: event.purchaseType,
       );
+      final List<PurchaseOrderDetail> details = [];
+      for (final header in headers) {
+        if (header.id != null && header.company != null) {
+          final headerDetails = await repository.getDetailsByHeaderId(
+            header.id!,
+            header.company!,
+          );
+          details.addAll(headerDetails);
+        }
+      }
 
       emit(
         state.copyWith(
           status: PurchaseOrderStatus.loaded,
           headers: headers,
           filteredHeaders: headers,
+          filteredDetails: details,
           error: null,
           startdateForPO: event.startDate,
           thrudateForPO: event.endDate,
@@ -708,10 +720,13 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         poHeader: headerId,
         company: state.selectedHeader!.company,
         dateUpdated: DateTime.now(),
-        userId: state.userId,
+        dateReceived: detail.dateReceived,
+        userId: state.userId ?? authBloc.state.userId?.id,
         poReceiveStatus: await _getUdcDetailId('N', 'PR'),
         quantityOpen: detail.quantityTransaction,
         amountOpen: detail.amountExtendedCost,
+        amountReceived: detail.amountReceived ?? 0,
+        quantityRecieved: detail.quantityRecieved ?? 0,
         dateDelivery: state.selectedHeader!.dateDelivery,
       );
 
@@ -1160,6 +1175,13 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
 
       final detail = event.detail ?? state.selectedDetail!;
 
+      // Ensure we have the correct header selected for this detail so that
+      // stock updates can use a valid orderNumber
+      PurchaseOrderHeader? header = state.selectedHeader;
+      if (header == null && detail.poHeader != null) {
+        header = await repository.getHeaderById(detail.poHeader!);
+      }
+
       // Check for existing receivers
       final existingReceivers = await repository.getReceiversByDetailId(
         detail.id!,
@@ -1168,10 +1190,12 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
 
       PurchaseOrderReceiver receiver;
       if (existingReceivers.isNotEmpty) {
-        receiver = existingReceivers.first.copyWith(
+        final existing = existingReceivers.first;
+        receiver = existing.copyWith(
           quantityOpen: detail.quantityOpen,
           amountOpen: detail.amountOpen,
           tempId: _getNextReceiverTempId(state.editReceivers),
+          unitOfMeasure: existing.unitOfMeasure ?? detail.unitOfMeasure,
         );
       } else {
         receiver = PurchaseOrderReceiver(
@@ -1186,6 +1210,14 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
           dateReceived: DateTime.now(),
           userId: state.userId,
           dateUpdated: DateTime.now(),
+          amountReceived: detail.amountReceived,
+          quantityRecieved: detail.quantityRecieved,
+          unitOfMeasure: detail.unitOfMeasure,
+          location: detail.autoReceiptReceiver?.location,
+          branchRecieved: detail.autoReceiptReceiver?.branchRecieved,
+          dateExpiration: detail.dateExpiration,
+          dateEffective: detail.dateEffective,
+          batchNumberSupplier: detail.batchNumberSupplier,
           tempId: _getNextReceiverTempId(state.editReceivers),
         );
       }
@@ -1202,6 +1234,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
           editReceivers: [receiver],
           selectedReceiver: receiver,
           selectedReceiver2: receiver,
+          selectedHeader: header ?? state.selectedHeader,
+          selectedHeader1: header ?? state.selectedHeader1,
+          lastOperation: 'receive_items',
         ),
       );
     } catch (e) {
@@ -1232,6 +1267,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
           company: detail.company,
           dateReceived: state.receivingDates ?? DateTime.now(),
           quantityRecieved: detail.quantityTransaction,
+          unitOfMeasure: detail.unitOfMeasure,
           branchRecieved:
               detail.autoReceiptReceiver?.branchRecieved ??
               await _getUserBranchId(state.userId!),
@@ -1402,12 +1438,30 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
           final savedReceiver = receiverToSave.copyWith(id: id);
           updatedReceivers.add(savedReceiver);
 
-          if (state.selectedHeader?.orderNumber != null) {
+          // Determine orderNumber and companyId for stock update
+          int? orderNumber = state.selectedHeader?.orderNumber;
+          int? companyId = state.companyId ?? authBloc.state.companyId;
+
+          if (orderNumber == null && receiver.poDetail != null) {
+            // Fallback: load detail and derive order number from its header
+            final detail = await repository.getDetailById(receiver.poDetail!);
+            orderNumber ??= detail?.poHeaderRef?.orderNumber;
+            companyId ??= detail?.company;
+          }
+
+          print(
+            '🔎 Stock update check - headerId: ${state.selectedHeader?.id}, '
+            'orderNumber: $orderNumber, companyId: $companyId',
+          );
+
+          if (orderNumber != null && companyId != null) {
             await stockService.updateStockItemAvailabilityPor(
               receiver: savedReceiver,
-              companyId: state.companyId ?? authBloc.state.companyId!,
-              orderNumber: state.selectedHeader!.orderNumber!,
+              companyId: companyId,
+              orderNumber: orderNumber,
             );
+          } else {
+            print('⚠️ Skipping stock update: missing orderNumber or companyId');
           }
 
           hasSuccess = true;
@@ -2068,6 +2122,21 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         editHeaders: [...state.editHeaders, newHeader],
         selectedHeader: newHeader,
         selectedHeader1: newHeader,
+      ),
+    );
+  }
+
+  void _onReset(
+    ResetPurchaseOrderSettings event,
+    Emitter<PurchaseOrderState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        status: PurchaseOrderStatus.loaded,
+        selectedReceiver: null,
+        selectedDetail: null,
+        selectedHeader: null,
+        selectedHeader1: null,
       ),
     );
   }

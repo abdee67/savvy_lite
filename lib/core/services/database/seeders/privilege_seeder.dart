@@ -551,6 +551,12 @@ class PrivilegeSeeder {
         AppRoutes.purchaseOrderPayment,
         'purchase_order_payment',
       ),
+      _createPrivilege(
+        'Purchase Receive',
+        'button',
+        AppRoutes.purchaseOrderReceive,
+        'purchase_order_receive',
+      ),
     ];
 
     for (final privilege in privileges) {

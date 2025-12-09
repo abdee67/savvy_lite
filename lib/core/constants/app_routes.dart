@@ -164,6 +164,7 @@ class AppRoutes {
       '$purchaseReview/purchase-supplier-info';
   static const String purchaseItemEntry = '$purchaseReview/purchase-item-entry';
   static const String purchaseOrderPayment = '$purchaseReview/payment-summary';
+  static const String purchaseOrderReceive = '$purchaseReview/purchase-receive';
 
   // Helper method to get all dashboard routes
   static List<String> get dashboardRoutes => [

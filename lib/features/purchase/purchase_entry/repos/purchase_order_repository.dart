@@ -164,6 +164,60 @@ class PurchaseOrderRepository {
     }
   }
 
+  //get purchase by details
+  Future<List<PurchaseOrderDetail>> getPurchaseOrderDetails({
+    required int companyId,
+    DateTime? dateEffective,
+    DateTime? dateExpiration,
+    String? purchaseType,
+  }) async {
+    final db = await _db;
+
+    try {
+      String where = 'pod.company = ?';
+      List<dynamic> whereArgs = [companyId];
+
+      if (dateEffective != null) {
+        where += ' AND pod.date_effective >= ?';
+        whereArgs.add(dateEffective.toIso8601String());
+      }
+
+      if (dateExpiration != null) {
+        where += ' AND pod.date_expiration <= ?';
+        whereArgs.add(dateExpiration.toIso8601String());
+      }
+
+      final query =
+          '''
+     SELECT 
+          pod.*,
+           it.item_description as item_description,
+           it.barcode as item_code,
+           it.taxable as taxable,
+          poh.order_number as order_number,
+          poh.invoice_number as invoice_number,
+          poh.date_transaction as date_transaction,
+          pr.description_1 as po_receive_status_desc,
+          pr.detail_code as po_receive_status_code,
+          uom.description_1 as unit_of_measure_description,
+          uom.detail_code as unit_of_measure_code
+          
+        FROM purchase_order_detail pod
+        LEFT JOIN purchase_order_header poh ON pod.po_header = poh.id
+        LEFT JOIN items_table it ON pod.item_number = it.id
+        LEFT JOIN udc_details pr ON pod.po_receive_status = pr.id
+        LEFT JOIN udc_details uom ON pod.unit_of_measure = uom.id
+        WHERE $where
+        ORDER BY pod.date_transaction DESC, pod.order_number DESC
+      ''';
+
+      final maps = await db.rawQuery(query, whereArgs);
+      return maps.map((map) => PurchaseOrderDetail.fromMap(map)).toList();
+    } catch (e) {
+      throw Exception('Failed to get purchase order headers: $e');
+    }
+  }
+
   Future<List<PurchaseOrderHeader>> filterPurchaseOrders({
     required int companyId,
     int? supplierId,
@@ -388,7 +442,7 @@ class PurchaseOrderRepository {
           poh.date_transaction as date_transaction,
           pr.description_1 as po_receive_status_desc,
           pr.detail_code as po_receive_status_code,
-          uom.description_1 as unit_of_measure_desc,
+          uom.description_1 as unit_of_measure_description,
           uom.detail_code as unit_of_measure_code
           
         FROM purchase_order_detail pod
@@ -428,7 +482,7 @@ class PurchaseOrderRepository {
           poh.date_transaction as date_transaction,
           pr.description_1 as po_receive_status_desc,
           pr.detail_code as po_receive_status_code,
-          uom.description_1 as unit_of_measure_desc,
+          uom.description_1 as unit_of_measure_description,
           uom.detail_code as unit_of_measure_code
           
         FROM purchase_order_detail pod
@@ -503,7 +557,7 @@ class PurchaseOrderRepository {
           poh.date_transaction as date_transaction,
           pr.description_1 as po_receive_status_desc,
           pr.detail_code as po_receive_status_code,
-          uom.description_1 as unit_of_measure_desc,
+          uom.description_1 as unit_of_measure_description,
           uom.detail_code as unit_of_measure_code
           
         FROM purchase_order_detail pod
@@ -695,14 +749,14 @@ class PurchaseOrderRepository {
           pod.unit_cost as unit_cost,
           pod.amount_extended_cost as amount_extended_cost,
           br.description as branch_recieved_description,
-          il.location as location_description,
+          lm.location_description as location_description,
           uom.description_1 as unit_of_measure_description,
           uom.detail_code as unit_of_measure_code
         FROM purchase_order_receiver por
         LEFT JOIN items_table it ON por.item_number = it.id
         LEFT JOIN purchase_order_detail pod ON por.po_detail = pod.id
         LEFT JOIN branch_table br ON por.branch_recieved = br.id
-        LEFT JOIN item_location il ON por.location = il.id
+        LEFT JOIN location_master lm ON por.location = lm.id
         LEFT JOIN udc_details uom ON por.unit_of_measure = uom.id
         WHERE por.id = ?
         ''',
@@ -729,19 +783,19 @@ class PurchaseOrderRepository {
         SELECT 
           por.*,
           it.item_description as item_description,
-          it.item_code as item_code,
+          it.barcode as item_code,
           pod.quantity_transaction as quantity_transaction,
           pod.unit_cost as unit_cost,
           pod.amount_extended_cost as amount_extended_cost,
-          br.description as branch_recieved,
-          il.location as location_description,
+          br.description as branch_recieved_description,
+          lm.location_description as location_description,
           uom.description_1 as unit_of_measure_description,
           uom.detail_code as unit_of_measure_code
         FROM purchase_order_receiver por
         LEFT JOIN items_table it ON por.item_number = it.id
         LEFT JOIN purchase_order_detail pod ON por.po_detail = pod.id
         LEFT JOIN branch_table br ON por.branch_recieved = br.id
-        LEFT JOIN item_location il ON por.location = il.id
+        LEFT JOIN location_master lm ON por.location = lm.id
         LEFT JOIN udc_details uom ON por.unit_of_measure = uom.id
         WHERE por.po_detail = ? AND por.company = ?
         ORDER BY por.date_received DESC
@@ -767,7 +821,7 @@ class PurchaseOrderRepository {
         SELECT 
           por.*,
           it.item_description as item_description,
-          it.item_code as item_code,
+          it.barcode as item_code,
         FROM purchase_order_receiver por
         LEFT JOIN items_table it ON por.item_number = it.id
         WHERE por.item_number = ? 
@@ -800,14 +854,14 @@ class PurchaseOrderRepository {
           pod.unit_cost as unit_cost,
           pod.amount_extended_cost as amount_extended_cost,
           br.description as branch_recieved_description,
-          il.location as location_description,
+          lm.location_description as location_description,
           uom.description_1 as unit_of_measure_description,
           uom.detail_code as unit_of_measure_code
         FROM purchase_order_receiver por
         LEFT JOIN items_table it ON por.item_number = it.id
         LEFT JOIN purchase_order_detail pod ON por.po_detail = pod.id
         LEFT JOIN branch_table br ON por.branch_recieved = br.id
-        LEFT JOIN item_location il ON por.location = il.id
+        LEFT JOIN location_master lm ON por.location = lm.id
         LEFT JOIN udc_details uom ON por.unit_of_measure = uom.id
         WHERE pod.po_header = ? AND por.company = ?
         ORDER BY por.date_received DESC
