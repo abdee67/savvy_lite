@@ -9,7 +9,10 @@ import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_event.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_state.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/screens/purchase_receive/purchase_receive_screen.dart';
 
 class PurchaseReviewPage extends StatefulWidget {
   final AuthBloc authBloc;
@@ -33,7 +36,7 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
 
   // Detail panel state
   bool _purchaseOrderDetail = false;
-  PurchaseOrderHeader? _selectedPurchaseOrder;
+  PurchaseOrderDetail? _selectedPurchaseOrder;
 
   @override
   void initState() {
@@ -86,12 +89,27 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
     super.dispose();
   }
 
+  void _hanleSearch(
+    PurchaseOrderHeader filter,
+    DateTime? startDate,
+    DateTime? endDate,
+  ) {
+    context.read<PurchaseOrderBloc>().add(
+      FilterPurchaseOrders(
+        supplierId: filter.supplierId,
+        invoiceNumber: filter.invoiceNumber,
+        startDate: startDate,
+        endDate: endDate,
+      ),
+    );
+  }
+
   void _clearSearch() {
     _searchController.clear();
     context.read<PurchaseOrderBloc>().add(const ClearPurchaseOrderFilters());
   }
 
-  void _showPurchaseOrderDetail(PurchaseOrderHeader purchaseOrder) {
+  void _showPurchaseOrderDetail(PurchaseOrderDetail purchaseOrder) {
     setState(() {
       _selectedPurchaseOrder = purchaseOrder;
       _purchaseOrderDetail = true;
@@ -122,6 +140,62 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
     ).showSnackBar(const SnackBar(content: Text('Purchase Orders refreshed')));
   }
 
+  void _receiveItem(PurchaseOrderDetail purchaseOrderDetail) {
+    if (purchaseOrderDetail.quantityOpen! <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('All Orders is already Received')),
+      );
+      return;
+    }
+    // Prepare receiver data in the bloc
+    context.read<PurchaseOrderBloc>().add(
+      PreparePurchaseOrderReceipt(detail: purchaseOrderDetail),
+    );
+
+    // Open receiving dialog for this detail
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return BlocProvider.value(
+          value: context.read<PurchaseOrderBloc>(),
+          child: PurchaseReceivingScreen(
+            detail: purchaseOrderDetail,
+            orderData: const {},
+            authBloc: widget.authBloc,
+          ),
+        );
+      },
+    );
+  }
+
+  void _exportToExcel() {
+    final bloc = context.read<PurchaseOrderBloc>();
+    final state = bloc.state;
+
+    if (state.selectedHeader != null) {
+      //bloc.add(ExportQuotationOrder(purchaseOrder: state.selectedHeader!, format: 'excel'));
+    } else {
+      // bloc.add(ExportQuotationOrder(purchaseOrder: state.selectedHeader!, format: 'excel'));
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Exporting to Excel...')));
+  }
+
+  void _exportToCSV() {
+    final bloc = context.read<PurchaseOrderBloc>();
+    final state = bloc.state;
+    if (state.selectedHeader != null) {
+      //bloc.add(ExportQuotationOrder(purchaseOrder: state.selectedHeader!, format: 'csv'));
+    } else {
+      //bloc.add(ExportSaleOrder(purchaseOrder: state.selected!, format: 'csv'));
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Exporting to CSV...')));
+  }
+
   void _navigateToCreateScreen() {
     final companyId = widget.authBloc.state.companyId;
     final branchId = widget.authBloc.state.userId?.branch;
@@ -134,19 +208,19 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
   void _safeVoid(
     BuildContext context, {
     int? index,
-    PurchaseOrderHeader? header,
+    PurchaseOrderDetail? detail,
   }) {
     final bloc = context.read<PurchaseOrderBloc>();
     final state = bloc.state;
 
-    PurchaseOrderHeader? purchaseOrderToDelete;
+    PurchaseOrderDetail? purchaseOrderToDelete;
 
-    if (header != null) {
-      purchaseOrderToDelete = header;
+    if (detail != null) {
+      purchaseOrderToDelete = detail;
     } else if (index != null &&
         index >= 0 &&
-        index < state.filteredHeaders.length) {
-      purchaseOrderToDelete = state.filteredHeaders[index];
+        index < state.filteredDetails.length) {
+      purchaseOrderToDelete = state.filteredDetails[index];
     }
 
     if (purchaseOrderToDelete == null) {
@@ -158,12 +232,13 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
       return;
     }
 
-    showVoidDialog(
+    showDeleteDialog(
       context,
-      title: 'Delete Purchase Order #${purchaseOrderToDelete.orderNumber}?',
+      title:
+          'Delete Purchase Order #${purchaseOrderToDelete.itemNumberRef?.itemDescription}?',
       content:
-          'Are you sure you want to delete Purchase Order #${purchaseOrderToDelete.orderNumber}?',
-      onConfirm: (reason) {
+          'Are you sure you want to delete Purchase Order #${purchaseOrderToDelete.itemNumberRef?.itemDescription}?',
+      onConfirm: () {
         bloc.add(DeletePurchaseOrderHeader(id: purchaseOrderToDelete!.id!));
       },
     );
@@ -227,14 +302,35 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
       body: BlocConsumer<PurchaseOrderBloc, PurchaseOrderState>(
         listener: (context, state) {
           if (state.status == PurchaseOrderStatus.success) {
-            /*ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  state.successMessage ?? 'Operation completed successfully',
+            if (state.lastOperation == 'receive_items' &&
+                state.selectedReceiver != null) {
+              // Navigate to Sales Customer Info with extra data
+              /*  context
+                  .push(
+                    AppRoutes.receiveItem,
+                    extra: {'details': state.selectedReceiver},
+                  )
+                  .then((_) {
+                    // Reset state when returning to prevent loop
+                    context.read<PurchaseOrderBloc>().add(
+                      ResetPurchaseOrderSettings(),
+                    );
+                  });
+*/
+              // Also reset immediately to prevent double push if rebuild happens
+              context.read<PurchaseOrderBloc>().add(
+                ResetPurchaseOrderSettings(),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    state.successMessage ?? 'Operation completed successfully',
+                  ),
+                  backgroundColor: Colors.green,
                 ),
-                backgroundColor: Colors.green,
-              ),
-            );*/
+              );
+            }
           }
 
           if (state.status == PurchaseOrderStatus.error) {
@@ -359,7 +455,7 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
       );
     }
 
-    if (state.filteredHeaders.isEmpty) {
+    if (state.filteredDetails.isEmpty) {
       final query = state.searchQuery ?? '';
       final hasQuery = query.isNotEmpty;
 
@@ -387,15 +483,15 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
       child: ListView.separated(
         controller: _scrollController,
         padding: const EdgeInsets.all(16),
-        itemCount: state.filteredHeaders.length,
+        itemCount: state.filteredDetails.length,
         separatorBuilder: (context, index) => SizedBox(height: cardSpacing),
         itemBuilder: (context, index) {
-          final purchaseOrder = state.filteredHeaders[index];
-          // final isSelected = state.selectedHeaders.contains(purchaseOrder);
+          final purchaseOrder = state.filteredDetails[index];
+          final isSelected = state.selectedDetails?.contains(purchaseOrder);
 
           return _buildPurchaseOrderListItem(
             purchaseOrder,
-            false, // isSelected
+            isSelected!,
             state,
             index,
             isSmallScreen,
@@ -407,7 +503,7 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
   }
 
   Widget _buildPurchaseOrderListItem(
-    PurchaseOrderHeader purchaseOrder,
+    PurchaseOrderDetail purchaseOrder,
     bool isSelected,
     PurchaseOrderState state,
     int index,
@@ -529,7 +625,7 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    ' ${purchaseOrder.orderNumber ?? 'N/A'}',
+                                    ' ${purchaseOrder.itemNumberRef?.itemDescription ?? 'N/A'}',
                                     style: TextStyle(
                                       color: const Color(0xFF373737),
                                       fontSize: isCompact ? 20 : 24,
@@ -573,7 +669,7 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
                               ),
 
                               Text(
-                                'Total - ${NumberFormat.currency(symbol: '\$').format(purchaseOrder.amountGrandTotalCost ?? 0)}',
+                                'Received Amount - ${NumberFormat.currency(symbol: '\$').format(purchaseOrder.amountReceived ?? 0)}',
                                 style: TextStyle(
                                   color: const Color(0xFF887F7F),
                                   fontSize: isCompact ? 12 : 14,
@@ -599,7 +695,7 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
                                       ),
                                     ),
                                     child: Text(
-                                      'From ${_formatDateTime(purchaseOrder.dateTransaction!)}',
+                                      'From ${_formatDateTime(purchaseOrder.dateEffective!)}',
                                       style: TextStyle(
                                         fontSize: 10,
                                         color: Colors.blue[800],
@@ -621,7 +717,7 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
                                       ),
                                     ),
                                     child: Text(
-                                      'Supplier: ${purchaseOrder.supplierRef?.supplierName ?? 'N/A'}',
+                                      'Supplier: ${purchaseOrder.batchNumberSupplier ?? 'N/A'}',
                                       style: TextStyle(
                                         fontSize: 10,
                                         color: Colors.green[800],
@@ -637,56 +733,66 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
                       ],
                     ),
 
-                    // Action Buttons
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          if (purchaseOrder.poReceiveStatusRef?.description1 !=
-                              'Received')
-                            ElevatedButton.icon(
-                              onPressed: () {
-                                // Navigate to edit/receive screen
-                                context.read<PurchaseOrderBloc>().add(
-                                  SelectPurchaseOrder(header: purchaseOrder),
-                                );
-                                context.read<PurchaseOrderBloc>().add(
-                                  const PrepareEditPurchaseOrder(),
-                                );
-                                //  context.push(AppRoutes.purchaseOrder);//to receiving page
-                              },
-                              icon: const Icon(Iconsax.box, size: 16),
-                              label: const Text('Receive'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.orange,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                              ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        // See More / See Less button
+                        ElevatedButton(
+                          onPressed: () => isExpanded
+                              ? _hidePurchaseOrderDetail()
+                              : _showPurchaseOrderDetail(purchaseOrder),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF145888),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
                             ),
-                          const SizedBox(width: 8),
-                          /*  IconButton(
-                            icon: const Icon(Iconsax.edit),
-                            onPressed: () {
-                              context.read<PurchaseOrderBloc>().add(
-                                SelectPurchaseOrder(header: purchaseOrder),
-                              );
-                              context.read<PurchaseOrderBloc>().add(
-                                const PrepareEditPurchaseOrder(),
-                              );
-                              context.go(AppRoutes.purchaseOrder);
-                            },
-                            tooltip: 'Edit',
-                          ),*/
-                        ],
-                      ),
+                          ),
+                          child: Text(
+                            isExpanded ? 'See Less' : 'See More',
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: isCompact ? 10 : 12,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
+
+              // 4. ANIMATED EXPANDED CONTENT
+              if (isExpanded)
+                Positioned(
+                  top: collapsedHeight + 10,
+                  left: 20,
+                  right: 20,
+                  child: AnimatedBuilder(
+                    animation: _detailAnimationController,
+                    builder: (context, child) {
+                      final currentHeight =
+                          _heightAnimation.value *
+                          (expandedHeight - collapsedHeight - 20);
+                      final currentOpacity = _opacityAnimation.value;
+
+                      return SlideTransition(
+                        position: _slideAnimation,
+                        child: Container(
+                          height: currentHeight > 0 ? currentHeight : 0,
+                          decoration: BoxDecoration(color: Colors.transparent),
+                          child: Opacity(opacity: currentOpacity, child: child),
+                        ),
+                      );
+                    },
+                    child: _buildPurchaseOrderDetailContent(
+                      purchaseOrder,
+                      isCompact,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -694,8 +800,223 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
     );
   }
 
+  Widget _buildPurchaseOrderDetailContent(
+    PurchaseOrderDetail purchaseOrder,
+    bool isCompact,
+  ) {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        children: [
+          if (purchaseOrder.batchNumberSupplier != null)
+            _buildquotationOrderInfoItem(
+              'Supplier : ',
+              purchaseOrder.batchNumberSupplier!.toString() ?? 'N/A',
+              Iconsax.box,
+              isCompact,
+            ),
+          if (purchaseOrder.itemNumber != null)
+            _buildquotationOrderInfoItem(
+              'Item  : ',
+              purchaseOrder.itemNumberRef?.itemDescription.toString() ?? 'N/A',
+              Iconsax.receipt,
+              isCompact,
+            ),
+          if (purchaseOrder.unitOfMeasure != null)
+            _buildquotationOrderInfoItem(
+              ' UoM : ',
+              purchaseOrder.unitOfMeasureRef?.description1.toString() ?? 'N/A',
+              Iconsax.rulerpen,
+              isCompact,
+            ),
+          if (purchaseOrder.amountReceived != null)
+            _buildquotationOrderInfoItem(
+              ' Receive Amount : ',
+              purchaseOrder.amountReceived.toString() ?? 'N/A',
+              Iconsax.rulerpen,
+              isCompact,
+            ),
+          if (purchaseOrder.amountOpen != null)
+            _buildquotationOrderInfoItem(
+              'Unreceived Amount : ',
+              purchaseOrder.amountOpen.toString(),
+              Iconsax.receipt_edit,
+              isCompact,
+            ),
+          if (purchaseOrder.quantityOpen != null)
+            _buildquotationOrderInfoItem(
+              'Unreceived Qunatity : ',
+              purchaseOrder.quantityOpen.toString(),
+              Iconsax.receipt_edit,
+              isCompact,
+            ),
+          if (purchaseOrder.quantityRecieved != null)
+            _buildquotationOrderInfoItem(
+              ' Receive Qunatity : ',
+              purchaseOrder.quantityRecieved.toString() ?? 'N/A',
+              Iconsax.rulerpen,
+              isCompact,
+            ),
+          if (purchaseOrder.unitCost != null)
+            _buildquotationOrderInfoItem(
+              ' Unit Cost : ',
+              purchaseOrder.unitCost.toString() ?? 'N/A',
+              Iconsax.rulerpen,
+              isCompact,
+            ),
+          if (purchaseOrder.amountExtendedCost != null)
+            _buildquotationOrderInfoItem(
+              ' Extended Cost : ',
+              purchaseOrder.amountExtendedCost.toString() ?? 'N/A',
+              Iconsax.rulerpen,
+              isCompact,
+            ),
+          if (purchaseOrder.quantityTransaction != null)
+            _buildquotationOrderInfoItem(
+              ' Transaction Quntity : ',
+              purchaseOrder.quantityTransaction.toString() ?? 'N/A',
+              Iconsax.rulerpen,
+              isCompact,
+            ),
+          if (purchaseOrder.dateEffective != null)
+            _buildquotationOrderInfoItem(
+              'Effective Date : ',
+              _formatDateTime(purchaseOrder.dateEffective!),
+              Iconsax.shop,
+              isCompact,
+            ),
+          if (purchaseOrder.dateExpiration != null)
+            _buildquotationOrderInfoItem(
+              'Expiration Date : ',
+              _formatDateTime(purchaseOrder.dateExpiration!),
+              Iconsax.shop,
+              isCompact,
+            ),
+          if (purchaseOrder.dateDelivery != null)
+            _buildquotationOrderInfoItem(
+              'Delivery Date : ',
+              _formatDateTime(purchaseOrder.dateDelivery!),
+              Iconsax.calendar,
+              isCompact,
+            ),
+
+          // Action buttons row
+          Padding(
+            padding: const EdgeInsets.only(top: 16, bottom: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                if (purchaseOrder.quantityOpen! > 0)
+                  _buildActionButton(
+                    Iconsax.convert_3d_cube,
+                    'Receive Item',
+                    () => _receiveItem(purchaseOrder),
+                    isCompact,
+                  ),
+                _buildActionButton(
+                  Iconsax.trash,
+                  'Delete',
+                  () => _safeVoid(context, detail: purchaseOrder),
+                  isCompact,
+                ),
+                _buildActionButton(
+                  Iconsax.export,
+                  'Export',
+                  () => _exportToExcel(),
+                  isCompact,
+                ),
+                _buildActionButton(Iconsax.repeat, 'Print', () {}, isCompact),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildquotationOrderInfoItem(
+    String label,
+    String value,
+    IconData icon,
+    bool isCompact,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 16, color: Colors.grey[600]),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: label,
+                    style: const TextStyle(
+                      color: Color(0xFF373737),
+                      fontSize: 13,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  TextSpan(
+                    text: value,
+                    style: const TextStyle(
+                      color: Color(0xFF373737),
+                      fontSize: 13,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton(
+    IconData icon,
+    String label,
+    VoidCallback onPressed,
+    bool isCompact,
+  ) {
+    return Column(
+      children: [
+        IconButton(
+          icon: Icon(icon, size: isCompact ? 20 : 24),
+          onPressed: onPressed,
+          style: IconButton.styleFrom(
+            backgroundColor: const Color(0xFF145888),
+            foregroundColor: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: isCompact ? 10 : 12,
+            color: const Color(0xFF373737),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildPurchaseOrderAvatar(
-    PurchaseOrderHeader purchaseOrder,
+    PurchaseOrderDetail purchaseOrder,
     bool isSelected,
     bool isCompact,
   ) {
@@ -709,9 +1030,7 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
       ),
       child: Center(
         child: Text(
-          purchaseOrder.supplierRef?.supplierName
-                  ?.substring(0, 1)
-                  .toUpperCase() ??
+          purchaseOrder.batchNumberSupplier?.substring(0, 1).toUpperCase() ??
               'S',
           style: TextStyle(
             fontSize: isCompact ? 18 : 24,
