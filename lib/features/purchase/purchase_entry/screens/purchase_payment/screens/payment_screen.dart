@@ -89,15 +89,15 @@ class _PurchasePaymentScreenState extends State<PurchasePaymentScreen> {
 
           // Navigate back to purchase order home (review) screen
           if (mounted) {
-            context.go(AppRoutes.purchaseReview);
+            context.go(AppRoutes.homePage);
           }
         }
       },
       builder: (context, purchaseState) {
         // Check if we have items to process
-        if (purchaseState.createDetails.isEmpty) {
+        /*  if (purchaseState.createDetails.isEmpty) {
           return _buildEmptyOrderState();
-        }
+        }*/
 
         return Scaffold(
           resizeToAvoidBottomInset: true,

@@ -135,9 +135,7 @@ class SalesOrderDetail extends Equatable {
               unitOfMeasure: map['unit_of_measure'],
             )
           : null,
-      uom:
-          map['unit_of_measure'] != null &&
-              map['unit_of_measure_description'] != null
+      uom: map['unit_of_measure_description'] != null
           ? UdcDetails(
               id: map['unit_of_measure'],
               description1: map['unit_of_measure_description'],

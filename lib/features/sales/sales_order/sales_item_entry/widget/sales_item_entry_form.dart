@@ -27,6 +27,7 @@ import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_c
 import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_state.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_event.dart';
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class SalesItemEntryForm extends StatefulWidget {
   final SalesOrderDetail detail;
@@ -211,8 +212,34 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
     _updateDetail();
   }
 
+  UdcDetails? _resolveSelectedUomDetail() {
+    if (_selectedUom == null) return null;
+
+    // Prefer UOMs loaded specifically for this item
+    final itemUomState = context.read<ItemUomConversionBloc>().state;
+    final fromItemUoms = itemUomState.availableUomsForItem
+        .where((u) => u.id == _selectedUom)
+        .toList();
+    if (fromItemUoms.isNotEmpty) {
+      return fromItemUoms.first;
+    }
+
+    // Fallback to global UDC details list
+    final udcDetailsBloc = context.read<UdcDetailsBloc>();
+    final fromAllUoms = udcDetailsBloc.state.details
+        .where((u) => u.id == _selectedUom)
+        .toList();
+    if (fromAllUoms.isNotEmpty) {
+      return fromAllUoms.first;
+    }
+
+    return null;
+  }
+
   void _updateDetail() {
     if (_isInitializing) return;
+
+    final selectedUomDetail = _resolveSelectedUomDetail();
 
     final updatedDetail = widget.detail.copyWith(
       itemsTableId: _selectedItem?.id,
@@ -222,6 +249,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
       unitPrice: double.tryParse(_unitPriceController.text),
       extendedPrice: double.tryParse(_extendedPriceController.text),
       unitOfMeasure: _selectedUom,
+      uom: selectedUomDetail,
       item: _selectedItem, // Include the full item object
     );
 
@@ -298,12 +326,15 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
     // Dispatch event to calculate price with UOM
     if (itemInBranch != null) {
       // Create a temporary detail with current values to send for calculation
+      final selectedUomDetail = _resolveSelectedUomDetail();
+
       final currentDetail = widget.detail.copyWith(
         itemsTableId: _selectedItem?.id,
         itemInBranch: itemInBranch.id,
         itemBranch: itemInBranch,
         quantity: double.tryParse(_quantityController.text) ?? 0.0,
         unitOfMeasure: _selectedUom,
+        uom: selectedUomDetail,
         item: _selectedItem,
       );
 
@@ -566,12 +597,15 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
               onChanged: (value) {
                 // Dispatch update for price recalculation
                 if (_selectedItemInBranch != null) {
+                  final selectedUomDetail = _resolveSelectedUomDetail();
+
                   final currentDetail = widget.detail.copyWith(
                     itemsTableId: _selectedItem?.id,
                     itemInBranch: _selectedItemInBranch?.id,
                     itemBranch: _selectedItemInBranch,
                     quantity: double.tryParse(value) ?? 0.0,
                     unitOfMeasure: _selectedUom,
+                    uom: selectedUomDetail,
                     item: _selectedItem,
                   );
 
@@ -646,6 +680,9 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
 
                           // Dispatch update for price recalculation
                           if (_selectedItemInBranch != null) {
+                            final selectedUomDetail =
+                                _resolveSelectedUomDetail();
+
                             final currentDetail = widget.detail.copyWith(
                               itemsTableId: _selectedItem?.id,
                               itemInBranch: _selectedItemInBranch?.id,
@@ -654,6 +691,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
                                   double.tryParse(_quantityController.text) ??
                                   0.0,
                               unitOfMeasure: _selectedUom,
+                              uom: selectedUomDetail,
                               item: _selectedItem,
                             );
 
@@ -729,6 +767,8 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
                   keyboardType: TextInputType.number,
                   onChanged: (value) {
                     if (_selectedItemInBranch != null) {
+                      final selectedUomDetail = _resolveSelectedUomDetail();
+
                       final currentDetail = widget.detail.copyWith(
                         itemsTableId: _selectedItem?.id,
                         itemInBranch: _selectedItemInBranch?.id,
@@ -736,6 +776,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
                         quantity:
                             double.tryParse(_quantityController.text) ?? 0.0,
                         unitOfMeasure: _selectedUom,
+                        uom: selectedUomDetail,
                         item: _selectedItem,
                       );
 

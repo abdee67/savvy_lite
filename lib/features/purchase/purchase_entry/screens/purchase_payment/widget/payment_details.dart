@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:savvy_stock/core/widgets/custom_text_form.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_event.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_state.dart';
@@ -124,8 +123,6 @@ class _PurchasePaymentDetailsState extends State<PurchasePaymentDetails> {
     final subtotal = state.totalAmount ?? 0.0;
     final discount = state.amountDiscount ?? 0.0;
     final otherCosts = state.amountOtherCosts ?? 0.0;
-    final taxAmount = state.taxAmount ?? 0.0;
-    final withholding = state.amountWithhold ?? 0.0;
     final grandTotal = state.amountGrandTotalCost ?? 0.0;
 
     return Container(
@@ -155,7 +152,7 @@ class _PurchasePaymentDetailsState extends State<PurchasePaymentDetails> {
 
           // Discount (Toggleable)
           _buildToggleableField(
-            label: 'Discount',
+            hint: 'Discount',
             controller: _discountController,
             enabled: _discountEnabled,
             onToggle: _toggleDiscount,
@@ -165,12 +162,11 @@ class _PurchasePaymentDetailsState extends State<PurchasePaymentDetails> {
 
           // Other Costs (Toggleable)
           _buildToggleableField(
-            label: 'Other Costs',
+            hint: 'Other Costs(Shipping, handling, etc.)',
             controller: _otherCostsController,
             enabled: _otherCostsEnabled,
             onToggle: _toggleOtherCosts,
             icon: Icons.miscellaneous_services,
-            hint: 'Shipping, handling, etc.',
           ),
           const SizedBox(height: 12),
 
@@ -182,37 +178,6 @@ class _PurchasePaymentDetailsState extends State<PurchasePaymentDetails> {
             color: Colors.green,
           ),
           const SizedBox(height: 12),
-
-          // Taxes
-          if (taxAmount > 0)
-            Column(
-              children: [
-                _buildSummaryRow(
-                  label:
-                      'Tax (${state.systemConstants?.rateVatPercentage != null ? (state.systemConstants!.rateVatPercentage! * 100).toStringAsFixed(1) : '0.0'}%)',
-                  amount: taxAmount,
-                  icon: Icons.account_balance,
-                  color: Colors.orange,
-                ),
-                const SizedBox(height: 8),
-              ],
-            ),
-
-          // Withholding Tax
-          if (withholding > 0)
-            Column(
-              children: [
-                _buildSummaryRow(
-                  label: 'Withholding Tax',
-                  amount: withholding,
-                  icon: Icons.attach_money,
-                  color: Colors.red,
-                  isNegative: true,
-                ),
-                const SizedBox(height: 8),
-              ],
-            ),
-
           const Divider(height: 24),
 
           // Grand Total
@@ -351,7 +316,6 @@ class _PurchasePaymentDetailsState extends State<PurchasePaymentDetails> {
   }
 
   Widget _buildToggleableField({
-    required String label,
     required TextEditingController controller,
     required bool enabled,
     required Function(bool) onToggle,
@@ -381,17 +345,32 @@ class _PurchasePaymentDetailsState extends State<PurchasePaymentDetails> {
             Expanded(
               child: IgnorePointer(
                 ignoring: !enabled,
-                child: Opacity(
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 200),
                   opacity: enabled ? 1.0 : 0.5,
-                  child: CustomTextField(
+                  child: TextField(
                     controller: controller,
-                    labelText: label,
-                    hintText: hint ?? 'Enter amount',
+                    textAlign: TextAlign.center,
                     enabled: enabled,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    prefixIcon: const Icon(Icons.attach_money),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      fillColor: Colors.grey[100],
+                      border: InputBorder.none,
+                      hintText: hint ?? 'Enter Amount',
+                      hintStyle: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                     onChanged: (value) {
                       if (enabled) {
                         _updateHeaderAmounts();

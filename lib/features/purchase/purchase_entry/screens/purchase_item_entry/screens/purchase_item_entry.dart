@@ -10,6 +10,8 @@ import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/screens/purchase_item_entry/widget/purchase_item_entry_confirmed_item.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/screens/purchase_item_entry/widget/purchase_item_entry_form.dart';
+import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
+import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
 
 class PurchaseItemEntryScreen extends StatelessWidget {
   final Map<String, dynamic> orderData;
@@ -65,6 +67,7 @@ class _PurchaseItemEntryScreenContentState
           _showErrorSnackBar('Purchase order not properly initialized');
         }
       });
+      context.read<StockItemsEntryBloc>().add(LoadItems(companyId));
     }
   }
 

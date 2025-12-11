@@ -1,17 +1,24 @@
+// features/purchase/purchase_entry/ui/payment/purchase_payment_method.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
-import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
-import 'package:savvy_stock/features/sales/sales_order/payment/widget/payment_action.dart';
+import 'package:savvy_stock/core/widgets/custom_text_form.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
+import 'package:savvy_stock/features/sales/sales_order/payment/widget/payment_action.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
-import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_event.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_state.dart';
 
 class PaymentMethod extends StatefulWidget {
-  const PaymentMethod({super.key});
+  final SalesOrderCoordinatorState salesState;
+  final dynamic orderData;
+
+  const PaymentMethod({
+    super.key,
+    required this.salesState,
+    required this.orderData,
+  });
 
   @override
   State<PaymentMethod> createState() => _PaymentMethodState();
@@ -19,274 +26,391 @@ class PaymentMethod extends StatefulWidget {
 
 class _PaymentMethodState extends State<PaymentMethod> {
   final TextEditingController _paymentTermController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  String? _selectedPaymentType;
   int? _selectedPaymentInstrument;
+  DateTime? _creditDateToPay;
+
   @override
   void initState() {
     super.initState();
+
     _paymentTermController.addListener(_onPaymentTermChanged);
-    context.read<UdcDetailsBloc>().add(
-      LoadAllUdcDetails(),
-    ); // for Unit of Measure and lot status
+
+    // Initialize with existing values from state
+    _initializeFromState();
   }
 
-  void _onPaymentTermChanged() {
-    final bloc = context.read<SalesOrderCoordinatorBloc>();
-    final currentState = bloc.state;
+  void _initializeFromState() {
+    final header = widget.salesState.currentHeader;
 
-    bloc.add(
-      UpdatePaymentDetails(
-        paymentMethod: currentState.paymentMethod,
-        paymentInstrument: currentState.paymentInstrument,
-        paymentTerm: _paymentTermController.text,
-      ),
-    );
-  }
+    _selectedPaymentType = widget.salesState.paymentMethod.isNotEmpty
+        ? widget.salesState.paymentMethod
+        : header?.paymentMethod;
+    _selectedPaymentInstrument = widget.salesState.paymentInstrument != 0
+        ? widget.salesState.paymentInstrument
+        : header?.paymentInstrument;
 
-  void _selectpaymentMethod(BuildContext context, String paymentMethod) {
-    final bloc = context.read<SalesOrderCoordinatorBloc>();
-    final currentState = bloc.state;
+    // Set payment term from header
+    if (header?.paymentTerm != null) {
+      _paymentTermController.text = header!.paymentTerm.toString();
+    }
 
-    bloc.add(
-      UpdatePaymentDetails(
-        paymentMethod: paymentMethod,
-        paymentInstrument: currentState.paymentInstrument,
-        paymentTerm: paymentMethod == 'Credit' ? currentState.paymentTerm : '',
-      ),
-    );
-
-    // Clear payment term if switching from Credit
-    if (paymentMethod != 'Credit') {
-      _paymentTermController.clear();
+    // Set credit due date
+    if (header?.creditDateToPay != null) {
+      _creditDateToPay = header!.creditDateToPay;
     }
   }
 
-  void _updatePaymentInstrument(BuildContext context, int? instrument) {
-    if (instrument == null) return;
+  void _onPaymentTermChanged() {
+    final text = _paymentTermController.text;
+    if (text.isEmpty) {
+      _updatePaymentDetails(paymentTerm: '');
+      return;
+    }
 
+    if (int.tryParse(text) != null) {
+      _updatePaymentDetails(paymentTerm: text);
+    }
+  }
+
+  void _updatePaymentDetails({
+    String? paymentMethod,
+    int? paymentInstrument,
+    String? paymentTerm,
+  }) {
     final bloc = context.read<SalesOrderCoordinatorBloc>();
     final currentState = bloc.state;
+
+    final newPaymentMethod = paymentMethod ?? currentState.paymentMethod;
+    final newPaymentInstrument =
+        paymentInstrument ?? currentState.paymentInstrument;
+    final newPaymentTerm = paymentTerm ?? currentState.paymentTerm;
+
     bloc.add(
       UpdatePaymentDetails(
-        paymentMethod: currentState.paymentMethod,
-        paymentInstrument: currentState.paymentInstrument,
-        paymentTerm: currentState.paymentTerm,
+        paymentMethod: newPaymentMethod,
+        paymentInstrument: newPaymentInstrument,
+        paymentTerm: newPaymentTerm,
       ),
     );
   }
 
-  void _updatePaymentTerm(BuildContext context, String term) {
-    final bloc = context.read<SalesOrderCoordinatorBloc>();
-    final currentState = bloc.state;
+  void _onPaymentTypeSelected(String? type) {
+    setState(() {
+      _selectedPaymentType = type;
+    });
+    if (type == null) return;
 
-    bloc.add(
-      UpdatePaymentDetails(
-        paymentMethod: currentState.paymentMethod,
-        paymentInstrument: currentState.paymentInstrument,
-        paymentTerm: term,
-      ),
-    );
+    if (type != 'Credit') {
+      _paymentTermController.clear();
+      _updatePaymentDetails(paymentMethod: type, paymentTerm: '');
+    } else {
+      _updatePaymentDetails(paymentMethod: type);
+    }
   }
 
-  Future<void> _selectDate() async {
-    FocusScope.of(context).unfocus();
+  void _onPaymentInstrumentSelected(int? instrument) {
+    setState(() {
+      _selectedPaymentInstrument = instrument;
+    });
 
+    _updatePaymentDetails(paymentInstrument: instrument);
+  }
+
+  Future<void> _selectDueDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate:
+          _creditDateToPay ?? DateTime.now().add(const Duration(days: 30)),
       firstDate: DateTime.now(),
-      lastDate: DateTime(2100),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(primary: Color(0xFF155888)),
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF155888),
+              onPrimary: Colors.white,
+            ),
           ),
           child: child!,
         );
       },
     );
 
-    if (picked != null && mounted) {
-      _paymentTermController.text =
-          "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+    if (picked != null) {
+      setState(() {
+        _creditDateToPay = picked;
+      });
+
+      // Calculate payment term in days
+      final header = widget.salesState.currentHeader;
+      if (header?.orderDate != null) {
+        final term = picked.difference(header!.orderDate!).inDays;
+        _paymentTermController.text = term.toString();
+        _updatePaymentDetails(paymentTerm: term.toString());
+      }
     }
   }
 
   @override
   void dispose() {
-    _paymentTermController.removeListener(_onPaymentTermChanged);
     _paymentTermController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final isSmallScreen = MediaQuery.of(context).size.width < 700;
-    final isMediumScreen = MediaQuery.of(context).size.width < 1024;
-    final padding = isSmallScreen
-        ? 16
-        : isMediumScreen
-        ? 24
-        : 32;
+    final isCreditSelected = _selectedPaymentType == 'Credit';
+    final customer = widget.salesState.currentHeader?.customerBillToRef;
+    final orderTotal = widget.salesState.lastTotalAmount ?? 0.0;
 
-    return BlocConsumer<SalesOrderCoordinatorBloc, SalesOrderCoordinatorState>(
-      listener: (context, state) {
-        // Sync controller with state changes from other sources
-        if (_paymentTermController.text != state.paymentTerm &&
-            state.paymentTerm.isNotEmpty) {
-          _paymentTermController.text = state.paymentTerm;
-        }
-      },
-      builder: (context, state) {
-        final isCreditSelected = state.paymentMethod == 'Credit';
-
-        return Container(
-          constraints: BoxConstraints(
-            maxWidth: double.infinity,
-            minHeight: isSmallScreen
-                ? 250
-                : isMediumScreen
-                ? 330
-                : 400,
-            maxHeight: isSmallScreen
-                ? 350
-                : isMediumScreen
-                ? 400
-                : 450,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
           ),
-          padding: EdgeInsets.all(padding.toDouble()),
-          decoration: BoxDecoration(
-            color: Colors.grey,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
-            boxShadow: [
-              BoxShadow(
-                blurRadius: 10,
-                color: Colors.black26,
-                offset: const Offset(0, -2),
-              ),
-            ],
-          ),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildpaymentMethodSelector(context, state),
-                const SizedBox(height: 16),
-                if (isCreditSelected) ...[
-                  _buildPaymentTermField(context),
-                  const SizedBox(height: 16),
-                ],
-                BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
-                  builder: (context, state) {
-                    final paymentInstrument = state.details
-                        .where((udc) => udc.udcGroup == 'PI')
-                        .toList();
-
-                    return CustomDropdown(
-                      labelText: 'Payment Instrument',
-                      value: _selectedPaymentInstrument,
-                      validator: (value) {
-                        if (value == null) {
-                          return 'Please select a payment instrument';
-                        }
-                        return null;
-                      },
-                      prefixIcon: const Icon(Icons.credit_card),
-                      items: paymentInstrument.map((udc) {
-                        return DropdownMenuItem<int>(
-                          value: udc.id,
-                          child: Text(udc.description1),
-                        );
-                      }).toList(),
-                      onChanged: (newValue) {
-                        _updatePaymentInstrument(context, newValue);
-                        setState(() {
-                          _selectedPaymentInstrument = newValue;
-                        });
-                      },
-                    );
-                  },
+        ],
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            /*   // Supplier Credit Info (if applicable)
+            if (supplierCreditLimit != null && supplierCreditLimit > 0)
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
                 ),
+                child: Row(
+                  children: [
+                    Icon(Icons.credit_score, color: Colors.blue.shade700),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Supplier Credit Limit',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.blue.shade700,
+                            ),
+                          ),
+                          Text(
+                            '\$${supplierCreditLimit.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue.shade700,
+                            ),
+                          ),
+                          if (isCreditSelected && orderTotal > supplierCreditLimit)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                'Warning: Order exceeds credit limit by \$${(orderTotal - supplierCreditLimit).toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.red,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),*/
 
-                const PaymentAction(),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
+            // Payment Type Selection
+            _buildPaymentTypeSelector(),
+            const SizedBox(height: 16),
 
-  Widget _buildPaymentTermField(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        GestureDetector(
-          onTap: () => _selectDate(),
-          child: AbsorbPointer(
-            child: CustomTextField(
-              controller: _paymentTermController,
-              labelText: 'Enter Due date on receipt',
-              hintText: 'Select date',
-              focusNode: FocusNode(
-                debugLabel: 'Payment Term',
-                canRequestFocus: false,
-              ),
-              textInputAction: TextInputAction.done,
-              prefixIcon: const Icon(Icons.calendar_today, size: 20),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Payment term is required for credit';
-                }
-                return null;
+            // Payment Term (only for credit)
+            if (isCreditSelected) ...[
+              _buildPaymentTermField(),
+              const SizedBox(height: 16),
+
+              // Due Date Display
+              if (_creditDateToPay != null)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.calendar_today, color: Colors.orange.shade700),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Credit Due Date',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            Text(
+                              '${_creditDateToPay!.year}-${_creditDateToPay!.month.toString().padLeft(2, '0')}-${_creditDateToPay!.day.toString().padLeft(2, '0')}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _selectDueDate,
+                        child: const Text('Change'),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 8),
+            ],
+
+            // Payment Instrument
+            BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
+              builder: (context, udcState) {
+                final paymentInstruments = udcState.details
+                    .where((udc) => udc.udcGroup == 'PI')
+                    .toList();
+
+                return CustomDropdown<int>(
+                  labelText: 'Payment Instrument',
+                  value: _selectedPaymentInstrument,
+                  items: paymentInstruments.map((udc) {
+                    return DropdownMenuItem<int>(
+                      value: udc.id,
+                      child: Text(udc.description1 ?? udc.detailCode ?? ''),
+                    );
+                  }).toList(),
+                  onChanged: _onPaymentInstrumentSelected,
+                  validator: (value) {
+                    if (value == null) {
+                      return 'Please select payment instrument';
+                    }
+                    return null;
+                  },
+                  prefixIcon: const Icon(Icons.credit_card),
+                );
               },
             ),
-          ),
+            const SizedBox(height: 16),
+
+            // Payment Action (Save/Complete Purchase Order)
+            PaymentAction(),
+          ],
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildpaymentMethodSelector(
-    BuildContext context,
-    SalesOrderCoordinatorState state,
-  ) {
-    const paymentMethods = ['Cash', 'Credit', 'Advance'];
+  Widget _buildPaymentTypeSelector() {
+    const paymentTypes = ['Cash', 'Credit'];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Payment Methods',
+          'Payment Type',
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: paymentMethods.map((type) {
-            final isSelected = state.paymentMethod == type;
+        Wrap(
+          spacing: 18,
+          runSpacing: 18,
+          children: paymentTypes.map((type) {
+            final isSelected = _selectedPaymentType == type;
             return ChoiceChip(
               label: Text(
                 type,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : const Color(0xFF1E3A5C),
+                  color: isSelected ? Colors.white : const Color(0xFF155888),
+                  fontWeight: FontWeight.w500,
                 ),
               ),
               selected: isSelected,
-              onSelected: (_) => _selectpaymentMethod(context, type),
+              onSelected: (_) => _onPaymentTypeSelected(type),
               backgroundColor: Colors.white,
               selectedColor: const Color(0xFF155888),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
-                side: const BorderSide(color: Colors.grey),
+                side: BorderSide(
+                  color: isSelected
+                      ? const Color(0xFF155888)
+                      : Colors.grey.shade300,
+                ),
               ),
             );
           }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPaymentTermField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: CustomTextField(
+                controller: _paymentTermController,
+                labelText: 'Payment Term (Days)',
+                hintText: 'Enter number of days',
+                keyboardType: TextInputType.number,
+                prefixIcon: const Icon(Icons.calendar_today),
+                validator: (value) {
+                  if (_selectedPaymentType == 'Credit') {
+                    if (value == null || value.isEmpty) {
+                      return 'Payment term is required for credit';
+                    }
+                    final term = int.tryParse(value);
+                    if (term == null || term <= 0) {
+                      return 'Enter valid number of days';
+                    }
+                  }
+                  return null;
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            ElevatedButton.icon(
+              onPressed: _selectDueDate,
+              icon: const Icon(Icons.calendar_month),
+              label: const Text('Select Date'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange.shade600,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Enter number of days or select due date',
+          style: TextStyle(fontSize: 12, color: Colors.grey),
         ),
       ],
     );
