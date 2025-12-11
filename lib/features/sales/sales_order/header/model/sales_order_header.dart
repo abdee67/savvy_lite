@@ -1,10 +1,9 @@
-import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
 import 'package:savvy_stock/features/company/models/company_model.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
-class SalesOrderHeader extends Equatable {
+class SalesOrderHeader {
   final int? id;
   final DateTime? orderDate;
   final DateTime? requiredDate;
@@ -25,7 +24,7 @@ class SalesOrderHeader extends Equatable {
   final String? referenceNote4;
   final String? proformaFlag;
   final String? proformaReference;
-  final DateTime? creditDateToPay;
+  DateTime? creditDateToPay;
   final String? fsNumber;
   final String? voidIndicator;
   final int? customerBillTo;
@@ -51,7 +50,7 @@ class SalesOrderHeader extends Equatable {
   final UdcDetails? paymentStatusRef;
   final UdcDetails? orderTypeRef;
 
-  const SalesOrderHeader({
+  SalesOrderHeader({
     this.id,
     this.orderDate,
     this.requiredDate,

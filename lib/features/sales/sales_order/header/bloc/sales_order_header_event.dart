@@ -2,6 +2,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:meta/meta.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/model/credit_receipt_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
@@ -477,4 +478,80 @@ class ExportSaleOrder extends SalesOrderHeaderEvent {
   const ExportSaleOrder({required this.salesOrder, required this.format});
   @override
   List<Object?> get props => [salesOrder, format];
+}
+
+// Add to SalesOrderHeaderEvent class:
+
+// Credit Receipt Events
+class LoadCreditReceipts extends SalesOrderHeaderEvent {
+  final int companyId;
+  final int? soHeaderId;
+  final DateTime? startDate;
+  final DateTime? endDate;
+
+  const LoadCreditReceipts({
+    required this.companyId,
+    this.soHeaderId,
+    this.startDate,
+    this.endDate,
+  });
+  @override
+  List<Object?> get props => [companyId, soHeaderId, startDate, endDate];
+}
+
+class PrepareCreditReceipt extends SalesOrderHeaderEvent {
+  final int soHeaderId;
+
+  const PrepareCreditReceipt({required this.soHeaderId});
+  @override
+  List<Object?> get props => [soHeaderId];
+}
+
+class UpdateCreditReceipt extends SalesOrderHeaderEvent {
+  final CreditReceipt receipt;
+
+  const UpdateCreditReceipt({required this.receipt});
+  @override
+  List<Object?> get props => [receipt];
+}
+
+class SaveCreditReceipt extends SalesOrderHeaderEvent {
+  final CreditReceipt receipt;
+  final int companyId;
+
+  const SaveCreditReceipt({required this.receipt, required this.companyId});
+  @override
+  List<Object?> get props => [receipt, companyId];
+}
+
+class DeleteCreditReceipt extends SalesOrderHeaderEvent {
+  final int receiptId;
+
+  const DeleteCreditReceipt({required this.receiptId});
+  @override
+  List<Object?> get props => [receiptId];
+}
+
+class SelectCreditReceipt extends SalesOrderHeaderEvent {
+  final CreditReceipt receipt;
+
+  const SelectCreditReceipt({required this.receipt});
+  @override
+  List<Object?> get props => [receipt];
+}
+
+class FilterCreditReceipts extends SalesOrderHeaderEvent {
+  final int companyId;
+  final int? customerId;
+  final DateTime? startDate;
+  final DateTime? endDate;
+
+  const FilterCreditReceipts({
+    required this.companyId,
+    this.customerId,
+    this.startDate,
+    this.endDate,
+  });
+  @override
+  List<Object?> get props => [companyId, customerId, startDate, endDate];
 }
