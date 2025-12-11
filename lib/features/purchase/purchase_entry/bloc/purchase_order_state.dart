@@ -1,5 +1,6 @@
 // features/purchase_order/bloc/purchase_order_state.dart
 import 'package:equatable/equatable.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/credit_payment_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
@@ -120,6 +121,13 @@ class PurchaseOrderState extends Equatable {
   final List<Map<String, dynamic>>? agingReport;
   final List<Map<String, dynamic>>? supplierSummary;
 
+  //cedit payment states
+  final CreditPayment? selectedCreditPayment;
+  final List<CreditPayment> creditPayments;
+  final List<CreditPayment> filteredCreditPayments;
+  final bool? creditPaymentSuccess;
+  final String? creditPaymentError;
+
   const PurchaseOrderState({
     this.status = PurchaseOrderStatus.initial,
     this.headers = const [],
@@ -193,6 +201,11 @@ class PurchaseOrderState extends Equatable {
     this.selectedDetails = const [],
     this.selectedHeaders = const [],
     this.selectedReceivers = const [],
+    this.creditPaymentError,
+    this.creditPaymentSuccess,
+    this.creditPayments = const [],
+    this.filteredCreditPayments = const [],
+    this.selectedCreditPayment,
   });
 
   @override
@@ -269,6 +282,11 @@ class PurchaseOrderState extends Equatable {
     statistics,
     agingReport,
     supplierSummary,
+    selectedCreditPayment,
+    creditPayments,
+    filteredCreditPayments,
+    creditPaymentSuccess,
+    creditPaymentError,
   ];
 
   PurchaseOrderState copyWith({
@@ -345,6 +363,11 @@ class PurchaseOrderState extends Equatable {
     Map<String, dynamic>? statistics,
     List<Map<String, dynamic>>? agingReport,
     List<Map<String, dynamic>>? supplierSummary,
+    CreditPayment? selectedCreditPayment,
+    List<CreditPayment>? creditPayments,
+    List<CreditPayment>? filteredCreditPayments,
+    bool? creditPaymentSuccess,
+    String? creditPaymentError,
   }) {
     return PurchaseOrderState(
       status: status ?? this.status,
@@ -424,6 +447,13 @@ class PurchaseOrderState extends Equatable {
       selectedDetails: selectedDetails ?? this.selectedDetails,
       selectedHeaders: selectedHeaders ?? this.selectedHeaders,
       selectedReceivers: selectedReceivers ?? this.selectedReceivers,
+      selectedCreditPayment:
+          selectedCreditPayment ?? this.selectedCreditPayment,
+      creditPayments: creditPayments ?? this.creditPayments,
+      filteredCreditPayments:
+          filteredCreditPayments ?? this.filteredCreditPayments,
+      creditPaymentSuccess: creditPaymentSuccess ?? this.creditPaymentSuccess,
+      creditPaymentError: creditPaymentError ?? this.creditPaymentError,
     );
   }
 

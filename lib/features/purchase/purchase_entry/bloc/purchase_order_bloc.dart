@@ -6,6 +6,7 @@ import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/next_number/repo/next_number_repo.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_event.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_state.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/credit_payment_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
@@ -147,6 +148,15 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     on<PrepareCreateInEdit>(_onPrepareCreateInEdit);
     on<ResetPurchaseOrderSettings>(_onReset);
     on<SetPurchaseOrderAutoReceipt>(_onSetPurchaseOrderAutoReceipt);
+
+    //credit payment
+    on<LoadCreditPayments>(_onLoadCreditPayments);
+    on<PrepareCreditPayment>(_onPrepareCreditPayment);
+    on<UpdateCreditPayment>(_onUpdateCreditPayment);
+    on<SaveCreditPayment>(_onSaveCreditPayment);
+    on<DeleteCreditPayment>(_onDeleteCreditPayment);
+    on<SelectCreditPayment>(_onSelectCreditPayment);
+    on<FilterCreditPayments>(_onFilterCreditPayments);
   }
 
   @override
@@ -247,8 +257,25 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         companyId: event.companyId,
         isCredit: true,
       );
+      final List<PurchaseOrderDetail> details = [];
+      for (final header in creditHeaders) {
+        if (header.id != null && header.company != null) {
+          final headerDetails = await repository.getDetailsByHeaderId(
+            header.id!,
+            header.company!,
+          );
+          details.addAll(headerDetails);
+        }
+      }
 
-      emit(state.copyWith(creditHeaders: creditHeaders, error: null));
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loaded,
+          creditHeaders: creditHeaders,
+          filteredHeaders: creditHeaders,
+          error: null,
+        ),
+      );
     } catch (e) {
       emit(state.errorState('Failed to load credit purchase orders: $e'));
     }
@@ -539,7 +566,6 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
             filteredHeaders: updatedHeaders,
             editHeaders: updatedEditHeaders,
             selectedHeader: event.header,
-            successMessage: 'Purchase order updated successfully',
           ),
         );
       } else {
@@ -761,11 +787,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
           company: detail.company,
           dateReceived: state.receivingDates ?? DateTime.now(),
           quantityRecieved: detail.quantityTransaction,
-          branchRecieved: //state.userId == null ?
-          await _getUserBranchId(
-            state.userId!,
-          ),
-          // : state.selectedHeader?.branchReceive,
+          branchRecieved: authBloc.state.branchId,
           userId: state.userId,
           dateUpdated: DateTime.now(),
           tempId: _getNextReceiverTempId(receivers),
@@ -1909,36 +1931,21 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
   ) async {
     try {
       final subtotal = state.totalAmount ?? 0.0;
-      final taxRate = state.systemConstants?.rateVatPercentage ?? 0.15;
-      final withholdingRate =
-          state.systemConstants?.rateWithholdingPercentage ?? 0.02;
-      final withholdingThreshold =
-          state.systemConstants?.withHoldInitials ?? 1000.0;
-
-      final taxAmount = subtotal * taxRate;
-      double withholdingAmount = 0.0;
-
-      if (subtotal >= withholdingThreshold) {
-        withholdingAmount = subtotal * withholdingRate;
-      }
 
       final discount = state.selectedHeader?.amountDiscount ?? 0.0;
       final otherCosts = state.selectedHeader?.amountOtherCosts ?? 0.0;
       final grossAmount = subtotal - discount;
-      final grandTotal =
-          grossAmount + otherCosts + taxAmount - withholdingAmount;
+      final grandTotal = grossAmount + otherCosts;
 
       emit(
         state.copyWith(
-          taxableAmount: subtotal,
-          taxAmount: taxAmount,
-          amountWithhold: withholdingAmount,
+          totalAmount: subtotal,
           amountGross: grossAmount,
           amountGrandTotalCost: grandTotal,
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to calculate taxes and fees: $e'));
+      emit(state.errorState('Failed to calculate fees: $e'));
     }
   }
 
@@ -2436,5 +2443,333 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         receivingDates: event.autoReceipt ? DateTime.now() : null,
       ),
     );
+  }
+  // ============ CREDIT PAYMENT OPERATIONS ============
+
+  Future<void> _onLoadCreditPayments(
+    LoadCreditPayments event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    emit(state.loadingState('load_credit_payments'));
+
+    try {
+      final payments = await repository.getCreditPayments(
+        companyId: event.companyId,
+        poHeaderId: event.poHeaderId,
+        startDate: event.startDate,
+        endDate: event.endDate,
+      );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loaded,
+          creditPayments: payments,
+          filteredCreditPayments: payments,
+          error: null,
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load credit payments: $e'));
+    }
+  }
+
+  Future<void> _onPrepareCreditPayment(
+    PrepareCreditPayment event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    emit(state.loadingState('prepare_credit_payment'));
+
+    try {
+      // Get the purchase order header
+      final header = await repository.getHeaderById(event.poHeaderId);
+      if (header == null) {
+        emit(state.errorState('Purchase order not found'));
+        return;
+      }
+
+      // Check if there's open credit
+      if (header.amountOpenCredit == null || header.amountOpenCredit! <= 0) {
+        emit(state.errorState('No open credit available for payment'));
+        return;
+      }
+
+      // Create new credit payment
+      final newPayment = CreditPayment(
+        poHeader: header.id,
+        paymentAmount: 0.0, // Start with 0, user will enter amount
+        datePayment: DateTime.now(),
+        company: header.company,
+        userId: state.userId,
+        dateUpdated: DateTime.now(),
+        tempId: _getNextCreditPaymentTempId(state.creditPayments),
+      );
+
+      emit(
+        state.copyWith(
+          selectedCreditPayment: newPayment,
+          creditPaymentSuccess: null,
+          creditPaymentError: null,
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to prepare credit payment: $e'));
+    }
+  }
+
+  Future<void> _onUpdateCreditPayment(
+    UpdateCreditPayment event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    emit(state.copyWith(selectedCreditPayment: event.payment));
+  }
+
+  // MAIN CREDIT PAYMENT SAVE FUNCTION (Based on Java logic)
+  Future<void> _onSaveCreditPayment(
+    SaveCreditPayment event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    emit(state.loadingState('save_credit_payment'));
+
+    try {
+      final payment = event.payment;
+
+      // Validate payment amount (from Java logic)
+      if (payment.paymentAmount! <= 0.0) {
+        emit(
+          state.copyWith(
+            creditPaymentError: 'Payment amount must be greater than 0',
+            creditPaymentSuccess: false,
+          ),
+        );
+        return;
+      }
+
+      // Get the purchase order header
+      final header = await repository.getHeaderById(payment.poHeader!);
+      if (header == null) {
+        emit(
+          state.copyWith(
+            creditPaymentError: 'Purchase order header not found',
+            creditPaymentSuccess: false,
+          ),
+        );
+        return;
+      }
+
+      // Calculate remaining amount (from Java logic)
+      final amountRemain =
+          (header.amountOpenCredit ?? 0.0) - payment.paymentAmount!;
+
+      // Validate payment amount doesn't exceed open credit
+      if (amountRemain < 0) {
+        emit(
+          state.copyWith(
+            creditPaymentError: 'Payment amount exceeds open credit',
+            creditPaymentSuccess: false,
+          ),
+        );
+        return;
+      }
+
+      // If payment is new (id == null), create it
+      if (payment.id == null) {
+        // Create credit payment record
+        final paymentId = await repository.createCreditPayment(payment);
+        final savedPayment = payment.copyWith(id: paymentId);
+
+        // Update purchase order header (from Java logic)
+        final updatedHeader = header.copyWith(
+          amountOpenCredit: amountRemain,
+          paymentStatus: amountRemain == 0.0
+              ? await _getUdcDetailId('P', 'PS') // Paid
+              : await _getUdcDetailId('S', 'PS'), // Partially Paid
+          dateUpdated: DateTime.now(),
+        );
+
+        // Save updated header
+        await repository.updatePurchaseOrderHeader(updatedHeader);
+
+        // Update state with new lists
+        final updatedHeaders = state.headers
+            .map((h) => h.id == updatedHeader.id ? updatedHeader : h)
+            .toList();
+
+        final updatedFilteredHeaders = state.filteredHeaders
+            .map((h) => h.id == updatedHeader.id ? updatedHeader : h)
+            .toList();
+
+        final updatedCreditPayments = [...state.creditPayments, savedPayment];
+        final updatedFilteredCreditPayments = [
+          ...state.filteredCreditPayments,
+          savedPayment,
+        ];
+
+        emit(
+          state.copyWith(
+            status: PurchaseOrderStatus.success,
+            headers: updatedHeaders,
+            filteredHeaders: updatedFilteredHeaders,
+            selectedHeader: updatedHeader,
+            selectedHeader1: updatedHeader,
+            creditPayments: updatedCreditPayments,
+            filteredCreditPayments: updatedFilteredCreditPayments,
+            selectedCreditPayment: savedPayment,
+            creditPaymentSuccess: true,
+            creditPaymentError: null,
+            successMessage: 'Credit payment saved successfully',
+          ),
+        );
+
+        // Refresh credit payments list
+        add(LoadCreditPayments(companyId: event.companyId));
+      } else {
+        // For existing payments, just update (though typically payments shouldn't be edited)
+        await repository.updateCreditPayment(payment);
+
+        emit(
+          state.copyWith(
+            creditPaymentSuccess: true,
+            creditPaymentError: null,
+            successMessage: 'Credit payment updated successfully',
+          ),
+        );
+      }
+    } catch (e) {
+      emit(
+        state.copyWith(
+          creditPaymentError: 'Failed to save credit payment: $e',
+          creditPaymentSuccess: false,
+        ),
+      );
+    }
+  }
+
+  Future<void> _onDeleteCreditPayment(
+    DeleteCreditPayment event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    emit(state.loadingState('delete_credit_payment'));
+
+    try {
+      // Get payment details first
+      final payment = state.creditPayments.firstWhere(
+        (p) => p.id == event.paymentId,
+        orElse: () => throw Exception('Payment not found'),
+      );
+
+      // Get header to restore credit amount
+      final header = await repository.getHeaderById(payment.poHeader!);
+      if (header != null) {
+        // Restore the payment amount to open credit
+        final restoredAmount =
+            (header.amountOpenCredit ?? 0.0) + payment.paymentAmount!;
+
+        // Update payment status (may need to revert to partial or not paid)
+        int? newPaymentStatus;
+        if (restoredAmount == (header.amountGrandTotalCost ?? 0.0)) {
+          // All credit restored, back to not paid
+          newPaymentStatus = await _getUdcDetailId('N', 'PS');
+        } else if (restoredAmount > 0) {
+          // Partial credit restored, back to partially paid
+          newPaymentStatus = await _getUdcDetailId('S', 'PS');
+        }
+
+        final updatedHeader = header.copyWith(
+          amountOpenCredit: restoredAmount,
+          paymentStatus: newPaymentStatus,
+          dateUpdated: DateTime.now(),
+        );
+
+        await repository.updatePurchaseOrderHeader(updatedHeader);
+
+        // Update state headers
+        final updatedHeaders = state.headers
+            .map((h) => h.id == updatedHeader.id ? updatedHeader : h)
+            .toList();
+
+        final updatedFilteredHeaders = state.filteredHeaders
+            .map((h) => h.id == updatedHeader.id ? updatedHeader : h)
+            .toList();
+
+        emit(
+          state.copyWith(
+            headers: updatedHeaders,
+            filteredHeaders: updatedFilteredHeaders,
+            selectedHeader: state.selectedHeader?.id == updatedHeader.id
+                ? updatedHeader
+                : state.selectedHeader,
+          ),
+        );
+      }
+
+      // Delete the payment
+      await repository.deleteCreditPayment(event.paymentId);
+
+      // Update state
+      final updatedPayments = state.creditPayments
+          .where((p) => p.id != event.paymentId)
+          .toList();
+
+      final updatedFilteredPayments = state.filteredCreditPayments
+          .where((p) => p.id != event.paymentId)
+          .toList();
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.success,
+          creditPayments: updatedPayments,
+          filteredCreditPayments: updatedFilteredPayments,
+          selectedCreditPayment:
+              state.selectedCreditPayment?.id == event.paymentId
+              ? null
+              : state.selectedCreditPayment,
+          successMessage: 'Credit payment deleted successfully',
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to delete credit payment: $e'));
+    }
+  }
+
+  void _onSelectCreditPayment(
+    SelectCreditPayment event,
+    Emitter<PurchaseOrderState> emit,
+  ) {
+    emit(state.copyWith(selectedCreditPayment: event.payment));
+  }
+
+  Future<void> _onFilterCreditPayments(
+    FilterCreditPayments event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    emit(state.loadingState('filter_credit_payments'));
+
+    try {
+      final filteredPayments = await repository.filterCreditPayments(
+        companyId: event.companyId,
+        supplierId: event.supplierId,
+        startDate: event.startDate,
+        endDate: event.endDate,
+        referenceNumber: event.referenceNumber,
+      );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loaded,
+          filteredCreditPayments: filteredPayments,
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to filter credit payments: $e'));
+    }
+  }
+
+  // Helper method for temp IDs
+  int _getNextCreditPaymentTempId(List<CreditPayment> items) {
+    if (items.isEmpty) return 1;
+    final maxTempId = items
+        .map((e) => e.tempId ?? 0)
+        .reduce((a, b) => a > b ? a : b);
+    return maxTempId + 1;
   }
 }

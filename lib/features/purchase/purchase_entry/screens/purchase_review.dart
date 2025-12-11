@@ -11,7 +11,6 @@ import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_state.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
-import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/screens/purchase_receive/purchase_receive_screen.dart';
 
 class PurchaseReviewPage extends StatefulWidget {
@@ -320,15 +319,6 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
               // Also reset immediately to prevent double push if rebuild happens
               context.read<PurchaseOrderBloc>().add(
                 ResetPurchaseOrderSettings(),
-              );
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    state.successMessage ?? 'Operation completed successfully',
-                  ),
-                  backgroundColor: Colors.green,
-                ),
               );
             }
           }
@@ -642,14 +632,14 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
                                       color: _getPurchaseOrderTypeColor(
                                         purchaseOrder
                                             .poReceiveStatusRef
-                                            ?.description1,
+                                            ?.detailCode,
                                       ),
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
                                         color: _getPurchaseOrderTypeBorderColor(
                                           purchaseOrder
                                               .poReceiveStatusRef
-                                              ?.description1,
+                                              ?.detailCode,
                                         ),
                                       ),
                                     ),
@@ -695,7 +685,10 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
                                       ),
                                     ),
                                     child: Text(
-                                      'From ${_formatDateTime(purchaseOrder.dateEffective!)}',
+                                      _formatDateTime(
+                                            purchaseOrder.dateEffective!,
+                                          ) ??
+                                          '',
                                       style: TextStyle(
                                         fontSize: 10,
                                         color: Colors.blue[800],
@@ -826,6 +819,14 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
             _buildquotationOrderInfoItem(
               ' UoM : ',
               purchaseOrder.unitOfMeasureRef?.description1.toString() ?? 'N/A',
+              Iconsax.rulerpen,
+              isCompact,
+            ),
+          if (purchaseOrder.poReceiveStatus != null)
+            _buildquotationOrderInfoItem(
+              ' Status : ',
+              purchaseOrder.poReceiveStatusRef?.description1.toString() ??
+                  'N/A',
               Iconsax.rulerpen,
               isCompact,
             ),
@@ -1044,11 +1045,11 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
 
   Color _getPurchaseOrderTypeColor(String? status) {
     switch (status) {
-      case 'Received':
+      case 'C':
         return Colors.green;
-      case 'Partial':
+      case 'P':
         return Colors.orange;
-      case 'Not Received':
+      case 'N':
       default:
         return Colors.red;
     }
@@ -1056,11 +1057,11 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
 
   Color _getPurchaseOrderTypeBorderColor(String? status) {
     switch (status) {
-      case 'Received':
+      case 'C':
         return Colors.green[700]!;
-      case 'Partial':
+      case 'P':
         return Colors.orange[700]!;
-      case 'Not Received':
+      case 'N':
       default:
         return Colors.red[700]!;
     }

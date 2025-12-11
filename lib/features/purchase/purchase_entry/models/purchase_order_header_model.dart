@@ -32,6 +32,7 @@ class PurchaseOrderHeader {
   final SupplierModel? supplierRef;
   final UdcDetails? poReceiveStatusRef;
   final UdcDetails? paymentStatusRef;
+  final UdcDetails? paymentInstrumentRef;
   final UdcDetails? orderTypeRef;
   final UserModel? userRef;
 
@@ -61,6 +62,7 @@ class PurchaseOrderHeader {
     this.creditDueDate,
     this.invoiceNumber,
     this.paymentStatusRef,
+    this.paymentInstrumentRef,
     this.orderTypeRef,
     this.supplierRef,
     this.poReceiveStatusRef,
@@ -106,6 +108,13 @@ class PurchaseOrderHeader {
               id: map['payment_status'],
               description1: map['payment_status_description'],
               detailCode: map['payment_status_code'],
+            )
+          : null,
+      paymentInstrumentRef: map['payment_instrument_description'] != null
+          ? UdcDetails(
+              id: map['payment_instrument'],
+              description1: map['payment_instrument_description'],
+              detailCode: map['payment_instrument_code'],
             )
           : null,
       orderTypeRef: map['order_type_description'] != null

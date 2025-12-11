@@ -1,5 +1,6 @@
 // features/purchase_order/bloc/purchase_order_event.dart
 import 'package:equatable/equatable.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/credit_payment_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
@@ -1063,4 +1064,65 @@ class SimulatePurchaseOrderError extends PurchaseOrderEvent {
 
   @override
   List<Object> get props => [errorType];
+}
+
+class LoadCreditPayments extends PurchaseOrderEvent {
+  final int companyId;
+  final int? poHeaderId;
+  final DateTime? startDate;
+  final DateTime? endDate;
+
+  const LoadCreditPayments({
+    required this.companyId,
+    this.poHeaderId,
+    this.startDate,
+    this.endDate,
+  });
+}
+
+class PrepareCreditPayment extends PurchaseOrderEvent {
+  final int poHeaderId;
+
+  const PrepareCreditPayment({required this.poHeaderId});
+}
+
+class UpdateCreditPayment extends PurchaseOrderEvent {
+  final CreditPayment payment;
+
+  const UpdateCreditPayment({required this.payment});
+}
+
+class SaveCreditPayment extends PurchaseOrderEvent {
+  final CreditPayment payment;
+  final int companyId;
+
+  const SaveCreditPayment({required this.payment, required this.companyId});
+}
+
+class DeleteCreditPayment extends PurchaseOrderEvent {
+  final int paymentId;
+
+  const DeleteCreditPayment({required this.paymentId});
+}
+
+class SelectCreditPayment extends PurchaseOrderEvent {
+  final CreditPayment payment;
+
+  const SelectCreditPayment({required this.payment});
+}
+
+class FilterCreditPayments extends PurchaseOrderEvent {
+  final int companyId;
+  final int? supplierId;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final String? referenceNumber;
+
+  const FilterCreditPayments({
+    required this.companyId,
+    this.supplierId,
+    this.startDate,
+    this.endDate,
+    this.referenceNumber,
+  });
 }

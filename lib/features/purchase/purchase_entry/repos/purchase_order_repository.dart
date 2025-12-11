@@ -1,5 +1,6 @@
 // features/purchase_order/repositories/purchase_order_repository.dart
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/credit_payment_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
@@ -74,13 +75,13 @@ class PurchaseOrderRepository {
           st.supplier_name,
           st.tin_number as supplier_tin,
           st.phone_no_1 as supplier_phone,
-          pr.description_1 as po_receive_status_desc,
+          pr.description_1 as po_receive_status_description,
           pr.detail_code as po_receive_status_code,
-          ps.description_1 as payment_status_desc,
+          ps.description_1 as payment_status_description,
           ps.detail_code as payment_status_code,
-          pi.description_1 as payment_instrument_desc,
+          pi.description_1 as payment_instrument_description,
           pi.detail_code as payment_instrument_code,
-          ot.description_1 as order_type_desc,
+          ot.description_1 as order_type_description,
           ot.detail_code as order_type_code,
           u.user_name as user_name,
           ct.company_name
@@ -147,12 +148,27 @@ class PurchaseOrderRepository {
           '''
         SELECT 
           poh.*,
-          st.supplier_name,
+     st.supplier_name,
+          st.tin_number as supplier_tin,
+          st.phone_no_1 as supplier_phone,
           pr.description_1 as po_receive_status_description,
-          pr.detail_code as po_receive_status_code
+          pr.detail_code as po_receive_status_code,
+          ps.description_1 as payment_status_description,
+          ps.detail_code as payment_status_code,
+          pi.description_1 as payment_instrument_description,
+          pi.detail_code as payment_instrument_code,
+          ot.description_1 as order_type_description,
+          ot.detail_code as order_type_code,
+          u.user_name as user_name,
+          ct.company_name
         FROM purchase_order_header poh
         LEFT JOIN supplier_table st ON poh.supplier_id = st.id
         LEFT JOIN udc_details pr ON poh.po_receive_status = pr.id
+        LEFT JOIN udc_details ps ON poh.payment_status = ps.id
+        LEFT JOIN udc_details pi ON poh.payment_instrument = pi.id
+        LEFT JOIN udc_details ot ON poh.order_type = ot.id
+        LEFT JOIN user_table u ON poh.user_id = u.id
+        LEFT JOIN company_table ct ON poh.company = ct.id
         WHERE $where
         ORDER BY poh.date_transaction DESC, poh.order_number DESC
       ''';
@@ -197,7 +213,7 @@ class PurchaseOrderRepository {
           poh.order_number as order_number,
           poh.invoice_number as invoice_number,
           poh.date_transaction as date_transaction,
-          pr.description_1 as po_receive_status_desc,
+          pr.description_1 as po_receive_status_description,
           pr.detail_code as po_receive_status_code,
           uom.description_1 as unit_of_measure_description,
           uom.detail_code as unit_of_measure_code
@@ -262,12 +278,27 @@ class PurchaseOrderRepository {
           '''
         SELECT 
           poh.*,
-          st.supplier_name,
-          pr.description_1 as po_receive_status_desc,
-          pr.detail_code as po_receive_status_code
+       st.supplier_name,
+          st.tin_number as supplier_tin,
+          st.phone_no_1 as supplier_phone,
+          pr.description_1 as po_receive_status_description,
+          pr.detail_code as po_receive_status_code,
+          ps.description_1 as payment_status_description,
+          ps.detail_code as payment_status_code,
+          pi.description_1 as payment_instrument_description,
+          pi.detail_code as payment_instrument_code,
+          ot.description_1 as order_type_description,
+          ot.detail_code as order_type_code,
+          u.user_name as user_name,
+          ct.company_name
         FROM purchase_order_header poh
         LEFT JOIN supplier_table st ON poh.supplier_id = st.id
         LEFT JOIN udc_details pr ON poh.po_receive_status = pr.id
+        LEFT JOIN udc_details ps ON poh.payment_status = ps.id
+        LEFT JOIN udc_details pi ON poh.payment_instrument = pi.id
+        LEFT JOIN udc_details ot ON poh.order_type = ot.id
+        LEFT JOIN user_table u ON poh.user_id = u.id
+        LEFT JOIN company_table ct ON poh.company = ct.id
         WHERE $where
         ORDER BY poh.id DESC
       ''';
@@ -440,7 +471,7 @@ class PurchaseOrderRepository {
           poh.order_number as order_number,
           poh.invoice_number as invoice_number,
           poh.date_transaction as date_transaction,
-          pr.description_1 as po_receive_status_desc,
+          pr.description_1 as po_receive_status_description,
           pr.detail_code as po_receive_status_code,
           uom.description_1 as unit_of_measure_description,
           uom.detail_code as unit_of_measure_code
@@ -480,7 +511,7 @@ class PurchaseOrderRepository {
           poh.order_number as order_number,
           poh.invoice_number as invoice_number,
           poh.date_transaction as date_transaction,
-          pr.description_1 as po_receive_status_desc,
+          pr.description_1 as po_receive_status_description,
           pr.detail_code as po_receive_status_code,
           uom.description_1 as unit_of_measure_description,
           uom.detail_code as unit_of_measure_code
@@ -555,7 +586,7 @@ class PurchaseOrderRepository {
           poh.order_number as order_number,
           poh.invoice_number as invoice_number,
           poh.date_transaction as date_transaction,
-          pr.description_1 as po_receive_status_desc,
+          pr.description_1 as po_receive_status_description,
           pr.detail_code as po_receive_status_code,
           uom.description_1 as unit_of_measure_description,
           uom.detail_code as unit_of_measure_code
@@ -631,7 +662,7 @@ class PurchaseOrderRepository {
           it.item_description as item_description,
           poh.order_number as order_number,
           poh.date_transaction as date_transaction,
-          pr.description_1 as po_receive_status_desc,
+          pr.description_1 as po_receive_status_description,
           pr.detail_code as po_receive_status_code
         FROM purchase_order_detail pod
         LEFT JOIN purchase_order_header poh ON pod.po_header = poh.id
@@ -1542,6 +1573,308 @@ class PurchaseOrderRepository {
       );
     } catch (e) {
       throw Exception('Failed to clear purchase order data: $e');
+    }
+  }
+  // Add these methods to your PurchaseOrderRepository class:
+
+  // ============ CREDIT PAYMENT OPERATIONS ============
+
+  /// Get credit payments with optional filters
+  Future<List<CreditPayment>> getCreditPayments({
+    required int companyId,
+    int? poHeaderId,
+    DateTime? startDate,
+    DateTime? endDate,
+    int? supplierId,
+  }) async {
+    final db = await _db;
+
+    try {
+      String where = 'cp.company = ?';
+      List<dynamic> whereArgs = [companyId];
+
+      if (poHeaderId != null) {
+        where += ' AND cp.po_header = ?';
+        whereArgs.add(poHeaderId);
+      }
+
+      if (startDate != null) {
+        where += ' AND cp.date_payment >= ?';
+        whereArgs.add(startDate.toIso8601String());
+      }
+
+      if (endDate != null) {
+        where += ' AND cp.date_payment <= ?';
+        whereArgs.add(endDate.toIso8601String());
+      }
+
+      if (supplierId != null) {
+        where += ' AND poh.supplier_id = ?';
+        whereArgs.add(supplierId);
+      }
+
+      final query =
+          '''
+      SELECT 
+        cp.*,
+        poh.order_number as order_number,
+        poh.invoice_number as invoice_number,
+        pm.description_1 as payment_instrument_description,
+        pm.detail_code as payment_instrument_code
+      FROM credit_payment_table cp
+      LEFT JOIN purchase_order_header poh ON cp.po_header = poh.id
+      LEFT JOIN udc_details pm ON cp.payment_instrument = pm.id
+      WHERE $where
+      ORDER BY cp.date_payment DESC, cp.id DESC
+    ''';
+
+      final maps = await db.rawQuery(query, whereArgs);
+
+      // Map to CreditPayment objects (you need to create fromMap method in CreditPayment model)
+      return maps.map((map) => CreditPayment.fromMap(map)).toList();
+    } catch (e) {
+      throw Exception('Failed to get credit payments: $e');
+    }
+  }
+
+  /// Create a new credit payment
+  Future<int> createCreditPayment(CreditPayment payment) async {
+    final db = await _db;
+    try {
+      return await db.insert('credit_payment_table', payment.toMap());
+    } catch (e) {
+      throw Exception('Failed to create credit payment: $e');
+    }
+  }
+
+  /// Update an existing credit payment
+  Future<void> updateCreditPayment(CreditPayment payment) async {
+    final db = await _db;
+    try {
+      await db.update(
+        'credit_payment_table',
+        payment.toMap(),
+        where: 'id = ?',
+        whereArgs: [payment.id],
+      );
+    } catch (e) {
+      throw Exception('Failed to update credit payment: $e');
+    }
+  }
+
+  /// Delete a credit payment
+  Future<void> deleteCreditPayment(int id) async {
+    final db = await _db;
+    try {
+      await db.delete('credit_payment_table', where: 'id = ?', whereArgs: [id]);
+    } catch (e) {
+      throw Exception('Failed to delete credit payment: $e');
+    }
+  }
+
+  /// Filter credit payments with various criteria
+  Future<List<CreditPayment>> filterCreditPayments({
+    required int companyId,
+    int? supplierId,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? referenceNumber,
+  }) async {
+    final db = await _db;
+
+    try {
+      String where = 'cp.company = ?';
+      List<dynamic> whereArgs = [companyId];
+
+      if (supplierId != null) {
+        where += ' AND poh.supplier_id = ?';
+        whereArgs.add(supplierId);
+      }
+
+      if (startDate != null) {
+        where += ' AND cp.date_payment >= ?';
+        whereArgs.add(startDate.toIso8601String());
+      }
+
+      if (endDate != null) {
+        where += ' AND cp.date_payment <= ?';
+        whereArgs.add(endDate.toIso8601String());
+      }
+
+      final query =
+          '''
+      SELECT 
+        cp.*,
+          poh.order_number as order_number,
+        poh.invoice_number as invoice_number,
+        pm.description_1 as payment_instrument_description,
+        pm.detail_code as payment_instrument_code
+      FROM credit_payment_table cp
+      LEFT JOIN purchase_order_header poh ON cp.po_header = poh.id
+      LEFT JOIN udc_details pm ON cp.payment_instrument = pm.id
+      WHERE $where
+      ORDER BY cp.date_payment DESC
+    ''';
+
+      final maps = await db.rawQuery(query, whereArgs);
+      return maps.map((map) => CreditPayment.fromMap(map)).toList();
+    } catch (e) {
+      throw Exception('Failed to filter credit payments: $e');
+    }
+  }
+
+  /// Get total credit payments for a purchase order header
+  Future<double> getTotalCreditPaymentsForHeader(int poHeaderId) async {
+    final db = await _db;
+
+    try {
+      final result = await db.rawQuery(
+        '''
+      SELECT SUM(payment_amount) as total_paid
+      FROM credit_payment_table
+      WHERE po_header = ?
+      ''',
+        [poHeaderId],
+      );
+
+      final total = result.first['total_paid'] as double?;
+      return total ?? 0.0;
+    } catch (e) {
+      throw Exception('Failed to get total credit payments for header: $e');
+    }
+  }
+
+  /// Get credit payment by ID
+  Future<CreditPayment?> getCreditPaymentById(int id) async {
+    final db = await _db;
+
+    try {
+      final maps = await db.rawQuery(
+        '''
+      SELECT 
+        cp.*,
+          poh.order_number as order_number,
+        poh.invoice_number as invoice_number,
+        pm.description_1 as payment_instrument_description,
+        pm.detail_code as payment_instrument_code
+      FROM credit_payment_table cp
+      LEFT JOIN purchase_order_header poh ON cp.po_header = poh.id
+      LEFT JOIN udc_details pm ON cp.payment_instrument = pm.id
+      WHERE cp.id = ?
+      ''',
+        [id],
+      );
+
+      if (maps.isNotEmpty) {
+        return CreditPayment.fromMap(maps.first);
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Failed to get credit payment by ID: $e');
+    }
+  }
+
+  /// Get credit payments summary by supplier
+  Future<List<Map<String, dynamic>>> getCreditPaymentsSummaryBySupplier({
+    required int companyId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await _db;
+
+    try {
+      String where = 'cp.company = ?';
+      List<dynamic> whereArgs = [companyId];
+
+      if (startDate != null) {
+        where += ' AND cp.date_payment >= ?';
+        whereArgs.add(startDate.toIso8601String());
+      }
+
+      if (endDate != null) {
+        where += ' AND cp.date_payment <= ?';
+        whereArgs.add(endDate.toIso8601String());
+      }
+
+      final query =
+          '''
+      SELECT 
+        poh.supplier_id,
+        st.supplier_name,
+        COUNT(cp.id) as payment_count,
+        SUM(cp.payment_amount) as total_paid,
+        MIN(cp.date_payment) as first_date_payment,
+        MAX(cp.date_payment) as last_date_payment
+      FROM credit_payment_table cp
+      LEFT JOIN purchase_order_header poh ON cp.po_header = poh.id
+      LEFT JOIN supplier_table st ON poh.supplier_id = st.id
+      WHERE $where
+      GROUP BY poh.supplier_id
+      ORDER BY total_paid DESC
+    ''';
+
+      final result = await db.rawQuery(query, whereArgs);
+      return List<Map<String, dynamic>>.from(result);
+    } catch (e) {
+      throw Exception('Failed to get credit payments summary by supplier: $e');
+    }
+  }
+
+  /// Batch delete credit payments
+  Future<void> deleteCreditPaymentBatch(List<int> ids) async {
+    if (ids.isEmpty) return;
+
+    final db = await _db;
+    try {
+      final placeholders = List.generate(ids.length, (_) => '?').join(',');
+      await db.delete(
+        'credit_payment_table',
+        where: 'id IN ($placeholders)',
+        whereArgs: ids,
+      );
+    } catch (e) {
+      throw Exception('Failed to delete credit payment batch: $e');
+    }
+  }
+
+  /// Get credit payment aging report (similar to purchase order aging)
+  Future<List<Map<String, dynamic>>> getCreditPaymentAgingReport({
+    required int companyId,
+    DateTime? asOfDate,
+  }) async {
+    final db = await _db;
+
+    try {
+      final effectiveDate = asOfDate ?? DateTime.now();
+
+      final result = await db.rawQuery(
+        '''
+      SELECT 
+        poh.order_number,
+        poh.invoice_number,
+        poh.date_transaction as po_date,
+        poh.credit_due_date,
+        poh.amount_open_credit as remaining_credit,
+        cp.date_payment,
+        cp.payment_amount,
+        DATEDAY(?, poh.credit_due_date) as days_overdue_at_payment,
+        st.supplier_name,
+        ps.description_1 as payment_status_desc
+      FROM credit_payment_table cp
+      LEFT JOIN purchase_order_header poh ON cp.po_header = poh.id
+      LEFT JOIN supplier_table st ON poh.supplier_id = st.id
+      LEFT JOIN udc_details ps ON poh.payment_status = ps.id
+      WHERE cp.company = ? 
+        AND poh.credit_due_date IS NOT NULL
+        AND cp.date_payment <= poh.credit_due_date
+      ORDER BY cp.date_payment DESC
+      ''',
+        [effectiveDate.toIso8601String(), companyId],
+      );
+
+      return List<Map<String, dynamic>>.from(result);
+    } catch (e) {
+      throw Exception('Failed to get credit payment aging report: $e');
     }
   }
 }
