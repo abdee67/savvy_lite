@@ -62,6 +62,8 @@ class AppRoutes {
   static const String salesInvoice = '$salesCustomerInfo/sales-invoice';
 
   static const String salesReport = '$salesDashboard/sales-report';
+  static const String salesCreditReceiptReview =
+      '$salesDashboard/sales-credit-receipt-review';
 
   static const String salesReturn = '$salesDashboard/sales-return';
 
@@ -165,6 +167,8 @@ class AppRoutes {
   static const String purchaseItemEntry = '$purchaseReview/purchase-item-entry';
   static const String purchaseOrderPayment = '$purchaseReview/payment-summary';
   static const String purchaseOrderReceive = '$purchaseReview/purchase-receive';
+
+  static const String creditPurchaseReview = '$purchase/credit-purchase-review';
 
   // Helper method to get all dashboard routes
   static List<String> get dashboardRoutes => [

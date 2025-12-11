@@ -215,6 +215,13 @@ class PrivilegeSeeder {
         'sales_report',
       ),
       _createPrivilege(
+        'Sales Credit Receipt',
+        'link',
+        AppRoutes.salesCreditReceiptReview,
+        'sales_credit_receipt',
+      ),
+
+      _createPrivilege(
         'Sales Return',
         'link',
         AppRoutes.salesReturn,
@@ -556,6 +563,12 @@ class PrivilegeSeeder {
         'button',
         AppRoutes.purchaseOrderReceive,
         'purchase_order_receive',
+      ),
+      _createPrivilege(
+        'Credit Purchase',
+        'button',
+        AppRoutes.creditPurchaseReview,
+        'review_credit_purchase_order',
       ),
     ];
 

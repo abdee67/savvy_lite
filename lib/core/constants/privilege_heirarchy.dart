@@ -47,6 +47,7 @@ class PrivilegeHierarchy {
 
     //Sales Report (child of Sales Dashboard)
     AppRoutes.salesReport: AppRoutes.salesDashboard,
+    AppRoutes.salesCreditReceiptReview: AppRoutes.salesDashboard,
 
     //Sales Return (child of Sales Dashboard)
     AppRoutes.salesReturn: AppRoutes.salesDashboard,
@@ -141,7 +142,9 @@ class PrivilegeHierarchy {
     AppRoutes.purchaseSupplierInfo: AppRoutes.purchaseReview,
     AppRoutes.purchaseItemEntry: AppRoutes.purchaseReview,
     AppRoutes.purchaseOrderPayment: AppRoutes.purchaseReview,
-    AppRoutes.purchaseOrderReceive: AppRoutes.purchaseReview,
+
+    // AppRoutes.purchaseOrderReceive: AppRoutes.purchaseReview,
+    AppRoutes.creditPurchaseReview: AppRoutes.purchaseDashboard,
   };
 
   /// Get the parent privilege for a given privilege URI

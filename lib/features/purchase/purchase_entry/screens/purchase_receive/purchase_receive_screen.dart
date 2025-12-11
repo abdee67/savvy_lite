@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_searchable_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_text_form.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -18,7 +17,6 @@ import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_ord
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_event.dart';
-import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_state.dart';
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_bloc.dart';
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_event.dart';
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_state.dart';
@@ -74,9 +72,7 @@ class _PurchaseReceivingScreenState extends State<PurchaseReceivingScreen> {
       if (companyId != null) {
         // Check system constants
         final systemBloc = context.read<SystemConstantBloc>();
-        if (systemBloc.state.systemConstants != null) {
-          _updateSystemConstants(systemBloc.state);
-        }
+        _updateSystemConstants(systemBloc.state);
 
         // Load branches
         context.read<BranchBloc>().add(LoadBranchs(companyId));
@@ -151,11 +147,9 @@ class _PurchaseReceivingScreenState extends State<PurchaseReceivingScreen> {
         _selectedLocation = null;
       });
 
-      if (branch != null) {
-        // Load locations for selected branch
-        print('📍 Loading locations for branch ID: ${branch.id}');
-        _loadBranchLocations(branch.id);
-      }
+      // Load locations for selected branch
+      print('📍 Loading locations for branch ID: ${branch.id}');
+      _loadBranchLocations(branch.id);
 
       // Update current receiver
       final updated = _receivers[_selectedReceiverIndex].copyWith(
@@ -415,53 +409,6 @@ class _PurchaseReceivingScreenState extends State<PurchaseReceivingScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: Color(0xFF155888),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
-              ),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.inventory, color: Colors.white, size: 24),
-                const SizedBox(width: 12),
-                const Text(
-                  'Receive Items',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                if (_receivers.length > 1)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '${_selectedReceiverIndex + 1}/${_receivers.length}',
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                const SizedBox(width: 12),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white),
-                  onPressed: _closeDialog,
-                ),
-              ],
-            ),
-          ),
-
           // Item Details Card
           _buildItemDetailsCard(),
 
@@ -864,7 +811,7 @@ class _PurchaseReceivingScreenState extends State<PurchaseReceivingScreen> {
         CustomTextField(
           labelText: 'Amount Received',
           controller: TextEditingController(
-            text: '\$${(receiver.amountReceived ?? 0).toStringAsFixed(2)}',
+            text: '\$${(widget.detail.amountReceived ?? 0).toStringAsFixed(2)}',
           ),
           readOnly: true,
           prefixIcon: const Icon(Icons.attach_money),

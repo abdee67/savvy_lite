@@ -27,9 +27,9 @@ import 'package:savvy_stock/features/branch_list/widgets/branch_list_create_and_
 import 'package:savvy_stock/features/dashboards/screens/home_page.dart';
 import 'package:savvy_stock/features/onboarding/screens/welcome_screen.dart';
 import 'package:savvy_stock/features/onboarding/widgets/getStarted.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/screens/credit_purchase/credit_purchase_review.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/screens/purchase_item_entry/screens/purchase_item_entry.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/screens/purchase_payment/screens/payment_screen.dart';
-import 'package:savvy_stock/features/purchase/purchase_entry/screens/purchase_receive/purchase_receive_screen.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/screens/purchase_review.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/models/supplier_model.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/screens/supplier_info_screen.dart';
@@ -44,6 +44,7 @@ import 'package:savvy_stock/features/sales/quotation_order/screens/quote_custome
 import 'package:savvy_stock/features/sales/quotation_order/screens/quote_invoice_screen/quote_invoice_review_screen.dart';
 import 'package:savvy_stock/features/sales/quotation_order/screens/quote_item_entry_screen/quote_item_entry.dart';
 import 'package:savvy_stock/features/sales/quotation_order/screens/quote_payment_screen/quote_payment_screen.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/credit_receipt/sales_credit_receipt_reveiw.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/screens/invoice_review_screen.dart';
 import 'package:savvy_stock/features/sales/sales_order/payment/screens/payment_screen.dart';
 import 'package:savvy_stock/features/sales/sales_order/sales_item_entry/screens/sales_item_entry.dart';
@@ -189,6 +190,16 @@ class AppRouter {
         ),
         redirect: _protectedRouteRedirect,
       ),
+      GoRoute(
+        path: AppRoutes.salesCreditReceiptReview,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.salesCreditReceiptReview,
+          parentPrivilege: AppRoutes.salesDashboard,
+          child: CreditSalesReviewPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+
       GoRoute(
         path: AppRoutes.paymentSummary,
         builder: (context, state) => PrivilegeRouteGuard(
@@ -857,7 +868,15 @@ class AppRouter {
         ),
         redirect: _protectedRouteRedirect,
       ),
-
+      GoRoute(
+        path: AppRoutes.creditPurchaseReview,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.creditPurchaseReview,
+          parentPrivilege: AppRoutes.purchaseDashboard,
+          child: CreditPurchaseReviewPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
       // System Constants
       GoRoute(
         path: AppRoutes.systemConstants,

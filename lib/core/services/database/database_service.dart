@@ -1250,6 +1250,49 @@ ON quote_order_detail (prforma_status);
     ''');
     developer.log('Created table: quote_order_detail');
 
+    //create credit payment(on purchase)
+    await db.execute('''
+CREATE TABLE credit_payment_table (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  po_header INTEGER,
+  payment_amount REAL,
+  date_payment TEXT,
+  payment_instrument INTEGER,
+  company INTEGER,
+  user_id INTEGER,
+  date_updated TEXT,
+
+  -- FOREIGN KEYS
+  FOREIGN KEY (po_header) REFERENCES purchase_order_header(id),
+  FOREIGN KEY (payment_instrument) REFERENCES udc_details(id),
+  FOREIGN KEY (company) REFERENCES company_table(id),
+  FOREIGN KEY (user_id) REFERENCES user_table(id)
+);
+
+    ''');
+    developer.log('Created table: credit_payment_table');
+
+    //create sales credit receipt
+    await db.execute('''
+CREATE TABLE credit_receipt_table (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  so_header INTEGER,
+  receipt_amount REAL,
+  date_receipt TEXT,
+  payment_instrument INTEGER,
+  company INTEGER,
+  user_id INTEGER,
+  date_updated TEXT,
+
+  FOREIGN KEY (company) REFERENCES company_table(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  FOREIGN KEY (payment_instrument) REFERENCES udc_details(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  FOREIGN KEY (so_header) REFERENCES sales_order_header(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES user_table(id) ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+    ''');
+    developer.log('Created table: credit_receipt_table');
+
     //. Create sync_queue table
     await db.execute('''
       CREATE TABLE sync_queue (
