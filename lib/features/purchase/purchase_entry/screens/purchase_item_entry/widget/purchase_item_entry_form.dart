@@ -66,7 +66,7 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
   ItemEntryModel? _selectedItem;
   Branch? _selectedBranch;
   ItemLocation? _selectedLocation;
-  UdcDetails? _selectedUom;
+  int? _selectedUom;
 
   DateTime? _effectiveDate;
   DateTime? _expirationDate;
@@ -146,6 +146,9 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
       _extendedAmountController.text =
           detail.amountExtendedCost?.toStringAsFixed(2) ?? '0.00';
       _batchNumberController.text = detail.batchNumberSupplier ?? '';
+
+      // Set initial UoM from existing detail (if editing)
+      _selectedUom = detail.unitOfMeasure;
 
       // Set dates
       _effectiveDate = detail.dateEffective;
@@ -231,8 +234,34 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
     _updateDetail();
   }
 
+  UdcDetails? _resolveSelectedUomDetail() {
+    if (_selectedUom == null) return null;
+
+    // Prefer UOMs loaded specifically for this item
+    final itemUomState = context.read<ItemUomConversionBloc>().state;
+    final fromItemUoms = itemUomState.availableUomsForItem
+        .where((u) => u.id == _selectedUom)
+        .toList();
+    if (fromItemUoms.isNotEmpty) {
+      return fromItemUoms.first;
+    }
+
+    // Fallback to global UDC details list
+    final udcDetailsBloc = context.read<UdcDetailsBloc>();
+    final fromAllUoms = udcDetailsBloc.state.details
+        .where((u) => u.id == _selectedUom)
+        .toList();
+    if (fromAllUoms.isNotEmpty) {
+      return fromAllUoms.first;
+    }
+
+    return null;
+  }
+
   void _updateDetail() {
     if (_isInitializing) return;
+
+    final selectedUomDetail = _resolveSelectedUomDetail();
 
     final detail =
         widget.initialDetail ??
@@ -247,12 +276,13 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
       quantityTransaction: double.tryParse(_quantityController.text),
       unitCost: double.tryParse(_unitCostController.text),
       amountExtendedCost: double.tryParse(_extendedAmountController.text),
-      unitOfMeasure: _selectedUom?.id,
+      unitOfMeasure: _selectedUom,
       dateEffective: _effectiveDate,
       dateExpiration: _expirationDate,
       batchNumberSupplier: _batchNumberController.text.isNotEmpty
           ? _batchNumberController.text
           : null,
+      unitOfMeasureRef: selectedUomDetail,
       //itemLocationsSelect: _selectedLocation?.id,
     );
 
@@ -269,9 +299,10 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
       _selectedItem = item;
       _selectedUom = null;
 
-      // If item has default UOM, try to find it
+      // If item has default UOM, set it as selected
       if (item?.unitOfMeasure != null) {
-        _loadDefaultUom(item!.id);
+        final parsedId = int.tryParse(item!.unitOfMeasure!);
+        _selectedUom = parsedId;
       }
 
       // Load UOM conversions for this item
@@ -281,19 +312,6 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
     });
 
     _calculateExtendedAmount();
-  }
-
-  void _loadDefaultUom(int uomCode) {
-    final udcBloc = context.read<UdcDetailsBloc>();
-    final uomDetails = udcBloc.state.details
-        .where((udc) => udc.id == uomCode)
-        .toList();
-
-    if (uomDetails.isNotEmpty) {
-      setState(() {
-        _selectedUom = uomDetails.first;
-      });
-    }
   }
 
   void _onBranchSelected(Branch? branch) {
@@ -335,9 +353,9 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
     _updateDetail();
   }
 
-  void _onUomSelected(UdcDetails? uom) {
+  void _onUomSelected(int? uomId) {
     setState(() {
-      _selectedUom = uom;
+      _selectedUom = uomId;
     });
 
     _updateDetail();
@@ -408,12 +426,14 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
           company: context.read<AuthBloc>().state.companyId,
         );
 
+    final selectedUomDetail = _resolveSelectedUomDetail();
+
     return detail.copyWith(
       itemNumber: _selectedItem?.id,
       quantityTransaction: double.tryParse(_quantityController.text),
       unitCost: double.tryParse(_unitCostController.text),
       amountExtendedCost: double.tryParse(_extendedAmountController.text),
-      unitOfMeasure: _selectedUom?.id,
+      unitOfMeasure: _selectedUom,
       dateEffective: _effectiveDate,
       dateExpiration: _expirationDate,
       batchNumberSupplier: _batchNumberController.text.isNotEmpty
@@ -426,6 +446,7 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
               location: _selectedLocation?.id,
             )
           : null,
+      unitOfMeasureRef: selectedUomDetail,
     );
   }
 
@@ -536,7 +557,9 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
                         header: 'Default UOM',
                         flex: 1,
                         cellBuilder: (item) => Text(
-                          item.unitOfMeasure ?? 'N/A',
+                          item.unitOfMeasureDescription ??
+                              item.unitOfMeasure ??
+                              'N/A',
                           style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w500,
@@ -575,72 +598,91 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
 
               const SizedBox(height: 16),
 
-              // UoM Selection
-              BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
-                builder: (context, udcState) {
-                  return BlocBuilder<
-                    ItemUomConversionBloc,
-                    ItemUomConversionState
-                  >(
-                    builder: (context, uomState) {
-                      // Get available UOMs for the selected item
-                      List<UdcDetails> availableUoms = [];
+              // UoM Selection (use ItemUomConversionBloc like sales item entry)
+              if (_selectedItem != null)
+                BlocBuilder<ItemUomConversionBloc, ItemUomConversionState>(
+                  builder: (context, state) {
+                    if (state.isLoadingUomsForItem ||
+                        state.status == ItemUomConversionStatus.loading) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-                      if (_selectedItem != null &&
-                          uomState.availableUomsForItem.isNotEmpty) {
-                        // Get UOM details from UDC
-                        availableUoms = udcState.details
-                            .where(
-                              (udc) => uomState.availableUomsForItem.any(
-                                (uom) => uom.id == udc.id,
-                              ),
-                            )
-                            .toList();
+                    final udcList = state.availableUomsForItem;
 
-                        // Add default UOM if not already in list
-                        if (_selectedItem?.unitOfMeasure != null) {
-                          final defaultUom = udcState.details.firstWhere(
-                            (udc) =>
-                                udc.description1 ==
-                                _selectedItem!.unitOfMeasure,
-                            orElse: () => UdcDetails.empty(),
+                    if (udcList.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8.0),
+                        child: Text(
+                          'No unit of measure available',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      );
+                    }
+
+                    return Builder(
+                      builder: (context) {
+                        String? currentUomDesc;
+
+                        if (_selectedUom != null) {
+                          final match = udcList.where(
+                            (u) => u.id == _selectedUom,
                           );
-                          if (!availableUoms.contains(defaultUom)) {
-                            availableUoms.add(defaultUom);
+                          if (match.isNotEmpty) {
+                            currentUomDesc = match.first.description1;
                           }
                         }
-                      }
 
-                      if (availableUoms.isEmpty && _selectedUom != null) {
-                        availableUoms.add(_selectedUom!);
-                      }
-
-                      return CustomSearchableDropdown(
-                        labelText: 'Unit of Measure *',
-                        options: availableUoms
-                            .map((uom) => uom.description1)
-                            .toList(),
-                        value: _selectedUom?.description1,
-                        prefixIcon: Iconsax.ruler,
-                        allowCustomEntries: false,
-                        onChanged: (selectedUom) {
-                          _onUomSelected(
-                            availableUoms.firstWhere(
-                              (uom) => uom.description1 == selectedUom,
-                            ),
+                        // Fallback: try to resolve from item's stored UOM
+                        if (currentUomDesc == null &&
+                            _selectedItem?.unitOfMeasure != null) {
+                          final parsedId = int.tryParse(
+                            _selectedItem!.unitOfMeasure!,
                           );
-                        },
-                        validator: (value) {
-                          if (_selectedItem != null && _selectedUom == null) {
-                            return 'Please select unit of measure';
+                          if (parsedId != null) {
+                            final match = udcList.where(
+                              (u) => u.id == parsedId,
+                            );
+                            if (match.isNotEmpty) {
+                              currentUomDesc = match.first.description1;
+                            }
                           }
-                          return null;
-                        },
-                      );
-                    },
-                  );
-                },
-              ),
+                        }
+
+                        return CustomSearchableDropdown(
+                          labelText: 'Unit of Measure *',
+                          options: udcList
+                              .map((uom) => uom.description1)
+                              .toList(),
+                          value: currentUomDesc,
+                          prefixIcon: Iconsax.ruler,
+                          allowCustomEntries: false,
+                          onChanged: (value) {
+                            setState(() {
+                              if (value == null) {
+                                _selectedUom = null;
+                              } else {
+                                final matches = udcList.where(
+                                  (u) => u.description1 == value,
+                                );
+                                _selectedUom = matches.isNotEmpty
+                                    ? matches.first.id
+                                    : null;
+                              }
+                            });
+
+                            _updateDetail();
+                          },
+                          validator: (value) {
+                            if (_selectedItem != null && _selectedUom == null) {
+                              return 'Please select unit of measure';
+                            }
+                            return null;
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
 
               const SizedBox(height: 16),
 
