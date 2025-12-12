@@ -599,7 +599,7 @@ class _CreditReceiptScreenState extends State<CreditReceiptScreen> {
                         value: udc.id,
                         child: Text(udc.description1 ?? udc.detailCode ?? ''),
                       );
-                    }).toList(),
+                    }),
                   ],
                   onChanged: _onPaymentInstrumentSelected,
                   validator: (value) {
