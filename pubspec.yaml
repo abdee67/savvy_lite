@@ -76,6 +76,15 @@ dev_dependencies:
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 # The following section is specific to Flutter packages.
+# --- Flutter Launcher Icons Configuration ---
+flutter_launcher_icons:
+  android: truey
+  ios: true
+  image_path: "assets/images/onboarding_background.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "assets/images/onboarding_background.png"
+  adaptive_icon_foreground: "assets/images/onboarding_background.png"
+  android_foreground_mode: "auto"
 flutter:
   assets:
     - assets/images/onboarding_background.png
