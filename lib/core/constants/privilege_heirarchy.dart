@@ -47,10 +47,18 @@ class PrivilegeHierarchy {
 
     //Sales Report (child of Sales Dashboard)
     AppRoutes.salesReport: AppRoutes.salesDashboard,
+    AppRoutes.salesCreditReceiptReview: AppRoutes.salesDashboard,
 
     //Sales Return (child of Sales Dashboard)
     AppRoutes.salesReturn: AppRoutes.salesDashboard,
 
+    //Quotation Order (child of Sales Dashboard)
+    AppRoutes.quotationOrder: AppRoutes.salesDashboard,
+    AppRoutes.quotationItemEntry: AppRoutes.quotationOrder,
+    AppRoutes.quotationOrderPayment: AppRoutes.quotationOrder,
+    AppRoutes.quotationInvoiceReview: AppRoutes.quotationOrder,
+
+    AppRoutes.quotationOrderReview: AppRoutes.salesDashboard,
     // Customer Entry (child of Sales Dashboard)
     AppRoutes.customerEntry: AppRoutes.salesDashboard,
     AppRoutes.customerCreate: AppRoutes.customerEntry,
@@ -122,6 +130,21 @@ class PrivilegeHierarchy {
     AppRoutes.branchCreation: AppRoutes.branchManagement,
     AppRoutes.branchEdit: AppRoutes.branchManagement,
     AppRoutes.branchDelete: AppRoutes.branchManagement,
+
+    // ==================== PURCHASE MODULE ====================
+    AppRoutes.supplierEntry: AppRoutes.purchaseDashboard,
+    AppRoutes.supplierCreate: AppRoutes.supplierEntry,
+    AppRoutes.supplierEdit: AppRoutes.supplierEntry,
+    AppRoutes.supplierDelete: AppRoutes.supplierEntry,
+
+    // AppRoutes.purchaseEntry: AppRoutes.purchaseDashboard,
+    AppRoutes.purchaseReview: AppRoutes.purchaseDashboard,
+    AppRoutes.purchaseSupplierInfo: AppRoutes.purchaseReview,
+    AppRoutes.purchaseItemEntry: AppRoutes.purchaseReview,
+    AppRoutes.purchaseOrderPayment: AppRoutes.purchaseReview,
+
+    // AppRoutes.purchaseOrderReceive: AppRoutes.purchaseReview,
+    AppRoutes.creditPurchaseReview: AppRoutes.purchaseDashboard,
   };
 
   /// Get the parent privilege for a given privilege URI

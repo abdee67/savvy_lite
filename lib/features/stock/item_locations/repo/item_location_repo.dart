@@ -51,6 +51,27 @@ class ItemLocationsRepository extends BaseRepository {
     return items.map((p) => ItemLocation.fromMap(p)).toList();
   }
 
+  // Get item locations for branch
+  Future<List<ItemLocation>> getItemLocationsForBranch({
+    required int companyId,
+    required int branchId,
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
+    final items = await db.rawQuery(
+      '''
+      SELECT 
+        il.*,
+        lm.location_description as location_description
+      FROM item_location il
+      LEFT JOIN location_master lm ON il.location = lm.id
+      WHERE il.company = ? AND il.branch = ?
+      ''',
+      [companyId, branchId],
+    );
+    return items.map((p) => ItemLocation.fromMap(p)).toList();
+  }
+
   // Get item location by ID
   Future<ItemLocation?> getItemLocationById(
     int id,

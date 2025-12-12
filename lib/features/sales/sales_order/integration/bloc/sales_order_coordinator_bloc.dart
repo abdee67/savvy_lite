@@ -20,6 +20,7 @@ import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_d
 import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_state.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
+import 'package:savvy_stock/features/sales/quotation_order/repo/quotation_order_repo.dart';
 import 'sales_order_coordinator_event.dart';
 import 'sales_order_coordinator_state.dart';
 
@@ -32,6 +33,7 @@ class SalesOrderCoordinatorBloc
   final InvoiceHistoryDetailBloc invoiceDetailBloc;
   final AuthBloc authBloc;
   final SalesOrderIntegrationService integrationService;
+  final QuotationOrderRepository quotationRepo;
 
   StreamSubscription<SalesOrderHeaderState>? _headerSubscription;
   StreamSubscription<SalesOrderDetailState>? _detailSubscription;
@@ -47,6 +49,7 @@ class SalesOrderCoordinatorBloc
     required this.invoiceDetailBloc,
     required this.systemConstantBloc,
     required this.authBloc,
+    required this.quotationRepo,
   }) : integrationService = SalesOrderIntegrationService(
          headerBloc: headerBloc,
          detailBloc: detailBloc,
@@ -98,6 +101,7 @@ class SalesOrderCoordinatorBloc
     // Preparation & Initialization
     on<PrepareNewSalesOrder>(_onPrepareNewSalesOrder);
     on<LoadCompleteSalesOrder>(_onLoadCompleteSalesOrder);
+    on<InitializeFromQuotation>(_onInitializeFromQuotation);
 
     // Detail Management
     on<AddDetailToOrder>(_onAddDetailToOrder);
@@ -174,6 +178,39 @@ class SalesOrderCoordinatorBloc
       // Use the details that were used to create the order; detailBloc.createItems
       // may have been cleared by the save process.
       final currentDetails = event.details;
+
+      // ✅ Update quotation status if this was converted from a quotation (Java style)
+      // Check if referenceNote3 contains a quotation fs_number
+      if (headerToCreate.proformaFlag != null &&
+          headerToCreate.proformaFlag!.isNotEmpty &&
+          currentHeader?.fsNumber != null) {
+        try {
+          final quotationFsNumber = headerToCreate.proformaReference!;
+
+          // Query quotation by fs_number (matching Java implementation)
+          final quotationHeaders = await quotationRepo.getQuotationOrderHeaders(
+            companyId: headerToCreate.company,
+            fsNumber: quotationFsNumber,
+          );
+
+          // Update each matching quotation (usually just one)
+          for (final quotationHeader in quotationHeaders) {
+            final updatedQuotation = quotationHeader.copyWith(
+              conversionStatus: 'Converted',
+              referenceNote3:
+                  currentHeader!.fsNumber, // Store sales order fs_number
+              conversionDate: headerToCreate.orderDate ?? DateTime.now(),
+            );
+            await quotationRepo.updateQuotationOrderHeader(updatedQuotation);
+            print(
+              'DEBUG: Updated quotation ${quotationHeader.fsNumber} status to Converted, linked to sales order ${currentHeader.fsNumber}',
+            );
+          }
+        } catch (e) {
+          print('WARNING: Failed to update quotation status: $e');
+          // Don't fail the entire operation if quotation update fails
+        }
+      }
 
       emit(
         state
@@ -530,9 +567,9 @@ class SalesOrderCoordinatorBloc
       );
 
       // Recalculate with new rates if we have existing data
-      if (state.currentDetails.isNotEmpty) {
+      /*  if (state.currentDetails.isNotEmpty) {
         add(const CalculateCompleteOrderTotals());
-      }
+      }*/
     } catch (e) {
       emit(
         state.copyWith(
@@ -773,6 +810,51 @@ class SalesOrderCoordinatorBloc
           operation: 'load_order',
         ),
       );
+    }
+  }
+
+  Future<void> _onInitializeFromQuotation(
+    InitializeFromQuotation event,
+    Emitter<SalesOrderCoordinatorState> emit,
+  ) async {
+    emit(state.loadingState('initialize_from_quotation'));
+
+    try {
+      // 1. Set Header in Header Bloc
+      headerBloc.add(SelectSalesOrder(header: event.header));
+
+      // 2. Set Details in Detail Bloc
+      detailBloc.add(const ClearCreateItemsSalesOrderDetails());
+      for (final detail in event.details) {
+        detailBloc.add(AddToCreateItemsSalesOrderDetails(item: detail));
+      }
+
+      // 3. Load System Constants
+      add(const LoadFeeSystemConstants());
+
+      // 4. Update Coordinator State
+      emit(
+        state
+            .successState(
+              'Initialized from quotation',
+              operation: 'initialize_from_quotation',
+            )
+            .copyWith(
+              currentHeader: event.header,
+              currentDetails: event.details,
+              paymentMethod: event.header.paymentMethod ?? 'Cash',
+              paymentInstrument: event.header.paymentInstrument ?? 0,
+              isOrderComplete: false,
+              isStockValidated: false,
+              isCalculationsComplete: false,
+              defaultCustomer: event.header.customerBillToRef,
+            ),
+      );
+
+      // 5. Trigger Calculations
+      // add(const CalculateCompleteOrderTotals());
+    } catch (e) {
+      emit(state.errorState('Failed to initialize from quotation: $e'));
     }
   }
   /* Future<void> _onLoadAllSalesOrders(

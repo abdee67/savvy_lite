@@ -1,7 +1,14 @@
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_repository.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/services/purchase_order_stock_service.dart';
+import 'package:savvy_stock/features/purchase/supplier_entry/blocs/supplier_bloc.dart';
+import 'package:savvy_stock/features/purchase/supplier_entry/repo/supplier_repo.dart';
 import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_bloc.dart';
+import 'package:savvy_stock/features/sales/quotation_order/repo/quotation_order_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/detail/bloc/invoice_detail_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/detail/repo/invoice_detail_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/header/bloc/invoice_header_bloc.dart';
@@ -9,9 +16,9 @@ import 'package:savvy_stock/features/sales/sales_order/invoice/header/repo/invoi
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/service/sales_order_integration_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/service/validate_stock_availability.dart';
-import 'package:savvy_stock/features/sales/void%20sales/bloc/sales_return_bloc.dart';
-import 'package:savvy_stock/features/sales/void%20sales/repos/sales_return_repository.dart';
-import 'package:savvy_stock/features/sales/void%20sales/services/sales_return_stock_service.dart';
+import 'package:savvy_stock/features/sales/sales_return/bloc/sales_return_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_return/repos/sales_return_repository.dart';
+import 'package:savvy_stock/features/sales/sales_return/services/sales_return_stock_service.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/repo/lot_expiration_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
@@ -232,7 +239,32 @@ void initDependencies() {
       lotMasterRepository: getIt(),
     ),
   );
-  // BLoCs
+  getIt.registerLazySingleton<QuotationOrderRepository>(
+    () => QuotationOrderRepository(databaseService: getIt()),
+  );
+  getIt.registerLazySingleton<SupplierRepository>(
+    () => SupplierRepositoryImpl(getIt()),
+  );
+  getIt.registerLazySingleton<PurchaseOrderRepository>(
+    () => PurchaseOrderRepository(
+      databaseService: getIt(),
+      udcRepository: getIt(),
+    ),
+  );
+  getIt.registerLazySingleton<PurchaseOrderStockService>(
+    () => PurchaseOrderStockService(
+      itemLocationsRepository: getIt(),
+      udcRepository: getIt(),
+      itemUomConversionsRepository: getIt(),
+      itemTransactionsRepository: getIt(),
+      systemConstantBloc: getIt(),
+      lotMasterRepository: getIt(),
+      stockItemInBranchRepository: getIt(),
+      expirationColorsRepository: getIt(),
+    ),
+  );
+
+  ///////////// BLoCs///////////////
 
   getIt.registerLazySingleton<AuthBloc>(
     () => AuthBloc(databaseService: getIt(), secureStorage: getIt()),
@@ -410,6 +442,7 @@ void initDependencies() {
       invoiceHeaderBloc: getIt(),
       invoiceDetailBloc: getIt(),
       systemConstantBloc: getIt(),
+      quotationRepo: getIt(),
     ),
   );
   getIt.registerFactory<SalesReturnBloc>(
@@ -419,6 +452,38 @@ void initDependencies() {
       systemConstantBloc: getIt(),
       salesOrderHeaderRepository: getIt(),
       salesReturnStockService: getIt(),
+    ),
+  );
+  getIt.registerFactory<QuotationOrderBloc>(
+    () => QuotationOrderBloc(
+      repository: getIt(),
+      authBloc: getIt(),
+      systemConstantBloc: getIt(),
+      customerRepository: getIt(),
+      uomConversionsRepository: getIt(),
+      itemInBranchRepository: getIt(),
+      invoiceDetailBloc: getIt(),
+      invoiceDetailRepository: getIt(),
+      invoiceHeaderBloc: getIt(),
+      invoiceHeaderRepository: getIt(),
+      udcRepository: getIt(),
+    ),
+  );
+  // Purchase
+  getIt.registerFactory<SupplierBloc>(
+    () => SupplierBloc(repository: getIt(), authBloc: getIt()),
+  );
+  getIt.registerFactory<PurchaseOrderBloc>(
+    () => PurchaseOrderBloc(
+      repository: getIt(),
+      authBloc: getIt(),
+      systemConstantBloc: getIt(),
+      udcRepository: getIt(),
+      nextNumberRepository: getIt(),
+      stockService: getIt(),
+      itemsTableRepository: getIt(),
+      itemCostsRepository: getIt(),
+      supplierRepository: getIt(),
     ),
   );
 }

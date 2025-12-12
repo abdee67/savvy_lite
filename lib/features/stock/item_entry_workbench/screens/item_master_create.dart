@@ -43,22 +43,25 @@ class _ItemMasterCreatePageState extends State<ItemMasterCreatePage> {
             _showErrorMessage(state.message ?? 'An error occurred');
           }
         },
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Mode Selection
-              _buildModeSelection(),
-              const SizedBox(height: 24),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Mode Selection
+                _buildModeSelection(),
+                const SizedBox(height: 24),
 
-              // Content based on selection
-              Expanded(
-                child: _selectedMode == 'S'
-                    ? SingleItemEntryForm(authBloc: widget.authBloc)
-                    : BatchUploadSection(),
-              ),
-            ],
+                // Content based on selection
+                SizedBox(
+                  height: MediaQuery.of(context).size.height - 300,
+                  child: _selectedMode == 'S'
+                      ? SingleItemEntryForm(authBloc: widget.authBloc)
+                      : BatchUploadSection(),
+                ),
+              ],
+            ),
           ),
         ),
       ),

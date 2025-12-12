@@ -5,7 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_repository.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/services/purchase_order_stock_service.dart';
+import 'package:savvy_stock/features/purchase/supplier_entry/blocs/supplier_bloc.dart';
+import 'package:savvy_stock/features/purchase/supplier_entry/repo/supplier_repo.dart';
 import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_bloc.dart';
+import 'package:savvy_stock/features/sales/quotation_order/repo/quotation_order_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/detail/bloc/invoice_detail_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/detail/repo/invoice_detail_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/header/bloc/invoice_header_bloc.dart';
@@ -14,9 +21,9 @@ import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_d
 import 'package:savvy_stock/features/sales/sales_order/detail/repo/sales_order_detail_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/service/validate_stock_availability.dart';
-import 'package:savvy_stock/features/sales/void%20sales/bloc/sales_return_bloc.dart';
-import 'package:savvy_stock/features/sales/void%20sales/repos/sales_return_repository.dart';
-import 'package:savvy_stock/features/sales/void%20sales/services/sales_return_stock_service.dart';
+import 'package:savvy_stock/features/sales/sales_return/bloc/sales_return_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_return/repos/sales_return_repository.dart';
+import 'package:savvy_stock/features/sales/sales_return/services/sales_return_stock_service.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/repo/lot_expiration_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
@@ -74,7 +81,7 @@ Future<void> _initializeAndRunApp() async {
   try {
     await ConnectivityService().initConnectivity();
     initDependencies();
-    //\\await LocalDatabaseService().resetDatabase();
+    //await LocalDatabaseService().resetDatabase();
     // await LocalDatabaseService().debugTable('branch_table');
 
     if (AppConfig.isTestMode) {
@@ -83,16 +90,25 @@ Future<void> _initializeAndRunApp() async {
       developer.log('💾 Using local database only');
     }
     // Debug database tables (optional - remove in production)
-    await LocalDatabaseService().debugTable('items_in_branch');
-    await LocalDatabaseService().debugTable('item_location');
-    await LocalDatabaseService().debugTable('lot_master');
+    // await LocalDatabaseService().debugTable('items_in_branch');
+    //  await LocalDatabaseService().debugTable('item_cost');
+    //  await LocalDatabaseService().debugTable('item_location');
+    // await LocalDatabaseService().debugTable('lot_master');
     await LocalDatabaseService().debugTable('sales_order_header');
-    await LocalDatabaseService().debugTable('sales_order_details');
-    await LocalDatabaseService().debugTable('sales_return_header');
-    await LocalDatabaseService().debugTable('sales_return_details');
-    await LocalDatabaseService().debugTable('invoice_history_header');
-    await LocalDatabaseService().debugTable('invoice_history_detail');
-    await LocalDatabaseService().debugTable('item_transactions');
+    await LocalDatabaseService().debugTable('credit_receipt_table');
+    // await LocalDatabaseService().debugTable('sales_order_details');
+    // await LocalDatabaseService().debugTable('sales_return_header');
+    //await LocalDatabaseService().debugTable('sales_return_details');
+    //await LocalDatabaseService().debugTable('invoice_history_header');
+    // await LocalDatabaseService().debugTable('invoice_history_detail');
+    // await LocalDatabaseService().debugTable('item_transactions');
+    // await LocalDatabaseService().debugTable('quote_order_header');
+    // await LocalDatabaseService().debugTable('quote_order_detail');
+    // await LocalDatabaseService().debugTable('supplier_table');
+    // await LocalDatabaseService().debugTable('purchase_order_header');
+    //await LocalDatabaseService().debugTable('purchase_order_detail');
+    //await LocalDatabaseService().debugTable('purchase_order_receiver');
+    //await LocalDatabaseService().debugTable('credit_payment_table');
   } catch (error, stackTrace) {
     developer.log('Initialization error: $error');
     developer.log('Stack trace: $stackTrace');
@@ -160,6 +176,10 @@ class _SavvyStockState extends State<SavvyStock> {
   late InvoiceHistoryHeaderRepository _invoiceHistoryHeaderRepository;
   late SalesReturnStockService _salesReturnStockService;
   late SalesReturnRepository _salesReturnRepository;
+  late QuotationOrderRepository _quotationOrderRepository;
+  late SupplierRepository _supplierRepository;
+  late PurchaseOrderStockService _purchaseStockService;
+  late PurchaseOrderRepository _purchaseOrderRepository;
 
   @override
   void initState() {
@@ -206,6 +226,10 @@ class _SavvyStockState extends State<SavvyStock> {
     _salesOrderDetailRepository = getIt<SalesOrderDetailRepository>();
     _salesReturnStockService = getIt<SalesReturnStockService>();
     _salesReturnRepository = getIt<SalesReturnRepository>();
+    _quotationOrderRepository = getIt<QuotationOrderRepository>();
+    _supplierRepository = getIt<SupplierRepository>();
+    _purchaseOrderRepository = getIt<PurchaseOrderRepository>();
+    _purchaseStockService = getIt<PurchaseOrderStockService>();
     // Ensure system constants are loaded when companyId becomes available.
     final cid = _authBloc.state.companyId;
     if (cid != null) {
@@ -475,6 +499,7 @@ class _SavvyStockState extends State<SavvyStock> {
               invoiceDetailBloc: _invoiceHistoryDetailBloc,
               authBloc: _authBloc,
               systemConstantBloc: _systemConstantBloc,
+              quotationRepo: _quotationOrderRepository,
             ),
           ),
           BlocProvider<InvoiceHistoryHeaderBloc>(
@@ -498,6 +523,42 @@ class _SavvyStockState extends State<SavvyStock> {
               systemConstantBloc: _systemConstantBloc,
               salesReturnStockService: _salesReturnStockService,
               salesOrderHeaderRepository: _salesOrderHeaderRepository,
+            ),
+          ),
+          BlocProvider<QuotationOrderBloc>(
+            create: (context) => QuotationOrderBloc(
+              repository: _quotationOrderRepository,
+              authBloc: _authBloc,
+              systemConstantBloc: _systemConstantBloc,
+              customerRepository: _customerRepository,
+              uomConversionsRepository: _itemUomConversionRepository,
+              itemInBranchRepository: _stockItemInBranchRepository,
+              invoiceDetailBloc: _invoiceHistoryDetailBloc,
+              invoiceDetailRepository: _invoiceHistoryDetailRepository,
+              invoiceHeaderBloc: _invoiceHistoryHeaderBloc,
+              invoiceHeaderRepository: _invoiceHistoryHeaderRepository,
+              udcRepository: _udcRepository,
+            ),
+          ),
+          // Purchase Blocs
+          BlocProvider<SupplierBloc>(
+            create: (context) => SupplierBloc(
+              repository: _supplierRepository,
+              authBloc: _authBloc,
+            ),
+          ),
+          // Purchase Blocs
+          BlocProvider<PurchaseOrderBloc>(
+            create: (context) => PurchaseOrderBloc(
+              repository: _purchaseOrderRepository,
+              authBloc: _authBloc,
+              systemConstantBloc: _systemConstantBloc,
+              udcRepository: _udcRepository,
+              itemCostsRepository: _itemCostRepository,
+              itemsTableRepository: _stockItemsEntryRepository,
+              supplierRepository: _supplierRepository,
+              nextNumberRepository: _nextNumberRepository,
+              stockService: _purchaseStockService,
             ),
           ),
         ],

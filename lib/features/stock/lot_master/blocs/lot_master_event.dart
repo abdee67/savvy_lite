@@ -2,7 +2,7 @@
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
-import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_receiver_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
@@ -184,7 +184,7 @@ class RemoveFromCreateList extends LotMasterEvent {
 }
 
 class AutoCreateLotForPO extends LotMasterEvent {
-  final PurchaseOrderReceiverModel por;
+  final PurchaseOrderReceiver por;
   final int transactionNumber;
   const AutoCreateLotForPO(this.por, this.transactionNumber);
 }
@@ -198,8 +198,8 @@ class CalculateLotStatus extends LotMasterEvent {
 class CalculateLotColors extends LotMasterEvent {
   const CalculateLotColors();
 }
-class CalculateMultipleLotStatus extends LotMasterEvent {}
 
+class CalculateMultipleLotStatus extends LotMasterEvent {}
 
 class ValidateLotDates extends LotMasterEvent {
   final LotMaster item;

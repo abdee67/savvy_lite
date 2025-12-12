@@ -1,0 +1,1197 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:savvy_stock/core/constants/app_routes.dart';
+import 'package:savvy_stock/core/utils/ui_helper.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_bloc.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_event.dart';
+import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_state.dart';
+import 'package:savvy_stock/features/sales/quotation_order/model/quotation_order_header.dart';
+
+class QuotationReviewPage extends StatefulWidget {
+  final AuthBloc authBloc;
+  const QuotationReviewPage({super.key, required this.authBloc});
+
+  @override
+  State<QuotationReviewPage> createState() => _QuotationReviewPageState();
+}
+
+class _QuotationReviewPageState extends State<QuotationReviewPage>
+    with SingleTickerProviderStateMixin {
+  final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  final Map<int, double> _dragOffset = {};
+
+  // Animation controllers for detail panel
+  late AnimationController _detailAnimationController;
+  late Animation<double> _heightAnimation;
+  late Animation<double> _opacityAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  // Detail panel state
+  bool _quotationOrderDetail = false;
+  QuotationOrderHeader? _selectedQuotationOrder;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Initialize animation controller
+    _detailAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    // Set up animations
+    _setupAnimations();
+
+    // Load quotationOrders
+    context.read<QuotationOrderBloc>().add(
+      LoadQuotationOrders(companyId: widget.authBloc.state.companyId!),
+    );
+  }
+
+  void _setupAnimations() {
+    _heightAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _detailAnimationController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeInOutCubic),
+      ),
+    );
+
+    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _detailAnimationController,
+        curve: const Interval(0.3, 1.0, curve: Curves.easeIn),
+      ),
+    );
+
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0.0, -0.1), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _detailAnimationController,
+            curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
+          ),
+        );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _scrollController.dispose();
+    _detailAnimationController.dispose();
+    super.dispose();
+  }
+
+  void _handleSearch(
+    QuotationOrderHeader filter,
+    DateTime? startDate,
+    DateTime? endDate,
+  ) {
+    context.read<QuotationOrderBloc>().add(
+      FilterQuotationOrders(
+        customerBillTo: filter.customerBillTo,
+        fsNumber: filter.fsNumber,
+        conversionStatus: filter.conversionStatus,
+        startDate: startDate,
+        endDate: endDate,
+      ),
+    );
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    context.read<QuotationOrderBloc>().add(
+      FilterQuotationOrders(
+        customerBillTo: null,
+        fsNumber: '',
+        conversionStatus: '',
+        startDate: null,
+        endDate: null,
+      ),
+    );
+  }
+
+  void _showQuotationOrderDetail(QuotationOrderHeader quotationOrder) {
+    setState(() {
+      _selectedQuotationOrder = quotationOrder;
+      _quotationOrderDetail = true;
+    });
+
+    // Start the animation
+    _detailAnimationController.forward(from: 0.0);
+  }
+
+  void _hideQuotationOrderDetail() {
+    // Reverse the animation
+    _detailAnimationController.reverse().then((_) {
+      if (mounted) {
+        setState(() {
+          _quotationOrderDetail = false;
+          _selectedQuotationOrder = null;
+        });
+      }
+    });
+  }
+
+  void _refreshList() {
+    context.read<QuotationOrderBloc>().add(
+      LoadQuotationOrders(companyId: widget.authBloc.state.companyId!),
+    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('quotationOrders refreshed')));
+  }
+
+  void _convertToSales(QuotationOrderHeader quotationOrder) {
+    if (quotationOrder.conversionStatus == 'Converted') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Quotation Order is already converted')),
+      );
+      return;
+    }
+    context.read<QuotationOrderBloc>().add(
+      ConvertToSalesOrder(quotationHeader: quotationOrder),
+    );
+  }
+
+  void _exportToExcel() {
+    final bloc = context.read<QuotationOrderBloc>();
+    final state = bloc.state;
+
+    if (state.selectedHeaders.isNotEmpty) {
+      //bloc.add(ExportQuotationOrder(quotationOrder: state.selectedHeader!, format: 'excel'));
+    } else {
+      // bloc.add(ExportQuotationOrder(quotationOrder: state.selectedHeader!, format: 'excel'));
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Exporting to Excel...')));
+  }
+
+  void _exportToCSV() {
+    final bloc = context.read<QuotationOrderBloc>();
+    final state = bloc.state;
+
+    if (state.selectedHeaders.isNotEmpty) {
+      //bloc.add(ExportQuotationOrder(quotationOrder: state.selectedHeader!, format: 'csv'));
+    } else {
+      //bloc.add(ExportSaleOrder(quotationOrder: state.selected!, format: 'csv'));
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Exporting to CSV...')));
+  }
+
+  void _navigateToCreateScreen() {
+    final companyId = widget.authBloc.state.companyId;
+    final userId = widget.authBloc.state.userId?.id;
+    final branchId = widget.authBloc.state.userId?.branch;
+    context.read<QuotationOrderBloc>().add(
+      PrepareCreateQuotationOrder(
+        companyId: companyId!,
+        employeeId: userId!,
+        branchId: branchId!,
+      ),
+    );
+    context.push(AppRoutes.quotationOrder);
+  }
+
+  void _safeVoid(
+    BuildContext context, {
+    int? index,
+    QuotationOrderHeader? header,
+  }) {
+    final bloc = context.read<QuotationOrderBloc>();
+    final state = bloc.state;
+
+    QuotationOrderHeader? quotationOrderToDelete;
+
+    if (header != null) {
+      quotationOrderToDelete = header;
+    } else if (index != null &&
+        index >= 0 &&
+        index < state.filteredHeaders.length) {
+      quotationOrderToDelete = state.filteredHeaders[index];
+    }
+
+    if (quotationOrderToDelete == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cannot reject QuotationOrder. Invalid selection.'),
+        ),
+      );
+      return;
+    }
+
+    showVoidDialog(
+      context,
+      title: 'Void QuotationOrder #${quotationOrderToDelete.fsNumber}?',
+      content:
+          'Are you sure you want to void QuotationOrder #${quotationOrderToDelete.fsNumber}?',
+      onConfirm: (reason) {
+        bloc.add(
+          CancelQuotationOrder(
+            header: quotationOrderToDelete!,
+            commentsReason: reason,
+          ),
+        );
+      },
+    );
+  }
+
+  void _onHorizontalDragUpdate(int index, DragUpdateDetails details) {
+    setState(() {
+      final current = _dragOffset[index] ?? 0;
+      var newOffset = current + details.delta.dx;
+
+      // only allow left swipe
+      if (newOffset > 0) newOffset = 0;
+      _dragOffset[index] = newOffset;
+    });
+  }
+
+  void _onHorizontalDragEnd(
+    BuildContext context,
+    int index,
+    DragEndDetails details,
+  ) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final threshold = screenWidth * 0.3;
+    final current = _dragOffset[index] ?? 0;
+    if (current.abs() > threshold) {
+      // Swipe far enough → delete
+      setState(() {
+        _dragOffset[index] = -screenWidth;
+      });
+
+      Future.delayed(const Duration(milliseconds: 300), () {
+        _safeVoid(context, index: index);
+        setState(() {
+          _dragOffset.remove(index);
+        });
+      });
+    } else {
+      // Not far enough → snap back
+      setState(() {
+        _dragOffset[index] = 0.0;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey[100],
+      appBar: AppBar(
+        title: const Text('Quotation Order Report'),
+        backgroundColor: const Color.fromARGB(255, 28, 66, 146),
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Iconsax.home),
+            onPressed: () => {}, //context.push(AppRoutes.reportsHome),
+            tooltip: 'Reports Home',
+          ),
+        ],
+      ),
+      body: BlocConsumer<QuotationOrderBloc, QuotationOrderState>(
+        listener: (context, state) {
+          if (state.status == QuotationOrderStatus.success) {
+            if (state.lastOperation == 'convert_to_sales' &&
+                state.convertedSalesHeader != null) {
+              // Navigate to Sales Customer Info with extra data
+              context
+                  .push(
+                    AppRoutes.salesCustomerInfo,
+                    extra: {
+                      'header': state.convertedSalesHeader,
+                      'details': state.convertedSalesDetails,
+                    },
+                  )
+                  .then((_) {
+                    // Reset state when returning to prevent loop
+                    context.read<QuotationOrderBloc>().add(
+                      ResetQuotationState(),
+                    );
+                  });
+
+              // Also reset immediately to prevent double push if rebuild happens
+              context.read<QuotationOrderBloc>().add(ResetQuotationState());
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    state.successMessage ?? 'Operation completed successfully',
+                  ),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          }
+
+          if (state.status == QuotationOrderStatus.error) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.error ?? 'An error occurred'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+        builder: (context, state) {
+          return Stack(
+            children: [
+              Column(
+                children: [
+                  // Toolbar
+                  // _buildToolbar(),
+
+                  // Search Bar
+                  _buildSearchBar(),
+                  //  _buildActionButtons(state),
+
+                  // quotationOrders List
+                  Expanded(child: _buildquotationOrdersList(state)),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildToolbar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
+      ),
+      child: Row(
+        children: [
+          // Refresh Button
+          ElevatedButton.icon(
+            onPressed: _refreshList,
+            icon: const Icon(Iconsax.refresh, size: 16),
+            label: const Text('Refresh'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: const Color.fromARGB(255, 28, 66, 146),
+              side: BorderSide(
+                color: const Color.fromARGB(255, 28, 66, 146).withOpacity(0.3),
+              ),
+            ),
+          ),
+          const Spacer(),
+
+          // Export Menu
+          PopupMenuButton<String>(
+            icon: const Icon(
+              Iconsax.export,
+              color: Color.fromARGB(255, 28, 66, 146),
+            ),
+            offset: const Offset(0, 50),
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'excel',
+                child: Row(
+                  children: [
+                    Icon(Iconsax.document, size: 16),
+                    SizedBox(width: 8),
+                    Text('Excel'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'csv',
+                child: Row(
+                  children: [
+                    Icon(Iconsax.document_copy, size: 16),
+                    SizedBox(width: 8),
+                    Text('CSV'),
+                  ],
+                ),
+              ),
+            ],
+            onSelected: (value) {
+              if (value == 'excel') {
+                _exportToExcel();
+              } else if (value == 'csv') {
+                _exportToCSV();
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(
+                  color: const Color.fromARGB(
+                    255,
+                    28,
+                    66,
+                    146,
+                  ).withOpacity(0.3),
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Row(
+                children: [
+                  Icon(
+                    Iconsax.export,
+                    size: 16,
+                    color: Color.fromARGB(255, 28, 66, 146),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'Export',
+                    style: TextStyle(color: Color.fromARGB(255, 28, 66, 146)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search by Quotation Order number, item, store...',
+                prefixIcon: const Icon(Iconsax.search_normal, size: 20),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Iconsax.close_circle, size: 20),
+                        onPressed: _clearSearch,
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Colors.grey[100],
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+              // onChanged: _handleSearch,
+            ),
+          ),
+          const SizedBox(width: 12),
+          _buildFloatingActionButton(context),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFloatingActionButton(BuildContext context) {
+    return BlocBuilder<QuotationOrderBloc, QuotationOrderState>(
+      builder: (context, state) {
+        return ElevatedButton(
+          onPressed: () {
+            _navigateToCreateScreen();
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color.fromARGB(255, 28, 66, 146),
+            shape: const CircleBorder(),
+          ),
+          child: const Icon(Icons.add, color: Colors.white),
+        );
+      },
+    );
+  }
+
+  Widget _buildquotationOrdersList(QuotationOrderState state) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenWidth < 700;
+    final cardSpacing = screenHeight * 0.02;
+    final cardWidth = isSmallScreen ? screenWidth * 0.85 : screenWidth * 0.8;
+
+    if (state.status == QuotationOrderStatus.loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (state.status == QuotationOrderStatus.failure) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text(
+              state.error ?? 'Failed to load sales orders',
+              style: const TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => context.read<QuotationOrderBloc>().add(
+                LoadQuotationOrders(
+                  companyId: widget.authBloc.state.companyId!,
+                ),
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (state.filteredHeaders.isEmpty) {
+      final query = state.searchQuery ?? '';
+      final hasQuery = query.isNotEmpty;
+
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Iconsax.receipt, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text(
+              !hasQuery
+                  ? 'No quotationOrders found'
+                  : 'No results for "$query"',
+              style: const TextStyle(color: Colors.grey, fontSize: 16),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      width: screenWidth,
+      height: screenHeight,
+      decoration: BoxDecoration(color: Colors.grey[100]),
+      child: ListView.separated(
+        controller: _scrollController,
+        padding: const EdgeInsets.all(16),
+        itemCount: state.filteredHeaders.length,
+        separatorBuilder: (context, index) => SizedBox(height: cardSpacing),
+        itemBuilder: (context, index) {
+          final quotationOrder = state.filteredHeaders[index];
+          final isSelected = state.selectedHeaders.contains(quotationOrder);
+
+          return _buildquotationOrderListItem(
+            quotationOrder,
+            isSelected,
+            state,
+            index,
+            isSmallScreen,
+            cardWidth,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildquotationOrderListItem(
+    QuotationOrderHeader quotationOrder,
+    bool isSelected,
+    QuotationOrderState state,
+    int index,
+    bool isCompact,
+    double cardWidth,
+  ) {
+    final offset = _dragOffset[index] ?? 0.0;
+    final isExpanded =
+        _quotationOrderDetail == true &&
+        _selectedQuotationOrder == quotationOrder;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    // For responsiveness:
+    final collapsedHeight = isCompact
+        ? screenHeight * 0.22
+        : screenHeight * 0.14;
+
+    final expandedHeight = isCompact
+        ? screenHeight * 0.55
+        : screenHeight * 0.45;
+    final collapsedWidth = isCompact ? screenWidth * 0.92 : screenWidth * 0.8;
+
+    return GestureDetector(
+      onDoubleTap: () => _showQuotationOrderDetail(quotationOrder),
+      onHorizontalDragUpdate: (details) =>
+          _onHorizontalDragUpdate(index, details),
+      onHorizontalDragEnd: (details) =>
+          _onHorizontalDragEnd(context, index, details),
+      child: AnimatedBuilder(
+        animation: _scrollController,
+        builder: (context, child) => Container(
+          transform: Matrix4.translationValues(offset, 0, 0),
+          width: collapsedWidth,
+          height: isExpanded ? expandedHeight : collapsedHeight,
+          child: Stack(
+            children: [
+              // 1. DELETE INDICATOR - Should be FIRST in Stack
+              if (!isExpanded)
+                Positioned.fill(
+                  child: Container(
+                    alignment: Alignment.centerRight,
+                    decoration: BoxDecoration(
+                      color: Colors.amber,
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    margin: const EdgeInsets.only(bottom: 2),
+                    child: const Icon(
+                      Icons.delete,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                ),
+
+              // 2. BACKGROUND LAYERS (only when expanded)
+              if (isExpanded) ...[
+                // Yellow background
+                Positioned.fill(
+                  top: 47,
+                  child: Container(
+                    width: collapsedWidth,
+                    height: expandedHeight,
+                    decoration: ShapeDecoration(
+                      color: const Color(0xFFFDD105),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+
+              // 3. quotationOrder CARD - Should come AFTER delete indicator
+              AnimatedContainer(
+                padding: const EdgeInsets.only(top: 10, left: 10, right: 10),
+                width: collapsedWidth,
+                height: collapsedHeight,
+                duration: const Duration(milliseconds: 400),
+                transform: Matrix4.translationValues(offset, 0, 0),
+                curve: Curves.easeInOut,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.blue[50] : Colors.white,
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: isSelected
+                        ? const Color.fromARGB(255, 28, 66, 146)
+                        : Colors.transparent,
+                    width: 2,
+                  ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // quotationOrder Avatar
+                        _buildquotationOrderAvatar(
+                          quotationOrder,
+                          isSelected,
+                          isCompact,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    ' ${quotationOrder.fsNumber ?? 'N/A'}',
+                                    style: TextStyle(
+                                      color: const Color(0xFF373737),
+                                      fontSize: isCompact ? 20 : 24,
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: _getquotationOrderTypeColor(
+                                        quotationOrder.salesType,
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color:
+                                            _getquotationOrderTypeBorderColor(
+                                              quotationOrder.salesType,
+                                            ),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      quotationOrder.salesType ?? 'Unknown',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              Text(
+                                'Total - ${quotationOrder.amountTotal}',
+                                style: TextStyle(
+                                  color: const Color(0xFF887F7F),
+                                  fontSize: isCompact ? 12 : 14,
+                                  fontStyle: FontStyle.italic,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w300,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              // Store and date info
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue[50],
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: Colors.blue[200]!,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'From ${_formatDateTime(quotationOrder.orderDate ?? DateTime.now())}',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.blue[800],
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green[50],
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: Colors.green[200]!,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'To ${_formatDateTime(quotationOrder.shippedDate ?? DateTime.now())}',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.green[800],
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        // See More / See Less button
+                        ElevatedButton(
+                          onPressed: () => isExpanded
+                              ? _hideQuotationOrderDetail()
+                              : _showQuotationOrderDetail(quotationOrder),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF145888),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          child: Text(
+                            isExpanded ? 'See Less' : 'See More',
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: isCompact ? 10 : 12,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // 4. ANIMATED EXPANDED CONTENT
+              if (isExpanded)
+                Positioned(
+                  top: collapsedHeight + 10,
+                  left: 20,
+                  right: 20,
+                  child: AnimatedBuilder(
+                    animation: _detailAnimationController,
+                    builder: (context, child) {
+                      final currentHeight =
+                          _heightAnimation.value *
+                          (expandedHeight - collapsedHeight - 20);
+                      final currentOpacity = _opacityAnimation.value;
+
+                      return SlideTransition(
+                        position: _slideAnimation,
+                        child: Container(
+                          height: currentHeight > 0 ? currentHeight : 0,
+                          decoration: BoxDecoration(color: Colors.transparent),
+                          child: Opacity(opacity: currentOpacity, child: child),
+                        ),
+                      );
+                    },
+                    child: _buildquotationOrderDetailContent(
+                      quotationOrder,
+                      isCompact,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildquotationOrderDetailContent(
+    QuotationOrderHeader quotationOrder,
+    bool isCompact,
+  ) {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        children: [
+          if (quotationOrder.customerBillToRef != null)
+            _buildquotationOrderInfoItem(
+              'Customer : ',
+              quotationOrder.customerBillToRef!.customerName?.toString() ??
+                  'N/A',
+              Iconsax.box,
+              isCompact,
+            ),
+          _buildquotationOrderInfoItem(
+            'Order No : ',
+            quotationOrder.orderNumber.toString(),
+            Iconsax.receipt,
+            isCompact,
+          ),
+          if (quotationOrder.fsNumber != null)
+            _buildquotationOrderInfoItem(
+              'FS Number : ',
+              quotationOrder.fsNumber ?? 'N/A',
+              Iconsax.rulerpen,
+              isCompact,
+            ),
+          if (quotationOrder.orderType != null)
+            _buildquotationOrderInfoItem(
+              'Order Type : ',
+              quotationOrder.orderTypeRef!.description1.toString(),
+              Iconsax.receipt_edit,
+              isCompact,
+            ),
+          if (quotationOrder.orderDate != null)
+            _buildquotationOrderInfoItem(
+              'Order Date : ',
+              _formatDateTime(quotationOrder.orderDate!),
+              Iconsax.shop,
+              isCompact,
+            ),
+          if (quotationOrder.shippedDate != null)
+            _buildquotationOrderInfoItem(
+              'Shipped Date : ',
+              _formatDateTime(quotationOrder.shippedDate!),
+              Iconsax.calendar,
+              isCompact,
+            ),
+          if (quotationOrder.voidIndicator != null)
+            _buildquotationOrderInfoItem(
+              'Void Indicator : ',
+              quotationOrder.voidIndicator?.toString() ?? 'N/A',
+              Iconsax.tag,
+              isCompact,
+            ),
+          if (quotationOrder.withholdAmount != null)
+            _buildquotationOrderInfoItem(
+              'Withhold Amount : ',
+              quotationOrder.withholdAmount?.toString() ?? 'N/A',
+              Iconsax.barcode,
+              isCompact,
+            ),
+          if (quotationOrder.tax != null)
+            _buildquotationOrderInfoItem(
+              'Tax : ',
+              quotationOrder.tax?.toString() ?? 'N/A',
+              Iconsax.profile_2user,
+              isCompact,
+            ),
+          if (quotationOrder.discountAmount != null)
+            _buildquotationOrderInfoItem(
+              'Discount : ',
+              quotationOrder.discountAmount?.toString() ?? 'N/A',
+              Iconsax.profile_circle,
+              isCompact,
+            ),
+          if (quotationOrder.referenceNote3 != null)
+            _buildquotationOrderInfoItem(
+              'Sales invoice : ',
+              quotationOrder.referenceNote3?.toString() ?? 'N/A',
+              Iconsax.profile_2user,
+              isCompact,
+            ),
+          if (quotationOrder.commentsReason != null)
+            _buildquotationOrderInfoItem(
+              'Comments Reason : ',
+              quotationOrder.commentsReason?.toString() ?? 'N/A',
+              Iconsax.profile_2user,
+              isCompact,
+            ),
+          if (quotationOrder.conversionStatus != null)
+            _buildquotationOrderInfoItem(
+              'Conversion Status : ',
+              quotationOrder.conversionStatus?.toString() ?? 'N/A',
+              Iconsax.profile_2user,
+              isCompact,
+            ),
+          if (quotationOrder.conversionDate != null)
+            _buildquotationOrderInfoItem(
+              'Conversion Date : ',
+              _formatDateTime(quotationOrder.conversionDate!),
+              Iconsax.calendar,
+              isCompact,
+            ),
+          if (quotationOrder.amountCost != null)
+            _buildquotationOrderInfoItem(
+              'Amount Cost : ',
+              '\$${quotationOrder.amountCost}',
+              Iconsax.dollar_circle,
+              isCompact,
+            ),
+
+          // Action buttons row
+          if (quotationOrder.conversionStatus == 'Proforma Created')
+            Padding(
+              padding: const EdgeInsets.only(top: 16, bottom: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  if (quotationOrder.conversionStatus != 'Converted' &&
+                      quotationOrder.conversionStatus != null)
+                    _buildActionButton(
+                      Iconsax.convert_3d_cube,
+                      'Convert to sales',
+                      () => _convertToSales(quotationOrder),
+                      isCompact,
+                    ),
+                  if (quotationOrder.conversionStatus != 'Converted' &&
+                      quotationOrder.conversionStatus != null)
+                    _buildActionButton(
+                      Iconsax.trash,
+                      'Void',
+                      () => _safeVoid(context, header: quotationOrder),
+                      isCompact,
+                    ),
+                  _buildActionButton(
+                    Iconsax.export,
+                    'Export',
+                    () => _exportToExcel(),
+                    isCompact,
+                  ),
+                  _buildActionButton(Iconsax.repeat, 'Print', () {}, isCompact),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildquotationOrderInfoItem(
+    String label,
+    String value,
+    IconData icon,
+    bool isCompact,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 16, color: Colors.grey[600]),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: label,
+                    style: const TextStyle(
+                      color: Color(0xFF373737),
+                      fontSize: 13,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  TextSpan(
+                    text: value,
+                    style: const TextStyle(
+                      color: Color(0xFF373737),
+                      fontSize: 13,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton(
+    IconData icon,
+    String label,
+    VoidCallback onPressed,
+    bool isCompact,
+  ) {
+    return Column(
+      children: [
+        IconButton(
+          icon: Icon(icon, size: isCompact ? 20 : 24),
+          onPressed: onPressed,
+          style: IconButton.styleFrom(
+            backgroundColor: const Color(0xFF145888),
+            foregroundColor: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: isCompact ? 10 : 12,
+            color: const Color(0xFF373737),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildquotationOrderAvatar(
+    QuotationOrderHeader quotationOrder,
+    bool isSelected,
+    bool isCompact,
+  ) {
+    final Color backgroundColor;
+    final Color iconColor;
+
+    if (isSelected) {
+      backgroundColor = const Color.fromARGB(255, 28, 66, 146);
+      iconColor = Colors.white;
+    } else {
+      backgroundColor = Colors.grey[200]!;
+      iconColor = Colors.grey[600]!;
+    }
+
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(color: backgroundColor, shape: BoxShape.circle),
+      child: Icon(Iconsax.receipt, color: iconColor, size: isCompact ? 20 : 24),
+    );
+  }
+
+  // Helper methods
+  Color _getquotationOrderTypeColor(String? quotationOrderType) {
+    switch (quotationOrderType) {
+      case 'A': // Adjustment
+        return Colors.orange;
+      case 'I': // Issue
+        return Colors.red;
+      case 'T': // Transfer
+        return Colors.blue;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Color _getquotationOrderTypeBorderColor(String? quotationOrderType) {
+    switch (quotationOrderType) {
+      case 'A': // Adjustment
+        return Colors.orange[300]!;
+      case 'I': // Issue
+        return Colors.red[300]!;
+      case 'T': // Transfer
+        return Colors.blue[300]!;
+      default:
+        return Colors.grey[300]!;
+    }
+  }
+
+  String _formatDateTime(DateTime date) {
+    return '${_formatDate(date)} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}:${date.second.toString().padLeft(2, '0')}';
+  }
+
+  String _formatDate(DateTime date) {
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+}

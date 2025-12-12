@@ -809,7 +809,8 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
         return CustomTableDropdown<ItemLocation>(
           title: 'Location *',
           items: locations,
-          displayText: (loc) => loc.locationDescription ?? 'No Description',
+          displayText: (loc) =>
+              loc.locationDescription?.locationDescription ?? 'No Description',
           selectedValue: selectedLocation,
           showSearch: true,
           searchHint: 'Search locations...',
@@ -822,7 +823,8 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    loc.locationDescription ?? 'No Description',
+                    loc.locationDescription?.locationDescription ??
+                        'No Description',
                     style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
                   ),
                   SizedBox(height: 2),
@@ -1018,7 +1020,8 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
         return CustomTableDropdown<ItemLocation>(
           title: 'To Location *',
           items: toLocations,
-          displayText: (loc) => loc.locationDescription ?? 'No Description',
+          displayText: (loc) =>
+              loc.locationDescription?.locationDescription ?? 'No Description',
           selectedValue: selectedToLocation,
           showSearch: true,
           searchHint: 'Search to locations...',
@@ -1031,7 +1034,8 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    loc.locationDescription ?? 'No Description',
+                    loc.locationDescription?.locationDescription ??
+                        'No Description',
                     style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
                   ),
                   SizedBox(height: 2),

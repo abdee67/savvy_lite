@@ -1,9 +1,9 @@
-
 // bloc/item_cost_event.dart
 import 'package:flutter/foundation.dart';
-import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_header_model.dart';
-import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_receiver_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/stock/item_cost/models/item_cost_model.dart';
+
 @immutable
 abstract class ItemCostEvent {}
 
@@ -98,7 +98,7 @@ class SaveAndAddContinue extends ItemCostEvent {
 
 // Business logic events
 class UpdateItemCosts extends ItemCostEvent {
-  final PurchaseOrderHeaderModel purchaseOrderHeader;
+  final PurchaseOrderHeader purchaseOrderHeader;
   UpdateItemCosts(this.purchaseOrderHeader);
 }
 
@@ -110,7 +110,7 @@ class UpdateItemCosts extends ItemCostEvent {
 */
 class UpdateUnitPrice extends ItemCostEvent {
   final ItemCost itemCost;
-  final PurchaseOrderReceiverModel purchaseOrderReceiver;
+  final PurchaseOrderReceiver purchaseOrderReceiver;
   UpdateUnitPrice(this.itemCost, this.purchaseOrderReceiver);
 }
 

@@ -1,3 +1,5 @@
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
+
 class SystemConstant {
   final int? id;
   late final String? applyLotMgm;
@@ -24,6 +26,8 @@ class SystemConstant {
   final bool isSynced;
   final DateTime? lastSyncTime;
 
+  final UdcDetails? lotTypeRef;
+
   SystemConstant({
     this.id,
     this.applyLotMgm,
@@ -49,6 +53,7 @@ class SystemConstant {
     this.tempId,
     this.isSynced = true,
     this.lastSyncTime,
+    this.lotTypeRef,
   });
 
   factory SystemConstant.fromJson(Map<String, dynamic> json) {
@@ -81,6 +86,13 @@ class SystemConstant {
       isSynced: json['is_synced'] == 1,
       lastSyncTime: json['last_sync_time'] != null
           ? DateTime.fromMillisecondsSinceEpoch(json['last_sync_time'])
+          : null,
+      lotTypeRef: json['lotType_description'] != null
+          ? UdcDetails(
+              id: json['lot_type'],
+              detailCode: json['lot_type_detail'],
+              description1: json['lot_type_description'],
+            )
           : null,
     );
   }
@@ -177,6 +189,13 @@ class SystemConstant {
       lastSyncTime: map['last_sync_time'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['last_sync_time'])
           : null,
+      lotTypeRef: map['lotType_description'] != null
+          ? UdcDetails(
+              id: map['lot_type'],
+              detailCode: map['lot_type_detail'],
+              description1: map['lot_type_description'],
+            )
+          : null,
     );
   }
   bool get shouldAutoGenerateBarcodeForItem => generateBarcodeForItem == 'Y';
@@ -206,6 +225,7 @@ class SystemConstant {
     int? tempId,
     bool? isSynced,
     DateTime? lastSyncTime,
+    UdcDetails? lotTypeRef,
   }) {
     return SystemConstant(
       id: id ?? this.id,
@@ -235,6 +255,7 @@ class SystemConstant {
       tempId: tempId ?? this.tempId,
       isSynced: isSynced ?? this.isSynced,
       lastSyncTime: lastSyncTime ?? this.lastSyncTime,
+      lotTypeRef: lotTypeRef ?? this.lotTypeRef,
     );
   }
 

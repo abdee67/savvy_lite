@@ -30,7 +30,7 @@ class LocalDatabaseService {
     String path = join(await getDatabasesPath(), 'savvy_stock.db');
     return await openDatabase(
       path,
-      version: 1, // Increment this for future migrations
+      version: 2, // Incremented for proforma fields migration
       onCreate: _onCreate,
       onUpgrade: _onUpgrade, // Add upgrade handler
       onOpen: (db) async {
@@ -43,10 +43,17 @@ class LocalDatabaseService {
     developer.log('Upgrading database from $oldVersion to $newVersion');
 
     if (oldVersion < 2) {
-      // Example migration for version 2
+      // Add proforma fields to sales_order_header for quotation conversion tracking
+      developer.log(
+        'Adding proforma_flag and proforma_reference columns to sales_order_header',
+      );
       await db.execute('''
-      ALTER TABLE system_constant ADD COLUMN new_column TEXT DEFAULT NULL
-    ''');
+        ALTER TABLE sales_order_header ADD COLUMN proforma_flag TEXT
+      ''');
+      await db.execute('''
+        ALTER TABLE sales_order_header ADD COLUMN proforma_reference TEXT
+      ''');
+      developer.log('Successfully added proforma fields to sales_order_header');
     }
 
     if (oldVersion < 3) {
@@ -548,7 +555,7 @@ CREATE INDEX idx_supplier_table_user_id ON supplier_table(user_id);
   CREATE TABLE purchase_order_header (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     supplier_id INTEGER,
-    date_transation TEXT,
+    date_transaction TEXT,
     date_delivery TEXT,
     po_receive_status INTEGER,
     company INTEGER,
@@ -568,6 +575,7 @@ CREATE INDEX idx_supplier_table_user_id ON supplier_table(user_id);
     payment_term INTEGER,
     order_type INTEGER,
     credit_due_date TEXT,
+    invoice_number TEXT,
     FOREIGN KEY (supplier_id) REFERENCES supplier_table (id),
     FOREIGN KEY (company) REFERENCES company_table (id),
     FOREIGN KEY (po_receive_status) REFERENCES udc_details (id),
@@ -776,6 +784,8 @@ CREATE INDEX idx_next_number_company ON next_number(company);
   reference_note_2 TEXT,
   reference_note3 TEXT,
   reference_note4 TEXT,
+  proforma_flag TEXT,
+  proforma_reference TEXT,
   credit_date_topay TEXT,
   fs_number TEXT,
   void_indicator TEXT,
@@ -1095,6 +1105,194 @@ ON sales_return_detail (item_id);
 ''');
     developer.log('Created table: sales_return_detail');
 
+    //crete proforma header table
+    await db.execute('''
+CREATE TABLE quote_order_header (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_number INTEGER NOT NULL,
+  order_date TEXT,
+  conversion_date TEXT,
+  required_date TEXT,
+  shipped_date TEXT,
+  sales_type TEXT,
+  quotation_validation_in_days INTEGER DEFAULT 30,
+  payment_method TEXT,
+  payment_instrument INTEGER,
+  payment_term INTEGER,
+  payment_status INTEGER,
+  credit_date_topay TEXT,
+  currency_code TEXT DEFAULT 'ETB',
+  exchange_rate REAL DEFAULT 1,
+  discount TEXT,
+  discount_amount REAL,
+  discount_in_percent REAL,
+  add_on TEXT,
+  tax REAL,
+  with_hold_apply TEXT,
+  withhold_amount REAL,
+  amount_total REAL,
+  amount_open REAL,
+  unit_cost REAL,
+  amount_cost REAL,
+  order_type INTEGER,
+  order_status TEXT DEFAULT 'Draft',
+  conversion_status TEXT,
+  prforma_status TEXT,
+  void_indicator TEXT,
+  reference_note1 TEXT,
+  reference_note_2 TEXT,
+  reference_note3 TEXT,
+  reference_note4 TEXT,
+  external_ref_number TEXT,
+  fs_number TEXT,
+  sales_represent TEXT,
+  converted_items TEXT,
+  customer_bill_to INTEGER NOT NULL,
+  customer_table_id INTEGER NOT NULL,
+  employees_id INTEGER NOT NULL,
+  company INTEGER,
+  branch_id INTEGER,
+  created_at TEXT,
+  updated_at TEXT,
+  created_by INTEGER,
+  updated_by INTEGER,
+  comments_reason TEXT,
+
+  -- FOREIGN KEYS
+  FOREIGN KEY (customer_bill_to) REFERENCES customer_table(id),
+  FOREIGN KEY (customer_table_id) REFERENCES customer_table(id),
+  FOREIGN KEY (employees_id) REFERENCES employees(id),
+  FOREIGN KEY (company) REFERENCES company_table(id),
+  FOREIGN KEY (branch_id) REFERENCES branch(id),
+  FOREIGN KEY (payment_instrument) REFERENCES udc_details(id),
+  FOREIGN KEY (payment_status) REFERENCES udc_details(id),
+  FOREIGN KEY (order_type) REFERENCES udc_details(id),
+  FOREIGN KEY (prforma_status) REFERENCES udc_details(id)
+);
+CREATE UNIQUE INDEX idx_proforma_header_id_unique
+ON proforma_header (id);
+
+CREATE INDEX idx_ph_customer_bill_to
+ON proforma_header (customer_bill_to);
+
+CREATE INDEX idx_ph_customer_table_id
+ON proforma_header (customer_table_id);
+
+CREATE INDEX idx_ph_employees_id
+ON proforma_header (employees_id);
+
+CREATE INDEX idx_ph_company
+ON proforma_header (company);
+
+CREATE INDEX idx_ph_payment_instrument
+ON proforma_header (payment_instrument);
+
+CREATE INDEX idx_ph_payment_status
+ON proforma_header (payment_status);
+
+CREATE INDEX idx_ph_order_type
+ON proforma_header (order_type);
+
+CREATE INDEX idx_ph_prforma_status
+ON proforma_header (prforma_status);
+    ''');
+    developer.log('Created table: proforma_header');
+
+    //create quote order detail table
+    await db.execute('''
+CREATE TABLE quote_order_detail (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+  quote_order_header_id INTEGER NOT NULL,
+  items_table_id INTEGER NOT NULL,
+  item_in_branch INTEGER,
+  company INTEGER,
+  unit_price REAL,
+  quantity REAL,
+  extended_price REAL,
+  unit_cost REAL,
+  amount_cost REAL,
+  taxable TEXT,
+  discount_percent REAL,
+  discount_amount REAL,
+  unit_of_measure INTEGER,
+  line_status TEXT DEFAULT 'Open',
+  reference1 TEXT,
+  reference2 TEXT,
+  prforma_status INTEGER,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  created_by INTEGER,
+  updated_by INTEGER,
+
+  -- FOREIGN KEYS
+  FOREIGN KEY (quote_order_header_id) REFERENCES quote_order_header(id),
+  FOREIGN KEY (items_table_id) REFERENCES items_table(id),
+  FOREIGN KEY (item_in_branch) REFERENCES items_in_branch(id),
+  FOREIGN KEY (company) REFERENCES company_table(id),
+  FOREIGN KEY (unit_of_measure) REFERENCES udc_details(id),
+  FOREIGN KEY (prforma_status) REFERENCES udc_details(id)
+);
+
+CREATE INDEX idx_qod_quote_order_header_id
+ON quote_order_detail (quote_order_header_id);
+
+CREATE INDEX idx_qod_item_id
+ON quote_order_detail (item_in_branch);
+
+CREATE INDEX idx_qod_company
+ON quote_order_detail (company);
+
+CREATE INDEX idx_qod_unit_of_measure
+ON quote_order_detail (unit_of_measure);
+
+CREATE INDEX idx_qod_prforma_status
+ON quote_order_detail (prforma_status);
+    ''');
+    developer.log('Created table: quote_order_detail');
+
+    //create credit payment(on purchase)
+    await db.execute('''
+CREATE TABLE credit_payment_table (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  po_header INTEGER,
+  payment_amount REAL,
+  date_payment TEXT,
+  payment_instrument INTEGER,
+  company INTEGER,
+  user_id INTEGER,
+  date_updated TEXT,
+
+  -- FOREIGN KEYS
+  FOREIGN KEY (po_header) REFERENCES purchase_order_header(id),
+  FOREIGN KEY (payment_instrument) REFERENCES udc_details(id),
+  FOREIGN KEY (company) REFERENCES company_table(id),
+  FOREIGN KEY (user_id) REFERENCES user_table(id)
+);
+
+    ''');
+    developer.log('Created table: credit_payment_table');
+
+    //create sales credit receipt
+    await db.execute('''
+CREATE TABLE credit_receipt_table (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  so_header INTEGER,
+  receipt_amount REAL,
+  date_receipt TEXT,
+  payment_instrument INTEGER,
+  company INTEGER,
+  user_id INTEGER,
+  date_updated TEXT,
+
+  FOREIGN KEY (company) REFERENCES company_table(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  FOREIGN KEY (payment_instrument) REFERENCES udc_details(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  FOREIGN KEY (so_header) REFERENCES sales_order_header(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES user_table(id) ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+    ''');
+    developer.log('Created table: credit_receipt_table');
+
     //. Create sync_queue table
     await db.execute('''
       CREATE TABLE sync_queue (
@@ -1270,7 +1468,7 @@ ON sales_return_detail (item_id);
       // --- Purchased Receive Status (PR) ---
       {
         'id': 10,
-        'detail_code': 'NEW',
+        'detail_code': 'N',
         'description_1': 'New',
         'description_2': null,
         'record_header': 3,
@@ -1278,7 +1476,7 @@ ON sales_return_detail (item_id);
       },
       {
         'id': 11,
-        'detail_code': 'PARTIAL',
+        'detail_code': 'P',
         'description_1': 'Partially Received',
         'description_2': null,
         'record_header': 3,
@@ -1286,7 +1484,7 @@ ON sales_return_detail (item_id);
       },
       {
         'id': 12,
-        'detail_code': 'COMPLETE',
+        'detail_code': 'C',
         'description_1': 'Completely Received',
         'description_2': null,
         'record_header': 3,
@@ -2224,6 +2422,11 @@ ON sales_return_detail (item_id);
       AppRoutes.salesItemEntry,
       AppRoutes.salesReport,
       AppRoutes.salesReturn,
+      AppRoutes.quotationOrder,
+      AppRoutes.quotationItemEntry,
+      AppRoutes.quotationOrderPayment,
+      AppRoutes.quotationInvoiceReview,
+      AppRoutes.quotationOrderReview,
     ];
 
     for (final uri in salesPrivileges) {

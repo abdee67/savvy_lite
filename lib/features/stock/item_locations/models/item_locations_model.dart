@@ -1,4 +1,5 @@
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/stock/location_entry/models/location_master_model.dart';
 
 class ItemLocation {
   // Primary Fields
@@ -18,7 +19,7 @@ class ItemLocation {
   final int? createdBy; // INTEGER (FK to user_table)
 
   //joins
-  final String? locationDescription;
+  final LocationMaster? locationDescription;
   final ItemEntryModel? itemRef;
 
   ItemLocation({
@@ -92,7 +93,14 @@ class ItemLocation {
       updatedBy: asInt(map['updated_by']),
       dateUpdated: parseDate(map['date_updated']),
       company: asInt(map['company']),
-      locationDescription: map['location_description'],
+      locationDescription: map['location_description'] != null
+          ? LocationMaster(
+              id: asInt(map['location']) ?? 0,
+              branch: asInt(map['branch']) ?? 0,
+              locationDescription: map['location_description']?.toString(),
+              company: asInt(map['company']) ?? 0,
+            )
+          : null,
       itemRef: map['item_number'] != null
           ? ItemEntryModel(
               id: asInt(map['item_number']) ?? 0,
@@ -140,7 +148,7 @@ class ItemLocation {
     double? inverseConversion,
     int? tempId,
     bool? validCell,
-    String? locationDescription,
+    LocationMaster? locationDescription,
     ItemEntryModel? itemRef,
   }) {
     return ItemLocation(

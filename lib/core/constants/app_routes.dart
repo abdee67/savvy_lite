@@ -62,8 +62,19 @@ class AppRoutes {
   static const String salesInvoice = '$salesCustomerInfo/sales-invoice';
 
   static const String salesReport = '$salesDashboard/sales-report';
+  static const String salesCreditReceiptReview =
+      '$salesDashboard/sales-credit-receipt-review';
 
   static const String salesReturn = '$salesDashboard/sales-return';
+
+  static const String quotationOrder = '$salesDashboard/quotation-order';
+  static const String quotationItemEntry =
+      '$quotationOrder/quotation-item-entry';
+  static const String quotationOrderPayment = '$quotationOrder/payment-summary';
+  static const String quotationInvoiceReview =
+      '$quotationOrder/quotation-invoice-review';
+
+  static const String quotationOrderReview = '$salesDashboard/quotation-report';
 
   //Role sub-routes
   static const String roleCreation = '$roleManagement/add-role';
@@ -141,6 +152,23 @@ class AppRoutes {
   static const String branchCreation = '$branchManagement/branch-creation';
   static const String branchEdit = '$branchManagement/edit-branch';
   static const String branchDelete = '$branchManagement/delete-branch';
+
+  //////////Purchase ROUTES///////////////
+
+  static const String supplierEntry = '$purchase/supplier-dashboard';
+  static const String supplierCreate = '$supplierEntry/create-supplier';
+  static const String supplierEdit = '$supplierEntry/edit-supplier';
+  static const String supplierDelete = '$supplierEntry/delete-supplier';
+
+  //static const String purchaseEntry = '$purchase/purchase-dashboard';
+  static const String purchaseReview = '$purchase/purchase-review';
+  static const String purchaseSupplierInfo =
+      '$purchaseReview/purchase-supplier-info';
+  static const String purchaseItemEntry = '$purchaseReview/purchase-item-entry';
+  static const String purchaseOrderPayment = '$purchaseReview/payment-summary';
+  static const String purchaseOrderReceive = '$purchaseReview/purchase-receive';
+
+  static const String creditPurchaseReview = '$purchase/credit-purchase-review';
 
   // Helper method to get all dashboard routes
   static List<String> get dashboardRoutes => [

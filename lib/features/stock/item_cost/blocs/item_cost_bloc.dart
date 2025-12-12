@@ -1,13 +1,13 @@
 // bloc/item_cost_bloc.dart
 import 'dart:async';
 import 'package:bloc/bloc.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 import 'package:savvy_stock/features/company/models/company_model.dart';
-import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_detail_model.dart';
-import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/stock/item_cost/blocs/item_cost_event.dart';
 import 'package:savvy_stock/features/stock/item_cost/blocs/item_cost_state.dart';
 import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
@@ -556,7 +556,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
 
         // For demonstration, I'll create a mock implementation
         final purchaseOrderDetailList =
-            <PurchaseOrderDetailModel>[]; // Replace with actual data
+            <PurchaseOrderDetail>[]; // Replace with actual data
 
         for (final p in purchaseOrderDetailList) {
           final unitCost = p.unitCost ?? 0.0;
@@ -578,7 +578,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
             // This would need PurchaseOrderReceiver repository implementation
             // final purchaseOrderReceiverList = await purchaseOrderReceiverRepository.findByDetail(p.id!);
             final purchaseOrderReceiverList =
-                <PurchaseOrderReceiverModel>[]; // Replace with actual data
+                <PurchaseOrderReceiver>[]; // Replace with actual data
 
             if (purchaseOrderReceiverList.isEmpty) {
               final item = itemCostTableList.first;
@@ -594,7 +594,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
 
               final updatedItem = item.copyWith(
                 amountUnitCost: double.parse(unitCostAvg),
-                dateUpdated: DateTime.now().millisecondsSinceEpoch,
+                dateUpdated: DateTime.now(),
                 userId: authBloc.state.userId!.id,
               );
 
@@ -603,7 +603,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
           } else {
             final newItem = ItemCost(
               amountUnitCost: double.parse(cost.toStringAsFixed(2)),
-              dateUpdated: DateTime.now().millisecondsSinceEpoch,
+              dateUpdated: DateTime.now(),
               userId: authBloc.state.userId!.id,
               company: authBloc.state.companyId,
               itemNumber: p.itemNumber!,

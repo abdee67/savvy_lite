@@ -172,6 +172,30 @@ class UdcRepository extends BaseRepository {
     }
   }
 
+  //get record header id
+  Future<int?> getRecordHeaderId(String headerCode) async {
+    try {
+      final db = await databaseService.database;
+      final result = await db.rawQuery(
+        '''
+      SELECT uh.id FROM udc_header uh
+      WHERE uh.header_code = ?
+      ''',
+        [headerCode],
+      );
+
+      if (result.isNotEmpty) {
+        return result.first['id'] as int?;
+      }
+
+      print('❌ No UDC header found for code: $headerCode');
+      return null;
+    } catch (e) {
+      print('❌ Error getting UDC header ID: $e');
+      return null;
+    }
+  }
+
   // Helper methods
   Future<void> _saveUdcDetailsToLocal(List<UdcDetails> details) async {
     final db = await databaseService.database;

@@ -1,6 +1,7 @@
 // bloc/sales_order_header_bloc.dart
 import 'dart:async';
 import 'package:bloc/bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/model/credit_receipt_model.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
@@ -126,6 +127,15 @@ class SalesOrderHeaderBloc
     on<GenerateNextFsNumber>(_onGenerateNextFsNumber);
     on<RefreshSalesOrderHeaders>(_onRefreshSalesOrderHeaders);
     on<ExportSaleOrder>(_onExportTransactions);
+
+    // In SalesOrderHeaderBloc constructor, add these:
+    on<LoadCreditReceipts>(_onLoadCreditReceipts);
+    on<PrepareCreditReceipt>(_onPrepareCreditReceipt);
+    on<UpdateCreditReceipt>(_onUpdateCreditReceipt);
+    on<SaveCreditReceipt>(_onSaveCreditReceipt);
+    on<DeleteCreditReceipt>(_onDeleteCreditReceipt);
+    on<SelectCreditReceipt>(_onSelectCreditReceipt);
+    on<FilterCreditReceipts>(_onFilterCreditReceipts);
   }
   @override
   Future<void> close() {
@@ -203,7 +213,9 @@ class SalesOrderHeaderBloc
         subTotal += extendedPrice;
 
         // Check if item is taxable (like Java's item.getItemsTableId().getTaxableBoolean())
-        if (detail.item?.taxable == 'Y') {
+        // Use detail.taxable as fallback if detail.item is not populated
+        final isTaxable = detail.item?.taxable == 'Y' || detail.taxable == 'Y';
+        if (isTaxable) {
           taxableAmount += extendedPrice;
         }
       }
@@ -380,9 +392,19 @@ class SalesOrderHeaderBloc
       );
 
       // Process header with business logic
-      final processedHeader = await _processHeaderBusinessLogic(
-        event.header.copyWith(orderNumber: nextOrderNumber),
-      );
+      var headerToCreate = event.header.copyWith(orderNumber: nextOrderNumber);
+
+      // Generate FS Number if missing (e.g. during conversion)
+      if (headerToCreate.fsNumber == null || headerToCreate.fsNumber!.isEmpty) {
+        final branchId = authBloc.state.branchId ?? 1;
+        final nextFsNumber = await repository.generateNextFsNumber(
+          headerToCreate.company!,
+          branchId,
+        );
+        headerToCreate = headerToCreate.copyWith(fsNumber: nextFsNumber);
+      }
+
+      final processedHeader = await _processHeaderBusinessLogic(headerToCreate);
 
       final id = await repository.createSalesOrderHeader(processedHeader);
       final createdHeader = processedHeader.copyWith(id: id);
@@ -1265,6 +1287,365 @@ class SalesOrderHeaderBloc
         ),
       );
     });
+  }
+
+  // Add these methods to SalesOrderHeaderBloc class:
+
+  // ============ CREDIT RECEIPT OPERATIONS ============
+
+  Future<void> _onLoadCreditReceipts(
+    LoadCreditReceipts event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: SalesOrderHeaderStatus.loading));
+
+      final receipts = await repository.getCreditReceipts(
+        companyId: event.companyId,
+        soHeaderId: event.soHeaderId,
+        startDate: event.startDate,
+        endDate: event.endDate,
+      );
+
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loaded,
+          creditReceipts: receipts,
+          filteredCreditReceipts: receipts,
+          error: null,
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load credit receipts: $e'));
+    }
+  }
+
+  Future<void> _onPrepareCreditReceipt(
+    PrepareCreditReceipt event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: SalesOrderHeaderStatus.preparing));
+
+      // Get the sales order header
+      final header = await repository.getSalesOrderHeaderById(event.soHeaderId);
+      if (header == null) {
+        emit(state.errorState('Sales order not found'));
+        return;
+      }
+
+      // Check if there's open amount
+      if (header.amountOpen == null || header.amountOpen! <= 0) {
+        emit(state.errorState('No open amount available for receipt'));
+        return;
+      }
+
+      // Create new credit receipt
+      final newReceipt = CreditReceipt(
+        soHeader: header.id,
+        receiptAmount: 0.0, // Start with 0, user will enter amount
+        dateReceipt: DateTime.now(),
+        company: header.company,
+        userId: authBloc.state.userId?.id,
+        dateUpdated: DateTime.now(),
+        tempId: _getNextCreditReceiptTempId(state.creditReceipts),
+      );
+
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loaded,
+          selectedCreditReceipt: newReceipt,
+          creditReceiptSuccess: null,
+          creditReceiptError: null,
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to prepare credit receipt: $e'));
+    }
+  }
+
+  Future<void> _onUpdateCreditReceipt(
+    UpdateCreditReceipt event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    emit(state.copyWith(selectedCreditReceipt: event.receipt));
+  }
+
+  // MAIN CREDIT RECEIPT SAVE FUNCTION (Based on Java logic)
+  Future<void> _onSaveCreditReceipt(
+    SaveCreditReceipt event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: SalesOrderHeaderStatus.saving));
+
+      final receipt = event.receipt;
+
+      // Validate receipt amount (from Java logic)
+      if (receipt.receiptAmount! <= 0.0) {
+        emit(
+          state.copyWith(
+            status: SalesOrderHeaderStatus.error,
+            creditReceiptError: 'Receipt amount must be greater than 0',
+            creditReceiptSuccess: false,
+          ),
+        );
+        return;
+      }
+
+      // Get the sales order header
+      final header = await repository.getSalesOrderHeaderById(
+        receipt.soHeader!,
+      );
+      if (header == null) {
+        emit(
+          state.copyWith(
+            status: SalesOrderHeaderStatus.error,
+            creditReceiptError: 'Sales order header not found',
+            creditReceiptSuccess: false,
+          ),
+        );
+        return;
+      }
+
+      // Calculate remaining amount (from Java logic)
+      final amountRemain = (header.amountOpen ?? 0.0) - receipt.receiptAmount!;
+
+      // Validate receipt amount doesn't exceed open amount
+      if (amountRemain < 0) {
+        emit(
+          state.copyWith(
+            status: SalesOrderHeaderStatus.error,
+            creditReceiptError: 'Receipt amount exceeds open amount',
+            creditReceiptSuccess: false,
+          ),
+        );
+        return;
+      }
+
+      // Get UDC for payment status
+      final paidStatus = await udcDetailRepository.getUdcDetailsByCode(
+        "P",
+        "PS",
+      );
+      final partiallyPaidStatus = await udcDetailRepository.getUdcDetailsByCode(
+        "S",
+        "PS",
+      );
+
+      if (receipt.id == null) {
+        // Create credit receipt record
+        final receiptId = await repository.createCreditReceipt(receipt);
+        final savedReceipt = receipt.copyWith(id: receiptId);
+
+        // Update sales order header (from Java logic)
+        final updatedHeader = header.copyWith(
+          amountOpen: amountRemain,
+          paymentStatus: amountRemain == 0.0
+              ? paidStatus.isNotEmpty
+                    ? paidStatus.first.id
+                    : null // Paid
+              : partiallyPaidStatus.isNotEmpty
+              ? partiallyPaidStatus.first.id
+              : null, // Partially Paid
+        );
+
+        // Save updated header
+        await repository.updateSalesOrderHeader(updatedHeader);
+
+        // Update state with new lists
+        final updatedHeaders = state.headers
+            .map((h) => h.id == updatedHeader.id ? updatedHeader : h)
+            .toList();
+
+        final updatedFilteredHeaders = state.filteredHeaders
+            .map((h) => h.id == updatedHeader.id ? updatedHeader : h)
+            .toList();
+
+        final updatedCreditReceipts = [...state.creditReceipts, savedReceipt];
+        final updatedFilteredCreditReceipts = [
+          ...state.filteredCreditReceipts,
+          savedReceipt,
+        ];
+
+        emit(
+          state.copyWith(
+            status: SalesOrderHeaderStatus.success,
+            headers: updatedHeaders,
+            filteredHeaders: updatedFilteredHeaders,
+            selected: updatedHeader,
+            selected1: updatedHeader,
+            creditReceipts: updatedCreditReceipts,
+            filteredCreditReceipts: updatedFilteredCreditReceipts,
+            selectedCreditReceipt: savedReceipt,
+            creditReceiptSuccess: true,
+            creditReceiptError: null,
+            successmessage: 'Credit receipt saved successfully',
+          ),
+        );
+
+        // Refresh credit receipts list
+        add(LoadCreditReceipts(companyId: event.companyId));
+      } else {
+        // For existing receipts, just update (though typically receipts shouldn't be edited)
+        await repository.updateCreditReceipt(receipt);
+
+        emit(
+          state.copyWith(
+            creditReceiptSuccess: true,
+            creditReceiptError: null,
+            successmessage: 'Credit receipt updated successfully',
+          ),
+        );
+      }
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.error,
+          creditReceiptError: 'Failed to save credit receipt: $e',
+          creditReceiptSuccess: false,
+        ),
+      );
+    }
+  }
+
+  Future<void> _onDeleteCreditReceipt(
+    DeleteCreditReceipt event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: SalesOrderHeaderStatus.deleting));
+
+      // Get receipt details first
+      final receipt = state.creditReceipts.firstWhere(
+        (r) => r.id == event.receiptId,
+        orElse: () => throw Exception('Receipt not found'),
+      );
+
+      // Get header to restore open amount
+      final header = await repository.getSalesOrderHeaderById(
+        receipt.soHeader!,
+      );
+      if (header != null) {
+        // Restore the receipt amount to open amount
+        final restoredAmount =
+            (header.amountOpen ?? 0.0) + receipt.receiptAmount!;
+
+        // Update payment status (may need to revert to partial or not paid)
+        int? newPaymentStatus;
+        if (restoredAmount == (header.amountTotal ?? 0.0)) {
+          // All amount restored, back to not paid
+          final notPaidStatus = await udcDetailRepository.getUdcDetailsByCode(
+            "N",
+            "PS",
+          );
+          newPaymentStatus = notPaidStatus.isNotEmpty
+              ? notPaidStatus.first.id
+              : null;
+        } else if (restoredAmount > 0) {
+          // Partial amount restored, back to partially paid
+          final partiallyPaidStatus = await udcDetailRepository
+              .getUdcDetailsByCode("S", "PS");
+          newPaymentStatus = partiallyPaidStatus.isNotEmpty
+              ? partiallyPaidStatus.first.id
+              : null;
+        }
+
+        final updatedHeader = header.copyWith(
+          amountOpen: restoredAmount,
+          paymentStatus: newPaymentStatus,
+        );
+
+        await repository.updateSalesOrderHeader(updatedHeader);
+
+        // Update state headers
+        final updatedHeaders = state.headers
+            .map((h) => h.id == updatedHeader.id ? updatedHeader : h)
+            .toList();
+
+        final updatedFilteredHeaders = state.filteredHeaders
+            .map((h) => h.id == updatedHeader.id ? updatedHeader : h)
+            .toList();
+
+        emit(
+          state.copyWith(
+            headers: updatedHeaders,
+            filteredHeaders: updatedFilteredHeaders,
+            selected: state.selected?.id == updatedHeader.id
+                ? updatedHeader
+                : state.selected,
+          ),
+        );
+      }
+
+      // Delete the receipt
+      await repository.deleteCreditReceipt(event.receiptId);
+
+      // Update state
+      final updatedReceipts = state.creditReceipts
+          .where((r) => r.id != event.receiptId)
+          .toList();
+
+      final updatedFilteredReceipts = state.filteredCreditReceipts
+          .where((r) => r.id != event.receiptId)
+          .toList();
+
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.success,
+          creditReceipts: updatedReceipts,
+          filteredCreditReceipts: updatedFilteredReceipts,
+          selectedCreditReceipt:
+              state.selectedCreditReceipt?.id == event.receiptId
+              ? null
+              : state.selectedCreditReceipt,
+          successmessage: 'Credit receipt deleted successfully',
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to delete credit receipt: $e'));
+    }
+  }
+
+  void _onSelectCreditReceipt(
+    SelectCreditReceipt event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) {
+    emit(state.copyWith(selectedCreditReceipt: event.receipt));
+  }
+
+  Future<void> _onFilterCreditReceipts(
+    FilterCreditReceipts event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: SalesOrderHeaderStatus.filtering));
+
+      final filteredReceipts = await repository.filterCreditReceipts(
+        companyId: event.companyId,
+        customerId: event.customerId,
+        startDate: event.startDate,
+        endDate: event.endDate,
+      );
+
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loaded,
+          filteredCreditReceipts: filteredReceipts,
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to filter credit receipts: $e'));
+    }
+  }
+
+  // Helper method for temp IDs
+  int _getNextCreditReceiptTempId(List<CreditReceipt> items) {
+    if (items.isEmpty) return 1;
+    final maxTempId = items
+        .map((e) => e.tempId ?? 0)
+        .reduce((a, b) => a > b ? a : b);
+    return maxTempId + 1;
   }
 
   // Helper Methods

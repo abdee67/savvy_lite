@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
-import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_receiver_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 
@@ -254,7 +254,7 @@ class UpdateStockForSalesOrderVoid extends ItemInBranchEvent {
 }
 
 class UpdateStockForPurchaseOrder extends ItemInBranchEvent {
-  final PurchaseOrderReceiverModel purchaseOrderReceiver;
+  final PurchaseOrderReceiver purchaseOrderReceiver;
 
   const UpdateStockForPurchaseOrder(this.purchaseOrderReceiver);
 }

@@ -65,26 +65,28 @@ class SalesOrderDetail extends Equatable {
   // ✅ Create object from SQLite row (can include JOIN fields)
   factory SalesOrderDetail.fromMap(Map<String, dynamic> map) {
     return SalesOrderDetail(
-      id: map['id'] as int?,
+      id: (map['id'] as num?)?.toInt(),
       unitPrice: (map['unit_price'] as num?)?.toDouble(),
       quantity: (map['quantity'] as num?)?.toDouble(),
       extendedPrice: (map['extended_price'] as num?)?.toDouble(),
       taxable: map['taxable']?.toString(),
       reference1: map['reference1']?.toString(),
       reference2: map['reference2']?.toString(),
-      salesOrderHeaderId: map['sales_order_header_id'] as int?,
-      itemsTableId: map['items_table_id'] as int?,
+      salesOrderHeaderId: (map['sales_order_header_id'] as num?)?.toInt(),
+      itemsTableId: (map['items_table_id'] as num?)?.toInt(),
       itemInBranch: (map['item_in_branch'] as num?)?.toInt(),
-      company: map['company'] as int?,
-      lotNumber: map['lot_number'] as int?,
+      company: (map['company'] as num?)?.toInt(),
+      lotNumber: (map['lot_number'] as num?)?.toInt(),
       unitCost: (map['unit_cost'] as num?)?.toDouble(),
       amountCost: (map['amount_cost'] as num?)?.toDouble(),
-      unitOfMeasure: map['unit_of_measure'] as int?,
-      quantityAvailable: map['quantity_available'] as int?,
-      lotQuantityAvailable: map['lot_quantity_available'] as int?,
-      lotExpiration: map['lot_expiration'] as DateTime?,
+      unitOfMeasure: (map['unit_of_measure'] as num?)?.toInt(),
+      quantityAvailable: (map['quantity_available'] as num?)?.toInt(),
+      lotQuantityAvailable: (map['lot_quantity_available'] as num?)?.toInt(),
+      lotExpiration: map['lot_expiration'] != null
+          ? DateTime.tryParse(map['lot_expiration'].toString())
+          : null,
 
-      tempId: map['temp_id'] as int?,
+      tempId: (map['temp_id'] as num?)?.toInt(),
 
       // 👇 Joined objects (optional)
       item: map['items_id'] != null
@@ -133,9 +135,7 @@ class SalesOrderDetail extends Equatable {
               unitOfMeasure: map['unit_of_measure'],
             )
           : null,
-      uom:
-          map['unit_of_measure'] != null &&
-              map['unit_of_measure_description'] != null
+      uom: map['unit_of_measure_description'] != null
           ? UdcDetails(
               id: map['unit_of_measure'],
               description1: map['unit_of_measure_description'],

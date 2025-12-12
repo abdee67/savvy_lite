@@ -252,7 +252,7 @@ class MigrationService {
         itemNumber: itemsTable.id,
         amountUnitCost: item.unitCost ?? 0.0,
         company: companyId,
-        dateUpdated: DateTime.now().millisecondsSinceEpoch,
+        dateUpdated: DateTime.now(),
       );
 
       if (existingItemCost.isNotEmpty) {

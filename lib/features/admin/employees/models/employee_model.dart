@@ -118,7 +118,7 @@ class Employee {
   ];
 
   factory Employee.fromMap(Map<String, dynamic> map) => Employee(
-    id: map['id'] ?? 0,
+    id: (map['id'] as num?)?.toInt() ?? 0,
     employeeId: map['employee_id']?.toString(),
     nameFirst: map['name_first']?.toString() ?? '',
     nameLast: map['name_last']?.toString() ?? '',
@@ -133,8 +133,8 @@ class Employee {
     region: map['region']?.toString(),
     country: map['country']?.toString(),
     gender: map['gender']?.toString(),
-    company: map['company'],
-    branch: map['branch'],
+    company: (map['company'] as num?)?.toInt(),
+    branch: (map['branch'] as num?)?.toInt(),
   );
 
   Map<String, dynamic> toMap() => {

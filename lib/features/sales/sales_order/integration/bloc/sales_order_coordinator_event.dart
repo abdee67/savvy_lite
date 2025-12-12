@@ -170,6 +170,16 @@ class PrepareNewSalesOrder extends SalesOrderCoordinatorEvent {
   List<Object?> get props => [companyId, branchId, employeeId, defaultCustomer];
 }
 
+class InitializeFromQuotation extends SalesOrderCoordinatorEvent {
+  final SalesOrderHeader header;
+  final List<SalesOrderDetail> details;
+
+  const InitializeFromQuotation({required this.header, required this.details});
+
+  @override
+  List<Object?> get props => [header, details];
+}
+
 class LoadCompleteSalesOrder extends SalesOrderCoordinatorEvent {
   final int salesOrderId;
 

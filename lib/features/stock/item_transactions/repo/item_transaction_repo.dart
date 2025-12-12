@@ -1,4 +1,5 @@
 // repositories/item_transaction_repository.dart
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
@@ -6,7 +7,6 @@ import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/next_number/bloc/next_number_bloc.dart';
-import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_repo.dart';
@@ -56,7 +56,7 @@ class ItemTransactionRepository {
     required int? trNo,
     required String? remark,
     required double qty,
-    required PurchaseOrderReceiverModel? por,
+    required PurchaseOrderReceiver? por,
     required SalesOrderDetail? soD,
   }) async {
     try {
@@ -135,7 +135,7 @@ class ItemTransactionRepository {
     required int? trNo,
     required String? remark,
     required double qty,
-    required PurchaseOrderReceiverModel? por,
+    required PurchaseOrderReceiver? por,
     required SalesOrderDetail? soD,
     required int user,
     required int companyId,
@@ -154,10 +154,11 @@ class ItemTransactionRepository {
     }
     final udc = udcList.first;
 
-    // Set transaction number
-    int? trNumber = por != null
-        ? por.poDetailRef?.orderNumber
-        : (soD != null ? soD.orderHeader?.orderNumber : trNo);
+    // Set transaction number - prefer linked header, fall back to provided trNo
+    int? trNumber =
+        por?.poDetailRef?.poHeaderRef?.orderNumber ??
+        soD?.orderHeader?.orderNumber ??
+        trNo;
 
     trNumber ??= await nextNumberBloc.generateFormattedNumber('TN');
 
@@ -214,9 +215,10 @@ class ItemTransactionRepository {
       itemNumber: ib.itemNumber,
       branch: ib.branch,
       unitOfMeasure: ib.unitOfMeasure,
-      supplier: por?.poDetailRef?.supplierId,
+      supplier: por?.poDetailRef?.poHeaderRef?.supplierId,
       orderType:
-          por?.poDetailRef?.orderType ?? soD?.orderHeader?.orderTypeRef?.id,
+          por?.poDetailRef?.poHeaderRef?.orderType ??
+          soD?.orderHeader?.orderTypeRef?.id,
       customer: soD?.orderHeader?.customerTableRef?.id,
     );
 
@@ -233,7 +235,7 @@ class ItemTransactionRepository {
     required int? trNo,
     required String? remark,
     required double qty,
-    required PurchaseOrderReceiverModel? por,
+    required PurchaseOrderReceiver? por,
     required SalesOrderDetail? soD,
     required int user,
     required int companyId,
@@ -269,10 +271,11 @@ class ItemTransactionRepository {
       );
     }
 
-    // Set transaction number
-    int? trNumber = por != null
-        ? por.poDetailRef?.orderNumber
-        : (soD != null ? soD.orderHeader?.orderNumber : trNo);
+    // Set transaction number - prefer linked header, fall back to provided trNo
+    int? trNumber =
+        por?.poDetailRef?.poHeaderRef?.orderNumber ??
+        soD?.orderHeader?.orderNumber ??
+        trNo;
 
     trNumber ??= await nextNumberBloc.generateFormattedNumber('TN');
 
@@ -327,9 +330,10 @@ class ItemTransactionRepository {
       itemNumber: loc.itemNumber,
       branch: loc.branch,
       unitOfMeasure: ib.unitOfMeasure ?? uom,
-      supplier: por?.poDetailRef?.supplierId,
+      supplier: por?.poDetailRef?.poHeaderRef?.supplierId,
       orderType:
-          por?.poDetailRef?.orderType ?? soD?.orderHeader?.orderTypeRef?.id,
+          por?.poDetailRef?.poHeaderRef?.orderType ??
+          soD?.orderHeader?.orderTypeRef?.id,
       customer: soD?.orderHeader?.customerTableRef?.id,
     );
 
@@ -350,7 +354,7 @@ class ItemTransactionRepository {
     required int? trNo,
     required String? remark,
     required double qty,
-    required PurchaseOrderReceiverModel? por,
+    required PurchaseOrderReceiver? por,
     required SalesOrderDetail? soD,
     required int user,
     required int companyId,
@@ -392,10 +396,11 @@ class ItemTransactionRepository {
       );
     }
 
-    // Set transaction number
-    int? trNumber = por != null
-        ? por.poDetailRef?.orderNumber
-        : (soD != null ? soD.orderHeader?.orderNumber : trNo);
+    // Set transaction number - prefer linked header, fall back to provided trNo
+    int? trNumber =
+        por?.poDetailRef?.poHeaderRef?.orderNumber ??
+        soD?.orderHeader?.orderNumber ??
+        trNo;
 
     trNumber ??= await nextNumberBloc.generateFormattedNumber('TN');
 
@@ -461,9 +466,10 @@ class ItemTransactionRepository {
       itemNumber: lm.itemNumber,
       branch: lm.branch,
       unitOfMeasure: ib.unitOfMeasure ?? uom,
-      supplier: por?.poDetailRef?.supplierId,
+      supplier: por?.poDetailRef?.poHeaderRef?.supplierId,
       orderType:
-          por?.poDetailRef?.orderType ?? soD?.orderHeader?.orderTypeRef?.id,
+          por?.poDetailRef?.poHeaderRef?.orderType ??
+          soD?.orderHeader?.orderTypeRef?.id,
       customer: soD?.orderHeader?.customerBillToRef?.id,
     );
 

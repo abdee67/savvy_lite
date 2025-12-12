@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/model/credit_receipt_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -18,8 +19,23 @@ class SalesOrderHeaderRepository {
   Future<int> createSalesOrderHeader(SalesOrderHeader header) async {
     final db = await _db;
     try {
-      return await db.insert('sales_order_header', header.toMap());
-    } catch (e) {
+      final headerMap = header.toMap();
+
+      // Log the data being inserted for debugging
+      print('DEBUG: Creating sales order header with data: $headerMap');
+
+      final id = await db.insert(
+        'sales_order_header',
+        headerMap,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+
+      print('DEBUG: Sales order header created successfully with ID: $id');
+      return id;
+    } catch (e, stackTrace) {
+      print('ERROR: Failed to create sales order header: $e');
+      print('ERROR: Stack trace: $stackTrace');
+      print('ERROR: Header data: ${header.toMap()}');
       throw Exception('Failed to create sales order header: $e');
     }
   }
@@ -27,11 +43,19 @@ class SalesOrderHeaderRepository {
   // Read
   Future<SalesOrderHeader?> getSalesOrderHeaderById(int id) async {
     final db = await _db;
-    final maps = await db.query(
-      'sales_order_header',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    final query = '''
+        SELECT 
+          soh.*,
+          cu.customer_name as customer_bill_to_name,
+          udc.detail_code as payment_status_code ,
+          udc.description_1 as payment_instrument_description
+        FROM sales_order_header soh
+        LEFT JOIN customer_table cu ON soh.customer_bill_to = cu.id
+        LEFT JOIN udc_details pi ON soh.payment_instrument = pi.id
+        LEFT JOIN udc_details udc ON soh.payment_status = udc.id
+        WHERE soh.id = ?
+      ''';
+    final maps = await db.rawQuery(query, [id]);
     if (maps.isNotEmpty) {
       return SalesOrderHeader.fromMap(maps.first);
     }
@@ -79,46 +103,56 @@ class SalesOrderHeaderRepository {
     List<dynamic> whereArgs = [];
 
     if (companyId != null) {
-      where += ' AND company = ?';
+      where += ' AND soh.company = ?';
       whereArgs.add(companyId);
     }
 
     if (customerBillTo != null) {
-      where += ' AND customer_bill_to = ?';
+      where += ' AND soh.customer_bill_to = ?';
       whereArgs.add(customerBillTo);
     }
 
     if (fsNumber != null && fsNumber.isNotEmpty) {
-      where += ' AND fs_number = ?';
+      where += ' AND soh.fs_number = ?';
       whereArgs.add(fsNumber);
     }
 
     if (startDate != null) {
-      where += ' AND order_date >= ?';
+      where += ' AND soh.order_date >= ?';
       whereArgs.add(startDate.toIso8601String());
     }
 
     if (endDate != null) {
-      where += ' AND order_date <= ?';
+      where += ' AND soh.order_date <= ?';
       whereArgs.add(endDate.toIso8601String());
     }
 
     if (!includeVoided) {
-      where += ' AND (void_indicator IS NULL OR void_indicator = "")';
+      where += ' AND (soh.void_indicator IS NULL OR soh.void_indicator = "")';
     } else if (voidIndicator != null) {
       if (voidIndicator) {
-        where += ' AND void_indicator IS NOT NULL AND void_indicator != ""';
+        where +=
+            ' AND soh.void_indicator IS NOT NULL AND soh.void_indicator != ""';
       } else {
-        where += ' AND (void_indicator IS NULL OR void_indicator = "")';
+        where += ' AND (soh.void_indicator IS NULL OR soh.void_indicator = "")';
       }
     }
+    final query =
+        '''
+        SELECT 
+          soh.*,
+          cu.customer_name as customer_bill_to_name,
+          udc.detail_code as payment_status_code ,
+          udc.description_1 as payment_instrument_description
+        FROM sales_order_header soh
+        LEFT JOIN customer_table cu ON soh.customer_bill_to = cu.id
+        LEFT JOIN udc_details pi ON soh.payment_instrument = pi.id
+        LEFT JOIN udc_details udc ON soh.payment_status = udc.id
+        WHERE  $where
+        ORDER BY soh.id DESC
+      ''';
 
-    final maps = await db.query(
-      'sales_order_header',
-      where: where,
-      whereArgs: whereArgs,
-      orderBy: 'id DESC',
-    );
+    final maps = await db.rawQuery(query, whereArgs);
 
     return maps.map((map) => SalesOrderHeader.fromMap(map)).toList();
   }
@@ -138,13 +172,20 @@ class SalesOrderHeaderRepository {
   // Get credit sales orders
   Future<List<SalesOrderHeader>> getCreditSalesOrders(int companyId) async {
     final db = await _db;
-    final maps = await db.query(
-      'sales_order_header',
-      where:
-          'company = ? AND payment_term IS NOT NULL AND (void_indicator IS NULL OR void_indicator = "")',
-      whereArgs: [companyId],
-      orderBy: 'id DESC',
-    );
+    final query = '''
+        SELECT 
+          soh.*,
+          cu.customer_name as customer_bill_to_name,
+          udc.detail_code as payment_status_code ,
+          udc.description_1 as payment_instrument_description
+        FROM sales_order_header soh
+        LEFT JOIN customer_table cu ON soh.customer_bill_to = cu.id
+        LEFT JOIN udc_details pi ON soh.payment_instrument = pi.id
+        LEFT JOIN udc_details udc ON soh.payment_status = udc.id
+        WHERE soh.company = ? AND soh.payment_term IS NOT NULL AND (soh.void_indicator IS NULL OR soh.void_indicator = "")
+        ORDER BY soh.id DESC
+      ''';
+    final maps = await db.rawQuery(query, [companyId]);
 
     return maps.map((map) => SalesOrderHeader.fromMap(map)).toList();
   }
@@ -598,5 +639,158 @@ class SalesOrderHeaderRepository {
       whereArgs: [fsNumber, companyId],
     );
     return maps.isNotEmpty ? SalesOrderHeader.fromMap(maps.first) : null;
+  }
+
+  // In your SalesOrderHeaderRepository implementation, add:
+  Future<List<CreditReceipt>> getCreditReceipts({
+    required int companyId,
+    int? soHeaderId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await _db;
+
+    try {
+      String where = 'crt.company = ?';
+      List<dynamic> whereArgs = [companyId];
+
+      if (soHeaderId != null) {
+        where += ' AND crt.so_header = ?';
+        whereArgs.add(soHeaderId);
+      }
+
+      if (startDate != null) {
+        where += ' AND crt.date_receipt >= ?';
+        whereArgs.add(startDate.toIso8601String());
+      }
+
+      if (endDate != null) {
+        where += ' AND crt.date_receipt <= ?';
+        whereArgs.add(endDate.toIso8601String());
+      }
+
+      final query =
+          '''
+        SELECT 
+          crt.*,
+          soh.order_number as order_number,
+          soh.fs_number as fs_number ,
+          pi.description_1 as payment_instrument_description
+        FROM credit_receipt_table crt
+        LEFT JOIN sales_order_header soh ON crt.so_header = soh.id
+        LEFT JOIN udc_details pi ON crt.payment_instrument = pi.id
+        WHERE $where
+        ORDER BY crt.date_receipt DESC
+      ''';
+
+      final maps = await db.rawQuery(query, whereArgs);
+      return maps.map((map) => CreditReceipt.fromMap(map)).toList();
+    } catch (e) {
+      throw Exception('Failed to get credit receipts: $e');
+    }
+  }
+
+  Future<int> createCreditReceipt(CreditReceipt receipt) async {
+    final db = await _db;
+    try {
+      return await db.insert('credit_receipt_table', receipt.toMap());
+    } catch (e) {
+      throw Exception('Failed to create credit receipt: $e');
+    }
+  }
+
+  Future<void> updateCreditReceipt(CreditReceipt receipt) async {
+    final db = await _db;
+    try {
+      await db.update(
+        'credit_receipt_table',
+        receipt.toMap(),
+        where: 'id = ?',
+        whereArgs: [receipt.id],
+      );
+    } catch (e) {
+      throw Exception('Failed to update credit receipt: $e');
+    }
+  }
+
+  Future<void> deleteCreditReceipt(int receiptId) async {
+    final db = await _db;
+    try {
+      await db.delete(
+        'credit_receipt_table',
+        where: 'id = ?',
+        whereArgs: [receiptId],
+      );
+    } catch (e) {
+      throw Exception('Failed to delete credit receipt: $e');
+    }
+  }
+
+  Future<List<CreditReceipt>> filterCreditReceipts({
+    required int companyId,
+    int? customerId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await _db;
+
+    try {
+      String where = 'crt.company = ?';
+      List<dynamic> whereArgs = [companyId];
+
+      if (customerId != null) {
+        where += ' AND soh.customer_table_id = ?';
+        whereArgs.add(customerId);
+      }
+
+      if (startDate != null) {
+        where += ' AND crt.date_receipt >= ?';
+        whereArgs.add(startDate.toIso8601String());
+      }
+
+      if (endDate != null) {
+        where += ' AND crt.date_receipt <= ?';
+        whereArgs.add(endDate.toIso8601String());
+      }
+
+      final query =
+          '''
+        SELECT 
+          crt.*,
+           soh.order_number as order_number,
+          soh.fs_number as fs_number ,
+          pi.description_1 as payment_instrument_description
+        FROM credit_receipt_table crt
+        LEFT JOIN sales_order_header soh ON crt.so_header = soh.id
+        LEFT JOIN udc_details pi ON crt.payment_instrument = pi.id
+        WHERE $where
+        ORDER BY crt.date_receipt DESC
+      ''';
+
+      final maps = await db.rawQuery(query, whereArgs);
+      return maps.map((map) => CreditReceipt.fromMap(map)).toList();
+    } catch (e) {
+      throw Exception('Failed to filter credit receipts: $e');
+    }
+  }
+
+  Future<double> getTotalCreditReceiptsForHeader(int soHeaderId) async {
+    final db = await _db;
+
+    try {
+      final result = await db.rawQuery(
+        '''
+        SELECT SUM(receipt_amount) as total_received
+        FROM credit_receipt_table
+        WHERE so_header = ?
+        ''',
+        [soHeaderId],
+      );
+
+      final total = result.first['total_received'] as double?;
+      return total ?? 0.0;
+    } catch (e) {
+      throw Exception('Failed to get total credit receipts for header: $e');
+    }
   }
 }

@@ -3,6 +3,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/model/credit_receipt_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
@@ -101,6 +102,12 @@ class SalesOrderHeaderState extends Equatable {
   final LotValidationResult? lotValidationResult;
   final ValidationResult? validationResult;
 
+  final CreditReceipt? selectedCreditReceipt;
+  final List<CreditReceipt> creditReceipts;
+  final List<CreditReceipt> filteredCreditReceipts;
+  final bool? creditReceiptSuccess;
+  final String? creditReceiptError;
+
   const SalesOrderHeaderState({
     this.status = SalesOrderHeaderStatus.initial,
     this.headers = const [],
@@ -159,6 +166,11 @@ class SalesOrderHeaderState extends Equatable {
     this.validationResult,
     this.defaultCustomer,
     this.exportedSales,
+    this.selectedCreditReceipt,
+    this.creditReceipts = const [],
+    this.filteredCreditReceipts = const [],
+    this.creditReceiptSuccess,
+    this.creditReceiptError,
   });
 
   // Getters for status checks
@@ -276,6 +288,11 @@ class SalesOrderHeaderState extends Equatable {
     ValidationResult? validationResult,
     Customer? defaultCustomer,
     SalesOrderHeader? exportedSales,
+    CreditReceipt? selectedCreditReceipt,
+    List<CreditReceipt>? creditReceipts,
+    List<CreditReceipt>? filteredCreditReceipts,
+    bool? creditReceiptSuccess,
+    String? creditReceiptError,
   }) {
     return SalesOrderHeaderState(
       status: status ?? this.status,
@@ -337,6 +354,13 @@ class SalesOrderHeaderState extends Equatable {
       validationResult: validationResult ?? this.validationResult,
       defaultCustomer: defaultCustomer ?? this.defaultCustomer,
       exportedSales: exportedSales ?? this.exportedSales,
+      selectedCreditReceipt:
+          selectedCreditReceipt ?? this.selectedCreditReceipt,
+      creditReceipts: creditReceipts ?? this.creditReceipts,
+      filteredCreditReceipts:
+          filteredCreditReceipts ?? this.filteredCreditReceipts,
+      creditReceiptSuccess: creditReceiptSuccess ?? this.creditReceiptSuccess,
+      creditReceiptError: creditReceiptError ?? this.creditReceiptError,
     );
   }
 
@@ -458,6 +482,11 @@ class SalesOrderHeaderState extends Equatable {
     validationResult,
     defaultCustomer,
     exportedSales,
+    selectedCreditReceipt,
+    creditReceipts,
+    filteredCreditReceipts,
+    creditReceiptSuccess,
+    creditReceiptError,
   ];
 }
 

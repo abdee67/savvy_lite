@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
@@ -58,6 +59,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
 
     // Initialize payment calculations
+    print('DEBUG: PaymentScreen initializing data');
+    print(
+      'DEBUG: Coordinator state has header: ${coordinatorBloc.state.currentHeader != null}',
+    );
+    print(
+      'DEBUG: Coordinator state has details: ${coordinatorBloc.state.currentDetails.length}',
+    );
+
     coordinatorBloc.add(const CalculateCompleteOrderTotals());
     coordinatorBloc.add(const LoadFeeSystemConstants());
   }
@@ -69,67 +78,112 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      appBar: AppBar(
-        title: const Text('Payment Summary'),
-        actions: [
-          IconButton(
-            icon: const Icon(Iconsax.refresh),
-            onPressed: () {
-              context.read<SalesOrderCoordinatorBloc>().add(
-                const CalculateCompleteOrderTotals(),
-              );
-            },
-            tooltip: 'Refresh calculations',
-          ),
-        ],
-        backgroundColor: const Color(0xFF155888),
-        foregroundColor: Colors.white,
-        elevation: 2,
-      ),
-      body: SafeArea(
-        child:
-            BlocListener<SalesOrderCoordinatorBloc, SalesOrderCoordinatorState>(
-              listener: (context, state) {
-                if (state.status == SalesOrderCoordinatorStatus.error) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(state.error!),
-                      backgroundColor: Colors.red,
-                      behavior: SnackBarBehavior.floating,
-                    ),
+    return BlocConsumer<SalesOrderCoordinatorBloc, SalesOrderCoordinatorState>(
+      listener: (context, state) {
+        if (state.status == SalesOrderCoordinatorStatus.error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.error!),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      },
+      builder: (context, state) {
+        if (state.currentDetails.isEmpty) {
+          return _buildEmptyOrderState();
+        }
+
+        return Scaffold(
+          resizeToAvoidBottomInset: false,
+          appBar: AppBar(
+            title: const Text('Payment Summary'),
+            actions: [
+              IconButton(
+                icon: const Icon(Iconsax.refresh),
+                onPressed: () {
+                  context.read<SalesOrderCoordinatorBloc>().add(
+                    const CalculateCompleteOrderTotals(),
                   );
-                }
-              },
-              child: Column(
-                children: [
-                  // Upper Section - Order Items
-                  Expanded(
-                    flex: 1,
-                    child: Container(
-                      color: Colors.white,
-                      child: Column(
-                        children: [
-                          Expanded(
-                            child: SingleChildScrollView(
-                              child: Padding(
-                                padding: const EdgeInsets.only(bottom: 4.0),
-                                child: PaymentDetails(
-                                  authBloc: widget.authBloc,
-                                ),
-                              ),
+                },
+                tooltip: 'Refresh calculations',
+              ),
+            ],
+            backgroundColor: const Color(0xFF155888),
+            foregroundColor: Colors.white,
+            elevation: 2,
+          ),
+          body: SafeArea(
+            child: Column(
+              children: [
+                // Upper Section - Order Items
+                Expanded(
+                  flex: 1,
+                  child: Container(
+                    color: Colors.white,
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 4.0),
+                              child: PaymentDetails(authBloc: widget.authBloc),
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
-                  // Lower Section - Order Summary
-                  const PaymentMethod(),
-                ],
-              ),
+                ),
+                // Lower Section - Order Summary
+                PaymentMethod(salesState: state, orderData: widget.orderData),
+              ],
             ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyOrderState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.shopping_cart_outlined,
+            size: 64,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'No Items in Sales Order',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Add items to the sales order before proceeding to payment',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () {
+              context.pop();
+            },
+            icon: const Icon(Icons.arrow_back),
+            label: const Text('Back to Items'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF155888),
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
       ),
     );
   }

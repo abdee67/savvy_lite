@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_receiver_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
 
@@ -33,6 +33,18 @@ class LoadItemLocationsByBranchAndItem extends ItemLocationsEvent {
 
   @override
   List<Object> get props => [companyId, branchId, itemId];
+}
+
+class LoadItemLocationsForBranch extends ItemLocationsEvent {
+  final int companyId;
+  final int branchId;
+  const LoadItemLocationsForBranch({
+    required this.companyId,
+    required this.branchId,
+  });
+
+  @override
+  List<Object> get props => [companyId, branchId];
 }
 
 class CreateItemLocation extends ItemLocationsEvent {
@@ -111,7 +123,7 @@ class SaveItemLocationRow extends ItemLocationsEvent {
   final String action;
   final int? transactionNumber;
   final String? remark;
-  final PurchaseOrderReceiverModel? por;
+  final PurchaseOrderReceiver? por;
   final SalesOrderDetail? soD;
   const SaveItemLocationRow(
     this.item, {
