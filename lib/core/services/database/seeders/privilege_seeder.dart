@@ -47,6 +47,12 @@ class PrivilegeSeeder {
         AppRoutes.branchListDashboard,
         'branch_list_dashboard',
       ),
+      _createPrivilege(
+        'Report Dashboard',
+        'link',
+        AppRoutes.reportDashboard,
+        'report_dashboard',
+      ),
 
       // ==================== ADMIN MANAGEMENT ====================
       // Privilege Management
@@ -209,10 +215,10 @@ class PrivilegeSeeder {
 
       //Sales Report
       _createPrivilege(
-        'Sales Report',
+        'Sales Review',
         'link',
-        AppRoutes.salesReport,
-        'sales_report',
+        AppRoutes.salesReview,
+        'sales_review',
       ),
       _createPrivilege(
         'Sales Credit Receipt',
@@ -569,6 +575,147 @@ class PrivilegeSeeder {
         'button',
         AppRoutes.creditPurchaseReview,
         'review_credit_purchase_order',
+      ),
+
+      //=======================REPORT MODULE===================
+      _createPrivilege(
+        'Stock Report',
+        'link',
+        AppRoutes.stockReport,
+        'stock_report',
+      ),
+      _createPrivilege(
+        'Sales Report',
+        'link',
+        AppRoutes.salesReport,
+        'sales_report',
+      ),
+      _createPrivilege(
+        'Purchase Report',
+        'link',
+        AppRoutes.purchaseReport,
+        'purchase_report',
+      ),
+      _createPrivilege(
+        'Cash Flow Report',
+        'link',
+        AppRoutes.cashFlowReport,
+        'cash_flow_report',
+      ),
+
+      //===============STOCK REPORTS==========
+      _createPrivilege(
+        'Expiration Report',
+        'link',
+        AppRoutes.expirationReport,
+        'expiration_report',
+      ),
+      _createPrivilege(
+        'Upcoming Expiration',
+        'link',
+        AppRoutes.upcomingExpirationReport,
+        'upcoming_expiration_report',
+      ),
+      _createPrivilege(
+        'Balance of Item Entry',
+        'link',
+        AppRoutes.balanceOfItemEntryReport,
+        'balance_of_item_entry_report',
+      ),
+      _createPrivilege(
+        'Inventory Movement ',
+        'link',
+        AppRoutes.inventoryMovementReport,
+        'inventory_movement_report',
+      ),
+      _createPrivilege(
+        'Item Cost ',
+        'link',
+        AppRoutes.itemCostReport,
+        'item_cost_report',
+      ),
+      _createPrivilege(
+        'Inventory Transaction ',
+        'link',
+        AppRoutes.inventoryTransactionReport,
+        'inventory_transaction_report',
+      ),
+      _createPrivilege(
+        'Reorder Point ',
+        'link',
+        AppRoutes.reorderPointReport,
+        'reorder_point_report',
+      ),
+
+      //===============SALES REPORT============
+      _createPrivilege(
+        'Sales Transaction',
+        'link',
+        AppRoutes.salesTransactionReport,
+        'sales_trnasaction_report',
+      ),
+      _createPrivilege(
+        'Aged Credit Sales',
+        'link',
+        AppRoutes.agedCreditSalesReport,
+        'aged_credit_sales_report',
+      ),
+      _createPrivilege(
+        'Credit Received',
+        'link',
+        AppRoutes.creditRecievedReport,
+        'credit_received_report',
+      ),
+
+      //===================PURCHASE REPORT===========================
+      _createPrivilege(
+        'Purchase Transaction',
+        'link',
+        AppRoutes.salesTransactionReport,
+        'purchase_trnasaction_report',
+      ),
+      _createPrivilege(
+        'Aged Credit Payment',
+        'link',
+        AppRoutes.agedCreditPaymentReceiptReport,
+        'aged_credit_payment_report',
+      ),
+      _createPrivilege(
+        'Credit Payment',
+        'link',
+        AppRoutes.creditPaymentReport,
+        'credit_payment_report',
+      ),
+      _createPrivilege(
+        'Pending Purchase',
+        'link',
+        AppRoutes.pendingPurcahseReport,
+        'pending_purchase_report',
+      ),
+      _createPrivilege(
+        'Goods Recieved Note',
+        'link',
+        AppRoutes.goodsReceivedNote,
+        'goods_received_note',
+      ),
+      //===============CASHFLOW REPORT===========
+      _createPrivilege(
+        'CashFlow Summary',
+        'link',
+        AppRoutes.cashFlowSummaryReport,
+        'cash_flow_summary_report',
+      ),
+      _createPrivilege(
+        'Cash In Flow',
+        'link',
+        AppRoutes.cashInFlowReport,
+        'cash_in_flow_report',
+      ),
+      _createPrivilege(
+        'Cash Out Flow',
+        'link',
+        AppRoutes.cashOutFlowReport,
+        'cash_out_flow_report',
       ),
     ];
 

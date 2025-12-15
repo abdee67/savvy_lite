@@ -2420,7 +2420,7 @@ CREATE TABLE credit_receipt_table (
       AppRoutes.customerEntry,
       AppRoutes.salesCustomerInfo,
       AppRoutes.salesItemEntry,
-      AppRoutes.salesReport,
+      AppRoutes.salesReview,
       AppRoutes.salesReturn,
       AppRoutes.quotationOrder,
       AppRoutes.quotationItemEntry,

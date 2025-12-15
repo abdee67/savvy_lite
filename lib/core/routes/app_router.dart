@@ -182,9 +182,9 @@ class AppRouter {
         redirect: _protectedRouteRedirect,
       ),
       GoRoute(
-        path: AppRoutes.salesReport,
+        path: AppRoutes.salesReview,
         builder: (context, state) => PrivilegeRouteGuard(
-          requiredPrivilege: AppRoutes.salesReport,
+          requiredPrivilege: AppRoutes.salesReview,
           parentPrivilege: AppRoutes.salesDashboard,
           child: SalesReviewPage(authBloc: authBloc),
         ),
