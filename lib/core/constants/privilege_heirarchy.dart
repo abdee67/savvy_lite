@@ -11,6 +11,7 @@ class PrivilegeHierarchy {
     AppRoutes.purchaseDashboard: null,
     AppRoutes.companyDashboard: null,
     AppRoutes.branchListDashboard: null,
+    AppRoutes.reportDashboard: null,
 
     // ==================== ADMIN MANAGEMENT ====================
     // Privilege Management (child of Admin Dashboard)
@@ -46,7 +47,7 @@ class PrivilegeHierarchy {
     AppRoutes.salesInvoice: AppRoutes.salesCustomerInfo,
 
     //Sales Report (child of Sales Dashboard)
-    AppRoutes.salesReport: AppRoutes.salesDashboard,
+    AppRoutes.salesReview: AppRoutes.salesDashboard,
     AppRoutes.salesCreditReceiptReview: AppRoutes.salesDashboard,
 
     //Sales Return (child of Sales Dashboard)
@@ -145,6 +146,38 @@ class PrivilegeHierarchy {
 
     // AppRoutes.purchaseOrderReceive: AppRoutes.purchaseReview,
     AppRoutes.creditPurchaseReview: AppRoutes.purchaseDashboard,
+
+    //===================REPORT MODULE====================
+    AppRoutes.stockReport: AppRoutes.reportDashboard,
+    AppRoutes.salesReport: AppRoutes.reportDashboard,
+    AppRoutes.purchaseReport: AppRoutes.reportDashboard,
+    AppRoutes.cashFlowReport: AppRoutes.reportDashboard,
+
+    //===============STOCK REPORT====================
+    AppRoutes.expirationReport: AppRoutes.stockReport,
+    AppRoutes.upcomingExpirationReport: AppRoutes.stockReport,
+    AppRoutes.balanceOfItemEntryReport: AppRoutes.stockReport,
+    AppRoutes.inventoryMovementReport: AppRoutes.stockReport,
+    AppRoutes.itemCostReport: AppRoutes.stockReport,
+    AppRoutes.inventoryTransactionReport: AppRoutes.stockReport,
+    AppRoutes.reorderPointReport: AppRoutes.stockReport,
+
+    //===============SALES REPORT====================
+    AppRoutes.salesTransactionReport: AppRoutes.salesReport,
+    AppRoutes.agedCreditSalesReport: AppRoutes.salesReport,
+    AppRoutes.creditRecievedReport: AppRoutes.salesReport,
+
+    //=================PURCHASE REPORT================
+    AppRoutes.purchaseTransactionReport: AppRoutes.purchaseReport,
+    AppRoutes.agedCreditPaymentReceiptReport: AppRoutes.purchaseReport,
+    AppRoutes.pendingPurcahseReport: AppRoutes.purchaseReport,
+    AppRoutes.goodsReceivedNote: AppRoutes.purchaseReport,
+    AppRoutes.creditPaymentReport: AppRoutes.purchaseReport,
+
+    //=================CASH FLOW REPORT================
+    AppRoutes.cashFlowSummaryReport: AppRoutes.cashFlowReport,
+    AppRoutes.cashInFlowReport: AppRoutes.cashFlowReport,
+    AppRoutes.cashOutFlowReport: AppRoutes.cashFlowReport,
   };
 
   /// Get the parent privilege for a given privilege URI
