@@ -1,4 +1,4 @@
-package com.example.savvy_stock
+package com.techEquations.savvyLite
 
 import io.flutter.embedding.android.FlutterActivity
 
