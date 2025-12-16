@@ -30,8 +30,6 @@ Why SavvyLite?
 - Security: Role-based permissions ensure staff only see what they need. Sensitive data is protected with secure storage and encrypted communications.
 
 Ideal for:
-- Retail shops tracking fast-moving items, seasonal stock, and promotions.
-- Wholesale businesses managing bulk orders, customer credit limits, and supplier deliveries.
 - Service companies maintaining parts inventory, job materials, and client billing.
 - Distribution centers handling multi-location stock, lot tracking, and expiration management.
 - Any business needing clear visibility into cash flow, stock levels, and customer balances.
