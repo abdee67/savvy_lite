@@ -3,7 +3,9 @@ import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/stock/lot_master/models/expiration_report_filters.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
+import 'package:savvy_stock/features/stock/lot_master/models/paginated_expiration_result.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 import 'package:sqflite/sqflite.dart';
@@ -29,18 +31,22 @@ class LotMasterRepository extends BaseRepository {
     final lots = await db.rawQuery(
       '''
       SELECT lm.*,
-             it.items_id as item_id,
-             it.item_description,
-             it.unit_of_measure,
-             b.description,
-             loc.location_description,
-             ud.detail_code as status_code,
-             ud.description_1 as status_description
+          it.items_id as item_id,
+        it.item_description,
+        it.unit_of_measure,
+        uom.description_1 as unit_of_measure_description,
+        uom.detail_code as unit_of_measure_detail_code,
+        b.description as description,
+        loc.location_description,
+        ls.detail_code as status_code,
+        ls.description_1 as status_description
+      
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
       LEFT JOIN location_master loc ON lm.location = loc.id
-      LEFT JOIN udc_details ud ON lm.lot_status = ud.id
+      LEFT JOIN udc_details ls ON lm.lot_status = ls.id
+      LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.company = ?
       ORDER BY it.item_description, lm.lot_number
     ''',
@@ -60,17 +66,22 @@ class LotMasterRepository extends BaseRepository {
     final lots = await db.rawQuery(
       '''
       SELECT lm.*,
-             it.items_id as item_id,
-             it.item_description,
-             b.description as branch_name,
-             loc.location_description,
-             ud.detail_code as status_code,
-             ud.description_1 as status_description
+            it.items_id as item_id,
+        it.item_description,
+        it.unit_of_measure,
+        uom.description_1 as unit_of_measure_description,
+        uom.detail_code as unit_of_measure_detail_code,
+        b.description as description,
+        loc.location_description,
+        ls.detail_code as status_code,
+        ls.description_1 as status_description
+      
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
       LEFT JOIN location_master loc ON lm.location = loc.id
-      LEFT JOIN udc_details ud ON lm.lot_status = ud.id
+      LEFT JOIN udc_details ls ON lm.lot_status = ls.id
+      LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.id = ? AND lm.company = ?
     ''',
       [id, companyId],
@@ -91,16 +102,21 @@ class LotMasterRepository extends BaseRepository {
       '''
       SELECT lm.*,
              it.items_id as item_id,
-             it.item_description,
-             b.description as branch_name,
-             loc.location_description,
-             ud.detail_code as status_code,
-             ud.description_1 as status_description
+        it.item_description,
+        it.unit_of_measure,
+        uom.description_1 as unit_of_measure_description,
+        uom.detail_code as unit_of_measure_detail_code,
+        b.description as description,
+        loc.location_description,
+        ls.detail_code as status_code,
+        ls.description_1 as status_description
+      
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
       LEFT JOIN location_master loc ON lm.location = loc.id
-      LEFT JOIN udc_details ud ON lm.lot_status = ud.id
+      LEFT JOIN udc_details ls ON lm.lot_status = ls.id
+      LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.item_number = ? AND lm.location = ? AND lm.company = ?
     ''',
       [itemId, locationId, companyId],
@@ -146,16 +162,22 @@ class LotMasterRepository extends BaseRepository {
 
     final lots = await db.rawQuery('''
       SELECT lm.*,
-             i.item_description as item_description,
-             b.description as branch_name,
-             loc.location_description,
-             ls.detail_code as status_code,
-             ls.description_1 as status_description
+       it.items_id as item_id,
+        it.item_description,
+        it.unit_of_measure,
+        uom.description_1 as unit_of_measure_description,
+        uom.detail_code as unit_of_measure_detail_code,
+        b.description as description,
+        loc.location_description,
+        ls.detail_code as status_code,
+        ls.description_1 as status_description
+      
       FROM lot_master lm
-      LEFT JOIN items_table i ON lm.item_number = i.id
+      LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
       LEFT JOIN location_master loc ON lm.location = loc.id
       LEFT JOIN udc_details ls ON lm.lot_status = ls.id
+      LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       $whereClause
       ORDER BY i.item_description, lm.lot_number
     ''', whereArgs);
@@ -174,16 +196,22 @@ class LotMasterRepository extends BaseRepository {
     final lots = await db.rawQuery(
       '''
       SELECT lm.*,
-             it.item_description,
-             b.description as branch_name,
-             loc.location_description,
-             ud.detail_code as status_code,
-             ud.description_1 as status_description
+        it.items_id as item_id,
+        it.item_description,
+        it.unit_of_measure,
+        uom.description_1 as unit_of_measure_description,
+        uom.detail_code as unit_of_measure_detail_code,
+        b.description as description,
+        loc.location_description,
+        ls.detail_code as status_code,
+        ls.description_1 as status_description
+      
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
       LEFT JOIN location_master loc ON lm.location = loc.id
-      LEFT JOIN udc_details ud ON lm.lot_status = ud.id
+      LEFT JOIN udc_details ls ON lm.lot_status = ls.id
+      LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.company = ? AND lm.item_number = ? AND lm.branch = ?
       ORDER BY lm.date_expiration, lm.lot_number
     ''',
@@ -201,12 +229,22 @@ class LotMasterRepository extends BaseRepository {
     final lots = await db.rawQuery(
       '''
       SELECT lm.*,
-             it.item_description,
-             ud.detail_code as status_code,
-             ud.description_1 as status_description
+              it.items_id as item_id,
+        it.item_description,
+        it.unit_of_measure,
+        uom.description_1 as unit_of_measure_description,
+        uom.detail_code as unit_of_measure_detail_code,
+        b.description as description,
+        loc.location_description,
+        ls.detail_code as status_code,
+        ls.description_1 as status_description
+      
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
-      LEFT JOIN udc_details ud ON lm.lot_status = ud.id
+      LEFT JOIN branch_table b ON lm.branch = b.id
+      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN udc_details ls ON lm.lot_status = ls.id
+      LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.company = ? AND lm.item_number = ?
       ORDER BY lm.date_expiration, lm.lot_number
     ''',
@@ -406,16 +444,22 @@ class LotMasterRepository extends BaseRepository {
     final lots = await db.rawQuery(
       '''
       SELECT lm.*,
-             it.item_description,
-             b.description as branch_name,
-             loc.location_description,
-             ud.detail_code as status_code,
-             ud.description_1 as status_description
+              it.items_id as item_id,
+        it.item_description,
+        it.unit_of_measure,
+        uom.description_1 as unit_of_measure_description,
+        uom.detail_code as unit_of_measure_detail_code,
+        b.description as description,
+        loc.location_description,
+        ls.detail_code as status_code,
+        ls.description_1 as status_description
+      
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
       LEFT JOIN location_master loc ON lm.location = loc.id
-      LEFT JOIN udc_details ud ON lm.lot_status = ud.id
+      LEFT JOIN udc_details ls ON lm.lot_status = ls.id
+      LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.company = ? 
         AND (lm.lot_number LIKE ? OR lm.batch_number_supplier LIKE ? OR it.item_description LIKE ?)
       ORDER BY it.item_description, lm.lot_number
@@ -462,16 +506,22 @@ class LotMasterRepository extends BaseRepository {
     final lots = await db.rawQuery(
       '''
       SELECT lm.*,
-             it.item_description,
-             b.description as branch_name,
-             loc.location_description,
-             ud.detail_code as status_code,
-             ud.description_1 as status_description
+              it.items_id as item_id,
+        it.item_description,
+        it.unit_of_measure,
+        uom.description_1 as unit_of_measure_description,
+        uom.detail_code as unit_of_measure_detail_code,
+        b.description as description,
+        loc.location_description,
+        ls.detail_code as status_code,
+        ls.description_1 as status_description
+      
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
       LEFT JOIN location_master loc ON lm.location = loc.id
-      LEFT JOIN udc_details ud ON lm.lot_status = ud.id
+      LEFT JOIN udc_details ls ON lm.lot_status = ls.id
+      LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.company = ? 
         AND lm.date_expiration IS NOT NULL
         AND lm.date_expiration BETWEEN ? AND ?
@@ -494,16 +544,22 @@ class LotMasterRepository extends BaseRepository {
     final lots = await db.rawQuery(
       '''
       SELECT lm.*,
-             it.item_description,
-             b.description as branch_name,
-             loc.location_description,
-             ud.detail_code as status_code,
-             ud.description_1 as status_description
+              it.items_id as item_id,
+        it.item_description,
+        it.unit_of_measure,
+        uom.description_1 as unit_of_measure_description,
+        uom.detail_code as unit_of_measure_detail_code,
+        b.description as description,
+        loc.location_description,
+        ls.detail_code as status_code,
+        ls.description_1 as status_description
+      
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
       LEFT JOIN location_master loc ON lm.location = loc.id
-      LEFT JOIN udc_details ud ON lm.lot_status = ud.id
+      LEFT JOIN udc_details ls ON lm.lot_status = ls.id
+      LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.company = ? 
         AND lm.status_code = 'A'
       ORDER BY it.item_description, lm.lot_number
@@ -651,16 +707,22 @@ class LotMasterRepository extends BaseRepository {
 
     final lots = await db.rawQuery('''
       SELECT lm.*,
-             it.item_description,
-             b.description as branch_name,
-             loc.location_description,
-             ud.detail_code as status_code,
-             ud.description_1 as status_description
+           it.items_id as item_id,
+        it.item_description,
+        it.unit_of_measure,
+        uom.description_1 as unit_of_measure_description,
+        uom.detail_code as unit_of_measure_detail_code,
+        b.description as description,
+        loc.location_description,
+        ls.detail_code as status_code,
+        ls.description_1 as status_description
+      
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
       LEFT JOIN location_master loc ON lm.location = loc.id
-      LEFT JOIN udc_details ud ON lm.lot_status = ud.id
+      LEFT JOIN udc_details ls ON lm.lot_status = ls.id
+      LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       $whereClause
       ORDER BY lm.date_expiration
     ''', whereArgs);
@@ -868,16 +930,22 @@ class LotMasterRepository extends BaseRepository {
     final lots = await db.rawQuery(
       '''
       SELECT lm.*,
-             it.item_description as item_description,
-             b.description as branch_name,
-             loc.location_description,
-             ls.detail_code as status_code,
-             ls.description_1 as status_description
+         it.items_id as item_id,
+        it.item_description,
+        it.unit_of_measure,
+        uom.description_1 as unit_of_measure_description,
+        uom.detail_code as unit_of_measure_detail_code,
+        b.description as description,
+        loc.location_description,
+        ls.detail_code as status_code,
+        ls.description_1 as status_description
+      
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
       LEFT JOIN location_master loc ON lm.location = loc.id
       LEFT JOIN udc_details ls ON lm.lot_status = ls.id
+      LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.date_expiration = ? AND lm.company = ?
       ORDER BY it.item_description, lm.lot_number
     ''',
@@ -896,16 +964,22 @@ class LotMasterRepository extends BaseRepository {
     final lots = await db.rawQuery(
       '''
       SELECT lm.*,
-             it.item_description as item_description,
-             b.description as branch_name,
-             loc.location_description,
-             ls.detail_code as status_code,
-             ls.description_1 as status_description
+         it.items_id as item_id,
+        it.item_description,
+        it.unit_of_measure,
+        uom.description_1 as unit_of_measure_description,
+        uom.detail_code as unit_of_measure_detail_code,
+        b.description as description,
+        loc.location_description,
+        ls.detail_code as status_code,
+        ls.description_1 as status_description
+      
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
       LEFT JOIN location_master loc ON lm.location = loc.id
       LEFT JOIN udc_details ls ON lm.lot_status = ls.id
+      LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.date_effective = ? AND lm.company = ?
       ORDER BY it.item_description, lm.lot_number
     ''',
@@ -924,16 +998,22 @@ class LotMasterRepository extends BaseRepository {
     final lots = await db.rawQuery(
       '''
       SELECT lm.*,
-             it.item_description as item_description,
-             b.description as branch_name,
-             loc.location_description,
-             ls.detail_code as status_code,
-             ls.description_1 as status_description
+              it.items_id as item_id,
+        it.item_description,
+        it.unit_of_measure,
+        uom.description_1 as unit_of_measure_description,
+        uom.detail_code as unit_of_measure_detail_code,
+        b.description as description,
+        loc.location_description,
+        ls.detail_code as status_code,
+        ls.description_1 as status_description
+      
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
       LEFT JOIN location_master loc ON lm.location = loc.id
       LEFT JOIN udc_details ls ON lm.lot_status = ls.id
+      LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.date_received = ? AND lm.company = ?
       ORDER BY it.item_description, lm.lot_number
     ''',
@@ -952,5 +1032,195 @@ class LotMasterRepository extends BaseRepository {
     );
     final nextLotNumber = result.first['next_lot_number'] as int?;
     return nextLotNumber != null ? nextLotNumber + 1 : 1;
+  }
+
+  Future<PaginatedExpirationResult> getExpirationReport({
+    required int companyId,
+    required ExpirationReportFilters filters,
+    required int page,
+    required int pageSize,
+  }) async {
+    final db = await databaseService.database;
+
+    // Build WHERE clause dynamically
+    final whereConditions = <String>['lm.company = ?'];
+    final whereArgs = <dynamic>[companyId];
+
+    // Base condition: expired or expiring today
+    final today = DateTime.now();
+    whereConditions.add(
+      '(lm.date_expiration IS NOT NULL AND lm.date_expiration <= ?)',
+    );
+    whereArgs.add(today.toIso8601String());
+
+    // Apply filters
+    if (filters.itemId != null) {
+      whereConditions.add('lm.item_number = ?');
+      whereArgs.add(filters.itemId);
+    }
+
+    if (filters.branchId != null) {
+      whereConditions.add('lm.branch = ?');
+      whereArgs.add(filters.branchId);
+    }
+
+    if (filters.locationId != null) {
+      whereConditions.add('lm.location = ?');
+      whereArgs.add(filters.locationId);
+    }
+
+    if (!filters.showZeroAvailability) {
+      whereConditions.add('lm.quantity_available > 0');
+    }
+
+    if (filters.dateFrom != null) {
+      whereConditions.add('lm.date_expiration >= ?');
+      whereArgs.add(filters.dateFrom!.toIso8601String());
+    }
+
+    if (filters.dateTo != null) {
+      whereConditions.add('lm.date_expiration <= ?');
+      whereArgs.add(filters.dateTo!.toIso8601String());
+    }
+
+    final whereClause = whereConditions.join(' AND ');
+
+    // Count query
+    final countResult = await db.rawQuery('''
+      SELECT COUNT(*) as count
+      FROM lot_master lm
+      WHERE $whereClause
+    ''', whereArgs);
+
+    final totalCount = (countResult.first['count'] as int?) ?? 0;
+
+    // Data query with joins
+    final dataQuery =
+        '''
+      SELECT 
+        lm.*,
+        it.items_id as item_id,
+        it.item_description,
+        it.unit_of_measure,
+        uom.description_1 as unit_of_measure_description,
+        uom.detail_code as unit_of_measure_detail_code,
+        b.description as description,
+        loc.location_description,
+        ls.detail_code as status_code,
+        ls.description_1 as status_description,
+        COALESCE(
+          (SELECT unit_of_measure 
+           FROM items_in_branch iib 
+           WHERE iib.company = lm.company 
+             AND iib.item_number = lm.item_number 
+             AND iib.branch = lm.branch
+           LIMIT 1),
+          it.unit_of_measure
+        ) as branch_uom,
+        COALESCE(
+          (SELECT amount_unit_cost 
+           FROM item_cost ict 
+           WHERE ict.company = lm.company 
+             AND ict.item_number = lm.item_number
+           LIMIT 1),
+          0.0
+        ) as unit_cost
+      FROM lot_master lm
+      LEFT JOIN items_table it ON lm.item_number = it.id
+      LEFT JOIN branch_table b ON lm.branch = b.id
+      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN udc_details ls ON lm.lot_status = ls.id
+      LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
+      WHERE $whereClause
+      ORDER BY lm.date_expiration ASC
+      LIMIT ? OFFSET ?
+    ''';
+
+    final paginatedArgs = List<dynamic>.from(whereArgs)
+      ..add(pageSize)
+      ..add((page - 1) * pageSize);
+
+    final lotsData = await db.rawQuery(dataQuery, paginatedArgs);
+    final lots = lotsData.map((p) => LotMaster.fromMap(p)).toList();
+
+    // Calculate total cost
+    double totalCost = 0.0;
+    for (final lot in lots) {
+      final quantity = lot.quantityAvailable ?? 0.0;
+      final unitCost =
+          (lotsData.firstWhere(
+                    (row) => row['id'] == lot.id,
+                    orElse: () => {'unit_cost': 0.0},
+                  )['unit_cost']
+                  as num?)
+              ?.toDouble() ??
+          0.0;
+
+      // Calculate UoM conversion if needed
+      final branchUom =
+          (lotsData.firstWhere(
+                (row) => row['id'] == lot.id,
+                orElse: () => {'branch_uom': null},
+              )['branch_uom']
+              as int?);
+
+      double conversionFactor = 1.0;
+      if (branchUom != null && lot.itemRef?.unitOfMeasure != null) {
+        conversionFactor = await getUoMConversionFactor(
+          companyId: companyId,
+          itemNumber: lot.itemNumber!,
+          fromUom: branchUom,
+          toUom: int.parse(lot.itemRef!.unitOfMeasure!),
+        );
+      }
+
+      totalCost += quantity * conversionFactor * unitCost;
+    }
+
+    return PaginatedExpirationResult(
+      lots: lots,
+      totalCount: totalCount,
+      totalCost: totalCost,
+    );
+  }
+
+  Future<double> calculateLotTotalCost(LotMaster lot) async {
+    try {
+      final unitCost = await databaseService.database;
+      final unitCostResult = await unitCost.rawQuery(
+        '''
+        SELECT amount_unit_cost 
+        FROM item_cost 
+        WHERE company = ? AND item_number = ?
+        LIMIT 1
+      ''',
+        [lot.company, lot.itemNumber],
+      );
+
+      final cost =
+          (unitCostResult.first['amount_unit_cost'] as num?)?.toDouble() ?? 0.0;
+      final quantity = lot.quantityAvailable ?? 0.0;
+
+      // Apply UoM conversion if needed
+      final branchUom = await getItemBranchUoM(
+        lot.itemNumber!,
+        lot.branch!,
+        lot.company!,
+      );
+
+      double conversionFactor = 1.0;
+      if (branchUom != null && lot.itemRef?.unitOfMeasure != null) {
+        conversionFactor = await getUoMConversionFactor(
+          companyId: lot.company!,
+          itemNumber: lot.itemNumber!,
+          fromUom: branchUom,
+          toUom: int.parse(lot.itemRef!.unitOfMeasure!),
+        );
+      }
+
+      return quantity * conversionFactor * cost;
+    } catch (e) {
+      return 0.0;
+    }
   }
 }
