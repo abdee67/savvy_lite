@@ -85,7 +85,9 @@ class StockItemsEntryRepository extends BaseRepository {
     final db = await databaseService.database;
     final maps = await db.rawQuery(
       '''
-      SELECT it.*,ud.description_1 as unit_of_measure_description
+      SELECT it.*,
+      ud.description_1 as unit_of_measure_description,
+      ud.detail_code as unit_of_measure_code
       FROM items_table it
       LEFT JOIN udc_details ud ON it.unit_of_measure = ud.id
       WHERE it.company = ?
@@ -102,7 +104,9 @@ class StockItemsEntryRepository extends BaseRepository {
     final db = await databaseService.database;
     final maps = await db.rawQuery(
       '''
-      SELECT it.*,ud.description_1 as unit_of_measure_description
+      SELECT it.*,
+      ud.description_1 as unit_of_measure_description,
+      ud.detail_code as unit_of_measure_code
       FROM items_table it
       LEFT JOIN udc_details ud ON it.unit_of_measure = ud.id
       WHERE it.items_id = ? AND it.company = ?
@@ -125,7 +129,9 @@ class StockItemsEntryRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final maps = await db.rawQuery(
       '''
-      SELECT it.*,ud.description_1 as unit_of_measure_description
+      SELECT it.*,
+      ud.description_1 as unit_of_measure_description,
+      ud.detail_code as unit_of_measure_code
       FROM items_table it
       LEFT JOIN udc_details ud ON it.unit_of_measure = ud.id
       WHERE it.item_description = ? AND it.company = ?
@@ -148,7 +154,9 @@ class StockItemsEntryRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final maps = await db.rawQuery(
       '''
-      SELECT it.*,ud.description_1 as unit_of_measure_description
+      SELECT it.*,
+      ud.description_1 as unit_of_measure_description,
+      ud.detail_code as unit_of_measure_code
       FROM items_table it
       LEFT JOIN udc_details ud ON it.unit_of_measure = ud.id
       WHERE it.barcode = ? AND it.company = ?
@@ -195,7 +203,9 @@ class StockItemsEntryRepository extends BaseRepository {
     final db = await databaseService.database;
     final maps = await db.rawQuery(
       '''
-      SELECT it.*,ud.description_1 as unit_of_measure_description
+      SELECT it.*,
+      ud.description_1 as unit_of_measure_description,
+      ud.detail_code as unit_of_measure_code
       FROM items_table it
       LEFT JOIN udc_details ud ON it.unit_of_measure = ud.id
       WHERE it.company = ? AND (
@@ -240,7 +250,9 @@ class StockItemsEntryRepository extends BaseRepository {
     }
 
     final maps = await db.rawQuery('''
-      SELECT it.*, ud.description_1 as unit_of_measure_description
+      SELECT it.*,
+      ud.description_1 as unit_of_measure_description,
+      ud.detail_code as unit_of_measure_code
       FROM items_table it
       LEFT JOIN udc_details ud ON it.unit_of_measure = ud.id
       $whereClause
@@ -255,7 +267,9 @@ class StockItemsEntryRepository extends BaseRepository {
     final db = await databaseService.database;
     final maps = await db.rawQuery(
       '''
-      SELECT it.*,ud.description_1 as unit_of_measure_description
+      SELECT it.*,
+      ud.description_1 as unit_of_measure_description,
+      ud.detail_code as unit_of_measure_code
       FROM items_table it
       LEFT JOIN udc_details ud ON it.unit_of_measure = ud.id
       WHERE it.company = ? AND LENGTH(TRIM(it.barcode)) > 0
@@ -337,7 +351,9 @@ class StockItemsEntryRepository extends BaseRepository {
     final db = await databaseService.database;
     final maps = await db.rawQuery(
       '''
-      SELECT it.*,ud.description_1 as unit_of_measure_description
+      SELECT it.*,
+      ud.description_1 as unit_of_measure_description,
+      ud.detail_code as unit_of_measure_code
       FROM items_table it
       LEFT JOIN udc_details ud ON it.unit_of_measure = ud.id
       WHERE it.company = ?

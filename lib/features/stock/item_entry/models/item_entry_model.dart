@@ -1,3 +1,5 @@
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
+
 class ItemEntryModel {
   int id;
   final String? itemsId;
@@ -14,7 +16,7 @@ class ItemEntryModel {
   int? tempId;
   bool? validCell;
   // Additional fields from joins
-  String? unitOfMeasureDescription;
+  UdcDetails? unitOfMeasureDescription;
 
   ItemEntryModel({
     required this.id,
@@ -47,6 +49,10 @@ class ItemEntryModel {
       marginRate: null,
       marginType: null,
       reorderPoint: null,
+      referenceId: null,
+      tempId: null,
+      validCell: true,
+      unitOfMeasureDescription: null,
     );
   }
 
@@ -81,7 +87,13 @@ class ItemEntryModel {
       referenceId: map['reference_id']?.toString(),
       tempId: asInt(map['temp_id']),
       validCell: map['valid_cell'] == 1,
-      unitOfMeasureDescription: map['unit_of_measure_description']?.toString(),
+      unitOfMeasureDescription: map['unit_of_measure_description'] != null
+          ? UdcDetails(
+              id: (map['unit_of_measure']),
+              description1: map['unit_of_measure_description'],
+              detailCode: map['unit_of_measure_code'],
+            )
+          : null,
     );
   }
 
@@ -117,7 +129,7 @@ class ItemEntryModel {
     String? referenceId,
     int? tempId,
     bool? validCell,
-    String? unitOfMeasureDescription,
+    UdcDetails? unitOfMeasureDescription,
   }) {
     return ItemEntryModel(
       id: id ?? this.id,
