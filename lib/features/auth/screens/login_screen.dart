@@ -342,7 +342,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Encrypting your login Please wait...',
+                'Maintaining your data Please wait...',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,

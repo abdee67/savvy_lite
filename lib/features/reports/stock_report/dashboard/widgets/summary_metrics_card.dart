@@ -10,8 +10,6 @@ class SummaryMetricsCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final Color iconBackground;
-  final String? prefix;
-  final String? suffix;
 
   const SummaryMetricsCard({
     super.key,
@@ -22,15 +20,13 @@ class SummaryMetricsCard extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.iconBackground,
-    this.prefix,
-    this.suffix,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 280,
-      padding: const EdgeInsets.all(24),
+      width: MediaQuery.sizeOf(context).width * 0.2,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -49,8 +45,8 @@ class SummaryMetricsCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                width: 56,
-                height: 56,
+                width: MediaQuery.sizeOf(context).width * 0.1,
+                height: MediaQuery.sizeOf(context).height * 0.05,
                 decoration: BoxDecoration(
                   color: iconBackground,
                   borderRadius: BorderRadius.circular(12),
@@ -79,6 +75,7 @@ class SummaryMetricsCard extends StatelessWidget {
                       change,
                       style: TextStyle(
                         fontSize: 12,
+                        overflow: TextOverflow.ellipsis,
                         fontWeight: FontWeight.w600,
                         color: isPositive
                             ? const Color(0xFF10B981)
@@ -93,21 +90,16 @@ class SummaryMetricsCard extends StatelessWidget {
           const SizedBox(height: 20),
           Text(
             title,
-            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade600,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           const SizedBox(height: 8),
           RichText(
             text: TextSpan(
               children: [
-                if (prefix != null)
-                  TextSpan(
-                    text: prefix,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      color: Colors.grey,
-                      fontWeight: FontWeight.normal,
-                    ),
-                  ),
                 TextSpan(
                   text: _formatNumber(value),
                   style: const TextStyle(
@@ -116,15 +108,6 @@ class SummaryMetricsCard extends StatelessWidget {
                     color: Colors.black,
                   ),
                 ),
-                if (suffix != null)
-                  TextSpan(
-                    text: suffix,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      color: Colors.grey,
-                      fontWeight: FontWeight.normal,
-                    ),
-                  ),
               ],
             ),
           ),

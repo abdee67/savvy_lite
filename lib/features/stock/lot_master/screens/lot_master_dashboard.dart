@@ -227,7 +227,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
             .where((entry) => entry.id == locationId)
             .firstOrNull
             ?.locationDescription ??
-        'Branch $locationId';
+        'Loc $locationId';
     return locationName;
   }
 
@@ -1066,19 +1066,19 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
           ),
           _buildLotInfoItem(
             'Branch : ',
-            _getBranchName(lot.branch!),
+            _getBranchName(lot.branch!) ?? 'N/A',
             Iconsax.building,
             isCompact,
           ),
           _buildLotInfoItem(
             'Item Number : ',
-            _getItemName(lot.itemNumber!),
+            lot.itemRef?.itemDescription ?? 'N/A',
             Iconsax.box,
             isCompact,
           ),
           _buildLotInfoItem(
             'Location : ',
-            _getLocationName(lot.location!),
+            _getLocationName(lot.location!) ?? 'N/A',
             Iconsax.location,
             isCompact,
           ),
