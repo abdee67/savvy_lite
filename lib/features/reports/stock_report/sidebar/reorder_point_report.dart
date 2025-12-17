@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-class BalanceOfItemReport extends StatelessWidget {
-  const BalanceOfItemReport({super.key});
+class ReorderPointReport extends StatelessWidget {
+  const ReorderPointReport({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Balance of Item Report')),
+      appBar: AppBar(title: const Text('Reorder Point Report')),
       body: const Center(child: Text('Under Construction')),
     );
   }

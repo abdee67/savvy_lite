@@ -556,7 +556,7 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
                         header: 'Default UOM',
                         flex: 1,
                         cellBuilder: (item) => Text(
-                          item.unitOfMeasureDescription ??
+                          item.unitOfMeasureDescription?.description1 ??
                               item.unitOfMeasure ??
                               'N/A',
                           style: const TextStyle(
