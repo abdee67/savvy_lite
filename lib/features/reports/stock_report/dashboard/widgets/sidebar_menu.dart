@@ -1,6 +1,8 @@
 // features/reports/stock_report/widgets/sidebar_menu.dart
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:savvy_stock/core/constants/app_routes.dart';
 
 class SidebarMenu extends StatefulWidget {
   final bool isExpanded;
@@ -24,64 +26,60 @@ class _SidebarMenuState extends State<SidebarMenu> {
 
   final List<SidebarMenuItem> _menuItems = [
     SidebarMenuItem(
-      id: 'dashboard',
-      title: 'Stock Dashboard',
-      icon: Iconsax.chart,
-      isActive: true,
-    ),
-    SidebarMenuItem(
       id: 'reports',
-      title: 'Reports',
-      icon: Iconsax.document_text,
+      title: 'Stock Reports',
+      icon: Iconsax.folder,
       hasSubmenu: true,
+      route: null,
     ),
     SidebarMenuItem(
       id: 'expiration',
       title: 'Expiration Report',
       icon: Iconsax.calendar_tick,
       parentId: 'reports',
+      route: AppRoutes.expirationReport,
     ),
     SidebarMenuItem(
       id: 'upcoming_expiry',
       title: 'Upcoming Expiry',
       icon: Iconsax.calendar_1,
       parentId: 'reports',
+      route: AppRoutes.upcomingExpirationReport,
     ),
     SidebarMenuItem(
       id: 'balance_report',
       title: 'Balance of Item Report',
       icon: Iconsax.box,
       parentId: 'reports',
-    ),
-    SidebarMenuItem(
-      id: 'daily_stock',
-      title: 'Daily Stock Report',
-      icon: Iconsax.calendar_edit,
-      parentId: 'reports',
+      route: AppRoutes.balanceOfItemEntryReport,
     ),
     SidebarMenuItem(
       id: 'inventory_movement',
       title: 'Inventory Movement',
       icon: Iconsax.refresh,
       parentId: 'reports',
+      route: AppRoutes.inventoryMovementReport,
     ),
     SidebarMenuItem(
       id: 'item_cost',
       title: 'Item Cost Report',
       icon: Iconsax.money,
       parentId: 'reports',
+      route: AppRoutes.itemCostReport,
     ),
     SidebarMenuItem(
       id: 'inventory_transaction',
       title: 'Inventory Transaction',
       icon: Iconsax.receipt_item,
       parentId: 'reports',
+      route: AppRoutes.inventoryTransactionReport,
     ),
     SidebarMenuItem(
       id: 'reorder_point',
       title: 'Reorder-Point Report',
       icon: Iconsax.arrow_swap_horizontal,
       parentId: 'reports',
+      route: AppRoutes.reorderPointReport,
     ),
   ];
 
@@ -210,6 +208,9 @@ class _SidebarMenuState extends State<SidebarMenu> {
             setState(() {
               _selectedMenuItem = item.id;
             });
+            if (item.route != null) {
+              context.push(item.route!);
+            }
             if (!widget.isDesktop) {
               widget.onToggleExpanded();
             }
@@ -417,6 +418,7 @@ class SidebarMenuItem {
   final bool isActive;
   final bool hasSubmenu;
   final String? parentId;
+  final String? route;
 
   SidebarMenuItem({
     required this.id,
@@ -425,5 +427,6 @@ class SidebarMenuItem {
     this.isActive = false,
     this.hasSubmenu = false,
     this.parentId,
+    required this.route,
   });
 }

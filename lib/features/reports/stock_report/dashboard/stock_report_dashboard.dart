@@ -20,6 +20,7 @@ class _StockReportDashboardState extends State<StockReportDashboard> {
   bool _sidebarExpanded = false;
   bool _showSidebarOverlay = false;
   double _sidebarWidth = 280;
+  double _sidebarHeight = 280;
   final double _sidebarMinWidth = 0;
   final double _sidebarMaxWidth = 320;
 
@@ -55,20 +56,22 @@ class _StockReportDashboardState extends State<StockReportDashboard> {
             child: _buildMainContent(),
           ),
 
-          // Sidebar for Desktop (Overlay for Mobile/Tablet)
+          // Overlay for Mobile/Tablet when sidebar is open
+          if (_showSidebarOverlay && (isMobile || isTablet))
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: _hideSidebar,
+                child: Container(color: Colors.black.withOpacity(0.5)),
+              ),
+            ),
+
+          // Sidebar
           if (_sidebarExpanded || isDesktop)
             Positioned(
               left: 0,
               top: 0,
               bottom: 0,
               child: _buildSidebar(screenSize),
-            ),
-
-          // Overlay for Mobile/Tablet when sidebar is open
-          if (_showSidebarOverlay && (isMobile || isTablet))
-            GestureDetector(
-              onTap: _hideSidebar,
-              child: Container(color: Colors.black.withOpacity(0.5)),
             ),
 
           // Floating Menu Button for Mobile/Tablet
@@ -95,9 +98,11 @@ class _StockReportDashboardState extends State<StockReportDashboard> {
         slivers: [
           // App Bar
           SliverAppBar(
-            floating: true,
+            floating: false,
             pinned: true,
-            elevation: 0,
+            scrolledUnderElevation:
+                0, //when the screen scrolls it remain at the top
+            snap: false,
             backgroundColor: Colors.grey[50],
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -167,6 +172,9 @@ class _StockReportDashboardState extends State<StockReportDashboard> {
     final sidebarWidth = isDesktop
         ? (_sidebarExpanded ? _sidebarWidth : 0)
         : screenSize.width * 0.5;
+    final sidebarHeight = isDesktop
+        ? (_sidebarExpanded ? _sidebarHeight : 0)
+        : screenSize.height * 0.5;
 
     return GestureDetector(
       onHorizontalDragUpdate: _handleSidebarDrag,
@@ -175,6 +183,7 @@ class _StockReportDashboardState extends State<StockReportDashboard> {
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
         width: sidebarWidth.toDouble(),
+        height: sidebarHeight.toDouble(),
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border(
@@ -207,7 +216,6 @@ class _StockReportDashboardState extends State<StockReportDashboard> {
         'icon': Iconsax.box,
         'color': const Color(0xFF3B82F6),
         'iconBackground': const Color(0xFFEBF5FF),
-        'prefix': 'Qty: ',
       },
       {
         'title': 'Upcoming Inventory',
@@ -217,7 +225,6 @@ class _StockReportDashboardState extends State<StockReportDashboard> {
         'icon': Iconsax.box_tick,
         'color': const Color(0xFF8B5CF6),
         'iconBackground': const Color(0xFFF3E8FF),
-        'prefix': 'Qty: ',
       },
       {
         'title': 'Received Inventory',
@@ -227,7 +234,6 @@ class _StockReportDashboardState extends State<StockReportDashboard> {
         'icon': Iconsax.box_add,
         'color': const Color(0xFF10B981),
         'iconBackground': const Color(0xFFE6F8F5),
-        'prefix': 'Qty: ',
       },
       {
         'title': 'Stock Out',
@@ -237,17 +243,19 @@ class _StockReportDashboardState extends State<StockReportDashboard> {
         'icon': Iconsax.box_remove,
         'color': const Color(0xFFF59E0B),
         'iconBackground': const Color(0xFFFEF3E7),
-        'prefix': 'Qty: ',
       },
     ];
 
     if (isMobile) {
-      // Mobile: Vertical layout
-      return Column(
+      // Mobile: Horizontal layout
+      return Wrap(
+        spacing: 16,
+        runSpacing: 16,
+        alignment: WrapAlignment.start,
         children: metrics
             .map(
-              (metric) => Padding(
-                padding: const EdgeInsets.only(bottom: 16),
+              (metric) => SizedBox(
+                width: (MediaQuery.sizeOf(context).width - 60) / 2,
                 child: SummaryMetricsCard(
                   title: metric['title'] as String,
                   value: metric['value'] as double,
@@ -256,7 +264,6 @@ class _StockReportDashboardState extends State<StockReportDashboard> {
                   icon: metric['icon'] as IconData,
                   color: metric['color'] as Color,
                   iconBackground: metric['iconBackground'] as Color,
-                  prefix: metric['prefix'] as String?,
                 ),
               ),
             )
@@ -280,7 +287,6 @@ class _StockReportDashboardState extends State<StockReportDashboard> {
                   icon: metric['icon'] as IconData,
                   color: metric['color'] as Color,
                   iconBackground: metric['iconBackground'] as Color,
-                  prefix: metric['prefix'] as String?,
                 ),
               ),
             )
@@ -301,7 +307,6 @@ class _StockReportDashboardState extends State<StockReportDashboard> {
                 icon: metric['icon'] as IconData,
                 color: metric['color'] as Color,
                 iconBackground: metric['iconBackground'] as Color,
-                prefix: metric['prefix'] as String?,
               ),
             )
             .toList(),
@@ -318,7 +323,7 @@ class _StockReportDashboardState extends State<StockReportDashboard> {
             height: 350,
             child: StockChart(
               title: 'Average Time To Sell (Days)',
-              chartType: ChartType.bar,
+              chartType: ChartType.line,
               data: _generateAverageTimeData(),
               showValueLabels: true,
               valuePrefix: 'Days: ',
@@ -758,11 +763,11 @@ class _StockReportDashboardState extends State<StockReportDashboard> {
   // Mock data generators
   List<ChartData> _generateAverageTimeData() {
     return [
-      ChartData(label: 'Product A', value: 45, color: Colors.blue),
-      ChartData(label: 'Product B', value: 32, color: Colors.green),
-      ChartData(label: 'Product C', value: 28, color: Colors.orange),
-      ChartData(label: 'Product D', value: 51, color: Colors.purple),
-      ChartData(label: 'Product E', value: 39, color: Colors.red),
+      ChartData(label: 'A', value: 45, color: Colors.blue),
+      ChartData(label: 'B', value: 32, color: Colors.green),
+      ChartData(label: 'C', value: 28, color: Colors.orange),
+      ChartData(label: 'D', value: 51, color: Colors.purple),
+      ChartData(label: 'E', value: 39, color: Colors.red),
     ];
   }
 
@@ -883,4 +888,4 @@ class TransactionData {
   });
 }
 
-enum ChartType { bar, horizontalBar }
+enum ChartType { bar, horizontalBar, line }
