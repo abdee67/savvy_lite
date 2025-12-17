@@ -36,6 +36,13 @@ import 'package:savvy_stock/features/purchase/supplier_entry/screens/supplier_in
 import 'package:savvy_stock/features/purchase/supplier_entry/screens/supplier_list.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/widget/supplier_create_edit.dart';
 import 'package:savvy_stock/features/reports/stock_report/dashboard/stock_report_dashboard.dart';
+import 'package:savvy_stock/features/reports/stock_report/sidebar/balance_of_item.dart';
+import 'package:savvy_stock/features/reports/stock_report/sidebar/expiration_report.dart';
+import 'package:savvy_stock/features/reports/stock_report/sidebar/inventory_movement.dart';
+import 'package:savvy_stock/features/reports/stock_report/sidebar/inventory_transaction.dart';
+import 'package:savvy_stock/features/reports/stock_report/sidebar/item_cost_report.dart';
+import 'package:savvy_stock/features/reports/stock_report/sidebar/reorder_point_report.dart';
+import 'package:savvy_stock/features/reports/stock_report/sidebar/upcoming_expiration.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/customer/screens/customer_list.dart';
 import 'package:savvy_stock/features/sales/customer/screens/sales_customer_screen.dart';
@@ -879,12 +886,83 @@ class AppRouter {
         redirect: _protectedRouteRedirect,
       ),
       //===================REPORT ROUTES===================
+      //====================STOCK REPORT ROUTS=======================
       GoRoute(
         path: AppRoutes.stockReport,
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: AppRoutes.stockReport,
           parentPrivilege: AppRoutes.reportDashboard,
           child: StockReportDashboard(),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Expiration Report
+      GoRoute(
+        path: AppRoutes.expirationReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.expirationReport,
+          parentPrivilege: AppRoutes.stockReport,
+          child: ExpirationReportPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Upcoming Expiration Report
+      GoRoute(
+        path: AppRoutes.upcomingExpirationReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.upcomingExpirationReport,
+          parentPrivilege: AppRoutes.stockReport,
+          child: UpcomingExpirationReport(),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Balance of Item Report
+      GoRoute(
+        path: AppRoutes.balanceOfItemEntryReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.balanceOfItemEntryReport,
+          parentPrivilege: AppRoutes.stockReport,
+          child: BalanceOfItemReport(),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Inventory Movement Report
+      GoRoute(
+        path: AppRoutes.inventoryMovementReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.inventoryMovementReport,
+          parentPrivilege: AppRoutes.stockReport,
+          child: InventoryMovementReport(),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Item Cost Report
+      GoRoute(
+        path: AppRoutes.itemCostReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.itemCostReport,
+          parentPrivilege: AppRoutes.stockReport,
+          child: ItemCostReport(),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Inventory Transaction Report
+      GoRoute(
+        path: AppRoutes.inventoryTransactionReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.inventoryTransactionReport,
+          parentPrivilege: AppRoutes.stockReport,
+          child: InventoryTransactionReport(),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Reorder Point Report
+      GoRoute(
+        path: AppRoutes.reorderPointReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.reorderPointReport,
+          parentPrivilege: AppRoutes.stockReport,
+          child: ReorderPointReport(),
         ),
         redirect: _protectedRouteRedirect,
       ),

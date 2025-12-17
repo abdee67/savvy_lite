@@ -1,5 +1,6 @@
 // features/stock/lot_master/blocs/lot_master_state.dart
 
+import 'package:savvy_stock/features/stock/lot_master/models/expiration_report_filters.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 
 enum LotMasterStatus {
@@ -14,8 +15,13 @@ enum LotMasterStatus {
   success,
   failure,
   dateValidationFailed,
-  duplicationFound
-
+  duplicationFound,
+  exporting,
+  loadingExpirationReport,
+  loadedExpirationReport,
+  loadingMoreExpirationReport,
+  exportingReport,
+  exportReportSuccess,
 }
 
 class LotMasterState {
@@ -38,11 +44,21 @@ class LotMasterState {
   final int? filterLocationId;
   final int? filterStatusId;
 
-   // Additional state
+  // Additional state
   final Map<int, double>? quantitySummary;
   final List<LotMaster>? expiringLots;
   final bool? datesValid;
   final bool? hasDuplication;
+
+  // Expiration report fields
+  final List<LotMaster> expirationReportLots;
+  final ExpirationReportFilters expirationReportFilters;
+  final int expirationReportPage;
+  final int expirationReportTotalPages;
+  final int expirationReportTotalCount;
+  final double expirationReportTotalCost;
+  final bool hasMoreExpirationReport;
+  final String exportReportMessage;
 
   const LotMasterState({
     this.status = LotMasterStatus.initial,
@@ -65,6 +81,16 @@ class LotMasterState {
     this.filterExpEnd,
     this.filterLocationId,
     this.filterStatusId,
+
+    // Expiration report fields
+    this.expirationReportLots = const [],
+    this.expirationReportFilters = const ExpirationReportFilters(),
+    this.expirationReportPage = 1,
+    this.expirationReportTotalPages = 0,
+    this.expirationReportTotalCount = 0,
+    this.expirationReportTotalCost = 0.0,
+    this.hasMoreExpirationReport = false,
+    this.exportReportMessage = '',
   });
 
   bool get isLoading => status == LotMasterStatus.loading;
@@ -82,6 +108,8 @@ class LotMasterState {
   bool get canEdit => selectedItems.length == 1;
   bool get canDelete => selectedItems.isNotEmpty;
   bool get canExport => filteredItems.isNotEmpty;
+  bool get hasNextPage => expirationReportPage < expirationReportTotalPages;
+  bool get hasPreviousPage => expirationReportPage > 1;
 
   // --- CopyWith for immutability ---
   LotMasterState copyWith({
@@ -101,13 +129,21 @@ class LotMasterState {
     List<LotMaster>? expiringLots,
     bool? datesValid,
     bool? hasDuplication,
-    
 
     int? filterItemId,
     DateTime? filterExpStart,
     DateTime? filterExpEnd,
     int? filterLocationId,
     int? filterStatusId,
+
+    List<LotMaster>? expirationReportLots,
+    ExpirationReportFilters? expirationReportFilters,
+    int? expirationReportPage,
+    int? expirationReportTotalPages,
+    int? expirationReportTotalCount,
+    double? expirationReportTotalCost,
+    bool? hasMoreExpirationReport,
+    String? exportReportMessage,
   }) {
     return LotMasterState(
       status: status ?? this.status,
@@ -131,6 +167,19 @@ class LotMasterState {
       datesValid: datesValid ?? this.datesValid,
       hasDuplication: hasDuplication ?? this.hasDuplication,
 
+      expirationReportLots: expirationReportLots ?? this.expirationReportLots,
+      expirationReportFilters:
+          expirationReportFilters ?? this.expirationReportFilters,
+      expirationReportPage: expirationReportPage ?? this.expirationReportPage,
+      expirationReportTotalPages:
+          expirationReportTotalPages ?? this.expirationReportTotalPages,
+      expirationReportTotalCount:
+          expirationReportTotalCount ?? this.expirationReportTotalCount,
+      expirationReportTotalCost:
+          expirationReportTotalCost ?? this.expirationReportTotalCost,
+      hasMoreExpirationReport:
+          hasMoreExpirationReport ?? this.hasMoreExpirationReport,
+      exportReportMessage: exportReportMessage ?? this.exportReportMessage,
     );
   }
 
@@ -156,5 +205,13 @@ class LotMasterState {
     expiringLots,
     datesValid,
     hasDuplication,
+    expirationReportLots,
+    expirationReportFilters,
+    expirationReportPage,
+    expirationReportTotalPages,
+    expirationReportTotalCount,
+    expirationReportTotalCost,
+    hasMoreExpirationReport,
+    exportReportMessage,
   ];
 }

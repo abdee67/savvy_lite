@@ -1,0 +1,43 @@
+class ExpirationReportFilters {
+  final int? itemId;
+  final int? branchId;
+  final int? locationId;
+  final bool showZeroAvailability;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+
+  const ExpirationReportFilters({
+    this.itemId,
+    this.branchId,
+    this.locationId,
+    this.showZeroAvailability = false,
+    this.dateFrom,
+    this.dateTo,
+  });
+
+  bool get hasFilters =>
+      itemId != null ||
+      branchId != null ||
+      locationId != null ||
+      showZeroAvailability ||
+      dateFrom != null ||
+      dateTo != null;
+
+  ExpirationReportFilters copyWith({
+    int? itemId,
+    int? branchId,
+    int? locationId,
+    bool? showZeroAvailability,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+  }) {
+    return ExpirationReportFilters(
+      itemId: itemId ?? this.itemId,
+      branchId: branchId ?? this.branchId,
+      locationId: locationId ?? this.locationId,
+      showZeroAvailability: showZeroAvailability ?? this.showZeroAvailability,
+      dateFrom: dateFrom ?? this.dateFrom,
+      dateTo: dateTo ?? this.dateTo,
+    );
+  }
+}

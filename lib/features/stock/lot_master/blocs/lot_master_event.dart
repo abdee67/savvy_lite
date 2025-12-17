@@ -3,6 +3,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
+import 'package:savvy_stock/features/stock/lot_master/models/expiration_report_filters.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
@@ -233,4 +234,52 @@ class GetLotQuantitySummary extends LotMasterEvent {
 
   @override
   List<Object> get props => [companyId];
+}
+
+class LoadExpirationReport extends LotMasterEvent {
+  final int companyId;
+  final ExpirationReportFilters filters;
+  final int page;
+  final int pageSize;
+
+  const LoadExpirationReport({
+    required this.companyId,
+    required this.filters,
+    this.page = 1,
+    this.pageSize = 20,
+  });
+
+  @override
+  List<Object> get props => [companyId, filters, page, pageSize];
+}
+
+class LoadMoreExpirationReport extends LotMasterEvent {}
+
+class UpdateExpirationReportFilters extends LotMasterEvent {
+  final ExpirationReportFilters filters;
+
+  const UpdateExpirationReportFilters(this.filters);
+
+  @override
+  List<Object> get props => [filters];
+}
+
+class ClearExpirationReportFilters extends LotMasterEvent {}
+
+class ExportExpirationReportToExcel extends LotMasterEvent {
+  final ExpirationReportFilters filters;
+
+  const ExportExpirationReportToExcel(this.filters);
+
+  @override
+  List<Object> get props => [filters];
+}
+
+class ExportExpirationReportToPDF extends LotMasterEvent {
+  final ExpirationReportFilters filters;
+
+  const ExportExpirationReportToPDF(this.filters);
+
+  @override
+  List<Object> get props => [filters];
 }

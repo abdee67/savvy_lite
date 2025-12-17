@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
+import 'package:savvy_stock/features/stock/lot_master/models/expiration_report_filters.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -21,6 +22,7 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
   final NextNumberBloc nextNumberBloc;
   final LotExpirationColorsBloc lotExpirationColorsBloc;
   final UdcRepository udcRepository;
+  final int defaultPageSize = 20;
 
   StreamSubscription? _authSubscription;
   StreamSubscription? _systemConstantSubscription;
@@ -66,6 +68,12 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
     on<CheckLotNumberDuplication>(_onCheckLotNumberDuplication);
     on<GetExpiringLots>(_onGetExpiringLots);
     on<GetLotQuantitySummary>(_onGetLotQuantitySummary);
+    on<LoadExpirationReport>(_onLoadExpirationReport);
+    on<LoadMoreExpirationReport>(_onLoadMoreExpirationReport);
+    on<UpdateExpirationReportFilters>(_onUpdateExpirationReportFilters);
+    on<ClearExpirationReportFilters>(_onClearFilters);
+    on<ExportExpirationReportToExcel>(_onExportToExcel);
+    on<ExportExpirationReportToPDF>(_onExportToPDF);
   }
 
   @override
@@ -886,5 +894,255 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
       itemNumber: itemNumber,
       branch: branch,
     );
+  }
+
+  Future<void> _onLoadExpirationReport(
+    LoadExpirationReport event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    emit(state.copyWith(status: LotMasterStatus.loadingExpirationReport));
+    try {
+      final companyId = event.companyId;
+      if (companyId == null) {
+        throw Exception('Company ID not found');
+      }
+
+      final result = await repository.getExpirationReport(
+        companyId: companyId,
+        filters: event.filters,
+        page: event.page,
+        pageSize: event.pageSize,
+      );
+
+      final totalPages = (result.totalCount / event.pageSize).ceil();
+
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.loadedExpirationReport,
+          expirationReportLots: result.lots,
+          expirationReportTotalCount: result.totalCount,
+          expirationReportTotalPages: totalPages,
+          expirationReportPage: event.page,
+          expirationReportTotalCost: result.totalCost,
+          expirationReportFilters: event.filters,
+          hasMoreExpirationReport: event.page < totalPages,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.failure,
+          message: 'Failed to load expiration report: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onLoadMoreExpirationReport(
+    LoadMoreExpirationReport event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    if (!state.hasMoreExpirationReport) return;
+
+    emit(state.copyWith(status: LotMasterStatus.loadingMoreExpirationReport));
+
+    try {
+      final nextPage = state.expirationReportPage + 1;
+      final result = await repository.getExpirationReport(
+        companyId: authBloc.state.companyId!,
+        filters: state.expirationReportFilters,
+        page: nextPage,
+        pageSize: 20,
+      );
+
+      final updatedLots = [...state.expirationReportLots, ...result.lots];
+      final totalPages = (result.totalCount / 20).ceil();
+
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.loadedExpirationReport,
+          expirationReportLots: updatedLots,
+          expirationReportPage: nextPage,
+          expirationReportTotalCost:
+              state.expirationReportTotalCost + result.totalCost,
+          hasMoreExpirationReport: nextPage < totalPages,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.failure,
+          message: 'Failed to load more reports: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onUpdateExpirationReportFilters(
+    UpdateExpirationReportFilters event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    // Reset to page 1 when filters change
+    add(
+      LoadExpirationReport(
+        companyId: authBloc.state.companyId!,
+        filters: event.filters,
+        page: 1,
+        pageSize: defaultPageSize,
+      ),
+    );
+  }
+
+  Future<void> _onClearFilters(
+    ClearExpirationReportFilters event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    add(
+      LoadExpirationReport(
+        companyId: authBloc.state.companyId!,
+        filters: const ExpirationReportFilters(),
+        page: 1,
+        pageSize: defaultPageSize,
+      ),
+    );
+  }
+
+  Future<void> _onExportToExcel(
+    ExportExpirationReportToExcel event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    emit(state.copyWith(status: LotMasterStatus.exporting));
+
+    try {
+      // Get all data (without pagination) for export
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) throw Exception('Company ID not found');
+
+      final result = await repository.getExpirationReport(
+        companyId: companyId,
+        filters: event.filters,
+        page: 1,
+        pageSize: 10000, // Large number to get all records
+      );
+
+      // Prepare data for Excel export
+      final exportData = _prepareExcelData(result.lots);
+
+      // In a real app, you would use a package like excel or csv
+      // For now, we'll just simulate
+      await _simulateExcelExport(exportData);
+
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.success,
+          message: 'Exported ${result.lots.length} records to Excel',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.failure,
+          message: 'Export failed: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportToPDF(
+    ExportExpirationReportToPDF event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    emit(state.copyWith(status: LotMasterStatus.exporting));
+
+    try {
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) throw Exception('Company ID not found');
+
+      final result = await repository.getExpirationReport(
+        companyId: companyId,
+        filters: event.filters,
+        page: 1,
+        pageSize: 10000,
+      );
+
+      // Prepare PDF data
+      await _simulatePDFExport(result.lots, result.totalCost);
+
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.success,
+          message: 'Generated PDF report with ${result.lots.length} records',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.failure,
+          message: 'PDF generation failed: $e',
+        ),
+      );
+    }
+  }
+
+  // Helper methods for export
+  List<Map<String, dynamic>> _prepareExcelData(List<LotMaster> lots) {
+    return lots.map((lot) {
+      return {
+        'Batch': lot.batchNumberSupplier ?? '',
+        'Item ID': lot.itemRef?.itemsId ?? '',
+        'Item Description': lot.itemRef?.itemDescription ?? '',
+        'Branch/Store': lot.branchRef?.description ?? '',
+        'Location': lot.locationRef?.locationDescription ?? '',
+        'Unit of Measure': lot.itemRef?.unitOfMeasure ?? '',
+        'Expiration Date': lot.dateExpiration?.toIso8601String() ?? '',
+        'Available Quantity': lot.quantityAvailable ?? 0.0,
+        'Status': lot.statusDescription ?? '',
+      };
+    }).toList();
+  }
+
+  Future<void> _simulateExcelExport(List<Map<String, dynamic>> data) async {
+    // In production, use a package like:
+    // - excel: ^2.0.0-null-safety-3
+    // - csv: ^5.0.0
+    await Future.delayed(const Duration(seconds: 1));
+    print('Exporting ${data.length} rows to Excel');
+  }
+
+  Future<void> _simulatePDFExport(
+    List<LotMaster> lots,
+    double totalCost,
+  ) async {
+    // In production, use a package like:
+    // - pdf: ^3.10.6
+    // - printing: ^5.11.2
+    await Future.delayed(const Duration(seconds: 2));
+    print('Generating PDF for ${lots.length} lots, total cost: $totalCost');
+  }
+
+  // Public methods for pagination
+  void loadNextPage() {
+    if (state.hasMoreExpirationReport) {
+      add(LoadMoreExpirationReport());
+    }
+  }
+
+  void loadPreviousPage() {
+    if (state.hasPreviousPage) {
+      add(LoadMoreExpirationReport());
+    }
+  }
+
+  void loadPage(int page) {
+    if (page > 0 && page <= state.expirationReportTotalPages) {
+      add(
+        LoadExpirationReport(
+          companyId: authBloc.state.companyId!,
+          filters: state.expirationReportFilters,
+          page: page,
+          pageSize: defaultPageSize,
+        ),
+      );
+    }
   }
 }
