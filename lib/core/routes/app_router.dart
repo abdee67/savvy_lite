@@ -912,7 +912,7 @@ class AppRouter {
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: AppRoutes.upcomingExpirationReport,
           parentPrivilege: AppRoutes.stockReport,
-          child: UpcomingExpirationReport(),
+          child: UpcomingupcomingExpiryPage(authBloc: authBloc),
         ),
         redirect: _protectedRouteRedirect,
       ),
@@ -942,7 +942,7 @@ class AppRouter {
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: AppRoutes.itemCostReport,
           parentPrivilege: AppRoutes.stockReport,
-          child: ItemCostReport(),
+          child: ItemCostReportPage(authBloc: authBloc),
         ),
         redirect: _protectedRouteRedirect,
       ),

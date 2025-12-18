@@ -120,6 +120,37 @@ class FilterItemCosts extends ItemCostEvent {
   FilterItemCosts(this.filteredItems);
 }
 
+//report events
+class LoadItemCostReport extends ItemCostEvent {
+  final int companyId;
+  final int page;
+  final int pageSize;
+
+  LoadItemCostReport({
+    required this.companyId,
+    this.page = 1,
+    this.pageSize = 20,
+  });
+}
+
+class UpdateItemCostReportFilters extends ItemCostEvent {
+  UpdateItemCostReportFilters();
+}
+
+class ClearItemCostReportFilters extends ItemCostEvent {
+  ClearItemCostReportFilters();
+}
+
+class ExportItemCostReportToExcel extends ItemCostEvent {
+  ExportItemCostReportToExcel();
+}
+
+class ExportItemCostReportToPDF extends ItemCostEvent {
+  ExportItemCostReportToPDF();
+}
+
+class LoadMoreItemCostReport extends ItemCostEvent {}
+
 // Cancel events
 class CancelUpdate extends ItemCostEvent {}
 

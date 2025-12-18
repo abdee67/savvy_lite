@@ -20,7 +20,7 @@ class _StockReportDashboardState extends State<StockReportDashboard> {
   bool _sidebarExpanded = false;
   bool _showSidebarOverlay = false;
   double _sidebarWidth = 280;
-  double _sidebarHeight = 280;
+  final double _sidebarHeight = 280;
   final double _sidebarMinWidth = 0;
   final double _sidebarMaxWidth = 320;
 

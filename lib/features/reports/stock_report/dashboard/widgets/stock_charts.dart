@@ -1,7 +1,6 @@
 // features/reports/stock_report/widgets/stock_charts.dart
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:savvy_stock/core/utils/ui_helper.dart';
 import 'package:savvy_stock/features/reports/stock_report/dashboard/stock_report_dashboard.dart';
 
 class StockChart extends StatelessWidget {

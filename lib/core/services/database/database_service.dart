@@ -30,7 +30,7 @@ class LocalDatabaseService {
     String path = join(await getDatabasesPath(), 'savvy_stock.db');
     return await openDatabase(
       path,
-      version: 2, // Incremented for proforma fields migration
+      version: 1, // Incremented for proforma fields migration
       onCreate: _onCreate,
       onUpgrade: _onUpgrade, // Add upgrade handler
       onOpen: (db) async {
@@ -42,29 +42,7 @@ class LocalDatabaseService {
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     developer.log('Upgrading database from $oldVersion to $newVersion');
 
-    if (oldVersion < 2) {
-      // Add proforma fields to sales_order_header for quotation conversion tracking
-      developer.log(
-        'Adding proforma_flag and proforma_reference columns to sales_order_header',
-      );
-      await db.execute('''
-        ALTER TABLE sales_order_header ADD COLUMN proforma_flag TEXT
-      ''');
-      await db.execute('''
-        ALTER TABLE sales_order_header ADD COLUMN proforma_reference TEXT
-      ''');
-      developer.log('Successfully added proforma fields to sales_order_header');
-    }
-
-    if (oldVersion < 3) {
-      // Migration for version 3
-      await db.execute('''
-      CREATE TABLE IF NOT EXISTS new_feature_table (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        feature_data TEXT
-      )
-    ''');
-    }
+    if (oldVersion < 1) {}
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -393,6 +371,8 @@ CREATE INDEX idx_items_in_branch_uom ON items_in_branch(unit_of_measure);
         lot_qty_auto_for_sales TEXT DEFAULT 'Y',
         discount_display TEXT DEFAULT 'N',
         tax_info_display TEXT DEFAULT 'N',
+        days_left INTEGER,
+        currency_code TEXT DEFAULT 'Birr',
         reorder_point_uom_type TEXT DEFAULT 'I',
         is_synced INTEGER DEFAULT 1,
         last_sync_time INTEGER,
@@ -801,6 +781,8 @@ CREATE INDEX idx_next_number_company ON next_number(company);
   order_type INTEGER,
   unit_cost REAL,
   amount_cost REAL,
+  proforma_flag TEXT,
+  proforma_reference TEXT,
   FOREIGN KEY (customer_bill_to) REFERENCES customer_table (id),
   FOREIGN KEY (customer_table_id) REFERENCES customer_table (id),
   FOREIGN KEY (employees_id) REFERENCES employees (id),

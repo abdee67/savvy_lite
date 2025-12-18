@@ -593,7 +593,7 @@ class ItemUomConversionBloc
                   lowerQuery,
                 ) ??
                 false) ||
-            (item.itemName!.unitOfMeasureDescription!.description1!
+            (item.itemName!.unitOfMeasureDescription!.description1
                     .toLowerCase()
                     .contains(lowerQuery) ??
                 false) ||

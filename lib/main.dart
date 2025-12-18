@@ -81,7 +81,7 @@ Future<void> _initializeAndRunApp() async {
   try {
     await ConnectivityService().initConnectivity();
     initDependencies();
-    //await LocalDatabaseService().resetDatabase();
+    // await LocalDatabaseService().resetDatabase();
     // await LocalDatabaseService().debugTable('branch_table');
 
     if (AppConfig.isTestMode) {
@@ -91,11 +91,11 @@ Future<void> _initializeAndRunApp() async {
     }
     // Debug database tables (optional - remove in production)
     // await LocalDatabaseService().debugTable('items_in_branch');
-    //  await LocalDatabaseService().debugTable('item_cost');
+    await LocalDatabaseService().debugTable('item_cost');
     //  await LocalDatabaseService().debugTable('item_location');
-    // await LocalDatabaseService().debugTable('lot_master');
-    await LocalDatabaseService().debugTable('sales_order_header');
-    await LocalDatabaseService().debugTable('credit_receipt_table');
+    await LocalDatabaseService().debugTable('lot_master');
+    //await LocalDatabaseService().debugTable('sales_order_header');
+    //await LocalDatabaseService().debugTable('credit_receipt_table');
     // await LocalDatabaseService().debugTable('sales_order_details');
     // await LocalDatabaseService().debugTable('sales_return_header');
     //await LocalDatabaseService().debugTable('sales_return_details');
