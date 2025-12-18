@@ -382,8 +382,9 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
     if (filters.branchId != null) parts.add('Branch Filtered');
     if (filters.locationId != null) parts.add('Location Filtered');
     if (filters.showZeroAvailability) parts.add('Including Zero Qty');
-    if (filters.dateFrom != null || filters.dateTo != null)
+    if (filters.dateFrom != null || filters.dateTo != null) {
       parts.add('Date Range');
+    }
 
     return parts.isNotEmpty
         ? 'Active Filters: ${parts.join(', ')}'
@@ -616,7 +617,7 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'Lot ${lot.lotNumber ?? 'N/A'}',
+                                  lot.itemRef?.itemDescription ?? 'N/A',
                                   style: TextStyle(
                                     color: const Color(0xFF373737),
                                     fontSize: isCompact ? 20 : 24,

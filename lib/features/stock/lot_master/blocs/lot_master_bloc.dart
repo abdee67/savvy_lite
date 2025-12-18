@@ -74,6 +74,12 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
     on<ClearExpirationReportFilters>(_onClearFilters);
     on<ExportExpirationReportToExcel>(_onExportToExcel);
     on<ExportExpirationReportToPDF>(_onExportToPDF);
+    on<LoadUpcomingExpiryReport>(_onLoadUpcomingExpiryReport);
+    on<LoadMoreUpcomingExpiryReport>(_onLoadMoreUpcomingExpiryReport);
+    on<UpdateUpcomingExpiryReportFilters>(_onUpdateUpcomingExpiryReportFilters);
+    on<ClearUpcomingExpiryReportFilters>(_onClearUpcomingExpiryReportFilters);
+    // on<ExportUpcomingExpiryReportToExcel>(_onExportUpcomingExpiryToExcel);
+    //  on<ExportUpcomingExpiryReportToPDF>(_onExportUpcomingExpiryToPDF);
   }
 
   @override
@@ -903,9 +909,6 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
     emit(state.copyWith(status: LotMasterStatus.loadingExpirationReport));
     try {
       final companyId = event.companyId;
-      if (companyId == null) {
-        throw Exception('Company ID not found');
-      }
 
       final result = await repository.getExpirationReport(
         companyId: companyId,
@@ -1082,6 +1085,121 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
         ),
       );
     }
+  }
+
+  //upcoming expiry report
+  Future<void> _onLoadUpcomingExpiryReport(
+    LoadUpcomingExpiryReport event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    emit(state.copyWith(status: LotMasterStatus.loadingUpcomingExpiryReport));
+
+    try {
+      final result = await repository.getUpComingExpirationReport(
+        companyId: event.companyId,
+        filters: event.filters,
+        daysThreshold: event.daysThreshold, // Pass threshold
+        page: event.page,
+        pageSize: event.pageSize,
+      );
+
+      final totalPages = (result.totalCount / event.pageSize).ceil();
+
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.loadedUpcomingExpiryReport,
+          upcomingExpiryLots: result.lots,
+          upcomingExpiryTotalCount: result.totalCount,
+          upcomingExpiryTotalPages: totalPages,
+          upcomingExpiryPage: event.page,
+          upcomingExpiryTotalCost: result.totalCost,
+          upcomingExpiryFilters: event.filters,
+          upcomingExpiryDaysThreshold: event.daysThreshold, // Store threshold
+          hasMoreUpcomingExpiry: event.page < totalPages,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.failure,
+          message: 'Failed to load upcoming expiry report: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onUpdateUpcomingExpiryReportFilters(
+    UpdateUpcomingExpiryReportFilters event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    add(
+      LoadUpcomingExpiryReport(
+        companyId: authBloc.state.companyId!,
+        filters: const ExpirationReportFilters(),
+        page: 1,
+        pageSize: defaultPageSize,
+        daysThreshold: event.daysThreshold,
+      ),
+    );
+  }
+
+  Future<void> _onLoadMoreUpcomingExpiryReport(
+    LoadMoreUpcomingExpiryReport event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    emit(
+      state.copyWith(status: LotMasterStatus.loadingMoreUpcomingExpiryReport),
+    );
+
+    try {
+      final result = await repository.getUpComingExpirationReport(
+        companyId: authBloc.state.companyId!,
+        filters: state.upcomingExpiryFilters,
+        daysThreshold: state.upcomingExpiryDaysThreshold,
+        page: state.upcomingExpiryPage + 1,
+        pageSize: state.upcomingExpiryTotalPages,
+      );
+
+      final totalPages = (result.totalCount / state.upcomingExpiryTotalPages)
+          .ceil();
+      //final daysLeft = repository.calculateDaysUntilExpiry(result.lots.first.dateExpiration);
+
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.loadedUpcomingExpiryReport,
+          upcomingExpiryLots: [...state.upcomingExpiryLots, ...result.lots],
+          upcomingExpiryTotalCount: result.totalCount,
+          upcomingExpiryTotalPages: totalPages,
+          upcomingExpiryPage: state.upcomingExpiryPage + 1,
+          upcomingExpiryTotalCost: result.totalCost,
+          upcomingExpiryFilters: state.upcomingExpiryFilters,
+          upcomingExpiryDaysThreshold: state.upcomingExpiryDaysThreshold,
+          hasMoreUpcomingExpiry: state.upcomingExpiryPage < totalPages,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.failure,
+          message: 'Failed to load more upcoming expiry report: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onClearUpcomingExpiryReportFilters(
+    ClearUpcomingExpiryReportFilters event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    add(
+      LoadUpcomingExpiryReport(
+        companyId: authBloc.state.companyId!,
+        filters: const ExpirationReportFilters(),
+        page: 1,
+        pageSize: defaultPageSize,
+        daysThreshold: systemConstantBloc.state.selected!.daysLeft!,
+      ),
+    );
   }
 
   // Helper methods for export

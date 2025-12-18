@@ -1184,6 +1184,154 @@ class LotMasterRepository extends BaseRepository {
     );
   }
 
+  Future<PaginatedExpirationResult> getUpComingExpirationReport({
+    required int companyId,
+    required ExpirationReportFilters filters,
+    required int daysThreshold,
+    required int page,
+    required int pageSize,
+  }) async {
+    final db = await databaseService.database;
+
+    // Build WHERE clause dynamically
+    final whereConditions = <String>['lm.company = ?'];
+    final whereArgs = <dynamic>[companyId];
+
+    // Base condition: expired or expiring today
+    final today = DateTime.now();
+    final thresholdDate = today.add(Duration(days: daysThreshold));
+    whereConditions.add('''(lm.date_expiration IS NOT NULL
+       AND lm.date_expiration >= ?
+       AND lm.date_expiration <= ?
+       )''');
+    whereArgs.add(today.toIso8601String());
+    whereArgs.add(thresholdDate.toIso8601String());
+
+    // Apply filters
+    if (filters.itemId != null) {
+      whereConditions.add('lm.item_number = ?');
+      whereArgs.add(filters.itemId);
+    }
+
+    if (filters.branchId != null) {
+      whereConditions.add('lm.branch = ?');
+      whereArgs.add(filters.branchId);
+    }
+
+    if (filters.locationId != null) {
+      whereConditions.add('lm.location = ?');
+      whereArgs.add(filters.locationId);
+    }
+
+    if (!filters.showZeroAvailability) {
+      whereConditions.add('lm.quantity_available > 0');
+    }
+    if (filters.batchNumber != null && filters.batchNumber!.isNotEmpty) {
+      whereConditions.add('lm.batch_number_supplier LIKE ?');
+      whereArgs.add('%${filters.batchNumber}%');
+    }
+
+    final whereClause = whereConditions.join(' AND ');
+
+    // Count query
+    final countResult = await db.rawQuery('''
+      SELECT COUNT(*) as count
+      FROM lot_master lm
+      WHERE $whereClause
+    ''', whereArgs);
+
+    final totalCount = (countResult.first['count'] as int?) ?? 0;
+
+    // Data query with joins
+    final dataQuery =
+        '''
+      SELECT 
+        lm.*,
+        it.items_id as item_id,
+        it.item_description,
+        it.unit_of_measure,
+        uom.description_1 as unit_of_measure_description,
+        uom.detail_code as unit_of_measure_detail_code,
+        b.description as description,
+        loc.location_description,
+        ls.detail_code as status_code,
+        ls.description_1 as status_description,
+        COALESCE(
+          (SELECT unit_of_measure 
+           FROM items_in_branch iib 
+           WHERE iib.company = lm.company 
+             AND iib.item_number = lm.item_number 
+             AND iib.branch = lm.branch
+           LIMIT 1),
+          it.unit_of_measure
+        ) as branch_uom,
+        COALESCE(
+          (SELECT amount_unit_cost 
+           FROM item_cost ict 
+           WHERE ict.company = lm.company 
+             AND ict.item_number = lm.item_number
+           LIMIT 1),
+          0.0
+        ) as unit_cost
+      FROM lot_master lm
+      LEFT JOIN items_table it ON lm.item_number = it.id
+      LEFT JOIN branch_table b ON lm.branch = b.id
+      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN udc_details ls ON lm.lot_status = ls.id
+      LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
+      WHERE $whereClause
+      ORDER BY lm.date_expiration ASC
+      LIMIT ? OFFSET ?
+    ''';
+
+    final paginatedArgs = List<dynamic>.from(whereArgs)
+      ..add(pageSize)
+      ..add((page - 1) * pageSize);
+
+    final lotsData = await db.rawQuery(dataQuery, paginatedArgs);
+    final lots = lotsData.map((p) => LotMaster.fromMap(p)).toList();
+
+    // Calculate total cost
+    double totalCost = 0.0;
+    for (final lot in lots) {
+      final quantity = lot.quantityAvailable ?? 0.0;
+      final unitCost =
+          (lotsData.firstWhere(
+                    (row) => row['id'] == lot.id,
+                    orElse: () => {'unit_cost': 0.0},
+                  )['unit_cost']
+                  as num?)
+              ?.toDouble() ??
+          0.0;
+
+      // Calculate UoM conversion if needed
+      final branchUom =
+          (lotsData.firstWhere(
+                (row) => row['id'] == lot.id,
+                orElse: () => {'branch_uom': null},
+              )['branch_uom']
+              as int?);
+
+      double conversionFactor = 1.0;
+      if (branchUom != null && lot.itemRef?.unitOfMeasure != null) {
+        conversionFactor = await getUoMConversionFactor(
+          companyId: companyId,
+          itemNumber: lot.itemNumber!,
+          fromUom: branchUom,
+          toUom: int.parse(lot.itemRef!.unitOfMeasure!),
+        );
+      }
+
+      totalCost += quantity * conversionFactor * unitCost;
+    }
+
+    return PaginatedExpirationResult(
+      lots: lots,
+      totalCount: totalCount,
+      totalCost: totalCost,
+    );
+  }
+
   Future<double> calculateLotTotalCost(LotMaster lot) async {
     try {
       final unitCost = await databaseService.database;
@@ -1222,5 +1370,12 @@ class LotMasterRepository extends BaseRepository {
     } catch (e) {
       return 0.0;
     }
+  }
+
+  int calculateDaysUntilExpiry(DateTime? expirationDate) {
+    if (expirationDate == null) return 0;
+    final now = DateTime.now();
+    final difference = expirationDate.difference(now).inDays;
+    return difference > 0 ? difference : 0; // Only positive values
   }
 }

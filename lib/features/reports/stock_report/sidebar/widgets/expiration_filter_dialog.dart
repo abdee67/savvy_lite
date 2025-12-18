@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_event.dart';
+import 'package:savvy_stock/features/onboarding/widgets/custom_text_field.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_bloc.dart';
@@ -68,8 +69,11 @@ class _ExpirationFilterDialogState extends State<ExpirationFilterDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Filter Expiration Report',
+                //for both expired and upcoming expired pages
+                Text(
+                  _filters.showZeroAvailability
+                      ? 'Filter Expiration Report'
+                      : 'Filter Upcoming Expiry Report',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 IconButton(
@@ -82,12 +86,13 @@ class _ExpirationFilterDialogState extends State<ExpirationFilterDialog> {
             const SizedBox(height: 20),
 
             // Date Range Filter
-            _buildDateRangeFilter(),
+            if (_filters.dateFrom != null || _filters.dateTo != null)
+              _buildDateRangeFilter(),
 
             const SizedBox(height: 16),
 
             // Item Filter
-            _buildItemFilter(),
+            if (_filters.itemId != null) _buildItemFilter(),
 
             const SizedBox(height: 16),
 
@@ -102,7 +107,9 @@ class _ExpirationFilterDialogState extends State<ExpirationFilterDialog> {
             const SizedBox(height: 16),
 
             // Zero Availability Toggle
-            _buildZeroAvailabilityToggle(),
+            if (_filters.showZeroAvailability) _buildZeroAvailabilityToggle(),
+
+            if (_filters.batchNumber != null) _buildBatchNumberFilter(),
 
             const SizedBox(height: 24),
 
@@ -234,7 +241,7 @@ class _ExpirationFilterDialogState extends State<ExpirationFilterDialog> {
         const Text('Item', style: TextStyle(fontWeight: FontWeight.w500)),
         const SizedBox(height: 8),
         DropdownButtonFormField<int?>(
-          value: _filters.itemId,
+          initialValue: _filters.itemId,
           decoration: InputDecoration(
             hintText: '-- Select One --',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -274,7 +281,7 @@ class _ExpirationFilterDialogState extends State<ExpirationFilterDialog> {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<int?>(
-          value: _filters.branchId,
+          initialValue: _filters.branchId,
           decoration: InputDecoration(
             hintText: '-- Select One --',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -311,7 +318,7 @@ class _ExpirationFilterDialogState extends State<ExpirationFilterDialog> {
         const Text('Location', style: TextStyle(fontWeight: FontWeight.w500)),
         const SizedBox(height: 8),
         DropdownButtonFormField<int?>(
-          value: _filters.locationId,
+          initialValue: _filters.locationId,
           decoration: InputDecoration(
             hintText: '-- Select One --',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -353,6 +360,30 @@ class _ExpirationFilterDialogState extends State<ExpirationFilterDialog> {
         ),
         const SizedBox(width: 8),
         const Expanded(child: Text('Include items with zero availability')),
+      ],
+    );
+  }
+
+  Widget _buildBatchNumberFilter() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Batch Number',
+          style: TextStyle(fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 8),
+        CustomTextField(
+          label: 'Batch Number',
+          value: _filters.batchNumber ?? '',
+          keyboardType: TextInputType.text,
+          readOnly: false,
+          onChanged: (value) {
+            setState(() {
+              _filters = _filters.copyWith(batchNumber: value);
+            });
+          },
+        ),
       ],
     );
   }

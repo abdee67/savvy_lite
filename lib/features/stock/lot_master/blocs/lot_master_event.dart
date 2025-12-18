@@ -283,3 +283,50 @@ class ExportExpirationReportToPDF extends LotMasterEvent {
   @override
   List<Object> get props => [filters];
 }
+
+//upcoming expiry report
+
+class LoadUpcomingExpiryReport extends LotMasterEvent {
+  final int companyId;
+  final int page;
+  final int pageSize;
+  final ExpirationReportFilters filters;
+  final int daysThreshold; // New parameter
+
+  const LoadUpcomingExpiryReport({
+    required this.companyId,
+    this.page = 1,
+    this.pageSize = 20,
+    required this.filters,
+    required this.daysThreshold,
+  });
+}
+
+class UpdateUpcomingExpiryReportFilters extends LotMasterEvent {
+  final ExpirationReportFilters filters;
+  final int daysThreshold; // New parameter
+
+  const UpdateUpcomingExpiryReportFilters(this.filters, this.daysThreshold);
+}
+
+class ClearUpcomingExpiryReportFilters extends LotMasterEvent {
+  final int daysThreshold; // New parameter
+
+  const ClearUpcomingExpiryReportFilters(this.daysThreshold);
+}
+
+class ExportUpcomingExpiryReportToExcel extends LotMasterEvent {
+  final ExpirationReportFilters filters;
+  final int daysThreshold; // New parameter
+
+  const ExportUpcomingExpiryReportToExcel(this.filters, this.daysThreshold);
+}
+
+class ExportUpcomingExpiryReportToPDF extends LotMasterEvent {
+  final ExpirationReportFilters filters;
+  final int daysThreshold; // New parameter
+
+  const ExportUpcomingExpiryReportToPDF(this.filters, this.daysThreshold);
+}
+
+class LoadMoreUpcomingExpiryReport extends LotMasterEvent {}
