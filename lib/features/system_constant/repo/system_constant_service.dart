@@ -43,6 +43,8 @@ class SystemConstantsService with ChangeNotifier {
       _currentSystemConstant?.lotQtyAutoForSales == 'Y';
   bool get discountDisplay => _currentSystemConstant?.discountDisplay == 'Y';
   bool get taxInfoDisplay => _currentSystemConstant?.taxInfoDisplay == 'Y';
+  int get daysLeft => _currentSystemConstant?.daysLeft ?? 180;
+  String get currencyCode => _currentSystemConstant?.currencyCode ?? 'Birr';
   bool get reorderPointUomType =>
       _currentSystemConstant?.reorderPointUomType == 'I';
   int get locationCategoryLevel =>
@@ -82,6 +84,8 @@ class SystemConstantsService with ChangeNotifier {
           lotQtyAutoForSales: 'Y',
           discountDisplay: 'N',
           taxInfoDisplay: 'N',
+          daysLeft: 180,
+          currencyCode: 'Birr',
           reorderPointUomType: 'I',
           locationCategoryLevel: 1,
           isSynced: false,
@@ -117,7 +121,7 @@ class SystemConstantsService with ChangeNotifier {
       developer.log('Server error: ${e.message}');
       _streamController.addError(e);
     } catch (e) {
-      _error = 'Failed to load system constants: $e';
+      //_error = 'Failed to load system constants: $e';
       developer.log('Failed to load system constants: $e');
       _streamController.addError(e);
     } finally {
@@ -149,6 +153,8 @@ class SystemConstantsService with ChangeNotifier {
         lotQtyAutoForSales: 'Y',
         discountDisplay: 'N',
         taxInfoDisplay: 'N',
+        daysLeft: 180,
+        currencyCode: 'Birr',
         reorderPointUomType: 'I',
         locationCategoryLevel: 1,
         // Ensure company ID is set if possible, or handle it upstream

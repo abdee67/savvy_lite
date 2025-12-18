@@ -21,6 +21,8 @@ class SystemConstant {
   late final String? lotQtyAutoForSales;
   late final String? discountDisplay;
   late final String? taxInfoDisplay;
+  final int? daysLeft;
+  late final String? currencyCode;
   late final String? reorderPointUomType;
   final int? tempId;
   final bool isSynced;
@@ -49,6 +51,8 @@ class SystemConstant {
     this.lotQtyAutoForSales,
     this.discountDisplay,
     this.taxInfoDisplay,
+    this.daysLeft,
+    this.currencyCode,
     this.reorderPointUomType,
     this.tempId,
     this.isSynced = true,
@@ -82,6 +86,8 @@ class SystemConstant {
       lotQtyAutoForSales: json['lot_qty_auto_for_sales'],
       discountDisplay: json['discount_display'],
       taxInfoDisplay: json['tax_info_display'],
+      daysLeft: json['days_left'],
+      currencyCode: json['currency_code'],
       reorderPointUomType: json['reorder_point_uom_type'],
       isSynced: json['is_synced'] == 1,
       lastSyncTime: json['last_sync_time'] != null
@@ -122,6 +128,8 @@ class SystemConstant {
       'lot_qty_auto_for_sales': lotQtyAutoForSales,
       'discount_display': discountDisplay,
       'tax_info_display': taxInfoDisplay,
+      'days_left': daysLeft,
+      'currency_code': currencyCode,
       'reorder_point_uom_type': reorderPointUomType,
       'is_synced': isSynced ? 1 : 0,
       'last_sync_time': lastSyncTime?.millisecondsSinceEpoch,
@@ -150,6 +158,8 @@ class SystemConstant {
       'lot_qty_auto_for_sales': lotQtyAutoForSales,
       'discount_display': discountDisplay,
       'tax_info_display': taxInfoDisplay,
+      'days_left': daysLeft,
+      'currency_code': currencyCode,
       'reorder_point_uom_type': reorderPointUomType,
       'is_synced': isSynced ? 1 : 0,
       'last_sync_time': lastSyncTime?.millisecondsSinceEpoch,
@@ -184,6 +194,8 @@ class SystemConstant {
       lotQtyAutoForSales: map['lot_qty_auto_for_sales'],
       discountDisplay: map['discount_display'],
       taxInfoDisplay: map['tax_info_display'],
+      daysLeft: map['days_left'],
+      currencyCode: map['currency_code'],
       reorderPointUomType: map['reorder_point_uom_type'],
       isSynced: map['is_synced'] == 1,
       lastSyncTime: map['last_sync_time'] != null
@@ -221,6 +233,8 @@ class SystemConstant {
     String? lotQtyAutoForSales,
     String? discountDisplay,
     String? taxInfoDisplay,
+    int? daysLeft,
+    String? currencyCode,
     String? reorderPointUomType,
     int? tempId,
     bool? isSynced,
@@ -251,6 +265,8 @@ class SystemConstant {
       lotQtyAutoForSales: lotQtyAutoForSales ?? this.lotQtyAutoForSales,
       discountDisplay: discountDisplay ?? this.discountDisplay,
       taxInfoDisplay: taxInfoDisplay ?? this.taxInfoDisplay,
+      daysLeft: daysLeft ?? this.daysLeft,
+      currencyCode: currencyCode ?? this.currencyCode,
       reorderPointUomType: reorderPointUomType ?? this.reorderPointUomType,
       tempId: tempId ?? this.tempId,
       isSynced: isSynced ?? this.isSynced,

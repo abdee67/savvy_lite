@@ -37,6 +37,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  // final List<LotMaster> items = List.generate(100, (index) => LotMaster());//used it for lazy loading but needs to be fix
   bool _isSelectionMode = false;
   final Map<int, double> _dragOffset = {};
 
@@ -700,9 +701,9 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
       decoration: const BoxDecoration(color: Colors.grey),
       child: ListView.separated(
         controller: _scrollController,
+        separatorBuilder: (context, index) => SizedBox(height: cardSpacing),
         padding: const EdgeInsets.all(16),
         itemCount: state.filteredItems.length,
-        separatorBuilder: (context, index) => SizedBox(height: cardSpacing),
         itemBuilder: (context, index) {
           final lot = state.filteredItems[index];
           final isSelected = state.selectedItems.contains(lot);

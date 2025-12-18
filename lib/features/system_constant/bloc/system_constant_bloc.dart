@@ -93,9 +93,10 @@ class SystemConstantBloc
       emit(
         state.copyWith(
           status: SystemConstantStatus.failure,
-          errorMessage: 'Failed to load system constants: ${e.toString()}',
+          // errorMessage: 'Failed to load system constants: ${e.toString()}',
         ),
       );
+      developer.log('Error loading system constants: $e');
     }
   }
 
@@ -122,9 +123,10 @@ class SystemConstantBloc
       emit(
         state.copyWith(
           status: SystemConstantStatus.failure,
-          errorMessage: 'Failed to load system constant: ${e.toString()}',
+          // errorMessage: 'Failed to load system constant: ${e.toString()}',
         ),
       );
+      developer.log('Error loading system constant: $e');
     }
   }
 
@@ -150,10 +152,11 @@ class SystemConstantBloc
       emit(
         state.copyWith(
           status: SystemConstantStatus.failure,
-          errorMessage:
-              'Failed to load system constant for company: ${e.toString()}',
+          // errorMessage:
+          // 'Failed to load system constant for company: ${e.toString()}',
         ),
       );
+      developer.log('Error loading system constant for company: $e');
     }
   }
 
@@ -431,6 +434,8 @@ class SystemConstantBloc
           reorderPointUomType: 'I',
           discountDisplay: 'Y',
           taxInfoDisplay: 'Y',
+          daysLeft: 180,
+          currencyCode: 'Birr',
         );
       }
 
@@ -598,7 +603,7 @@ class SystemConstantBloc
       emit(
         state.copyWith(
           status: SystemConstantStatus.failure,
-          errorMessage: 'Failed to save system constants: ${e.toString()}',
+          // errorMessage: 'Failed to save system constants: ${e.toString()}',
         ),
       );
     }

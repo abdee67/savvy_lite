@@ -240,6 +240,22 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
               onChanged: (value) =>
                   _updateField(taxInfoDisplay: value ? 'Y' : 'N'),
             ),
+            const SizedBox(height: 16),
+            _buildNumberField(
+              label: 'Days Left',
+              value: _localSystemConstant.daysLeft?.toDouble() ?? 180,
+              onChanged: (value) => _updateField(daysLeft: value.toInt()),
+              isInteger: true,
+              min: 0,
+              max: 365,
+            ),
+            const SizedBox(height: 16),
+            _buildTextField(
+              label: 'Currency Code',
+              value: _localSystemConstant.currencyCode ?? 'Birr',
+              onChanged: (value) => _updateField(currencyCode: value),
+            ),
+            const SizedBox(height: 16),
 
             // Reorder Point UOM Type Dropdown
             CustomDropdown<String>(
@@ -349,6 +365,29 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
     );
   }
 
+  Widget _buildTextField({
+    required String label,
+    required String value,
+    required Function(String) onChanged,
+    String? suffix,
+  }) {
+    return CustomTextField(
+      labelText: label,
+      value: value,
+      keyboardType: TextInputType.text,
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Field is required';
+        }
+        return null;
+      },
+      onChanged: (text) {
+        onChanged(text);
+        _setEditingState();
+      },
+    );
+  }
+
   Widget _buildSwitchTile({
     required String title,
     required bool value,
@@ -436,6 +475,8 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
     String? generateBarcodeForItem,
     String? discountDisplay,
     String? taxInfoDisplay,
+    int? daysLeft,
+    String? currencyCode,
     String? reorderPointUomType,
     int? decimalPlaces,
     int? locationCategoryLevel,
@@ -452,6 +493,8 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
         generateBarcodeForItem: generateBarcodeForItem,
         discountDisplay: discountDisplay,
         taxInfoDisplay: taxInfoDisplay,
+        daysLeft: daysLeft,
+        currencyCode: currencyCode,
         reorderPointUomType: reorderPointUomType,
         decimalPlaces: decimalPlaces,
         locationCategoryLevel: locationCategoryLevel,
