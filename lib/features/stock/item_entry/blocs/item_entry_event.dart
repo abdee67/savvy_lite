@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/stock/item_entry/models/item_report_filter.model.dart';
 
 @immutable
 abstract class ItemEntryEvent extends Equatable {
@@ -270,4 +271,52 @@ class SaveAndAddContinue extends ItemEntryEvent {
   final String linkName;
 
   const SaveAndAddContinue(this.linkName);
+}
+
+class LoadItemReport extends ItemEntryEvent {
+  final int companyId;
+  final ItemReportFilters filters;
+  final int page;
+  final int pageSize;
+
+  const LoadItemReport({
+    required this.companyId,
+    required this.filters,
+    this.page = 1,
+    this.pageSize = 20,
+  });
+
+  @override
+  List<Object> get props => [companyId, filters, page, pageSize];
+}
+
+class LoadMoreItemReport extends ItemEntryEvent {}
+
+class UpdateItemReportFilters extends ItemEntryEvent {
+  final ItemReportFilters filters;
+
+  const UpdateItemReportFilters(this.filters);
+
+  @override
+  List<Object> get props => [filters];
+}
+
+class ClearItemReportFilters extends ItemEntryEvent {}
+
+class ExportItemReportToExcel extends ItemEntryEvent {
+  final ItemReportFilters filters;
+
+  const ExportItemReportToExcel(this.filters);
+
+  @override
+  List<Object> get props => [filters];
+}
+
+class ExportItemReportToPDF extends ItemEntryEvent {
+  final ItemReportFilters filters;
+
+  const ExportItemReportToPDF(this.filters);
+
+  @override
+  List<Object> get props => [filters];
 }

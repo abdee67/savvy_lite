@@ -47,6 +47,13 @@ class _SidebarMenuState extends State<SidebarMenu> {
       route: AppRoutes.upcomingExpirationReport,
     ),
     SidebarMenuItem(
+      id: 'daily_stock',
+      title: 'Daily Stock Report',
+      icon: Iconsax.calendar_1,
+      parentId: 'reports',
+      route: AppRoutes.dailyStockReport,
+    ),
+    SidebarMenuItem(
       id: 'balance_report',
       title: 'Balance of Item Report',
       icon: Iconsax.box,

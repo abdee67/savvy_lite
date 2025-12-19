@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/stock/item_entry/models/item_report_filter.model.dart';
+import 'package:savvy_stock/features/stock/item_transactions/model/paginated_item_transaction_result.dart';
 import 'package:sqflite/sqflite.dart';
 
 class StockItemsEntryRepository extends BaseRepository {
@@ -97,6 +99,86 @@ class StockItemsEntryRepository extends BaseRepository {
     );
 
     return maps.map((map) => ItemEntryModel.fromMap(map)).toList();
+  }
+
+  Future<PaginatedItemTransactionResult> getPaginatedItems({
+    required int companyId,
+    required ItemReportFilters filters,
+    required int page,
+    required int pageSize,
+    String? sortField,
+    bool ascending = true,
+  }) async {
+    final db = await databaseService.database;
+
+    // Build WHERE clause dynamically
+    final whereConditions = <String>['company = ?'];
+    final whereArgs = <dynamic>[companyId];
+    // Date filtering removed as items_table has no date column.
+    // The date filter is used in the UI for context (calculating stock for that date).
+    /*
+    final startOfDay = DateTime(
+      filters.dateFrom!.year,
+      filters.dateFrom!.month,
+      filters.dateFrom!.day,
+    );
+    final endOfDay = DateTime(
+      filters.dateFrom!.year,
+      filters.dateFrom!.month,
+      filters.dateFrom!.day,
+      23,
+      59,
+      59,
+      999,
+    );
+    if (filters.dateTo != null) {
+      whereConditions.add(startOfDay.toIso8601String());
+      whereArgs.add(endOfDay.toIso8601String());
+    }
+    */
+
+    // Build base query
+    var query = '''
+          SELECT it.*,
+      ud.description_1 as unit_of_measure_description,
+      ud.detail_code as unit_of_measure_code
+      FROM items_table it
+      LEFT JOIN udc_details ud ON it.unit_of_measure = ud.id
+      WHERE company = ?
+    ''';
+
+    final params = whereArgs;
+
+    // Add sorting
+    if (sortField != null) {
+      query += ' ORDER BY $sortField ${ascending ? 'ASC' : 'DESC'}';
+    }
+
+    // Add pagination
+    query += ' LIMIT ? OFFSET ?';
+    params.add(pageSize);
+    params.add((page - 1) * pageSize);
+
+    // Execute main query
+    final itemsData = await db.rawQuery(query, params);
+
+    // Count total records
+    final countResult = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM items_table WHERE company = ?',
+      [companyId],
+    );
+
+    final totalCount = (countResult.first['count'] as int?) ?? 0;
+
+    // Parse results
+    final items = itemsData.map((row) {
+      return ItemEntryModel.fromMap(row);
+    }).toList();
+
+    return PaginatedItemTransactionResult(
+      itemEntries: items,
+      totalCount: totalCount,
+    );
   }
 
   // Find item by items ID
