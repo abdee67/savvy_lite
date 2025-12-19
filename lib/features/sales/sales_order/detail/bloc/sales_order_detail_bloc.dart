@@ -1456,9 +1456,10 @@ class SalesOrderDetailBloc
       emit(
         state.copyWith(
           status: SalesOrderDetailStatus.failure,
-          errorMessage: 'Failed to save sales order details: $e',
+          // errorMessage: 'Failed to save sales order details: $e',
         ),
       );
+      print('Failed to save sales order details: $e');
     }
   }
 
@@ -1490,9 +1491,10 @@ class SalesOrderDetailBloc
       emit(
         state.copyWith(
           status: SalesOrderDetailStatus.failure,
-          errorMessage: 'Failed to save sales order details: $e',
+          //errorMessage: 'Failed to save sales order details: $e',
         ),
       );
+      print('Failed to save sales order details: $e');
     }
   }
 
@@ -1521,9 +1523,10 @@ class SalesOrderDetailBloc
       emit(
         state.copyWith(
           status: SalesOrderDetailStatus.failure,
-          errorMessage: 'Failed to save row: $e',
+          //errorMessage: 'Failed to save row: $e',
         ),
       );
+      print('Failed to save row: $e');
     }
   }
 

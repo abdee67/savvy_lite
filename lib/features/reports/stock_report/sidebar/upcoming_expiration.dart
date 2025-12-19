@@ -20,16 +20,15 @@ import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.da
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_bloc.dart';
 
-class UpcomingupcomingExpiryPage extends StatefulWidget {
+class UpcomingExpiryPage extends StatefulWidget {
   final AuthBloc authBloc;
-  const UpcomingupcomingExpiryPage({super.key, required this.authBloc});
+  const UpcomingExpiryPage({super.key, required this.authBloc});
 
   @override
-  State<UpcomingupcomingExpiryPage> createState() =>
-      _UpcomingupcomingExpiryPageState();
+  State<UpcomingExpiryPage> createState() => _UpcomingExpiryPageState();
 }
 
-class _UpcomingupcomingExpiryPageState extends State<UpcomingupcomingExpiryPage>
+class _UpcomingExpiryPageState extends State<UpcomingExpiryPage>
     with SingleTickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
   // Animation controllers for detail panel

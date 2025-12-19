@@ -1177,7 +1177,8 @@ class SalesOrderHeaderBloc
         add(UpdateSalesOrderHeader(header: event.header));
       }
     } catch (e) {
-      emit(state.errorState('Failed to save sales order: $e'));
+      //emit(state.errorState('Failed to save sales order: $e'));
+      print('Failed to save sales order: $e');
     }
   }
 
@@ -1502,10 +1503,11 @@ class SalesOrderHeaderBloc
       emit(
         state.copyWith(
           status: SalesOrderHeaderStatus.error,
-          creditReceiptError: 'Failed to save credit receipt: $e',
+          //creditReceiptError: 'Failed to save credit receipt: $e',
           creditReceiptSuccess: false,
         ),
       );
+      print('Failed to save credit receipt: $e');
     }
   }
 

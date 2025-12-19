@@ -109,17 +109,18 @@ class ItemCostRepository extends BaseRepository {
     final db = await databaseService.database;
     final maps = await db.rawQuery(
       '''SELECT ic.*,
-    i.item_description,
-    i.barcode,
-    u.user_name as user_name,
-    c.company_name as company_name,
-    udc.description_1 as unit_of_measure_description,
-    udc.detail_code as unit_of_measure_code
-    FROM item_cost ic
-    LEFT JOIN items_table i ON ic.item_number = i.id
-    LEFT JOIN user_table u ON ic.user_id = u.id
-    LEFT JOIN company_table c ON ic.company = c.id
-    LEFT JOIN udc_details udc ON i.unit_of_measure = udc.id
+      i.item_description,
+          i.items_id as item_id,
+          i.unit_of_measure,
+          u.user_name as user_name,
+          c.company_name as company_name,
+          udc.description_1 as unit_of_measure_description,
+          udc.detail_code as unit_of_measure_code
+      FROM item_cost ic
+      LEFT JOIN items_table i ON ic.item_number = i.id
+      LEFT JOIN user_table u ON ic.user_id = u.id
+      LEFT JOIN company_table c ON ic.company = c.id
+      LEFT JOIN udc_details udc ON i.unit_of_measure = udc.id
     WHERE ic.item_number = ? AND ic.company = ?''',
       [itemNumber, companyId],
     );

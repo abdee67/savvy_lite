@@ -11,7 +11,6 @@ import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dar
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_bloc.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_event.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/expiration_report_filters.dart';
-import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 
 class ExpirationFilterDialog extends StatefulWidget {
   final ExpirationReportFilters currentFilters;

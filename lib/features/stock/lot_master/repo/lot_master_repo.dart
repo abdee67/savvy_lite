@@ -179,7 +179,7 @@ class LotMasterRepository extends BaseRepository {
       LEFT JOIN udc_details ls ON lm.lot_status = ls.id
       LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       $whereClause
-      ORDER BY i.item_description, lm.lot_number
+      ORDER BY it.item_description, lm.lot_number
     ''', whereArgs);
 
     return lots.map((p) => LotMaster.fromMap(p)).toList();

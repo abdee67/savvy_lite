@@ -720,7 +720,8 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       // Refresh lists
       add(RefreshPurchaseOrders());
     } catch (e) {
-      emit(state.errorState('Failed to save purchase order: $e'));
+      //emit(state.errorState('Failed to save purchase order: $e'));
+      print('Failed to save purchase order: $e');
     }
   }
 
@@ -999,7 +1000,8 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to save row: $e'));
+      //emit(state.errorState('Failed to save row: $e'));
+      print('Failed to save row: $e');
     }
   }
 
@@ -1033,7 +1035,8 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to save row: $e'));
+      //emit(state.errorState('Failed to save row: $e'));
+      print('Failed to save row: $e');
     }
   }
 
@@ -1542,7 +1545,8 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         }
       }
     } catch (e) {
-      emit(state.errorState('Failed to save receipt and update stock: $e'));
+      //emit(state.errorState('Failed to save receipt and update stock: $e'));
+      print('Failed to save receipt and update stock: $e');
     }
   }
 
@@ -1726,7 +1730,8 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to save receipt in edit: $e'));
+      //emit(state.errorState('Failed to save receipt in edit: $e'));
+      print('Failed to save receipt in edit: $e');
     }
   }
 
@@ -2341,7 +2346,8 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
 
       add(RefreshPurchaseOrders());
     } catch (e) {
-      emit(state.errorState('Failed to save multiple purchase orders: $e'));
+      //emit(state.errorState('Failed to save multiple purchase orders: $e'));
+      print('Failed to save multiple purchase orders: $e');
     }
   }
 
@@ -2637,10 +2643,11 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     } catch (e) {
       emit(
         state.copyWith(
-          creditPaymentError: 'Failed to save credit payment: $e',
+          //creditPaymentError: 'Failed to save credit payment: $e',
           creditPaymentSuccess: false,
         ),
       );
+      print('Failed to save credit payment: $e');
     }
   }
 

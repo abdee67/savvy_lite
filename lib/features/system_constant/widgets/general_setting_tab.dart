@@ -369,7 +369,6 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
     required String label,
     required String value,
     required Function(String) onChanged,
-    String? suffix,
   }) {
     return CustomTextField(
       labelText: label,

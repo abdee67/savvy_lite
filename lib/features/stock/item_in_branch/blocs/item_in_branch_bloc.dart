@@ -408,9 +408,10 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
       emit(
         state.copyWith(
           status: ItemInBranchStatus.failure,
-          message: 'Failed to save row: $e',
+          //message: 'Failed to save row: $e',
         ),
       );
+      print('Failed to save row: $e');
     }
   }
 

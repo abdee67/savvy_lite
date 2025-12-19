@@ -246,9 +246,10 @@ class StockItemLocationBloc
       emit(
         state.copyWith(
           status: ItemLocationsStatus.failure,
-          message: 'Failed to save item location: $e',
+          //message: 'Failed to save item location: $e',
         ),
       );
+      print('Failed to save item location: $e');
     }
   }
 

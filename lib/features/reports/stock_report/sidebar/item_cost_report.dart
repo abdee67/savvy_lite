@@ -5,7 +5,6 @@ import 'package:savvy_stock/features/stock/item_cost/blocs/item_cost_bloc.dart';
 import 'package:savvy_stock/features/stock/item_cost/blocs/item_cost_event.dart';
 import 'package:savvy_stock/features/stock/item_cost/blocs/item_cost_state.dart';
 import 'package:savvy_stock/features/stock/item_cost/models/item_cost_model.dart';
-import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 
 class ItemCostReportPage extends StatefulWidget {
@@ -604,9 +603,8 @@ class _ItemCostReportPageState extends State<ItemCostReportPage>
     String label,
     String value,
     IconData icon,
-    bool isCompact, {
-    Color valueColor = Colors.blue,
-  }) {
+    bool isCompact,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(

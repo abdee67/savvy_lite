@@ -131,9 +131,10 @@ class LotExpirationColorsBloc
       emit(
         state.copyWith(
           status: LotExpirationColorsStatus.failure,
-          message: 'Failed to save lot expiration color: $e',
+          //message: 'Failed to save lot expiration color: $e',
         ),
       );
+      print('Failed to save lot expiration color: $e');
     }
   }
 

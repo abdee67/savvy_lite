@@ -606,6 +606,7 @@ class SystemConstantBloc
           // errorMessage: 'Failed to save system constants: ${e.toString()}',
         ),
       );
+      print('Failed to save system constants: ${e.toString()}');
     }
   }
 

@@ -351,7 +351,8 @@ class SalesReturnBloc extends Bloc<SalesReturnEvent, SalesReturnState> {
             .copyWith(createDetails: const []),
       );
     } catch (e) {
-      emit(state.errorState('Failed to save sales return details: $e'));
+      //emit(state.errorState('Failed to save sales return details: $e'));
+      print('Failed to save sales return details: $e');
     }
   }
 
