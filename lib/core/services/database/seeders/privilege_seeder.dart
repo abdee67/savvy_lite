@@ -611,6 +611,12 @@ class PrivilegeSeeder {
         'expiration_report',
       ),
       _createPrivilege(
+        'Daily Stock Report',
+        'link',
+        AppRoutes.dailyStockReport,
+        'daily_stock_report',
+      ),
+      _createPrivilege(
         'Upcoming Expiration',
         'link',
         AppRoutes.upcomingExpirationReport,

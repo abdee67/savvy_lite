@@ -156,6 +156,7 @@ class PrivilegeHierarchy {
     //===============STOCK REPORT====================
     AppRoutes.expirationReport: AppRoutes.stockReport,
     AppRoutes.upcomingExpirationReport: AppRoutes.stockReport,
+    AppRoutes.dailyStockReport: AppRoutes.stockReport,
     AppRoutes.balanceOfItemEntryReport: AppRoutes.stockReport,
     AppRoutes.inventoryMovementReport: AppRoutes.stockReport,
     AppRoutes.itemCostReport: AppRoutes.stockReport,

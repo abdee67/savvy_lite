@@ -781,8 +781,6 @@ CREATE INDEX idx_next_number_company ON next_number(company);
   order_type INTEGER,
   unit_cost REAL,
   amount_cost REAL,
-  proforma_flag TEXT,
-  proforma_reference TEXT,
   FOREIGN KEY (customer_bill_to) REFERENCES customer_table (id),
   FOREIGN KEY (customer_table_id) REFERENCES customer_table (id),
   FOREIGN KEY (employees_id) REFERENCES employees (id),

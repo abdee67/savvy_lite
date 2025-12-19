@@ -183,6 +183,7 @@ class AppRoutes {
   static const String expirationReport = '$stockReport/expiration-report';
   static const String upcomingExpirationReport =
       '$stockReport/upcoming-expiration-report';
+  static const String dailyStockReport = '$stockReport/daily-stock-report';
   static const String balanceOfItemEntryReport =
       '$stockReport/balance-of-item-entry-report';
   static const String inventoryMovementReport =

@@ -36,13 +36,14 @@ import 'package:savvy_stock/features/purchase/supplier_entry/screens/supplier_in
 import 'package:savvy_stock/features/purchase/supplier_entry/screens/supplier_list.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/widget/supplier_create_edit.dart';
 import 'package:savvy_stock/features/reports/stock_report/dashboard/stock_report_dashboard.dart';
-import 'package:savvy_stock/features/reports/stock_report/sidebar/balance_of_item.dart';
+import 'package:savvy_stock/features/reports/stock_report/sidebar/daily_stock_report.dart';
 import 'package:savvy_stock/features/reports/stock_report/sidebar/expiration_report.dart';
 import 'package:savvy_stock/features/reports/stock_report/sidebar/inventory_movement.dart';
 import 'package:savvy_stock/features/reports/stock_report/sidebar/inventory_transaction.dart';
 import 'package:savvy_stock/features/reports/stock_report/sidebar/item_cost_report.dart';
 import 'package:savvy_stock/features/reports/stock_report/sidebar/reorder_point_report.dart';
 import 'package:savvy_stock/features/reports/stock_report/sidebar/upcoming_expiration.dart';
+import 'package:savvy_stock/features/reports/stock_report/sidebar/widgets/balance_of_item_entry_report.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/customer/screens/customer_list.dart';
 import 'package:savvy_stock/features/sales/customer/screens/sales_customer_screen.dart';
@@ -912,7 +913,16 @@ class AppRouter {
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: AppRoutes.upcomingExpirationReport,
           parentPrivilege: AppRoutes.stockReport,
-          child: UpcomingupcomingExpiryPage(authBloc: authBloc),
+          child: UpcomingExpiryPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.dailyStockReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.dailyStockReport,
+          parentPrivilege: AppRoutes.stockReport,
+          child: DailyStockReport(authBloc: authBloc),
         ),
         redirect: _protectedRouteRedirect,
       ),
@@ -952,7 +962,7 @@ class AppRouter {
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: AppRoutes.inventoryTransactionReport,
           parentPrivilege: AppRoutes.stockReport,
-          child: InventoryTransactionReport(),
+          child: InventoryTransactionReportPage(authBloc: authBloc),
         ),
         redirect: _protectedRouteRedirect,
       ),
