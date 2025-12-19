@@ -312,3 +312,72 @@ class LoadUoMDescription extends ItemTransactionsEvent {
   final int uomId;
   const LoadUoMDescription(this.uomId);
 }
+
+//report events
+class LoadItemTransactionsReport extends ItemTransactionsEvent {
+  final int companyId;
+  final int page;
+  final int pageSize;
+
+  const LoadItemTransactionsReport({
+    required this.companyId,
+    this.page = 1,
+    this.pageSize = 20,
+  });
+}
+
+class ExportItemTransactionsReportToExcel extends ItemTransactionsEvent {
+  const ExportItemTransactionsReportToExcel();
+}
+
+class ExportItemTransactionsReportToPDF extends ItemTransactionsEvent {
+  const ExportItemTransactionsReportToPDF();
+}
+
+class LoadMoreItemTransactionsReport extends ItemTransactionsEvent {
+  const LoadMoreItemTransactionsReport();
+}
+
+class GetOpeningQuantityBefore extends ItemTransactionsEvent {
+  final int itemId;
+  final int branchId;
+  final DateTime dateFrom;
+  const GetOpeningQuantityBefore({
+    required this.itemId,
+    required this.branchId,
+    required this.dateFrom,
+  });
+}
+
+class GetOpeningQuantityBeforeToday extends ItemTransactionsEvent {
+  final int itemId;
+  final int branchId;
+  final DateTime dateFrom;
+  const GetOpeningQuantityBeforeToday({
+    required this.itemId,
+    required this.branchId,
+    required this.dateFrom,
+  });
+}
+
+class GetSalesQtyOnDate extends ItemTransactionsEvent {
+  final int itemId;
+  final int branchId;
+  final DateTime dateFrom;
+  const GetSalesQtyOnDate({
+    required this.itemId,
+    required this.branchId,
+    required this.dateFrom,
+  });
+}
+
+class GetDifferenceSalesQty extends ItemTransactionsEvent {
+  final int itemId;
+  final int branchId;
+  final DateTime dateFrom;
+  const GetDifferenceSalesQty({
+    required this.itemId,
+    required this.branchId,
+    required this.dateFrom,
+  });
+}

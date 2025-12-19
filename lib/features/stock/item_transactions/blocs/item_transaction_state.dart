@@ -18,6 +18,11 @@ enum ItemTransactionsStatus {
   success,
   error,
   failure,
+  loadingItemTransactionReport,
+  loadedItemTransactionReport,
+  loadingMoreItemTransactionReport,
+  exportingItemTransactionReport,
+  exportItemTransactionReportSuccess,
 }
 
 class ItemTransactionsState extends Equatable {
@@ -41,6 +46,10 @@ class ItemTransactionsState extends Equatable {
   final double totalCost;
   final double openingAmount;
   final double totlaAmount;
+  final double openingQuantityBefore;
+  final double openingQuantityBeforeToday;
+  final double salesQtyOnDate;
+  final double differenceSalesQty;
   final bool isDuplicate;
   final int? companyId;
 
@@ -57,6 +66,14 @@ class ItemTransactionsState extends Equatable {
   final bool loadingLots;
   final bool loadingToLocations;
   final bool loadingItems;
+
+  //report data
+  final List<ItemTransactionModel> itemTransactionReportItems;
+  final int itemTransactionReportPage;
+  final int itemTransactionReportTotalPages;
+  final int itemTransactionReportTotalCount;
+  final double itemTransactionReportTotalCost;
+  final bool hasMoreItemTransactionReport;
 
   const ItemTransactionsState({
     this.status = ItemTransactionsStatus.initial,
@@ -79,6 +96,10 @@ class ItemTransactionsState extends Equatable {
     this.totalCost = 0.0,
     this.openingAmount = 0.0,
     this.totlaAmount = 0.0,
+    this.openingQuantityBefore = 0.0,
+    this.openingQuantityBeforeToday = 0.0,
+    this.salesQtyOnDate = 0.0,
+    this.differenceSalesQty = 0.0,
     this.companyId,
     this.isDuplicate = false,
     this.availableLocations = const [],
@@ -91,6 +112,12 @@ class ItemTransactionsState extends Equatable {
     this.loadingLots = false,
     this.loadingToLocations = false,
     this.loadingItems = false,
+    this.itemTransactionReportItems = const [],
+    this.itemTransactionReportPage = 1,
+    this.itemTransactionReportTotalPages = 0,
+    this.itemTransactionReportTotalCount = 0,
+    this.itemTransactionReportTotalCost = 0.0,
+    this.hasMoreItemTransactionReport = false,
   });
 
   bool get hasError => error != null && error!.isNotEmpty;
@@ -106,6 +133,8 @@ class ItemTransactionsState extends Equatable {
   bool get hasSearchQuery => searchQuery != null && searchQuery!.isNotEmpty;
 
   bool get hasFilters => filters != null && filters!.isNotEmpty;
+
+  bool get hasItemTransactionReport => itemTransactionReportItems.isNotEmpty;
 
   bool isExporting() => status == ItemTransactionsStatus.exporting;
   bool isLoading() => status == ItemTransactionsStatus.loading;
@@ -143,6 +172,10 @@ class ItemTransactionsState extends Equatable {
     double? totalCost,
     double? openingAmount,
     double? totlaAmount,
+    double? openingQuantityBefore,
+    double? openingQuantityBeforeToday,
+    double? salesQtyOnDate,
+    double? differenceSalesQty,
     bool? isDuplicate,
     int? companyId,
 
@@ -156,6 +189,13 @@ class ItemTransactionsState extends Equatable {
     bool? loadingLots,
     bool? loadingToLocations,
     bool? loadingItems,
+
+    List<ItemTransactionModel>? itemTransactionReportItems,
+    int? itemTransactionReportPage,
+    int? itemTransactionReportTotalPages,
+    int? itemTransactionReportTotalCount,
+    double? itemTransactionReportTotalCost,
+    bool? hasMoreItemTransactionReport,
   }) {
     return ItemTransactionsState(
       status: status ?? this.status,
@@ -178,6 +218,12 @@ class ItemTransactionsState extends Equatable {
       totalCost: totalCost ?? this.totalCost,
       openingAmount: openingAmount ?? this.openingAmount,
       totlaAmount: totlaAmount ?? this.totlaAmount,
+      openingQuantityBefore:
+          openingQuantityBefore ?? this.openingQuantityBefore,
+      openingQuantityBeforeToday:
+          openingQuantityBeforeToday ?? this.openingQuantityBeforeToday,
+      salesQtyOnDate: salesQtyOnDate ?? this.salesQtyOnDate,
+      differenceSalesQty: differenceSalesQty ?? this.differenceSalesQty,
       companyId: companyId ?? this.companyId,
       isDuplicate: isDuplicate ?? this.isDuplicate,
       availableLocations: availableLocations ?? this.availableLocations,
@@ -191,6 +237,20 @@ class ItemTransactionsState extends Equatable {
       loadingLots: loadingLots ?? this.loadingLots,
       loadingToLocations: loadingToLocations ?? this.loadingToLocations,
       loadingItems: loadingItems ?? this.loadingItems,
+      itemTransactionReportItems:
+          itemTransactionReportItems ?? this.itemTransactionReportItems,
+      itemTransactionReportPage:
+          itemTransactionReportPage ?? this.itemTransactionReportPage,
+      itemTransactionReportTotalPages:
+          itemTransactionReportTotalPages ??
+          this.itemTransactionReportTotalPages,
+      itemTransactionReportTotalCount:
+          itemTransactionReportTotalCount ??
+          this.itemTransactionReportTotalCount,
+      itemTransactionReportTotalCost:
+          itemTransactionReportTotalCost ?? this.itemTransactionReportTotalCost,
+      hasMoreItemTransactionReport:
+          hasMoreItemTransactionReport ?? this.hasMoreItemTransactionReport,
     );
   }
 
@@ -211,6 +271,10 @@ class ItemTransactionsState extends Equatable {
     exportedTransactions,
     openingAmount,
     totlaAmount,
+    openingQuantityBefore,
+    openingQuantityBeforeToday,
+    salesQtyOnDate,
+    differenceSalesQty,
     companyId,
     searchQuery,
     isSelectionMode,
@@ -227,5 +291,11 @@ class ItemTransactionsState extends Equatable {
     loadingLots,
     loadingToLocations,
     loadingItems,
+    itemTransactionReportItems,
+    itemTransactionReportPage,
+    itemTransactionReportTotalPages,
+    itemTransactionReportTotalCount,
+    itemTransactionReportTotalCost,
+    hasMoreItemTransactionReport,
   ];
 }

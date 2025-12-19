@@ -1,6 +1,8 @@
 // repositories/item_transaction_repository.dart
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/stock/item_transactions/model/paginated_item_transaction_result.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
@@ -16,6 +18,7 @@ import 'package:savvy_stock/features/stock/item_transactions/model/item_transact
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/repo/lot_master_repo.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_bloc.dart';
+import 'package:sqflite/sqflite.dart';
 
 class ItemTransactionRepository {
   final LocalDatabaseService databaseService;
@@ -554,6 +557,9 @@ class ItemTransactionRepository {
           company: transaction.company ?? masterTransaction.company,
           itemBranch: transaction.itemBranch ?? resolvedIb?.id,
           lotStatus: transaction.lotStatus ?? resolvedLot?.lotStatus,
+          customer: transaction.customer ?? masterTransaction.customer,
+          orderType: transaction.orderType ?? masterTransaction.orderType,
+          supplier: transaction.supplier ?? masterTransaction.supplier,
         );
 
         await _processInventoryTransaction(
@@ -791,8 +797,8 @@ class ItemTransactionRepository {
     String incDec,
     int companyId,
   ) async {
-    if (item.location != null) {
-      final il = item.location!;
+    if (item.itemLocationRef?.location != null) {
+      final il = item.itemLocationRef!;
       final qb = il.quantityOnHand ?? 0.0;
       final uom = await _getItemBranchUoM(
         item.itemNumber!,
@@ -818,7 +824,7 @@ class ItemTransactionRepository {
         il.quantityOnHand = qb - qI;
       }
 
-      itemLocationsRepository.updateItemLocation(item.location!);
+      itemLocationsRepository.updateItemLocation(item.itemLocationRef!);
     }
   }
 
@@ -828,8 +834,8 @@ class ItemTransactionRepository {
     String incDec,
     int companyId,
   ) async {
-    if (item.lot != null) {
-      final lm = item.lot!;
+    if (item.lotNumberRef != null) {
+      final lm = item.lotNumberRef!;
       final qb = lm.quantityAvailable ?? 0.0;
       final uom = await _getItemBranchUoM(
         item.itemNumber!,
@@ -1094,16 +1100,23 @@ class ItemTransactionRepository {
     final transactions = await db.rawQuery(
       '''
       SELECT it.*,
-             il.location,
+                 it.item_location,
+                il.location,
+                lcm.location_description as location_description,
              lm.lot_number,
              ib.quantity_available,
              i.item_description as item_description,
              b.description as branch_name,
-             udt.description_1 as transaction_type,
-             uds.description_1 as lot_status,
-             udm.description_1 as unit_of_measure
+             udt.description_1 as transaction_type_description,
+             uds.description_1 as lot_status_description,
+             udo.description_1 as order_type_description,
+             sup.supplier_name as supplier_name,
+             cus.customer_name as customer_name,
+             lm.batch_number_supplier as batch_number_supplier,
+             udm.description_1 as unit_of_measure_description
       FROM item_transactions it
       LEFT JOIN item_location il ON it.item_location = il.id
+      LEFT JOIN location_master lcm ON il.location = lcm.id
       LEFT JOIN lot_master lm ON it.lot_number = lm.id
       LEFT JOIN items_in_branch ib ON it.item_branch = ib.id
       LEFT JOIN items_table i ON it.item_number = i.id
@@ -1111,6 +1124,9 @@ class ItemTransactionRepository {
       LEFT JOIN udc_details udt ON it.transaction_type = udt.id
       LEFT JOIN udc_details uds ON it.lot_status = uds.id
       LEFT JOIN udc_details udm ON it.unit_of_measure = udm.id
+      LEFT JOIN udc_details udo ON it.order_type = udo.id
+      LEFT JOIN supplier_table sup ON it.supplier = sup.id
+      LEFT JOIN customer_table cus ON it.customer = cus.id
       WHERE it.company = ?
       ORDER BY it.date_created DESC
     ''',
@@ -1120,6 +1136,75 @@ class ItemTransactionRepository {
     return transactions
         .map((map) => ItemTransactionModel.fromMap(map))
         .toList();
+  }
+
+  Future<PaginatedItemTransactionResult> getPaginatedItemTransactions({
+    required int companyId,
+    required int page,
+    required int pageSize,
+    String? sortField,
+    bool ascending = true,
+  }) async {
+    final db = await databaseService.database;
+
+    // Build base query
+    var query = '''
+        SELECT it.*,
+             il.location,
+             lm.lot_number,
+             ib.quantity_available,
+             i.item_description as item_description,
+             b.description as branch_name,
+             udt.description_1 as transaction_type_description,
+             uds.description_1 as lot_status_description,
+             udo.description_1 as order_type_description,
+             sup.supplier_name as supplier_name,
+             cus.customer_name as customer_name,
+             udm.description_1 as unit_of_measure_description
+      FROM item_transactions it
+      LEFT JOIN item_location il ON it.item_location = il.id
+      LEFT JOIN lot_master lm ON it.lot_number = lm.id
+      LEFT JOIN items_in_branch ib ON it.item_branch = ib.id
+      LEFT JOIN items_table i ON it.item_number = i.id
+      LEFT JOIN branch_table b ON it.branch = b.id
+      LEFT JOIN udc_details udt ON it.transaction_type = udt.id
+      LEFT JOIN udc_details uds ON it.lot_status = uds.id
+      LEFT JOIN udc_details udm ON it.unit_of_measure = udm.id
+      LEFT JOIN udc_details udo ON it.order_type = udo.id
+      LEFT JOIN supplier_table sup ON it.supplier = sup.id
+      LEFT JOIN customer_table cus ON it.customer = cus.id
+      WHERE it.company = ?
+    ''';
+
+    final params = <dynamic>[companyId];
+
+    // Add sorting
+    if (sortField != null) {
+      query += ' ORDER BY $sortField ${ascending ? 'ASC' : 'DESC'}';
+    }
+
+    // Add pagination
+    query += ' LIMIT ? OFFSET ?';
+    params.add(pageSize);
+    params.add((page - 1) * pageSize);
+
+    // Execute main query
+    final itemsData = await db.rawQuery(query, params);
+
+    // Count total records
+    final countResult = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM item_transactions WHERE company = ?',
+      [companyId],
+    );
+
+    final totalCount = (countResult.first['count'] as int?) ?? 0;
+
+    // Parse results
+    final items = itemsData.map((row) {
+      return ItemTransactionModel.fromMap(row);
+    }).toList();
+
+    return PaginatedItemTransactionResult(items: items, totalCount: totalCount);
   }
 
   Future<int> createTransaction(ItemTransactionModel transaction) async {
@@ -1163,5 +1248,264 @@ class ItemTransactionRepository {
     }
 
     await batch.commit();
+  }
+
+  Future<double> openingQuantityBefore(
+    int itemId,
+    int companyId,
+    DateTime dateFrom,
+  ) async {
+    try {
+      final db = await databaseService.database;
+      final typeCodes = ["A", "I", "T"];
+      final typeIds = <int>[];
+
+      for (var code in typeCodes) {
+        final udc = await udcDetailsController.getLocalUdcDetailsByCode(
+          code,
+          'TT',
+        );
+        if (udc.isNotEmpty) {
+          typeIds.add(udc.first.id);
+        }
+      }
+
+      final dateFromStr = dateFrom.toIso8601String();
+      final startOfDay = DateTime(
+        dateFrom.year,
+        dateFrom.month,
+        dateFrom.day,
+      ).toIso8601String();
+
+      double transValueTotal = 0.0;
+      if (typeIds.isNotEmpty) {
+        final typeIdsStr = typeIds.join(',');
+        final transactions = await db.rawQuery(
+          '''
+          SELECT quantity_transaction, unit_of_measure 
+          FROM item_transactions 
+          WHERE company = ? 
+          AND item_number = ? 
+          AND order_type IS NULL 
+          AND transaction_type IN ($typeIdsStr)
+          AND date_created < ?
+        ''',
+          [companyId, itemId, dateFromStr],
+        );
+
+        for (var row in transactions) {
+          final qty = row['quantity_transaction'] as double? ?? 0.0;
+          final uom = row['unit_of_measure'] as int?;
+
+          if (uom != null) {
+            final rowFactor = await itemUomConversionRepository
+                .fromOtherToPrimary(itemId, uom, companyId);
+            transValueTotal += (qty * rowFactor);
+          }
+        }
+      }
+      final purchasesResult = await db.rawQuery(
+        '''
+        SELECT SUM(d.quantity_transaction) as total
+        FROM purchase_order_detail d
+        JOIN purchase_order_header h ON d.po_header = h.id
+        WHERE d.company = ?
+        AND d.item_number = ?
+        AND h.date_transaction < ?
+      ''',
+        [companyId, itemId, startOfDay],
+      );
+
+      final totalPurchases = (purchasesResult.first['total'] as double?) ?? 0.0;
+
+      final salesResult = await db.rawQuery(
+        '''
+        SELECT SUM(d.quantity) as total
+        FROM sales_order_details d
+        JOIN sales_order_header h ON d.sales_order_header_id = h.id
+        WHERE d.company = ?
+        AND d.items_table_id = ?
+        AND (h.void_indicator IS NULL OR h.void_indicator = 'null') 
+        AND h.order_date < ?
+      ''',
+        [companyId, itemId, startOfDay],
+      );
+
+      final cogs = (salesResult.first['total'] as double?) ?? 0.0;
+
+      return (transValueTotal + totalPurchases) - cogs;
+    } catch (e) {
+      print('Error in openingQuantityBefore: $e');
+      return 0.0;
+    }
+  }
+
+  Future<double> openingQuantityBeforeToday(
+    int itemId,
+    int companyId,
+    DateTime dateFrom,
+  ) async {
+    try {
+      final db = await databaseService.database;
+
+      final typeCodes = ["A", "I", "T"];
+      final typeIds = <int>[];
+      for (var code in typeCodes) {
+        final udc = await udcDetailsController.getLocalUdcDetailsByCode(
+          code,
+          'TT',
+        );
+        if (udc.isNotEmpty) {
+          typeIds.add(udc.first.id);
+        }
+      }
+
+      final startOfDay = DateTime(dateFrom.year, dateFrom.month, dateFrom.day);
+      final endOfDay = DateTime(
+        dateFrom.year,
+        dateFrom.month,
+        dateFrom.day,
+        23,
+        59,
+        59,
+        999,
+      );
+
+      final startStr = startOfDay.toIso8601String();
+      final endStr = endOfDay.toIso8601String();
+
+      double transValueTotal = 0.0;
+      if (typeIds.isNotEmpty) {
+        final typeIdsStr = typeIds.join(',');
+        final transactions = await db.rawQuery(
+          '''
+          SELECT quantity_transaction, unit_of_measure 
+          FROM item_transactions 
+          WHERE company = ? 
+          AND item_number = ? 
+          AND order_type IS NULL 
+          AND transaction_type IN ($typeIdsStr)
+          AND date_created BETWEEN ? AND ?
+        ''',
+          [companyId, itemId, startStr, endStr],
+        );
+
+        for (var row in transactions) {
+          final qty = row['quantity_transaction'] as double? ?? 0.0;
+          final uom = row['unit_of_measure'] as int?;
+
+          if (uom != null) {
+            final rowFactor = await itemUomConversionRepository
+                .fromOtherToPrimary(itemId, uom, companyId);
+            transValueTotal += (qty * rowFactor);
+          }
+        }
+      }
+      final purchasesResult = await db.rawQuery(
+        '''
+        SELECT SUM(d.quantity_transaction) as total
+        FROM purchase_order_detail d
+        JOIN purchase_order_header h ON d.po_header = h.id
+        WHERE d.company = ?
+        AND d.item_number = ?
+        AND h.date_transaction BETWEEN ? AND ?
+      ''',
+        [companyId, itemId, startStr, endStr],
+      );
+
+      final totalPurchases = (purchasesResult.first['total'] as double?) ?? 0.0;
+
+      return transValueTotal + totalPurchases;
+    } catch (e) {
+      print('Error in openingQuantityBeforeToday: $e');
+      return 0.0;
+    }
+  }
+
+  Future<double> salesQTYonthisdates(
+    int itemId,
+    int companyId,
+    DateTime dateFrom,
+  ) async {
+    try {
+      final db = await databaseService.database;
+
+      // 1. Get UDC for Order Type "S" (Sales) in Header "OT"
+      final udcList = await udcDetailsController.getLocalUdcDetailsByCode(
+        'S',
+        'OT',
+      );
+      int? orderTypeId;
+      if (udcList.isNotEmpty) {
+        orderTypeId = udcList.first.id;
+      }
+
+      if (orderTypeId == null) {
+        return 0.0;
+      }
+
+      // 2. Date Range: Start of Day to End of Day
+      final startOfDay = DateTime(
+        dateFrom.year,
+        dateFrom.month,
+        dateFrom.day,
+      ).toIso8601String();
+
+      final endOfDay = DateTime(
+        dateFrom.year,
+        dateFrom.month,
+        dateFrom.day,
+        23,
+        59,
+        59,
+        999,
+      ).toIso8601String();
+
+      // 3. Query ItemTransactions
+      // "SELECT i FROM ItemTransactions i WHERE ... AND orderType = :orderType"
+      // Sum quantityTransaction
+      final result = await db.rawQuery(
+        '''
+        SELECT SUM(quantity_transaction) as total
+        FROM item_transactions
+        WHERE company = ?
+        AND item_number = ?
+        AND order_type = ?
+        AND date_created BETWEEN ? AND ?
+      ''',
+        [companyId, itemId, orderTypeId, startOfDay, endOfDay],
+      );
+
+      final totalAmt = (result.first['total'] as double?) ?? 0.0;
+
+      return totalAmt.abs();
+    } catch (e) {
+      print('Error in salesQTYonthisdates: $e');
+      return 0.0;
+    }
+  }
+
+  Future<double> diffrencesalesOnThisdatesQTY(
+    int itemId,
+    int companyId,
+    DateTime dateFrom,
+  ) async {
+    try {
+      final salesQty = await salesQTYonthisdates(itemId, companyId, dateFrom);
+      final before = await openingQuantityBefore(itemId, companyId, dateFrom);
+      final today = await openingQuantityBeforeToday(
+        itemId,
+        companyId,
+        dateFrom,
+      );
+
+      final totalQty = before + today;
+      final amt = totalQty - salesQty;
+
+      return amt;
+    } catch (e) {
+      print('Error in diffrencesalesOnThisdatesQTY: $e');
+      return 0.0;
+    }
   }
 }

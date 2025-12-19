@@ -61,6 +61,10 @@ class ItemTransactionsBloc
     on<ExecuteInventoryTransaction>(_onExecuteInventoryTransaction);
     on<CalculateOpeningAmount>(_onCalculateOpeningAmount);
     on<GetTotalOpening>(_onGetTotalOpening);
+    on<GetOpeningQuantityBefore>(_onGetOpeningQuantityBefore);
+    on<GetOpeningQuantityBeforeToday>(_onGetOpeningQuantityBeforeToday);
+    on<GetSalesQtyOnDate>(_onGetSalesQtyOnDate);
+    on<GetDifferenceSalesQty>(_onGetDifferenceSalesQty);
 
     on<CancelCreate>(_onCancelCreate);
     on<CancelUpdate>(_onCancelUpdate);
@@ -75,6 +79,10 @@ class ItemTransactionsBloc
     on<LoadItemsForBranch>(_onLoadItemsForBranch);
     on<SelectItem>(_onSelectItem);
     on<LoadUoMDescription>(_onLoadUoMDescription);
+
+    on<LoadItemTransactionsReport>(_onLoadItemTransactionsReport);
+    on<LoadMoreItemTransactionsReport>(_onLoadMoreItemTransactionsReport);
+    //on<ExportItemTransactionsReport>(_onExportItemTransactionsReport);
   }
 
   Future<void> _onLoadTransactions(
@@ -132,9 +140,10 @@ class ItemTransactionsBloc
       emit(
         state.copyWith(
           status: ItemTransactionsStatus.error,
-          error: 'Failed to save transactions: $e',
+          //error: 'Failed to save transactions: $e',
         ),
       );
+      print('Failed to save transactions: $e');
     }
   }
 
@@ -164,9 +173,10 @@ class ItemTransactionsBloc
       emit(
         state.copyWith(
           status: ItemTransactionsStatus.error,
-          error: 'Failed to save row: $e',
+          //error: 'Failed to save row: $e',
         ),
       );
+      print('Failed to save row: $e');
     }
   }
 
@@ -856,6 +866,171 @@ class ItemTransactionsBloc
         state.copyWith(
           loadingUoMDescription: false,
           error: 'Failed to load UoM description: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onLoadItemTransactionsReport(
+    LoadItemTransactionsReport event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        status: ItemTransactionsStatus.loadingItemTransactionReport,
+      ),
+    );
+
+    try {
+      final result = await repository.getPaginatedItemTransactions(
+        companyId: event.companyId,
+        page: event.page,
+        pageSize: event.pageSize,
+      );
+
+      final totalPages = (result.totalCount / event.pageSize).ceil();
+
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.loadedItemTransactionReport,
+          itemTransactionReportItems: result.items,
+          itemTransactionReportTotalCount: result.totalCount,
+          itemTransactionReportTotalPages: totalPages,
+          itemTransactionReportPage: event.page,
+          // itemCostReportTotalCost: result.totalCost,
+          hasMoreItemTransactionReport: event.page < totalPages,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.failure,
+          error: 'Failed to load item transaction report: $e',
+        ),
+      );
+    }
+  }
+
+  //load more report item cost
+  Future<void> _onLoadMoreItemTransactionsReport(
+    LoadMoreItemTransactionsReport event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    if (!state.hasMoreItemTransactionReport) return;
+
+    emit(
+      state.copyWith(
+        status: ItemTransactionsStatus.loadingMoreItemTransactionReport,
+      ),
+    );
+
+    try {
+      final nextPage = state.itemTransactionReportPage + 1;
+      final result = await repository.getPaginatedItemTransactions(
+        companyId: authBloc.state.companyId!,
+        page: nextPage,
+        pageSize: 20,
+      );
+
+      final updatedLots = [
+        ...state.itemTransactionReportItems,
+        ...result.items!,
+      ];
+      final totalPages = (result.totalCount / 20).ceil();
+
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.loadedItemTransactionReport,
+          itemTransactionReportItems: updatedLots,
+          itemTransactionReportPage: nextPage,
+          itemTransactionReportTotalPages: totalPages,
+          itemTransactionReportTotalCount: result.totalCount,
+          hasMoreItemTransactionReport: nextPage < totalPages,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemTransactionsStatus.failure,
+          error: 'Failed to load more item transaction reports: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onGetOpeningQuantityBefore(
+    GetOpeningQuantityBefore event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    try {
+      final opening = await repository.openingQuantityBefore(
+        event.itemId,
+        authBloc.state.companyId!,
+        event.dateFrom,
+      );
+      emit(state.copyWith(openingQuantityBefore: opening));
+    } catch (e) {
+      emit(
+        state.copyWith(
+          error: 'Failed to calculate opening quantity before: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onGetOpeningQuantityBeforeToday(
+    GetOpeningQuantityBeforeToday event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    try {
+      final opening = await repository.openingQuantityBeforeToday(
+        event.itemId,
+        authBloc.state.companyId!,
+        event.dateFrom,
+      );
+      emit(state.copyWith(openingQuantityBeforeToday: opening));
+    } catch (e) {
+      emit(
+        state.copyWith(
+          error: 'Failed to calculate opening quantity before today: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onGetSalesQtyOnDate(
+    GetSalesQtyOnDate event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    try {
+      final qty = await repository.salesQTYonthisdates(
+        event.itemId,
+        authBloc.state.companyId!,
+        event.dateFrom,
+      );
+      emit(state.copyWith(salesQtyOnDate: qty));
+    } catch (e) {
+      emit(
+        state.copyWith(error: 'Failed to calculate sales quantity on date: $e'),
+      );
+    }
+  }
+
+  Future<void> _onGetDifferenceSalesQty(
+    GetDifferenceSalesQty event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    try {
+      final diff = await repository.diffrencesalesOnThisdatesQTY(
+        event.itemId,
+        authBloc.state.companyId!,
+        event.dateFrom,
+      );
+      emit(state.copyWith(differenceSalesQty: diff));
+    } catch (e) {
+      emit(
+        state.copyWith(
+          error: 'Failed to calculate difference sales quantity: $e',
         ),
       );
     }
