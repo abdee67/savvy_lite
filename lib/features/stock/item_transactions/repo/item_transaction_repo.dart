@@ -1,5 +1,4 @@
 // repositories/item_transaction_repository.dart
-import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/item_transactions/model/paginated_item_transaction_result.dart';
@@ -18,7 +17,6 @@ import 'package:savvy_stock/features/stock/item_transactions/model/item_transact
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/repo/lot_master_repo.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_bloc.dart';
-import 'package:sqflite/sqflite.dart';
 
 class ItemTransactionRepository {
   final LocalDatabaseService databaseService;
@@ -61,6 +59,9 @@ class ItemTransactionRepository {
     required double qty,
     required PurchaseOrderReceiver? por,
     required SalesOrderDetail? soD,
+    int? supplier,
+    int? orderType,
+    int? customer,
   }) async {
     try {
       print(
@@ -88,6 +89,9 @@ class ItemTransactionRepository {
             qty: qty,
             por: por,
             soD: soD,
+            supplier: supplier,
+            orderType: orderType,
+            customer: customer,
             user: user.id,
             companyId: companyId,
           );
@@ -104,6 +108,9 @@ class ItemTransactionRepository {
             qty: qty,
             por: por,
             soD: soD,
+            supplier: supplier,
+            orderType: orderType,
+            customer: customer,
             user: user.id,
             companyId: companyId,
           );
@@ -120,6 +127,9 @@ class ItemTransactionRepository {
             qty: qty,
             por: por,
             soD: soD,
+            supplier: supplier,
+            orderType: orderType,
+            customer: customer,
             user: user.id,
             companyId: companyId,
           );
@@ -140,6 +150,9 @@ class ItemTransactionRepository {
     required double qty,
     required PurchaseOrderReceiver? por,
     required SalesOrderDetail? soD,
+    int? supplier,
+    int? orderType,
+    int? customer,
     required int user,
     required int companyId,
   }) async {
@@ -195,17 +208,17 @@ class ItemTransactionRepository {
       companyId,
     );
 
-    final qTrn = (factorP * qty).abs();
+    final qTrn = factorP * qty;
     final amountCost = qTrn * unitCost;
 
-    final qBfrTrn = (factorP * qtyAvInStore).abs();
+    final qBfrTrn = factorP * (ib.quantityAvailable ?? 0.0);
     final beforeAmountCost = qBfrTrn * unitCost;
 
     // Create transaction
     final transaction = ItemTransactionModel(
       dateCreated: DateTime.now(),
       quantityTransaction: qty,
-      beforeStoreQuantityAvailable: qtyAvInStore,
+      beforeStoreQuantityAvailable: ib.quantityAvailable ?? 0.0,
       unitCost: unitCost,
       amountCost: amountCost,
       beforeAmountCost: beforeAmountCost,
@@ -218,11 +231,12 @@ class ItemTransactionRepository {
       itemNumber: ib.itemNumber,
       branch: ib.branch,
       unitOfMeasure: ib.unitOfMeasure,
-      supplier: por?.poDetailRef?.poHeaderRef?.supplierId,
+      supplier: supplier ?? por?.poDetailRef?.poHeaderRef?.supplierId,
       orderType:
+          orderType ??
           por?.poDetailRef?.poHeaderRef?.orderType ??
-          soD?.orderHeader?.orderTypeRef?.id,
-      customer: soD?.orderHeader?.customerTableRef?.id,
+          soD?.orderHeader?.orderType,
+      customer: customer ?? soD?.orderHeader?.customerBillTo,
     );
 
     await db.insert('item_transactions', transaction.toMap());
@@ -240,6 +254,9 @@ class ItemTransactionRepository {
     required double qty,
     required PurchaseOrderReceiver? por,
     required SalesOrderDetail? soD,
+    int? supplier,
+    int? orderType,
+    int? customer,
     required int user,
     required int companyId,
   }) async {
@@ -333,11 +350,16 @@ class ItemTransactionRepository {
       itemNumber: loc.itemNumber,
       branch: loc.branch,
       unitOfMeasure: ib.unitOfMeasure ?? uom,
-      supplier: por?.poDetailRef?.poHeaderRef?.supplierId,
+      supplier: supplier ?? por?.poDetailRef?.poHeaderRef?.supplierId,
       orderType:
+          orderType ??
           por?.poDetailRef?.poHeaderRef?.orderType ??
-          soD?.orderHeader?.orderTypeRef?.id,
-      customer: soD?.orderHeader?.customerTableRef?.id,
+          soD?.orderHeader?.orderTypeRef?.id ??
+          soD?.orderHeader?.orderType,
+      customer:
+          customer ??
+          soD?.orderHeader?.customerTableRef?.id ??
+          soD?.orderHeader?.customerBillTo,
     );
 
     await db.insert('item_transactions', transaction.toMap());
@@ -359,6 +381,9 @@ class ItemTransactionRepository {
     required double qty,
     required PurchaseOrderReceiver? por,
     required SalesOrderDetail? soD,
+    int? supplier,
+    int? orderType,
+    int? customer,
     required int user,
     required int companyId,
   }) async {
@@ -469,11 +494,16 @@ class ItemTransactionRepository {
       itemNumber: lm.itemNumber,
       branch: lm.branch,
       unitOfMeasure: ib.unitOfMeasure ?? uom,
-      supplier: por?.poDetailRef?.poHeaderRef?.supplierId,
+      supplier: supplier ?? por?.poDetailRef?.poHeaderRef?.supplierId,
       orderType:
+          orderType ??
           por?.poDetailRef?.poHeaderRef?.orderType ??
-          soD?.orderHeader?.orderTypeRef?.id,
-      customer: soD?.orderHeader?.customerBillToRef?.id,
+          soD?.orderHeader?.orderTypeRef?.id ??
+          soD?.orderHeader?.orderType,
+      customer:
+          customer ??
+          soD?.orderHeader?.customerTableRef?.id ??
+          soD?.orderHeader?.customerBillTo,
     );
 
     print('DEBUG: Inserting transaction');
@@ -1432,7 +1462,7 @@ class ItemTransactionRepository {
 
       // 1. Get UDC for Order Type "S" (Sales) in Header "OT"
       final udcList = await udcDetailsController.getLocalUdcDetailsByCode(
-        'S',
+        'SO',
         'OT',
       );
       int? orderTypeId;
@@ -1505,6 +1535,351 @@ class ItemTransactionRepository {
       return amt;
     } catch (e) {
       print('Error in diffrencesalesOnThisdatesQTY: $e');
+      return 0.0;
+    }
+  }
+
+  Future<double> openingAmountInitial(
+    int itemId,
+    int companyId,
+    DateTime dateFrom,
+    DateTime dateThru,
+  ) async {
+    try {
+      final db = await databaseService.database;
+
+      // 1. Get the balance as of the start of history (before any transactions in range)
+      double balanceBefore = await openingAmountBefore(
+        itemId,
+        companyId,
+        dateFrom,
+      );
+
+      // 2. Sum internal movements (A, I, T) DURING the range
+      double internalMovementsValue = 0.0;
+
+      final typeCodes = ["A", "I", "T"];
+      final typeIds = <int>[];
+      for (var code in typeCodes) {
+        final udc = await udcDetailsController.getUdcDetailsByCode(code, 'TT');
+        if (udc.isNotEmpty) {
+          typeIds.add(udc.first.id);
+        }
+      }
+
+      if (typeIds.isNotEmpty) {
+        final dateFromStr = DateTime(
+          dateFrom.year,
+          dateFrom.month,
+          dateFrom.day,
+        ).toIso8601String();
+        final dateThruEndOfDay = DateTime(
+          dateThru.year,
+          dateThru.month,
+          dateThru.day,
+          23,
+          59,
+          59,
+          999,
+        ).toIso8601String();
+
+        final typeIdsStr = typeIds.join(',');
+        final transactions = await db.rawQuery(
+          '''
+          SELECT amount_cost 
+          FROM item_transactions 
+          WHERE company = ? 
+          AND item_number = ? 
+          AND order_type IS NULL 
+          AND transaction_type IN ($typeIdsStr)
+          AND date_created BETWEEN ? AND ?
+        ''',
+          [companyId, itemId, dateFromStr, dateThruEndOfDay],
+        );
+
+        for (var row in transactions) {
+          internalMovementsValue +=
+              (row['amount_cost'] as num?)?.toDouble() ?? 0.0;
+        }
+      }
+
+      return balanceBefore + internalMovementsValue;
+    } catch (e) {
+      print('Error in openingAmountInitial: $e');
+      return 0.0;
+    }
+  }
+
+  Future<double> openingAmountBefore(
+    int itemId,
+    int companyId,
+    DateTime dateFrom,
+  ) async {
+    try {
+      final db = await databaseService.database;
+      final startOfDay = DateTime(
+        dateFrom.year,
+        dateFrom.month,
+        dateFrom.day,
+      ).toIso8601String();
+
+      // We can get the opening balance MUCH more reliably by looking at
+      // the 'before_amount_cost' of the FIRST transaction on or after dateFrom,
+      // OR the 'after' balance of the transaction before it.
+
+      final firstInPeriod = await db.rawQuery(
+        '''
+        SELECT before_amount_cost 
+        FROM item_transactions 
+        WHERE company = ? AND item_number = ? AND date_created >= ?
+        ORDER BY date_created ASC LIMIT 1
+      ''',
+        [companyId, itemId, startOfDay],
+      );
+
+      if (firstInPeriod.isNotEmpty) {
+        return (firstInPeriod.first['before_amount_cost'] as num?)
+                ?.toDouble() ??
+            0.0;
+      }
+
+      // If no transactions on or after dateFrom, find the LAST one BEFORE dateFrom
+      final lastBeforePeriod = await db.rawQuery(
+        '''
+        SELECT before_amount_cost, amount_cost 
+        FROM item_transactions 
+        WHERE company = ? AND item_number = ? AND date_created < ?
+        ORDER BY date_created DESC LIMIT 1
+      ''',
+        [companyId, itemId, startOfDay],
+      );
+
+      if (lastBeforePeriod.isNotEmpty) {
+        final before =
+            (lastBeforePeriod.first['before_amount_cost'] as num?)
+                ?.toDouble() ??
+            0.0;
+        final delta =
+            (lastBeforePeriod.first['amount_cost'] as num?)?.toDouble() ?? 0.0;
+        return before + delta;
+      }
+
+      // Fallback: Current items in branch value if NO transaction history exists
+      final itemInBranchList = await itemInBranchRepository.findByItem(
+        itemId,
+        companyId,
+      );
+      double currentTotalValue = 0.0;
+      final itemCost = await itemCostRepository.findByItem(itemId, companyId);
+      final unitCost = itemCost?.amountUnitCost ?? 0.0;
+
+      for (var ib in itemInBranchList) {
+        final factor = await itemUomConversionRepository.fromOtherToPrimary(
+          itemId,
+          ib.unitOfMeasure!,
+          companyId,
+        );
+        currentTotalValue += (ib.quantityAvailable ?? 0.0) * factor * unitCost;
+      }
+
+      return currentTotalValue;
+    } catch (e) {
+      print('Error in openingAmountBefore: $e');
+      return 0.0;
+    }
+  }
+
+  Future<double> purchaseAmountOnDate(
+    int itemId,
+    int companyId,
+    DateTime dateFrom,
+    DateTime dateThru,
+  ) async {
+    try {
+      final db = await databaseService.database;
+
+      final startOfDay = DateTime(
+        dateFrom.year,
+        dateFrom.month,
+        dateFrom.day,
+      ).toIso8601String();
+
+      final endOfDay = DateTime(
+        dateThru.year,
+        dateThru.month,
+        dateThru.day,
+        23,
+        59,
+        59,
+        999,
+      ).toIso8601String();
+
+      final result = await db.rawQuery(
+        '''
+        SELECT SUM(d.amount_extended_cost) as total
+        FROM purchase_order_detail d
+        JOIN purchase_order_header h ON d.po_header = h.id
+        WHERE d.company = ?
+        AND d.item_number = ?
+        AND h.date_transaction BETWEEN ? AND ?
+      ''',
+        [companyId, itemId, startOfDay, endOfDay],
+      );
+
+      final totalAmt = (result.first['total'] as double?) ?? 0.0;
+      return totalAmt;
+    } catch (e) {
+      print('Error in purchaseAmountOnDate: $e');
+      return 0.0;
+    }
+  }
+
+  Future<double> salesAmountOnThisDate(
+    int itemId,
+    int companyId,
+    DateTime dateFrom,
+    DateTime dateThru,
+  ) async {
+    try {
+      final db = await databaseService.database;
+
+      final startOfDay = DateTime(
+        dateFrom.year,
+        dateFrom.month,
+        dateFrom.day,
+      ).toIso8601String();
+
+      final endOfDay = DateTime(
+        dateThru.year,
+        dateThru.month,
+        dateThru.day,
+        23,
+        59,
+        59,
+        999,
+      ).toIso8601String();
+
+      final result = await db.rawQuery(
+        '''
+        SELECT SUM(d.extended_price) as total
+        FROM sales_order_details d
+        JOIN sales_order_header h ON d.sales_order_header_id = h.id
+        WHERE d.company = ?
+        AND d.items_table_id = ?
+        AND h.order_date BETWEEN ? AND ?
+      ''',
+        [companyId, itemId, startOfDay, endOfDay],
+      );
+
+      final totalAmt = (result.first['total'] as double?) ?? 0.0;
+      return totalAmt;
+    } catch (e) {
+      print('Error in salesAmountOnDate: $e');
+      return 0.0;
+    }
+  }
+
+  Future<double> salesAmountOnThisDateCOS(
+    int itemId,
+    int companyId,
+    DateTime dateFrom,
+    DateTime dateThru,
+  ) async {
+    try {
+      final db = await databaseService.database;
+
+      final startOfDay = DateTime(
+        dateFrom.year,
+        dateFrom.month,
+        dateFrom.day,
+      ).toIso8601String();
+
+      final endOfDay = DateTime(
+        dateThru.year,
+        dateThru.month,
+        dateThru.day,
+        23,
+        59,
+        59,
+        999,
+      ).toIso8601String();
+
+      final result = await db.rawQuery(
+        '''
+        SELECT SUM(d.amount_cost) as total
+        FROM sales_order_details d
+        JOIN sales_order_header h ON d.sales_order_header_id = h.id
+        WHERE d.company = ?
+        AND d.items_table_id = ?
+        AND h.order_date BETWEEN ? AND ?
+      ''',
+        [companyId, itemId, startOfDay, endOfDay],
+      );
+
+      final totalAmt = (result.first['total'] as double?) ?? 0.0;
+      return totalAmt;
+    } catch (e) {
+      print('Error in salesAmountOnThisDateCOS: $e');
+      return 0.0;
+    }
+  }
+
+  //gross profit(salesAmountOnThisDate - salesAmountOnThisDateCOS)
+  Future<double> grossProfitOnThisDate(
+    int itemId,
+    int companyId,
+    DateTime dateFrom,
+    DateTime dateThru,
+  ) async {
+    try {
+      final totalSalesAmountOnThisDate = await salesAmountOnThisDate(
+        itemId,
+        companyId,
+        dateFrom,
+        dateThru,
+      );
+      final totalSalesAmountCostOnThisDateCOS = await salesAmountOnThisDateCOS(
+        itemId,
+        companyId,
+        dateFrom,
+        dateThru,
+      );
+      return totalSalesAmountOnThisDate - totalSalesAmountCostOnThisDateCOS;
+    } catch (e) {
+      print('Error in grossProfitOnThisDate: $e');
+      return 0.0;
+    }
+  }
+
+  //amount ending(openingAmountInitial - purchaseAmountOnDate + salesAmountOnDateCOS)
+  Future<double> amountEnding(
+    int itemId,
+    int companyId,
+    DateTime dateFrom,
+    DateTime dateThru,
+  ) async {
+    try {
+      final oai = await openingAmountInitial(
+        itemId,
+        companyId,
+        dateFrom,
+        dateThru,
+      );
+      final paotd = await purchaseAmountOnDate(
+        itemId,
+        companyId,
+        dateFrom,
+        dateThru,
+      );
+      final saotd = await salesAmountOnThisDateCOS(
+        itemId,
+        companyId,
+        dateFrom,
+        dateThru,
+      );
+      return oai + paotd - saotd;
+    } catch (e) {
+      print('Error in amountEnding: $e');
       return 0.0;
     }
   }
