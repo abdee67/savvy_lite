@@ -1,5 +1,4 @@
 // models/item_transaction_model.dart
-import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 import 'package:savvy_stock/features/company/models/company_model.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/models/supplier_model.dart';

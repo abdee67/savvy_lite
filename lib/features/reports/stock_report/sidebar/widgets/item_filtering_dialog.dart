@@ -116,6 +116,28 @@ class _ItemFilterDialogState extends State<ItemFilterDialog> {
                 ),
               ),
             const SizedBox(width: 8),
+            if (_filters.dateTo != null)
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: _dateTo ?? DateTime.now(),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                    );
+                    if (date != null) {
+                      setState(() => _dateTo = date);
+                    }
+                  },
+                  child: Text(
+                    _dateTo != null
+                        ? 'To: ${_dateTo!.toLocal().toString().split(' ')[0]}'
+                        : 'Select End Date',
+                  ),
+                ),
+              ),
+            const SizedBox(width: 8),
             Expanded(
               child: OutlinedButton(
                 onPressed: () async {

@@ -46,10 +46,20 @@ class ItemTransactionsState extends Equatable {
   final double totalCost;
   final double openingAmount;
   final double totlaAmount;
+  //for daily stock report
   final double openingQuantityBefore;
   final double openingQuantityBeforeToday;
   final double salesQtyOnDate;
   final double differenceSalesQty;
+  //for balance stock item
+  final double openingAmountBefore;
+  final double openingAmountInitial;
+  final double purchaseAmountOnDate;
+  final double salesAmountOnDate;
+  final double salesAmountOnThisDateCOS;
+  final double grossProfitOnThisDate;
+  final double amountEnding;
+
   final bool isDuplicate;
   final int? companyId;
 
@@ -100,6 +110,13 @@ class ItemTransactionsState extends Equatable {
     this.openingQuantityBeforeToday = 0.0,
     this.salesQtyOnDate = 0.0,
     this.differenceSalesQty = 0.0,
+    this.openingAmountBefore = 0.0,
+    this.openingAmountInitial = 0.0,
+    this.purchaseAmountOnDate = 0.0,
+    this.salesAmountOnDate = 0.0,
+    this.salesAmountOnThisDateCOS = 0.0,
+    this.grossProfitOnThisDate = 0.0,
+    this.amountEnding = 0.0,
     this.companyId,
     this.isDuplicate = false,
     this.availableLocations = const [],
@@ -171,13 +188,23 @@ class ItemTransactionsState extends Equatable {
     double? totalQuantity,
     double? totalCost,
     double? openingAmount,
+    bool? isDuplicate,
+    int? companyId,
+    //for daily stock report
     double? totlaAmount,
     double? openingQuantityBefore,
     double? openingQuantityBeforeToday,
     double? salesQtyOnDate,
     double? differenceSalesQty,
-    bool? isDuplicate,
-    int? companyId,
+
+    //for balance stock item
+    double? openingAmountBefore,
+    double? openingAmountInitial,
+    double? purchaseAmountOnDate,
+    double? salesAmountOnDate,
+    double? salesAmountOnThisDateCOS,
+    double? grossProfitOnThisDate,
+    double? amountEnding,
 
     List<ItemLocation>? availableLocations,
     List<LotMaster>? availableLots,
@@ -224,6 +251,15 @@ class ItemTransactionsState extends Equatable {
           openingQuantityBeforeToday ?? this.openingQuantityBeforeToday,
       salesQtyOnDate: salesQtyOnDate ?? this.salesQtyOnDate,
       differenceSalesQty: differenceSalesQty ?? this.differenceSalesQty,
+      openingAmountBefore: openingAmountBefore ?? this.openingAmountBefore,
+      openingAmountInitial: openingAmountInitial ?? this.openingAmountInitial,
+      purchaseAmountOnDate: purchaseAmountOnDate ?? this.purchaseAmountOnDate,
+      salesAmountOnDate: salesAmountOnDate ?? this.salesAmountOnDate,
+      salesAmountOnThisDateCOS:
+          salesAmountOnThisDateCOS ?? this.salesAmountOnThisDateCOS,
+      grossProfitOnThisDate:
+          grossProfitOnThisDate ?? this.grossProfitOnThisDate,
+      amountEnding: amountEnding ?? this.amountEnding,
       companyId: companyId ?? this.companyId,
       isDuplicate: isDuplicate ?? this.isDuplicate,
       availableLocations: availableLocations ?? this.availableLocations,
@@ -275,6 +311,13 @@ class ItemTransactionsState extends Equatable {
     openingQuantityBeforeToday,
     salesQtyOnDate,
     differenceSalesQty,
+    openingAmountBefore,
+    openingAmountInitial,
+    purchaseAmountOnDate,
+    salesAmountOnDate,
+    salesAmountOnThisDateCOS,
+    grossProfitOnThisDate,
+    amountEnding,
     companyId,
     searchQuery,
     isSelectionMode,

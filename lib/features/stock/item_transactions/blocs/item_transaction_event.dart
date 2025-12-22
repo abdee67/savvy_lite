@@ -381,3 +381,92 @@ class GetDifferenceSalesQty extends ItemTransactionsEvent {
     required this.dateFrom,
   });
 }
+
+class GetOpeningAmountBefore extends ItemTransactionsEvent {
+  final int itemId;
+  final int branchId;
+  final DateTime dateFrom;
+  const GetOpeningAmountBefore({
+    required this.itemId,
+    required this.branchId,
+    required this.dateFrom,
+  });
+}
+
+class GetOpeningAmountInitial extends ItemTransactionsEvent {
+  final int itemId;
+  final int branchId;
+  final DateTime dateFrom;
+  final DateTime dateThru;
+  const GetOpeningAmountInitial({
+    required this.itemId,
+    required this.branchId,
+    required this.dateFrom,
+    required this.dateThru,
+  });
+}
+
+class GetPOonthisdates extends ItemTransactionsEvent {
+  final int itemId;
+  final int branchId;
+  final DateTime dateFrom;
+  final DateTime dateThru;
+  const GetPOonthisdates({
+    required this.itemId,
+    required this.branchId,
+    required this.dateFrom,
+    required this.dateThru,
+  });
+}
+
+class GetSalesOnThisDate extends ItemTransactionsEvent {
+  final int itemId;
+  final int branchId;
+  final DateTime dateFrom;
+  final DateTime dateThru;
+  const GetSalesOnThisDate({
+    required this.itemId,
+    required this.branchId,
+    required this.dateFrom,
+    required this.dateThru,
+  });
+}
+
+class GetSalesOnThisDateCOS extends ItemTransactionsEvent {
+  final int itemId;
+  final int branchId;
+  final DateTime dateFrom;
+  final DateTime dateThru;
+  const GetSalesOnThisDateCOS({
+    required this.itemId,
+    required this.branchId,
+    required this.dateFrom,
+    required this.dateThru,
+  });
+}
+
+class GetGrossProfitOnThisDate extends ItemTransactionsEvent {
+  final int itemId;
+  final int branchId;
+  final DateTime dateFrom;
+  final DateTime dateThru;
+  const GetGrossProfitOnThisDate({
+    required this.itemId,
+    required this.branchId,
+    required this.dateFrom,
+    required this.dateThru,
+  });
+}
+
+class GetAmountEnding extends ItemTransactionsEvent {
+  final int itemId;
+  final int branchId;
+  final DateTime dateFrom;
+  final DateTime dateThru;
+  const GetAmountEnding({
+    required this.itemId,
+    required this.branchId,
+    required this.dateFrom,
+    required this.dateThru,
+  });
+}

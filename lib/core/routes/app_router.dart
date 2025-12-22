@@ -43,7 +43,7 @@ import 'package:savvy_stock/features/reports/stock_report/sidebar/inventory_tran
 import 'package:savvy_stock/features/reports/stock_report/sidebar/item_cost_report.dart';
 import 'package:savvy_stock/features/reports/stock_report/sidebar/reorder_point_report.dart';
 import 'package:savvy_stock/features/reports/stock_report/sidebar/upcoming_expiration.dart';
-import 'package:savvy_stock/features/reports/stock_report/sidebar/widgets/balance_of_item_entry_report.dart';
+import 'package:savvy_stock/features/reports/stock_report/sidebar/balance_of_item_entry_report.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/customer/screens/customer_list.dart';
 import 'package:savvy_stock/features/sales/customer/screens/sales_customer_screen.dart';
@@ -932,7 +932,7 @@ class AppRouter {
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: AppRoutes.balanceOfItemEntryReport,
           parentPrivilege: AppRoutes.stockReport,
-          child: BalanceOfItemReport(),
+          child: BalanceOfItemReport(authBloc: authBloc),
         ),
         redirect: _protectedRouteRedirect,
       ),
@@ -972,7 +972,7 @@ class AppRouter {
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: AppRoutes.reorderPointReport,
           parentPrivilege: AppRoutes.stockReport,
-          child: ReorderPointReport(),
+          child: ReorderPointReport(authBloc: authBloc),
         ),
         redirect: _protectedRouteRedirect,
       ),

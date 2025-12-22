@@ -66,6 +66,14 @@ class ItemTransactionsBloc
     on<GetSalesQtyOnDate>(_onGetSalesQtyOnDate);
     on<GetDifferenceSalesQty>(_onGetDifferenceSalesQty);
 
+    on<GetOpeningAmountBefore>(_onGetOpeningAmountBefore);
+    on<GetOpeningAmountInitial>(_onGetOpeningAmountInitial);
+    on<GetPOonthisdates>(_onGetPOonthisdates);
+    on<GetSalesOnThisDate>(_onGetSalesOnThisDate);
+    on<GetSalesOnThisDateCOS>(_onGetSalesOnThisDateCOS);
+    on<GetGrossProfitOnThisDate>(_onGetGrossProfitOnThisDate);
+    on<GetAmountEnding>(_onGetAmountEnding);
+
     on<CancelCreate>(_onCancelCreate);
     on<CancelUpdate>(_onCancelUpdate);
     on<Discard>(_onDiscard);
@@ -83,6 +91,124 @@ class ItemTransactionsBloc
     on<LoadItemTransactionsReport>(_onLoadItemTransactionsReport);
     on<LoadMoreItemTransactionsReport>(_onLoadMoreItemTransactionsReport);
     //on<ExportItemTransactionsReport>(_onExportItemTransactionsReport);
+  }
+
+  Future<void> _onGetPOonthisdates(
+    GetPOonthisdates event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    try {
+      final amount = await repository.purchaseAmountOnDate(
+        event.itemId,
+        authBloc.state.companyId!,
+        event.dateFrom,
+        event.dateThru,
+      );
+      emit(state.copyWith(purchaseAmountOnDate: amount));
+    } catch (e) {
+      print('Error in _onGetPOonthisdates: $e');
+    }
+  }
+
+  Future<void> _onGetSalesOnThisDate(
+    GetSalesOnThisDate event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    try {
+      final amount = await repository.salesAmountOnThisDate(
+        event.itemId,
+        authBloc.state.companyId!,
+        event.dateFrom,
+        event.dateThru,
+      );
+      emit(state.copyWith(salesAmountOnDate: amount));
+    } catch (e) {
+      print('Error in _onGetSalesOnThisDate: $e');
+    }
+  }
+
+  Future<void> _onGetSalesOnThisDateCOS(
+    GetSalesOnThisDateCOS event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    try {
+      final amount = await repository.salesAmountOnThisDateCOS(
+        event.itemId,
+        authBloc.state.companyId!,
+        event.dateFrom,
+        event.dateThru,
+      );
+      emit(state.copyWith(salesAmountOnThisDateCOS: amount));
+    } catch (e) {
+      print('Error in _onGetSalesOnThisDateCOS: $e');
+    }
+  }
+
+  Future<void> _onGetGrossProfitOnThisDate(
+    GetGrossProfitOnThisDate event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    try {
+      final amount = await repository.grossProfitOnThisDate(
+        event.itemId,
+        authBloc.state.companyId!,
+        event.dateFrom,
+        event.dateThru,
+      );
+      emit(state.copyWith(grossProfitOnThisDate: amount));
+    } catch (e) {
+      print('Error in _onGetGrossProfitOnThisDate: $e');
+    }
+  }
+
+  Future<void> _onGetAmountEnding(
+    GetAmountEnding event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    try {
+      final amount = await repository.amountEnding(
+        event.itemId,
+        authBloc.state.companyId!,
+        event.dateFrom,
+        event.dateThru,
+      );
+      emit(state.copyWith(amountEnding: amount));
+    } catch (e) {
+      print('Error in _onGetAmountEnding: $e');
+    }
+  }
+
+  Future<void> _onGetOpeningAmountBefore(
+    GetOpeningAmountBefore event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    try {
+      final amount = await repository.openingAmountBefore(
+        event.itemId,
+        authBloc.state.companyId!,
+        event.dateFrom,
+      );
+      emit(state.copyWith(openingAmountBefore: amount));
+    } catch (e) {
+      print('Error in _onGetOpeningAmountBefore: $e');
+    }
+  }
+
+  Future<void> _onGetOpeningAmountInitial(
+    GetOpeningAmountInitial event,
+    Emitter<ItemTransactionsState> emit,
+  ) async {
+    try {
+      final amount = await repository.openingAmountInitial(
+        event.itemId,
+        authBloc.state.companyId!,
+        event.dateFrom,
+        event.dateThru,
+      );
+      emit(state.copyWith(openingAmountInitial: amount));
+    } catch (e) {
+      print('Error in _onGetOpeningAmountInitial: $e');
+    }
   }
 
   Future<void> _onLoadTransactions(
