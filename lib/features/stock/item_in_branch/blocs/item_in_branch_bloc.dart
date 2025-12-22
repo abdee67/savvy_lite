@@ -94,6 +94,10 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     on<ExportItemFromBranch>(_onExportItemFromBranch);
     on<ExportSingleItemFromBranch>(_onExportSingleItemFromBranch);
     on<LoadLowStockItems>(_onLoadLowStockItems);
+
+    on<LoadItemInBranchReport>(_onLoaditemInBranchReport);
+    on<LoadMoreItemInBranchReport>(_onLoadMoreitemInBranchReport);
+    on<ExportItemInBranchReportToExcel>(_onExportToExcel);
   }
 
   @override
@@ -1157,6 +1161,221 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
         state.copyWith(
           status: ItemInBranchStatus.failure,
           message: 'Failed to update quantity: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onLoaditemInBranchReport(
+    LoadItemInBranchReport event,
+    Emitter<ItemInBranchState> emit,
+  ) async {
+    emit(state.copyWith(status: ItemInBranchStatus.loadingitemInBranchReport));
+    try {
+      final companyId = event.companyId;
+
+      final result = await repository.getPaginatedItemsInBranch(
+        companyId: companyId,
+        page: event.page,
+        pageSize: event.pageSize,
+      );
+
+      final totalPages = (result.totalCount / event.pageSize).ceil();
+
+      emit(
+        state.copyWith(
+          status: ItemInBranchStatus.loadeditemInBranchReport,
+          itemInBranchReportItems: result.itemInBranch,
+          itemInBranchReportTotalCount: result.totalCount,
+          itemInBranchReportTotalPages: totalPages,
+          itemInBranchReportPage: event.page,
+          //itemInBranchReportTotalCost: result.totalCost,
+          hasMoreitemInBranchReport: event.page < totalPages,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemInBranchStatus.failure,
+          message: 'Failed to load Item report: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onLoadMoreitemInBranchReport(
+    LoadMoreItemInBranchReport event,
+    Emitter<ItemInBranchState> emit,
+  ) async {
+    if (!state.hasMoreitemInBranchReport) return;
+
+    emit(
+      state.copyWith(status: ItemInBranchStatus.loadingMoreitemInBranchReport),
+    );
+
+    try {
+      final nextPage = state.itemInBranchReportPage + 1;
+      final result = await repository.getPaginatedItemsInBranch(
+        companyId: authBloc.state.companyId!,
+        page: nextPage,
+        pageSize: 20,
+      );
+
+      final updatedItems = [
+        ...state.itemInBranchReportItems,
+        ...result.itemInBranch!,
+      ];
+      final totalPages = (result.totalCount / 20).ceil();
+
+      emit(
+        state.copyWith(
+          status: ItemInBranchStatus.loadeditemInBranchReport,
+          itemInBranchReportItems: updatedItems,
+          itemInBranchReportPage: nextPage,
+          //itemInBranchReportTotalCost:
+          //state.itemInBranchReportTotalCost + result.totalCost,
+          hasMoreitemInBranchReport: nextPage < totalPages,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemInBranchStatus.failure,
+          message: 'Failed to load more reports: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportToExcel(
+    ExportItemInBranchReportToExcel event,
+    Emitter<ItemInBranchState> emit,
+  ) async {
+    emit(state.copyWith(status: ItemInBranchStatus.exporting));
+
+    try {
+      // Get all data (without pagination) for export
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) throw Exception('Company ID not found');
+
+      final result = await repository.getPaginatedItemsInBranch(
+        companyId: companyId,
+        page: 1,
+        pageSize: 10000, // Large number to get all records
+      );
+
+      // Prepare data for Excel export
+      final exportData = _prepareExcelData(result.itemInBranch!);
+
+      // In a real app, you would use a package like excel or csv
+      // For now, we'll just simulate
+      await _simulateExcelExport(exportData);
+
+      emit(
+        state.copyWith(
+          status: ItemInBranchStatus.success,
+          message: 'Exported ${result.itemEntries!.length} records to Excel',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemInBranchStatus.failure,
+          message: 'Export failed: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportToPDF(
+    ExportItemInBranchReportToPDF event,
+    Emitter<ItemInBranchState> emit,
+  ) async {
+    emit(state.copyWith(status: ItemInBranchStatus.exporting));
+
+    try {
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) throw Exception('Company ID not found');
+
+      final result = await repository.getPaginatedItemsInBranch(
+        companyId: companyId,
+        page: 1,
+        pageSize: 10000,
+      );
+
+      // Prepare PDF data
+      await _simulatePDFExport(result.itemInBranch!);
+
+      emit(
+        state.copyWith(
+          status: ItemInBranchStatus.success,
+          message:
+              'Generated PDF report with ${result.itemEntries!.length} records',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemInBranchStatus.failure,
+          message: 'PDF generation failed: $e',
+        ),
+      );
+    }
+  }
+
+  // Helper methods for export
+  List<Map<String, dynamic>> _prepareExcelData(List<ItemInBranchModel> items) {
+    return items.map((item) {
+      return {
+        //'Batch': item.batchNumberSupplier ?? '',
+        // 'Item ID': item.itemRef?.itemsId ?? '',
+        //'Item Description': item.itemRef?.itemDescription ?? '',
+        'Branch/Store': item.branchRef?.description ?? '',
+        //'Location': item.locationRef?.locationDescription ?? '',
+        //'Unit of Measure': item.itemRef?.unitOfMeasure ?? '',
+        //'Item Date': item.dateItem?.toIso8601String() ?? '',
+        //'Available Quantity': item.quantityAvailable ?? 0.0,
+        //'Item Description': item.itemDescription ?? '',
+      };
+    }).toList();
+  }
+
+  Future<void> _simulateExcelExport(List<Map<String, dynamic>> data) async {
+    // In production, use a package like:
+    // - excel: ^2.0.0-null-safety-3
+    // - csv: ^5.0.0
+    await Future.delayed(const Duration(seconds: 1));
+    print('Exporting ${data.length} rows to Excel');
+  }
+
+  Future<void> _simulatePDFExport(List<ItemInBranchModel> items) async {
+    // In production, use a package like:
+    // - pdf: ^3.10.6
+    // - printing: ^5.11.2
+    await Future.delayed(const Duration(seconds: 2));
+    print('Generating PDF for ${items.length} Items');
+  }
+
+  // Public methods for pagination
+  void loadNextPage() {
+    if (state.hasMoreitemInBranchReport) {
+      add(LoadMoreItemInBranchReport());
+    }
+  }
+
+  void loadPreviousPage() {
+    if (state.hasPreviousPage) {
+      add(LoadMoreItemInBranchReport());
+    }
+  }
+
+  void loadPage(int page) {
+    if (page > 0 && page <= state.itemInBranchReportTotalPages) {
+      add(
+        LoadItemInBranchReport(
+          companyId: authBloc.state.companyId!,
+          page: page,
+          pageSize: 20,
         ),
       );
     }

@@ -3,6 +3,7 @@ import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
+import 'package:savvy_stock/features/stock/item_transactions/model/paginated_item_transaction_result.dart';
 import 'package:sqflite/sqflite.dart';
 
 class StockItemInBranchRepository extends BaseRepository {
@@ -522,5 +523,62 @@ class StockItemInBranchRepository extends BaseRepository {
         );
       }
     }
+  }
+
+  Future<PaginatedItemTransactionResult> getPaginatedItemsInBranch({
+    required int companyId,
+    required int page,
+    required int pageSize,
+    String? sortField,
+    bool ascending = true,
+  }) async {
+    final db = await databaseService.database;
+
+    // Build WHERE clause dynamically
+    final whereConditions = <String>['company = ?'];
+    final whereArgs = <dynamic>[companyId];
+    // Build base query
+    var query = '''
+          SELECT ib.*,
+             i.item_description, i.barcode, i.items_id,
+             b.description as branch_description, b.reference_id as branch_reference
+      FROM items_in_branch ib
+      LEFT JOIN items_table i ON ib.item_number = i.id
+      LEFT JOIN branch_table b ON ib.branch = b.id
+      WHERE company = ?
+    ''';
+
+    final params = whereArgs;
+
+    // Add sorting
+    if (sortField != null) {
+      query += ' ORDER BY $sortField ${ascending ? 'ASC' : 'DESC'}';
+    }
+
+    // Add pagination
+    query += ' LIMIT ? OFFSET ?';
+    params.add(pageSize);
+    params.add((page - 1) * pageSize);
+
+    // Execute main query
+    final itemsData = await db.rawQuery(query, params);
+
+    // Count total records
+    final countResult = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM branch_table WHERE company = ?',
+      [companyId],
+    );
+
+    final totalCount = (countResult.first['count'] as int?) ?? 0;
+
+    // Parse results
+    final items = itemsData.map((row) {
+      return ItemInBranchModel.fromMap(row);
+    }).toList();
+
+    return PaginatedItemTransactionResult(
+      itemInBranch: items,
+      totalCount: totalCount,
+    );
   }
 }
