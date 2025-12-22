@@ -232,7 +232,6 @@ class ItemCostRepository extends BaseRepository {
       );
 
       double unitCost = 0.0;
-      String costSource = 'Standard Cost';
 
       if (itemCost.isNotEmpty) {
         unitCost = itemCost.first.amountUnitCost ?? 0.0;
@@ -240,7 +239,6 @@ class ItemCostRepository extends BaseRepository {
         // Fallback: Use last purchase price or average cost
         final avgCost = await _getAverageCost(item.itemsTableId!, companyId);
         unitCost = avgCost;
-        costSource = 'Average Cost';
       }
 
       // Apply UOM conversion if needed
@@ -255,9 +253,7 @@ class ItemCostRepository extends BaseRepository {
         );
       }
 
-      final amountCost = unitCost * (item.quantity ?? 0);
-
-      return amountCost;
+      return unitCost;
     } catch (e) {
       // Fallback to zero cost with error tracking
       return 0.0;
@@ -306,11 +302,11 @@ class ItemCostRepository extends BaseRepository {
     double totalCost = 0.0;
 
     for (final item in items) {
-      final costResult = await calculateItemCost(
+      final unitCost = await calculateItemCost(
         item: item,
         companyId: item.company!,
       );
-      totalCost += costResult;
+      totalCost += unitCost * (item.quantity ?? 0.0);
     }
 
     return totalCost;

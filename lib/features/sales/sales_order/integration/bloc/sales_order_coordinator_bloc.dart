@@ -18,9 +18,11 @@ import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_h
 import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_event.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_state.dart';
+import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
 import 'package:savvy_stock/features/sales/quotation_order/repo/quotation_order_repo.dart';
+import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
 import 'sales_order_coordinator_event.dart';
 import 'sales_order_coordinator_state.dart';
 
@@ -34,6 +36,7 @@ class SalesOrderCoordinatorBloc
   final AuthBloc authBloc;
   final SalesOrderIntegrationService integrationService;
   final QuotationOrderRepository quotationRepo;
+  final ItemCostRepository itemCostRepository;
 
   StreamSubscription<SalesOrderHeaderState>? _headerSubscription;
   StreamSubscription<SalesOrderDetailState>? _detailSubscription;
@@ -50,6 +53,7 @@ class SalesOrderCoordinatorBloc
     required this.systemConstantBloc,
     required this.authBloc,
     required this.quotationRepo,
+    required this.itemCostRepository,
   }) : integrationService = SalesOrderIntegrationService(
          headerBloc: headerBloc,
          detailBloc: detailBloc,
@@ -163,16 +167,37 @@ class SalesOrderCoordinatorBloc
         }
       }
 
-      // Calculate total cost from details
-      double totalCost = 0.0;
-      for (final detail in event.details) {
-        totalCost += (detail.amountCost ?? 0.0);
+      // Calculate total cost from details (Enriching details with costs before header creation)
+      double totalHeaderCost = 0.0;
+      final enrichedDetails = <SalesOrderDetail>[];
+      final companyId = headerToCreate.company ?? authBloc.state.companyId;
+
+      if (companyId != null) {
+        for (final detail in event.details) {
+          final unitCost = await itemCostRepository.calculateItemCost(
+            item: detail,
+            companyId: companyId,
+          );
+          final amountCost = unitCost * (detail.quantity ?? 0.0);
+          final enrichedDetail = detail.copyWith(
+            unitCost: unitCost,
+            amountCost: amountCost,
+          );
+          enrichedDetails.add(enrichedDetail);
+          totalHeaderCost += amountCost;
+        }
+      } else {
+        enrichedDetails.addAll(event.details);
       }
-      headerToCreate = headerToCreate.copyWith(amountCost: totalCost);
+
+      headerToCreate = headerToCreate.copyWith(
+        amountCost: totalHeaderCost,
+        unitCost: totalHeaderCost, // As per user request, setting both
+      );
 
       await integrationService.createSalesOrderWithDetails(
         header: headerToCreate,
-        details: event.details,
+        details: enrichedDetails,
       );
       final currentHeader = headerBloc.state.selected;
       // Use the details that were used to create the order; detailBloc.createItems
