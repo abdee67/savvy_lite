@@ -63,11 +63,15 @@ class SalesOrderDetailRepository {
   Future<SalesOrderDetail?> getSalesOrderDetailById(int id) async {
     final db = await databaseService.database;
 
-    final maps = await db.query(
-      'sales_order_details',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    final query = '''
+      SELECT sod.*, 
+             soh.order_type as order_type,
+             soh.customer_bill_to as customer_bill_to
+      FROM sales_order_details sod
+      LEFT JOIN sales_order_header soh ON sod.sales_order_header_id = soh.id
+      WHERE sod.id = ?
+    ''';
+    final maps = await db.rawQuery(query, [id]);
 
     if (maps.isNotEmpty) {
       return SalesOrderDetail.fromMap(maps.first);
@@ -88,11 +92,14 @@ class SalesOrderDetailRepository {
            ib.quantity_available as quantity_available,
            lm.quantity_available as lot_quantity_available,
            lm.date_expiration as lot_expiration,
-           u.description_1 as unit_of_measure_description
+           u.description_1 as unit_of_measure_description,
+           soh.order_type as order_type,
+           soh.customer_bill_to as customer_bill_to
     FROM sales_order_details sod
     LEFT JOIN items_table it ON sod.items_table_id = it.id
     LEFT JOIN items_in_branch ib ON sod.item_in_branch = ib.id
     LEFT JOIN lot_master lm ON sod.lot_number = lm.id
+    LEFT JOIN sales_order_header soh ON sod.sales_order_header_id = soh.id
     LEFT JOIN udc_details u ON sod.unit_of_measure = u.id
     WHERE sod.sales_order_header_id = ? AND sod.company = ?
   ''';
@@ -297,9 +304,10 @@ class SalesOrderDetailRepository {
 
     var query =
         '''
-      SELECT sd.*
+      SELECT sd.*,
+             soh.order_type as order_type,
+             soh.customer_bill_to as customer_bill_to
       FROM sales_order_details sd
-      
       INNER JOIN sales_order_header soh ON sd.sales_order_header_id = soh.id
       WHERE $whereClause
     ''';
@@ -444,11 +452,14 @@ class SalesOrderDetailRepository {
            ib.quantity_available as quantity_available,
            lm.quantity_available as lot_quantity_available,
            lm.date_expiration as lot_expiration,
+           soh.order_type as order_type,
+           soh.customer_bill_to as customer_bill_to,
            u.description_1 as unit_of_measure_description
     FROM sales_order_details sod
     LEFT JOIN items_table it ON sod.items_table_id = it.id
     LEFT JOIN items_in_branch ib ON sod.item_in_branch = ib.id
     LEFT JOIN lot_master lm ON sod.lot_number = lm.id
+    LEFT JOIN sales_order_header soh ON sod.sales_order_header_id = soh.id
     LEFT JOIN udc_details u ON sod.unit_of_measure = u.id
     WHERE sod.company = ?
   ''';

@@ -111,6 +111,7 @@ class PurchaseOrderDetail {
                   : DateTime.parse(map['date_transaction']),
               invoiceNumber: map['invoice_number'],
               orderType: map['order_type'],
+              supplierId: map['supplier_id'],
             )
           : null,
       poReceiveStatusRef: map['po_receive_status_description'] != null

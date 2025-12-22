@@ -427,7 +427,8 @@ class SalesOrderHeaderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to create sales order: $e'));
+      // emit(state.errorState('Failed to create sales order: $e'));
+      print({'Failed to create sales order: $e'});
     }
   }
 
@@ -452,6 +453,10 @@ class SalesOrderHeaderBloc
         'N',
         "PS",
       );
+      final orderType = await udcDetailRepository.getSingleUdcDetailsByCode(
+        'SO',
+        "OT",
+      );
 
       final discount = header.discountAmount ?? 0.0;
       final total = header.amountTotal ?? 0.0;
@@ -461,7 +466,7 @@ class SalesOrderHeaderBloc
         creditDateToPay: dueDate,
         paymentStatus: paymentStatus?.id,
         amountOpen: openAmount,
-        orderType: header.orderType,
+        orderType: orderType?.id,
       );
     }
 

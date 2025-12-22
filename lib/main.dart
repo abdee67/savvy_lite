@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
@@ -74,6 +75,18 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   _initializeAndRunApp();
   // clearAllSharedPreferences();
+  SystemChrome.setSystemUIOverlayStyle(
+    SystemUiOverlayStyle(
+      statusBarColor: Colors.amber,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+  );
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
 }
 
 // Add error handling wrapper
@@ -94,7 +107,7 @@ Future<void> _initializeAndRunApp() async {
     //await LocalDatabaseService().debugTable('item_cost');
     //  await LocalDatabaseService().debugTable('item_location');
     // await LocalDatabaseService().debugTable('lot_master');
-    //await LocalDatabaseService().debugTable('sales_order_header');
+    // await LocalDatabaseService().debugTable('sales_order_header');
     //await LocalDatabaseService().debugTable('credit_receipt_table');
     // await LocalDatabaseService().debugTable('sales_order_details');
     // await LocalDatabaseService().debugTable('sales_return_header');
@@ -105,7 +118,7 @@ Future<void> _initializeAndRunApp() async {
     // await LocalDatabaseService().debugTable('quote_order_header');
     // await LocalDatabaseService().debugTable('quote_order_detail');
     // await LocalDatabaseService().debugTable('supplier_table');
-    // await LocalDatabaseService().debugTable('purchase_order_header');
+    //await LocalDatabaseService().debugTable('purchase_order_header');
     //await LocalDatabaseService().debugTable('purchase_order_detail');
     //await LocalDatabaseService().debugTable('purchase_order_receiver');
     //await LocalDatabaseService().debugTable('credit_payment_table');
@@ -500,6 +513,7 @@ class _SavvyStockState extends State<SavvyStock> {
               authBloc: _authBloc,
               systemConstantBloc: _systemConstantBloc,
               quotationRepo: _quotationOrderRepository,
+              itemCostRepository: _itemCostRepository,
             ),
           ),
           BlocProvider<InvoiceHistoryHeaderBloc>(

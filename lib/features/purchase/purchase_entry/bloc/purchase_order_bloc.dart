@@ -1479,9 +1479,28 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
             'orderNumber: $orderNumber, companyId: $companyId',
           );
 
+          // 🎯 ENRICH RECEIVER WITH DETAIL (ENSURE SUPPLIER/ORDERTYPE)
+          var enrichedReceiver = savedReceiver;
+          if (enrichedReceiver.poDetail != null) {
+            try {
+              final detail = await repository.getDetailById(
+                enrichedReceiver.poDetail!,
+              );
+              if (detail != null) {
+                enrichedReceiver = enrichedReceiver.copyWith(
+                  poDetailRef: detail,
+                );
+              }
+            } catch (e) {
+              print(
+                'WARNING: Could not enrich PurchaseOrderReceiver with detail: $e',
+              );
+            }
+          }
+
           if (orderNumber != null && companyId != null) {
             await stockService.updateStockItemAvailabilityPor(
-              receiver: savedReceiver,
+              receiver: enrichedReceiver,
               companyId: companyId,
               orderNumber: orderNumber,
             );

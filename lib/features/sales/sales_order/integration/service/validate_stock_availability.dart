@@ -156,6 +156,11 @@ class ValidateStockAvailabilityService {
         qty: -qtyToDeduct,
         por: null,
         soD: soD,
+        customer:
+            soD.orderHeader?.customerBillTo ??
+            soD.orderHeader?.customerTableRef?.id,
+        orderType:
+            soD.orderHeader?.orderType ?? soD.orderHeader?.orderTypeRef?.id,
       );
     }
 
@@ -557,6 +562,11 @@ class ValidateStockAvailabilityService {
         qty: -qtyToDeduct,
         por: null,
         soD: soD,
+        customer:
+            soD.orderHeader?.customerBillTo ??
+            soD.orderHeader?.customerTableRef?.id,
+        orderType:
+            soD.orderHeader?.orderType ?? soD.orderHeader?.orderTypeRef?.id,
       );
     }
 
@@ -643,6 +653,11 @@ class ValidateStockAvailabilityService {
       qty: -qtyToSubtract, // Negative quantity for sales
       por: null,
       soD: soD,
+      customer:
+          soD.orderHeader?.customerBillTo ??
+          soD.orderHeader?.customerTableRef?.id,
+      orderType:
+          soD.orderHeader?.orderType ?? soD.orderHeader?.orderTypeRef?.id,
     );
   }
 

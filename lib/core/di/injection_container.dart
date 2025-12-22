@@ -443,6 +443,7 @@ void initDependencies() {
       invoiceDetailBloc: getIt(),
       systemConstantBloc: getIt(),
       quotationRepo: getIt(),
+      itemCostRepository: getIt(),
     ),
   );
   getIt.registerFactory<SalesReturnBloc>(

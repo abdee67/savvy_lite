@@ -142,6 +142,13 @@ class SalesOrderDetail extends Equatable {
               detailCode: map['unit_of_measure_code'],
             )
           : null,
+      orderHeader: map['order_type'] != null
+          ? SalesOrderHeader(
+              id: map['sales_order_header_id'],
+              customerBillTo: map['customer_bill_to'],
+              orderType: map['order_type'],
+            )
+          : null,
     );
   }
 
