@@ -43,7 +43,7 @@ class CreditReceipt {
       dateUpdated: map['date_updated'] != null
           ? DateTime.tryParse(map['date_updated'])
           : null,
-      soHeaderRef: map['total_amount'] != null
+      soHeaderRef: map['fs_number'] != null
           ? SalesOrderHeader(
               id: map['so_header'],
               amountTotal: map['total_amount'],

@@ -1463,7 +1463,11 @@ class SalesOrderDetailBloc
         );
         final amountCost = unitCost * (item.quantity ?? 0.0);
         enrichedItems.add(
-          item.copyWith(unitCost: unitCost, amountCost: amountCost),
+          item.copyWith(
+            unitCost: unitCost,
+            amountCost: amountCost,
+            salesOrderHeaderId: event.salesOrderHeaderId,
+          ),
         );
       }
 
