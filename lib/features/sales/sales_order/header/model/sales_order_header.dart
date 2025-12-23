@@ -41,6 +41,11 @@ class SalesOrderHeader {
   final double? amountCost;
   final int? tempId;
 
+  // 📊 Report specific fields (populated from JOINs in repository)
+  final String? customerBillToName;
+  final String? paymentStatusDescription;
+  final double? itemWiseGrossProfit;
+
   // 🔗 Optional joined entities
   final Customer? customerBillToRef;
   final Customer? customerTableRef;
@@ -94,6 +99,9 @@ class SalesOrderHeader {
     this.paymentStatusRef,
     this.orderTypeRef,
     this.tempId,
+    this.customerBillToName,
+    this.paymentStatusDescription,
+    this.itemWiseGrossProfit,
   });
 
   factory SalesOrderHeader.fromMap(Map<String, dynamic> map) {
@@ -139,6 +147,9 @@ class SalesOrderHeader {
       unitCost: (map['unit_cost'] as num?)?.toDouble(),
       amountCost: (map['amount_cost'] as num?)?.toDouble(),
       tempId: (map['temp_id'] as num?)?.toInt(),
+      customerBillToName: map['customer_bill_to_name']?.toString(),
+      paymentStatusDescription: map['payment_status_description']?.toString(),
+      itemWiseGrossProfit: (map['item_wise_gross_profit'] as num?)?.toDouble(),
 
       // 👇 Handle joined fields (if joined SELECT is used)
       customerBillToRef: map['customer_bill_to_name'] != null
@@ -164,6 +175,20 @@ class SalesOrderHeader {
               id: map['payment_status'],
               detailCode: map['payment_status_code'] ?? '',
               description1: map['payment_status_description'] ?? '',
+            )
+          : null,
+      paymentInstrumentRef: map['payment_instrument_description'] != null
+          ? UdcDetails(
+              id: map['payment_instrument'],
+              detailCode: map['payment_instrument_code'] ?? '',
+              description1: map['payment_instrument_description'] ?? '',
+            )
+          : null,
+      orderTypeRef: map['order_type_description'] != null
+          ? UdcDetails(
+              id: map['order_type'],
+              detailCode: map['order_type_code'] ?? '',
+              description1: map['order_type_description'] ?? '',
             )
           : null,
     );
@@ -253,6 +278,7 @@ class SalesOrderHeader {
     UdcDetails? paymentStatusRef,
     UdcDetails? orderTypeRef,
     int? tempId,
+    double? itemWiseGrossProfit,
   }) {
     return SalesOrderHeader(
       id: id ?? this.id,
@@ -298,6 +324,7 @@ class SalesOrderHeader {
       paymentStatusRef: paymentStatusRef ?? this.paymentStatusRef,
       orderTypeRef: orderTypeRef ?? this.orderTypeRef,
       tempId: tempId ?? this.tempId,
+      itemWiseGrossProfit: itemWiseGrossProfit ?? this.itemWiseGrossProfit,
     );
   }
 

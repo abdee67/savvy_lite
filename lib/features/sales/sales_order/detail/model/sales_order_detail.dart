@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
+import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
@@ -35,6 +36,15 @@ class SalesOrderDetail extends Equatable {
   final int? lotQuantityAvailable;
   final DateTime? lotExpiration;
 
+  // 📊 Report specific fields (populated from JOINs in repository)
+  final DateTime? orderDate;
+  final String? fsNumber;
+  final String? itemDescription;
+  final String? unitOfMeasureDescription;
+  final String? customerName;
+  final double? taxAmount;
+  final double? grossProfitDetail;
+
   const SalesOrderDetail({
     this.id,
     this.unitPrice,
@@ -60,6 +70,13 @@ class SalesOrderDetail extends Equatable {
     this.quantityAvailable,
     this.lotQuantityAvailable,
     this.lotExpiration,
+    this.orderDate,
+    this.fsNumber,
+    this.itemDescription,
+    this.unitOfMeasureDescription,
+    this.customerName,
+    this.taxAmount,
+    this.grossProfitDetail,
   });
 
   // ✅ Create object from SQLite row (can include JOIN fields)
@@ -89,23 +106,32 @@ class SalesOrderDetail extends Equatable {
       tempId: (map['temp_id'] as num?)?.toInt(),
 
       // 👇 Joined objects (optional)
-      item: map['items_id'] != null
+      item: (map['items_table_id'] != null || map['item_number_string'] != null)
           ? ItemEntryModel(
-              id: map['items_table_id'],
-              itemsId: map['items_id'],
-              itemDescription: map['item_description'],
-              unitOfMeasure: map['unit_of_measure'],
-              unitPrice: map['unit_price'],
-              taxable: map['taxable'],
-              barcode: map['barcode'],
-              company: map['company'],
-              marginRate: map['margin_rate'],
-              marginType: map['margin_type'],
-              reorderPoint: map['reorder_point'],
-              referenceId: map['reference_id'],
-              tempId: map['temp_id'],
-              validCell: map['valid_cell'],
-              unitOfMeasureDescription: map['unit_of_measure_description'],
+              id: map['items_table_id'] ?? 0,
+              itemsId:
+                  map['items_id']?.toString() ??
+                  map['item_number_string']?.toString(),
+              itemDescription: map['item_description']?.toString(),
+              unitOfMeasure: map['unit_of_measure']?.toString(),
+              unitPrice: (map['unit_price'] as num?)?.toDouble(),
+              taxable: map['taxable']?.toString(),
+              barcode: map['barcode']?.toString(),
+              company: map['item_company'] ?? map['company'],
+              marginRate: (map['margin_rate'] as num?)?.toDouble(),
+              marginType: map['margin_type']?.toString(),
+              reorderPoint: (map['reorder_point'] as num?)?.toDouble(),
+              referenceId: map['reference_id']?.toString(),
+              tempId: map['item_temp_id'] ?? map['temp_id'],
+              validCell: map['item_valid_cell'] ?? map['valid_cell'],
+              unitOfMeasureDescription:
+                  map['unit_of_measure_description'] != null
+                  ? UdcDetails(
+                      id: map['unit_of_measure'],
+                      description1: map['unit_of_measure_description'],
+                      detailCode: map['unit_of_measure_code'],
+                    )
+                  : null,
             )
           : null,
       lot: map['lot_number'] != null && map['batch_number_supplier'] != null
@@ -125,13 +151,15 @@ class SalesOrderDetail extends Equatable {
               quantityAvailable: map['quantity_available'],
             )
           : null,
-      itemBranch: map['item_in_branch'] != null && map['item_number'] != null
+      itemBranch:
+          (map['item_in_branch_id'] != null || map['item_in_branch'] != null)
           ? ItemInBranchModel(
-              id: map['item_in_branch'],
-              itemNumber: map['item_number'],
-              branch: map['branch'],
-              quantityAvailable: map['quantity_available'],
-              company: map['company'],
+              id: map['item_in_branch_id'] ?? map['item_in_branch'] ?? 0,
+              itemNumber: map['items_table_id'] ?? 0,
+              branch: map['branch'] ?? 0,
+              quantityAvailable: (map['quantity_available'] as num?)
+                  ?.toDouble(),
+              company: map['item_in_branch_company'] ?? map['company'],
               unitOfMeasure: map['unit_of_measure'],
             )
           : null,
@@ -147,8 +175,26 @@ class SalesOrderDetail extends Equatable {
               id: map['sales_order_header_id'],
               customerBillTo: map['customer_bill_to'],
               orderType: map['order_type'],
+              orderNumber: map['order_number'],
+              customerBillToRef: map['customer_name'] != null
+                  ? Customer(
+                      id: map['customer_bill_to'],
+                      customerName: map['customer_name'],
+                      phoneNumber: map['customer_bill_to_phone'],
+                      tinNumber: map['customer_bill_to_tin'],
+                    )
+                  : null,
             )
           : null,
+      orderDate: map['order_date'] != null
+          ? DateTime.tryParse(map['order_date'].toString())
+          : null,
+      fsNumber: map['fs_number']?.toString(),
+      itemDescription: map['item_description']?.toString(),
+      unitOfMeasureDescription: map['unit_of_measure_description']?.toString(),
+      customerName: map['customer_name']?.toString(),
+      taxAmount: (map['tax_amount'] as num?)?.toDouble(),
+      grossProfitDetail: (map['gross_profit_detail'] as num?)?.toDouble(),
     );
   }
 
@@ -201,6 +247,13 @@ class SalesOrderDetail extends Equatable {
     int? lotQuantityAvailable,
     DateTime? lotExpiration,
     int? tempId,
+    DateTime? orderDate,
+    String? fsNumber,
+    String? itemDescription,
+    String? unitOfMeasureDescription,
+    String? customerName,
+    double? taxAmount,
+    double? grossProfitDetail,
   }) {
     return SalesOrderDetail(
       id: id ?? this.id,
@@ -227,6 +280,14 @@ class SalesOrderDetail extends Equatable {
       lotQuantityAvailable: lotQuantityAvailable ?? this.lotQuantityAvailable,
       lotExpiration: lotExpiration ?? this.lotExpiration,
       tempId: tempId ?? this.tempId,
+      orderDate: orderDate ?? this.orderDate,
+      fsNumber: fsNumber ?? this.fsNumber,
+      itemDescription: itemDescription ?? this.itemDescription,
+      unitOfMeasureDescription:
+          unitOfMeasureDescription ?? this.unitOfMeasureDescription,
+      customerName: customerName ?? this.customerName,
+      taxAmount: taxAmount ?? this.taxAmount,
+      grossProfitDetail: grossProfitDetail ?? this.grossProfitDetail,
     );
   }
 
@@ -256,6 +317,13 @@ class SalesOrderDetail extends Equatable {
     lotQuantityAvailable,
     lotExpiration,
     tempId,
+    orderDate,
+    fsNumber,
+    itemDescription,
+    unitOfMeasureDescription,
+    customerName,
+    taxAmount,
+    grossProfitDetail,
   ];
 }
 

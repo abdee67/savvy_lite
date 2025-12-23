@@ -25,6 +25,8 @@ class SystemConstant {
   late final String? currencyCode;
   late final String? reorderPointUomType;
   final int? tempId;
+  final String? totVat;
+  final String? totWithHolding;
   final bool isSynced;
   final DateTime? lastSyncTime;
 
@@ -55,6 +57,8 @@ class SystemConstant {
     this.currencyCode,
     this.reorderPointUomType,
     this.tempId,
+    this.totVat,
+    this.totWithHolding,
     this.isSynced = true,
     this.lastSyncTime,
     this.lotTypeRef,
@@ -89,6 +93,8 @@ class SystemConstant {
       daysLeft: json['days_left'],
       currencyCode: json['currency_code'],
       reorderPointUomType: json['reorder_point_uom_type'],
+      totVat: json['tot_vat'],
+      totWithHolding: json['tot_withholding'],
       isSynced: json['is_synced'] == 1,
       lastSyncTime: json['last_sync_time'] != null
           ? DateTime.fromMillisecondsSinceEpoch(json['last_sync_time'])
@@ -197,6 +203,8 @@ class SystemConstant {
       daysLeft: map['days_left'],
       currencyCode: map['currency_code'],
       reorderPointUomType: map['reorder_point_uom_type'],
+      totVat: map['tot_vat'],
+      totWithHolding: map['tot_withholding'],
       isSynced: map['is_synced'] == 1,
       lastSyncTime: map['last_sync_time'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['last_sync_time'])
