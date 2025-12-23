@@ -216,14 +216,14 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
     final bloc = context.read<SalesOrderHeaderBloc>();
     final state = bloc.state;
 
-    if (index == null || index < 0 || index >= state.filteredHeaders.length) {
+    if (index == null || index < 0 || index >= state.creditHeaders.length) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cannot void salesOrder. Invalid index.')),
       );
       return;
     }
 
-    final salesOrderToDelete = state.filteredHeaders[index];
+    final salesOrderToDelete = state.creditHeaders[index];
     final voidIndicator = 'V';
 
     showDeleteDialog(
@@ -528,7 +528,7 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
       );
     }
 
-    if (state.filteredHeaders.isEmpty) {
+    if (state.creditHeaders.isEmpty) {
       final query = state.searchQuery ?? '';
       final hasQuery = query.isNotEmpty;
 
@@ -554,10 +554,10 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
       child: ListView.separated(
         controller: _scrollController,
         padding: const EdgeInsets.all(16),
-        itemCount: state.filteredHeaders.length,
+        itemCount: state.creditHeaders.length,
         separatorBuilder: (context, index) => SizedBox(height: cardSpacing),
         itemBuilder: (context, index) {
-          final salesOrder = state.filteredHeaders[index];
+          final salesOrder = state.creditHeaders[index];
           final isSelected = state.selectedItems.contains(salesOrder);
 
           return _buildsalesOrderListItem(
@@ -723,7 +723,9 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
                                       ),
                                     ),
                                     child: Text(
-                                      salesOrder.paymentStatusRef!.detailCode ??
+                                      salesOrder
+                                              .paymentStatusRef!
+                                              .description1 ??
                                           'Unknown',
                                       style: TextStyle(
                                         fontSize: 10,

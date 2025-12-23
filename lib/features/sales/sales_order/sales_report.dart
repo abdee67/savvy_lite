@@ -867,7 +867,7 @@ class _SalesReviewPageState extends State<SalesReviewPage>
           if (salesOrder.salesType != null)
             _buildsalesOrderInfoItem(
               'Order Type : ',
-              salesOrder.orderTypeRef?.description1?.toString() ?? 'N/A',
+              salesOrder.orderTypeRef?.description1.toString() ?? 'N/A',
               Iconsax.receipt_edit,
               isCompact,
             ),
