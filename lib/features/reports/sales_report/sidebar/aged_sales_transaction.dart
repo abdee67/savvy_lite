@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/features/reports/stock_report/sidebar/widgets/expiration_filter_dialog.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/expiration_report_filters.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/core/di/injection_container.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -19,15 +20,15 @@ import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.da
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_bloc.dart';
 
-class ExpirationReportPage extends StatefulWidget {
+class AgedCreditSalesReport extends StatefulWidget {
   final AuthBloc authBloc;
-  const ExpirationReportPage({super.key, required this.authBloc});
+  const AgedCreditSalesReport({super.key, required this.authBloc});
 
   @override
-  State<ExpirationReportPage> createState() => _ExpirationReportPageState();
+  State<AgedCreditSalesReport> createState() => _AgedCreditSalesReportState();
 }
 
-class _ExpirationReportPageState extends State<ExpirationReportPage>
+class _AgedCreditSalesReportState extends State<AgedCreditSalesReport>
     with SingleTickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
   // Animation controllers for detail panel
@@ -104,6 +105,9 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
 
   void _loadInitialData() {
     final companyId = widget.authBloc.state.companyId;
+    // Get threshold from system constants
+    final systemConstant = context.read<SystemConstantBloc>().state.selected;
+    final threshold = systemConstant?.daysLeft ?? 30; // Default to 30 if null
     if (companyId != null) {
       // Load data for filters
       context.read<BranchBloc>().add(LoadBranchs(companyId));
@@ -112,9 +116,10 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
 
       // Load initial expiration report
       context.read<LotMasterBloc>().add(
-        LoadExpirationReport(
+        LoadUpcomingExpiryReport(
           companyId: companyId,
           filters: const ExpirationReportFilters(),
+          daysThreshold: threshold,
           pageSize: 20,
         ),
       );
@@ -161,7 +166,7 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
     final currentFilters = context
         .read<LotMasterBloc>()
         .state
-        .expirationReportFilters;
+        .upcomingExpiryFilters;
     final result = await showDialog<ExpirationReportFilters>(
       context: context,
       builder: (context) => ExpirationFilterDialog(
@@ -173,21 +178,33 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
     _isFilterDialogOpen = false;
 
     if (result != null) {
-      context.read<LotMasterBloc>().add(UpdateExpirationReportFilters(result));
+      final state = context.read<LotMasterBloc>().state;
+      context.read<LotMasterBloc>().add(
+        UpdateUpcomingExpiryReportFilters(
+          result,
+          state.upcomingExpiryDaysThreshold,
+        ),
+      );
     }
   }
 
   void _exportToExcel() {
     final state = context.read<LotMasterBloc>().state;
     context.read<LotMasterBloc>().add(
-      ExportExpirationReportToExcel(state.expirationReportFilters),
+      ExportUpcomingExpiryReportToExcel(
+        state.upcomingExpiryFilters,
+        state.upcomingExpiryDaysThreshold,
+      ),
     );
   }
 
   void _exportToPDF() {
     final state = context.read<LotMasterBloc>().state;
     context.read<LotMasterBloc>().add(
-      ExportExpirationReportToPDF(state.expirationReportFilters),
+      ExportUpcomingExpiryReportToPDF(
+        state.upcomingExpiryFilters,
+        state.upcomingExpiryDaysThreshold,
+      ),
     );
   }
 
@@ -196,7 +213,7 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
     return Scaffold(
       backgroundColor: Colors.grey,
       appBar: AppBar(
-        title: const Text('Expiration Report'),
+        title: const Text('Upcoming Expiration Report'),
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
         actions: [
@@ -233,7 +250,7 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
                   _buildSummaryCard(state),
 
                   // Active Filters Indicator
-                  if (state.expirationReportFilters.hasFilters)
+                  if (state.upcomingExpiryFilters.hasFilters)
                     _buildActiveFiltersIndicator(state),
 
                   // Lot List
@@ -241,7 +258,7 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
                 ],
               ),
               // Loading Overlay
-              if (state.status == LotMasterStatus.loadingExpirationReport)
+              if (state.status == LotMasterStatus.loadingUpcomingExpiryReport)
                 Container(
                   color: Colors.black.withOpacity(0.5),
                   child: const Center(child: CircularProgressIndicator()),
@@ -261,31 +278,56 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            // Add threshold indicator
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.orange),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.calendar_today, size: 14, color: Colors.orange),
+                  SizedBox(width: 6),
+                  Text(
+                    'Expires in ${state.upcomingExpiryDaysThreshold} days',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.orange,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildSummaryItem(
-                  'Expired Lots',
-                  '${state.expirationReportTotalCount}',
-                  Iconsax.box,
-                  Colors.blue,
+                  'Upcoming Expiry',
+                  '${state.upcomingExpiryTotalCount}',
+                  Iconsax.calendar_tick,
+                  Colors.orange,
                 ),
                 _buildSummaryItem(
                   'Total Value',
-                  '${state.expirationReportTotalCost.toStringAsFixed(2)} Birr',
+                  '${state.upcomingExpiryTotalCost.toStringAsFixed(2)} Birr',
                   Iconsax.dollar_circle,
                   Colors.green,
                 ),
                 _buildSummaryItem(
                   'Page',
-                  '${state.expirationReportPage}/${state.expirationReportTotalPages}',
+                  '${state.upcomingExpiryPage}/${state.upcomingExpiryTotalPages}',
                   Iconsax.document,
-                  Colors.orange,
+                  Colors.blue,
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            if (state.status == LotMasterStatus.loadingMoreExpirationReport)
+            if (state.status == LotMasterStatus.loadingMoreUpcomingExpiryReport)
               LinearProgressIndicator(
                 backgroundColor: Colors.grey[200],
                 valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
@@ -351,7 +393,7 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              _buildFilterDescription(state.expirationReportFilters),
+              _buildFilterDescription(state.upcomingExpiryFilters),
               style: TextStyle(fontSize: 12, color: Colors.blue[800]),
               overflow: TextOverflow.ellipsis,
             ),
@@ -359,7 +401,11 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
           IconButton(
             icon: const Icon(Iconsax.close_circle, size: 16),
             onPressed: () {
-              context.read<LotMasterBloc>().add(ClearExpirationReportFilters());
+              context.read<LotMasterBloc>().add(
+                ClearUpcomingExpiryReportFilters(
+                  state.upcomingExpiryDaysThreshold,
+                ),
+              );
             },
           ),
         ],
@@ -390,8 +436,8 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
     final cardSpacing = screenHeight * 0.02;
     final cardWidth = isSmallScreen ? screenWidth * 0.85 : screenWidth * 0.8;
 
-    if (state.status == LotMasterStatus.loadingExpirationReport &&
-        state.expirationReportLots.isEmpty) {
+    if (state.status == LotMasterStatus.loadingUpcomingExpiryReport &&
+        state.upcomingExpiryLots.isEmpty) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -405,7 +451,7 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
     }
 
     if (state.status == LotMasterStatus.failure &&
-        state.expirationReportLots.isEmpty) {
+        state.upcomingExpiryLots.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -424,9 +470,10 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
                 final companyId = widget.authBloc.state.companyId;
                 if (companyId != null) {
                   context.read<LotMasterBloc>().add(
-                    LoadExpirationReport(
+                    LoadUpcomingExpiryReport(
                       companyId: companyId,
-                      filters: state.expirationReportFilters,
+                      filters: state.upcomingExpiryFilters,
+                      daysThreshold: state.upcomingExpiryDaysThreshold,
                     ),
                   );
                 }
@@ -438,7 +485,7 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
       );
     }
 
-    if (state.expirationReportLots.isEmpty) {
+    if (state.upcomingExpiryLots.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -449,11 +496,13 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
               'No expiration item found',
               style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
-            if (state.expirationReportFilters.hasFilters)
+            if (state.upcomingExpiryFilters.hasFilters)
               TextButton(
                 onPressed: () {
                   context.read<LotMasterBloc>().add(
-                    ClearExpirationReportFilters(),
+                    ClearUpcomingExpiryReportFilters(
+                      state.upcomingExpiryDaysThreshold,
+                    ),
                   );
                 },
                 child: const Text(
@@ -474,11 +523,11 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
         controller: _scrollController,
         padding: const EdgeInsets.all(16),
         itemCount:
-            state.expirationReportLots.length +
-            (state.expirationReportLots.isEmpty ? 1 : 0),
+            state.upcomingExpiryLots.length +
+            (state.upcomingExpiryLots.isEmpty ? 1 : 0),
         separatorBuilder: (context, index) => SizedBox(height: cardSpacing),
         itemBuilder: (context, index) {
-          if (index >= state.expirationReportLots.length) {
+          if (index >= state.upcomingExpiryLots.length) {
             return Padding(
               padding: const EdgeInsets.all(16),
               child: Center(
@@ -500,7 +549,7 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
             );
           }
 
-          final lot = state.expirationReportLots[index];
+          final lot = state.upcomingExpiryLots[index];
 
           return _buildLotListItem(
             lot,
@@ -526,13 +575,12 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
     // final offset = _dragOffset[index] ?? 0.0;
     final isExpanded = _lotDetail == true && _selectedLot == lot;
     final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
     // For responsiveness:
     final collapsedHeight = isCompact
         ? screenHeight * 0.22
-        : screenHeight * 0.14;
-    final expandedHeight = isCompact
-        ? screenHeight * 0.55
-        : screenHeight * 0.45;
+        : screenHeight * 0.6;
+    final expandedHeight = isCompact ? screenHeight * 0.4 : screenHeight * 0.35;
 
     return GestureDetector(
       onTap: () => isExpanded ? _hideLotDetail() : _showLotDetail(lot),
@@ -622,7 +670,10 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
                             // Date information
                             const SizedBox(height: 2),
                             if (lot.dateExpiration != null)
-                              _buildExpirationWarning(lot.dateExpiration!),
+                              _buildExpirationWarning(
+                                lot.dateExpiration!,
+                                state.upcomingExpiryDaysThreshold,
+                              ),
                           ],
                         ),
                       ),
@@ -753,6 +804,12 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
                 ? '${lot.quantityAvailable} ${lot.itemRef?.unitOfMeasureDescription?.description1}'
                 : 'N/A',
             Iconsax.dollar_circle,
+            isCompact,
+          ),
+          _buildDetailItem(
+            'Days Left: ',
+            calculateDaysUntilExpiry(lot.dateExpiration!).toString(),
+            Iconsax.clock,
             isCompact,
           ),
           _buildDetailItem(
@@ -972,7 +1029,7 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
     );
   }
 
-  Widget _buildExpirationWarning(DateTime expirationDate) {
+  Widget _buildExpirationWarning(DateTime expirationDate, int threshold) {
     final now = DateTime.now();
     final daysUntilExpiry = expirationDate.difference(now).inDays;
 
@@ -984,7 +1041,10 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
       text = 'EXPIRED ${(daysUntilExpiry * -1)} days ago';
     } else if (daysUntilExpiry <= 7) {
       color = Colors.orange;
-      text = 'Expires in $daysUntilExpiry days';
+      text = 'Expires in $daysUntilExpiry days (Urgent)';
+    } else if (daysUntilExpiry <= threshold) {
+      color = Colors.orange;
+      text = 'Expires in $daysUntilExpiry days (Warning)';
     } else {
       color = Colors.blue;
       text = 'Expires: ${_formatDate(expirationDate)}';
@@ -1017,5 +1077,12 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
 
   String _formatDate(DateTime date) {
     return '${date.month}/${date.day}/${date.year}';
+  }
+
+  int calculateDaysUntilExpiry(DateTime? expirationDate) {
+    if (expirationDate == null) return 0;
+    final now = DateTime.now();
+    final difference = expirationDate.difference(now).inDays;
+    return difference > 0 ? difference : 0; // Only positive values
   }
 }
