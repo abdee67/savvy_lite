@@ -4,6 +4,7 @@ import 'package:meta/meta.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/credit_receipt_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/model/sales_transaction_filtering_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
@@ -554,4 +555,66 @@ class FilterCreditReceipts extends SalesOrderHeaderEvent {
   });
   @override
   List<Object?> get props => [companyId, customerId, startDate, endDate];
+}
+
+// ============================================================================
+// SALES TRANSACTION REPORT EVENTS
+// ============================================================================
+
+class LoadSalesTransactionReport extends SalesOrderHeaderEvent {
+  final int companyId;
+  final int page;
+  final int pageSize;
+  final SalesTransactionReportFilters filters;
+
+  const LoadSalesTransactionReport({
+    required this.companyId,
+    this.page = 1,
+    this.pageSize = 25,
+    this.filters = const SalesTransactionReportFilters(),
+  });
+
+  @override
+  List<Object?> get props => [companyId, page, pageSize, filters];
+}
+
+class LoadMoreSalesTransactionReport extends SalesOrderHeaderEvent {
+  const LoadMoreSalesTransactionReport();
+
+  @override
+  List<Object?> get props => [];
+}
+
+class UpdateSalesTransactionFilters extends SalesOrderHeaderEvent {
+  final SalesTransactionReportFilters filters;
+
+  const UpdateSalesTransactionFilters(this.filters);
+
+  @override
+  List<Object?> get props => [filters];
+}
+
+class ClearSalesTransactionFilters extends SalesOrderHeaderEvent {
+  const ClearSalesTransactionFilters();
+
+  @override
+  List<Object?> get props => [];
+}
+
+class ExportSalesTransactionToExcel extends SalesOrderHeaderEvent {
+  final SalesTransactionReportFilters filters;
+
+  const ExportSalesTransactionToExcel(this.filters);
+
+  @override
+  List<Object?> get props => [filters];
+}
+
+class ExportSalesTransactionToPDF extends SalesOrderHeaderEvent {
+  final SalesTransactionReportFilters filters;
+
+  const ExportSalesTransactionToPDF(this.filters);
+
+  @override
+  List<Object?> get props => [filters];
 }

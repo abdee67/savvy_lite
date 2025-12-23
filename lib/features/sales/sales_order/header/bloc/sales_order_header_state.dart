@@ -5,6 +5,8 @@ import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/credit_receipt_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/model/sales_transaction_filtering_model.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/model/sales_transaction_report_totals.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 
@@ -29,6 +31,7 @@ enum SalesOrderHeaderStatus {
   validatingItemInBranch,
   validatingLot,
   exporting,
+  loadingMore,
 }
 
 class SalesOrderHeaderState extends Equatable {
@@ -108,6 +111,18 @@ class SalesOrderHeaderState extends Equatable {
   final bool? creditReceiptSuccess;
   final String? creditReceiptError;
 
+  // Sales Transaction Report fields
+  final List<SalesOrderHeader> salesTransactionHeaders;
+  final List<SalesOrderDetail> salesTransactionDetails;
+  final SalesTransactionReportFilters salesTransactionFilters;
+  final SalesTransactionReportTotals? salesTransactionTotals;
+  final int salesTransactionPage;
+  final int salesTransactionPageSize;
+  final int salesTransactionTotalCount;
+  final int salesTransactionTotalPages;
+  final bool hasMoreSalesTransaction;
+  final String? exportSalesTransactionMessage;
+
   const SalesOrderHeaderState({
     this.status = SalesOrderHeaderStatus.initial,
     this.headers = const [],
@@ -171,6 +186,16 @@ class SalesOrderHeaderState extends Equatable {
     this.filteredCreditReceipts = const [],
     this.creditReceiptSuccess,
     this.creditReceiptError,
+    this.salesTransactionHeaders = const [],
+    this.salesTransactionDetails = const [],
+    this.salesTransactionFilters = const SalesTransactionReportFilters(),
+    this.salesTransactionTotals,
+    this.salesTransactionPage = 1,
+    this.salesTransactionPageSize = 25,
+    this.salesTransactionTotalCount = 0,
+    this.salesTransactionTotalPages = 1,
+    this.hasMoreSalesTransaction = false,
+    this.exportSalesTransactionMessage,
   });
 
   // Getters for status checks
@@ -293,6 +318,16 @@ class SalesOrderHeaderState extends Equatable {
     List<CreditReceipt>? filteredCreditReceipts,
     bool? creditReceiptSuccess,
     String? creditReceiptError,
+    List<SalesOrderHeader>? salesTransactionHeaders,
+    List<SalesOrderDetail>? salesTransactionDetails,
+    SalesTransactionReportFilters? salesTransactionFilters,
+    SalesTransactionReportTotals? salesTransactionTotals,
+    int? salesTransactionPage,
+    int? salesTransactionPageSize,
+    int? salesTransactionTotalCount,
+    int? salesTransactionTotalPages,
+    bool? hasMoreSalesTransaction,
+    String? exportSalesTransactionMessage,
   }) {
     return SalesOrderHeaderState(
       status: status ?? this.status,
@@ -361,12 +396,37 @@ class SalesOrderHeaderState extends Equatable {
           filteredCreditReceipts ?? this.filteredCreditReceipts,
       creditReceiptSuccess: creditReceiptSuccess ?? this.creditReceiptSuccess,
       creditReceiptError: creditReceiptError ?? this.creditReceiptError,
+      salesTransactionHeaders:
+          salesTransactionHeaders ?? this.salesTransactionHeaders,
+      salesTransactionDetails:
+          salesTransactionDetails ?? this.salesTransactionDetails,
+      salesTransactionFilters:
+          salesTransactionFilters ?? this.salesTransactionFilters,
+      salesTransactionTotals:
+          salesTransactionTotals ?? this.salesTransactionTotals,
+      salesTransactionPage: salesTransactionPage ?? this.salesTransactionPage,
+      salesTransactionPageSize:
+          salesTransactionPageSize ?? this.salesTransactionPageSize,
+      salesTransactionTotalCount:
+          salesTransactionTotalCount ?? this.salesTransactionTotalCount,
+      salesTransactionTotalPages:
+          salesTransactionTotalPages ?? this.salesTransactionTotalPages,
+      hasMoreSalesTransaction:
+          hasMoreSalesTransaction ?? this.hasMoreSalesTransaction,
+      exportSalesTransactionMessage:
+          exportSalesTransactionMessage ?? this.exportSalesTransactionMessage,
     );
   }
 
   // Helper methods for common state transitions
   SalesOrderHeaderState loadingState() => copyWith(
     status: SalesOrderHeaderStatus.loading,
+    error: null,
+    successmessage: null,
+  );
+
+  SalesOrderHeaderState loadingMoreState() => copyWith(
+    status: SalesOrderHeaderStatus.loadingMore,
     error: null,
     successmessage: null,
   );
@@ -487,6 +547,16 @@ class SalesOrderHeaderState extends Equatable {
     filteredCreditReceipts,
     creditReceiptSuccess,
     creditReceiptError,
+    salesTransactionHeaders,
+    salesTransactionDetails,
+    salesTransactionFilters,
+    salesTransactionTotals,
+    salesTransactionPage,
+    salesTransactionPageSize,
+    salesTransactionTotalCount,
+    salesTransactionTotalPages,
+    hasMoreSalesTransaction,
+    exportSalesTransactionMessage,
   ];
 }
 
