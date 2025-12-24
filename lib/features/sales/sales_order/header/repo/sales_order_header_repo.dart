@@ -148,11 +148,16 @@ class SalesOrderHeaderRepository {
           soh.*,
           cu.customer_name as customer_bill_to_name,
           udc.detail_code as payment_status_code ,
-          udc.description_1 as payment_instrument_description
+          udc.description_1 as payment_instrument_description,
+          pi.detail_code as payment_instrument_code,
+          pi.description_1 as payment_instrument_description,
+          ot.detail_code as order_type_code,
+          ot.description_1 as order_type_description
         FROM sales_order_header soh
         LEFT JOIN customer_table cu ON soh.customer_bill_to = cu.id
         LEFT JOIN udc_details pi ON soh.payment_instrument = pi.id
         LEFT JOIN udc_details udc ON soh.payment_status = udc.id
+        LEFT JOIN udc_details ot ON soh.order_type = ot.id
         WHERE  $where
         ORDER BY soh.id DESC
       ''';
@@ -183,11 +188,14 @@ class SalesOrderHeaderRepository {
           cu.customer_name as customer_bill_to_name,
           ps.detail_code as payment_status_code ,
           ps.description_1 as payment_status_description,
+          ot.detail_code as order_type_code,
+          ot.description_1 as order_type_description,
           pi.description_1 as payment_instrument_description,
           pi.detail_code as payment_instrument_code
         FROM sales_order_header soh
         LEFT JOIN customer_table cu ON soh.customer_bill_to = cu.id
         LEFT JOIN udc_details pi ON soh.payment_instrument = pi.id
+        LEFT JOIN udc_details ot ON soh.order_type = ot.id
         LEFT JOIN udc_details ps ON soh.payment_status = ps.id
         WHERE soh.company = ? AND soh.payment_term IS NOT NULL AND soh.payment_method = 'Credit' AND (soh.void_indicator IS NULL OR soh.void_indicator = "")
         ORDER BY soh.id DESC
@@ -735,8 +743,7 @@ class SalesOrderHeaderRepository {
   Future<List<CreditReceipt>> filterCreditReceipts({
     required int companyId,
     int? customerId,
-    DateTime? startDate,
-    DateTime? endDate,
+    String? fsNumber,
   }) async {
     final db = await _db;
 
@@ -749,14 +756,9 @@ class SalesOrderHeaderRepository {
         whereArgs.add(customerId);
       }
 
-      if (startDate != null) {
-        where += ' AND crt.date_receipt >= ?';
-        whereArgs.add(startDate.toIso8601String());
-      }
-
-      if (endDate != null) {
-        where += ' AND crt.date_receipt <= ?';
-        whereArgs.add(endDate.toIso8601String());
+      if (fsNumber != null) {
+        where += ' AND soh.fs_number = ?';
+        whereArgs.add(fsNumber);
       }
 
       final query =
@@ -796,7 +798,7 @@ class SalesOrderHeaderRepository {
       final total = result.first['total_received'] as double?;
       return total ?? 0.0;
     } catch (e) {
-      throw Exception('Failed to get total credit receipts for header: $e');
+      throw Exception('Failed to get total credit receipts: $e');
     }
   }
 
@@ -1290,6 +1292,215 @@ class SalesOrderHeaderRepository {
       };
     } catch (e) {
       throw Exception('Failed to calculate sales transaction totals: $e');
+    }
+  }
+
+  Future<List<CreditReceipt>> getCreditReceiptsReport({
+    required int companyId,
+    int? customerBillTo,
+    String? fsNumber,
+    String? sortBy,
+    int? limit,
+    int? offset,
+  }) async {
+    final db = await _db;
+
+    try {
+      String where = 'crt.company = ?';
+      List<dynamic> whereArgs = [companyId];
+
+      if (customerBillTo != null) {
+        where += ' AND soh.customer_bill_to = ?';
+        whereArgs.add(customerBillTo);
+      }
+
+      if (fsNumber != null && fsNumber.isNotEmpty) {
+        where += ' AND soh.fs_number = ?';
+        whereArgs.add(fsNumber);
+      }
+
+      String orderBy = 'soh.order_date DESC';
+      if (sortBy != null && sortBy.isNotEmpty) {
+        orderBy = sortBy;
+      }
+
+      String query =
+          '''
+        SELECT 
+          crt.*,
+          soh.fs_number as fs_number,
+          soh.amount_total as total_amount,
+          soh.customer_bill_to as customer_bill_to,
+          soh.order_date as order_date,
+          cust.customer_name as customer_bill_to_name,
+          pi.description_1 as payment_instrument_description,
+          pi.detail_code as payment_instrument_code,
+          soh.order_type as order_type,
+          ot.description_1 as order_type_description,
+          ot.detail_code as order_type_code
+        FROM credit_receipt_table crt
+        LEFT JOIN sales_order_header soh ON crt.so_header = soh.id
+        LEFT JOIN customer_table cust ON soh.customer_bill_to = cust.id
+        LEFT JOIN udc_details pi ON crt.payment_instrument = pi.id
+        LEFT JOIN udc_details ot ON soh.order_type = ot.id
+        WHERE $where
+        ORDER BY $orderBy
+      ''';
+
+      if (limit != null) {
+        query += ' LIMIT $limit';
+      }
+      if (offset != null) {
+        query += ' OFFSET $offset';
+      }
+
+      final maps = await db.rawQuery(query, whereArgs);
+      return maps.map((map) => CreditReceipt.fromMap(map)).toList();
+    } catch (e) {
+      throw Exception('Failed to get credit receipts report: $e');
+    }
+  }
+
+  // Aged Credit Receipt Report
+  Future<Map<String, dynamic>> getAgedCreditReceiptReport({
+    required int companyId,
+    int page = 1,
+    int pageSize = 20,
+    int? customerId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await _db;
+
+    try {
+      String where =
+          'soh.company = ? AND soh.amount_open <> 0.0 AND soh.payment_term IS NOT NULL';
+      List<dynamic> whereArgs = [companyId];
+
+      if (customerId != null) {
+        where += ' AND soh.customer_bill_to = ?';
+        whereArgs.add(customerId);
+      }
+
+      if (startDate != null) {
+        where += ' AND soh.order_date >= ?';
+        whereArgs.add(startDate.toIso8601String());
+      }
+
+      if (endDate != null) {
+        where += ' AND soh.order_date <= ?';
+        whereArgs.add(endDate.toIso8601String());
+      }
+
+      where += ' AND (soh.void_indicator IS NULL OR soh.void_indicator = "")';
+
+      // Count total queries
+      final countQuery =
+          'SELECT COUNT(*) as count FROM sales_order_header soh WHERE $where';
+      final countResult = await db.rawQuery(countQuery, whereArgs);
+      final totalCount = Sqflite.firstIntValue(countResult) ?? 0;
+
+      // Calculate pagination
+      final totalPages = (totalCount / pageSize).ceil();
+      final offset = (page - 1) * pageSize;
+
+      String orderBy = 'soh.id DESC';
+
+      final query =
+          '''
+        SELECT 
+          soh.*,
+          soh.fs_number as fs_number,
+          soh.amount_total as total_amount,
+          soh.customer_bill_to as customer_bill_to,
+          soh.order_date as order_date,
+          cust.customer_name as customer_bill_to_name,
+          pi.description_1 as payment_instrument_description,
+          pi.detail_code as payment_instrument_code,
+          soh.order_type as order_type,
+          ot.description_1 as order_type_description,
+          ot.detail_code as order_type_code
+        FROM credit_receipt_table crt
+        LEFT JOIN sales_order_header soh ON crt.so_header = soh.id
+        LEFT JOIN customer_table cust ON soh.customer_bill_to = cust.id
+        LEFT JOIN udc_details pi ON crt.payment_instrument = pi.id
+        LEFT JOIN udc_details ot ON soh.order_type = ot.id
+        WHERE $where
+        ORDER BY $orderBy
+        LIMIT ? OFFSET ?
+      ''';
+
+      final queryArgs = [...whereArgs, pageSize, offset];
+      final maps = await db.rawQuery(query, queryArgs);
+      final headers = maps.map((map) => SalesOrderHeader.fromMap(map)).toList();
+
+      return {
+        'headers': headers,
+        'totalCount': totalCount,
+        'totalPages': totalPages,
+        'currentPage': page,
+      };
+    } catch (e) {
+      throw Exception('Failed to get aged credit receipt report: $e');
+    }
+  }
+
+  Future<Map<String, double>> calculateAgedCreditReceiptTotals({
+    required int companyId,
+    int? customerId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await _db;
+    try {
+      String where =
+          'company = ? AND amount_open <> 0.0 AND payment_term IS NOT NULL';
+      List<dynamic> whereArgs = [companyId];
+
+      if (customerId != null) {
+        where += ' AND customer_bill_to = ?';
+        whereArgs.add(customerId);
+      }
+
+      if (startDate != null) {
+        where += ' AND order_date >= ?';
+        whereArgs.add(startDate.toIso8601String());
+      }
+
+      if (endDate != null) {
+        where += ' AND order_date <= ?';
+        whereArgs.add(endDate.toIso8601String());
+      }
+
+      where += ' AND (void_indicator IS NULL OR void_indicator = "")';
+
+      final query =
+          '''
+        SELECT 
+          SUM(amount_total) as total_amount,
+          SUM(amount_total - CASE WHEN amount_open IS NULL THEN 0 ELSE amount_open END) as total_paid,
+          SUM(CASE WHEN amount_open IS NULL THEN 0 ELSE amount_open END) as total_remaining
+        FROM sales_order_header
+        WHERE $where
+      ''';
+
+      final result = await db.rawQuery(query, whereArgs);
+
+      if (result.isNotEmpty) {
+        final row = result.first;
+        return {
+          'totalAmountprice': (row['total_amount'] as double?) ?? 0.0,
+          'paidpriceAmount': (row['total_paid'] as double?) ?? 0.0,
+          'remainingPriceAmount': (row['total_remaining'] as double?) ?? 0.0,
+        };
+      }
+      return {
+        'totalAmountprice': 0.0,
+        'paidpriceAmount': 0.0,
+        'remainingPriceAmount': 0.0,
+      };
+    } catch (e) {
+      throw Exception('Failed to calculate aged credit receipt totals: $e');
     }
   }
 }
