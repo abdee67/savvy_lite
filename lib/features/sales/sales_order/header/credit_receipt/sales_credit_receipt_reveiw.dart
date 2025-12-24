@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:intl/intl.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/utils/ui_helper.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -12,6 +13,7 @@ import 'package:savvy_stock/features/sales/sales_order/header/credit_receipt/sal
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 
 class CreditSalesReviewPage extends StatefulWidget {
   final AuthBloc authBloc;
@@ -36,6 +38,7 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
   // Detail panel state
   bool _salesOrderDetail = false;
   SalesOrderHeader? _selectedSalesOrder;
+  late final int decimalPlace;
 
   @override
   void initState() {
@@ -54,6 +57,13 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
     context.read<SalesOrderHeaderBloc>().add(
       LoadCreditSalesOrders(companyId: widget.authBloc.state.companyId!),
     );
+
+    decimalPlace = context
+        .read<SystemConstantBloc>()
+        .state
+        .systemConstants
+        .first
+        .decimalPlaces!;
   }
 
   void _setupAnimations() {
@@ -286,7 +296,7 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text('Sales Order Report'),
+        title: const Text('Credit Sales Order'),
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
         actions: [
@@ -890,14 +900,22 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
           if (salesOrder.amountTotal != null)
             _buildsalesOrderInfoItem(
               'Total Amount : ',
-              salesOrder.amountTotal?.toString() ?? 'N/A',
+              NumberFormat.currency(
+                    decimalDigits: decimalPlace,
+                    symbol: 'Birr',
+                  ).format(salesOrder.amountTotal!) ??
+                  'N/A',
               Iconsax.receipt,
               isCompact,
             ),
           if (salesOrder.amountOpen != null)
             _buildsalesOrderInfoItem(
               'Unreceived Amount : ',
-              salesOrder.amountOpen?.toString() ?? 'N/A',
+              NumberFormat.currency(
+                    decimalDigits: decimalPlace,
+                    symbol: 'Birr',
+                  ).format(salesOrder.amountOpen!) ??
+                  'N/A',
               Iconsax.receipt,
               isCompact,
             ),
@@ -908,10 +926,10 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
               Iconsax.rulerpen,
               isCompact,
             ),
-          if (salesOrder.salesType != null)
+          if (salesOrder.orderType != null)
             _buildsalesOrderInfoItem(
               'Order Type : ',
-              salesOrder.salesType?.toString() ?? 'N/A',
+              salesOrder.orderTypeRef?.description1?.toString() ?? 'N/A',
               Iconsax.receipt_edit,
               isCompact,
             ),
@@ -939,21 +957,33 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
           if (salesOrder.withholdAmount != null)
             _buildsalesOrderInfoItem(
               'Withhold Amount : ',
-              salesOrder.withholdAmount?.toString() ?? 'N/A',
+              NumberFormat.currency(
+                    decimalDigits: decimalPlace,
+                    symbol: 'Birr ',
+                  ).format(salesOrder.withholdAmount!) ??
+                  'N/A',
               Iconsax.barcode,
               isCompact,
             ),
           if (salesOrder.tax != null)
             _buildsalesOrderInfoItem(
               'Tax : ',
-              salesOrder.tax?.toString() ?? 'N/A',
+              NumberFormat.currency(
+                    decimalDigits: decimalPlace,
+                    symbol: 'Birr ',
+                  ).format(salesOrder.tax!) ??
+                  'N/A',
               Iconsax.profile_2user,
               isCompact,
             ),
           if (salesOrder.discountAmount != null)
             _buildsalesOrderInfoItem(
               'Discount : ',
-              salesOrder.discountAmount?.toString() ?? 'N/A',
+              NumberFormat.currency(
+                    decimalDigits: decimalPlace,
+                    symbol: 'Birr ',
+                  ).format(salesOrder.discountAmount!) ??
+                  'N/A',
               Iconsax.profile_circle,
               isCompact,
             ),
@@ -967,7 +997,11 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
           if (salesOrder.amountCost != null)
             _buildsalesOrderInfoItem(
               'Amount Cost : ',
-              '\$${salesOrder.amountCost}',
+              NumberFormat.currency(
+                    decimalDigits: decimalPlace,
+                    symbol: 'Birr ',
+                  ).format(salesOrder.amountCost!) ??
+                  'N/A',
               Iconsax.dollar_circle,
               isCompact,
             ),

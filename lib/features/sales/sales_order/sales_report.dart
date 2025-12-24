@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:intl/intl.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/utils/ui_helper.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -11,6 +12,7 @@ import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_h
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 
 class SalesReviewPage extends StatefulWidget {
   final AuthBloc authBloc;
@@ -35,6 +37,7 @@ class _SalesReviewPageState extends State<SalesReviewPage>
   // Detail panel state
   bool _salesOrderDetail = false;
   SalesOrderHeader? _selectedSalesOrder;
+  late int _decimalPlace;
 
   @override
   void initState() {
@@ -53,6 +56,12 @@ class _SalesReviewPageState extends State<SalesReviewPage>
     context.read<SalesOrderHeaderBloc>().add(
       LoadSalesOrderHeaders(companyId: widget.authBloc.state.companyId!),
     );
+    _decimalPlace = context
+        .read<SystemConstantBloc>()
+        .state
+        .systemConstants
+        .first
+        .decimalPlaces!;
   }
 
   void _setupAnimations() {
@@ -686,17 +695,18 @@ class _SalesReviewPageState extends State<SalesReviewPage>
                                     ),
                                     decoration: BoxDecoration(
                                       color: _getsalesOrderTypeColor(
-                                        salesOrder.salesType,
+                                        salesOrder.orderTypeRef?.description1,
                                       ),
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
                                         color: _getsalesOrderTypeBorderColor(
-                                          salesOrder.salesType,
+                                          salesOrder.orderTypeRef?.description1,
                                         ),
                                       ),
                                     ),
                                     child: Text(
-                                      salesOrder.salesType ?? 'Unknown',
+                                      salesOrder.orderTypeRef?.description1 ??
+                                          'Unknown',
                                       style: TextStyle(
                                         fontSize: 10,
                                         color: Colors.white,
@@ -895,21 +905,33 @@ class _SalesReviewPageState extends State<SalesReviewPage>
           if (salesOrder.withholdAmount != null)
             _buildsalesOrderInfoItem(
               'Withhold Amount : ',
-              salesOrder.withholdAmount?.toString() ?? 'N/A',
+              NumberFormat.currency(
+                    decimalDigits: _decimalPlace,
+                    symbol: 'Birr ',
+                  ).format(salesOrder.withholdAmount!) ??
+                  'N/A',
               Iconsax.barcode,
               isCompact,
             ),
           if (salesOrder.tax != null)
             _buildsalesOrderInfoItem(
               'Tax : ',
-              salesOrder.tax?.toString() ?? 'N/A',
+              NumberFormat.currency(
+                    decimalDigits: _decimalPlace,
+                    symbol: 'Birr ',
+                  ).format(salesOrder.tax!) ??
+                  'N/A',
               Iconsax.profile_2user,
               isCompact,
             ),
           if (salesOrder.discountAmount != null)
             _buildsalesOrderInfoItem(
               'Discount : ',
-              salesOrder.discountAmount?.toString() ?? 'N/A',
+              NumberFormat.currency(
+                    decimalDigits: _decimalPlace,
+                    symbol: 'Birr ',
+                  ).format(salesOrder.discountAmount!) ??
+                  'N/A',
               Iconsax.profile_circle,
               isCompact,
             ),
@@ -923,7 +945,11 @@ class _SalesReviewPageState extends State<SalesReviewPage>
           if (salesOrder.amountCost != null)
             _buildsalesOrderInfoItem(
               'Amount Cost : ',
-              '\$${salesOrder.amountCost}',
+              NumberFormat.currency(
+                    decimalDigits: _decimalPlace,
+                    symbol: 'Birr ',
+                  ).format(salesOrder.amountCost!) ??
+                  'N/A',
               Iconsax.dollar_circle,
               isCompact,
             ),
@@ -1065,11 +1091,11 @@ class _SalesReviewPageState extends State<SalesReviewPage>
   // Helper methods
   Color _getsalesOrderTypeColor(String? salesOrderType) {
     switch (salesOrderType) {
-      case 'A': // Adjustment
+      case 'Sales Order': // Adjustment
         return Colors.orange;
-      case 'I': // Issue
+      case 'Issue': // Issue
         return Colors.red;
-      case 'T': // Transfer
+      case 'Transfer': // Transfer
         return Colors.blue;
       default:
         return Colors.grey;
@@ -1078,11 +1104,11 @@ class _SalesReviewPageState extends State<SalesReviewPage>
 
   Color _getsalesOrderTypeBorderColor(String? salesOrderType) {
     switch (salesOrderType) {
-      case 'A': // Adjustment
+      case 'Sales Order': // Adjustment
         return Colors.orange[300]!;
-      case 'I': // Issue
+      case 'Issue': // Issue
         return Colors.red[300]!;
-      case 'T': // Transfer
+      case 'Transfer': // Transfer
         return Colors.blue[300]!;
       default:
         return Colors.grey[300]!;
