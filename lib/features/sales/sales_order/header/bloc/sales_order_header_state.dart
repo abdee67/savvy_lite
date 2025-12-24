@@ -3,6 +3,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/model/aged_credit_receipt_totals_mode.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/credit_receipt_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_transaction_filtering_model.dart';
@@ -32,6 +33,17 @@ enum SalesOrderHeaderStatus {
   validatingLot,
   exporting,
   loadingMore,
+  loadingCreditReceiptReport,
+  filteringCreditReceiptReport,
+  loadedCreditReceiptReport,
+  loadingMoreCreditReceiptReport,
+  exportCreditReceiptReportSuccess,
+
+  // Aged Credit Receipt Report
+  loadingAgedCreditReceiptReport,
+  loadedAgedCreditReceiptReport,
+  loadingMoreAgedCreditReceiptReport,
+  exportAgedCreditReceiptReportSuccess,
 }
 
 class SalesOrderHeaderState extends Equatable {
@@ -108,8 +120,16 @@ class SalesOrderHeaderState extends Equatable {
   final CreditReceipt? selectedCreditReceipt;
   final List<CreditReceipt> creditReceipts;
   final List<CreditReceipt> filteredCreditReceipts;
+
+  final SalesTransactionReportFilters creditReceiptReportFilters;
   final bool? creditReceiptSuccess;
   final String? creditReceiptError;
+  final List<CreditReceipt> creditReceiptsReport;
+  final int creditReceiptReportPage;
+  final int creditReceiptReportPageSize;
+  final int creditReceiptReportTotalCount;
+  final int creditReceiptReportTotalPages;
+  final bool hasMoreCreditReceiptReport;
 
   // Sales Transaction Report fields
   final List<SalesOrderHeader> salesTransactionHeaders;
@@ -122,6 +142,17 @@ class SalesOrderHeaderState extends Equatable {
   final int salesTransactionTotalPages;
   final bool hasMoreSalesTransaction;
   final String? exportSalesTransactionMessage;
+
+  // Aged Credit Receipt Report fields
+  final List<SalesOrderHeader> agedCreditReceiptReport;
+  final SalesTransactionReportFilters agedCreditReceiptReportFilters;
+  final AgedCreditReceiptTotals? agedCreditReceiptReportTotals;
+  final int agedCreditReceiptReportPage;
+  final int agedCreditReceiptReportPageSize;
+  final int agedCreditReceiptReportTotalCount;
+  final int agedCreditReceiptReportTotalPages;
+  final bool hasMoreAgedCreditReceiptReport;
+  final String? exportAgedCreditReceiptReportMessage;
 
   const SalesOrderHeaderState({
     this.status = SalesOrderHeaderStatus.initial,
@@ -184,6 +215,7 @@ class SalesOrderHeaderState extends Equatable {
     this.selectedCreditReceipt,
     this.creditReceipts = const [],
     this.filteredCreditReceipts = const [],
+
     this.creditReceiptSuccess,
     this.creditReceiptError,
     this.salesTransactionHeaders = const [],
@@ -196,6 +228,23 @@ class SalesOrderHeaderState extends Equatable {
     this.salesTransactionTotalPages = 1,
     this.hasMoreSalesTransaction = false,
     this.exportSalesTransactionMessage,
+    this.creditReceiptReportFilters = const SalesTransactionReportFilters(),
+    this.creditReceiptsReport = const [],
+    this.creditReceiptReportPage = 1,
+    this.creditReceiptReportPageSize = 20,
+    this.creditReceiptReportTotalCount = 0,
+    this.creditReceiptReportTotalPages = 1,
+    this.hasMoreCreditReceiptReport = false,
+
+    this.agedCreditReceiptReport = const [],
+    this.agedCreditReceiptReportFilters = const SalesTransactionReportFilters(),
+    this.agedCreditReceiptReportTotals,
+    this.agedCreditReceiptReportPage = 1,
+    this.agedCreditReceiptReportPageSize = 20,
+    this.agedCreditReceiptReportTotalCount = 0,
+    this.agedCreditReceiptReportTotalPages = 1,
+    this.hasMoreAgedCreditReceiptReport = false,
+    this.exportAgedCreditReceiptReportMessage,
   });
 
   // Getters for status checks
@@ -316,8 +365,7 @@ class SalesOrderHeaderState extends Equatable {
     CreditReceipt? selectedCreditReceipt,
     List<CreditReceipt>? creditReceipts,
     List<CreditReceipt>? filteredCreditReceipts,
-    bool? creditReceiptSuccess,
-    String? creditReceiptError,
+
     List<SalesOrderHeader>? salesTransactionHeaders,
     List<SalesOrderDetail>? salesTransactionDetails,
     SalesTransactionReportFilters? salesTransactionFilters,
@@ -328,6 +376,25 @@ class SalesOrderHeaderState extends Equatable {
     int? salesTransactionTotalPages,
     bool? hasMoreSalesTransaction,
     String? exportSalesTransactionMessage,
+    SalesTransactionReportFilters? creditReceiptReportFilters,
+    List<CreditReceipt>? creditReceiptsReport,
+    bool? creditReceiptSuccess,
+    String? creditReceiptError,
+    int? creditReceiptReportPage,
+    int? creditReceiptReportPageSize,
+    int? creditReceiptReportTotalCount,
+    int? creditReceiptReportTotalPages,
+    bool? hasMoreCreditReceiptReport,
+
+    SalesTransactionReportFilters? agedCreditReceiptReportFilters,
+    List<SalesOrderHeader>? agedCreditReceiptReport,
+    AgedCreditReceiptTotals? agedCreditReceiptReportTotals,
+    int? agedCreditReceiptReportPage,
+    int? agedCreditReceiptReportPageSize,
+    int? agedCreditReceiptReportTotalCount,
+    int? agedCreditReceiptReportTotalPages,
+    bool? hasMoreAgedCreditReceiptReport,
+    String? exportAgedCreditReceiptReportMessage,
   }) {
     return SalesOrderHeaderState(
       status: status ?? this.status,
@@ -394,6 +461,7 @@ class SalesOrderHeaderState extends Equatable {
       creditReceipts: creditReceipts ?? this.creditReceipts,
       filteredCreditReceipts:
           filteredCreditReceipts ?? this.filteredCreditReceipts,
+
       creditReceiptSuccess: creditReceiptSuccess ?? this.creditReceiptSuccess,
       creditReceiptError: creditReceiptError ?? this.creditReceiptError,
       salesTransactionHeaders:
@@ -415,6 +483,40 @@ class SalesOrderHeaderState extends Equatable {
           hasMoreSalesTransaction ?? this.hasMoreSalesTransaction,
       exportSalesTransactionMessage:
           exportSalesTransactionMessage ?? this.exportSalesTransactionMessage,
+      creditReceiptsReport: creditReceiptsReport ?? this.creditReceiptsReport,
+      creditReceiptReportFilters:
+          creditReceiptReportFilters ?? this.creditReceiptReportFilters,
+      creditReceiptReportPage:
+          creditReceiptReportPage ?? this.creditReceiptReportPage,
+      creditReceiptReportPageSize:
+          creditReceiptReportPageSize ?? this.creditReceiptReportPageSize,
+      creditReceiptReportTotalCount:
+          creditReceiptReportTotalCount ?? this.creditReceiptReportTotalCount,
+      creditReceiptReportTotalPages:
+          creditReceiptReportTotalPages ?? this.creditReceiptReportTotalPages,
+      hasMoreCreditReceiptReport:
+          hasMoreCreditReceiptReport ?? this.hasMoreCreditReceiptReport,
+
+      agedCreditReceiptReport:
+          agedCreditReceiptReport ?? this.agedCreditReceiptReport,
+      agedCreditReceiptReportFilters:
+          agedCreditReceiptReportFilters ?? this.agedCreditReceiptReportFilters,
+      agedCreditReceiptReportPage:
+          agedCreditReceiptReportPage ?? this.agedCreditReceiptReportPage,
+      agedCreditReceiptReportPageSize:
+          agedCreditReceiptReportPageSize ??
+          this.agedCreditReceiptReportPageSize,
+      agedCreditReceiptReportTotalCount:
+          agedCreditReceiptReportTotalCount ??
+          this.agedCreditReceiptReportTotalCount,
+      agedCreditReceiptReportTotalPages:
+          agedCreditReceiptReportTotalPages ??
+          this.agedCreditReceiptReportTotalPages,
+      hasMoreAgedCreditReceiptReport:
+          hasMoreAgedCreditReceiptReport ?? this.hasMoreAgedCreditReceiptReport,
+      exportAgedCreditReceiptReportMessage:
+          exportAgedCreditReceiptReportMessage ??
+          this.exportAgedCreditReceiptReportMessage,
     );
   }
 
@@ -545,8 +647,7 @@ class SalesOrderHeaderState extends Equatable {
     selectedCreditReceipt,
     creditReceipts,
     filteredCreditReceipts,
-    creditReceiptSuccess,
-    creditReceiptError,
+
     salesTransactionHeaders,
     salesTransactionDetails,
     salesTransactionFilters,
@@ -556,7 +657,26 @@ class SalesOrderHeaderState extends Equatable {
     salesTransactionTotalCount,
     salesTransactionTotalPages,
     hasMoreSalesTransaction,
+
     exportSalesTransactionMessage,
+    creditReceiptReportFilters,
+    creditReceiptSuccess,
+    creditReceiptError,
+    creditReceiptsReport,
+    creditReceiptReportPage,
+    creditReceiptReportPageSize,
+    creditReceiptReportTotalCount,
+    creditReceiptReportTotalPages,
+    hasMoreCreditReceiptReport,
+
+    agedCreditReceiptReport,
+    agedCreditReceiptReportFilters,
+    agedCreditReceiptReportPage,
+    agedCreditReceiptReportPageSize,
+    agedCreditReceiptReportTotalCount,
+    agedCreditReceiptReportTotalPages,
+    hasMoreAgedCreditReceiptReport,
+    exportAgedCreditReceiptReportMessage,
   ];
 }
 

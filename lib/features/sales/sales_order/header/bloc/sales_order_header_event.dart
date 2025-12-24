@@ -544,17 +544,21 @@ class SelectCreditReceipt extends SalesOrderHeaderEvent {
 class FilterCreditReceipts extends SalesOrderHeaderEvent {
   final int companyId;
   final int? customerId;
-  final DateTime? startDate;
-  final DateTime? endDate;
+  final String? fsNumber;
 
   const FilterCreditReceipts({
     required this.companyId,
     this.customerId,
-    this.startDate,
-    this.endDate,
+    this.fsNumber,
   });
   @override
-  List<Object?> get props => [companyId, customerId, startDate, endDate];
+  List<Object?> get props => [companyId, customerId, fsNumber];
+}
+
+class ClearCreditReceiptFilters extends SalesOrderHeaderEvent {
+  const ClearCreditReceiptFilters();
+  @override
+  List<Object?> get props => [];
 }
 
 // ============================================================================
@@ -614,6 +618,125 @@ class ExportSalesTransactionToPDF extends SalesOrderHeaderEvent {
   final SalesTransactionReportFilters filters;
 
   const ExportSalesTransactionToPDF(this.filters);
+
+  @override
+  List<Object?> get props => [filters];
+}
+
+class LoadCreditReceiptsReport extends SalesOrderHeaderEvent {
+  final int companyId;
+  final int page;
+  final int pageSize;
+  final SalesTransactionReportFilters filters;
+  final String? sortBy;
+
+  const LoadCreditReceiptsReport({
+    required this.companyId,
+    this.page = 1,
+    this.pageSize = 25,
+    this.filters = const SalesTransactionReportFilters(),
+    this.sortBy,
+  });
+
+  @override
+  List<Object?> get props => [companyId, page, pageSize, filters, sortBy];
+}
+
+class LoadMoreCreditReceiptsReport extends SalesOrderHeaderEvent {
+  const LoadMoreCreditReceiptsReport();
+
+  @override
+  List<Object?> get props => [];
+}
+
+class UpdateCreditReceiptReportFilters extends SalesOrderHeaderEvent {
+  final SalesTransactionReportFilters filters;
+
+  const UpdateCreditReceiptReportFilters(this.filters);
+
+  @override
+  List<Object?> get props => [filters];
+}
+
+class ClearCreditReceiptsReportFilters extends SalesOrderHeaderEvent {
+  const ClearCreditReceiptsReportFilters();
+
+  @override
+  List<Object?> get props => [];
+}
+
+class ExportCreditReceiptReportToExcel extends SalesOrderHeaderEvent {
+  final SalesTransactionReportFilters filters;
+
+  const ExportCreditReceiptReportToExcel(this.filters);
+
+  @override
+  List<Object?> get props => [filters];
+}
+
+class ExportCreditReceiptReportToPDF extends SalesOrderHeaderEvent {
+  final SalesTransactionReportFilters filters;
+
+  const ExportCreditReceiptReportToPDF(this.filters);
+
+  @override
+  List<Object?> get props => [filters];
+}
+
+// Aged Credit Receipt Report Events
+class LoadAgedCreditReceiptReport extends SalesOrderHeaderEvent {
+  final int companyId;
+  final int page;
+  final int pageSize;
+  final SalesTransactionReportFilters filters;
+
+  const LoadAgedCreditReceiptReport({
+    required this.companyId,
+    this.page = 1,
+    this.pageSize = 25,
+    this.filters = const SalesTransactionReportFilters(),
+  });
+
+  @override
+  List<Object?> get props => [companyId, page, pageSize, filters];
+}
+
+class LoadMoreAgedCreditReceiptReport extends SalesOrderHeaderEvent {
+  const LoadMoreAgedCreditReceiptReport();
+
+  @override
+  List<Object?> get props => [];
+}
+
+class UpdateAgedCreditReceiptReportFilters extends SalesOrderHeaderEvent {
+  final SalesTransactionReportFilters filters;
+
+  const UpdateAgedCreditReceiptReportFilters(this.filters);
+
+  @override
+  List<Object?> get props => [filters];
+}
+
+class ClearAgedCreditReceiptReportFilters extends SalesOrderHeaderEvent {
+  const ClearAgedCreditReceiptReportFilters();
+
+  @override
+  List<Object?> get props => [];
+}
+
+class ExportAgedCreditReceiptReportToExcel extends SalesOrderHeaderEvent {
+  final SalesTransactionReportFilters filters;
+
+  const ExportAgedCreditReceiptReportToExcel(this.filters);
+
+  @override
+  List<Object?> get props => [filters];
+}
+
+class ExportAgedCreditReceiptReportToPDF extends SalesOrderHeaderEvent {
+  final SalesTransactionReportFilters filters;
+
+  const ExportAgedCreditReceiptReportToPDF(this.filters);
 
   @override
   List<Object?> get props => [filters];

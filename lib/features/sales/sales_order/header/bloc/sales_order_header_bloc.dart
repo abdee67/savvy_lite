@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/model/aged_credit_receipt_totals_mode.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/credit_receipt_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_transaction_filtering_model.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
@@ -139,6 +140,13 @@ class SalesOrderHeaderBloc
     on<DeleteCreditReceipt>(_onDeleteCreditReceipt);
     on<SelectCreditReceipt>(_onSelectCreditReceipt);
     on<FilterCreditReceipts>(_onFilterCreditReceipts);
+    on<ClearCreditReceiptFilters>(_onClearCreditReceiptFilters);
+    on<LoadMoreCreditReceiptsReport>(_onLoadMoreCreditReceiptsReport);
+    on<UpdateCreditReceiptReportFilters>(_onUpdateCreditReceiptReportFilters);
+    on<ClearCreditReceiptsReportFilters>(_onClearCreditReceiptsReportFilters);
+    on<ExportCreditReceiptReportToExcel>(_onExportCreditReceiptReportToExcel);
+    on<ExportCreditReceiptReportToPDF>(_onExportCreditReceiptReportToPDF);
+    on<LoadCreditReceiptsReport>(_onLoadCreditReceiptsReport);
 
     // Sales Transaction Report
     on<LoadSalesTransactionReport>(_onLoadSalesTransactionReport);
@@ -147,6 +155,14 @@ class SalesOrderHeaderBloc
     on<ClearSalesTransactionFilters>(_onClearSalesTransactionFilters);
     on<ExportSalesTransactionToExcel>(_onExportSalesTransactionToExcel);
     on<ExportSalesTransactionToPDF>(_onExportSalesTransactionToPDF);
+
+    // Aged Credit Receipt Report
+    on<LoadAgedCreditReceiptReport>(_onLoadAgedCreditReceiptReport);
+    on<LoadMoreAgedCreditReceiptReport>(_onLoadMoreAgedCreditReceiptReport);
+    on<UpdateAgedCreditReceiptReportFilters>(_onUpdateAgedCreditReceiptFilters);
+    on<ClearAgedCreditReceiptReportFilters>(_onClearAgedCreditReceiptFilters);
+    on<ExportAgedCreditReceiptReportToExcel>(_onExportAgedCreditReceiptToExcel);
+    on<ExportAgedCreditReceiptReportToPDF>(_onExportAgedCreditReceiptToPDF);
   }
   @override
   Future<void> close() {
@@ -1641,8 +1657,7 @@ class SalesOrderHeaderBloc
       final filteredReceipts = await repository.filterCreditReceipts(
         companyId: event.companyId,
         customerId: event.customerId,
-        startDate: event.startDate,
-        endDate: event.endDate,
+        fsNumber: event.fsNumber,
       );
 
       emit(
@@ -1653,6 +1668,26 @@ class SalesOrderHeaderBloc
       );
     } catch (e) {
       emit(state.errorState('Failed to filter credit receipts: $e'));
+    }
+  }
+
+  Future<void> _onClearCreditReceiptFilters(
+    ClearCreditReceiptFilters event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    emit(
+      state.copyWith(status: SalesOrderHeaderStatus.loadingCreditReceiptReport),
+    );
+
+    try {
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loadedCreditReceiptReport,
+          filteredCreditReceipts: [],
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to clear credit receipts filters: $e'));
     }
   }
 
@@ -2001,6 +2036,402 @@ class SalesOrderHeaderBloc
 
   Future<void> _onExportSalesTransactionToPDF(
     ExportSalesTransactionToPDF event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: SalesOrderHeaderStatus.exporting));
+
+      // TODO: Implement PDF export logic
+      // This will be similar to Excel export but generate PDF
+
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loaded,
+          exportSalesTransactionMessage: 'PDF export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loaded,
+          exportSalesTransactionMessage: 'Failed to export to PDF: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onLoadCreditReceiptsReport(
+    LoadCreditReceiptsReport event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loadingCreditReceiptReport,
+          creditReceiptReportPage: event.page,
+          creditReceiptReportFilters: event.filters,
+        ),
+      );
+
+      final int offset = (event.page - 1) * event.pageSize;
+
+      final receipts = await repository.getCreditReceiptsReport(
+        companyId: event.companyId,
+        customerBillTo: event.filters.customerId,
+        fsNumber: event.filters.fsNumber,
+        sortBy: event.sortBy,
+        limit: event.pageSize,
+        offset: offset,
+      );
+
+      // Post-processing logic (Same as before but on the fetched page)
+      // Group by Sales Order Header
+      final Map<int, List<CreditReceipt>> groupedReceipts = {};
+      for (var receipt in receipts) {
+        if (receipt.soHeaderRef?.id != null) {
+          if (!groupedReceipts.containsKey(receipt.soHeaderRef!.id)) {
+            groupedReceipts[receipt.soHeaderRef!.id!] = [];
+          }
+          groupedReceipts[receipt.soHeaderRef!.id]!.add(receipt);
+        }
+      }
+
+      final List<CreditReceipt> processedReceipts = [];
+
+      groupedReceipts.forEach((soId, soReceipts) {
+        // Sort by date receipt (Ascending for calculation?)
+        // Java code sorts retrieving by DESC, then in memory compares by DateReceipt.
+        // Assuming DateReceipt is comparable.
+        soReceipts.sort((a, b) {
+          final aDate = a.dateReceipt ?? DateTime(0);
+          final bDate = b.dateReceipt ?? DateTime(0);
+          return aDate.compareTo(bDate);
+        });
+
+        // Calculate Remaining Values
+        // remaining starts at SO Amount Total
+        double remaining = soReceipts.isNotEmpty
+            ? (soReceipts.first.soHeaderRef?.amountTotal ?? 0.0)
+            : 0.0;
+
+        for (var receipt in soReceipts) {
+          remaining -= (receipt.receiptAmount ?? 0.0);
+          receipt.setRemainingValues(remaining);
+          processedReceipts.add(receipt);
+        }
+      });
+      processedReceipts.sort(
+        (a, b) => (b.dateReceipt ?? DateTime(0)).compareTo(
+          a.dateReceipt ?? DateTime(0),
+        ),
+      );
+
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loadedCreditReceiptReport,
+          creditReceiptsReport: processedReceipts,
+          hasMoreCreditReceiptReport: receipts.length == event.pageSize,
+          creditReceiptReportTotalCount: 0, // Should fetch count if needed
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load credit receipts report: $e'));
+    }
+  }
+
+  Future<void> _onLoadMoreCreditReceiptsReport(
+    LoadMoreCreditReceiptsReport event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    if (state.hasMoreCreditReceiptReport &&
+        state.status != SalesOrderHeaderStatus.loadingMoreCreditReceiptReport) {
+      final nextPage = state.creditReceiptReportPage + 1;
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loadingMoreCreditReceiptReport,
+        ),
+      );
+
+      // Trigger load for next page. But wait, reusing _onLoad replaces the list.
+      // I need to append.
+      // So I should implement the logic here, or make _onLoad handle appending (if I passed a flag).
+      // Standard pattern: Separate handler or helper.
+      // I will implement helper logic here.
+
+      try {
+        final int offset = (nextPage - 1) * state.creditReceiptReportPageSize;
+        final receipts = await repository.getCreditReceiptsReport(
+          companyId: state.companyId ?? 1, // Default or generic
+          customerBillTo: state.creditReceiptReportFilters.customerId,
+          fsNumber: state.creditReceiptReportFilters.fsNumber,
+          limit: state.creditReceiptReportPageSize,
+          offset: offset,
+        );
+
+        // Process newly fetched receipts
+        // Note: Remaining value calculation is PER PAGE here as per logic discussion.
+        final Map<int, List<CreditReceipt>> groupedReceipts = {};
+        for (var receipt in receipts) {
+          if (receipt.soHeaderRef?.id != null) {
+            if (!groupedReceipts.containsKey(receipt.soHeaderRef!.id)) {
+              groupedReceipts[receipt.soHeaderRef!.id!] = [];
+            }
+            groupedReceipts[receipt.soHeaderRef!.id]!.add(receipt);
+          }
+        }
+
+        final List<CreditReceipt> processedReceipts = [];
+        groupedReceipts.forEach((soId, soReceipts) {
+          soReceipts.sort(
+            (a, b) => (a.dateReceipt ?? DateTime(0)).compareTo(
+              b.dateReceipt ?? DateTime(0),
+            ),
+          );
+          double remaining = soReceipts.isNotEmpty
+              ? (soReceipts.first.soHeaderRef?.amountTotal ?? 0.0)
+              : 0.0;
+          for (var receipt in soReceipts) {
+            remaining -= (receipt.receiptAmount ?? 0.0);
+            receipt.setRemainingValues(remaining);
+            processedReceipts.add(receipt);
+          }
+        });
+        processedReceipts.sort(
+          (a, b) => (b.dateReceipt ?? DateTime(0)).compareTo(
+            a.dateReceipt ?? DateTime(0),
+          ),
+        );
+
+        emit(
+          state.copyWith(
+            status: SalesOrderHeaderStatus.loadedCreditReceiptReport,
+            creditReceiptsReport: List.of(state.creditReceiptsReport)
+              ..addAll(processedReceipts),
+            creditReceiptReportPage: nextPage,
+            hasMoreCreditReceiptReport:
+                receipts.length == state.creditReceiptReportPageSize,
+          ),
+        );
+      } catch (e) {
+        emit(state.errorState('Failed to load more credit receipts: $e'));
+      }
+    }
+  }
+
+  Future<void> _onUpdateCreditReceiptReportFilters(
+    UpdateCreditReceiptReportFilters event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    emit(state.copyWith(creditReceiptReportFilters: event.filters));
+    add(
+      LoadCreditReceiptsReport(
+        companyId: state.companyId ?? 1,
+        filters: event.filters,
+        page: 1,
+        pageSize: state.creditReceiptReportPageSize,
+      ),
+    );
+  }
+
+  Future<void> _onClearCreditReceiptsReportFilters(
+    ClearCreditReceiptsReportFilters event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        creditReceiptReportFilters: const SalesTransactionReportFilters(),
+      ),
+    );
+    add(
+      LoadCreditReceiptsReport(
+        companyId: state.companyId ?? 1,
+        filters: const SalesTransactionReportFilters(),
+        page: 1,
+        pageSize: state.creditReceiptReportPageSize,
+      ),
+    );
+  }
+
+  Future<void> _onExportCreditReceiptReportToExcel(
+    ExportCreditReceiptReportToExcel event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    // Placeholder for export logic
+    emit(state.successState('Export to Excel not implemented yet'));
+  }
+
+  Future<void> _onExportCreditReceiptReportToPDF(
+    ExportCreditReceiptReportToPDF event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    // Placeholder for export logic
+    emit(state.successState('Export to PDF not implemented yet'));
+  }
+  // ============================================================================
+  // Aged Credit Receipt REPORT EVENT HANDLERS
+  // ============================================================================
+
+  Future<void> _onLoadAgedCreditReceiptReport(
+    LoadAgedCreditReceiptReport event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loadingAgedCreditReceiptReport,
+        ),
+      );
+
+      // Fetch paginated data based on filter view type
+      final result = await repository.getAgedCreditReceiptReport(
+        companyId: event.companyId,
+        page: event.page,
+        pageSize: event.pageSize,
+        customerId: event.filters.customerId,
+        startDate: event.filters.dateFrom,
+        endDate: event.filters.dateTo,
+      );
+
+      // Calculate totals
+      final totalsResult = await repository.calculateAgedCreditReceiptTotals(
+        companyId: event.companyId,
+        customerId: event.filters.customerId,
+        startDate: event.filters.dateFrom,
+        endDate: event.filters.dateTo,
+      );
+
+      final totals = AgedCreditReceiptTotals(
+        totalAmountprice: totalsResult['totalAmountprice'] as double,
+        paidpriceAmount: totalsResult['paidpriceAmount'] as double,
+        remainingPriceAmount: totalsResult['remainingPriceAmount'] as double,
+        totalCount:
+            totalsResult['totalCount'] as int? ??
+            0, // Adjusted as repo calc doesn't return count, but report result does
+        currentPage: result['currentPage'] as int,
+        totalPages: result['totalPages'] as int,
+      );
+
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loadedAgedCreditReceiptReport,
+          agedCreditReceiptReport: result['headers'] as List<SalesOrderHeader>,
+          agedCreditReceiptReportFilters: event.filters,
+          agedCreditReceiptReportTotals: totals,
+          agedCreditReceiptReportPage: result['currentPage'] as int,
+          agedCreditReceiptReportPageSize: event.pageSize,
+          agedCreditReceiptReportTotalCount: result['totalCount'] as int,
+          agedCreditReceiptReportTotalPages: result['totalPages'] as int,
+          hasMoreAgedCreditReceiptReport:
+              (result['currentPage'] as int) < (result['totalPages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load aged credit receipt report: $e'));
+    }
+  }
+
+  Future<void> _onLoadMoreAgedCreditReceiptReport(
+    LoadMoreAgedCreditReceiptReport event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    if (!state.hasMoreAgedCreditReceiptReport) return;
+
+    try {
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loadingMoreAgedCreditReceiptReport,
+        ),
+      );
+      final nextPage = state.agedCreditReceiptReportPage + 1;
+      final filters = state.agedCreditReceiptReportFilters;
+
+      // Fetch next page
+      final result = await repository.getAgedCreditReceiptReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: nextPage,
+        pageSize: state.agedCreditReceiptReportPageSize,
+        customerId: filters.customerId,
+        startDate: filters.dateFrom,
+        endDate: filters.dateTo,
+      );
+
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loadedAgedCreditReceiptReport,
+          agedCreditReceiptReport: [
+            ...state.agedCreditReceiptReport,
+            ...(result['headers'] as List<SalesOrderHeader>),
+          ],
+          agedCreditReceiptReportPage: result['currentPage'] as int,
+          hasMoreAgedCreditReceiptReport:
+              (result['currentPage'] as int) < (result['totalPages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load more aged credit receipts: $e'));
+    }
+  }
+
+  Future<void> _onUpdateAgedCreditReceiptFilters(
+    UpdateAgedCreditReceiptReportFilters event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    // Reload data with new filters
+    add(
+      LoadAgedCreditReceiptReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.agedCreditReceiptReportPageSize,
+        filters: event.filters,
+      ),
+    );
+  }
+
+  void _onClearAgedCreditReceiptFilters(
+    ClearAgedCreditReceiptReportFilters event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) {
+    // Reload with empty filters
+    add(
+      LoadAgedCreditReceiptReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.agedCreditReceiptReportPageSize,
+        filters: const SalesTransactionReportFilters(),
+      ),
+    );
+  }
+
+  Future<void> _onExportAgedCreditReceiptToExcel(
+    ExportAgedCreditReceiptReportToExcel event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: SalesOrderHeaderStatus.exporting));
+
+      // TODO: Implement Excel export logic
+      // This will be similar to _onExportTransactions but for the report data
+      // You'll need to fetch all data (not paginated) and create Excel file
+
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loaded,
+          exportSalesTransactionMessage:
+              'Excel export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loaded,
+          exportSalesTransactionMessage: 'Failed to export to Excel: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportAgedCreditReceiptToPDF(
+    ExportAgedCreditReceiptReportToPDF event,
     Emitter<SalesOrderHeaderState> emit,
   ) async {
     try {
