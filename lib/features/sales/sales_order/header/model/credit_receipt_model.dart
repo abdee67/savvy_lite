@@ -1,3 +1,4 @@
+import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
@@ -27,6 +28,7 @@ class CreditReceipt {
     this.tempId,
     this.soHeaderRef,
     this.paymentInstrumentRef,
+    this.remainingValues,
   });
 
   factory CreditReceipt.fromMap(Map<String, dynamic> map) {
@@ -43,13 +45,29 @@ class CreditReceipt {
       dateUpdated: map['date_updated'] != null
           ? DateTime.tryParse(map['date_updated'])
           : null,
-      soHeaderRef: map['fs_number'] != null
+      soHeaderRef: map['so_header'] != null
           ? SalesOrderHeader(
               id: map['so_header'],
               amountTotal: map['total_amount'],
-              orderNumber: map['order_number'],
               customerBillTo: map['customer_bill_to'],
+              orderDate: map['order_date'] != null
+                  ? DateTime.tryParse(map['order_date'])
+                  : null,
               fsNumber: map['fs_number'],
+              orderType: map['order_type'],
+              orderTypeRef: map['order_type_description'] != null
+                  ? UdcDetails(
+                      id: map['order_type'],
+                      detailCode: map['order_type_code'],
+                      description1: map['order_type_description'],
+                    )
+                  : null,
+              customerBillToRef: map['customer_bill_to_name'] != null
+                  ? Customer(
+                      id: map['customer_bill_to'],
+                      customerName: map['customer_bill_to_name'],
+                    )
+                  : null,
             )
           : null,
       paymentInstrumentRef: map['payment_instrument_description'] != null
@@ -87,6 +105,7 @@ class CreditReceipt {
     int? tempId,
     SalesOrderHeader? soHeaderRef,
     UdcDetails? paymentInstrumentRef,
+    double? remainingValues,
   }) {
     return CreditReceipt(
       id: id ?? this.id,
@@ -100,6 +119,12 @@ class CreditReceipt {
       tempId: tempId ?? this.tempId,
       soHeaderRef: soHeaderRef ?? this.soHeaderRef,
       paymentInstrumentRef: paymentInstrumentRef ?? this.paymentInstrumentRef,
+      remainingValues: remainingValues ?? this.remainingValues,
     );
+  }
+
+  double? remainingValues;
+  void setRemainingValues(double value) {
+    remainingValues = value;
   }
 }
