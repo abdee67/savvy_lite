@@ -36,7 +36,7 @@ import 'package:savvy_stock/features/purchase/supplier_entry/screens/supplier_in
 import 'package:savvy_stock/features/purchase/supplier_entry/screens/supplier_list.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/widget/supplier_create_edit.dart';
 import 'package:savvy_stock/features/reports/sales_report/dashboard/sales_report_dashboard.dart';
-import 'package:savvy_stock/features/reports/sales_report/sidebar/aged_sales_transaction.dart';
+import 'package:savvy_stock/features/reports/sales_report/sidebar/aged_credit_receipt_report.dart';
 import 'package:savvy_stock/features/reports/sales_report/sidebar/credit_received_report.dart';
 import 'package:savvy_stock/features/reports/sales_report/sidebar/sales_transaction_report.dart';
 import 'package:savvy_stock/features/reports/stock_report/dashboard/stock_report_dashboard.dart';
@@ -1006,7 +1006,7 @@ class AppRouter {
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: AppRoutes.creditRecievedReport,
           parentPrivilege: AppRoutes.salesReport,
-          child: CreditReceivedReport(),
+          child: CreditReceivedReport(authBloc: authBloc),
         ),
         redirect: _protectedRouteRedirect,
       ),
@@ -1016,7 +1016,7 @@ class AppRouter {
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: AppRoutes.agedCreditSalesReport,
           parentPrivilege: AppRoutes.salesReport,
-          child: AgedCreditSalesReport(authBloc: authBloc),
+          child: AgedCreditReceiptReportPage(authBloc: authBloc),
         ),
         redirect: _protectedRouteRedirect,
       ),

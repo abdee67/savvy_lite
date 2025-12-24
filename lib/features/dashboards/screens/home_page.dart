@@ -141,6 +141,7 @@ class _HomePageState extends State<HomePage> {
                         children: [
                           // Background with radial gradient
                           Container(
+                            margin: const EdgeInsets.only(bottom: 50),
                             width: double.infinity,
                             height: 167,
                             decoration: const BoxDecoration(
