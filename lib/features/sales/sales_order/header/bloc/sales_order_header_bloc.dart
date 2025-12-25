@@ -5,6 +5,7 @@ import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_
 import 'package:savvy_stock/features/sales/sales_order/header/model/aged_credit_receipt_totals_mode.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/credit_receipt_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_transaction_filtering_model.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/repo/sales_order_report_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
@@ -30,6 +31,7 @@ class SalesOrderHeaderBloc
   final EmployeeRepository employeesRepository;
   final ItemUomConversionsRepository uomConversionsRepository;
   final StockItemInBranchRepository itemInBranchRepository;
+  final SalesOrderReportRepository salesOrderReportRepository;
 
   StreamSubscription? _authSubscription;
   StreamSubscription? _systemConstantsSubscription;
@@ -46,6 +48,7 @@ class SalesOrderHeaderBloc
     required this.udcDetailRepository,
     required this.uomConversionsRepository,
     required this.itemInBranchRepository,
+    required this.salesOrderReportRepository,
   }) : super(const SalesOrderHeaderState()) {
     // Listen to authentication state
     _authSubscription = authBloc.stream.listen((authState) {
@@ -1834,7 +1837,7 @@ class SalesOrderHeaderBloc
 
       // Fetch paginated data based on filter view type
       final result = event.filters.isDetailView
-          ? await repository.getSalesTransactionDetailReport(
+          ? await salesOrderReportRepository.getSalesTransactionDetailReport(
               companyId: event.companyId,
               page: event.page,
               pageSize: event.pageSize,
@@ -1847,7 +1850,7 @@ class SalesOrderHeaderBloc
               salesType: event.filters.salesType,
               voidIndicator: event.filters.voidIndicator,
             )
-          : await repository.getSalesTransactionReport(
+          : await salesOrderReportRepository.getSalesTransactionReport(
               companyId: event.companyId,
               page: event.page,
               pageSize: event.pageSize,
@@ -1862,18 +1865,19 @@ class SalesOrderHeaderBloc
             );
 
       // Calculate totals
-      final totalsResult = await repository.calculateSalesTransactionTotals(
-        companyId: event.companyId,
-        customerId: event.filters.customerId,
-        itemId: event.filters.itemId,
-        fsNumber: event.filters.fsNumber,
-        proformaReference: event.filters.proformaReference,
-        startDate: event.filters.dateFrom,
-        endDate: event.filters.dateTo,
-        salesType: event.filters.salesType,
-        voidIndicator: event.filters.voidIndicator,
-        isDetailView: event.filters.isDetailView,
-      );
+      final totalsResult = await salesOrderReportRepository
+          .calculateSalesTransactionTotals(
+            companyId: event.companyId,
+            customerId: event.filters.customerId,
+            itemId: event.filters.itemId,
+            fsNumber: event.filters.fsNumber,
+            proformaReference: event.filters.proformaReference,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+            salesType: event.filters.salesType,
+            voidIndicator: event.filters.voidIndicator,
+            isDetailView: event.filters.isDetailView,
+          );
 
       final totals = SalesTransactionReportTotals(
         withholdTotal: totalsResult['withholdTotal'] as double,
@@ -1924,7 +1928,7 @@ class SalesOrderHeaderBloc
 
       // Fetch next page
       final result = filters.isDetailView
-          ? await repository.getSalesTransactionDetailReport(
+          ? await salesOrderReportRepository.getSalesTransactionDetailReport(
               companyId: state.companyId ?? authBloc.state.companyId!,
               page: nextPage,
               pageSize: state.salesTransactionPageSize,
@@ -1937,7 +1941,7 @@ class SalesOrderHeaderBloc
               salesType: filters.salesType,
               voidIndicator: filters.voidIndicator,
             )
-          : await repository.getSalesTransactionReport(
+          : await salesOrderReportRepository.getSalesTransactionReport(
               companyId: state.companyId ?? authBloc.state.companyId!,
               page: nextPage,
               pageSize: state.salesTransactionPageSize,
@@ -2075,7 +2079,7 @@ class SalesOrderHeaderBloc
 
       final int offset = (event.page - 1) * event.pageSize;
 
-      final receipts = await repository.getCreditReceiptsReport(
+      final receipts = await salesOrderReportRepository.getCreditReceiptsReport(
         companyId: event.companyId,
         customerBillTo: event.filters.customerId,
         fsNumber: event.filters.fsNumber,
@@ -2160,13 +2164,14 @@ class SalesOrderHeaderBloc
 
       try {
         final int offset = (nextPage - 1) * state.creditReceiptReportPageSize;
-        final receipts = await repository.getCreditReceiptsReport(
-          companyId: state.companyId ?? 1, // Default or generic
-          customerBillTo: state.creditReceiptReportFilters.customerId,
-          fsNumber: state.creditReceiptReportFilters.fsNumber,
-          limit: state.creditReceiptReportPageSize,
-          offset: offset,
-        );
+        final receipts = await salesOrderReportRepository
+            .getCreditReceiptsReport(
+              companyId: state.companyId ?? 1, // Default or generic
+              customerBillTo: state.creditReceiptReportFilters.customerId,
+              fsNumber: state.creditReceiptReportFilters.fsNumber,
+              limit: state.creditReceiptReportPageSize,
+              offset: offset,
+            );
 
         // Process newly fetched receipts
         // Note: Remaining value calculation is PER PAGE here as per logic discussion.
@@ -2283,22 +2288,24 @@ class SalesOrderHeaderBloc
       );
 
       // Fetch paginated data based on filter view type
-      final result = await repository.getAgedCreditReceiptReport(
-        companyId: event.companyId,
-        page: event.page,
-        pageSize: event.pageSize,
-        customerId: event.filters.customerId,
-        startDate: event.filters.dateFrom,
-        endDate: event.filters.dateTo,
-      );
+      final result = await salesOrderReportRepository
+          .getAgedCreditReceiptReport(
+            companyId: event.companyId,
+            page: event.page,
+            pageSize: event.pageSize,
+            customerId: event.filters.customerId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+          );
 
       // Calculate totals
-      final totalsResult = await repository.calculateAgedCreditReceiptTotals(
-        companyId: event.companyId,
-        customerId: event.filters.customerId,
-        startDate: event.filters.dateFrom,
-        endDate: event.filters.dateTo,
-      );
+      final totalsResult = await salesOrderReportRepository
+          .calculateAgedCreditReceiptTotals(
+            companyId: event.companyId,
+            customerId: event.filters.customerId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+          );
 
       final totals = AgedCreditReceiptTotals(
         totalAmountprice: totalsResult['totalAmountprice'] as double,
@@ -2346,14 +2353,15 @@ class SalesOrderHeaderBloc
       final filters = state.agedCreditReceiptReportFilters;
 
       // Fetch next page
-      final result = await repository.getAgedCreditReceiptReport(
-        companyId: state.companyId ?? authBloc.state.companyId!,
-        page: nextPage,
-        pageSize: state.agedCreditReceiptReportPageSize,
-        customerId: filters.customerId,
-        startDate: filters.dateFrom,
-        endDate: filters.dateTo,
-      );
+      final result = await salesOrderReportRepository
+          .getAgedCreditReceiptReport(
+            companyId: state.companyId ?? authBloc.state.companyId!,
+            page: nextPage,
+            pageSize: state.agedCreditReceiptReportPageSize,
+            customerId: filters.customerId,
+            startDate: filters.dateFrom,
+            endDate: filters.dateTo,
+          );
 
       emit(
         state.copyWith(
