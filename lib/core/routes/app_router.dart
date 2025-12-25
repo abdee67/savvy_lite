@@ -35,6 +35,8 @@ import 'package:savvy_stock/features/purchase/supplier_entry/models/supplier_mod
 import 'package:savvy_stock/features/purchase/supplier_entry/screens/supplier_info_screen.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/screens/supplier_list.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/widget/supplier_create_edit.dart';
+import 'package:savvy_stock/features/reports/purchase_report/dashboard/purchase_report_dashboard.dart';
+import 'package:savvy_stock/features/reports/purchase_report/sidebar/purchase_transaction_report.dart';
 import 'package:savvy_stock/features/reports/sales_report/dashboard/sales_report_dashboard.dart';
 import 'package:savvy_stock/features/reports/sales_report/sidebar/aged_credit_receipt_report.dart';
 import 'package:savvy_stock/features/reports/sales_report/sidebar/credit_received_report.dart';
@@ -1000,7 +1002,7 @@ class AppRouter {
         ),
         redirect: _protectedRouteRedirect,
       ),
-      //Sales Invoice Report
+      //Credit Receipt Report
       GoRoute(
         path: AppRoutes.creditRecievedReport,
         builder: (context, state) => PrivilegeRouteGuard(
@@ -1010,13 +1012,33 @@ class AppRouter {
         ),
         redirect: _protectedRouteRedirect,
       ),
-      //Sales Invoice Report
+      //Aged Credit Sales Report
       GoRoute(
         path: AppRoutes.agedCreditSalesReport,
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: AppRoutes.agedCreditSalesReport,
           parentPrivilege: AppRoutes.salesReport,
           child: AgedCreditReceiptReportPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Purchase Report
+      GoRoute(
+        path: AppRoutes.purchaseReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.purchaseReport,
+          parentPrivilege: AppRoutes.reportDashboard,
+          child: PurchaseReportDashboard(),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Purchase Transaction Report
+      GoRoute(
+        path: AppRoutes.purchaseTransactionReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.purchaseTransactionReport,
+          parentPrivilege: AppRoutes.purchaseReport,
+          child: PurchaseTransactionReportPage(authBloc: authBloc),
         ),
         redirect: _protectedRouteRedirect,
       ),

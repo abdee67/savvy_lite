@@ -677,7 +677,7 @@ class PrivilegeSeeder {
       _createPrivilege(
         'Purchase Transaction',
         'link',
-        AppRoutes.salesTransactionReport,
+        AppRoutes.purchaseTransactionReport,
         'purchase_trnasaction_report',
       ),
       _createPrivilege(

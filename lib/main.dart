@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_report_repo.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_repository.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/services/purchase_order_stock_service.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/blocs/supplier_bloc.dart';
@@ -14,6 +15,7 @@ import 'package:savvy_stock/features/purchase/supplier_entry/repo/supplier_repo.
 import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
 import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_bloc.dart';
 import 'package:savvy_stock/features/sales/quotation_order/repo/quotation_order_repo.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/repo/sales_order_report_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/detail/bloc/invoice_detail_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/detail/repo/invoice_detail_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/header/bloc/invoice_header_bloc.dart';
@@ -94,7 +96,7 @@ Future<void> _initializeAndRunApp() async {
   try {
     await ConnectivityService().initConnectivity();
     initDependencies();
-    // await LocalDatabaseService().resetDatabase();
+    //ppawait LocalDatabaseService().resetDatabase();
     // await LocalDatabaseService().debugTable('branch_table');
 
     if (AppConfig.isTestMode) {
@@ -193,6 +195,8 @@ class _SavvyStockState extends State<SavvyStock> {
   late SupplierRepository _supplierRepository;
   late PurchaseOrderStockService _purchaseStockService;
   late PurchaseOrderRepository _purchaseOrderRepository;
+  late PurchaseOrderReportRepository _purchaseOrderReportRepository;
+  late SalesOrderReportRepository _salesOrderReportRepository;
 
   @override
   void initState() {
@@ -243,6 +247,8 @@ class _SavvyStockState extends State<SavvyStock> {
     _supplierRepository = getIt<SupplierRepository>();
     _purchaseOrderRepository = getIt<PurchaseOrderRepository>();
     _purchaseStockService = getIt<PurchaseOrderStockService>();
+    _purchaseOrderReportRepository = getIt<PurchaseOrderReportRepository>();
+    _salesOrderReportRepository = getIt<SalesOrderReportRepository>();
     // Ensure system constants are loaded when companyId becomes available.
     final cid = _authBloc.state.companyId;
     if (cid != null) {
@@ -485,6 +491,7 @@ class _SavvyStockState extends State<SavvyStock> {
               systemConstantBloc: _systemConstantBloc,
               uomConversionsRepository: _itemUomConversionRepository,
               itemInBranchRepository: _stockItemInBranchRepository,
+              salesOrderReportRepository: _salesOrderReportRepository,
             ),
           ),
           BlocProvider<SalesOrderDetailBloc>(
@@ -573,6 +580,7 @@ class _SavvyStockState extends State<SavvyStock> {
               supplierRepository: _supplierRepository,
               nextNumberRepository: _nextNumberRepository,
               stockService: _purchaseStockService,
+              purchaseOrderReportRepository: _purchaseOrderReportRepository,
             ),
           ),
         ],

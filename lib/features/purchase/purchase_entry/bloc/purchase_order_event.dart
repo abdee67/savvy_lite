@@ -4,6 +4,7 @@ import 'package:savvy_stock/features/purchase/purchase_entry/models/credit_payme
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_report_filter_model.dart';
 import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 
 abstract class PurchaseOrderEvent extends Equatable {
@@ -1125,4 +1126,47 @@ class FilterCreditPayments extends PurchaseOrderEvent {
     this.endDate,
     this.referenceNumber,
   });
+}
+// ============================================================================
+// PURCHASE ORDER REPORT EVENTS
+// ============================================================================
+
+class LoadPurchaseTransactionReport extends PurchaseOrderEvent {
+  final int companyId;
+  final int page;
+  final int pageSize;
+  final PurchaseReportFilters filters;
+
+  const LoadPurchaseTransactionReport({
+    required this.companyId,
+    this.page = 1,
+    this.pageSize = 25,
+    this.filters = const PurchaseReportFilters(),
+  });
+}
+
+class LoadMorePurchaseTransactionReport extends PurchaseOrderEvent {
+  const LoadMorePurchaseTransactionReport();
+}
+
+class UpdatePurchaseTransactionReportFilters extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const UpdatePurchaseTransactionReportFilters(this.filters);
+}
+
+class ClearPurchaseTransactionReportFilters extends PurchaseOrderEvent {
+  const ClearPurchaseTransactionReportFilters();
+}
+
+class ExportPurchaseTransactionReportToExcel extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const ExportPurchaseTransactionReportToExcel(this.filters);
+}
+
+class ExportPurchaseTransactionReportToPDF extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const ExportPurchaseTransactionReportToPDF(this.filters);
 }

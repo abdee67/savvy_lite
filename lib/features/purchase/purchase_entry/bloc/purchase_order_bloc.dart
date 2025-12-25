@@ -10,6 +10,9 @@ import 'package:savvy_stock/features/purchase/purchase_entry/models/credit_payme
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_report_filter_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_transaction_totals_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_report_repo.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_repository.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/services/purchase_order_stock_service.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/repo/supplier_repo.dart';
@@ -28,6 +31,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
   final UdcRepository udcRepository;
   final NextNumberRepository nextNumberRepository;
   final PurchaseOrderStockService stockService;
+  final PurchaseOrderReportRepository purchaseOrderReportRepository;
 
   StreamSubscription? _authSubscription;
   StreamSubscription? _systemConstantSubscription;
@@ -42,6 +46,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     required this.udcRepository,
     required this.nextNumberRepository,
     required this.stockService,
+    required this.purchaseOrderReportRepository,
   }) : super(const PurchaseOrderState()) {
     _authSubscription = authBloc.stream.listen((authState) {
       if (authState.isAuthenticated && authState.companyId != null) {
@@ -157,6 +162,20 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     on<DeleteCreditPayment>(_onDeleteCreditPayment);
     on<SelectCreditPayment>(_onSelectCreditPayment);
     on<FilterCreditPayments>(_onFilterCreditPayments);
+
+    //Purchase Transaction Report
+    on<LoadPurchaseTransactionReport>(_onLoadPurchaseTransactionReport);
+    on<LoadMorePurchaseTransactionReport>(_onLoadMorePurchaseTransactionReport);
+    on<UpdatePurchaseTransactionReportFilters>(
+      _onUpdatePurchaseTransactionFilters,
+    );
+    on<ClearPurchaseTransactionReportFilters>(
+      _onClearPurchaseTransactionFilters,
+    );
+    on<ExportPurchaseTransactionReportToExcel>(
+      _onExportPurchaseTransactionToExcel,
+    );
+    on<ExportPurchaseTransactionReportToPDF>(_onExportPurchaseTransactionToPDF);
   }
 
   @override
@@ -2787,6 +2806,204 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       );
     } catch (e) {
       emit(state.errorState('Failed to filter credit payments: $e'));
+    }
+  }
+
+  // ============================================================================
+  // PURCHASE TRANSACTION REPORT EVENT HANDLERS
+  // ============================================================================
+
+  Future<void> _onLoadPurchaseTransactionReport(
+    LoadPurchaseTransactionReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: PurchaseOrderStatus.loading));
+
+      // Fetch paginated data based on filter view type
+      final result = await purchaseOrderReportRepository
+          .getPurchaseTransactionReport(
+            companyId: event.companyId,
+            page: event.page,
+            pageSize: event.pageSize,
+            supplierId: event.filters.supplierId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+            purchaseType: event.filters.purchaseType,
+          );
+
+      // Calculate totals
+      final totalsResult = await purchaseOrderReportRepository
+          .calculatePurchaseOrderTransactionTotals(
+            companyId: event.companyId,
+            supplierId: event.filters.supplierId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+            purchaseType: event.filters.purchaseType,
+          );
+
+      final totals = PurchaseTransactionTotals(
+        totalAmountGross: totalsResult['totalAmountGross'] as double,
+        totalGrandAmountGross: totalsResult['totalGrandAmountGross'] as double,
+        totalCount: totalsResult['totalCount'] as int,
+        currentPage: result['currentPage'] as int,
+        totalPages: result['totalPages'] as int,
+      );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loaded,
+          purchaseTransactionReports:
+              result['headers'] as List<PurchaseOrderHeader>,
+          purchaseTransactionFilters: event.filters,
+          purchaseTransactionTotals: totals,
+          purchaseTransactionPage: result['currentPage'] as int,
+          purchaseTransactionPageSize: event.pageSize,
+          purchaseTransactionTotalCount: result['totalCount'] as int,
+          purchaseTransactionTotalPages: result['totalPages'] as int,
+          hasMorePurchaseTransaction:
+              (result['currentPage'] as int) < (result['totalPages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load sales transaction report: $e'));
+    }
+  }
+
+  Future<void> _onLoadMorePurchaseTransactionReport(
+    LoadMorePurchaseTransactionReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    if (!state.hasMorePurchaseTransaction) return;
+
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadingMorePurchaseTransactionReport,
+        ),
+      );
+      final nextPage = state.purchaseTransactionPage + 1;
+      final filters = state.purchaseTransactionFilters;
+
+      // Fetch next page
+      final result = await purchaseOrderReportRepository
+          .getPurchaseTransactionReport(
+            companyId: state.companyId ?? authBloc.state.companyId!,
+            page: nextPage,
+            pageSize: state.purchaseTransactionPageSize,
+            supplierId: filters.supplierId,
+            startDate: filters.dateFrom,
+            endDate: filters.dateTo,
+            purchaseType: filters.purchaseType,
+          );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loaded,
+          purchaseTransactionReports: [
+            ...state.purchaseTransactionReports,
+            ...(result['headers'] as List<PurchaseOrderHeader>),
+          ],
+          purchaseTransactionPage: result['currentPage'] as int,
+          hasMorePurchaseTransaction:
+              (result['currentPage'] as int) < (result['totalPages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load more transactions: $e'));
+    }
+  }
+
+  Future<void> _onUpdatePurchaseTransactionFilters(
+    UpdatePurchaseTransactionReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    // Reload data with new filters
+    add(
+      LoadPurchaseTransactionReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.purchaseTransactionPageSize,
+        filters: event.filters,
+      ),
+    );
+  }
+
+  void _onClearPurchaseTransactionFilters(
+    ClearPurchaseTransactionReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) {
+    // Reload with empty filters
+    add(
+      LoadPurchaseTransactionReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.purchaseTransactionPageSize,
+        filters: const PurchaseReportFilters(),
+      ),
+    );
+  }
+
+  Future<void> _onExportPurchaseTransactionToExcel(
+    ExportPurchaseTransactionReportToExcel event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.exportingPurchaseTransactionReport,
+        ),
+      );
+
+      // TODO: Implement Excel export logic
+      // This will be similar to _onExportTransactions but for the report data
+      // You'll need to fetch all data (not paginated) and create Excel file
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedPurchaseTransactionReport,
+          exportPurchaseTransactionMessage:
+              'Excel export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedPurchaseTransactionReport,
+          exportPurchaseTransactionMessage: 'Failed to export to Excel: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportPurchaseTransactionToPDF(
+    ExportPurchaseTransactionReportToPDF event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.exportingPurchaseTransactionReport,
+        ),
+      );
+
+      // TODO: Implement PDF export logic
+      // This will be similar to Excel export but generate PDF
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedPurchaseTransactionReport,
+          exportPurchaseTransactionMessage:
+              'PDF export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedPurchaseTransactionReport,
+          exportPurchaseTransactionMessage: 'Failed to export to PDF: $e',
+        ),
+      );
     }
   }
 

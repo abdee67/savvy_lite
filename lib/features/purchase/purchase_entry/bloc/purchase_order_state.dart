@@ -4,6 +4,8 @@ import 'package:savvy_stock/features/purchase/purchase_entry/models/credit_payme
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_report_filter_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_transaction_totals_model.dart';
 import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 
 enum PurchaseOrderStatus {
@@ -22,6 +24,15 @@ enum PurchaseOrderStatus {
   receiving,
   error,
   partialError,
+
+  //purchase transaction report
+  loadingPurchaseTransactionReport,
+  filteringPurchaseTransactionReport,
+  loadedPurchaseTransactionReport,
+  loadingMorePurchaseTransactionReport,
+  exportPurchaseTransactionReportSuccess,
+  exportPurchaseTransactionReportFailure,
+  exportingPurchaseTransactionReport,
 }
 
 class PurchaseOrderState extends Equatable {
@@ -128,6 +139,16 @@ class PurchaseOrderState extends Equatable {
   final bool? creditPaymentSuccess;
   final String? creditPaymentError;
 
+  //purchase transaction report
+  final List<PurchaseOrderHeader> purchaseTransactionReports;
+  final PurchaseReportFilters purchaseTransactionFilters;
+  final PurchaseTransactionTotals? purchaseTransactionTotals;
+  final int purchaseTransactionPage;
+  final int purchaseTransactionPageSize;
+  final int purchaseTransactionTotalCount;
+  final int purchaseTransactionTotalPages;
+  final bool hasMorePurchaseTransaction;
+  final String? exportPurchaseTransactionMessage;
   const PurchaseOrderState({
     this.status = PurchaseOrderStatus.initial,
     this.headers = const [],
@@ -206,6 +227,16 @@ class PurchaseOrderState extends Equatable {
     this.creditPayments = const [],
     this.filteredCreditPayments = const [],
     this.selectedCreditPayment,
+
+    this.purchaseTransactionReports = const [],
+    this.purchaseTransactionFilters = const PurchaseReportFilters(),
+    this.purchaseTransactionTotals,
+    this.purchaseTransactionPage = 1,
+    this.purchaseTransactionPageSize = 10,
+    this.purchaseTransactionTotalCount = 0,
+    this.purchaseTransactionTotalPages = 1,
+    this.hasMorePurchaseTransaction = false,
+    this.exportPurchaseTransactionMessage,
   });
 
   @override
@@ -287,6 +318,16 @@ class PurchaseOrderState extends Equatable {
     filteredCreditPayments,
     creditPaymentSuccess,
     creditPaymentError,
+
+    purchaseTransactionReports,
+    purchaseTransactionFilters,
+    purchaseTransactionTotals,
+    purchaseTransactionPage,
+    purchaseTransactionPageSize,
+    purchaseTransactionTotalCount,
+    purchaseTransactionTotalPages,
+    hasMorePurchaseTransaction,
+    exportPurchaseTransactionMessage,
   ];
 
   PurchaseOrderState copyWith({
@@ -368,6 +409,16 @@ class PurchaseOrderState extends Equatable {
     List<CreditPayment>? filteredCreditPayments,
     bool? creditPaymentSuccess,
     String? creditPaymentError,
+
+    List<PurchaseOrderHeader>? purchaseTransactionReports,
+    PurchaseReportFilters? purchaseTransactionFilters,
+    PurchaseTransactionTotals? purchaseTransactionTotals,
+    int? purchaseTransactionPage,
+    int? purchaseTransactionPageSize,
+    int? purchaseTransactionTotalCount,
+    int? purchaseTransactionTotalPages,
+    bool? hasMorePurchaseTransaction,
+    String? exportPurchaseTransactionMessage,
   }) {
     return PurchaseOrderState(
       status: status ?? this.status,
@@ -454,6 +505,26 @@ class PurchaseOrderState extends Equatable {
           filteredCreditPayments ?? this.filteredCreditPayments,
       creditPaymentSuccess: creditPaymentSuccess ?? this.creditPaymentSuccess,
       creditPaymentError: creditPaymentError ?? this.creditPaymentError,
+
+      purchaseTransactionReports:
+          purchaseTransactionReports ?? this.purchaseTransactionReports,
+      purchaseTransactionFilters:
+          purchaseTransactionFilters ?? this.purchaseTransactionFilters,
+      purchaseTransactionTotals:
+          purchaseTransactionTotals ?? this.purchaseTransactionTotals,
+      purchaseTransactionPage:
+          purchaseTransactionPage ?? this.purchaseTransactionPage,
+      purchaseTransactionPageSize:
+          purchaseTransactionPageSize ?? this.purchaseTransactionPageSize,
+      purchaseTransactionTotalCount:
+          purchaseTransactionTotalCount ?? this.purchaseTransactionTotalCount,
+      purchaseTransactionTotalPages:
+          purchaseTransactionTotalPages ?? this.purchaseTransactionTotalPages,
+      hasMorePurchaseTransaction:
+          hasMorePurchaseTransaction ?? this.hasMorePurchaseTransaction,
+      exportPurchaseTransactionMessage:
+          exportPurchaseTransactionMessage ??
+          this.exportPurchaseTransactionMessage,
     );
   }
 
