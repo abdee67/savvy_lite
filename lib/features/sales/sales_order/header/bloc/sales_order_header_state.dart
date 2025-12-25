@@ -501,6 +501,8 @@ class SalesOrderHeaderState extends Equatable {
           agedCreditReceiptReport ?? this.agedCreditReceiptReport,
       agedCreditReceiptReportFilters:
           agedCreditReceiptReportFilters ?? this.agedCreditReceiptReportFilters,
+      agedCreditReceiptReportTotals:
+          agedCreditReceiptReportTotals ?? this.agedCreditReceiptReportTotals,
       agedCreditReceiptReportPage:
           agedCreditReceiptReportPage ?? this.agedCreditReceiptReportPage,
       agedCreditReceiptReportPageSize:
@@ -671,6 +673,7 @@ class SalesOrderHeaderState extends Equatable {
 
     agedCreditReceiptReport,
     agedCreditReceiptReportFilters,
+    agedCreditReceiptReportTotals,
     agedCreditReceiptReportPage,
     agedCreditReceiptReportPageSize,
     agedCreditReceiptReportTotalCount,
