@@ -1404,7 +1404,7 @@ class SalesOrderHeaderRepository {
       final totalPages = (totalCount / pageSize).ceil();
       final offset = (page - 1) * pageSize;
 
-      String orderBy = 'soh.id DESC';
+      String orderBy = 'soh.order_date DESC, soh.id DESC';
 
       final query =
           '''
@@ -1419,12 +1419,15 @@ class SalesOrderHeaderRepository {
           pi.detail_code as payment_instrument_code,
           soh.order_type as order_type,
           ot.description_1 as order_type_description,
-          ot.detail_code as order_type_code
-        FROM credit_receipt_table crt
-        LEFT JOIN sales_order_header soh ON crt.so_header = soh.id
+          ot.detail_code as order_type_code,
+          emp.name_first as employee_name_first,
+          emp.name_middle as employee_name_middle,
+          emp.name_last as employee_name_last
+        FROM sales_order_header soh
         LEFT JOIN customer_table cust ON soh.customer_bill_to = cust.id
-        LEFT JOIN udc_details pi ON crt.payment_instrument = pi.id
+        LEFT JOIN udc_details pi ON soh.payment_instrument = pi.id
         LEFT JOIN udc_details ot ON soh.order_type = ot.id
+        LEFT JOIN employees emp ON soh.employees_id = emp.id
         WHERE $where
         ORDER BY $orderBy
         LIMIT ? OFFSET ?
@@ -1432,7 +1435,27 @@ class SalesOrderHeaderRepository {
 
       final queryArgs = [...whereArgs, pageSize, offset];
       final maps = await db.rawQuery(query, queryArgs);
-      final headers = maps.map((map) => SalesOrderHeader.fromMap(map)).toList();
+
+      final headers = maps.map((map) {
+        final header = SalesOrderHeader.fromMap(map);
+
+        // Calculate Aged Credit (Days) as per Java logic
+        double calculatedAgedDays = 0.0;
+        if (header.orderDate != null) {
+          double paymentTermAmount = (header.paymentTerm ?? 0).toDouble();
+          DateTime dueDate = header.orderDate!.add(
+            Duration(days: paymentTermAmount.toInt()),
+          );
+          DateTime currentDate = DateTime.now();
+
+          // Java: ChronoUnit.DAYS.between(dueDate, currentDate)
+          // Difference in days.
+          int diffDays = currentDate.difference(dueDate).inDays;
+          calculatedAgedDays = diffDays > 0 ? diffDays.toDouble() : 0.0;
+        }
+
+        return header.copyWith(agedDays: calculatedAgedDays);
+      }).toList();
 
       return {
         'headers': headers,
@@ -1445,7 +1468,7 @@ class SalesOrderHeaderRepository {
     }
   }
 
-  Future<Map<String, double>> calculateAgedCreditReceiptTotals({
+  Future<Map<String, dynamic>> calculateAgedCreditReceiptTotals({
     required int companyId,
     int? customerId,
     DateTime? startDate,
@@ -1477,6 +1500,7 @@ class SalesOrderHeaderRepository {
       final query =
           '''
         SELECT 
+          COUNT(*) as total_count,
           SUM(amount_total) as total_amount,
           SUM(amount_total - CASE WHEN amount_open IS NULL THEN 0 ELSE amount_open END) as total_paid,
           SUM(CASE WHEN amount_open IS NULL THEN 0 ELSE amount_open END) as total_remaining
@@ -1489,15 +1513,18 @@ class SalesOrderHeaderRepository {
       if (result.isNotEmpty) {
         final row = result.first;
         return {
-          'totalAmountprice': (row['total_amount'] as double?) ?? 0.0,
-          'paidpriceAmount': (row['total_paid'] as double?) ?? 0.0,
-          'remainingPriceAmount': (row['total_remaining'] as double?) ?? 0.0,
+          'totalAmountprice': (row['total_amount'] as num?)?.toDouble() ?? 0.0,
+          'paidpriceAmount': (row['total_paid'] as num?)?.toDouble() ?? 0.0,
+          'remainingPriceAmount':
+              (row['total_remaining'] as num?)?.toDouble() ?? 0.0,
+          'totalCount': (row['total_count'] as int?) ?? 0,
         };
       }
       return {
         'totalAmountprice': 0.0,
         'paidpriceAmount': 0.0,
         'remainingPriceAmount': 0.0,
+        'totalCount': 0,
       };
     } catch (e) {
       throw Exception('Failed to calculate aged credit receipt totals: $e');

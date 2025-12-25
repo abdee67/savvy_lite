@@ -45,6 +45,7 @@ class SalesOrderHeader {
   final String? customerBillToName;
   final String? paymentStatusDescription;
   final double? itemWiseGrossProfit;
+  final double? agedDays;
 
   // 🔗 Optional joined entities
   final Customer? customerBillToRef;
@@ -102,6 +103,7 @@ class SalesOrderHeader {
     this.customerBillToName,
     this.paymentStatusDescription,
     this.itemWiseGrossProfit,
+    this.agedDays,
   });
 
   factory SalesOrderHeader.fromMap(Map<String, dynamic> map) {
@@ -150,6 +152,7 @@ class SalesOrderHeader {
       customerBillToName: map['customer_bill_to_name']?.toString(),
       paymentStatusDescription: map['payment_status_description']?.toString(),
       itemWiseGrossProfit: (map['item_wise_gross_profit'] as num?)?.toDouble(),
+      agedDays: (map['aged_days'] as num?)?.toDouble(),
 
       // 👇 Handle joined fields (if joined SELECT is used)
       customerBillToRef: map['customer_bill_to_name'] != null
@@ -279,6 +282,7 @@ class SalesOrderHeader {
     UdcDetails? orderTypeRef,
     int? tempId,
     double? itemWiseGrossProfit,
+    double? agedDays,
   }) {
     return SalesOrderHeader(
       id: id ?? this.id,
@@ -325,6 +329,7 @@ class SalesOrderHeader {
       orderTypeRef: orderTypeRef ?? this.orderTypeRef,
       tempId: tempId ?? this.tempId,
       itemWiseGrossProfit: itemWiseGrossProfit ?? this.itemWiseGrossProfit,
+      agedDays: agedDays ?? this.agedDays,
     );
   }
 

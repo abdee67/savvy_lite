@@ -576,6 +576,10 @@ class _AgedCreditReceiptReportPageState
   }
 
   Widget _buildHeaderViewContent(SalesOrderHeader header, bool isCompact) {
+    // Aged Credit Calculation
+    // Aged Credit Calculation (Allocated in Repo)
+    double agedDays = header.agedDays ?? 0.0;
+
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       child: Column(
@@ -594,6 +598,22 @@ class _AgedCreditReceiptReportPageState
             'Transaction Ref',
             'FS-${header.fsNumber ?? 'N/A'}',
             Iconsax.card,
+          ),
+
+          // Added: Payment Term Display
+          _buildDetailRow(
+            'Payment Term',
+            '${header.paymentTerm ?? 0} Days',
+            Iconsax.clock,
+          ),
+
+          // Added: Aged Credit Display
+          _buildDetailRow(
+            'Aged Credit (Days)',
+            '${agedDays.toInt()} Days',
+            Iconsax.timer_1,
+            valueColor: agedDays > 0 ? Colors.red : Colors.green,
+            isBold: agedDays > 0,
           ),
 
           _buildDetailRow(
@@ -704,17 +724,21 @@ class _AgedCreditReceiptReportPageState
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildSummaryItem(
-                  'Total Amount Price',
-                  _currencyFormat.format(totals.totalAmountprice),
-                  Iconsax.money_send,
-                  Colors.green,
+                Expanded(
+                  child: _buildSummaryItem(
+                    'Total Amount Price',
+                    _currencyFormat.format(totals.totalAmountprice),
+                    Iconsax.money_send,
+                    Colors.green,
+                  ),
                 ),
-                _buildSummaryItem(
-                  'Total Paid Amount',
-                  _currencyFormat.format(totals.paidpriceAmount),
-                  Iconsax.document_text,
-                  Colors.blue,
+                Expanded(
+                  child: _buildSummaryItem(
+                    'Total Paid Amount',
+                    _currencyFormat.format(totals.paidpriceAmount),
+                    Iconsax.document_text,
+                    Colors.blue,
+                  ),
                 ),
               ],
             ),
@@ -724,17 +748,21 @@ class _AgedCreditReceiptReportPageState
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildSummaryItem(
-                  'Remaining Amount Price',
-                  _currencyFormat.format(totals.remainingPriceAmount),
-                  Iconsax.receipt_2,
-                  Colors.orange,
+                Expanded(
+                  child: _buildSummaryItem(
+                    'Remaining Amount Price',
+                    _currencyFormat.format(totals.remainingPriceAmount),
+                    Iconsax.receipt_2,
+                    Colors.orange,
+                  ),
                 ),
-                _buildSummaryItem(
-                  'Count',
-                  '${totals.totalCount}',
-                  Iconsax.document_text,
-                  Colors.purple,
+                Expanded(
+                  child: _buildSummaryItem(
+                    'Count',
+                    '${totals.totalCount}',
+                    Iconsax.document_text,
+                    Colors.purple,
+                  ),
                 ),
               ],
             ),
