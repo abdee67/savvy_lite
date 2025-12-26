@@ -1,7 +1,11 @@
 import 'package:equatable/equatable.dart';
+import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
+import 'package:savvy_stock/features/purchase/supplier_entry/models/supplier_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
 import 'package:savvy_stock/features/stock/location_entry/models/location_master_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
@@ -9,6 +13,16 @@ class PurchaseOrderReceiver extends Equatable {
   final int? id;
   final int? poDetail;
   final int? itemNumber;
+
+  static DateTime? _parseDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return null;
+    try {
+      return DateTime.parse(dateStr);
+    } catch (e) {
+      return null;
+    }
+  }
+
   final double? quantityTransaction;
   final double? unitCost;
   final double? amountExtendedCost;
@@ -33,8 +47,9 @@ class PurchaseOrderReceiver extends Equatable {
   final PurchaseOrderDetail? poDetailRef;
   final ItemEntryModel? itemNumberRef;
   final Branch? branchRecievedRef;
-  final LocationMaster? locationRef;
+  final ItemLocation? locationRef;
   final UdcDetails? unitOfMeasureRef;
+  final UserModel? userRef;
 
   const PurchaseOrderReceiver({
     this.id,
@@ -62,6 +77,7 @@ class PurchaseOrderReceiver extends Equatable {
     this.branchRecievedRef,
     this.locationRef,
     this.unitOfMeasureRef,
+    this.userRef,
     this.tempId,
     this.validCell,
   });
@@ -71,28 +87,20 @@ class PurchaseOrderReceiver extends Equatable {
       id: map['id'],
       poDetail: map['po_detail'],
       itemNumber: map['item_number'],
-      quantityTransaction: map['quantity_transaction'],
-      unitCost: map['unit_cost'],
-      amountExtendedCost: map['amount_extended_cost'],
-      quantityOpen: map['quantity_open'],
-      amountOpen: map['amount_open'],
-      quantityRecieved: map['quantity_recieved'],
-      amountReceived: map['amount_received'],
-      dateReceived: map['date_received'] != null
-          ? DateTime.parse(map['date_received'])
-          : null,
+      quantityTransaction: (map['quantity_transaction'] as num?)?.toDouble(),
+      unitCost: (map['unit_cost'] as num?)?.toDouble(),
+      amountExtendedCost: (map['amount_extended_cost'] as num?)?.toDouble(),
+      quantityOpen: (map['quantity_open'] as num?)?.toDouble(),
+      amountOpen: (map['amount_open'] as num?)?.toDouble(),
+      quantityRecieved: (map['quantity_recieved'] as num?)?.toDouble(),
+      amountReceived: (map['amount_received'] as num?)?.toDouble(),
+      dateReceived: _parseDate(map['date_received']),
       company: map['company'],
       userId: map['user_id'],
-      dateUpdated: map['date_updated'] != null
-          ? DateTime.parse(map['date_updated'])
-          : null,
+      dateUpdated: _parseDate(map['date_updated']),
       branchRecieved: map['branch_recieved'],
-      dateEffective: map['date_effective'] != null
-          ? DateTime.parse(map['date_effective'])
-          : null,
-      dateExpiration: map['date_expiration'] != null
-          ? DateTime.parse(map['date_expiration'])
-          : null,
+      dateEffective: _parseDate(map['date_effective']),
+      dateExpiration: _parseDate(map['date_expiration']),
       location: map['location'],
       unitOfMeasure: map['unit_of_measure'],
       batchNumberSupplier: map['batch_number_supplier'],
@@ -106,9 +114,28 @@ class PurchaseOrderReceiver extends Equatable {
                   ? DateTime.parse(map['date_delivery'])
                   : null,
               poReceiveStatus: map['po_receive_status'],
-              quantityTransaction: map['quantity_transaction'],
-              unitCost: map['unit_cost'],
-              amountExtendedCost: map['amount_extended_cost'],
+              quantityTransaction: (map['quantity_transaction'] as num?)
+                  ?.toDouble(),
+              unitCost: (map['unit_cost'] as num?)?.toDouble(),
+              amountExtendedCost: (map['amount_extended_cost'] as num?)
+                  ?.toDouble(),
+              batchNumberSupplier: map['batch_number_supplier'],
+              poHeader: map['po_header'],
+              poHeaderRef: map['po_header'] != null
+                  ? PurchaseOrderHeader(
+                      id: map['po_header'],
+                      supplierId: map['supplier_id'],
+                      invoiceNumber: map['invoice_number'],
+                      paymentTerm: map['payment_term'],
+                      supplierRef: map['supplier_name'] != null
+                          ? SupplierModel(
+                              id: map['supplier_id'],
+                              supplierName: map['supplier_name'],
+                            )
+                          : null,
+                      orderNumber: map['order_number'],
+                    )
+                  : null,
             )
           : null,
       itemNumberRef: map['item_description'] != null
@@ -124,10 +151,16 @@ class PurchaseOrderReceiver extends Equatable {
               description: map['branch_recieved_description'],
             )
           : null,
-      locationRef: map['location_description'] != null
-          ? LocationMaster(
+      locationRef: map['location_id'] != null
+          ? ItemLocation(
               id: map['location'],
-              locationDescription: map['location_description'],
+              location: map['location_id'],
+              locationDescription: map['location_description'] != null
+                  ? LocationMaster(
+                      id: map['location_id'],
+                      locationDescription: map['location_description'],
+                    )
+                  : null,
             )
           : null,
       unitOfMeasureRef: map['unit_of_measure_description'] != null
@@ -135,6 +168,13 @@ class PurchaseOrderReceiver extends Equatable {
               id: map['unit_of_measure'],
               description1: map['unit_of_measure_description'],
               detailCode: map['unit_of_measure_code'],
+            )
+          : null,
+      userRef: map['user_name'] != null
+          ? UserModel(
+              id: map['user_id'],
+              userName: map['user_name'],
+              password: map['password'],
             )
           : null,
     );
@@ -190,8 +230,9 @@ class PurchaseOrderReceiver extends Equatable {
     PurchaseOrderDetail? poDetailRef,
     ItemEntryModel? itemNumberRef,
     Branch? branchRecievedRef,
-    LocationMaster? locationRef,
+    ItemLocation? locationRef,
     UdcDetails? unitOfMeasureRef,
+    UserModel? userRef,
     int? tempId,
     bool? validCell,
   }) {
@@ -221,6 +262,7 @@ class PurchaseOrderReceiver extends Equatable {
       branchRecievedRef: branchRecievedRef ?? this.branchRecievedRef,
       locationRef: locationRef ?? this.locationRef,
       unitOfMeasureRef: unitOfMeasureRef ?? this.unitOfMeasureRef,
+      userRef: userRef ?? this.userRef,
       tempId: tempId ?? this.tempId,
       validCell: validCell ?? this.validCell,
     );
@@ -253,6 +295,7 @@ class PurchaseOrderReceiver extends Equatable {
     branchRecievedRef,
     locationRef,
     unitOfMeasureRef,
+    userRef,
     tempId,
     validCell,
   ];

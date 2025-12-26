@@ -1,5 +1,6 @@
 // features/purchase_order/bloc/purchase_order_state.dart
 import 'package:equatable/equatable.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/GRNtotals.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/credit_payment_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
@@ -33,6 +34,15 @@ enum PurchaseOrderStatus {
   exportPurchaseTransactionReportSuccess,
   exportPurchaseTransactionReportFailure,
   exportingPurchaseTransactionReport,
+
+  //GRN report
+  loadingGRNReport,
+  filteringGRNReport,
+  loadedGRNReport,
+  loadingMoreGRNReport,
+  exportGRNReportSuccess,
+  exportGRNReportFailure,
+  exportingGRNReport,
 }
 
 class PurchaseOrderState extends Equatable {
@@ -149,6 +159,18 @@ class PurchaseOrderState extends Equatable {
   final int purchaseTransactionTotalPages;
   final bool hasMorePurchaseTransaction;
   final String? exportPurchaseTransactionMessage;
+
+  //GRN report
+  final List<PurchaseOrderReceiver> grnReports;
+  final PurchaseReportFilters grnFilters;
+  final GRNTotals? grnTotals;
+  final int grnPage;
+  final int grnPageSize;
+  final int grnTotalCount;
+  final int grnTotalPages;
+  final bool hasMoreGRN;
+  final String? exportGRNMessage;
+
   const PurchaseOrderState({
     this.status = PurchaseOrderStatus.initial,
     this.headers = const [],
@@ -237,6 +259,16 @@ class PurchaseOrderState extends Equatable {
     this.purchaseTransactionTotalPages = 1,
     this.hasMorePurchaseTransaction = false,
     this.exportPurchaseTransactionMessage,
+
+    this.grnReports = const [],
+    this.grnFilters = const PurchaseReportFilters(),
+    this.grnTotals,
+    this.grnPage = 1,
+    this.grnPageSize = 10,
+    this.grnTotalCount = 0,
+    this.grnTotalPages = 1,
+    this.hasMoreGRN = false,
+    this.exportGRNMessage,
   });
 
   @override
@@ -328,6 +360,16 @@ class PurchaseOrderState extends Equatable {
     purchaseTransactionTotalPages,
     hasMorePurchaseTransaction,
     exportPurchaseTransactionMessage,
+
+    grnReports,
+    grnFilters,
+    grnTotals,
+    grnPage,
+    grnPageSize,
+    grnTotalCount,
+    grnTotalPages,
+    hasMoreGRN,
+    exportGRNMessage,
   ];
 
   PurchaseOrderState copyWith({
@@ -419,6 +461,16 @@ class PurchaseOrderState extends Equatable {
     int? purchaseTransactionTotalPages,
     bool? hasMorePurchaseTransaction,
     String? exportPurchaseTransactionMessage,
+
+    List<PurchaseOrderReceiver>? grnReports,
+    PurchaseReportFilters? grnFilters,
+    GRNTotals? grnTotals,
+    int? grnPage,
+    int? grnPageSize,
+    int? grnTotalCount,
+    int? grnTotalPages,
+    bool? hasMoreGRN,
+    String? exportGRNMessage,
   }) {
     return PurchaseOrderState(
       status: status ?? this.status,
@@ -525,6 +577,16 @@ class PurchaseOrderState extends Equatable {
       exportPurchaseTransactionMessage:
           exportPurchaseTransactionMessage ??
           this.exportPurchaseTransactionMessage,
+
+      grnReports: grnReports ?? this.grnReports,
+      grnFilters: grnFilters ?? this.grnFilters,
+      grnTotals: grnTotals ?? this.grnTotals,
+      grnPage: grnPage ?? this.grnPage,
+      grnPageSize: grnPageSize ?? this.grnPageSize,
+      grnTotalCount: grnTotalCount ?? this.grnTotalCount,
+      grnTotalPages: grnTotalPages ?? this.grnTotalPages,
+      hasMoreGRN: hasMoreGRN ?? this.hasMoreGRN,
+      exportGRNMessage: exportGRNMessage ?? this.exportGRNMessage,
     );
   }
 

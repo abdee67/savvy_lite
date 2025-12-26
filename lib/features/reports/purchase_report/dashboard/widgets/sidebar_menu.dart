@@ -122,17 +122,22 @@ class _SidebarMenuState extends State<SidebarMenu> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Purchase Report',
+                      'Purchase ',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
+                        overflow: TextOverflow.ellipsis,
                         color: Color(0xFF155888),
                       ),
                     ),
                     SizedBox(height: 2),
                     Text(
                       'Analytics Suite',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),

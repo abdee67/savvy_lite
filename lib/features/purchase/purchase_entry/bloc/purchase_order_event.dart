@@ -1170,3 +1170,46 @@ class ExportPurchaseTransactionReportToPDF extends PurchaseOrderEvent {
 
   const ExportPurchaseTransactionReportToPDF(this.filters);
 }
+// ============================================================================
+// GRN REPORT EVENTS
+// ============================================================================
+
+class LoadGRNReport extends PurchaseOrderEvent {
+  final int companyId;
+  final int page;
+  final int pageSize;
+  final PurchaseReportFilters filters;
+
+  const LoadGRNReport({
+    required this.companyId,
+    this.page = 1,
+    this.pageSize = 25,
+    this.filters = const PurchaseReportFilters(),
+  });
+}
+
+class LoadMoreGRNReport extends PurchaseOrderEvent {
+  const LoadMoreGRNReport();
+}
+
+class UpdateGRNReportFilters extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const UpdateGRNReportFilters(this.filters);
+}
+
+class ClearGRNReportFilters extends PurchaseOrderEvent {
+  const ClearGRNReportFilters();
+}
+
+class ExportGRNReportToExcel extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const ExportGRNReportToExcel(this.filters);
+}
+
+class ExportGRNReportToPDF extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const ExportGRNReportToPDF(this.filters);
+}

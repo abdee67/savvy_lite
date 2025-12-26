@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:sqflite/sqflite.dart';
 
 class PurchaseOrderReportRepository {
@@ -193,6 +194,217 @@ class PurchaseOrderReportRepository {
       throw Exception(
         'Failed to calculate purchase order transaction totals: $e',
       );
+    }
+  }
+
+  // ============================================================================
+  // PURCHASE ORDER RECEIVER REPORT METHODS
+  // ============================================================================
+
+  /// Get purchase order receiver report with pagination
+  Future<Map<String, dynamic>> getPurchaseOrderReceiverReport({
+    required int companyId,
+    required int page,
+    required int pageSize,
+    int? supplierId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await _db;
+
+    try {
+      final whereClauses = <String>[];
+      final whereArgs = <dynamic>[];
+
+      // Company filter using table alias 'por' for receiver table
+      whereClauses.add('por.company = ?');
+      whereArgs.add(companyId);
+
+      // Date range filter on date_received
+      if (startDate != null && endDate != null) {
+        final start = DateTime(
+          startDate.year,
+          startDate.month,
+          startDate.day,
+          0,
+          0,
+          0,
+        );
+        final end = DateTime(
+          endDate.year,
+          endDate.month,
+          endDate.day,
+          23,
+          59,
+          59,
+        );
+        whereClauses.add('por.date_received BETWEEN ? AND ?');
+        whereArgs.add(start.toIso8601String());
+        whereArgs.add(end.toIso8601String());
+      }
+
+      // Supplier filter requires join with header through detail
+      if (supplierId != null) {
+        whereClauses.add('poh.supplier_id = ?');
+        whereArgs.add(supplierId);
+      }
+
+      final whereClause = whereClauses.join(' AND ');
+
+      // Base joins needed for both count and data queries
+      // We need these joins for the WHERE clause (e.g. supplier_id is in header)
+      final baseJoins = '''
+        LEFT JOIN purchase_order_detail pod ON por.po_detail = pod.id
+        LEFT JOIN purchase_order_header poh ON pod.po_header = poh.id
+      ''';
+
+      // Get total count
+      final countQuery =
+          '''
+        SELECT COUNT(*) as count 
+        FROM purchase_order_receiver por 
+        $baseJoins
+        WHERE $whereClause
+      ''';
+
+      final countResult = await db.rawQuery(countQuery, whereArgs);
+      final totalCount = countResult.first['count'] as int;
+      final totalPages = (totalCount / pageSize).ceil();
+
+      // Get paginated data
+      final offset = (page - 1) * pageSize;
+
+      // Full query with all joins for description fields
+      final dataQuery =
+          '''
+        SELECT 
+          por.*,
+          it.item_description as item_description,
+          br.description as branch_recieved_description,
+          il.location as location,
+          lm.id as location_id,
+          lm.location_description as location_description,
+          um.description_1 as unit_of_measure_description,
+          um.detail_code as unit_of_measure_code,
+          poh.invoice_number as invoice_number,
+          poh.payment_term as payment_term,
+          poh.supplier_id as supplier_id,
+          poh.order_number as order_number,
+          poh.id as po_header,
+          sup.supplier_name as supplier_name,
+          ut.user_name as user_name,
+          ut.id as user_id
+        FROM purchase_order_receiver por
+        LEFT JOIN purchase_order_detail pod ON por.po_detail = pod.id
+        LEFT JOIN purchase_order_header poh ON pod.po_header = poh.id
+        LEFT JOIN supplier_table sup ON poh.supplier_id = sup.id
+        LEFT JOIN items_table it ON por.item_number = it.id
+        LEFT JOIN branch_table br ON por.branch_recieved = br.id
+        LEFT JOIN item_location il ON por.location = il.id
+        LEFT JOIN location_master lm ON il.location = lm.id
+        LEFT JOIN udc_details um ON por.unit_of_measure = um.id
+        LEFT JOIN user_table ut ON por.user_id = ut.id
+        WHERE $whereClause
+        ORDER BY por.date_received DESC, por.id DESC
+        LIMIT ? OFFSET ?
+      ''';
+
+      final dataResult = await db.rawQuery(dataQuery, [
+        ...whereArgs,
+        pageSize,
+        offset,
+      ]);
+
+      final receivers = dataResult
+          .map((map) => PurchaseOrderReceiver.fromMap(map))
+          .toList();
+
+      return {
+        'receivers': receivers,
+        'total_count': totalCount,
+        'current_page': page,
+        'total_pages': totalPages,
+        'page_size': pageSize,
+      };
+    } catch (e) {
+      if (e is DatabaseException) {
+        // Log the specific database error
+        print('Database Exception: ${e.toString()}');
+      }
+      print('Stack Trace: ${StackTrace.current}');
+      throw Exception('Failed to get purchase order receiver report: $e');
+    }
+  }
+
+  /// Calculate totals for purchase order receiver report
+  Future<Map<String, dynamic>> calculatePurchaseOrderReceiverTotals({
+    required int companyId,
+    int? supplierId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await _db;
+
+    try {
+      final whereClauses = <String>[];
+      final whereArgs = <dynamic>[];
+
+      whereClauses.add('por.company = ?');
+      whereArgs.add(companyId);
+
+      if (startDate != null && endDate != null) {
+        final start = DateTime(
+          startDate.year,
+          startDate.month,
+          startDate.day,
+          0,
+          0,
+          0,
+        );
+        final end = DateTime(
+          endDate.year,
+          endDate.month,
+          endDate.day,
+          23,
+          59,
+          59,
+        );
+        whereClauses.add('por.date_received BETWEEN ? AND ?');
+        whereArgs.add(start.toIso8601String());
+        whereArgs.add(end.toIso8601String());
+      }
+
+      if (supplierId != null) {
+        whereClauses.add('poh.supplier_id = ?');
+        whereArgs.add(supplierId);
+      }
+
+      final whereClause = whereClauses.join(' AND ');
+
+      final query =
+          '''
+        SELECT 
+          COUNT(*) as total_count,
+          COALESCE(SUM(por.quantity_recieved), 0.0) as total_received_quantity,
+          COALESCE(SUM(por.amount_received), 0.0) as total_received_amount
+        FROM purchase_order_receiver por
+        LEFT JOIN purchase_order_detail pod ON por.po_detail = pod.id
+        LEFT JOIN purchase_order_header poh ON pod.po_header = poh.id
+        WHERE $whereClause
+      ''';
+
+      final result = await db.rawQuery(query, whereArgs);
+      final row = result.first;
+
+      return {
+        'total_received_quantity':
+            (row['total_received_quantity'] as num?)?.toDouble() ?? 0.0,
+        'total_received_amount':
+            (row['total_received_amount'] as num?)?.toDouble() ?? 0.0,
+        'total_count': (row['total_count'] as int?) ?? 0,
+      };
+    } catch (e) {
+      throw Exception('Failed to calculate purchase order receiver totals: $e');
     }
   }
 }

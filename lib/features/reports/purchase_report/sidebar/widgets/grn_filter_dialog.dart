@@ -6,23 +6,21 @@ import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_rep
 import 'package:savvy_stock/features/purchase/supplier_entry/blocs/supplier_bloc.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/blocs/supplier_event.dart';
 
-class PurchaseTransactionFilterDialog extends StatefulWidget {
+class GRNFilterDialog extends StatefulWidget {
   final PurchaseReportFilters currentFilters;
   final AuthBloc authBloc;
 
-  const PurchaseTransactionFilterDialog({
+  const GRNFilterDialog({
     super.key,
     required this.currentFilters,
     required this.authBloc,
   });
 
   @override
-  State<PurchaseTransactionFilterDialog> createState() =>
-      _PurchaseTransactionFilterDialogState();
+  State<GRNFilterDialog> createState() => _GRNFilterDialogState();
 }
 
-class _PurchaseTransactionFilterDialogState
-    extends State<PurchaseTransactionFilterDialog> {
+class _GRNFilterDialogState extends State<GRNFilterDialog> {
   late PurchaseReportFilters _filters;
   DateTime? _dateFrom;
   DateTime? _dateTo;
@@ -87,14 +85,6 @@ class _PurchaseTransactionFilterDialogState
                   children: [
                     // Order Date Range
                     _buildDateRangeFilter(),
-                    const SizedBox(height: 16),
-
-                    // Customer Filter
-                    _buildSupplierFilter(),
-                    const SizedBox(height: 16),
-
-                    // Purchase Type
-                    _buildPurchaseTypeFilter(),
                     const SizedBox(height: 16),
                   ],
                 ),
@@ -216,81 +206,6 @@ class _PurchaseTransactionFilterDialogState
               ),
             ),
           ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSupplierFilter() {
-    final supplierState = context.watch<SupplierBloc>().state;
-    final suppliers = supplierState.suppliers;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Supplier', style: TextStyle(fontWeight: FontWeight.w500)),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<int?>(
-          initialValue: _filters.supplierId,
-          decoration: InputDecoration(
-            hintText: '-- Select One --',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 8,
-            ),
-          ),
-          items: [
-            const DropdownMenuItem<int?>(
-              value: null,
-              child: Text('-- Select One --'),
-            ),
-            ...suppliers.map((supplier) {
-              return DropdownMenuItem<int?>(
-                value: supplier.id,
-                child: Text(supplier.supplierName ?? 'Unknown'),
-              );
-            }),
-          ],
-          onChanged: (value) {
-            setState(() {
-              _filters = _filters.copyWith(supplierId: value);
-            });
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPurchaseTypeFilter() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Purchase Type',
-          style: TextStyle(fontWeight: FontWeight.w500),
-        ),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String?>(
-          initialValue: _filters.purchaseType,
-          decoration: InputDecoration(
-            hintText: '-- All --',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 8,
-            ),
-          ),
-          items: const [
-            DropdownMenuItem<String?>(value: null, child: Text('-- All --')),
-            DropdownMenuItem<String?>(value: 'Cash', child: Text('Cash')),
-            DropdownMenuItem<String?>(value: 'Credit', child: Text('Credit')),
-          ],
-          onChanged: (value) {
-            setState(() {
-              _filters = _filters.copyWith(purchaseType: value);
-            });
-          },
         ),
       ],
     );

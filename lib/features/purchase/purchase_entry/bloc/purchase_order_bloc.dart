@@ -6,6 +6,7 @@ import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/next_number/repo/next_number_repo.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_event.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_state.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/GRNtotals.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/credit_payment_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
@@ -176,6 +177,14 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       _onExportPurchaseTransactionToExcel,
     );
     on<ExportPurchaseTransactionReportToPDF>(_onExportPurchaseTransactionToPDF);
+
+    //GRN Report
+    on<LoadGRNReport>(_onLoadGRNReport);
+    on<LoadMoreGRNReport>(_onLoadMoreGRNReport);
+    on<UpdateGRNReportFilters>(_onUpdateGRNFilters);
+    on<ClearGRNReportFilters>(_onClearGRNFilters);
+    on<ExportGRNReportToExcel>(_onExportGRNToExcel);
+    on<ExportGRNReportToPDF>(_onExportGRNToPDF);
   }
 
   @override
@@ -3002,6 +3011,187 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         state.copyWith(
           status: PurchaseOrderStatus.loadedPurchaseTransactionReport,
           exportPurchaseTransactionMessage: 'Failed to export to PDF: $e',
+        ),
+      );
+    }
+  }
+
+  // ============================================================================
+  // GRN REPORT EVENT HANDLERS
+  // ============================================================================
+
+  Future<void> _onLoadGRNReport(
+    LoadGRNReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: PurchaseOrderStatus.loadingGRNReport));
+
+      // Fetch paginated data based on filter view type
+      final result = await purchaseOrderReportRepository
+          .getPurchaseOrderReceiverReport(
+            companyId: event.companyId,
+            page: event.page,
+            pageSize: event.pageSize,
+            supplierId: event.filters.supplierId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+          );
+
+      // Calculate totals
+      final totalsResult = await purchaseOrderReportRepository
+          .calculatePurchaseOrderReceiverTotals(
+            companyId: event.companyId,
+            supplierId: event.filters.supplierId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+          );
+
+      final totals = GRNTotals(
+        totalReceivedAmount: totalsResult['total_received_amount'] as double,
+        totalReceivedQuantity:
+            totalsResult['total_received_quantity'] as double,
+        totalCount: totalsResult['total_count'] as int,
+        currentPage: result['current_page'] as int,
+        totalPages: result['total_pages'] as int,
+      );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedGRNReport,
+          grnReports: result['receivers'] as List<PurchaseOrderReceiver>,
+          grnFilters: event.filters,
+          grnTotals: totals,
+          grnPage: result['current_page'] as int,
+          grnPageSize: event.pageSize,
+          grnTotalCount: result['total_count'] as int,
+          grnTotalPages: result['total_pages'] as int,
+          hasMoreGRN:
+              (result['current_page'] as int) < (result['total_pages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load GRN report: $e'));
+    }
+  }
+
+  Future<void> _onLoadMoreGRNReport(
+    LoadMoreGRNReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    if (!state.hasMoreGRN) return;
+
+    try {
+      emit(state.copyWith(status: PurchaseOrderStatus.loadingMoreGRNReport));
+      final nextPage = state.grnPage + 1;
+      final filters = state.grnFilters;
+
+      // Fetch next page
+      final result = await purchaseOrderReportRepository
+          .getPurchaseOrderReceiverReport(
+            companyId: state.companyId ?? authBloc.state.companyId!,
+            page: nextPage,
+            pageSize: state.grnPageSize,
+            supplierId: filters.supplierId,
+            startDate: filters.dateFrom,
+            endDate: filters.dateTo,
+          );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedGRNReport,
+          grnReports: [
+            ...state.grnReports,
+            ...(result['receivers'] as List<PurchaseOrderReceiver>),
+          ],
+          grnPage: result['current_page'] as int,
+          hasMoreGRN:
+              (result['current_page'] as int) < (result['total_pages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load more GRN report: $e'));
+    }
+  }
+
+  Future<void> _onUpdateGRNFilters(
+    UpdateGRNReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    // Reload data with new filters
+    add(
+      LoadGRNReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.grnPageSize,
+        filters: event.filters,
+      ),
+    );
+  }
+
+  void _onClearGRNFilters(
+    ClearGRNReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) {
+    // Reload with empty filters
+    add(
+      LoadGRNReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.grnPageSize,
+        filters: const PurchaseReportFilters(),
+      ),
+    );
+  }
+
+  Future<void> _onExportGRNToExcel(
+    ExportGRNReportToExcel event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: PurchaseOrderStatus.exportingGRNReport));
+
+      // TODO: Implement Excel export logic
+      // This will be similar to _onExportTransactions but for the report data
+      // You'll need to fetch all data (not paginated) and create Excel file
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedGRNReport,
+          exportGRNMessage: 'Excel export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedGRNReport,
+          exportGRNMessage: 'Failed to export to Excel: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportGRNToPDF(
+    ExportGRNReportToPDF event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: PurchaseOrderStatus.exportingGRNReport));
+
+      // TODO: Implement PDF export logic
+      // This will be similar to Excel export but generate PDF
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedGRNReport,
+          exportGRNMessage: 'PDF export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedGRNReport,
+          exportGRNMessage: 'Failed to export to PDF: $e',
         ),
       );
     }
