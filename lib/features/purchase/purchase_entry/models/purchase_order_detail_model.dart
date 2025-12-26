@@ -1,5 +1,6 @@
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
+import 'package:savvy_stock/features/purchase/supplier_entry/models/supplier_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
@@ -98,20 +99,27 @@ class PurchaseOrderDetail {
       tempId: map['temp_id'],
       // autoReceiptReceiver is not mapped from DB columns directly unless joined,
       // but here we are strictly removing the column mapping as requested.
-      poHeaderRef: map['order_number'] != null
+      poHeaderRef: map['po_header'] != null
           ? PurchaseOrderHeader(
               id: map['po_header'],
               orderNumber: map['order_number'],
               dateDelivery: map['date_delivery'] == null
                   ? null
-                  : DateTime.parse(map['date_delivery']),
+                  : _parseDate(map['date_delivery']),
               poReceiveStatus: map['po_receive_status'],
               dateTransaction: map['date_transaction'] == null
                   ? null
-                  : DateTime.parse(map['date_transaction']),
+                  : _parseDate(map['date_transaction']),
               invoiceNumber: map['invoice_number'],
+              paymentTerm: map['payment_term'],
               orderType: map['order_type'],
               supplierId: map['supplier_id'],
+              supplierRef: map['supplier_name'] != null
+                  ? SupplierModel(
+                      id: map['supplier_id'],
+                      supplierName: map['supplier_name'],
+                    )
+                  : null,
             )
           : null,
       poReceiveStatusRef: map['po_receive_status_description'] != null

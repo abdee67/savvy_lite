@@ -37,6 +37,7 @@ import 'package:savvy_stock/features/purchase/supplier_entry/screens/supplier_li
 import 'package:savvy_stock/features/purchase/supplier_entry/widget/supplier_create_edit.dart';
 import 'package:savvy_stock/features/reports/purchase_report/dashboard/purchase_report_dashboard.dart';
 import 'package:savvy_stock/features/reports/purchase_report/sidebar/grn_report.dart';
+import 'package:savvy_stock/features/reports/purchase_report/sidebar/pending_purchase_report.dart';
 import 'package:savvy_stock/features/reports/purchase_report/sidebar/purchase_transaction_report.dart';
 import 'package:savvy_stock/features/reports/sales_report/dashboard/sales_report_dashboard.dart';
 import 'package:savvy_stock/features/reports/sales_report/sidebar/aged_credit_receipt_report.dart';
@@ -1050,6 +1051,16 @@ class AppRouter {
           requiredPrivilege: AppRoutes.goodsReceivedNote,
           parentPrivilege: AppRoutes.purchaseReport,
           child: GRNReportPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Pending Purchase Report
+      GoRoute(
+        path: AppRoutes.pendingPurcahseReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.pendingPurcahseReport,
+          parentPrivilege: AppRoutes.purchaseReport,
+          child: PendingPurchaseReportPage(authBloc: authBloc),
         ),
         redirect: _protectedRouteRedirect,
       ),

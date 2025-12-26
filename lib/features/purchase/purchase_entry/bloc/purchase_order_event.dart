@@ -1213,3 +1213,46 @@ class ExportGRNReportToPDF extends PurchaseOrderEvent {
 
   const ExportGRNReportToPDF(this.filters);
 }
+// ============================================================================
+// PENDING PURCHASE REPORT EVENTS
+// ============================================================================
+
+class LoadPendingPurchaseReport extends PurchaseOrderEvent {
+  final int companyId;
+  final int page;
+  final int pageSize;
+  final PurchaseReportFilters filters;
+
+  const LoadPendingPurchaseReport({
+    required this.companyId,
+    this.page = 1,
+    this.pageSize = 25,
+    this.filters = const PurchaseReportFilters(),
+  });
+}
+
+class LoadMorePendingPurchaseReport extends PurchaseOrderEvent {
+  const LoadMorePendingPurchaseReport();
+}
+
+class UpdatePendingPurchaseReportFilters extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const UpdatePendingPurchaseReportFilters(this.filters);
+}
+
+class ClearPendingPurchaseReportFilters extends PurchaseOrderEvent {
+  const ClearPendingPurchaseReportFilters();
+}
+
+class ExportPendingPurchaseReportToExcel extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const ExportPendingPurchaseReportToExcel(this.filters);
+}
+
+class ExportPendingPurchaseReportToPDF extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const ExportPendingPurchaseReportToPDF(this.filters);
+}

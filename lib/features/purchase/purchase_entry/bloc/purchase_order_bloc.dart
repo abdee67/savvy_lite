@@ -8,6 +8,7 @@ import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_state.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/GRNtotals.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/credit_payment_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/pending_purchase_totals.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
@@ -185,6 +186,14 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     on<ClearGRNReportFilters>(_onClearGRNFilters);
     on<ExportGRNReportToExcel>(_onExportGRNToExcel);
     on<ExportGRNReportToPDF>(_onExportGRNToPDF);
+
+    //Pending Purchase Report
+    on<LoadPendingPurchaseReport>(_onLoadPendingPurchaseReport);
+    on<LoadMorePendingPurchaseReport>(_onLoadMorePendingPurchaseReport);
+    on<UpdatePendingPurchaseReportFilters>(_onUpdatePendingPurchaseFilters);
+    on<ClearPendingPurchaseReportFilters>(_onClearPendingPurchaseFilters);
+    on<ExportPendingPurchaseReportToExcel>(_onExportPendingPurchaseToExcel);
+    on<ExportPendingPurchaseReportToPDF>(_onExportPendingPurchaseToPDF);
   }
 
   @override
@@ -3185,6 +3194,211 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         state.copyWith(
           status: PurchaseOrderStatus.loadedGRNReport,
           exportGRNMessage: 'PDF export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedGRNReport,
+          exportGRNMessage: 'Failed to export to PDF: $e',
+        ),
+      );
+    }
+  }
+  // ============================================================================
+  // PENDING PURCHASE REPORT EVENT HANDLERS
+  // ============================================================================
+
+  Future<void> _onLoadPendingPurchaseReport(
+    LoadPendingPurchaseReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadingPendingPurchaseReport,
+        ),
+      );
+
+      // Fetch paginated data based on filter view type
+      final result = await purchaseOrderReportRepository
+          .getPendingPurchaseOrderReport(
+            companyId: event.companyId,
+            page: event.page,
+            pageSize: event.pageSize,
+            supplierId: event.filters.supplierId,
+            itemId: event.filters.itemId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+          );
+
+      // Calculate totals
+      final totalsResult = await purchaseOrderReportRepository
+          .calculatePendingPurchaseOrderTotals(
+            companyId: event.companyId,
+            supplierId: event.filters.supplierId,
+            itemId: event.filters.itemId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+          );
+
+      final totals = PendingPurchaseTotals(
+        totalRemainigQuantity:
+            (totalsResult['total_quantity_open'] as num?)?.toDouble() ?? 0.0,
+        totalTransactionQunatity:
+            (totalsResult['total_quantity_transaction'] as num?)?.toDouble() ??
+            0.0,
+        totalReceivedQuantity:
+            (totalsResult['total_quantity_recieved'] as num?)?.toDouble() ??
+            0.0,
+        totalCount: (totalsResult['total_count'] as int?) ?? 0,
+        currentPage: (result['current_page'] as int?) ?? 1,
+        totalPages: (result['total_pages'] as int?) ?? 1,
+      );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedGRNReport,
+          pendingPurchaseReports:
+              result['details'] as List<PurchaseOrderDetail>,
+          pendingPurchaseFilters: event.filters,
+          pendingPurchaseTotals: totals,
+          pendingPurchasePage: result['current_page'] as int,
+          pendingPurchasePageSize: event.pageSize,
+          pendingPurchaseTotalCount: result['total_count'] as int,
+          pendingPurchaseTotalPages: result['total_pages'] as int,
+          hasMorePendingPurchase:
+              (result['current_page'] as int) < (result['total_pages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load Pending purchase report: $e'));
+    }
+  }
+
+  Future<void> _onLoadMorePendingPurchaseReport(
+    LoadMorePendingPurchaseReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    if (!state.hasMorePendingPurchase) return;
+
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadingMorePendingPurchaseReport,
+        ),
+      );
+      final nextPage = state.pendingPurchasePage + 1;
+      final filters = state.pendingPurchaseFilters;
+
+      // Fetch next page
+      final result = await purchaseOrderReportRepository
+          .getPendingPurchaseOrderReport(
+            companyId: state.companyId ?? authBloc.state.companyId!,
+            page: nextPage,
+            pageSize: state.pendingPurchasePageSize,
+            supplierId: filters.supplierId,
+            startDate: filters.dateFrom,
+            endDate: filters.dateTo,
+          );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedPendingPurchaseReport,
+          pendingPurchaseReports: [
+            ...state.pendingPurchaseReports,
+            ...(result['details'] as List<PurchaseOrderDetail>),
+          ],
+          pendingPurchasePage: result['current_page'] as int,
+          hasMorePendingPurchase:
+              (result['current_page'] as int) < (result['total_pages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load more pending purchase report: $e'));
+    }
+  }
+
+  Future<void> _onUpdatePendingPurchaseFilters(
+    UpdatePendingPurchaseReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    // Reload data with new filters
+    add(
+      LoadPendingPurchaseReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.pendingPurchasePageSize,
+        filters: event.filters,
+      ),
+    );
+  }
+
+  void _onClearPendingPurchaseFilters(
+    ClearPendingPurchaseReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) {
+    // Reload with empty filters
+    add(
+      LoadPendingPurchaseReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.pendingPurchasePageSize,
+        filters: const PurchaseReportFilters(),
+      ),
+    );
+  }
+
+  Future<void> _onExportPendingPurchaseToExcel(
+    ExportPendingPurchaseReportToExcel event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.exportingPendingPurchaseReport,
+        ),
+      );
+
+      // TODO: Implement Excel export logic
+      // This will be similar to _onExportTransactions but for the report data
+      // You'll need to fetch all data (not paginated) and create Excel file
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedPendingPurchaseReport,
+          exportPendingPurchaseMessage:
+              'Excel export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedPendingPurchaseReport,
+          exportPendingPurchaseMessage: 'Failed to export to Excel: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportPendingPurchaseToPDF(
+    ExportPendingPurchaseReportToPDF event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.exportingPendingPurchaseReport,
+        ),
+      );
+
+      // TODO: Implement PDF export logic
+      // This will be similar to Excel export but generate PDF
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedPendingPurchaseReport,
+          exportPendingPurchaseMessage: 'PDF export functionality coming soon',
         ),
       );
     } catch (e) {

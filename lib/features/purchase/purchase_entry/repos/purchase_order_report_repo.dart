@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
 import 'package:sqflite/sqflite.dart';
 
 class PurchaseOrderReportRepository {
@@ -405,6 +406,225 @@ class PurchaseOrderReportRepository {
       };
     } catch (e) {
       throw Exception('Failed to calculate purchase order receiver totals: $e');
+    }
+  }
+
+  // ============================================================================
+  // PENDING PURCHASE ORDER REPORT METHODS
+  // ============================================================================
+
+  /// Get pending purchase order report (details with quantity open)
+  /// Equivalent to Java's getLazyPendingToReceive
+  Future<Map<String, dynamic>> getPendingPurchaseOrderReport({
+    required int companyId,
+    required int page,
+    required int pageSize,
+    int? supplierId,
+    int? itemId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await _db;
+
+    try {
+      final whereClauses = <String>[];
+      final whereArgs = <dynamic>[];
+
+      // Company filter using table alias 'pod'
+      whereClauses.add('pod.company = ?');
+      whereArgs.add(companyId);
+
+      // Quantity Open filter (Java: o.quantityOpen IS NOT NULL AND o.quantityOpen <> 0.0)
+      whereClauses.add('pod.quantity_open IS NOT NULL');
+      whereClauses.add('pod.quantity_open <> 0.0');
+
+      // Date range filter on header date_transaction
+      if (startDate != null && endDate != null) {
+        final start = DateTime(
+          startDate.year,
+          startDate.month,
+          startDate.day,
+          0,
+          0,
+          0,
+        );
+        final end = DateTime(
+          endDate.year,
+          endDate.month,
+          endDate.day,
+          23,
+          59,
+          59,
+        );
+        whereClauses.add('poh.date_transaction BETWEEN ? AND ?');
+        whereArgs.add(start.toIso8601String());
+        whereArgs.add(end.toIso8601String());
+      }
+
+      // Supplier filter (on header)
+      if (supplierId != null) {
+        whereClauses.add('poh.supplier_id = ?');
+        whereArgs.add(supplierId);
+      }
+
+      // Item filter
+      if (itemId != null) {
+        whereClauses.add('pod.item_number = ?');
+        whereArgs.add(itemId);
+      }
+
+      final whereClause = whereClauses.join(' AND ');
+
+      // Base joins
+      final baseJoins = '''
+        LEFT JOIN purchase_order_header poh ON pod.po_header = poh.id
+      ''';
+
+      // Get total count
+      final countQuery =
+          '''
+        SELECT COUNT(*) as count 
+        FROM purchase_order_detail pod 
+        $baseJoins
+        WHERE $whereClause
+      ''';
+
+      final countResult = await db.rawQuery(countQuery, whereArgs);
+      final totalCount = countResult.first['count'] as int;
+      final totalPages = (totalCount / pageSize).ceil();
+
+      // Get paginated data
+      final offset = (page - 1) * pageSize;
+
+      // Full query with all joins for description fields needed by PurchaseOrderDetail.fromMap
+      final dataQuery =
+          '''
+        SELECT 
+          pod.*,
+          it.item_description as item_description,
+          poh.order_number as order_number,
+          poh.date_transaction as date_transaction,
+          poh.invoice_number as invoice_number,
+          poh.payment_term as payment_term,
+          poh.supplier_id as supplier_id,
+          sup.supplier_name as supplier_name,
+          um.description_1 as unit_of_measure_description,
+          um.detail_code as unit_of_measure_code
+        FROM purchase_order_detail pod
+        LEFT JOIN purchase_order_header poh ON pod.po_header = poh.id
+        LEFT JOIN supplier_table sup ON poh.supplier_id = sup.id
+        LEFT JOIN items_table it ON pod.item_number = it.id
+        LEFT JOIN udc_details um ON pod.unit_of_measure = um.id
+        WHERE $whereClause
+        ORDER BY poh.date_transaction DESC, pod.id DESC
+        LIMIT ? OFFSET ?
+      ''';
+
+      final dataResult = await db.rawQuery(dataQuery, [
+        ...whereArgs,
+        pageSize,
+        offset,
+      ]);
+
+      final details = dataResult
+          .map((map) => PurchaseOrderDetail.fromMap(map))
+          .toList();
+
+      return {
+        'details': details,
+        'total_count': totalCount,
+        'current_page': page,
+        'total_pages': totalPages,
+        'page_size': pageSize,
+      };
+    } catch (e) {
+      if (e is DatabaseException) {
+        print('Database Exception: ${e.toString()}');
+      }
+      print('Stack Trace: ${StackTrace.current}');
+      throw Exception('Failed to get pending purchase order report: $e');
+    }
+  }
+
+  /// Calculate totals for pending purchase order report
+  Future<Map<String, dynamic>> calculatePendingPurchaseOrderTotals({
+    required int companyId,
+    int? supplierId,
+    int? itemId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await _db;
+
+    try {
+      final whereClauses = <String>[];
+      final whereArgs = <dynamic>[];
+
+      whereClauses.add('pod.company = ?');
+      whereArgs.add(companyId);
+
+      whereClauses.add('pod.quantity_open IS NOT NULL');
+      whereClauses.add('pod.quantity_open <> 0.0');
+
+      if (startDate != null && endDate != null) {
+        final start = DateTime(
+          startDate.year,
+          startDate.month,
+          startDate.day,
+          0,
+          0,
+          0,
+        );
+        final end = DateTime(
+          endDate.year,
+          endDate.month,
+          endDate.day,
+          23,
+          59,
+          59,
+        );
+        whereClauses.add('poh.date_transaction BETWEEN ? AND ?');
+        whereArgs.add(start.toIso8601String());
+        whereArgs.add(end.toIso8601String());
+      }
+
+      if (supplierId != null) {
+        whereClauses.add('poh.supplier_id = ?');
+        whereArgs.add(supplierId);
+      }
+
+      if (itemId != null) {
+        whereClauses.add('pod.item_number = ?');
+        whereArgs.add(itemId);
+      }
+
+      final whereClause = whereClauses.join(' AND ');
+
+      final query =
+          '''
+        SELECT 
+          COUNT(*) as total_count,
+          COALESCE(SUM(pod.quantity_open), 0.0) as total_quantity_open,
+          COALESCE(SUM(pod.quantity_transaction), 0.0) as total_quantity_transaction,
+          COALESCE(SUM(pod.quantity_recieved), 0.0) as total_quantity_recieved
+        FROM purchase_order_detail pod
+        LEFT JOIN purchase_order_header poh ON pod.po_header = poh.id
+        WHERE $whereClause
+      ''';
+
+      final result = await db.rawQuery(query, whereArgs);
+      final row = result.first;
+      return {
+        'total_quantity_open':
+            (row['total_quantity_open'] as num?)?.toDouble() ?? 0.0,
+        'total_quantity_recieved':
+            (row['total_quantity_recieved'] as num?)?.toDouble() ?? 0.0,
+        'total_count': (row['total_count'] as int?) ?? 0,
+        'total_quantity_transaction':
+            (row['total_quantity_transaction'] as num?)?.toDouble() ?? 0.0,
+      };
+    } catch (e) {
+      throw Exception('Failed to calculate pending purchase order totals: $e');
     }
   }
 }

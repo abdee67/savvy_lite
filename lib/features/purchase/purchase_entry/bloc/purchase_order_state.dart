@@ -2,6 +2,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/GRNtotals.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/credit_payment_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/pending_purchase_totals.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
@@ -43,6 +44,15 @@ enum PurchaseOrderStatus {
   exportGRNReportSuccess,
   exportGRNReportFailure,
   exportingGRNReport,
+
+  //pending purchase report
+  loadingPendingPurchaseReport,
+  filteringPendingPurchaseReport,
+  loadedPendingPurchaseReport,
+  loadingMorePendingPurchaseReport,
+  exportPendingPurchaseReportSuccess,
+  exportPendingPurchaseReportFailure,
+  exportingPendingPurchaseReport,
 }
 
 class PurchaseOrderState extends Equatable {
@@ -171,6 +181,17 @@ class PurchaseOrderState extends Equatable {
   final bool hasMoreGRN;
   final String? exportGRNMessage;
 
+  //pending purchase report
+  final List<PurchaseOrderDetail> pendingPurchaseReports;
+  final PurchaseReportFilters pendingPurchaseFilters;
+  final PendingPurchaseTotals? pendingPurchaseTotals;
+  final int pendingPurchasePage;
+  final int pendingPurchasePageSize;
+  final int pendingPurchaseTotalCount;
+  final int pendingPurchaseTotalPages;
+  final bool hasMorePendingPurchase;
+  final String? exportPendingPurchaseMessage;
+
   const PurchaseOrderState({
     this.status = PurchaseOrderStatus.initial,
     this.headers = const [],
@@ -269,6 +290,16 @@ class PurchaseOrderState extends Equatable {
     this.grnTotalPages = 1,
     this.hasMoreGRN = false,
     this.exportGRNMessage,
+
+    this.pendingPurchaseReports = const [],
+    this.pendingPurchaseFilters = const PurchaseReportFilters(),
+    this.pendingPurchaseTotals,
+    this.pendingPurchasePage = 1,
+    this.pendingPurchasePageSize = 10,
+    this.pendingPurchaseTotalCount = 0,
+    this.pendingPurchaseTotalPages = 1,
+    this.hasMorePendingPurchase = false,
+    this.exportPendingPurchaseMessage,
   });
 
   @override
@@ -370,6 +401,16 @@ class PurchaseOrderState extends Equatable {
     grnTotalPages,
     hasMoreGRN,
     exportGRNMessage,
+
+    pendingPurchaseReports,
+    pendingPurchaseFilters,
+    pendingPurchaseTotals,
+    pendingPurchasePage,
+    pendingPurchasePageSize,
+    pendingPurchaseTotalCount,
+    pendingPurchaseTotalPages,
+    hasMorePendingPurchase,
+    exportPendingPurchaseMessage,
   ];
 
   PurchaseOrderState copyWith({
@@ -471,6 +512,16 @@ class PurchaseOrderState extends Equatable {
     int? grnTotalPages,
     bool? hasMoreGRN,
     String? exportGRNMessage,
+
+    List<PurchaseOrderDetail>? pendingPurchaseReports,
+    PurchaseReportFilters? pendingPurchaseFilters,
+    PendingPurchaseTotals? pendingPurchaseTotals,
+    int? pendingPurchasePage,
+    int? pendingPurchasePageSize,
+    int? pendingPurchaseTotalCount,
+    int? pendingPurchaseTotalPages,
+    bool? hasMorePendingPurchase,
+    String? exportPendingPurchaseMessage,
   }) {
     return PurchaseOrderState(
       status: status ?? this.status,
@@ -587,6 +638,24 @@ class PurchaseOrderState extends Equatable {
       grnTotalPages: grnTotalPages ?? this.grnTotalPages,
       hasMoreGRN: hasMoreGRN ?? this.hasMoreGRN,
       exportGRNMessage: exportGRNMessage ?? this.exportGRNMessage,
+
+      pendingPurchaseReports:
+          pendingPurchaseReports ?? this.pendingPurchaseReports,
+      pendingPurchaseFilters:
+          pendingPurchaseFilters ?? this.pendingPurchaseFilters,
+      pendingPurchaseTotals:
+          pendingPurchaseTotals ?? this.pendingPurchaseTotals,
+      pendingPurchasePage: pendingPurchasePage ?? this.pendingPurchasePage,
+      pendingPurchasePageSize:
+          pendingPurchasePageSize ?? this.pendingPurchasePageSize,
+      pendingPurchaseTotalCount:
+          pendingPurchaseTotalCount ?? this.pendingPurchaseTotalCount,
+      pendingPurchaseTotalPages:
+          pendingPurchaseTotalPages ?? this.pendingPurchaseTotalPages,
+      hasMorePendingPurchase:
+          hasMorePendingPurchase ?? this.hasMorePendingPurchase,
+      exportPendingPurchaseMessage:
+          exportPendingPurchaseMessage ?? this.exportPendingPurchaseMessage,
     );
   }
 
