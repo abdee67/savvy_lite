@@ -540,12 +540,19 @@ class StockItemInBranchRepository extends BaseRepository {
     // Build base query
     var query = '''
           SELECT ib.*,
-             i.item_description, i.barcode, i.items_id,
-             b.description as branch_description, b.reference_id as branch_reference
+             i.item_description,
+             i.barcode,
+             i.items_id,
+             b.description as branch_description,
+             b.reference_id as branch_reference,
+             i.unit_of_measure,
+             umd.description_1 as unit_of_measure_description,
+             umd.detail_code as unit_of_measure_code
       FROM items_in_branch ib
       LEFT JOIN items_table i ON ib.item_number = i.id
       LEFT JOIN branch_table b ON ib.branch = b.id
-      WHERE company = ?
+      LEFT JOIN udc_details umd ON i.unit_of_measure = umd.id
+      WHERE ib.company = ?
     ''';
 
     final params = whereArgs;
