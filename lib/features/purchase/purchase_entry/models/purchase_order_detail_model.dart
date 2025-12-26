@@ -7,6 +7,16 @@ class PurchaseOrderDetail {
   final int? id;
   final int? poHeader;
   final int? itemNumber;
+
+  static DateTime? _parseDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return null;
+    try {
+      return DateTime.parse(dateStr);
+    } catch (e) {
+      return null;
+    }
+  }
+
   final int? poReceiveStatus;
   final double? quantityTransaction;
   final double? unitCost;
@@ -69,30 +79,20 @@ class PurchaseOrderDetail {
       poHeader: map['po_header'],
       itemNumber: map['item_number'],
       poReceiveStatus: map['po_receive_status'],
-      quantityTransaction: map['quantity_transaction'],
-      unitCost: map['unit_cost'],
-      amountExtendedCost: map['amount_extended_cost'],
-      quantityOpen: map['quantity_open'],
-      amountOpen: map['amount_open'],
-      quantityRecieved: map['quantity_recieved'],
-      amountReceived: map['amount_received'],
-      dateReceived: map['date_received'] == null
-          ? null
-          : DateTime.parse(map['date_received']),
-      dateDelivery: map['date_delivery'] == null
-          ? null
-          : DateTime.parse(map['date_delivery']),
+      quantityTransaction: (map['quantity_transaction'] as num?)?.toDouble(),
+      unitCost: (map['unit_cost'] as num?)?.toDouble(),
+      amountExtendedCost: (map['amount_extended_cost'] as num?)?.toDouble(),
+      quantityOpen: (map['quantity_open'] as num?)?.toDouble(),
+      amountOpen: (map['amount_open'] as num?)?.toDouble(),
+      quantityRecieved: (map['quantity_recieved'] as num?)?.toDouble(),
+      amountReceived: (map['amount_received'] as num?)?.toDouble(),
+      dateReceived: _parseDate(map['date_received']),
+      dateDelivery: _parseDate(map['date_delivery']),
       company: map['company'],
       userId: map['user_id'],
-      dateUpdated: map['date_updated'] == null
-          ? null
-          : DateTime.parse(map['date_updated']),
-      dateEffective: map['date_effective'] == null
-          ? null
-          : DateTime.parse(map['date_effective']),
-      dateExpiration: map['date_expiration'] == null
-          ? null
-          : DateTime.parse(map['date_expiration']),
+      dateUpdated: _parseDate(map['date_updated']),
+      dateEffective: _parseDate(map['date_effective']),
+      dateExpiration: _parseDate(map['date_expiration']),
       unitOfMeasure: map['unit_of_measure'],
       batchNumberSupplier: map['batch_number_supplier'],
       tempId: map['temp_id'],

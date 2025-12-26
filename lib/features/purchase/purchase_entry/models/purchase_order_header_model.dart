@@ -5,6 +5,16 @@ import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 class PurchaseOrderHeader {
   final int? id;
   final int? supplierId;
+
+  static DateTime? _parseDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return null;
+    try {
+      return DateTime.parse(dateStr);
+    } catch (e) {
+      return null;
+    }
+  }
+
   final DateTime? dateTransaction;
   final DateTime? dateDelivery;
   final int? poReceiveStatus;
@@ -73,12 +83,8 @@ class PurchaseOrderHeader {
     return PurchaseOrderHeader(
       id: map['id'],
       supplierId: map['supplier_id'],
-      dateTransaction: map['date_transaction'] == null
-          ? null
-          : DateTime.parse(map['date_transaction']),
-      dateDelivery: map['date_delivery'] == null
-          ? null
-          : DateTime.parse(map['date_delivery']),
+      dateTransaction: _parseDate(map['date_transaction']),
+      dateDelivery: _parseDate(map['date_delivery']),
       poReceiveStatus: map['po_receive_status'],
       company: map['company'],
       taxableAmount: map['taxable_amount'],
@@ -91,17 +97,13 @@ class PurchaseOrderHeader {
       paymentStatus: map['payment_status'],
       paymentInstrument: map['payment_instrument'],
       userId: map['user_id'],
-      dateUpdated: map['date_updated'] == null
-          ? null
-          : DateTime.parse(map['date_updated']),
+      dateUpdated: _parseDate(map['date_updated']),
       amountOpenCredit: map['amount_open_credit'],
       orderNumber: map['order_number'],
       paymentTerm: map['payment_term'],
       orderType: map['order_type'],
       tempId: map['temp_id'],
-      creditDueDate: map['credit_due_date'] == null
-          ? null
-          : DateTime.parse(map['credit_due_date']),
+      creditDueDate: _parseDate(map['credit_due_date']),
       invoiceNumber: map['invoice_number'],
       paymentStatusRef: map['payment_status_description'] != null
           ? UdcDetails(
