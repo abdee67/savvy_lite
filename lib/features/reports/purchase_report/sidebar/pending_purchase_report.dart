@@ -840,8 +840,9 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
     if (filters.dateFrom != null) parts.add('Start Range');
     if (filters.dateTo != null) parts.add('End Range');
     if (filters.itemId != null) parts.add('Selected item: ${filters.itemId}');
-    if (filters.supplierId != null)
+    if (filters.supplierId != null) {
       parts.add('Selected supplier: ${filters.supplierId}');
+    }
 
     return parts.isNotEmpty ? 'Active: ${parts.join(', ')}' : 'No filters';
   }

@@ -929,7 +929,7 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
           if (salesOrder.orderType != null)
             _buildsalesOrderInfoItem(
               'Order Type : ',
-              salesOrder.orderTypeRef?.description1?.toString() ?? 'N/A',
+              salesOrder.orderTypeRef?.description1.toString() ?? 'N/A',
               Iconsax.receipt_edit,
               isCompact,
             ),

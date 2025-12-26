@@ -826,8 +826,9 @@ class _PurchaseTransactionReportPageState
     if (filters.supplierId != null) parts.add('Supplier Filtered');
     if (filters.dateFrom != null) parts.add('Start Range');
     if (filters.dateTo != null) parts.add('End Range');
-    if (filters.purchaseType != null)
+    if (filters.purchaseType != null) {
       parts.add('${filters.purchaseType} Purchase Type Filtered');
+    }
 
     return parts.isNotEmpty ? 'Active: ${parts.join(', ')}' : 'No filters';
   }
