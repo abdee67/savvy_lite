@@ -148,7 +148,7 @@ class _ReorderPointReportState extends State<ReorderPointReport>
     return Scaffold(
       backgroundColor: Colors.grey,
       appBar: AppBar(
-        title: const Text('Daily Item Report'),
+        title: const Text('Reorder Point Report'),
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
         actions: [
@@ -590,16 +590,17 @@ class _ReorderPointReportState extends State<ReorderPointReport>
             Iconsax.wallet,
             isCompact,
           ),
-          _buildDetailItem(
-            'Reorder Point: ',
-            item.reorderPoint.toString(),
-            Iconsax.add_circle,
-            isCompact,
-          ),
+          if (item.reorderPoint != null)
+            _buildDetailItem(
+              'Reorder Point: ',
+              item.reorderPoint.toString(),
+              Iconsax.add_circle,
+              isCompact,
+            ),
 
           _buildDetailItem(
             'UoM : ',
-            item.itemRef?.unitOfMeasure ?? 'N/A',
+            item.itemRef?.unitOfMeasureDescription?.description1 ?? 'N/A',
             Iconsax.calculator,
             isCompact,
           ),
