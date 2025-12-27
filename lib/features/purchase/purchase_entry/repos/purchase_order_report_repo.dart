@@ -1,6 +1,7 @@
 // repositories/sales_order_header_repository.dart
 import 'dart:async';
 import 'package:savvy_stock/core/services/database/database_service.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/credit_payment_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
@@ -625,6 +626,68 @@ class PurchaseOrderReportRepository {
       };
     } catch (e) {
       throw Exception('Failed to calculate pending purchase order totals: $e');
+    }
+  }
+  // ============================================================================
+  // CREDIT RECEIPT REPORT METHODS
+  // ============================================================================
+
+  Future<List<CreditPayment>> getCreditPaymentReport({
+    required int companyId,
+    int? supplierId,
+    String? sortBy,
+    int? limit,
+    int? offset,
+  }) async {
+    final db = await _db;
+
+    try {
+      String where = 'cpt.company = ?';
+      List<dynamic> whereArgs = [companyId];
+
+      if (supplierId != null) {
+        where += ' AND poh.supplier_id = ?';
+        whereArgs.add(supplierId);
+      }
+
+      String orderBy = 'poh.date_transaction DESC';
+      if (sortBy != null && sortBy.isNotEmpty) {
+        orderBy = sortBy;
+      }
+
+      String query =
+          '''
+        SELECT 
+          cpt.*,
+          poh.amount_gross as amount_gross,
+          poh.supplier_id as supplier_id,
+        poh.date_transaction as date_transaction,
+          sup.supplier_name as supplier_name,
+          pi.description_1 as payment_instrument_description,
+          pi.detail_code as payment_instrument_code,
+          poh.order_type as order_type,
+          ot.description_1 as order_type_description,
+          ot.detail_code as order_type_code
+        FROM credit_payment_table cpt
+        LEFT JOIN purchase_order_header poh ON cpt.po_header = poh.id
+        LEFT JOIN supplier_table sup ON poh.supplier_id = sup.id
+        LEFT JOIN udc_details pi ON cpt.payment_instrument = pi.id
+        LEFT JOIN udc_details ot ON poh.order_type = ot.id
+        WHERE $where
+        ORDER BY $orderBy
+      ''';
+
+      if (limit != null) {
+        query += ' LIMIT $limit';
+      }
+      if (offset != null) {
+        query += ' OFFSET $offset';
+      }
+
+      final maps = await db.rawQuery(query, whereArgs);
+      return maps.map((map) => CreditPayment.fromMap(map)).toList();
+    } catch (e) {
+      throw Exception('Failed to get credit payment report: $e');
     }
   }
 }

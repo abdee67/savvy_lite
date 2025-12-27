@@ -33,6 +33,7 @@ enum SalesOrderHeaderStatus {
   validatingLot,
   exporting,
   loadingMore,
+
   loadingCreditReceiptReport,
   filteringCreditReceiptReport,
   loadedCreditReceiptReport,

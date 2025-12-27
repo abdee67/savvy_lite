@@ -53,6 +53,15 @@ enum PurchaseOrderStatus {
   exportPendingPurchaseReportSuccess,
   exportPendingPurchaseReportFailure,
   exportingPendingPurchaseReport,
+
+  //credit payment report
+  loadingCreditPaymentReport,
+  filteringCreditPaymentReport,
+  loadedCreditPaymentReport,
+  loadingMoreCreditPaymentReport,
+  exportCreditPaymentReportSuccess,
+  exportCreditPaymentReportFailure,
+  exportingCreditPaymentReport,
 }
 
 class PurchaseOrderState extends Equatable {
@@ -192,6 +201,16 @@ class PurchaseOrderState extends Equatable {
   final bool hasMorePendingPurchase;
   final String? exportPendingPurchaseMessage;
 
+  //credit payment report
+  final List<CreditPayment> creditPaymentReports;
+  final PurchaseReportFilters creditPaymentFilters;
+  final int creditPaymentPage;
+  final int creditPaymentPageSize;
+  final int creditPaymentTotalCount;
+  final int creditPaymentTotalPages;
+  final bool hasMoreCreditPayment;
+  final String? exportCreditPaymentMessage;
+
   const PurchaseOrderState({
     this.status = PurchaseOrderStatus.initial,
     this.headers = const [],
@@ -300,6 +319,15 @@ class PurchaseOrderState extends Equatable {
     this.pendingPurchaseTotalPages = 1,
     this.hasMorePendingPurchase = false,
     this.exportPendingPurchaseMessage,
+
+    this.creditPaymentReports = const [],
+    this.creditPaymentFilters = const PurchaseReportFilters(),
+    this.creditPaymentPage = 1,
+    this.creditPaymentPageSize = 10,
+    this.creditPaymentTotalCount = 0,
+    this.creditPaymentTotalPages = 1,
+    this.hasMoreCreditPayment = false,
+    this.exportCreditPaymentMessage,
   });
 
   @override
@@ -411,6 +439,15 @@ class PurchaseOrderState extends Equatable {
     pendingPurchaseTotalPages,
     hasMorePendingPurchase,
     exportPendingPurchaseMessage,
+
+    creditPaymentReports,
+    creditPaymentFilters,
+    creditPaymentPage,
+    creditPaymentPageSize,
+    creditPaymentTotalCount,
+    creditPaymentTotalPages,
+    hasMoreCreditPayment,
+    exportCreditPaymentMessage,
   ];
 
   PurchaseOrderState copyWith({
@@ -522,6 +559,15 @@ class PurchaseOrderState extends Equatable {
     int? pendingPurchaseTotalPages,
     bool? hasMorePendingPurchase,
     String? exportPendingPurchaseMessage,
+
+    List<CreditPayment>? creditPaymentReports,
+    PurchaseReportFilters? creditPaymentFilters,
+    int? creditPaymentPage,
+    int? creditPaymentPageSize,
+    int? creditPaymentTotalCount,
+    int? creditPaymentTotalPages,
+    bool? hasMoreCreditPayment,
+    String? exportCreditPaymentMessage,
   }) {
     return PurchaseOrderState(
       status: status ?? this.status,
@@ -656,6 +702,19 @@ class PurchaseOrderState extends Equatable {
           hasMorePendingPurchase ?? this.hasMorePendingPurchase,
       exportPendingPurchaseMessage:
           exportPendingPurchaseMessage ?? this.exportPendingPurchaseMessage,
+
+      creditPaymentReports: creditPaymentReports ?? this.creditPaymentReports,
+      creditPaymentFilters: creditPaymentFilters ?? this.creditPaymentFilters,
+      creditPaymentPage: creditPaymentPage ?? this.creditPaymentPage,
+      creditPaymentPageSize:
+          creditPaymentPageSize ?? this.creditPaymentPageSize,
+      creditPaymentTotalCount:
+          creditPaymentTotalCount ?? this.creditPaymentTotalCount,
+      creditPaymentTotalPages:
+          creditPaymentTotalPages ?? this.creditPaymentTotalPages,
+      hasMoreCreditPayment: hasMoreCreditPayment ?? this.hasMoreCreditPayment,
+      exportCreditPaymentMessage:
+          exportCreditPaymentMessage ?? this.exportCreditPaymentMessage,
     );
   }
 

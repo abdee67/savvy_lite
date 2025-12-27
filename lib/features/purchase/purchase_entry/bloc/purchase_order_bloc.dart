@@ -194,6 +194,14 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     on<ClearPendingPurchaseReportFilters>(_onClearPendingPurchaseFilters);
     on<ExportPendingPurchaseReportToExcel>(_onExportPendingPurchaseToExcel);
     on<ExportPendingPurchaseReportToPDF>(_onExportPendingPurchaseToPDF);
+
+    //Credit Payment Report
+    on<LoadCreditPaymentReport>(_onLoadCreditPaymentReport);
+    on<LoadMoreCreditPaymentReport>(_onLoadMoreCreditPaymentReport);
+    on<UpdateCreditPaymentReportFilters>(_onUpdateCreditPaymentFilters);
+    on<ClearCreditPaymentReportFilters>(_onClearCreditPaymentFilters);
+    on<ExportCreditPaymentReportToExcel>(_onExportCreditPaymentToExcel);
+    on<ExportCreditPaymentReportToPDF>(_onExportCreditPaymentToPDF);
   }
 
   @override
@@ -3409,6 +3417,210 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         ),
       );
     }
+  }
+
+  Future<void> _onLoadCreditPaymentReport(
+    LoadCreditPaymentReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadingCreditPaymentReport,
+          creditPaymentPage: event.page,
+          creditPaymentFilters: event.filters,
+        ),
+      );
+
+      final int offset = (event.page - 1) * event.pageSize;
+
+      final receipts = await purchaseOrderReportRepository
+          .getCreditPaymentReport(
+            companyId: event.companyId,
+            supplierId: event.filters.supplierId,
+            sortBy: event.sortBy,
+            limit: event.pageSize,
+            offset: offset,
+          );
+
+      // Post-processing logic (Same as before but on the fetched page)
+      // Group by Sales Order Header
+      final Map<int, List<CreditPayment>> groupedPayments = {};
+      for (var payment in receipts) {
+        if (payment.poHeaderRef?.id != null) {
+          if (!groupedPayments.containsKey(payment.poHeaderRef!.id)) {
+            groupedPayments[payment.poHeaderRef!.id!] = [];
+          }
+          groupedPayments[payment.poHeaderRef!.id]!.add(payment);
+        }
+      }
+
+      final List<CreditPayment> processedPayments = [];
+
+      groupedPayments.forEach((poId, poPayments) {
+        // Sort by date receipt (Ascending for calculation?)
+        // Java code sorts retrieving by DESC, then in memory compares by DateReceipt.
+        // Assuming DateReceipt is comparable.
+        poPayments.sort((a, b) {
+          final aDate = a.datePayment ?? DateTime(0);
+          final bDate = b.datePayment ?? DateTime(0);
+          return aDate.compareTo(bDate);
+        });
+
+        // Calculate Remaining Values
+        // remaining starts at PO Amount Gross
+        double remaining = poPayments.isNotEmpty
+            ? (poPayments.first.poHeaderRef?.amountGross ?? 0.0)
+            : 0.0;
+
+        for (var payment in poPayments) {
+          remaining -= (payment.paymentAmount ?? 0.0);
+          payment.setRemaining(remaining);
+          processedPayments.add(payment);
+        }
+      });
+      processedPayments.sort(
+        (a, b) => (b.datePayment ?? DateTime(0)).compareTo(
+          a.datePayment ?? DateTime(0),
+        ),
+      );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedCreditPaymentReport,
+          creditPaymentReports: processedPayments,
+          hasMoreCreditPayment: receipts.length == event.pageSize,
+          creditPaymentTotalCount: 0, // Should fetch count if needed
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load credit receipts report: $e'));
+    }
+  }
+
+  Future<void> _onLoadMoreCreditPaymentReport(
+    LoadMoreCreditPaymentReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    if (state.hasMoreCreditPayment &&
+        state.status != PurchaseOrderStatus.loadingMoreCreditPaymentReport) {
+      final nextPage = state.creditPaymentPage + 1;
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadingMoreCreditPaymentReport,
+        ),
+      );
+
+      // Trigger load for next page. But wait, reusing _onLoad replaces the list.
+      // I need to append.
+      // So I should implement the logic here, or make _onLoad handle appending (if I passed a flag).
+      // Standard pattern: Separate handler or helper.
+      // I will implement helper logic here.
+
+      try {
+        final int offset = (nextPage - 1) * state.creditPaymentPageSize;
+        final receipts = await purchaseOrderReportRepository
+            .getCreditPaymentReport(
+              companyId: state.companyId ?? 1, // Default or generic
+              supplierId: state.creditPaymentFilters.supplierId,
+              limit: state.creditPaymentPageSize,
+              offset: offset,
+            );
+
+        // Process newly fetched receipts
+        // Note: Remaining value calculation is PER PAGE here as per logic discussion.
+        final Map<int, List<CreditPayment>> groupedPayments = {};
+        for (var payment in receipts) {
+          if (payment.poHeaderRef?.id != null) {
+            if (!groupedPayments.containsKey(payment.poHeaderRef!.id)) {
+              groupedPayments[payment.poHeaderRef!.id!] = [];
+            }
+            groupedPayments[payment.poHeaderRef!.id]!.add(payment);
+          }
+        }
+
+        final List<CreditPayment> processedPayments = [];
+        groupedPayments.forEach((poId, poPayments) {
+          poPayments.sort(
+            (a, b) => (a.datePayment ?? DateTime(0)).compareTo(
+              b.datePayment ?? DateTime(0),
+            ),
+          );
+          double remaining = poPayments.isNotEmpty
+              ? (poPayments.first.poHeaderRef?.amountGross ?? 0.0)
+              : 0.0;
+          for (var payment in poPayments) {
+            remaining -= (payment.paymentAmount ?? 0.0);
+            payment.setRemaining(remaining);
+            processedPayments.add(payment);
+          }
+        });
+        processedPayments.sort(
+          (a, b) => (b.datePayment ?? DateTime(0)).compareTo(
+            a.datePayment ?? DateTime(0),
+          ),
+        );
+
+        emit(
+          state.copyWith(
+            status: PurchaseOrderStatus.loadedCreditPaymentReport,
+            creditPayments: List.of(state.creditPayments)
+              ..addAll(processedPayments),
+            creditPaymentPage: nextPage,
+            hasMoreCreditPayment:
+                receipts.length == state.creditPaymentPageSize,
+          ),
+        );
+      } catch (e) {
+        emit(state.errorState('Failed to load more credit payments: $e'));
+      }
+    }
+  }
+
+  Future<void> _onUpdateCreditPaymentFilters(
+    UpdateCreditPaymentReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    emit(state.copyWith(creditPaymentFilters: event.filters));
+    add(
+      LoadCreditPaymentReport(
+        companyId: state.companyId ?? 1,
+        filters: event.filters,
+        page: 1,
+        pageSize: state.creditPaymentPageSize,
+      ),
+    );
+  }
+
+  Future<void> _onClearCreditPaymentFilters(
+    ClearCreditPaymentReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    emit(state.copyWith(creditPaymentFilters: const PurchaseReportFilters()));
+    add(
+      LoadCreditPaymentReport(
+        companyId: state.companyId ?? 1,
+        filters: const PurchaseReportFilters(),
+        page: 1,
+        pageSize: state.creditPaymentPageSize,
+      ),
+    );
+  }
+
+  Future<void> _onExportCreditPaymentToExcel(
+    ExportCreditPaymentReportToExcel event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    // Placeholder for export logic
+    emit(state.successState('Export to Excel not implemented yet'));
+  }
+
+  Future<void> _onExportCreditPaymentToPDF(
+    ExportCreditPaymentReportToPDF event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    // Placeholder for export logic
+    emit(state.successState('Export to PDF not implemented yet'));
   }
 
   // Helper method for temp IDs

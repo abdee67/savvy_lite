@@ -120,10 +120,10 @@ Future<void> _initializeAndRunApp() async {
     // await LocalDatabaseService().debugTable('quote_order_header');
     // await LocalDatabaseService().debugTable('quote_order_detail');
     // await LocalDatabaseService().debugTable('supplier_table');
-    await LocalDatabaseService().debugTable('purchase_order_header');
+    //await LocalDatabaseService().debugTable('purchase_order_header');
     //await LocalDatabaseService().debugTable('purchase_order_detail');
     //await LocalDatabaseService().debugTable('purchase_order_receiver');
-    //await LocalDatabaseService().debugTable('credit_receipt_table');
+    await LocalDatabaseService().debugTable('credit_payment_table');
   } catch (error, stackTrace) {
     developer.log('Initialization error: $error');
     developer.log('Stack trace: $stackTrace');

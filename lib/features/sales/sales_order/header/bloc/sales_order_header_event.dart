@@ -623,6 +623,10 @@ class ExportSalesTransactionToPDF extends SalesOrderHeaderEvent {
   List<Object?> get props => [filters];
 }
 
+// ============================================================================
+// CREDIT RECEIPT REPORT EVENTS
+// ============================================================================
+
 class LoadCreditReceiptsReport extends SalesOrderHeaderEvent {
   final int companyId;
   final int page;
@@ -683,7 +687,9 @@ class ExportCreditReceiptReportToPDF extends SalesOrderHeaderEvent {
   List<Object?> get props => [filters];
 }
 
+// ============================================================================
 // Aged Credit Receipt Report Events
+// ============================================================================
 class LoadAgedCreditReceiptReport extends SalesOrderHeaderEvent {
   final int companyId;
   final int page;

@@ -1256,3 +1256,49 @@ class ExportPendingPurchaseReportToPDF extends PurchaseOrderEvent {
 
   const ExportPendingPurchaseReportToPDF(this.filters);
 }
+
+// ============================================================================
+// CREDIT PAYMENT REPORT EVENTS
+// ============================================================================
+
+class LoadCreditPaymentReport extends PurchaseOrderEvent {
+  final int companyId;
+  final int page;
+  final int pageSize;
+  final PurchaseReportFilters filters;
+  final String? sortBy;
+
+  const LoadCreditPaymentReport({
+    required this.companyId,
+    this.page = 1,
+    this.pageSize = 25,
+    this.filters = const PurchaseReportFilters(),
+    this.sortBy,
+  });
+}
+
+class LoadMoreCreditPaymentReport extends PurchaseOrderEvent {
+  const LoadMoreCreditPaymentReport();
+}
+
+class UpdateCreditPaymentReportFilters extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const UpdateCreditPaymentReportFilters(this.filters);
+}
+
+class ClearCreditPaymentReportFilters extends PurchaseOrderEvent {
+  const ClearCreditPaymentReportFilters();
+}
+
+class ExportCreditPaymentReportToExcel extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const ExportCreditPaymentReportToExcel(this.filters);
+}
+
+class ExportCreditPaymentReportToPDF extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const ExportCreditPaymentReportToPDF(this.filters);
+}
