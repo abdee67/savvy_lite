@@ -63,6 +63,8 @@ import 'package:savvy_stock/features/sales/sales_order/detail/repo/sales_order_d
 import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/repo/sales_order_header_repo.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
+import 'package:savvy_stock/features/reports/cash_flow/bloc/cash_flow_bloc.dart';
+import 'package:savvy_stock/features/reports/cash_flow/repo/cash_flow_repo.dart';
 
 final getIt = GetIt.instance;
 
@@ -271,6 +273,7 @@ void initDependencies() {
   getIt.registerLazySingleton<SalesOrderReportRepository>(
     () => SalesOrderReportRepository(),
   );
+  getIt.registerLazySingleton<CashFlowRepository>(() => CashFlowRepository());
 
   ///////////// BLoCs///////////////
 
@@ -496,5 +499,10 @@ void initDependencies() {
       supplierRepository: getIt(),
       purchaseOrderReportRepository: getIt(),
     ),
+  );
+
+  // Cash Flow
+  getIt.registerFactory<CashFlowBloc>(
+    () => CashFlowBloc(authBloc: getIt(), cashFlowRepository: getIt()),
   );
 }

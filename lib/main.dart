@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:savvy_stock/debug_credit_payment.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_report_repo.dart';
@@ -13,6 +12,8 @@ import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_orde
 import 'package:savvy_stock/features/purchase/purchase_entry/services/purchase_order_stock_service.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/blocs/supplier_bloc.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/repo/supplier_repo.dart';
+import 'package:savvy_stock/features/reports/cash_flow/bloc/cash_flow_bloc.dart';
+import 'package:savvy_stock/features/reports/cash_flow/repo/cash_flow_repo.dart';
 import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
 import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_bloc.dart';
 import 'package:savvy_stock/features/sales/quotation_order/repo/quotation_order_repo.dart';
@@ -78,14 +79,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   _initializeAndRunApp();
   // clearAllSharedPreferences();
-  SystemChrome.setSystemUIOverlayStyle(
-    SystemUiOverlayStyle(
-      statusBarColor: Colors.amber,
-      statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarColor: Colors.transparent,
-      systemNavigationBarIconBrightness: Brightness.dark,
-    ),
-  );
+
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -97,7 +91,7 @@ Future<void> _initializeAndRunApp() async {
   try {
     await ConnectivityService().initConnectivity();
     initDependencies();
-    //ppawait LocalDatabaseService().resetDatabase();
+    //await LocalDatabaseService().resetDatabase();
     // await LocalDatabaseService().debugTable('branch_table');
 
     if (AppConfig.isTestMode) {
@@ -125,7 +119,6 @@ Future<void> _initializeAndRunApp() async {
     //await LocalDatabaseService().debugTable('purchase_order_detail');
     //await LocalDatabaseService().debugTable('purchase_order_receiver');
     //await LocalDatabaseService().debugTable('credit_payment_table');
-    debugCreditPayment();
   } catch (error, stackTrace) {
     developer.log('Initialization error: $error');
     developer.log('Stack trace: $stackTrace');
@@ -199,6 +192,7 @@ class _SavvyStockState extends State<SavvyStock> {
   late PurchaseOrderRepository _purchaseOrderRepository;
   late PurchaseOrderReportRepository _purchaseOrderReportRepository;
   late SalesOrderReportRepository _salesOrderReportRepository;
+  late CashFlowRepository _cashFlowRepository;
 
   @override
   void initState() {
@@ -251,6 +245,7 @@ class _SavvyStockState extends State<SavvyStock> {
     _purchaseStockService = getIt<PurchaseOrderStockService>();
     _purchaseOrderReportRepository = getIt<PurchaseOrderReportRepository>();
     _salesOrderReportRepository = getIt<SalesOrderReportRepository>();
+    _cashFlowRepository = getIt<CashFlowRepository>();
     // Ensure system constants are loaded when companyId becomes available.
     final cid = _authBloc.state.companyId;
     if (cid != null) {
@@ -583,6 +578,12 @@ class _SavvyStockState extends State<SavvyStock> {
               nextNumberRepository: _nextNumberRepository,
               stockService: _purchaseStockService,
               purchaseOrderReportRepository: _purchaseOrderReportRepository,
+            ),
+          ),
+          BlocProvider<CashFlowBloc>(
+            create: (context) => CashFlowBloc(
+              cashFlowRepository: _cashFlowRepository,
+              authBloc: _authBloc,
             ),
           ),
         ],

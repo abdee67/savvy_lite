@@ -30,7 +30,7 @@ class LocalDatabaseService {
     String path = join(await getDatabasesPath(), 'savvy_stock.db');
     return await openDatabase(
       path,
-      version: 1, // Incremented for proforma fields migration
+      version: 2, // Incremented for proforma fields migration
       onCreate: _onCreate,
       onUpgrade: _onUpgrade, // Add upgrade handler
       onOpen: (db) async {
@@ -42,7 +42,12 @@ class LocalDatabaseService {
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     developer.log('Upgrading database from $oldVersion to $newVersion');
 
-    if (oldVersion < 1) {}
+    if (oldVersion < 2) {
+      await db.execute('''
+
+      
+      ''');
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -1270,8 +1275,87 @@ CREATE TABLE credit_receipt_table (
   FOREIGN KEY (user_id) REFERENCES user_table(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
 
+
     ''');
     developer.log('Created table: credit_receipt_table');
+
+    //create other expense table
+    await db.execute('''
+CREATE TABLE other_expense_table (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  payment_amount REAL,
+  date_payment TEXT,
+  reason_description TEXT,
+  payment_instrument INTEGER,
+  company INTEGER,
+  user_id INTEGER,
+  date_updated TEXT,
+
+  FOREIGN KEY (company)
+    REFERENCES company_table(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE,
+
+  FOREIGN KEY (payment_instrument)
+    REFERENCES udc_details(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE,
+
+  FOREIGN KEY (user_id)
+    REFERENCES user_table(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE
+);
+
+CREATE INDEX idx_oet_company
+ON other_expense_table (company);
+
+CREATE INDEX idx_oet_payment_instrument
+ON other_expense_table (payment_instrument);
+
+CREATE INDEX idx_oet_user_id
+ON other_expense_table (user_id);
+''');
+    developer.log('Created table: other_expense_table');
+
+    //create other income table
+    await db.execute('''
+CREATE TABLE other_income_table (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  income_amount REAL,
+  date_income TEXT,
+  reason_description TEXT,
+  payment_instrument INTEGER,
+  company INTEGER,
+  user_id INTEGER,
+  date_updated TEXT,
+
+  FOREIGN KEY (company)
+    REFERENCES company_table(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE,
+
+  FOREIGN KEY (payment_instrument)
+    REFERENCES udc_details(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE,
+
+  FOREIGN KEY (user_id)
+    REFERENCES user_table(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE
+);
+
+CREATE INDEX idx_oit_company
+ON other_income_table (company);
+
+CREATE INDEX idx_oit_payment_instrument
+ON other_income_table (payment_instrument);
+
+CREATE INDEX idx_oit_user_id
+ON other_income_table (user_id);
+''');
+    developer.log('Created table: other_income_table');
 
     //. Create sync_queue table
     await db.execute('''

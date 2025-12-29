@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/errors/unauthorized_screen.dart';
@@ -35,6 +36,10 @@ import 'package:savvy_stock/features/purchase/supplier_entry/models/supplier_mod
 import 'package:savvy_stock/features/purchase/supplier_entry/screens/supplier_info_screen.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/screens/supplier_list.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/widget/supplier_create_edit.dart';
+import 'package:savvy_stock/features/reports/cash_flow/dashboard/cash_flow_report_dashboard.dart';
+import 'package:savvy_stock/features/reports/cash_flow/sidebar/cash_inflow_report.dart';
+import 'package:savvy_stock/features/reports/cash_flow/sidebar/cash_flow_summary_report.dart';
+import 'package:savvy_stock/features/reports/cash_flow/sidebar/cash_out_flow_report.dart';
 import 'package:savvy_stock/features/reports/purchase_report/dashboard/purchase_report_dashboard.dart';
 import 'package:savvy_stock/features/reports/purchase_report/sidebar/aged_credit_purchase_report.dart';
 import 'package:savvy_stock/features/reports/purchase_report/sidebar/credit_payment_report.dart';
@@ -94,6 +99,9 @@ import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.da
 import 'package:savvy_stock/features/stock/lot_master/screens/lot_master_dashboard.dart';
 import 'package:savvy_stock/features/stock/lot_master/widgets/lot_master_create_and_edit.dart.dart';
 import 'package:savvy_stock/features/system_constant/screen/system_constants_screen.dart';
+
+import 'package:savvy_stock/core/di/injection_container.dart';
+import 'package:savvy_stock/features/reports/cash_flow/bloc/cash_flow_bloc.dart';
 
 // Import your screen files for missing routes
 // import 'package:savvy_stock/features/sales/sales_entry/screens/sales_entry_screen.dart';
@@ -1083,6 +1091,53 @@ class AppRouter {
           requiredPrivilege: AppRoutes.agedCreditPaymentReceiptReport,
           parentPrivilege: AppRoutes.purchaseReport,
           child: AgedPurchaseCreditReportPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+
+      //===========================CASH FLOW ROUTES===========================
+      GoRoute(
+        path: AppRoutes.cashFlowReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.cashFlowReport,
+          parentPrivilege: AppRoutes.reportDashboard,
+          child: CashFlowReportDashboard(),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.cashFlowSummaryReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.cashFlowSummaryReport,
+          parentPrivilege: AppRoutes.cashFlowReport,
+          child: BlocProvider.value(
+            value: getIt<CashFlowBloc>(),
+            child: CashFlowSummaryReportPage(authBloc: authBloc),
+          ),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.cashInFlowReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.cashInFlowReport,
+          parentPrivilege: AppRoutes.cashFlowReport,
+          child: BlocProvider(
+            create: (context) => getIt<CashFlowBloc>(),
+            child: CashInflowReportPage(authBloc: authBloc),
+          ),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.cashOutFlowReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.cashOutFlowReport,
+          parentPrivilege: AppRoutes.cashFlowReport,
+          child: BlocProvider(
+            create: (context) => getIt<CashFlowBloc>(),
+            child: CashOutFlowReportPage(authBloc: authBloc),
+          ),
         ),
         redirect: _protectedRouteRedirect,
       ),
