@@ -16,6 +16,7 @@ class AppRoutes {
   static const String purchase = '/purchase';
   static const String company = '/company';
   static const String branch = '/branch';
+  static const String report = '/report';
 
   // Main Dashboards
   static const String adminDashboard = '$admin/dashboard';
@@ -24,7 +25,8 @@ class AppRoutes {
   static const String availabilityDashboard = '$availability/dashboard';
   static const String purchaseDashboard = '$purchase/dashboard';
   static const String companyDashboard = '$company/dashboard';
-  static const String branchListDashboard = '$branch/dashboard';
+  static const String branchListDashboard = '$branch/dash board';
+  static const String reportDashboard = '$report/dashboard';
 
   // Admin Sub-Routes
   static const String privilegeManagement = '$admin/privilege-management';
@@ -61,7 +63,7 @@ class AppRoutes {
   static const String paymentSummary = '$salesCustomerInfo/payment-summary';
   static const String salesInvoice = '$salesCustomerInfo/sales-invoice';
 
-  static const String salesReport = '$salesDashboard/sales-report';
+  static const String salesReview = '$salesDashboard/sales-review';
   static const String salesCreditReceiptReview =
       '$salesDashboard/sales-credit-receipt-review';
 
@@ -169,6 +171,53 @@ class AppRoutes {
   static const String purchaseOrderReceive = '$purchaseReview/purchase-receive';
 
   static const String creditPurchaseReview = '$purchase/credit-purchase-review';
+
+  /////////////////REPORT ROUTES///////////////
+
+  static const String stockReport = '$report/stock-report';
+  static const String salesReport = '$report/sales-report';
+  static const String purchaseReport = '$report/purchase-report';
+  static const String cashFlowReport = '$report/cashFlow-report';
+
+  ///////////////STOCK REPORT REOUTES///////////////
+  static const String expirationReport = '$stockReport/expiration-report';
+  static const String upcomingExpirationReport =
+      '$stockReport/upcoming-expiration-report';
+  static const String dailyStockReport = '$stockReport/daily-stock-report';
+  static const String balanceOfItemEntryReport =
+      '$stockReport/balance-of-item-entry-report';
+  static const String inventoryMovementReport =
+      '$stockReport/inventory_movement-report';
+  static const String itemCostReport = '$stockReport/item-cost-report';
+  static const String inventoryTransactionReport =
+      '$stockReport/inventory-trnasaction-report';
+  static const String reorderPointReport = '$stockReport/reorder-point-report';
+
+  ///////////////SALES REPORT REOUTES///////////////
+  static const String salesTransactionReport =
+      '$salesReport/sales-transaction-report';
+  static const String agedCreditSalesReport =
+      '$salesReport/aged-credit-sales-report';
+  static const String creditRecievedReport =
+      '$salesReport/credit-recieved-report';
+
+  /////////////PURCHASE REPORT REOUTES///////////////
+  static const String purchaseTransactionReport =
+      '$purchaseReport/purchase-transaction-report';
+  static const String agedCreditPaymentReceiptReport =
+      '$purchaseReport/aged-credit-payment-receipt-report';
+  static const String pendingPurcahseReport =
+      '$purchaseReport/pending-purchase-report';
+  static const String goodsReceivedNote = '$purchaseReport/goods-received-note';
+  static const String creditPaymentReport =
+      '$purchaseReport/credit-payment-report';
+
+  /////////////CASH FLOW REPORT REOUTES///////////////
+  static const String cashFlowSummaryReport =
+      '$cashFlowReport/cash-flow-summary-report';
+  static const String cashInFlowReport = '$cashFlowReport/cash-in-flow-report';
+  static const String cashOutFlowReport =
+      '$cashFlowReport/cash-out-flow-report';
 
   // Helper method to get all dashboard routes
   static List<String> get dashboardRoutes => [

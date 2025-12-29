@@ -6,10 +6,16 @@ import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/next_number/repo/next_number_repo.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_event.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_state.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/GRNtotals.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/aged_credit_payment_report_totals.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/credit_payment_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/pending_purchase_totals.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_report_filter_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_transaction_totals_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_report_repo.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_repository.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/services/purchase_order_stock_service.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/repo/supplier_repo.dart';
@@ -28,6 +34,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
   final UdcRepository udcRepository;
   final NextNumberRepository nextNumberRepository;
   final PurchaseOrderStockService stockService;
+  final PurchaseOrderReportRepository purchaseOrderReportRepository;
 
   StreamSubscription? _authSubscription;
   StreamSubscription? _systemConstantSubscription;
@@ -42,6 +49,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     required this.udcRepository,
     required this.nextNumberRepository,
     required this.stockService,
+    required this.purchaseOrderReportRepository,
   }) : super(const PurchaseOrderState()) {
     _authSubscription = authBloc.stream.listen((authState) {
       if (authState.isAuthenticated && authState.companyId != null) {
@@ -157,6 +165,52 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     on<DeleteCreditPayment>(_onDeleteCreditPayment);
     on<SelectCreditPayment>(_onSelectCreditPayment);
     on<FilterCreditPayments>(_onFilterCreditPayments);
+
+    //Purchase Transaction Report
+    on<LoadPurchaseTransactionReport>(_onLoadPurchaseTransactionReport);
+    on<LoadMorePurchaseTransactionReport>(_onLoadMorePurchaseTransactionReport);
+    on<UpdatePurchaseTransactionReportFilters>(
+      _onUpdatePurchaseTransactionFilters,
+    );
+    on<ClearPurchaseTransactionReportFilters>(
+      _onClearPurchaseTransactionFilters,
+    );
+    on<ExportPurchaseTransactionReportToExcel>(
+      _onExportPurchaseTransactionToExcel,
+    );
+    on<ExportPurchaseTransactionReportToPDF>(_onExportPurchaseTransactionToPDF);
+
+    //GRN Report
+    on<LoadGRNReport>(_onLoadGRNReport);
+    on<LoadMoreGRNReport>(_onLoadMoreGRNReport);
+    on<UpdateGRNReportFilters>(_onUpdateGRNFilters);
+    on<ClearGRNReportFilters>(_onClearGRNFilters);
+    on<ExportGRNReportToExcel>(_onExportGRNToExcel);
+    on<ExportGRNReportToPDF>(_onExportGRNToPDF);
+
+    //Pending Purchase Report
+    on<LoadPendingPurchaseReport>(_onLoadPendingPurchaseReport);
+    on<LoadMorePendingPurchaseReport>(_onLoadMorePendingPurchaseReport);
+    on<UpdatePendingPurchaseReportFilters>(_onUpdatePendingPurchaseFilters);
+    on<ClearPendingPurchaseReportFilters>(_onClearPendingPurchaseFilters);
+    on<ExportPendingPurchaseReportToExcel>(_onExportPendingPurchaseToExcel);
+    on<ExportPendingPurchaseReportToPDF>(_onExportPendingPurchaseToPDF);
+
+    //Credit Payment Report
+    on<LoadCreditPaymentReport>(_onLoadCreditPaymentReport);
+    on<LoadMoreCreditPaymentReport>(_onLoadMoreCreditPaymentReport);
+    on<UpdateCreditPaymentReportFilters>(_onUpdateCreditPaymentFilters);
+    on<ClearCreditPaymentReportFilters>(_onClearCreditPaymentFilters);
+    on<ExportCreditPaymentReportToExcel>(_onExportCreditPaymentToExcel);
+    on<ExportCreditPaymentReportToPDF>(_onExportCreditPaymentToPDF);
+
+    //Aged Credit Payment Report
+    on<LoadAgedCreditPaymentReport>(_onLoadAgedCreditPaymentReport);
+    on<LoadMoreAgedCreditPaymentReport>(_onLoadMoreAgedCreditPaymentReport);
+    on<UpdateAgedCreditPaymentReportFilters>(_onUpdateAgedCreditPaymentFilters);
+    on<ClearAgedCreditPaymentReportFilters>(_onClearAgedCreditPaymentFilters);
+    on<ExportAgedCreditPaymentReportToExcel>(_onExportAgedCreditPaymentToExcel);
+    on<ExportAgedCreditPaymentReportToPDF>(_onExportAgedCreditPaymentToPDF);
   }
 
   @override
@@ -720,7 +774,8 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       // Refresh lists
       add(RefreshPurchaseOrders());
     } catch (e) {
-      emit(state.errorState('Failed to save purchase order: $e'));
+      //emit(state.errorState('Failed to save purchase order: $e'));
+      print('Failed to save purchase order: $e');
     }
   }
 
@@ -999,7 +1054,8 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to save row: $e'));
+      //emit(state.errorState('Failed to save row: $e'));
+      print('Failed to save row: $e');
     }
   }
 
@@ -1033,7 +1089,8 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to save row: $e'));
+      //emit(state.errorState('Failed to save row: $e'));
+      print('Failed to save row: $e');
     }
   }
 
@@ -1476,9 +1533,28 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
             'orderNumber: $orderNumber, companyId: $companyId',
           );
 
+          // 🎯 ENRICH RECEIVER WITH DETAIL (ENSURE SUPPLIER/ORDERTYPE)
+          var enrichedReceiver = savedReceiver;
+          if (enrichedReceiver.poDetail != null) {
+            try {
+              final detail = await repository.getDetailById(
+                enrichedReceiver.poDetail!,
+              );
+              if (detail != null) {
+                enrichedReceiver = enrichedReceiver.copyWith(
+                  poDetailRef: detail,
+                );
+              }
+            } catch (e) {
+              print(
+                'WARNING: Could not enrich PurchaseOrderReceiver with detail: $e',
+              );
+            }
+          }
+
           if (orderNumber != null && companyId != null) {
             await stockService.updateStockItemAvailabilityPor(
-              receiver: savedReceiver,
+              receiver: enrichedReceiver,
               companyId: companyId,
               orderNumber: orderNumber,
             );
@@ -1542,7 +1618,8 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         }
       }
     } catch (e) {
-      emit(state.errorState('Failed to save receipt and update stock: $e'));
+      //emit(state.errorState('Failed to save receipt and update stock: $e'));
+      print('Failed to save receipt and update stock: $e');
     }
   }
 
@@ -1726,7 +1803,8 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to save receipt in edit: $e'));
+      //emit(state.errorState('Failed to save receipt in edit: $e'));
+      print('Failed to save receipt in edit: $e');
     }
   }
 
@@ -2341,7 +2419,8 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
 
       add(RefreshPurchaseOrders());
     } catch (e) {
-      emit(state.errorState('Failed to save multiple purchase orders: $e'));
+      //emit(state.errorState('Failed to save multiple purchase orders: $e'));
+      print('Failed to save multiple purchase orders: $e');
     }
   }
 
@@ -2637,10 +2716,11 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     } catch (e) {
       emit(
         state.copyWith(
-          creditPaymentError: 'Failed to save credit payment: $e',
+          //creditPaymentError: 'Failed to save credit payment: $e',
           creditPaymentSuccess: false,
         ),
       );
+      print('Failed to save credit payment: $e');
     }
   }
 
@@ -2761,6 +2841,1006 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       );
     } catch (e) {
       emit(state.errorState('Failed to filter credit payments: $e'));
+    }
+  }
+
+  // ============================================================================
+  // PURCHASE TRANSACTION REPORT EVENT HANDLERS
+  // ============================================================================
+
+  Future<void> _onLoadPurchaseTransactionReport(
+    LoadPurchaseTransactionReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: PurchaseOrderStatus.loading));
+
+      // Fetch paginated data based on filter view type
+      final result = await purchaseOrderReportRepository
+          .getPurchaseTransactionReport(
+            companyId: event.companyId,
+            page: event.page,
+            pageSize: event.pageSize,
+            supplierId: event.filters.supplierId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+            purchaseType: event.filters.purchaseType,
+          );
+
+      // Calculate totals
+      final totalsResult = await purchaseOrderReportRepository
+          .calculatePurchaseOrderTransactionTotals(
+            companyId: event.companyId,
+            supplierId: event.filters.supplierId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+            purchaseType: event.filters.purchaseType,
+          );
+
+      final totals = PurchaseTransactionTotals(
+        totalAmountGross: totalsResult['totalAmountGross'] as double,
+        totalGrandAmountGross: totalsResult['totalGrandAmountGross'] as double,
+        totalCount: totalsResult['totalCount'] as int,
+        currentPage: result['currentPage'] as int,
+        totalPages: result['totalPages'] as int,
+      );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loaded,
+          purchaseTransactionReports:
+              result['headers'] as List<PurchaseOrderHeader>,
+          purchaseTransactionFilters: event.filters,
+          purchaseTransactionTotals: totals,
+          purchaseTransactionPage: result['currentPage'] as int,
+          purchaseTransactionPageSize: event.pageSize,
+          purchaseTransactionTotalCount: result['totalCount'] as int,
+          purchaseTransactionTotalPages: result['totalPages'] as int,
+          hasMorePurchaseTransaction:
+              (result['currentPage'] as int) < (result['totalPages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load sales transaction report: $e'));
+    }
+  }
+
+  Future<void> _onLoadMorePurchaseTransactionReport(
+    LoadMorePurchaseTransactionReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    if (!state.hasMorePurchaseTransaction) return;
+
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadingMorePurchaseTransactionReport,
+        ),
+      );
+      final nextPage = state.purchaseTransactionPage + 1;
+      final filters = state.purchaseTransactionFilters;
+
+      // Fetch next page
+      final result = await purchaseOrderReportRepository
+          .getPurchaseTransactionReport(
+            companyId: state.companyId ?? authBloc.state.companyId!,
+            page: nextPage,
+            pageSize: state.purchaseTransactionPageSize,
+            supplierId: filters.supplierId,
+            startDate: filters.dateFrom,
+            endDate: filters.dateTo,
+            purchaseType: filters.purchaseType,
+          );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loaded,
+          purchaseTransactionReports: [
+            ...state.purchaseTransactionReports,
+            ...(result['headers'] as List<PurchaseOrderHeader>),
+          ],
+          purchaseTransactionPage: result['currentPage'] as int,
+          hasMorePurchaseTransaction:
+              (result['currentPage'] as int) < (result['totalPages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load more transactions: $e'));
+    }
+  }
+
+  Future<void> _onUpdatePurchaseTransactionFilters(
+    UpdatePurchaseTransactionReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    // Reload data with new filters
+    add(
+      LoadPurchaseTransactionReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.purchaseTransactionPageSize,
+        filters: event.filters,
+      ),
+    );
+  }
+
+  void _onClearPurchaseTransactionFilters(
+    ClearPurchaseTransactionReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) {
+    // Reload with empty filters
+    add(
+      LoadPurchaseTransactionReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.purchaseTransactionPageSize,
+        filters: const PurchaseReportFilters(),
+      ),
+    );
+  }
+
+  Future<void> _onExportPurchaseTransactionToExcel(
+    ExportPurchaseTransactionReportToExcel event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.exportingPurchaseTransactionReport,
+        ),
+      );
+
+      // TODO: Implement Excel export logic
+      // This will be similar to _onExportTransactions but for the report data
+      // You'll need to fetch all data (not paginated) and create Excel file
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedPurchaseTransactionReport,
+          exportPurchaseTransactionMessage:
+              'Excel export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedPurchaseTransactionReport,
+          exportPurchaseTransactionMessage: 'Failed to export to Excel: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportPurchaseTransactionToPDF(
+    ExportPurchaseTransactionReportToPDF event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.exportingPurchaseTransactionReport,
+        ),
+      );
+
+      // TODO: Implement PDF export logic
+      // This will be similar to Excel export but generate PDF
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedPurchaseTransactionReport,
+          exportPurchaseTransactionMessage:
+              'PDF export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedPurchaseTransactionReport,
+          exportPurchaseTransactionMessage: 'Failed to export to PDF: $e',
+        ),
+      );
+    }
+  }
+
+  // ============================================================================
+  // GRN REPORT EVENT HANDLERS
+  // ============================================================================
+
+  Future<void> _onLoadGRNReport(
+    LoadGRNReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: PurchaseOrderStatus.loadingGRNReport));
+
+      // Fetch paginated data based on filter view type
+      final result = await purchaseOrderReportRepository
+          .getPurchaseOrderReceiverReport(
+            companyId: event.companyId,
+            page: event.page,
+            pageSize: event.pageSize,
+            supplierId: event.filters.supplierId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+          );
+
+      // Calculate totals
+      final totalsResult = await purchaseOrderReportRepository
+          .calculatePurchaseOrderReceiverTotals(
+            companyId: event.companyId,
+            supplierId: event.filters.supplierId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+          );
+
+      final totals = GRNTotals(
+        totalReceivedAmount: totalsResult['total_received_amount'] as double,
+        totalReceivedQuantity:
+            totalsResult['total_received_quantity'] as double,
+        totalCount: totalsResult['total_count'] as int,
+        currentPage: result['current_page'] as int,
+        totalPages: result['total_pages'] as int,
+      );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedGRNReport,
+          grnReports: result['receivers'] as List<PurchaseOrderReceiver>,
+          grnFilters: event.filters,
+          grnTotals: totals,
+          grnPage: result['current_page'] as int,
+          grnPageSize: event.pageSize,
+          grnTotalCount: result['total_count'] as int,
+          grnTotalPages: result['total_pages'] as int,
+          hasMoreGRN:
+              (result['current_page'] as int) < (result['total_pages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load GRN report: $e'));
+    }
+  }
+
+  Future<void> _onLoadMoreGRNReport(
+    LoadMoreGRNReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    if (!state.hasMoreGRN) return;
+
+    try {
+      emit(state.copyWith(status: PurchaseOrderStatus.loadingMoreGRNReport));
+      final nextPage = state.grnPage + 1;
+      final filters = state.grnFilters;
+
+      // Fetch next page
+      final result = await purchaseOrderReportRepository
+          .getPurchaseOrderReceiverReport(
+            companyId: state.companyId ?? authBloc.state.companyId!,
+            page: nextPage,
+            pageSize: state.grnPageSize,
+            supplierId: filters.supplierId,
+            startDate: filters.dateFrom,
+            endDate: filters.dateTo,
+          );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedGRNReport,
+          grnReports: [
+            ...state.grnReports,
+            ...(result['receivers'] as List<PurchaseOrderReceiver>),
+          ],
+          grnPage: result['current_page'] as int,
+          hasMoreGRN:
+              (result['current_page'] as int) < (result['total_pages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load more GRN report: $e'));
+    }
+  }
+
+  Future<void> _onUpdateGRNFilters(
+    UpdateGRNReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    // Reload data with new filters
+    add(
+      LoadGRNReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.grnPageSize,
+        filters: event.filters,
+      ),
+    );
+  }
+
+  void _onClearGRNFilters(
+    ClearGRNReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) {
+    // Reload with empty filters
+    add(
+      LoadGRNReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.grnPageSize,
+        filters: const PurchaseReportFilters(),
+      ),
+    );
+  }
+
+  Future<void> _onExportGRNToExcel(
+    ExportGRNReportToExcel event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: PurchaseOrderStatus.exportingGRNReport));
+
+      // TODO: Implement Excel export logic
+      // This will be similar to _onExportTransactions but for the report data
+      // You'll need to fetch all data (not paginated) and create Excel file
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedGRNReport,
+          exportGRNMessage: 'Excel export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedGRNReport,
+          exportGRNMessage: 'Failed to export to Excel: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportGRNToPDF(
+    ExportGRNReportToPDF event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: PurchaseOrderStatus.exportingGRNReport));
+
+      // TODO: Implement PDF export logic
+      // This will be similar to Excel export but generate PDF
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedGRNReport,
+          exportGRNMessage: 'PDF export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedGRNReport,
+          exportGRNMessage: 'Failed to export to PDF: $e',
+        ),
+      );
+    }
+  }
+  // ============================================================================
+  // PENDING PURCHASE REPORT EVENT HANDLERS
+  // ============================================================================
+
+  Future<void> _onLoadPendingPurchaseReport(
+    LoadPendingPurchaseReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadingPendingPurchaseReport,
+        ),
+      );
+
+      // Fetch paginated data based on filter view type
+      final result = await purchaseOrderReportRepository
+          .getPendingPurchaseOrderReport(
+            companyId: event.companyId,
+            page: event.page,
+            pageSize: event.pageSize,
+            supplierId: event.filters.supplierId,
+            itemId: event.filters.itemId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+          );
+
+      // Calculate totals
+      final totalsResult = await purchaseOrderReportRepository
+          .calculatePendingPurchaseOrderTotals(
+            companyId: event.companyId,
+            supplierId: event.filters.supplierId,
+            itemId: event.filters.itemId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+          );
+
+      final totals = PendingPurchaseTotals(
+        totalRemainigQuantity:
+            (totalsResult['total_quantity_open'] as num?)?.toDouble() ?? 0.0,
+        totalTransactionQunatity:
+            (totalsResult['total_quantity_transaction'] as num?)?.toDouble() ??
+            0.0,
+        totalReceivedQuantity:
+            (totalsResult['total_quantity_recieved'] as num?)?.toDouble() ??
+            0.0,
+        totalCount: (totalsResult['total_count'] as int?) ?? 0,
+        currentPage: (result['current_page'] as int?) ?? 1,
+        totalPages: (result['total_pages'] as int?) ?? 1,
+      );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedGRNReport,
+          pendingPurchaseReports:
+              result['details'] as List<PurchaseOrderDetail>,
+          pendingPurchaseFilters: event.filters,
+          pendingPurchaseTotals: totals,
+          pendingPurchasePage: result['current_page'] as int,
+          pendingPurchasePageSize: event.pageSize,
+          pendingPurchaseTotalCount: result['total_count'] as int,
+          pendingPurchaseTotalPages: result['total_pages'] as int,
+          hasMorePendingPurchase:
+              (result['current_page'] as int) < (result['total_pages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load Pending purchase report: $e'));
+    }
+  }
+
+  Future<void> _onLoadMorePendingPurchaseReport(
+    LoadMorePendingPurchaseReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    if (!state.hasMorePendingPurchase) return;
+
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadingMorePendingPurchaseReport,
+        ),
+      );
+      final nextPage = state.pendingPurchasePage + 1;
+      final filters = state.pendingPurchaseFilters;
+
+      // Fetch next page
+      final result = await purchaseOrderReportRepository
+          .getPendingPurchaseOrderReport(
+            companyId: state.companyId ?? authBloc.state.companyId!,
+            page: nextPage,
+            pageSize: state.pendingPurchasePageSize,
+            supplierId: filters.supplierId,
+            startDate: filters.dateFrom,
+            endDate: filters.dateTo,
+          );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedPendingPurchaseReport,
+          pendingPurchaseReports: [
+            ...state.pendingPurchaseReports,
+            ...(result['details'] as List<PurchaseOrderDetail>),
+          ],
+          pendingPurchasePage: result['current_page'] as int,
+          hasMorePendingPurchase:
+              (result['current_page'] as int) < (result['total_pages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load more pending purchase report: $e'));
+    }
+  }
+
+  Future<void> _onUpdatePendingPurchaseFilters(
+    UpdatePendingPurchaseReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    // Reload data with new filters
+    add(
+      LoadPendingPurchaseReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.pendingPurchasePageSize,
+        filters: event.filters,
+      ),
+    );
+  }
+
+  void _onClearPendingPurchaseFilters(
+    ClearPendingPurchaseReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) {
+    // Reload with empty filters
+    add(
+      LoadPendingPurchaseReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.pendingPurchasePageSize,
+        filters: const PurchaseReportFilters(),
+      ),
+    );
+  }
+
+  Future<void> _onExportPendingPurchaseToExcel(
+    ExportPendingPurchaseReportToExcel event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.exportingPendingPurchaseReport,
+        ),
+      );
+
+      // TODO: Implement Excel export logic
+      // This will be similar to _onExportTransactions but for the report data
+      // You'll need to fetch all data (not paginated) and create Excel file
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedPendingPurchaseReport,
+          exportPendingPurchaseMessage:
+              'Excel export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedPendingPurchaseReport,
+          exportPendingPurchaseMessage: 'Failed to export to Excel: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportPendingPurchaseToPDF(
+    ExportPendingPurchaseReportToPDF event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.exportingPendingPurchaseReport,
+        ),
+      );
+
+      // TODO: Implement PDF export logic
+      // This will be similar to Excel export but generate PDF
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedPendingPurchaseReport,
+          exportPendingPurchaseMessage: 'PDF export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedGRNReport,
+          exportGRNMessage: 'Failed to export to PDF: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onLoadCreditPaymentReport(
+    LoadCreditPaymentReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadingCreditPaymentReport,
+          creditPaymentPage: event.page,
+          creditPaymentFilters: event.filters,
+        ),
+      );
+
+      final int offset = (event.page - 1) * event.pageSize;
+
+      final receipts = await purchaseOrderReportRepository
+          .getCreditPaymentReport(
+            companyId: event.companyId,
+            supplierId: event.filters.supplierId,
+            sortBy: event.sortBy,
+            limit: event.pageSize,
+            offset: offset,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+          );
+
+      final totalCount = await purchaseOrderReportRepository
+          .getCreditPaymentReportCount(
+            companyId: event.companyId,
+            supplierId: event.filters.supplierId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+          );
+
+      // Post-processing logic (Same as before but on the fetched page)
+      // Group by Sales Order Header
+      final Map<int, List<CreditPayment>> groupedPayments = {};
+      for (var payment in receipts) {
+        if (payment.poHeaderRef?.id != null) {
+          if (!groupedPayments.containsKey(payment.poHeaderRef!.id)) {
+            groupedPayments[payment.poHeaderRef!.id!] = [];
+          }
+          groupedPayments[payment.poHeaderRef!.id]!.add(payment);
+        }
+      }
+
+      final List<CreditPayment> processedPayments = [];
+
+      groupedPayments.forEach((poId, poPayments) {
+        // Sort by date receipt (Ascending for calculation?)
+        // Java code sorts retrieving by DESC, then in memory compares by DateReceipt.
+        // Assuming DateReceipt is comparable.
+        poPayments.sort((a, b) {
+          final aDate = a.datePayment ?? DateTime(0);
+          final bDate = b.datePayment ?? DateTime(0);
+          return aDate.compareTo(bDate);
+        });
+
+        // Calculate Remaining Values
+        // remaining starts at PO Amount Gross
+        double remaining = poPayments.isNotEmpty
+            ? (poPayments.first.poHeaderRef?.amountGross ?? 0.0)
+            : 0.0;
+
+        for (var payment in poPayments) {
+          remaining -= (payment.paymentAmount ?? 0.0);
+          payment.setRemaining(remaining < 0 ? 0.0 : remaining);
+          processedPayments.add(payment);
+        }
+      });
+      processedPayments.sort(
+        (a, b) => (b.datePayment ?? DateTime(0)).compareTo(
+          a.datePayment ?? DateTime(0),
+        ),
+      );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedCreditPaymentReport,
+          creditPaymentReports: processedPayments,
+          hasMoreCreditPayment: receipts.length == event.pageSize,
+          creditPaymentTotalCount: totalCount,
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load credit receipts report: $e'));
+    }
+  }
+
+  Future<void> _onLoadMoreCreditPaymentReport(
+    LoadMoreCreditPaymentReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    if (state.hasMoreCreditPayment &&
+        state.status != PurchaseOrderStatus.loadingMoreCreditPaymentReport) {
+      final nextPage = state.creditPaymentPage + 1;
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadingMoreCreditPaymentReport,
+        ),
+      );
+
+      // Trigger load for next page. But wait, reusing _onLoad replaces the list.
+      // I need to append.
+      // So I should implement the logic here, or make _onLoad handle appending (if I passed a flag).
+      // Standard pattern: Separate handler or helper.
+      // I will implement helper logic here.
+
+      try {
+        final int offset = (nextPage - 1) * state.creditPaymentPageSize;
+        final receipts = await purchaseOrderReportRepository
+            .getCreditPaymentReport(
+              companyId: state.companyId ?? 1, // Default or generic
+              supplierId: state.creditPaymentFilters.supplierId,
+              limit: state.creditPaymentPageSize,
+              offset: offset,
+            );
+
+        // Process newly fetched receipts
+        // Note: Remaining value calculation is PER PAGE here as per logic discussion.
+        final Map<int, List<CreditPayment>> groupedPayments = {};
+        for (var payment in receipts) {
+          if (payment.poHeaderRef?.id != null) {
+            if (!groupedPayments.containsKey(payment.poHeaderRef!.id)) {
+              groupedPayments[payment.poHeaderRef!.id!] = [];
+            }
+            groupedPayments[payment.poHeaderRef!.id]!.add(payment);
+          }
+        }
+
+        final List<CreditPayment> processedPayments = [];
+        groupedPayments.forEach((poId, poPayments) {
+          poPayments.sort(
+            (a, b) => (a.datePayment ?? DateTime(0)).compareTo(
+              b.datePayment ?? DateTime(0),
+            ),
+          );
+          double remaining = poPayments.isNotEmpty
+              ? (poPayments.first.poHeaderRef?.amountGross ?? 0.0)
+              : 0.0;
+          for (var payment in poPayments) {
+            remaining -= (payment.paymentAmount ?? 0.0);
+            payment.setRemaining(remaining);
+            processedPayments.add(payment);
+          }
+        });
+        processedPayments.sort(
+          (a, b) => (b.datePayment ?? DateTime(0)).compareTo(
+            a.datePayment ?? DateTime(0),
+          ),
+        );
+
+        emit(
+          state.copyWith(
+            status: PurchaseOrderStatus.loadedCreditPaymentReport,
+            creditPayments: List.of(state.creditPayments)
+              ..addAll(processedPayments),
+            creditPaymentPage: nextPage,
+            hasMoreCreditPayment:
+                receipts.length == state.creditPaymentPageSize,
+          ),
+        );
+      } catch (e) {
+        emit(state.errorState('Failed to load more credit payments: $e'));
+      }
+    }
+  }
+
+  Future<void> _onUpdateCreditPaymentFilters(
+    UpdateCreditPaymentReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    emit(state.copyWith(creditPaymentFilters: event.filters));
+    add(
+      LoadCreditPaymentReport(
+        companyId: state.companyId ?? 1,
+        filters: event.filters,
+        page: 1,
+        pageSize: state.creditPaymentPageSize,
+      ),
+    );
+  }
+
+  Future<void> _onClearCreditPaymentFilters(
+    ClearCreditPaymentReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    emit(state.copyWith(creditPaymentFilters: const PurchaseReportFilters()));
+    add(
+      LoadCreditPaymentReport(
+        companyId: state.companyId ?? 1,
+        filters: const PurchaseReportFilters(),
+        page: 1,
+        pageSize: state.creditPaymentPageSize,
+      ),
+    );
+  }
+
+  Future<void> _onExportCreditPaymentToExcel(
+    ExportCreditPaymentReportToExcel event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    // Placeholder for export logic
+    emit(state.successState('Export to Excel not implemented yet'));
+  }
+
+  Future<void> _onExportCreditPaymentToPDF(
+    ExportCreditPaymentReportToPDF event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    // Placeholder for export logic
+    emit(state.successState('Export to PDF not implemented yet'));
+  }
+  // ============================================================================
+  // Aged Credit Payment REPORT EVENT HANDLERS
+  // ============================================================================
+
+  Future<void> _onLoadAgedCreditPaymentReport(
+    LoadAgedCreditPaymentReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadingAgedCreditPaymentReport,
+        ),
+      );
+
+      // Fetch paginated data based on filter view type
+      final result = await purchaseOrderReportRepository
+          .getAgedCreditPaymentReport(
+            companyId: event.companyId,
+            page: event.page,
+            pageSize: event.pageSize,
+            supplierId: event.filters.supplierId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+            purchaseType: event.filters.purchaseType,
+          );
+
+      // Calculate totals
+      final totalsResult = await purchaseOrderReportRepository
+          .calculateAgedCreditPaymentTotals(
+            companyId: event.companyId,
+            supplierId: event.filters.supplierId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+          );
+
+      final totals = AgedCreditPaymentTotals(
+        totalGrossAmount: totalsResult['totalGrossAmount'] as double,
+        totalPaidAmount: totalsResult['totalPaidAmount'] as double,
+        totalRemainingAmount: totalsResult['totalRemainingAmount'] as double,
+        totalCount:
+            totalsResult['totalCount'] as int? ??
+            0, // Adjusted as repo calc doesn't return count, but report result does
+        currentPage: result['currentPage'] as int,
+        totalPages: result['totalPages'] as int,
+      );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedAgedCreditPaymentReport,
+          agedCreditPaymentReport:
+              result['headers'] as List<PurchaseOrderHeader>,
+          agedCreditPaymentReportFilters: event.filters,
+          agedCreditPaymentReportTotals: totals,
+          agedCreditPaymentReportPage: result['currentPage'] as int,
+          agedCreditPaymentReportPageSize: event.pageSize,
+          agedCreditPaymentReportTotalCount: result['totalCount'] as int,
+          agedCreditPaymentReportTotalPages: result['totalPages'] as int,
+          hasMoreAgedCreditPaymentReport:
+              (result['currentPage'] as int) < (result['totalPages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load aged credit payment report: $e'));
+    }
+  }
+
+  Future<void> _onLoadMoreAgedCreditPaymentReport(
+    LoadMoreAgedCreditPaymentReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    if (!state.hasMoreAgedCreditPaymentReport) return;
+
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadingMoreAgedCreditPaymentReport,
+        ),
+      );
+      final nextPage = state.agedCreditPaymentReportPage + 1;
+      final filters = state.agedCreditPaymentReportFilters;
+
+      // Fetch next page
+      final result = await purchaseOrderReportRepository
+          .getAgedCreditPaymentReport(
+            companyId: state.companyId ?? authBloc.state.companyId!,
+            page: nextPage,
+            pageSize: state.agedCreditPaymentReportPageSize,
+            supplierId: filters.supplierId,
+            startDate: filters.dateFrom,
+            endDate: filters.dateTo,
+          );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedAgedCreditPaymentReport,
+          agedCreditPaymentReport: [
+            ...state.agedCreditPaymentReport,
+            ...(result['headers'] as List<PurchaseOrderHeader>),
+          ],
+          agedCreditPaymentReportPage: result['currentPage'] as int,
+          hasMoreAgedCreditPaymentReport:
+              (result['currentPage'] as int) < (result['totalPages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load more aged credit payments: $e'));
+    }
+  }
+
+  Future<void> _onUpdateAgedCreditPaymentFilters(
+    UpdateAgedCreditPaymentReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    // Reload data with new filters
+    add(
+      LoadAgedCreditPaymentReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.agedCreditPaymentReportPageSize,
+        filters: event.filters,
+      ),
+    );
+  }
+
+  void _onClearAgedCreditPaymentFilters(
+    ClearAgedCreditPaymentReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) {
+    // Reload with empty filters
+    add(
+      LoadAgedCreditPaymentReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.agedCreditPaymentReportPageSize,
+        filters: const PurchaseReportFilters(),
+      ),
+    );
+  }
+
+  Future<void> _onExportAgedCreditPaymentToExcel(
+    ExportAgedCreditPaymentReportToExcel event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.exportingAgedCreditPaymentReport,
+        ),
+      );
+
+      // TODO: Implement Excel export logic
+      // This will be similar to _onExportTransactions but for the report data
+      // You'll need to fetch all data (not paginated) and create Excel file
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedAgedCreditPaymentReport,
+          exportAgedCreditPaymentReportMessage:
+              'Excel export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedAgedCreditPaymentReport,
+          exportAgedCreditPaymentReportMessage: 'Failed to export to Excel: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportAgedCreditPaymentToPDF(
+    ExportAgedCreditPaymentReportToPDF event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.exportingAgedCreditPaymentReport,
+        ),
+      );
+
+      // TODO: Implement PDF export logic
+      // This will be similar to Excel export but generate PDF
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedAgedCreditPaymentReport,
+          exportAgedCreditPaymentReportMessage:
+              'PDF export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedAgedCreditPaymentReport,
+          exportAgedCreditPaymentReportMessage: 'Failed to export to PDF: $e',
+        ),
+      );
     }
   }
 

@@ -807,7 +807,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
           ),
           _buildItemInfoItem(
             'Unit of Measure : ',
-            item.unitOfMeasure ?? 'N/A',
+            item.unitOfMeasureDescription?.description1 ?? 'N/A',
             Iconsax.rulerpen,
             isCompact,
           ),

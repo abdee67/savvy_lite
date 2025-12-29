@@ -1,0 +1,277 @@
+Savvy Lite – Privacy Policy
+
+Last updated: [12 Dec 2025]
+
+This Privacy Policy explains how Tech Equations we collect,
+uses, and protects information when you use the Savvy Lite mobile app. Savvy Lite is intended for business use by companies
+and their authorized staff.
+
+By using the App, you agree to the practices described in this Privacy Policy.
+If you do not agree, please do not use the App.
+
+1. Scope
+
+1.1 Platforms covered
+This Policy applies to your use of Savvy Lite on Android and on any other
+platforms where Savvy Lite is made available, unless stated otherwise.
+
+1.2 Business use
+Savvy Lite is designed for use by organizations (for example, companies running
+stock and sales operations). It is not directed to private consumers or
+children.
+
+2. Information we collect
+
+The App itself does not collect data for advertising or marketing purposes.
+However, in order to provide stock and sales management functionality to your
+organization, the App may process the following categories of information:
+
+2.1 User and account information
+- User identifiers such as username, employee ID, role, and access privileges.
+- Business contact details such as name, email address, or phone number, when
+  entered into the system by your organization.
+- Authentication-related data (for example, hashed or encrypted credentials or
+  tokens used to sign in to the App or to your backend systems).
+
+2.2 Customer and supplier information
+When your organization uses Savvy Lite to manage business partners, the App may
+store:
+- Customer information (names, contact details, account numbers, credit terms,
+  and other data your organization chooses to record).
+- Supplier information (names, contact details, payment/banking details where
+  entered, and related records).
+
+All such information is entered and controlled by your organization, which acts
+as the data controller for that data.
+
+2.3 Inventory, sales, and transaction data
+To support stock and sales management, the App may process:
+- Item and inventory data (item codes, descriptions, units of measure, pricing,
+  cost information, item locations, and branches).
+- Stock transactions (purchases, sales, returns, transfers, and adjustments).
+- Sales documents such as quotations, sales orders, invoices, and credit
+  receipts.
+- Purchase documents such as purchase orders and related records.
+- Payment or credit-related information associated with the above documents,
+  where configured by your organization.
+
+2.4 Device and usage information
+To operate reliably, the App may process certain technical data, such as:
+- Device information (for example, device model and operating system version).
+- App information (App version and basic diagnostic logs used for debugging and
+  improving stability).
+- Connectivity state (for example, whether the device is online or offline) to
+  allow data synchronization when a network connection is available.
+
+The App does not request or use precise location, contact lists, call logs, or
+SMS messages.
+
+2.5 Files and documents
+If your organization uses import/export features (for example, working with
+Excel files and reports), the App may:
+- Access files that you explicitly select through a file picker in order to
+  import data into the App.
+- Create and write files (for example, reports or exports) to storage
+  locations that you choose.
+
+The App does not access other files on the device that you have not explicitly
+selected for import or export.
+
+2.6 Camera data (QR/barcode scanning)
+If the QR or barcode scanning features are enabled:
+- The App uses the device camera solely to scan item barcodes or QR codes.
+- Images from the camera are processed locally to read the code and are not
+  stored for unrelated purposes.
+- The App does not use the camera for facial recognition or other biometric
+  identification.
+
+3. How we use information
+
+We use the information described above only for purposes related to providing
+and supporting the App and your organization’s business processes, including:
+
+3.1 To provide the App and its functionality
+- Authenticating users and enforcing role-based access control.
+- Displaying and updating inventory, customers, suppliers, sales, purchases,
+  and related records.
+- Enabling QR/barcode scanning, file import/export, and other in-App features.
+
+3.2 To synchronize with backend systems
+- Communicating with your organization’s backend servers or ERP system (via
+  HTTP or HTTPS) to send and receive the data necessary for operations, such as
+  items, orders, invoices, and user information.
+
+3.3 To maintain, secure, and improve the App
+- Diagnosing technical issues and errors.
+- Improving performance, reliability, and user experience.
+- Protecting user accounts and preventing unauthorized access.
+
+We do not use data collected through the App to deliver third-party ads or to
+build advertising profiles of end users.
+
+4. Legal bases (where applicable)
+
+Depending on your location and applicable data protection laws (for example,
+the GDPR in the European Economic Area and the UK), we may rely on different
+legal bases for processing data, including:
+- Performance of a contract: To provide the App and fulfill our obligations to
+  your organization.
+- Legitimate interests: To operate, maintain, and improve the App, and to
+  ensure security, provided that such interests are not overridden by your
+  rights and freedoms.
+- Legal obligations: To comply with laws and regulations.
+- Consent: Where your organization or users give explicit consent for a
+  particular processing activity, if applicable.
+
+Your organization is responsible for determining its own legal bases for
+processing business data using Savvy Lite.
+
+5. Data storage and security
+
+5.1 Local storage on the device
+- The App uses a local database (for example, SQLite via sqflite) and shared
+  preferences to store data needed for offline usage and performance.
+- Sensitive information, such as authentication tokens or credentials (if
+  stored), may be kept in secure storage and protected using industry-standard
+  encryption mechanisms.
+
+5.2 Server-side storage
+- When online, the App communicates with your organization’s backend systems or
+  servers.
+- The retention, backup, and security of data stored on those servers are
+  managed by your organization and/or [Your Company Name] according to the
+  agreements and policies that apply to you.
+
+5.3 Security measures
+- We take reasonable technical and organizational measures to protect data
+  against accidental or unlawful destruction, loss, alteration, unauthorized
+  disclosure, or access.
+- No system is completely secure; therefore, we cannot guarantee absolute
+  security of your data.
+
+6. Data sharing and transfers
+
+6.1 Within your organization
+Data entered or processed in Savvy Lite may be accessible to other authorized
+users and systems within your organization, according to the roles and
+permissions you configure.
+
+6.2 Third-party service providers
+- We do not sell personal or business data to third parties.
+- We may use third-party service providers (for example, hosting, backup, or
+  monitoring providers) to help us operate and maintain the App. These
+  providers may process data on our behalf under contractual obligations that
+  require them to protect your information.
+
+6.3 Legal requirements
+We may disclose data if required to do so by law, regulation, or legal process,
+or in response to valid requests from public authorities.
+
+6.4 International transfers
+If information is transferred outside your country (for example, to servers in
+other jurisdictions), we will take appropriate steps to ensure that the data is
+protected in accordance with applicable law and this Privacy Policy.
+
+7. Data retention
+
+We retain information for as long as necessary to:
+- Provide the App and related services.
+- Fulfill our contractual obligations to your organization.
+- Comply with applicable legal, accounting, or reporting obligations.
+
+Your organization may determine how long certain types of business data (such
+as transactions, items, and customer or supplier records) are kept in its
+systems. Where required by law, we or your organization may delete or
+anonymize data or honor valid requests to do so.
+
+8. Your rights and choices
+
+Depending on your location and applicable law, you and/or your organization may
+have certain rights in relation to personal data processed through the App,
+such as:
+- The right to access your personal data.
+- The right to correct inaccurate or incomplete data.
+- The right to request deletion of certain data, subject to legal or
+  contractual limitations.
+- The right to restrict or object to certain types of processing.
+- The right to data portability (to receive certain data in a structured,
+  commonly used, and machine-readable format).
+
+If you are an end user (for example, an employee using the App as part of your
+job), please contact your organization’s administrator first for any requests
+regarding your data, as they control the main business records in Savvy Lite.
+You may also contact us using the details in Section 12 for requests that fall
+within our responsibility.
+
+9. Children’s privacy
+
+Savvy Lite is not directed to children and is intended for use by businesses
+and their authorized personnel only. We do not knowingly collect personal
+information from children. If you believe that we have unintentionally
+collected information about a child, please contact us so that we can take
+appropriate steps to remove that information.
+
+10. Permissions used by the App
+
+The exact permissions requested by your installation of Savvy Lite may vary
+depending on configuration and platform, but typically include:
+
+10.1 Camera
+- Purpose: To scan barcodes or QR codes on items and documents in order to
+  quickly retrieve or enter item information.
+- We do not use the camera for any purpose other than code scanning within the
+  App.
+
+10.2 Network / Internet access
+- Purpose: To communicate with your organization’s backend servers or ERP
+  system so that data such as items, orders, invoices, and user information can
+  be synchronized.
+- Where configured, data in transit should be protected using HTTPS or similar
+  encryption.
+
+10.3 File and storage access (if enabled)
+- Purpose: To allow users to import data from files they choose (for example,
+  Excel spreadsheets) and to export reports or other documents to locations
+  selected by the user.
+- The App does not access or modify other files on your device that you have
+  not explicitly selected through the App.
+
+If your production version of Savvy Lite does not use certain permissions,
+those permissions will not be requested. If you or your organization enable new
+permissions or features in the future, this Privacy Policy and your app store
+declarations (including Google Play’s Data safety section) should be updated to
+reflect those changes.
+
+11. Third-party libraries and services
+
+Savvy Lite uses various third-party libraries and frameworks (for example,
+Flutter packages) to provide necessary functionality such as database access,
+network communication, cryptography, secure storage, QR/barcode scanning, and
+file handling.
+
+These libraries operate as part of the App and do not independently sell your
+data for advertising purposes. Any external services that your organization
+connects to (for example, its own ERP, APIs, or other third-party systems) are
+subject to their own privacy policies and terms, which are separate from this
+Privacy Policy.
+
+12. Changes to this Privacy Policy
+
+We may update this Privacy Policy from time to time to reflect changes in the
+App, legal requirements, or our data practices. When we do so, we will update
+the "Last updated" date at the top of this document. In some cases, we may also
+provide additional notice (for example, in-App notifications).
+
+Your continued use of the App after the effective date of the revised Policy
+means that you accept the updated terms.
+
+13. Contact us
+
+If you have any questions or concerns about this Privacy Policy or our data
+practices, please contact us at:
+
+- Company name: Tech Equations
+- Address: Ethiopia, Addis Ababa
+- Email: 
+- Phone: 
+

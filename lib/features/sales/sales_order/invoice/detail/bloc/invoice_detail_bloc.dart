@@ -494,9 +494,10 @@ class InvoiceHistoryDetailBloc
       emit(
         state.copyWith(
           status: InvoiceHistoryDetailStatus.failure,
-          errorMessage: 'Failed to save invoice history: $e',
+          //errorMessage: 'Failed to save invoice history: $e',
         ),
       );
+      print('Failed to save invoice history: $e');
     }
   }
 
@@ -526,9 +527,10 @@ class InvoiceHistoryDetailBloc
       emit(
         state.copyWith(
           status: InvoiceHistoryDetailStatus.failure,
-          errorMessage: 'Failed to save row: $e',
+          //errorMessage: 'Failed to save row: $e',
         ),
       );
+      print('Failed to save row: $e');
     }
   }
 
@@ -561,9 +563,10 @@ class InvoiceHistoryDetailBloc
       emit(
         state.copyWith(
           status: InvoiceHistoryDetailStatus.failure,
-          errorMessage: 'Failed to save in edit: $e',
+          //errorMessage: 'Failed to save in edit: $e',
         ),
       );
+      print('Failed to save in edit: $e');
     }
   }
 

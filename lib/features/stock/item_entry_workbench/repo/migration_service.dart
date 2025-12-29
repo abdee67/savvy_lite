@@ -206,7 +206,7 @@ class MigrationService {
     int userId,
     Transaction? txn,
   ) async {
-    // Validate required fields
+    // Validate required fieldsQ2
     if (item.defualtUom == null) {
       throw Exception('Default UoM is required');
     }

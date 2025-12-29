@@ -1,11 +1,31 @@
-
 // bloc/item_cost_state.dart
 
-import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/features/stock/item_cost/models/item_cost_model.dart';
 
-@immutable
-abstract class ItemCostState {
+enum ItemCostStatus {
+  initial,
+  loading,
+  loaded,
+  creating,
+  updating,
+  deleting,
+  filtering,
+  searching,
+  success,
+  failure,
+  dateValidationFailed,
+  duplicationFound,
+  exporting,
+
+  loadingItemCostReport,
+  loadedItemCostReport,
+  loadingMoreItemCostReport,
+  exportingItemCostReport,
+  exportItemCostReportSuccess,
+}
+
+class ItemCostState {
+  final ItemCostStatus status;
   final List<ItemCost> items;
   final List<ItemCost> createItems;
   final List<ItemCost> editItems;
@@ -18,7 +38,16 @@ abstract class ItemCostState {
   final String? successMessage;
   final bool isLoading;
 
+  // Item Cost Report fields
+  final List<ItemCost> itemCostReportItems;
+  final int itemCostReportPage;
+  final int itemCostReportTotalPages;
+  final int itemCostReportTotalCount;
+  final double itemCostReportTotalCost;
+  final bool hasMoreItemCostReport;
+
   const ItemCostState({
+    this.status = ItemCostStatus.initial,
     this.items = const [],
     this.createItems = const [],
     this.editItems = const [],
@@ -30,9 +59,16 @@ abstract class ItemCostState {
     this.errorMessage,
     this.successMessage,
     this.isLoading = false,
+    this.itemCostReportItems = const [],
+    this.itemCostReportPage = 1,
+    this.itemCostReportTotalPages = 0,
+    this.itemCostReportTotalCount = 0,
+    this.itemCostReportTotalCost = 0.0,
+    this.hasMoreItemCostReport = false,
   });
 
   ItemCostState copyWith({
+    ItemCostStatus? status,
     List<ItemCost>? items,
     List<ItemCost>? createItems,
     List<ItemCost>? editItems,
@@ -44,142 +80,15 @@ abstract class ItemCostState {
     String? errorMessage,
     String? successMessage,
     bool? isLoading,
-  });
-}
-
-class ItemCostInitial extends ItemCostState {
-  const ItemCostInitial() : super();
-  
-  @override
-  ItemCostInitial copyWith({
-    List<ItemCost>? items,
-    List<ItemCost>? createItems,
-    List<ItemCost>? editItems,
-    List<ItemCost>? multiselectionItems,
-    List<ItemCost>? filteredValues,
-    ItemCost? selected,
-    ItemCost? selected1,
-    ItemCost? selected2,
-    String? errorMessage,
-    String? successMessage,
-    bool? isLoading,
+    List<ItemCost>? itemCostReportItems,
+    int? itemCostReportPage,
+    int? itemCostReportTotalPages,
+    int? itemCostReportTotalCount,
+    double? itemCostReportTotalCost,
+    bool? hasMoreItemCostReport,
   }) {
-    return ItemCostInitial();
-  }
-}
-
-class ItemCostLoading extends ItemCostState {
-  const ItemCostLoading({
-    super.items,
-    super.createItems,
-    super.editItems,
-    super.multiselectionItems,
-    super.filteredValues,
-    super.selected,
-    super.selected1,
-    super.selected2,
-    super.isLoading = true,
-  });
-
-  @override
-  ItemCostLoading copyWith({
-    List<ItemCost>? items,
-    List<ItemCost>? createItems,
-    List<ItemCost>? editItems,
-    List<ItemCost>? multiselectionItems,
-    List<ItemCost>? filteredValues,
-    ItemCost? selected,
-    ItemCost? selected1,
-    ItemCost? selected2,
-    String? errorMessage,
-    String? successMessage,
-    bool? isLoading,
-  }) {
-    return ItemCostLoading(
-      items: items ?? this.items,
-      createItems: createItems ?? this.createItems,
-      editItems: editItems ?? this.editItems,
-      multiselectionItems: multiselectionItems ?? this.multiselectionItems,
-      filteredValues: filteredValues ?? this.filteredValues,
-      selected: selected ?? this.selected,
-      selected1: selected1 ?? this.selected1,
-      selected2: selected2 ?? this.selected2,
-      isLoading: isLoading ?? this.isLoading,
-    );
-  }
-}
-
-class ItemCostLoaded extends ItemCostState {
-  const ItemCostLoaded({
-    required super.items,
-    super.createItems,
-    super.editItems,
-    super.multiselectionItems,
-    super.filteredValues,
-    super.selected,
-    super.selected1,
-    super.selected2,
-    super.successMessage,
-    super.isLoading = false,
-  });
-
-  @override
-  ItemCostLoaded copyWith({
-    List<ItemCost>? items,
-    List<ItemCost>? createItems,
-    List<ItemCost>? editItems,
-    List<ItemCost>? multiselectionItems,
-    List<ItemCost>? filteredValues,
-    ItemCost? selected,
-    ItemCost? selected1,
-    ItemCost? selected2,
-    String? errorMessage,
-    String? successMessage,
-    bool? isLoading,
-  }) {
-    return ItemCostLoaded(
-      items: items ?? this.items,
-      createItems: createItems ?? this.createItems,
-      editItems: editItems ?? this.editItems,
-      multiselectionItems: multiselectionItems ?? this.multiselectionItems,
-      filteredValues: filteredValues ?? this.filteredValues,
-      selected: selected ?? this.selected,
-      selected1: selected1 ?? this.selected1,
-      selected2: selected2 ?? this.selected2,
-      successMessage: successMessage ?? this.successMessage,
-    );
-  }
-}
-
-class ItemCostError extends ItemCostState {
-  const ItemCostError({
-    super.items,
-    super.createItems,
-    super.editItems,
-    super.multiselectionItems,
-    super.filteredValues,
-    super.selected,
-    super.selected1,
-    super.selected2,
-    required super.errorMessage,
-    super.isLoading = false,
-  });
-
-  @override
-  ItemCostError copyWith({
-    List<ItemCost>? items,
-    List<ItemCost>? createItems,
-    List<ItemCost>? editItems,
-    List<ItemCost>? multiselectionItems,
-    List<ItemCost>? filteredValues,
-    ItemCost? selected,
-    ItemCost? selected1,
-    ItemCost? selected2,
-    String? errorMessage,
-    String? successMessage,
-    bool? isLoading,
-  }) {
-    return ItemCostError(
+    return ItemCostState(
+      status: status ?? this.status,
       items: items ?? this.items,
       createItems: createItems ?? this.createItems,
       editItems: editItems ?? this.editItems,
@@ -189,48 +98,53 @@ class ItemCostError extends ItemCostState {
       selected1: selected1 ?? this.selected1,
       selected2: selected2 ?? this.selected2,
       errorMessage: errorMessage ?? this.errorMessage,
+      successMessage: successMessage ?? this.successMessage,
+      isLoading: isLoading ?? this.isLoading,
+      itemCostReportItems: itemCostReportItems ?? this.itemCostReportItems,
+      itemCostReportPage: itemCostReportPage ?? this.itemCostReportPage,
+      itemCostReportTotalPages:
+          itemCostReportTotalPages ?? this.itemCostReportTotalPages,
+      itemCostReportTotalCount:
+          itemCostReportTotalCount ?? this.itemCostReportTotalCount,
+      itemCostReportTotalCost:
+          itemCostReportTotalCost ?? this.itemCostReportTotalCost,
+      hasMoreItemCostReport:
+          hasMoreItemCostReport ?? this.hasMoreItemCostReport,
     );
   }
-}
 
-class ItemCostOperationSuccess extends ItemCostState {
-  const ItemCostOperationSuccess({
-    required super.items,
-    super.createItems,
-    super.editItems,
-    super.multiselectionItems,
-    super.filteredValues,
-    super.selected,
-    super.selected1,
-    super.selected2,
-    required super.successMessage,
-    super.isLoading = false,
-  });
+  bool get isSuccess => status == ItemCostStatus.success;
+  bool get isFailure => status == ItemCostStatus.failure;
+  bool get isCreating => status == ItemCostStatus.creating;
+  bool get isUpdating => status == ItemCostStatus.updating;
+  bool get isDeleting => status == ItemCostStatus.deleting;
+  bool get isFiltering => status == ItemCostStatus.filtering;
+  bool get isSearching => status == ItemCostStatus.searching;
+  bool get hasItems => items.isNotEmpty;
+  bool get hasFilteredItems => filteredValues.isNotEmpty;
+  bool get hasSelection => multiselectionItems.isNotEmpty;
+  bool get canEdit => multiselectionItems.length == 1;
+  bool get canDelete => multiselectionItems.isNotEmpty;
+  bool get canExport => filteredValues.isNotEmpty;
+  bool get hasNextPage => itemCostReportPage < itemCostReportTotalPages;
+  bool get hasPreviousPage => itemCostReportPage > 1;
 
   @override
-  ItemCostOperationSuccess copyWith({
-    List<ItemCost>? items,
-    List<ItemCost>? createItems,
-    List<ItemCost>? editItems,
-    List<ItemCost>? multiselectionItems,
-    List<ItemCost>? filteredValues,
-    ItemCost? selected,
-    ItemCost? selected1,
-    ItemCost? selected2,
-    String? errorMessage,
-    String? successMessage,
-    bool? isLoading,
-  }) {
-    return ItemCostOperationSuccess(
-      items: items ?? this.items,
-      createItems: createItems ?? this.createItems,
-      editItems: editItems ?? this.editItems,
-      multiselectionItems: multiselectionItems ?? this.multiselectionItems,
-      filteredValues: filteredValues ?? this.filteredValues,
-      selected: selected ?? this.selected,
-      selected1: selected1 ?? this.selected1,
-      selected2: selected2 ?? this.selected2,
-      successMessage: successMessage ?? this.successMessage,
-    );
-  }
+  List<Object?> get props => [
+    items,
+    createItems,
+    editItems,
+    multiselectionItems,
+    filteredValues,
+    selected,
+    selected1,
+    selected2,
+    isLoading,
+    itemCostReportItems,
+    itemCostReportPage,
+    itemCostReportTotalPages,
+    itemCostReportTotalCount,
+    itemCostReportTotalCost,
+    hasMoreItemCostReport,
+  ];
 }

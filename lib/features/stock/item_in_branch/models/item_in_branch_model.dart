@@ -1,5 +1,6 @@
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class ItemInBranchModel {
   final int id;
@@ -89,6 +90,15 @@ class ItemInBranchModel {
               itemsId: map['items_id']?.toString(),
               itemDescription: map['item_description']?.toString(),
               unitOfMeasure: map['unit_of_measure']?.toString(),
+              unitOfMeasureDescription:
+                  map['unit_of_measure_description'] != null
+                  ? UdcDetails(
+                      id: asInt(map['unit_of_measure']) ?? 0,
+                      description1:
+                          map['unit_of_measure_description']?.toString() ?? '',
+                      detailCode: map['unit_of_measure_code']?.toString() ?? '',
+                    )
+                  : null,
               unitPrice: asDouble(map['unit_price']),
               taxable: map['taxable']?.toString(),
               barcode: map['barcode']?.toString(),

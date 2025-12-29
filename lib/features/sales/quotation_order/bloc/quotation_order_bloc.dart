@@ -441,7 +441,8 @@ class QuotationOrderBloc
 
       add(RefreshQuotationOrders());
     } catch (e) {
-      emit(state.errorState('Failed to save quotation orders: $e'));
+      // emit(state.errorState('Failed to save quotation orders: $e'));
+      print('Failed to save quotation orders: $e');
     }
   }
 
@@ -732,7 +733,8 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to save row: $e'));
+      //emit(state.errorState('Failed to save row: $e'));
+      print('Failed to save row: $e');
     }
   }
 
@@ -1569,7 +1571,8 @@ class QuotationOrderBloc
       add(GenerateInvoiceFromQuotation());
       add(ClearQuotationOrderDetails());
     } catch (e) {
-      emit(state.errorState('Failed to save quotation order: $e'));
+      //emit(state.errorState('Failed to save quotation order: $e'));
+      print('Failed to save quotation order: $e');
     }
   }
 
@@ -1588,7 +1591,8 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to save quotation details: $e'));
+      //emit(state.errorState('Failed to save quotation details: $e'));
+      print('Failed to save quotation details: $e');
     }
   }
 

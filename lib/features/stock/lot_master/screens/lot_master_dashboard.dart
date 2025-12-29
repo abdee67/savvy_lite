@@ -37,6 +37,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  // final List<LotMaster> items = List.generate(100, (index) => LotMaster());//used it for lazy loading but needs to be fix
   bool _isSelectionMode = false;
   final Map<int, double> _dragOffset = {};
 
@@ -227,7 +228,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
             .where((entry) => entry.id == locationId)
             .firstOrNull
             ?.locationDescription ??
-        'Branch $locationId';
+        'Loc $locationId';
     return locationName;
   }
 
@@ -700,9 +701,9 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
       decoration: const BoxDecoration(color: Colors.grey),
       child: ListView.separated(
         controller: _scrollController,
+        separatorBuilder: (context, index) => SizedBox(height: cardSpacing),
         padding: const EdgeInsets.all(16),
         itemCount: state.filteredItems.length,
-        separatorBuilder: (context, index) => SizedBox(height: cardSpacing),
         itemBuilder: (context, index) {
           final lot = state.filteredItems[index];
           final isSelected = state.selectedItems.contains(lot);
@@ -1066,19 +1067,19 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
           ),
           _buildLotInfoItem(
             'Branch : ',
-            _getBranchName(lot.branch!),
+            _getBranchName(lot.branch!) ?? 'N/A',
             Iconsax.building,
             isCompact,
           ),
           _buildLotInfoItem(
             'Item Number : ',
-            _getItemName(lot.itemNumber!),
+            lot.itemRef?.itemDescription ?? 'N/A',
             Iconsax.box,
             isCompact,
           ),
           _buildLotInfoItem(
             'Location : ',
-            _getLocationName(lot.location!),
+            _getLocationName(lot.location!) ?? 'N/A',
             Iconsax.location,
             isCompact,
           ),

@@ -1,12 +1,12 @@
 // models/item_transaction_model.dart
-import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 import 'package:savvy_stock/features/company/models/company_model.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/models/supplier_model.dart';
-import 'package:savvy_stock/features/stock/inventory_transaction_entry/models/inventory_transaction_entry_model.dart';
+import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
+import 'package:savvy_stock/features/stock/location_entry/models/location_master_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
@@ -38,8 +38,8 @@ class ItemTransactionModel {
   int? itemLocationsTo;
 
   // Foreign key relationships
-  final ItemLocation? location;
-  final LotMaster? lot;
+  final ItemLocation? itemLocationRef;
+  final LotMaster? lotNumberRef;
   final ItemInBranchModel? itemBranchDetail;
   final ItemEntryModel? item;
   final Branch? branchDetail;
@@ -77,8 +77,8 @@ class ItemTransactionModel {
     this.tempId,
     this.adjustToIncrease = false,
     this.itemLocationsTo,
-    this.location,
-    this.lot,
+    this.itemLocationRef,
+    this.lotNumberRef,
     this.itemBranchDetail,
     this.item,
     this.branchDetail,
@@ -117,8 +117,8 @@ class ItemTransactionModel {
     int? tempId,
     bool? adjustToIncrease,
     int? itemLocationsTo,
-    ItemLocation? location,
-    LotMaster? lot,
+    ItemLocation? itemLocationRef,
+    LotMaster? lotNumberRef,
     ItemInBranchModel? itemBranchDetail,
     ItemEntryModel? item,
     Branch? branchDetail,
@@ -157,8 +157,8 @@ class ItemTransactionModel {
       tempId: tempId ?? this.tempId,
       adjustToIncrease: adjustToIncrease ?? this.adjustToIncrease,
       itemLocationsTo: itemLocationsTo ?? this.itemLocationsTo,
-      location: location ?? this.location,
-      lot: lot ?? this.lot,
+      itemLocationRef: itemLocationRef ?? this.itemLocationRef,
+      lotNumberRef: lotNumberRef ?? this.lotNumberRef,
       itemBranchDetail: itemBranchDetail ?? this.itemBranchDetail,
       item: item ?? this.item,
       branchDetail: branchDetail ?? this.branchDetail,
@@ -225,38 +225,79 @@ class ItemTransactionModel {
       unitCost: _toDouble(map['unit_cost']) ?? 0.0,
       amountCost: _toDouble(map['amount_cost']) ?? 0.0,
       beforeAmountCost: _toDouble(map['before_amount_cost']) ?? 0.0,
-      unitOfMeasureDetail: map['unit_of_measure'] != null
+      unitOfMeasureDetail: map['unit_of_measure_description'] != null
           ? UdcDetails(
               id: _toInt(map['unit_of_measure']) ?? 0,
               detailCode: map['detail_code']?.toString() ?? '',
-              description1: map['unit_of_measure']?.toString() ?? '',
+              description1:
+                  map['unit_of_measure_description']?.toString() ?? '',
             )
           : null,
-      transactionTypeDetail: map['transaction_type'] != null
+      transactionTypeDetail: map['transaction_type_description'] != null
           ? UdcDetails(
               id: _toInt(map['transaction_type']) ?? 0,
               detailCode: map['detail_code']?.toString() ?? '',
-              description1: map['transaction_type']?.toString() ?? '',
+              description1:
+                  map['transaction_type_description']?.toString() ?? '',
             )
           : null,
-      lotStatusDetail: map['lot_status'] != null
+      lotStatusDetail: map['lot_status_description'] != null
           ? UdcDetails(
               id: _toInt(map['lot_status']) ?? 0,
               detailCode: map['detail_code']?.toString() ?? '',
-              description1: map['lot_status']?.toString() ?? '',
+              description1: map['lot_status_description']?.toString() ?? '',
             )
           : null,
-      orderTypeDetail: map['order_type'] != null
+      orderTypeDetail: map['order_type_description'] != null
           ? UdcDetails(
               id: _toInt(map['order_type']) ?? 0,
               detailCode: map['detail_code']?.toString() ?? '',
-              description1: map['order_type']?.toString() ?? '',
+              description1: map['order_type_description']?.toString() ?? '',
             )
           : null,
       branchDetail: map['branch'] != null
           ? Branch(
               id: _toInt(map['branch']) ?? 0,
               description: map['branch_name']?.toString() ?? '',
+            )
+          : null,
+      itemLocationRef: map['location_description'] != null
+          ? ItemLocation(
+              id: _toInt(map['item_location']) ?? 0,
+              location: _toInt(map['location']) ?? 0,
+              locationDescription: map['location_description'] != null
+                  ? LocationMaster(
+                      id: _toInt(map['location']) ?? 0,
+                      locationDescription:
+                          map['location_description']?.toString() ?? '',
+                    )
+                  : null,
+            )
+          : null,
+      supplierDetail: map['supplier'] != null
+          ? SupplierModel(
+              id: _toInt(map['supplier']) ?? 0,
+              supplierName: map['supplier_name']?.toString() ?? '',
+            )
+          : null,
+      customerDetail: map['customer_name'] != null
+          ? Customer(
+              id: _toInt(map['customer']) ?? 0,
+              customerName: map['customer_name']?.toString() ?? '',
+            )
+          : null,
+      item: map['item_description'] != null
+          ? ItemEntryModel(
+              id: _toInt(map['item_number']) ?? 0,
+              itemDescription: map['item_description']?.toString() ?? '',
+            )
+          : null,
+      lotNumberRef: map['lot_number'] != null
+          ? LotMaster(
+              id: _toInt(map['lot_number']) ?? 0,
+              lotNumber: _toInt(map['lot_number']) ?? 0,
+              batchNumberSupplier:
+                  map['batch_number_supplier']?.toString() ?? '',
             )
           : null,
     );
@@ -277,100 +318,5 @@ class ItemTransactionModel {
     if (v is num) return v.toDouble();
     if (v is String) return double.tryParse(v);
     return null;
-  }
-
-  // Helper method to load relationships
-  Future<ItemTransactionModel> loadRelationships(
-    LocalDatabaseService databaseService,
-  ) async {
-    final db = await databaseService.database;
-
-    // Load location
-    ItemLocation? location;
-    if (itemLocation != null) {
-      final locationData = await db.query(
-        'item_location',
-        where: 'id = ?',
-        whereArgs: [itemLocation],
-      );
-      if (locationData.isNotEmpty) {
-        location = ItemLocation.fromMap(locationData.first);
-      }
-    }
-
-    // Load lot
-    LotMaster? lot;
-    if (lotNumber != null) {
-      final lotData = await db.query(
-        'lot_master',
-        where: 'id = ?',
-        whereArgs: [lotNumber],
-      );
-      if (lotData.isNotEmpty) {
-        lot = LotMaster.fromMap(lotData.first);
-      }
-    }
-
-    // Load item branch
-    ItemInBranchModel? itemBranchDetail;
-    if (itemBranch != null) {
-      final itemBranchData = await db.query(
-        'items_in_branch',
-        where: 'id = ?',
-        whereArgs: [itemBranch],
-      );
-      if (itemBranchData.isNotEmpty) {
-        itemBranchDetail = ItemInBranchModel.fromMap(itemBranchData.first);
-      }
-    }
-
-    // Load item
-    ItemEntryModel? item;
-    if (itemNumber != null) {
-      final itemData = await db.query(
-        'item_entry',
-        where: 'id = ?',
-        whereArgs: [itemNumber],
-      );
-      if (itemData.isNotEmpty) {
-        item = ItemEntryModel.fromMap(itemData.first);
-      }
-    }
-
-    // Load transaction type
-    UdcDetails? transactionTypeDetail;
-    if (transactionType != null) {
-      final transactionTypeData = await db.query(
-        'udc_details',
-        where: 'id = ?',
-        whereArgs: [transactionType],
-      );
-      if (transactionTypeData.isNotEmpty) {
-        transactionTypeDetail = UdcDetails.fromJson(transactionTypeData.first);
-      }
-    }
-
-    // Load unit of measure
-    UdcDetails? unitOfMeasureDetail;
-    if (unitOfMeasure != null) {
-      final unitOfMeasureData = await db.query(
-        'udc_details',
-        where: 'id = ?',
-        whereArgs: [unitOfMeasure],
-      );
-      if (unitOfMeasureData.isNotEmpty) {
-        unitOfMeasureDetail = UdcDetails.fromJson(unitOfMeasureData.first);
-      }
-    }
-    //
-
-    return copyWith(
-      location: location,
-      lot: lot,
-      itemBranchDetail: itemBranchDetail,
-      item: item,
-      transactionTypeDetail: transactionTypeDetail,
-      unitOfMeasureDetail: unitOfMeasureDetail,
-    );
   }
 }

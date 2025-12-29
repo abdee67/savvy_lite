@@ -1,0 +1,52 @@
+Short Description(80 words)
+SavvyLite is a complete stock and sales management app for businesses. Track inventory, manage customers and suppliers, process sales and purchases, and run reports—all in one mobile-friendly system. Ideal for retail, wholesale, and service operations.
+  
+
+
+
+
+
+
+Full Description(>4000 words)
+SavvyLite empowers small and medium businesses to manage inventory, sales, and purchasing from one mobile-friendly app. Track stock levels, create sales orders and invoices, manage customers and suppliers, and run reports—without the complexity of traditional ERP systems.
+
+Key features:
+- Inventory: Add items, set units of measure, track quantities across branches, manage lots and expiration alerts.
+- Sales: Create orders, quotations, invoices; apply credit terms; handle returns and credit notes.
+- Purchasing: Manage purchase orders, receive items, and process supplier credit payments.
+- Customers & suppliers: Maintain records, contact info, and credit terms.
+- Multi-branch support: Operate across locations with centralized control.
+- Barcode/QR scanning: Fast item lookup using the device camera.
+- Offline mode: Work without internet; sync when back online.
+- Reports & exports: Generate reports and export data (Excel) for analysis.
+- Role-based access: Secure user management with configurable permissions.
+- Real-time stock checks during sales and purchases.
+
+Why SavvyLite?
+- Simplicity: No steep learning curve. Get started in minutes with an intuitive interface designed for business owners and staff.
+- Flexibility: Whether you run a single store or multiple branches, SavvyLite scales with you. Manage separate locations, transfer stock between them, and see consolidated reports.
+- Mobility: Use it on tablets, phones, or desktops. Process sales on the shop floor, check stock from the warehouse, and review reports from the office.
+- Reliability: Work offline during outages. Your data syncs automatically when you reconnect, so you never lose a transaction.
+- Security: Role-based permissions ensure staff only see what they need. Sensitive data is protected with secure storage and encrypted communications.
+
+Ideal for:
+- Service companies maintaining parts inventory, job materials, and client billing.
+- Distribution centers handling multi-location stock, lot tracking, and expiration management.
+- Any business needing clear visibility into cash flow, stock levels, and customer balances.
+
+Built for retail, wholesale, and service businesses needing reliable, on-the-go access to stock and sales data. Reduce errors, improve cash flow, and stay compliant with simple, powerful tools.
+
+Install, sign in, and start managing your business today.
+
+
+
+
+
+
+
+
+
+
+
+
+

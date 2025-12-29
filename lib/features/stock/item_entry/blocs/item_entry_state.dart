@@ -1,4 +1,5 @@
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/stock/item_entry/models/item_report_filter.model.dart';
 
 enum ItemEntryStatus {
   initial,
@@ -13,6 +14,11 @@ enum ItemEntryStatus {
   failure,
   duplication,
   editing,
+  loadingItemReport,
+  loadedItemReport,
+  loadingMoreItemReport,
+  exportingReport,
+  exportReportSuccess,
 }
 
 enum ItemEntryDetailStatus { hidden, showing, editing }
@@ -49,6 +55,16 @@ class ItemEntryState {
   final ItemEntryModel? selected2;
   final ItemEntryModel? selected3;
   final List<ItemEntryModel> barcodeItems;
+
+  final List<ItemEntryModel> itemReportItems;
+  final ItemReportFilters itemReportFilters;
+  final int itemReportPage;
+  final int itemReportTotalPages;
+  final int itemReportTotalCount;
+  final double itemReportTotalCost;
+  final bool hasMoreItemReport;
+  final String exportReportMessage;
+
   ItemEntryState({
     this.status = ItemEntryStatus.initial,
     this.message,
@@ -76,6 +92,14 @@ class ItemEntryState {
     this.selected2,
     this.selected3,
     this.barcodeItems = const [],
+    this.itemReportItems = const [],
+    this.itemReportFilters = const ItemReportFilters(),
+    this.itemReportPage = 0,
+    this.itemReportTotalPages = 0,
+    this.itemReportTotalCount = 0,
+    this.itemReportTotalCost = 0,
+    this.hasMoreItemReport = false,
+    this.exportReportMessage = '',
   });
 
   // --- Helper Getters ---
@@ -102,6 +126,9 @@ class ItemEntryState {
   bool get canDelete => selectedItems.isNotEmpty;
   bool get canExport => filteredItems.isNotEmpty;
   bool get useBarcode => barcodeItems.isNotEmpty;
+  bool get hasItemReport => itemReportItems.isNotEmpty;
+  bool get hasPreviousPage => itemReportPage > 1;
+  bool get hasNextPage => itemReportPage < itemReportTotalPages;
 
   bool get hasRecentDeletions => recentlyDeleted.isNotEmpty;
 
@@ -133,6 +160,14 @@ class ItemEntryState {
     ItemEntryModel? selected2,
     ItemEntryModel? selected3,
     List<ItemEntryModel>? barcodeItems,
+    List<ItemEntryModel>? itemReportItems,
+    ItemReportFilters? itemReportFilters,
+    int? itemReportPage,
+    int? itemReportTotalPages,
+    int? itemReportTotalCount,
+    double? itemReportTotalCost,
+    bool? hasMoreItemReport,
+    String? exportReportMessage,
   }) {
     return ItemEntryState(
       status: status ?? this.status,
@@ -162,6 +197,14 @@ class ItemEntryState {
       selected2: selected2 ?? this.selected2,
       selected3: selected3 ?? this.selected3,
       barcodeItems: barcodeItems ?? this.barcodeItems,
+      itemReportItems: itemReportItems ?? this.itemReportItems,
+      itemReportFilters: itemReportFilters ?? this.itemReportFilters,
+      itemReportPage: itemReportPage ?? this.itemReportPage,
+      itemReportTotalPages: itemReportTotalPages ?? this.itemReportTotalPages,
+      itemReportTotalCount: itemReportTotalCount ?? this.itemReportTotalCount,
+      itemReportTotalCost: itemReportTotalCost ?? this.itemReportTotalCost,
+      hasMoreItemReport: hasMoreItemReport ?? this.hasMoreItemReport,
+      exportReportMessage: exportReportMessage ?? this.exportReportMessage,
     );
   }
 
@@ -193,5 +236,13 @@ class ItemEntryState {
     selected2,
     selected3,
     barcodeItems,
+    itemReportItems,
+    itemReportFilters,
+    itemReportPage,
+    itemReportTotalPages,
+    itemReportTotalCount,
+    itemReportTotalCost,
+    hasMoreItemReport,
+    exportReportMessage,
   ];
 }

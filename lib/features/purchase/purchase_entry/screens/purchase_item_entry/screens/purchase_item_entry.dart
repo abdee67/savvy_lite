@@ -154,14 +154,14 @@ class _PurchaseItemEntryScreenContentState
           AddPurchaseOrderDetail(detail: detail),
         );
 
-        _showSuccessSnackBar('Item updated successfully');
+        // _showSuccessSnackBar('Item updated successfully');
       } else {
         // Add new item
         context.read<PurchaseOrderBloc>().add(
           AddPurchaseOrderDetail(detail: detail),
         );
 
-        _showSuccessSnackBar('Item added successfully');
+        //   _showSuccessSnackBar('Item added successfully');
       }
 
       _resetForm();

@@ -1,4 +1,6 @@
+import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class ItemCost {
   int? id;
@@ -11,6 +13,7 @@ class ItemCost {
 
   //from join
   final ItemInBranchModel? fromUOM;
+  final ItemEntryModel? itemRef;
 
   ItemCost({
     this.id,
@@ -21,6 +24,7 @@ class ItemCost {
     this.dateUpdated,
     this.fromUOM,
     this.tempId,
+    this.itemRef,
   });
   factory ItemCost.empty() {
     return ItemCost(
@@ -32,6 +36,7 @@ class ItemCost {
       dateUpdated: null,
       fromUOM: null,
       tempId: null,
+      itemRef: null,
     );
   }
 
@@ -46,7 +51,29 @@ class ItemCost {
           ? DateTime.parse(map['date_updated'])
           : null,
       tempId: map['temp_id'],
-      fromUOM: map['branch'] != null ? ItemInBranchModel.fromMap(map) : null,
+      fromUOM: map['branch_description'] != null
+          ? ItemInBranchModel(
+              id: map['branch'],
+              itemNumber: map['item_number'],
+              branch: map['branch'],
+            )
+          : null,
+      itemRef: map['item_description'] != null
+          ? ItemEntryModel(
+              id: map['item_number'],
+              itemsId: map['item_id'],
+              unitOfMeasure: map['unit_of_measure']?.toString(),
+              itemDescription: map['item_description'],
+              unitOfMeasureDescription:
+                  map['unit_of_measure_description'] != null
+                  ? UdcDetails(
+                      id: map['unit_of_measure'],
+                      description1: map['unit_of_measure_description'],
+                      detailCode: map['unit_of_measure_code'],
+                    )
+                  : null,
+            )
+          : null,
     );
   }
 

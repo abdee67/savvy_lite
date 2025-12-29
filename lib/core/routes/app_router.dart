@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/errors/unauthorized_screen.dart';
@@ -35,6 +36,29 @@ import 'package:savvy_stock/features/purchase/supplier_entry/models/supplier_mod
 import 'package:savvy_stock/features/purchase/supplier_entry/screens/supplier_info_screen.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/screens/supplier_list.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/widget/supplier_create_edit.dart';
+import 'package:savvy_stock/features/reports/cash_flow/dashboard/cash_flow_report_dashboard.dart';
+import 'package:savvy_stock/features/reports/cash_flow/sidebar/cash_inflow_report.dart';
+import 'package:savvy_stock/features/reports/cash_flow/sidebar/cash_flow_summary_report.dart';
+import 'package:savvy_stock/features/reports/cash_flow/sidebar/cash_out_flow_report.dart';
+import 'package:savvy_stock/features/reports/purchase_report/dashboard/purchase_report_dashboard.dart';
+import 'package:savvy_stock/features/reports/purchase_report/sidebar/aged_credit_purchase_report.dart';
+import 'package:savvy_stock/features/reports/purchase_report/sidebar/credit_payment_report.dart';
+import 'package:savvy_stock/features/reports/purchase_report/sidebar/grn_report.dart';
+import 'package:savvy_stock/features/reports/purchase_report/sidebar/pending_purchase_report.dart';
+import 'package:savvy_stock/features/reports/purchase_report/sidebar/purchase_transaction_report.dart';
+import 'package:savvy_stock/features/reports/sales_report/dashboard/sales_report_dashboard.dart';
+import 'package:savvy_stock/features/reports/sales_report/sidebar/aged_credit_receipt_report.dart';
+import 'package:savvy_stock/features/reports/sales_report/sidebar/credit_received_report.dart';
+import 'package:savvy_stock/features/reports/sales_report/sidebar/sales_transaction_report.dart';
+import 'package:savvy_stock/features/reports/stock_report/dashboard/stock_report_dashboard.dart';
+import 'package:savvy_stock/features/reports/stock_report/sidebar/daily_stock_report.dart';
+import 'package:savvy_stock/features/reports/stock_report/sidebar/expiration_report.dart';
+import 'package:savvy_stock/features/reports/stock_report/sidebar/inventory_movement.dart';
+import 'package:savvy_stock/features/reports/stock_report/sidebar/inventory_transaction.dart';
+import 'package:savvy_stock/features/reports/stock_report/sidebar/item_cost_report.dart';
+import 'package:savvy_stock/features/reports/stock_report/sidebar/reorder_point_report.dart';
+import 'package:savvy_stock/features/reports/stock_report/sidebar/upcoming_expiration.dart';
+import 'package:savvy_stock/features/reports/stock_report/sidebar/balance_of_item_entry_report.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/customer/screens/customer_list.dart';
 import 'package:savvy_stock/features/sales/customer/screens/sales_customer_screen.dart';
@@ -75,6 +99,9 @@ import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.da
 import 'package:savvy_stock/features/stock/lot_master/screens/lot_master_dashboard.dart';
 import 'package:savvy_stock/features/stock/lot_master/widgets/lot_master_create_and_edit.dart.dart';
 import 'package:savvy_stock/features/system_constant/screen/system_constants_screen.dart';
+
+import 'package:savvy_stock/core/di/injection_container.dart';
+import 'package:savvy_stock/features/reports/cash_flow/bloc/cash_flow_bloc.dart';
 
 // Import your screen files for missing routes
 // import 'package:savvy_stock/features/sales/sales_entry/screens/sales_entry_screen.dart';
@@ -182,9 +209,9 @@ class AppRouter {
         redirect: _protectedRouteRedirect,
       ),
       GoRoute(
-        path: AppRoutes.salesReport,
+        path: AppRoutes.salesReview,
         builder: (context, state) => PrivilegeRouteGuard(
-          requiredPrivilege: AppRoutes.salesReport,
+          requiredPrivilege: AppRoutes.salesReview,
           parentPrivilege: AppRoutes.salesDashboard,
           child: SalesReviewPage(authBloc: authBloc),
         ),
@@ -874,6 +901,243 @@ class AppRouter {
           requiredPrivilege: AppRoutes.creditPurchaseReview,
           parentPrivilege: AppRoutes.purchaseDashboard,
           child: CreditPurchaseReviewPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //===================REPORT ROUTES===================
+      //====================STOCK REPORT ROUTS=======================
+      GoRoute(
+        path: AppRoutes.stockReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.stockReport,
+          parentPrivilege: AppRoutes.reportDashboard,
+          child: StockReportDashboard(),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Expiration Report
+      GoRoute(
+        path: AppRoutes.expirationReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.expirationReport,
+          parentPrivilege: AppRoutes.stockReport,
+          child: ExpirationReportPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Upcoming Expiration Report
+      GoRoute(
+        path: AppRoutes.upcomingExpirationReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.upcomingExpirationReport,
+          parentPrivilege: AppRoutes.stockReport,
+          child: UpcomingExpiryPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.dailyStockReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.dailyStockReport,
+          parentPrivilege: AppRoutes.stockReport,
+          child: DailyStockReport(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Balance of Item Report
+      GoRoute(
+        path: AppRoutes.balanceOfItemEntryReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.balanceOfItemEntryReport,
+          parentPrivilege: AppRoutes.stockReport,
+          child: BalanceOfItemReport(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Inventory Movement Report
+      GoRoute(
+        path: AppRoutes.inventoryMovementReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.inventoryMovementReport,
+          parentPrivilege: AppRoutes.stockReport,
+          child: InventoryMovementReport(),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Item Cost Report
+      GoRoute(
+        path: AppRoutes.itemCostReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.itemCostReport,
+          parentPrivilege: AppRoutes.stockReport,
+          child: ItemCostReportPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Inventory Transaction Report
+      GoRoute(
+        path: AppRoutes.inventoryTransactionReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.inventoryTransactionReport,
+          parentPrivilege: AppRoutes.stockReport,
+          child: InventoryTransactionReportPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Reorder Point Report
+      GoRoute(
+        path: AppRoutes.reorderPointReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.reorderPointReport,
+          parentPrivilege: AppRoutes.stockReport,
+          child: ReorderPointReport(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //===========================SALES REPORT ROUTES===========================
+      GoRoute(
+        path: AppRoutes.salesReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.salesReport,
+          parentPrivilege: AppRoutes.reportDashboard,
+          child: SalesReportDashboard(),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Sales Transaction Report
+      GoRoute(
+        path: AppRoutes.salesTransactionReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.salesTransactionReport,
+          parentPrivilege: AppRoutes.salesReport,
+          child: SalesTransactionReportPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Credit Receipt Report
+      GoRoute(
+        path: AppRoutes.creditRecievedReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.creditRecievedReport,
+          parentPrivilege: AppRoutes.salesReport,
+          child: CreditReceivedReport(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Aged Credit Sales Report
+      GoRoute(
+        path: AppRoutes.agedCreditSalesReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.agedCreditSalesReport,
+          parentPrivilege: AppRoutes.salesReport,
+          child: AgedCreditReceiptReportPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Purchase Report
+      GoRoute(
+        path: AppRoutes.purchaseReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.purchaseReport,
+          parentPrivilege: AppRoutes.reportDashboard,
+          child: PurchaseReportDashboard(),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Purchase Transaction Report
+      GoRoute(
+        path: AppRoutes.purchaseTransactionReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.purchaseTransactionReport,
+          parentPrivilege: AppRoutes.purchaseReport,
+          child: PurchaseTransactionReportPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //GRN Report
+      GoRoute(
+        path: AppRoutes.goodsReceivedNote,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.goodsReceivedNote,
+          parentPrivilege: AppRoutes.purchaseReport,
+          child: GRNReportPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Pending Purchase Report
+      GoRoute(
+        path: AppRoutes.pendingPurcahseReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.pendingPurcahseReport,
+          parentPrivilege: AppRoutes.purchaseReport,
+          child: PendingPurchaseReportPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Credit Payment Report
+      GoRoute(
+        path: AppRoutes.creditPaymentReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.creditPaymentReport,
+          parentPrivilege: AppRoutes.purchaseReport,
+          child: CreditPaymentReport(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Aged Credit Purchase Report
+      GoRoute(
+        path: AppRoutes.agedCreditPaymentReceiptReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.agedCreditPaymentReceiptReport,
+          parentPrivilege: AppRoutes.purchaseReport,
+          child: AgedPurchaseCreditReportPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+
+      //===========================CASH FLOW ROUTES===========================
+      GoRoute(
+        path: AppRoutes.cashFlowReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.cashFlowReport,
+          parentPrivilege: AppRoutes.reportDashboard,
+          child: CashFlowReportDashboard(),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.cashFlowSummaryReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.cashFlowSummaryReport,
+          parentPrivilege: AppRoutes.cashFlowReport,
+          child: BlocProvider.value(
+            value: getIt<CashFlowBloc>(),
+            child: CashFlowSummaryReportPage(authBloc: authBloc),
+          ),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.cashInFlowReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.cashInFlowReport,
+          parentPrivilege: AppRoutes.cashFlowReport,
+          child: BlocProvider(
+            create: (context) => getIt<CashFlowBloc>(),
+            child: CashInflowReportPage(authBloc: authBloc),
+          ),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.cashOutFlowReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.cashOutFlowReport,
+          parentPrivilege: AppRoutes.cashFlowReport,
+          child: BlocProvider(
+            create: (context) => getIt<CashFlowBloc>(),
+            child: CashOutFlowReportPage(authBloc: authBloc),
+          ),
         ),
         redirect: _protectedRouteRedirect,
       ),

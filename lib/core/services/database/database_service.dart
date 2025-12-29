@@ -43,27 +43,10 @@ class LocalDatabaseService {
     developer.log('Upgrading database from $oldVersion to $newVersion');
 
     if (oldVersion < 2) {
-      // Add proforma fields to sales_order_header for quotation conversion tracking
-      developer.log(
-        'Adding proforma_flag and proforma_reference columns to sales_order_header',
-      );
       await db.execute('''
-        ALTER TABLE sales_order_header ADD COLUMN proforma_flag TEXT
-      ''');
-      await db.execute('''
-        ALTER TABLE sales_order_header ADD COLUMN proforma_reference TEXT
-      ''');
-      developer.log('Successfully added proforma fields to sales_order_header');
-    }
 
-    if (oldVersion < 3) {
-      // Migration for version 3
-      await db.execute('''
-      CREATE TABLE IF NOT EXISTS new_feature_table (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        feature_data TEXT
-      )
-    ''');
+      
+      ''');
     }
   }
 
@@ -393,6 +376,8 @@ CREATE INDEX idx_items_in_branch_uom ON items_in_branch(unit_of_measure);
         lot_qty_auto_for_sales TEXT DEFAULT 'Y',
         discount_display TEXT DEFAULT 'N',
         tax_info_display TEXT DEFAULT 'N',
+        days_left INTEGER,
+        currency_code TEXT DEFAULT 'Birr',
         reorder_point_uom_type TEXT DEFAULT 'I',
         is_synced INTEGER DEFAULT 1,
         last_sync_time INTEGER,
@@ -1290,8 +1275,87 @@ CREATE TABLE credit_receipt_table (
   FOREIGN KEY (user_id) REFERENCES user_table(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
 
+
     ''');
     developer.log('Created table: credit_receipt_table');
+
+    //create other expense table
+    await db.execute('''
+CREATE TABLE other_expense_table (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  payment_amount REAL,
+  date_payment TEXT,
+  reason_description TEXT,
+  payment_instrument INTEGER,
+  company INTEGER,
+  user_id INTEGER,
+  date_updated TEXT,
+
+  FOREIGN KEY (company)
+    REFERENCES company_table(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE,
+
+  FOREIGN KEY (payment_instrument)
+    REFERENCES udc_details(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE,
+
+  FOREIGN KEY (user_id)
+    REFERENCES user_table(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE
+);
+
+CREATE INDEX idx_oet_company
+ON other_expense_table (company);
+
+CREATE INDEX idx_oet_payment_instrument
+ON other_expense_table (payment_instrument);
+
+CREATE INDEX idx_oet_user_id
+ON other_expense_table (user_id);
+''');
+    developer.log('Created table: other_expense_table');
+
+    //create other income table
+    await db.execute('''
+CREATE TABLE other_income_table (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  income_amount REAL,
+  date_income TEXT,
+  reason_description TEXT,
+  payment_instrument INTEGER,
+  company INTEGER,
+  user_id INTEGER,
+  date_updated TEXT,
+
+  FOREIGN KEY (company)
+    REFERENCES company_table(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE,
+
+  FOREIGN KEY (payment_instrument)
+    REFERENCES udc_details(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE,
+
+  FOREIGN KEY (user_id)
+    REFERENCES user_table(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE
+);
+
+CREATE INDEX idx_oit_company
+ON other_income_table (company);
+
+CREATE INDEX idx_oit_payment_instrument
+ON other_income_table (payment_instrument);
+
+CREATE INDEX idx_oit_user_id
+ON other_income_table (user_id);
+''');
+    developer.log('Created table: other_income_table');
 
     //. Create sync_queue table
     await db.execute('''
@@ -2420,7 +2484,7 @@ CREATE TABLE credit_receipt_table (
       AppRoutes.customerEntry,
       AppRoutes.salesCustomerInfo,
       AppRoutes.salesItemEntry,
-      AppRoutes.salesReport,
+      AppRoutes.salesReview,
       AppRoutes.salesReturn,
       AppRoutes.quotationOrder,
       AppRoutes.quotationItemEntry,

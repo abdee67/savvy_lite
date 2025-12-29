@@ -175,6 +175,8 @@ class PurchaseOrderStockService {
         qty: roundedReceivedQuantity, // Positive quantity for purchase
         por: receiver,
         soD: null,
+        supplier: receiver.poDetailRef?.poHeaderRef?.supplierId,
+        orderType: receiver.poDetailRef?.poHeaderRef?.orderType,
       );
     }
   }
@@ -470,6 +472,8 @@ class PurchaseOrderStockService {
         qty: qtyTr,
         por: por,
         soD: null,
+        supplier: por.poDetailRef?.poHeaderRef?.supplierId,
+        orderType: por.poDetailRef?.poHeaderRef?.orderType,
       );
     } catch (e) {
       print('Error updating item location quantity: $e');

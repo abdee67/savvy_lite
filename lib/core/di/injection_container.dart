@@ -2,6 +2,7 @@ import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_report_repo.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_repository.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/services/purchase_order_stock_service.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/blocs/supplier_bloc.dart';
@@ -9,6 +10,7 @@ import 'package:savvy_stock/features/purchase/supplier_entry/repo/supplier_repo.
 import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
 import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_bloc.dart';
 import 'package:savvy_stock/features/sales/quotation_order/repo/quotation_order_repo.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/repo/sales_order_report_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/detail/bloc/invoice_detail_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/detail/repo/invoice_detail_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/header/bloc/invoice_header_bloc.dart';
@@ -61,6 +63,8 @@ import 'package:savvy_stock/features/sales/sales_order/detail/repo/sales_order_d
 import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/repo/sales_order_header_repo.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
+import 'package:savvy_stock/features/reports/cash_flow/bloc/cash_flow_bloc.dart';
+import 'package:savvy_stock/features/reports/cash_flow/repo/cash_flow_repo.dart';
 
 final getIt = GetIt.instance;
 
@@ -263,6 +267,13 @@ void initDependencies() {
       expirationColorsRepository: getIt(),
     ),
   );
+  getIt.registerLazySingleton<PurchaseOrderReportRepository>(
+    () => PurchaseOrderReportRepository(),
+  );
+  getIt.registerLazySingleton<SalesOrderReportRepository>(
+    () => SalesOrderReportRepository(),
+  );
+  getIt.registerLazySingleton<CashFlowRepository>(() => CashFlowRepository());
 
   ///////////// BLoCs///////////////
 
@@ -387,6 +398,7 @@ void initDependencies() {
       authBloc: getIt(),
       uomConversionsRepository: getIt(),
       itemInBranchRepository: getIt(),
+      salesOrderReportRepository: getIt(),
     ),
   );
   getIt.registerFactory<CustomerBloc>(
@@ -443,6 +455,7 @@ void initDependencies() {
       invoiceDetailBloc: getIt(),
       systemConstantBloc: getIt(),
       quotationRepo: getIt(),
+      itemCostRepository: getIt(),
     ),
   );
   getIt.registerFactory<SalesReturnBloc>(
@@ -484,6 +497,12 @@ void initDependencies() {
       itemsTableRepository: getIt(),
       itemCostsRepository: getIt(),
       supplierRepository: getIt(),
+      purchaseOrderReportRepository: getIt(),
     ),
+  );
+
+  // Cash Flow
+  getIt.registerFactory<CashFlowBloc>(
+    () => CashFlowBloc(authBloc: getIt(), cashFlowRepository: getIt()),
   );
 }

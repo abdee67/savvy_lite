@@ -71,7 +71,17 @@ class SalesOrderIntegrationService {
       */
 
       // Step 7: Update stock quantities (like JSF's stock adjustment)
-      await updateStockForAllDetails(details);
+      // 🎯 ENRICH DETAILS WITH HEADER FOR STOCK UPDATE
+      final enrichedDetails = details
+          .map(
+            (d) => d.copyWith(
+              salesOrderHeaderId: createdHeader.id,
+              orderHeader: createdHeader,
+            ),
+          )
+          .toList();
+
+      await updateStockForAllDetails(enrichedDetails);
 
       // Step 8: Calculate final totals (like JSF's calQtyWithAmt)
       await _calculateFinalTotals(createdHeader, details);
@@ -105,7 +115,15 @@ class SalesOrderIntegrationService {
       await _updateSalesOrderDetails(header, details, originalDetails);
 
       // Step 5: Adjust stock based on changes
-      await _adjustStockForUpdate(originalDetails, details);
+      // 🎯 ENRICH DETAILS WITH HEADER FOR STOCK ADJUSTMENT
+      final enrichedDetails = details
+          .map(
+            (d) =>
+                d.copyWith(salesOrderHeaderId: header.id, orderHeader: header),
+          )
+          .toList();
+
+      await _adjustStockForUpdate(originalDetails, enrichedDetails);
 
       // Step 6: Recalculate totals
       await _calculateFinalTotals(header, details);

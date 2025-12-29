@@ -142,6 +142,8 @@ class SystemConstantRepository {
       lotQtyAutoForSales: 'Y',
       discountDisplay: 'Y',
       taxInfoDisplay: 'Y',
+      daysLeft: 180,
+      currencyCode: 'Birr',
       reorderPointUomType: 'I',
       locationCategoryLevel: 1,
       isSynced: false, // Mark as not synced since it's local

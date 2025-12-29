@@ -2,17 +2,22 @@ import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_report_repo.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_repository.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/services/purchase_order_stock_service.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/blocs/supplier_bloc.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/repo/supplier_repo.dart';
+import 'package:savvy_stock/features/reports/cash_flow/bloc/cash_flow_bloc.dart';
+import 'package:savvy_stock/features/reports/cash_flow/repo/cash_flow_repo.dart';
 import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
 import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_bloc.dart';
 import 'package:savvy_stock/features/sales/quotation_order/repo/quotation_order_repo.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/repo/sales_order_report_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/detail/bloc/invoice_detail_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/detail/repo/invoice_detail_repo.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/header/bloc/invoice_header_bloc.dart';
@@ -73,7 +78,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   _initializeAndRunApp();
-  //  clearAllSharedPreferences();
+  // clearAllSharedPreferences();
+
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
 }
 
 // Add error handling wrapper
@@ -91,11 +101,11 @@ Future<void> _initializeAndRunApp() async {
     }
     // Debug database tables (optional - remove in production)
     // await LocalDatabaseService().debugTable('items_in_branch');
-    //  await LocalDatabaseService().debugTable('item_cost');
+    //await LocalDatabaseService().debugTable('item_cost');
     //  await LocalDatabaseService().debugTable('item_location');
     // await LocalDatabaseService().debugTable('lot_master');
-    await LocalDatabaseService().debugTable('sales_order_header');
-    await LocalDatabaseService().debugTable('credit_receipt_table');
+    // await LocalDatabaseService().debugTable('sales_order_header');
+    //await LocalDatabaseService().debugTable('credit_receipt_table');
     // await LocalDatabaseService().debugTable('sales_order_details');
     // await LocalDatabaseService().debugTable('sales_return_header');
     //await LocalDatabaseService().debugTable('sales_return_details');
@@ -105,7 +115,7 @@ Future<void> _initializeAndRunApp() async {
     // await LocalDatabaseService().debugTable('quote_order_header');
     // await LocalDatabaseService().debugTable('quote_order_detail');
     // await LocalDatabaseService().debugTable('supplier_table');
-    // await LocalDatabaseService().debugTable('purchase_order_header');
+    await LocalDatabaseService().debugTable('purchase_order_header');
     //await LocalDatabaseService().debugTable('purchase_order_detail');
     //await LocalDatabaseService().debugTable('purchase_order_receiver');
     //await LocalDatabaseService().debugTable('credit_payment_table');
@@ -180,6 +190,9 @@ class _SavvyStockState extends State<SavvyStock> {
   late SupplierRepository _supplierRepository;
   late PurchaseOrderStockService _purchaseStockService;
   late PurchaseOrderRepository _purchaseOrderRepository;
+  late PurchaseOrderReportRepository _purchaseOrderReportRepository;
+  late SalesOrderReportRepository _salesOrderReportRepository;
+  late CashFlowRepository _cashFlowRepository;
 
   @override
   void initState() {
@@ -230,6 +243,9 @@ class _SavvyStockState extends State<SavvyStock> {
     _supplierRepository = getIt<SupplierRepository>();
     _purchaseOrderRepository = getIt<PurchaseOrderRepository>();
     _purchaseStockService = getIt<PurchaseOrderStockService>();
+    _purchaseOrderReportRepository = getIt<PurchaseOrderReportRepository>();
+    _salesOrderReportRepository = getIt<SalesOrderReportRepository>();
+    _cashFlowRepository = getIt<CashFlowRepository>();
     // Ensure system constants are loaded when companyId becomes available.
     final cid = _authBloc.state.companyId;
     if (cid != null) {
@@ -472,6 +488,7 @@ class _SavvyStockState extends State<SavvyStock> {
               systemConstantBloc: _systemConstantBloc,
               uomConversionsRepository: _itemUomConversionRepository,
               itemInBranchRepository: _stockItemInBranchRepository,
+              salesOrderReportRepository: _salesOrderReportRepository,
             ),
           ),
           BlocProvider<SalesOrderDetailBloc>(
@@ -500,6 +517,7 @@ class _SavvyStockState extends State<SavvyStock> {
               authBloc: _authBloc,
               systemConstantBloc: _systemConstantBloc,
               quotationRepo: _quotationOrderRepository,
+              itemCostRepository: _itemCostRepository,
             ),
           ),
           BlocProvider<InvoiceHistoryHeaderBloc>(
@@ -559,17 +577,23 @@ class _SavvyStockState extends State<SavvyStock> {
               supplierRepository: _supplierRepository,
               nextNumberRepository: _nextNumberRepository,
               stockService: _purchaseStockService,
+              purchaseOrderReportRepository: _purchaseOrderReportRepository,
+            ),
+          ),
+          BlocProvider<CashFlowBloc>(
+            create: (context) => CashFlowBloc(
+              cashFlowRepository: _cashFlowRepository,
+              authBloc: _authBloc,
             ),
           ),
         ],
         child: MaterialApp.router(
           debugShowCheckedModeBanner: false,
-          title: 'Savvy Stock',
+          title: 'Savvy Lite',
           routerConfig: _router,
           theme: ThemeData(
-            primarySwatch: Colors.deepPurple,
             appBarTheme: AppBarTheme(
-              backgroundColor: Color(0xFF155888),
+              backgroundColor: Color.fromARGB(255, 8, 33, 102),
               foregroundColor: Colors.white,
               elevation: 0,
               iconTheme: IconThemeData(color: Colors.white),
@@ -583,7 +607,7 @@ class _SavvyStockState extends State<SavvyStock> {
             ),
             elevatedButtonTheme: ElevatedButtonThemeData(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF155888),
+                backgroundColor: Color.fromARGB(255, 8, 33, 102),
                 foregroundColor: Colors.white,
                 padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(

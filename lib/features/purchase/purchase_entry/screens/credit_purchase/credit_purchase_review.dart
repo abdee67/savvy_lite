@@ -9,10 +9,9 @@ import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_event.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_state.dart';
-import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/screens/credit_purchase/credit_payment.dart';
-import 'package:savvy_stock/features/purchase/purchase_entry/screens/purchase_receive/purchase_receive_screen.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 
 class CreditPurchaseReviewPage extends StatefulWidget {
   final AuthBloc authBloc;
@@ -37,6 +36,12 @@ class _PurchaseReviewPageState extends State<CreditPurchaseReviewPage>
   // Detail panel state
   bool _purchaseOrderDetail = false;
   PurchaseOrderHeader? _selectedPurchaseOrder;
+  late final int decimalPlace = context
+      .read<SystemConstantBloc>()
+      .state
+      .systemConstants
+      .first
+      .decimalPlaces!;
 
   @override
   void initState() {
@@ -812,21 +817,33 @@ class _PurchaseReviewPageState extends State<CreditPurchaseReviewPage>
           if (purchaseOrder.amountDiscount != null)
             _buildquotationOrderInfoItem(
               ' Discount : ',
-              purchaseOrder.amountDiscount?.toString() ?? 'N/A',
+              NumberFormat.currency(
+                    decimalDigits: decimalPlace,
+                    symbol: 'Birr',
+                  ).format(purchaseOrder.amountDiscount!) ??
+                  'N/A',
               Iconsax.rulerpen,
               isCompact,
             ),
           if (purchaseOrder.amountGrandTotalCost != null)
             _buildquotationOrderInfoItem(
               ' Grand Total : ',
-              purchaseOrder.amountGrandTotalCost.toString() ?? 'N/A',
+              NumberFormat.currency(
+                    decimalDigits: decimalPlace,
+                    symbol: 'Birr',
+                  ).format(purchaseOrder.amountGrandTotalCost!) ??
+                  'N/A',
               Iconsax.rulerpen,
               isCompact,
             ),
           if (purchaseOrder.amountOpenCredit != null)
             _buildquotationOrderInfoItem(
               'Unreceived Credit : ',
-              purchaseOrder.amountOpenCredit.toString(),
+              NumberFormat.currency(
+                    decimalDigits: decimalPlace,
+                    symbol: 'Birr',
+                  ).format(purchaseOrder.amountOpenCredit!) ??
+                  'N/A',
               Iconsax.receipt_edit,
               isCompact,
             ),

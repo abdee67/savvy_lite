@@ -473,9 +473,10 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
       emit(
         state.copyWith(
           status: ItemMasterStatus.failure,
-          message: 'Failed to save row: $e',
+          //message: 'Failed to save row: $e',
         ),
       );
+      print('Failed to save row: $e');
     }
   }
 
@@ -528,9 +529,10 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
       emit(
         state.copyWith(
           status: ItemMasterStatus.failure,
-          message: 'Failed to save in edit: $e',
+          //message: 'Failed to save in edit: $e',
         ),
       );
+      print('Failed to save in edit: $e');
     }
   }
 

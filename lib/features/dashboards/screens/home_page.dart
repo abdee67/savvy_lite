@@ -68,6 +68,12 @@ class _HomePageState extends State<HomePage> {
       description: 'Branch management,controll, information and  and locations',
       color: Colors.indigo,
     ),
+    AppRoutes.reportDashboard: _DashboardConfig(
+      title: 'Reports',
+      icon: Iconsax.chart,
+      description: 'Reports and analytics',
+      color: Colors.amber,
+    ),
   };
 
   @override
@@ -135,6 +141,7 @@ class _HomePageState extends State<HomePage> {
                         children: [
                           // Background with radial gradient
                           Container(
+                            margin: const EdgeInsets.only(bottom: 50),
                             width: double.infinity,
                             height: 167,
                             decoration: const BoxDecoration(
@@ -663,7 +670,7 @@ class _FeatureButton extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w500),
         ),
         subtitle: Text(
-          privilege.uri,
+          privilege.description,
           style: TextStyle(fontSize: 10, color: Colors.grey[600]),
         ),
         trailing: const Icon(Icons.chevron_right, color: Colors.grey),

@@ -745,7 +745,7 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // Cancel Button
-              Expanded(
+              Flexible(
                 child: OutlinedButton(
                   onPressed: () {
                     _cancelOrder(context);
@@ -772,7 +772,7 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
               const SizedBox(width: 16),
 
               // Next Button
-              Expanded(
+              Flexible(
                 child: ElevatedButton(
                   onPressed: isValid && !isProcessing && !isLoading
                       ? () => _goToNextPage(context)
@@ -811,9 +811,6 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
                           'Add Items',
                           style: TextStyle(fontSize: _titleFontSize),
                         ),
-                      if (!isProcessing) const SizedBox(width: 8),
-                      if (!isProcessing)
-                        const Icon(Icons.arrow_forward, size: 18),
                     ],
                   ),
                 ),

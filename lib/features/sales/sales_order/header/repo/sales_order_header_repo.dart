@@ -47,12 +47,17 @@ class SalesOrderHeaderRepository {
         SELECT 
           soh.*,
           cu.customer_name as customer_bill_to_name,
+          udc.description_1 as payment_status_description,
           udc.detail_code as payment_status_code ,
-          udc.description_1 as payment_instrument_description
+          pi.description_1 as payment_instrument_description,
+          pi.detail_code as payment_instrument_code,
+          ot.description_1 as order_type_description,
+          ot.detail_code as order_type_code
         FROM sales_order_header soh
         LEFT JOIN customer_table cu ON soh.customer_bill_to = cu.id
         LEFT JOIN udc_details pi ON soh.payment_instrument = pi.id
         LEFT JOIN udc_details udc ON soh.payment_status = udc.id
+        LEFT JOIN udc_details ot ON soh.order_type = ot.id
         WHERE soh.id = ?
       ''';
     final maps = await db.rawQuery(query, [id]);
@@ -143,11 +148,16 @@ class SalesOrderHeaderRepository {
           soh.*,
           cu.customer_name as customer_bill_to_name,
           udc.detail_code as payment_status_code ,
-          udc.description_1 as payment_instrument_description
+          udc.description_1 as payment_instrument_description,
+          pi.detail_code as payment_instrument_code,
+          pi.description_1 as payment_instrument_description,
+          ot.detail_code as order_type_code,
+          ot.description_1 as order_type_description
         FROM sales_order_header soh
         LEFT JOIN customer_table cu ON soh.customer_bill_to = cu.id
         LEFT JOIN udc_details pi ON soh.payment_instrument = pi.id
         LEFT JOIN udc_details udc ON soh.payment_status = udc.id
+        LEFT JOIN udc_details ot ON soh.order_type = ot.id
         WHERE  $where
         ORDER BY soh.id DESC
       ''';
@@ -176,13 +186,18 @@ class SalesOrderHeaderRepository {
         SELECT 
           soh.*,
           cu.customer_name as customer_bill_to_name,
-          udc.detail_code as payment_status_code ,
-          udc.description_1 as payment_instrument_description
+          ps.detail_code as payment_status_code ,
+          ps.description_1 as payment_status_description,
+          ot.detail_code as order_type_code,
+          ot.description_1 as order_type_description,
+          pi.description_1 as payment_instrument_description,
+          pi.detail_code as payment_instrument_code
         FROM sales_order_header soh
         LEFT JOIN customer_table cu ON soh.customer_bill_to = cu.id
         LEFT JOIN udc_details pi ON soh.payment_instrument = pi.id
-        LEFT JOIN udc_details udc ON soh.payment_status = udc.id
-        WHERE soh.company = ? AND soh.payment_term IS NOT NULL AND (soh.void_indicator IS NULL OR soh.void_indicator = "")
+        LEFT JOIN udc_details ot ON soh.order_type = ot.id
+        LEFT JOIN udc_details ps ON soh.payment_status = ps.id
+        WHERE soh.company = ? AND soh.payment_term IS NOT NULL AND soh.payment_method = 'Credit' AND (soh.void_indicator IS NULL OR soh.void_indicator = "")
         ORDER BY soh.id DESC
       ''';
     final maps = await db.rawQuery(query, [companyId]);
@@ -673,7 +688,6 @@ class SalesOrderHeaderRepository {
           '''
         SELECT 
           crt.*,
-          soh.order_number as order_number,
           soh.fs_number as fs_number ,
           pi.description_1 as payment_instrument_description
         FROM credit_receipt_table crt
@@ -729,8 +743,7 @@ class SalesOrderHeaderRepository {
   Future<List<CreditReceipt>> filterCreditReceipts({
     required int companyId,
     int? customerId,
-    DateTime? startDate,
-    DateTime? endDate,
+    String? fsNumber,
   }) async {
     final db = await _db;
 
@@ -743,14 +756,9 @@ class SalesOrderHeaderRepository {
         whereArgs.add(customerId);
       }
 
-      if (startDate != null) {
-        where += ' AND crt.date_receipt >= ?';
-        whereArgs.add(startDate.toIso8601String());
-      }
-
-      if (endDate != null) {
-        where += ' AND crt.date_receipt <= ?';
-        whereArgs.add(endDate.toIso8601String());
+      if (fsNumber != null) {
+        where += ' AND soh.fs_number = ?';
+        whereArgs.add(fsNumber);
       }
 
       final query =
@@ -790,7 +798,7 @@ class SalesOrderHeaderRepository {
       final total = result.first['total_received'] as double?;
       return total ?? 0.0;
     } catch (e) {
-      throw Exception('Failed to get total credit receipts for header: $e');
+      throw Exception('Failed to get total credit receipts: $e');
     }
   }
 }

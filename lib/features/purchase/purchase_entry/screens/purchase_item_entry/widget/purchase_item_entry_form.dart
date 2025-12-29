@@ -28,7 +28,6 @@ import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_c
 import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_state.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_event.dart';
-import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_state.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class PurchaseItemEntryForm extends StatefulWidget {
@@ -557,7 +556,7 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
                         header: 'Default UOM',
                         flex: 1,
                         cellBuilder: (item) => Text(
-                          item.unitOfMeasureDescription ??
+                          item.unitOfMeasureDescription?.description1 ??
                               item.unitOfMeasure ??
                               'N/A',
                           style: const TextStyle(

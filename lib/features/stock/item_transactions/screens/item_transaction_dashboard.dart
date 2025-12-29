@@ -1013,10 +1013,10 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
               Iconsax.tag,
               isCompact,
             ),
-          if (transaction.lot?.batchNumberSupplier != null)
+          if (transaction.lotNumberRef?.batchNumberSupplier != null)
             _buildTransactionInfoItem(
               'Batch Number : ',
-              transaction.lot?.batchNumberSupplier ?? 'N/A',
+              transaction.lotNumberRef?.batchNumberSupplier ?? 'N/A',
               Iconsax.barcode,
               isCompact,
             ),
@@ -1031,7 +1031,7 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
           if (transaction.customer != null)
             _buildTransactionInfoItem(
               'Customer : ',
-              transaction.customerDetail?.name ??
+              transaction.customerDetail?.customerName ??
                   'Customer ${transaction.customer}',
               Iconsax.profile_circle,
               isCompact,

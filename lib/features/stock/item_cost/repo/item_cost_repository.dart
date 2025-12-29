@@ -3,6 +3,7 @@ import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/item_cost/models/item_cost_model.dart';
+import 'package:savvy_stock/features/stock/item_cost/models/paginated_item_cost.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -67,9 +68,24 @@ class ItemCostRepository extends BaseRepository {
   }
 
   // Find all item costs
-  Future<List<ItemCost>> findAll() async {
+  Future<List<ItemCost>> findAll(int companyId) async {
     final db = await databaseService.database;
-    final maps = await db.query('item_cost');
+    final maps = await db.rawQuery(
+      '''SELECT ic.*,
+    i.item_description,
+    i.barcode,
+    u.user_name as user_name,
+    c.company_name as company_name,
+    udc.description_1 as unit_of_measure_description,
+    udc.detail_code as unit_of_measure_code
+    FROM item_cost ic
+    LEFT JOIN items_table i ON ic.item_number = i.id
+    LEFT JOIN user_table u ON ic.user_id = u.id
+    LEFT JOIN company_table c ON ic.company = c.id
+    LEFT JOIN udc_details udc ON i.unit_of_measure = udc.id
+    WHERE ic.company = ?''',
+      [companyId],
+    );
     return maps.map((map) => ItemCost.fromMap(map)).toList();
   }
 
@@ -91,10 +107,22 @@ class ItemCostRepository extends BaseRepository {
   // Find item cost by item
   Future<ItemCost?> findByItem(int itemNumber, int companyId) async {
     final db = await databaseService.database;
-    final maps = await db.query(
-      'item_cost',
-      where: 'item_number = ? AND company = ?',
-      whereArgs: [itemNumber, companyId],
+    final maps = await db.rawQuery(
+      '''SELECT ic.*,
+      i.item_description,
+          i.items_id as item_id,
+          i.unit_of_measure,
+          u.user_name as user_name,
+          c.company_name as company_name,
+          udc.description_1 as unit_of_measure_description,
+          udc.detail_code as unit_of_measure_code
+      FROM item_cost ic
+      LEFT JOIN items_table i ON ic.item_number = i.id
+      LEFT JOIN user_table u ON ic.user_id = u.id
+      LEFT JOIN company_table c ON ic.company = c.id
+      LEFT JOIN udc_details udc ON i.unit_of_measure = udc.id
+    WHERE ic.item_number = ? AND ic.company = ?''',
+      [itemNumber, companyId],
     );
 
     if (maps.isNotEmpty) {
@@ -109,11 +137,19 @@ class ItemCostRepository extends BaseRepository {
     List<dynamic> whereArgs,
   ) async {
     final db = await databaseService.database;
-    final maps = await db.query(
-      'item_cost',
-      where: whereClause,
-      whereArgs: whereArgs,
-    );
+    final maps = await db.rawQuery('''SELECT ic.*,
+    i.item_description,
+    i.barcode,
+    u.user_name as user_name,
+    c.company_name as company_name,
+    udc.description_1 as unit_of_measure_description,
+    udc.detail_code as unit_of_measure_code
+    FROM item_cost ic
+    LEFT JOIN items_table i ON ic.item_number = i.id
+    LEFT JOIN user_table u ON ic.user_id = u.id
+    LEFT JOIN company_table c ON ic.company = c.id
+    LEFT JOIN udc_details udc ON i.unit_of_measure = udc.id
+    WHERE $whereClause''', whereArgs);
     return maps.map((map) => ItemCost.fromMap(map)).toList();
   }
 
@@ -126,12 +162,15 @@ class ItemCostRepository extends BaseRepository {
       '''
       SELECT ic.*, 
              i.item_description, i.barcode,
-             u.username as user_name,
-             c.name as company_name
+             u.user_name as user_name,
+             c.company_name as company_name,
+             udc.description_1 as unit_of_measure_description,
+             udc.detail_code as unit_of_measure_code
       FROM item_cost ic
       LEFT JOIN items_table i ON ic.item_number = i.id
       LEFT JOIN user_table u ON ic.user_id = u.id
       LEFT JOIN company_table c ON ic.company = c.id
+      LEFT JOIN udc_details udc ON i.unit_of_measure = udc.id
       WHERE ic.company = ?
       ORDER BY ic.date_updated DESC
     ''',
@@ -193,7 +232,6 @@ class ItemCostRepository extends BaseRepository {
       );
 
       double unitCost = 0.0;
-      String costSource = 'Standard Cost';
 
       if (itemCost.isNotEmpty) {
         unitCost = itemCost.first.amountUnitCost ?? 0.0;
@@ -201,7 +239,6 @@ class ItemCostRepository extends BaseRepository {
         // Fallback: Use last purchase price or average cost
         final avgCost = await _getAverageCost(item.itemsTableId!, companyId);
         unitCost = avgCost;
-        costSource = 'Average Cost';
       }
 
       // Apply UOM conversion if needed
@@ -216,9 +253,7 @@ class ItemCostRepository extends BaseRepository {
         );
       }
 
-      final amountCost = unitCost * (item.quantity ?? 0);
-
-      return amountCost;
+      return unitCost;
     } catch (e) {
       // Fallback to zero cost with error tracking
       return 0.0;
@@ -267,13 +302,72 @@ class ItemCostRepository extends BaseRepository {
     double totalCost = 0.0;
 
     for (final item in items) {
-      final costResult = await calculateItemCost(
+      final unitCost = await calculateItemCost(
         item: item,
         companyId: item.company!,
       );
-      totalCost += costResult;
+      totalCost += unitCost * (item.quantity ?? 0.0);
     }
 
     return totalCost;
+  }
+
+  //item cost report method
+  Future<PaginatedItemCostResult> getPaginatedItemCosts({
+    required int companyId,
+    required int page,
+    required int pageSize,
+    String? sortField,
+    bool ascending = true,
+  }) async {
+    final db = await databaseService.database;
+
+    // Build base query
+    var query = '''
+      SELECT ic.*,
+          i.item_description,
+          i.items_id as item_id,
+          i.unit_of_measure,
+          u.user_name as user_name,
+          c.company_name as company_name,
+          udc.description_1 as unit_of_measure_description,
+          udc.detail_code as unit_of_measure_code
+      FROM item_cost ic
+      LEFT JOIN items_table i ON ic.item_number = i.id
+      LEFT JOIN user_table u ON ic.user_id = u.id
+      LEFT JOIN company_table c ON ic.company = c.id
+      LEFT JOIN udc_details udc ON i.unit_of_measure = udc.id
+      WHERE ic.company = ?
+    ''';
+
+    final params = <dynamic>[companyId];
+
+    // Add sorting
+    if (sortField != null) {
+      query += ' ORDER BY $sortField ${ascending ? 'ASC' : 'DESC'}';
+    }
+
+    // Add pagination
+    query += ' LIMIT ? OFFSET ?';
+    params.add(pageSize);
+    params.add((page - 1) * pageSize);
+
+    // Execute main query
+    final itemsData = await db.rawQuery(query, params);
+
+    // Count total records
+    final countResult = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM item_cost WHERE company = ?',
+      [companyId],
+    );
+
+    final totalCount = (countResult.first['count'] as int?) ?? 0;
+
+    // Parse results
+    final items = itemsData.map((row) {
+      return ItemCost.fromMap(row);
+    }).toList();
+
+    return PaginatedItemCostResult(items: items, totalCount: totalCount);
   }
 }

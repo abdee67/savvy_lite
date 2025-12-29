@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_event.dart';
@@ -63,6 +65,9 @@ class _LoginScreenState extends State<LoginScreen> {
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
         if (!mounted) return;
+        if (state.status == AuthStatus.authenticated) {
+          context.go(AppRoutes.homePage);
+        }
         if (state.status == AuthStatus.failure && state.message != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -337,7 +342,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Encrypting your login Please wait...',
+                'Maintaining your data Please wait...',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,

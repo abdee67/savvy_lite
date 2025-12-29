@@ -287,3 +287,34 @@ class SendNotification extends ItemInBranchEvent {
 
   const SendNotification(this.item);
 }
+
+class LoadItemInBranchReport extends ItemInBranchEvent {
+  final int companyId;
+  final int page;
+  final int pageSize;
+
+  const LoadItemInBranchReport({
+    required this.companyId,
+    this.page = 1,
+    this.pageSize = 20,
+  });
+
+  @override
+  List<Object> get props => [companyId, page, pageSize];
+}
+
+class LoadMoreItemInBranchReport extends ItemInBranchEvent {}
+
+class ExportItemInBranchReportToExcel extends ItemInBranchEvent {
+  const ExportItemInBranchReportToExcel();
+
+  @override
+  List<Object> get props => [];
+}
+
+class ExportItemInBranchReportToPDF extends ItemInBranchEvent {
+  const ExportItemInBranchReportToPDF();
+
+  @override
+  List<Object> get props => [];
+}

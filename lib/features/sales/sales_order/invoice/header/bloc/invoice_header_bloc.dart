@@ -471,9 +471,10 @@ class InvoiceHistoryHeaderBloc
       emit(
         state.copyWith(
           status: InvoiceHistoryHeaderStatus.failure,
-          errorMessage: 'Failed to save row: $e',
+          //errorMessage: 'Failed to save row: $e',
         ),
       );
+      print('Failed to save row: $e');
     }
   }
 
@@ -506,9 +507,10 @@ class InvoiceHistoryHeaderBloc
       emit(
         state.copyWith(
           status: InvoiceHistoryHeaderStatus.failure,
-          errorMessage: 'Failed to save in edit: $e',
+          //errorMessage: 'Failed to save in edit: $e',
         ),
       );
+      print('Failed to save in edit: $e');
     }
   }
 
