@@ -46,6 +46,9 @@ class PurchaseOrderHeader {
   final UdcDetails? orderTypeRef;
   final UserModel? userRef;
 
+  //for aged credit payment
+  final double? agedDays;
+
   PurchaseOrderHeader({
     this.id,
     this.supplierId,
@@ -77,6 +80,7 @@ class PurchaseOrderHeader {
     this.supplierRef,
     this.poReceiveStatusRef,
     this.userRef,
+    this.agedDays,
   });
 
   factory PurchaseOrderHeader.fromMap(Map<String, dynamic> map) {
@@ -103,6 +107,7 @@ class PurchaseOrderHeader {
       paymentTerm: map['payment_term'],
       orderType: map['order_type'],
       tempId: map['temp_id'],
+      agedDays: map['aged_days'],
       creditDueDate: _parseDate(map['credit_due_date']),
       invoiceNumber: map['invoice_number'],
       paymentStatusRef: map['payment_status_description'] != null
@@ -207,6 +212,7 @@ class PurchaseOrderHeader {
     UdcDetails? orderTypeRef,
     SupplierModel? supplierRef,
     UdcDetails? poReceiveStatusRef,
+    double? agedDays,
   }) {
     return PurchaseOrderHeader(
       id: id ?? this.id,
@@ -237,6 +243,7 @@ class PurchaseOrderHeader {
       orderTypeRef: orderTypeRef ?? this.orderTypeRef,
       supplierRef: supplierRef ?? this.supplierRef,
       poReceiveStatusRef: poReceiveStatusRef ?? this.poReceiveStatusRef,
+      agedDays: agedDays ?? this.agedDays,
     );
   }
 

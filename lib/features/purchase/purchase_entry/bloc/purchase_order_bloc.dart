@@ -7,6 +7,7 @@ import 'package:savvy_stock/features/next_number/repo/next_number_repo.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_event.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_state.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/GRNtotals.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/aged_credit_payment_report_totals.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/credit_payment_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/pending_purchase_totals.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
@@ -202,6 +203,14 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     on<ClearCreditPaymentReportFilters>(_onClearCreditPaymentFilters);
     on<ExportCreditPaymentReportToExcel>(_onExportCreditPaymentToExcel);
     on<ExportCreditPaymentReportToPDF>(_onExportCreditPaymentToPDF);
+
+    //Aged Credit Payment Report
+    on<LoadAgedCreditPaymentReport>(_onLoadAgedCreditPaymentReport);
+    on<LoadMoreAgedCreditPaymentReport>(_onLoadMoreAgedCreditPaymentReport);
+    on<UpdateAgedCreditPaymentReportFilters>(_onUpdateAgedCreditPaymentFilters);
+    on<ClearAgedCreditPaymentReportFilters>(_onClearAgedCreditPaymentFilters);
+    on<ExportAgedCreditPaymentReportToExcel>(_onExportAgedCreditPaymentToExcel);
+    on<ExportAgedCreditPaymentReportToPDF>(_onExportAgedCreditPaymentToPDF);
   }
 
   @override
@@ -3441,6 +3450,16 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
             sortBy: event.sortBy,
             limit: event.pageSize,
             offset: offset,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+          );
+
+      final totalCount = await purchaseOrderReportRepository
+          .getCreditPaymentReportCount(
+            companyId: event.companyId,
+            supplierId: event.filters.supplierId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
           );
 
       // Post-processing logic (Same as before but on the fetched page)
@@ -3475,7 +3494,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
 
         for (var payment in poPayments) {
           remaining -= (payment.paymentAmount ?? 0.0);
-          payment.setRemaining(remaining);
+          payment.setRemaining(remaining < 0 ? 0.0 : remaining);
           processedPayments.add(payment);
         }
       });
@@ -3490,7 +3509,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
           status: PurchaseOrderStatus.loadedCreditPaymentReport,
           creditPaymentReports: processedPayments,
           hasMoreCreditPayment: receipts.length == event.pageSize,
-          creditPaymentTotalCount: 0, // Should fetch count if needed
+          creditPaymentTotalCount: totalCount,
         ),
       );
     } catch (e) {
@@ -3621,6 +3640,208 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
   ) async {
     // Placeholder for export logic
     emit(state.successState('Export to PDF not implemented yet'));
+  }
+  // ============================================================================
+  // Aged Credit Payment REPORT EVENT HANDLERS
+  // ============================================================================
+
+  Future<void> _onLoadAgedCreditPaymentReport(
+    LoadAgedCreditPaymentReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadingAgedCreditPaymentReport,
+        ),
+      );
+
+      // Fetch paginated data based on filter view type
+      final result = await purchaseOrderReportRepository
+          .getAgedCreditPaymentReport(
+            companyId: event.companyId,
+            page: event.page,
+            pageSize: event.pageSize,
+            supplierId: event.filters.supplierId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+            purchaseType: event.filters.purchaseType,
+          );
+
+      // Calculate totals
+      final totalsResult = await purchaseOrderReportRepository
+          .calculateAgedCreditPaymentTotals(
+            companyId: event.companyId,
+            supplierId: event.filters.supplierId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+          );
+
+      final totals = AgedCreditPaymentTotals(
+        totalGrossAmount: totalsResult['totalGrossAmount'] as double,
+        totalPaidAmount: totalsResult['totalPaidAmount'] as double,
+        totalRemainingAmount: totalsResult['totalRemainingAmount'] as double,
+        totalCount:
+            totalsResult['totalCount'] as int? ??
+            0, // Adjusted as repo calc doesn't return count, but report result does
+        currentPage: result['currentPage'] as int,
+        totalPages: result['totalPages'] as int,
+      );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedAgedCreditPaymentReport,
+          agedCreditPaymentReport:
+              result['headers'] as List<PurchaseOrderHeader>,
+          agedCreditPaymentReportFilters: event.filters,
+          agedCreditPaymentReportTotals: totals,
+          agedCreditPaymentReportPage: result['currentPage'] as int,
+          agedCreditPaymentReportPageSize: event.pageSize,
+          agedCreditPaymentReportTotalCount: result['totalCount'] as int,
+          agedCreditPaymentReportTotalPages: result['totalPages'] as int,
+          hasMoreAgedCreditPaymentReport:
+              (result['currentPage'] as int) < (result['totalPages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load aged credit payment report: $e'));
+    }
+  }
+
+  Future<void> _onLoadMoreAgedCreditPaymentReport(
+    LoadMoreAgedCreditPaymentReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    if (!state.hasMoreAgedCreditPaymentReport) return;
+
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadingMoreAgedCreditPaymentReport,
+        ),
+      );
+      final nextPage = state.agedCreditPaymentReportPage + 1;
+      final filters = state.agedCreditPaymentReportFilters;
+
+      // Fetch next page
+      final result = await purchaseOrderReportRepository
+          .getAgedCreditPaymentReport(
+            companyId: state.companyId ?? authBloc.state.companyId!,
+            page: nextPage,
+            pageSize: state.agedCreditPaymentReportPageSize,
+            supplierId: filters.supplierId,
+            startDate: filters.dateFrom,
+            endDate: filters.dateTo,
+          );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedAgedCreditPaymentReport,
+          agedCreditPaymentReport: [
+            ...state.agedCreditPaymentReport,
+            ...(result['headers'] as List<PurchaseOrderHeader>),
+          ],
+          agedCreditPaymentReportPage: result['currentPage'] as int,
+          hasMoreAgedCreditPaymentReport:
+              (result['currentPage'] as int) < (result['totalPages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load more aged credit payments: $e'));
+    }
+  }
+
+  Future<void> _onUpdateAgedCreditPaymentFilters(
+    UpdateAgedCreditPaymentReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    // Reload data with new filters
+    add(
+      LoadAgedCreditPaymentReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.agedCreditPaymentReportPageSize,
+        filters: event.filters,
+      ),
+    );
+  }
+
+  void _onClearAgedCreditPaymentFilters(
+    ClearAgedCreditPaymentReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) {
+    // Reload with empty filters
+    add(
+      LoadAgedCreditPaymentReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.agedCreditPaymentReportPageSize,
+        filters: const PurchaseReportFilters(),
+      ),
+    );
+  }
+
+  Future<void> _onExportAgedCreditPaymentToExcel(
+    ExportAgedCreditPaymentReportToExcel event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.exportingAgedCreditPaymentReport,
+        ),
+      );
+
+      // TODO: Implement Excel export logic
+      // This will be similar to _onExportTransactions but for the report data
+      // You'll need to fetch all data (not paginated) and create Excel file
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedAgedCreditPaymentReport,
+          exportAgedCreditPaymentReportMessage:
+              'Excel export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedAgedCreditPaymentReport,
+          exportAgedCreditPaymentReportMessage: 'Failed to export to Excel: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportAgedCreditPaymentToPDF(
+    ExportAgedCreditPaymentReportToPDF event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.exportingAgedCreditPaymentReport,
+        ),
+      );
+
+      // TODO: Implement PDF export logic
+      // This will be similar to Excel export but generate PDF
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedAgedCreditPaymentReport,
+          exportAgedCreditPaymentReportMessage:
+              'PDF export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedAgedCreditPaymentReport,
+          exportAgedCreditPaymentReportMessage: 'Failed to export to PDF: $e',
+        ),
+      );
+    }
   }
 
   // Helper method for temp IDs

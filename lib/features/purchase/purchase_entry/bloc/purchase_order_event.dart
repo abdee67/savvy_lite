@@ -1302,3 +1302,46 @@ class ExportCreditPaymentReportToPDF extends PurchaseOrderEvent {
 
   const ExportCreditPaymentReportToPDF(this.filters);
 }
+
+// ============================================================================
+// Aged Credit Payment Report Events
+// ============================================================================
+class LoadAgedCreditPaymentReport extends PurchaseOrderEvent {
+  final int companyId;
+  final int page;
+  final int pageSize;
+  final PurchaseReportFilters filters;
+
+  const LoadAgedCreditPaymentReport({
+    required this.companyId,
+    this.page = 1,
+    this.pageSize = 25,
+    this.filters = const PurchaseReportFilters(),
+  });
+}
+
+class LoadMoreAgedCreditPaymentReport extends PurchaseOrderEvent {
+  const LoadMoreAgedCreditPaymentReport();
+}
+
+class UpdateAgedCreditPaymentReportFilters extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const UpdateAgedCreditPaymentReportFilters(this.filters);
+}
+
+class ClearAgedCreditPaymentReportFilters extends PurchaseOrderEvent {
+  const ClearAgedCreditPaymentReportFilters();
+}
+
+class ExportAgedCreditPaymentReportToExcel extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const ExportAgedCreditPaymentReportToExcel(this.filters);
+}
+
+class ExportAgedCreditPaymentReportToPDF extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const ExportAgedCreditPaymentReportToPDF(this.filters);
+}

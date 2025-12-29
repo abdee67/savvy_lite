@@ -1,6 +1,7 @@
 // features/purchase_order/bloc/purchase_order_state.dart
 import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/GRNtotals.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/aged_credit_payment_report_totals.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/credit_payment_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/pending_purchase_totals.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
@@ -62,6 +63,15 @@ enum PurchaseOrderStatus {
   exportCreditPaymentReportSuccess,
   exportCreditPaymentReportFailure,
   exportingCreditPaymentReport,
+
+  // Aged Credit Payment Report
+  loadingAgedCreditPaymentReport,
+  filteringAgedCreditPaymentReport,
+  loadedAgedCreditPaymentReport,
+  loadingMoreAgedCreditPaymentReport,
+  exportAgedCreditPaymentReportSuccess,
+  exportAgedCreditPaymentReportFailure,
+  exportingAgedCreditPaymentReport,
 }
 
 class PurchaseOrderState extends Equatable {
@@ -211,6 +221,17 @@ class PurchaseOrderState extends Equatable {
   final bool hasMoreCreditPayment;
   final String? exportCreditPaymentMessage;
 
+  // Aged Credit Payment Report fields
+  final List<PurchaseOrderHeader> agedCreditPaymentReport;
+  final PurchaseReportFilters agedCreditPaymentReportFilters;
+  final AgedCreditPaymentTotals? agedCreditPaymentReportTotals;
+  final int agedCreditPaymentReportPage;
+  final int agedCreditPaymentReportPageSize;
+  final int agedCreditPaymentReportTotalCount;
+  final int agedCreditPaymentReportTotalPages;
+  final bool hasMoreAgedCreditPaymentReport;
+  final String? exportAgedCreditPaymentReportMessage;
+
   const PurchaseOrderState({
     this.status = PurchaseOrderStatus.initial,
     this.headers = const [],
@@ -328,6 +349,16 @@ class PurchaseOrderState extends Equatable {
     this.creditPaymentTotalPages = 1,
     this.hasMoreCreditPayment = false,
     this.exportCreditPaymentMessage,
+
+    this.agedCreditPaymentReport = const [],
+    this.agedCreditPaymentReportFilters = const PurchaseReportFilters(),
+    this.agedCreditPaymentReportTotals,
+    this.agedCreditPaymentReportPage = 1,
+    this.agedCreditPaymentReportPageSize = 10,
+    this.agedCreditPaymentReportTotalCount = 0,
+    this.agedCreditPaymentReportTotalPages = 1,
+    this.hasMoreAgedCreditPaymentReport = false,
+    this.exportAgedCreditPaymentReportMessage,
   });
 
   @override
@@ -448,6 +479,16 @@ class PurchaseOrderState extends Equatable {
     creditPaymentTotalPages,
     hasMoreCreditPayment,
     exportCreditPaymentMessage,
+
+    agedCreditPaymentReport,
+    agedCreditPaymentReportFilters,
+    agedCreditPaymentReportTotals,
+    agedCreditPaymentReportPage,
+    agedCreditPaymentReportPageSize,
+    agedCreditPaymentReportTotalCount,
+    agedCreditPaymentReportTotalPages,
+    hasMoreAgedCreditPaymentReport,
+    exportAgedCreditPaymentReportMessage,
   ];
 
   PurchaseOrderState copyWith({
@@ -568,6 +609,16 @@ class PurchaseOrderState extends Equatable {
     int? creditPaymentTotalPages,
     bool? hasMoreCreditPayment,
     String? exportCreditPaymentMessage,
+
+    List<PurchaseOrderHeader>? agedCreditPaymentReport,
+    PurchaseReportFilters? agedCreditPaymentReportFilters,
+    AgedCreditPaymentTotals? agedCreditPaymentReportTotals,
+    int? agedCreditPaymentReportPage,
+    int? agedCreditPaymentReportPageSize,
+    int? agedCreditPaymentReportTotalCount,
+    int? agedCreditPaymentReportTotalPages,
+    bool? hasMoreAgedCreditPaymentReport,
+    String? exportAgedCreditPaymentReportMessage,
   }) {
     return PurchaseOrderState(
       status: status ?? this.status,
@@ -715,6 +766,29 @@ class PurchaseOrderState extends Equatable {
       hasMoreCreditPayment: hasMoreCreditPayment ?? this.hasMoreCreditPayment,
       exportCreditPaymentMessage:
           exportCreditPaymentMessage ?? this.exportCreditPaymentMessage,
+
+      agedCreditPaymentReport:
+          agedCreditPaymentReport ?? this.agedCreditPaymentReport,
+      agedCreditPaymentReportFilters:
+          agedCreditPaymentReportFilters ?? this.agedCreditPaymentReportFilters,
+      agedCreditPaymentReportTotals:
+          agedCreditPaymentReportTotals ?? this.agedCreditPaymentReportTotals,
+      agedCreditPaymentReportPage:
+          agedCreditPaymentReportPage ?? this.agedCreditPaymentReportPage,
+      agedCreditPaymentReportPageSize:
+          agedCreditPaymentReportPageSize ??
+          this.agedCreditPaymentReportPageSize,
+      agedCreditPaymentReportTotalCount:
+          agedCreditPaymentReportTotalCount ??
+          this.agedCreditPaymentReportTotalCount,
+      agedCreditPaymentReportTotalPages:
+          agedCreditPaymentReportTotalPages ??
+          this.agedCreditPaymentReportTotalPages,
+      hasMoreAgedCreditPaymentReport:
+          hasMoreAgedCreditPaymentReport ?? this.hasMoreAgedCreditPaymentReport,
+      exportAgedCreditPaymentReportMessage:
+          exportAgedCreditPaymentReportMessage ??
+          this.exportAgedCreditPaymentReportMessage,
     );
   }
 

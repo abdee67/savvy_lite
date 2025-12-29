@@ -638,6 +638,8 @@ class PurchaseOrderReportRepository {
     String? sortBy,
     int? limit,
     int? offset,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
     final db = await _db;
 
@@ -648,6 +650,17 @@ class PurchaseOrderReportRepository {
       if (supplierId != null) {
         where += ' AND poh.supplier_id = ?';
         whereArgs.add(supplierId);
+      }
+
+      // Date Filtering Logic
+      if (startDate != null) {
+        where += ' AND poh.date_transaction >= ?';
+        whereArgs.add(startDate.toIso8601String());
+      }
+
+      if (endDate != null) {
+        where += ' AND poh.date_transaction <= ?';
+        whereArgs.add(endDate.toIso8601String());
       }
 
       String orderBy = 'poh.date_transaction DESC';
@@ -661,18 +674,16 @@ class PurchaseOrderReportRepository {
           cpt.*,
           poh.amount_gross as amount_gross,
           poh.supplier_id as supplier_id,
-        poh.date_transaction as date_transaction,
+          poh.order_number as order_number,
+          poh.invoice_number as invoice_number,
+          poh.date_transaction as date_transaction,
           sup.supplier_name as supplier_name,
           pi.description_1 as payment_instrument_description,
-          pi.detail_code as payment_instrument_code,
-          poh.order_type as order_type,
-          ot.description_1 as order_type_description,
-          ot.detail_code as order_type_code
+          pi.detail_code as payment_instrument_code
         FROM credit_payment_table cpt
         LEFT JOIN purchase_order_header poh ON cpt.po_header = poh.id
         LEFT JOIN supplier_table sup ON poh.supplier_id = sup.id
         LEFT JOIN udc_details pi ON cpt.payment_instrument = pi.id
-        LEFT JOIN udc_details ot ON poh.order_type = ot.id
         WHERE $where
         ORDER BY $orderBy
       ''';
@@ -688,6 +699,208 @@ class PurchaseOrderReportRepository {
       return maps.map((map) => CreditPayment.fromMap(map)).toList();
     } catch (e) {
       throw Exception('Failed to get credit payment report: $e');
+    }
+  }
+
+  Future<int> getCreditPaymentReportCount({
+    required int companyId,
+    int? supplierId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await _db;
+
+    try {
+      String where = 'cpt.company = ?';
+      List<dynamic> whereArgs = [companyId];
+
+      if (supplierId != null) {
+        where += ' AND poh.supplier_id = ?';
+        whereArgs.add(supplierId);
+      }
+
+      if (startDate != null) {
+        where += ' AND poh.date_transaction >= ?';
+        whereArgs.add(startDate.toIso8601String());
+      }
+
+      if (endDate != null) {
+        where += ' AND poh.date_transaction <= ?';
+        whereArgs.add(endDate.toIso8601String());
+      }
+
+      final query =
+          '''
+        SELECT COUNT(*) as count
+        FROM credit_payment_table cpt
+        LEFT JOIN purchase_order_header poh ON cpt.po_header = poh.id
+        WHERE $where
+      ''';
+
+      final result = await db.rawQuery(query, whereArgs);
+      return Sqflite.firstIntValue(result) ?? 0;
+    } catch (e) {
+      throw Exception('Failed to get credit payment report count: $e');
+    }
+  }
+
+  //============Aged credit payment erport===============
+  Future<Map<String, dynamic>> getAgedCreditPaymentReport({
+    required int companyId,
+    int page = 1,
+    int pageSize = 20,
+    int? supplierId,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? purchaseType,
+  }) async {
+    final db = await _db;
+
+    try {
+      String where =
+          'poh.company = ? AND poh.amount_open_credit <> 0.0 AND poh.payment_term IS NOT NULL';
+      List<dynamic> whereArgs = [companyId];
+
+      if (supplierId != null) {
+        where += ' AND poh.supplier_id = ?';
+        whereArgs.add(supplierId);
+      }
+
+      if (startDate != null) {
+        where += ' AND poh.date_transaction >= ?';
+        whereArgs.add(startDate.toIso8601String());
+      }
+
+      if (endDate != null) {
+        where += ' AND poh.date_transaction <= ?';
+        whereArgs.add(endDate.toIso8601String());
+      }
+
+      // Count total queries
+      final countQuery =
+          'SELECT COUNT(*) as count FROM purchase_order_header poh WHERE $where';
+      final countResult = await db.rawQuery(countQuery, whereArgs);
+      final totalCount = Sqflite.firstIntValue(countResult) ?? 0;
+
+      // Calculate pagination
+      final totalPages = (totalCount / pageSize).ceil();
+      final offset = (page - 1) * pageSize;
+
+      String orderBy = 'poh.date_transaction DESC, poh.id DESC';
+
+      final query =
+          '''
+        SELECT 
+          poh.*,
+          sup.supplier_name as supplier_name,
+          pi.description_1 as payment_instrument_description,
+          pi.detail_code as payment_instrument_code,
+          ot.description_1 as order_type_description,
+          ot.detail_code as order_type_code
+        FROM purchase_order_header poh
+        LEFT JOIN supplier_table sup ON poh.supplier_id = sup.id
+        LEFT JOIN udc_details pi ON poh.payment_instrument = pi.id
+        LEFT JOIN udc_details ot ON poh.order_type = ot.id
+        WHERE $where
+        ORDER BY $orderBy
+        LIMIT ? OFFSET ?
+      ''';
+
+      final queryArgs = [...whereArgs, pageSize, offset];
+      final maps = await db.rawQuery(query, queryArgs);
+
+      final headers = maps.map((map) {
+        final header = PurchaseOrderHeader.fromMap(map);
+
+        // Calculate Aged Credit (Days) as per Java logic
+        double calculatedAgedDays = 0.0;
+        if (header.dateTransaction != null) {
+          double paymentTermAmount = (header.paymentTerm ?? 0).toDouble();
+          DateTime dueDate = header.dateTransaction!.add(
+            Duration(days: paymentTermAmount.toInt()),
+          );
+          DateTime currentDate = DateTime.now();
+
+          // Java: ChronoUnit.DAYS.between(dueDate, currentDate)
+          // Difference in days.
+          int diffDays = currentDate.difference(dueDate).inDays;
+          calculatedAgedDays = diffDays > 0 ? diffDays.toDouble() : 0.0;
+        }
+
+        return header.copyWith(agedDays: calculatedAgedDays);
+      }).toList();
+
+      return {
+        'headers': headers,
+        'totalCount': totalCount,
+        'totalPages': totalPages,
+        'currentPage': page,
+      };
+    } catch (e) {
+      throw Exception('Failed to get aged credit receipt report: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> calculateAgedCreditPaymentTotals({
+    required int companyId,
+    int? supplierId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await _db;
+    try {
+      String where =
+          'company = ? AND amount_open_credit <> 0.0 AND payment_term IS NOT NULL';
+      List<dynamic> whereArgs = [companyId];
+
+      if (supplierId != null) {
+        where += ' AND supplier_id = ?';
+        whereArgs.add(supplierId);
+      }
+
+      if (startDate != null) {
+        where += ' AND date_transaction >= ?';
+        whereArgs.add(startDate.toIso8601String());
+      }
+
+      if (endDate != null) {
+        where += ' AND date_transaction <= ?';
+        whereArgs.add(endDate.toIso8601String());
+      }
+
+      final query =
+          '''
+        SELECT 
+          COUNT(*) as total_count,
+          SUM(amount_gross) as total_gross_amount,
+          SUM(amount_gross - CASE WHEN amount_open_credit IS NULL THEN 0 ELSE amount_open_credit END) as total_paid_amount,
+          SUM(CASE WHEN amount_open_credit IS NULL THEN 0 ELSE amount_open_credit END) as total_remaining_amount
+        FROM purchase_order_header
+        WHERE $where
+      ''';
+
+      final result = await db.rawQuery(query, whereArgs);
+
+      if (result.isNotEmpty) {
+        final row = result.first;
+        return {
+          'totalGrossAmount':
+              (row['total_gross_amount'] as num?)?.toDouble() ?? 0.0,
+          'totalPaidAmount':
+              (row['total_paid_amount'] as num?)?.toDouble() ?? 0.0,
+          'totalRemainingAmount':
+              (row['total_remaining_amount'] as num?)?.toDouble() ?? 0.0,
+          'totalCount': (row['total_count'] as int?) ?? 0,
+        };
+      }
+      return {
+        'totalGrossAmount': 0.0,
+        'totalPaidAmount': 0.0,
+        'totalRemainingAmount': 0.0,
+        'totalCount': 0,
+      };
+    } catch (e) {
+      throw Exception('Failed to calculate aged credit payment totals: $e');
     }
   }
 }

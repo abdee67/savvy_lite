@@ -48,9 +48,9 @@ class CreditPayment {
       dateUpdated: map['date_updated'] != null
           ? DateTime.tryParse(map['date_updated'])
           : null,
-      poHeaderRef: map['total_amount'] != null
+      poHeaderRef: map['po_header'] != null
           ? PurchaseOrderHeader(
-              id: map['po_header_id'],
+              id: map['po_header'],
               amountGrandTotalCost: (map['total_amount'] as num?)?.toDouble(),
               amountGross: (map['amount_gross'] as num?)?.toDouble(),
               dateTransaction: map['date_transaction'] != null
@@ -59,6 +59,7 @@ class CreditPayment {
               orderType: map['order_type'],
               invoiceNumber: map['invoice_number'],
               supplierId: map['supplier_id'],
+              orderNumber: map['order_number'],
               supplierRef: map['supplier_name'] != null
                   ? SupplierModel(
                       id: map['supplier_id'],

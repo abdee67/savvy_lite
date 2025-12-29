@@ -6,23 +6,24 @@ import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_event.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_state.dart';
-import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_report_filter_model.dart';
-import 'package:savvy_stock/features/reports/purchase_report/sidebar/widgets/pending_purchase_filter_dialog.dart';
+import 'package:savvy_stock/features/reports/purchase_report/sidebar/widgets/purchase_transaction_filter_dialog.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
 import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 
-class PendingPurchaseReportPage extends StatefulWidget {
+class AgedPurchaseCreditReportPage extends StatefulWidget {
   final AuthBloc authBloc;
-  const PendingPurchaseReportPage({super.key, required this.authBloc});
+  const AgedPurchaseCreditReportPage({super.key, required this.authBloc});
 
   @override
-  State<PendingPurchaseReportPage> createState() =>
-      _PendingPurchaseReportPageState();
+  State<AgedPurchaseCreditReportPage> createState() =>
+      _AgedPurchaseCreditReportPageState();
 }
 
-class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
+class _AgedPurchaseCreditReportPageState
+    extends State<AgedPurchaseCreditReportPage>
     with SingleTickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
   final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
@@ -35,7 +36,7 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
   late Animation<Offset> _slideAnimation;
 
   // Detail panel state
-  PurchaseOrderDetail? _selectedItem;
+  PurchaseOrderHeader? _selectedItem;
   bool _isDetailExpanded = false;
 
   @override
@@ -86,7 +87,7 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
     final companyId = widget.authBloc.state.companyId;
     if (companyId != null) {
       context.read<PurchaseOrderBloc>().add(
-        LoadPendingPurchaseReport(
+        LoadAgedCreditPaymentReport(
           companyId: companyId,
           filters: PurchaseReportFilters(),
           pageSize: 20,
@@ -99,11 +100,11 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
       final state = context.read<PurchaseOrderBloc>().state;
-      if (state.hasMorePendingPurchase &&
+      if (state.hasMoreAgedCreditPaymentReport &&
           state.status !=
-              PurchaseOrderStatus.loadingMorePendingPurchaseReport) {
+              PurchaseOrderStatus.loadingMoreAgedCreditPaymentReport) {
         context.read<PurchaseOrderBloc>().add(
-          const LoadMorePendingPurchaseReport(),
+          const LoadMoreAgedCreditPaymentReport(),
         );
       }
     }
@@ -132,10 +133,10 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
     final currentFilters = context
         .read<PurchaseOrderBloc>()
         .state
-        .pendingPurchaseFilters;
+        .agedCreditPaymentReportFilters;
     final result = await showDialog<PurchaseReportFilters>(
       context: context,
-      builder: (context) => PendingPurchaseFilterDialog(
+      builder: (context) => PurchaseTransactionFilterDialog(
         currentFilters: currentFilters,
         authBloc: widget.authBloc,
       ),
@@ -143,7 +144,7 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
 
     if (result != null) {
       context.read<PurchaseOrderBloc>().add(
-        UpdatePendingPurchaseReportFilters(result),
+        UpdateAgedCreditPaymentReportFilters(result),
       );
     }
   }
@@ -151,14 +152,16 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
   void _exportToExcel() {
     final state = context.read<PurchaseOrderBloc>().state;
     context.read<PurchaseOrderBloc>().add(
-      ExportPendingPurchaseReportToExcel(state.pendingPurchaseFilters),
+      ExportAgedCreditPaymentReportToExcel(
+        state.agedCreditPaymentReportFilters,
+      ),
     );
   }
 
   void _exportToPDF() {
     final state = context.read<PurchaseOrderBloc>().state;
     context.read<PurchaseOrderBloc>().add(
-      ExportPendingPurchaseReportToPDF(state.pendingPurchaseFilters),
+      ExportAgedCreditPaymentReportToPDF(state.agedCreditPaymentReportFilters),
     );
   }
 
@@ -168,7 +171,7 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
       backgroundColor:
           Colors.grey, // Updated background color to match ExpirationReport
       appBar: AppBar(
-        title: const Text('Pending Purchase Report'),
+        title: const Text('Aged Credit Purchase Report'),
         backgroundColor: const Color(0xFF1C4292),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -223,9 +226,12 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
                   ),
                 );
               }
-              if (state.exportPendingPurchaseMessage != null) {
+              if (state.exportAgedCreditPaymentReportMessage != null) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(state.exportPendingPurchaseMessage!)),
+                  SnackBar(
+                    content: Text(state.exportAgedCreditPaymentReportMessage!),
+                    backgroundColor: Colors.green,
+                  ),
                 );
               }
             },
@@ -247,7 +253,7 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
                         _buildSummaryCards(state, systemConstant),
 
                         // Active Filters Indicator
-                        if (state.pendingPurchaseFilters.hasFilters)
+                        if (state.agedCreditPaymentReportFilters.hasFilters)
                           _buildActiveFiltersIndicator(state),
 
                         // List Header
@@ -260,7 +266,7 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                'Total Items: ${state.pendingPurchaseTotalCount}',
+                                'Total Items: ${state.agedCreditPaymentReportTotalCount}',
                                 style: const TextStyle(
                                   fontSize: 14,
                                   color: Colors
@@ -280,8 +286,7 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
                     ),
 
                     // Loading Overlay
-                    if (state.status ==
-                        PurchaseOrderStatus.loadingPendingPurchaseReport)
+                    if (state.status == PurchaseOrderStatus.loading)
                       Container(
                         color: Colors.black.withOpacity(0.5),
                         child: const Center(child: CircularProgressIndicator()),
@@ -300,12 +305,12 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
     PurchaseOrderState state,
     SystemConstant? systemConstant,
   ) {
-    if (state.status == PurchaseOrderStatus.loadingPendingPurchaseReport &&
-        state.pendingPurchaseReports.isEmpty) {
+    if (state.status == PurchaseOrderStatus.loading &&
+        state.agedCreditPaymentReport.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final items = state.pendingPurchaseReports;
+    final items = state.agedCreditPaymentReport;
 
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
@@ -321,7 +326,7 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
             Icon(Iconsax.receipt_2, size: 64, color: Colors.white),
             SizedBox(height: 16),
             Text(
-              'No Pending Purchase found',
+              'No Aged Credit Payment found',
               style: TextStyle(color: Colors.white, fontSize: 16),
             ),
           ],
@@ -332,7 +337,7 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
     return ListView.separated(
       controller: _scrollController,
       padding: const EdgeInsets.all(16),
-      itemCount: items.length + (state.hasMorePendingPurchase ? 1 : 0),
+      itemCount: items.length + (state.hasMoreAgedCreditPaymentReport ? 1 : 0),
       separatorBuilder: (context, index) => SizedBox(height: cardSpacing),
       itemBuilder: (context, index) {
         if (index >= items.length) {
@@ -360,7 +365,7 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
   }
 
   Widget _buildTransactionListItem(
-    PurchaseOrderDetail item,
+    PurchaseOrderHeader item,
     int index,
     bool isCompact,
     double cardWidth,
@@ -435,11 +440,7 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
                               children: [
                                 Expanded(
                                   child: Text(
-                                    item
-                                            .poHeaderRef
-                                            ?.supplierRef
-                                            ?.supplierName ??
-                                        'N/A',
+                                    item.supplierRef?.supplierName ?? 'N/A',
                                     style: TextStyle(
                                       color: const Color(0xFF373737),
                                       fontSize: isCompact ? 18 : 22,
@@ -454,7 +455,7 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Order ${item.poHeaderRef?.orderNumber ?? 'N/A'}',
+                              'Order ${item.orderNumber ?? 'N/A'}',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey[600],
@@ -533,17 +534,22 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
     );
   }
 
-  Widget _buildAvatar(PurchaseOrderDetail item) {
+  Widget _buildAvatar(PurchaseOrderHeader item) {
     IconData icon;
     Color color;
 
-    final paymentType = item.poHeaderRef?.paymentTerm;
-    if (paymentType != null) {
-      icon = Iconsax.card_edit;
+    final status = item.paymentTerm != null && item.paymentTerm! > 0
+        ? 'Credit'
+        : 'Cash';
+    if (status.contains('Cash')) {
+      icon = Iconsax.tick_circle;
+      color = Colors.green;
+    } else if (status.contains('Credit')) {
+      icon = Iconsax.clock;
       color = Colors.orange;
     } else {
-      icon = Iconsax.money;
-      color = Colors.green;
+      icon = Iconsax.danger;
+      color = Colors.red;
     }
 
     return Container(
@@ -558,88 +564,103 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
     );
   }
 
-  Widget _buildStatusBadge(PurchaseOrderDetail item) {
-    final purchaseType = item.poHeaderRef?.paymentTerm;
+  Widget _buildStatusBadge(PurchaseOrderHeader item) {
+    final open = item.amountOpenCredit ?? 0;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: (purchaseType != null ? Colors.orange : Colors.green)
-            .withOpacity(0.1),
+        color: (open >= 0 ? Colors.red : Colors.green).withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: (purchaseType != null ? Colors.orange : Colors.green)
-              .withOpacity(0.3),
+          color: (open >= 0 ? Colors.red : Colors.green).withOpacity(0.3),
         ),
       ),
       child: Text(
-        purchaseType != null ? 'Credit' : 'Cash',
+        open >= 0 ? 'Not paid fully' : 'Paid fully',
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.bold,
-          color: purchaseType != null ? Colors.orange : Colors.green,
+          color: open >= 0 ? Colors.red : Colors.green,
         ),
       ),
     );
   }
 
-  Widget _buildHeaderViewContent(PurchaseOrderDetail detail, bool isCompact) {
+  Widget _buildHeaderViewContent(PurchaseOrderHeader header, bool isCompact) {
+    // Aged Credit Calculation
+    // Aged Credit Calculation (Allocated in Repo)
+    double agedDays = header.agedDays ?? 0.0;
+
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       child: Column(
         children: [
           _buildDetailRow(
             'Supplier',
-            detail.poHeaderRef?.supplierRef?.supplierName ?? 'N/A',
+            header.supplierRef?.supplierName ?? 'N/A',
             Iconsax.calendar,
           ),
           _buildDetailRow(
-            'Item',
-            detail.itemNumberRef?.itemDescription ?? 'N/A',
-            Iconsax.box,
+            'Order Date',
+            _dateFormat.format(header.dateTransaction!),
+            Iconsax.calendar,
           ),
           _buildDetailRow(
-            'Transaction Date',
-            _dateFormat.format(
-              detail.poHeaderRef?.dateTransaction ?? DateTime.now(),
+            'Transaction Ref',
+            'CO-${header.orderNumber ?? 'N/A'}',
+            Iconsax.card,
+          ),
+          _buildDetailRow(
+            'Invoice',
+            'IN-${header.invoiceNumber ?? 'N/A'}',
+            Iconsax.card,
+          ),
+
+          // Added: Payment Term Display
+          _buildDetailRow(
+            'Payment Term',
+            '${header.paymentTerm ?? 0} Days',
+            Iconsax.clock,
+          ),
+          _buildDetailRow(
+            'Total Amount',
+            _currencyFormat.format(header.amountGross ?? 0),
+            Iconsax.money_send,
+            isBold: true,
+            valueColor: const Color(0xFF1C4292),
+          ),
+          _buildDetailRow(
+            'Paid Amount',
+            _currencyFormat.format(
+              (header.amountGross ?? 0) - (header.amountOpenCredit ?? 0),
             ),
-            Iconsax.calendar,
+            Iconsax.money_send,
+            isBold: true,
+            valueColor: const Color(0xFF1C4292),
           ),
 
           _buildDetailRow(
-            'Transaction Ref ',
-            '${detail.poHeaderRef?.paymentTerm != null ? "CO-" : "PO-"} ${detail.poHeaderRef?.orderNumber}',
-            Iconsax.card,
-          ),
-          _buildDetailRow(
-            'Invoice No',
-            detail.poHeaderRef?.invoiceNumber ?? 'N/A',
-            Iconsax.card,
-          ),
-          _buildDetailRow(
-            'UOM',
-            detail.unitOfMeasureRef?.description1 ?? 'N/A',
-            Iconsax.uniEB15,
-          ),
-          _buildDetailRow(
-            'Quantity Ordered',
-            detail.quantityTransaction?.toString() ?? 'N/A',
+            'Remaining Amount',
+            _currencyFormat.format(header.amountOpenCredit ?? 0),
             Iconsax.chart_2,
             valueColor: const Color(0xFF1C4292),
           ),
+          // Added: Aged Credit Display
           _buildDetailRow(
-            'Quantity Received',
-            detail.quantityRecieved?.toString() ?? 'N/A',
-            Iconsax.chart_2,
-            isBold: true,
-            valueColor: const Color(0xFF1C4292),
+            'Aged Credit (Days)',
+            '${agedDays.toInt()} Days',
+            Iconsax.timer_1,
+            valueColor: agedDays > 0 ? Colors.red : Colors.green,
+            isBold: agedDays > 0,
           ),
-          _buildDetailRow(
-            'Quantity Remaining',
-            detail.quantityOpen?.toString() ?? 'N/A',
-            Iconsax.chart_2,
-            isBold: true,
-            valueColor: const Color(0xFF1C4292),
-          ),
+
+          if (header.userId != null)
+            _buildDetailRow(
+              'Purchaser',
+              header.userRef?.userName ?? 'N/A',
+              Iconsax.chart_2,
+              valueColor: const Color(0xFF1C4292),
+            ),
         ],
       ),
     );
@@ -704,7 +725,7 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
     PurchaseOrderState state,
     SystemConstant? systemConstant,
   ) {
-    final totals = state.pendingPurchaseTotals;
+    final totals = state.agedCreditPaymentReportTotals;
     if (totals == null) return const SizedBox.shrink();
     return Card(
       margin: const EdgeInsets.all(16),
@@ -719,16 +740,16 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
               children: [
                 Expanded(
                   child: _buildSummaryItem(
-                    'Total Received Quantity',
-                    totals.totalReceivedQuantity.toString(),
+                    'Total Amount Gross',
+                    _currencyFormat.format(totals.totalGrossAmount),
                     Iconsax.money_send,
                     Colors.green,
                   ),
                 ),
                 Expanded(
                   child: _buildSummaryItem(
-                    'Total Remaing Quantity',
-                    totals.totalRemainigQuantity.toString(),
+                    'Total Paid Amount',
+                    _currencyFormat.format(totals.totalPaidAmount),
                     Iconsax.document_text,
                     Colors.blue,
                   ),
@@ -743,18 +764,18 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
               children: [
                 Expanded(
                   child: _buildSummaryItem(
-                    'Total Ordered Quantity',
-                    totals.totalTransactionQunatity.toString(),
-                    Iconsax.document_text,
-                    Colors.blue,
+                    'Total Remaining Amount',
+                    _currencyFormat.format(totals.totalRemainingAmount),
+                    Iconsax.receipt_2,
+                    Colors.orange,
                   ),
                 ),
                 Expanded(
                   child: _buildSummaryItem(
-                    'Page',
-                    '${state.pendingPurchasePage}/${state.pendingPurchaseTotalPages}',
-                    Iconsax.document,
-                    Colors.blue,
+                    'Count',
+                    '${totals.totalCount}',
+                    Iconsax.document_text,
+                    Colors.purple,
                   ),
                 ),
               ],
@@ -817,7 +838,7 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              _buildFilterDescription(state.pendingPurchaseFilters),
+              _buildFilterDescription(state.agedCreditPaymentReportFilters),
               style: TextStyle(fontSize: 12, color: Colors.blue[800]),
               overflow: TextOverflow.ellipsis,
             ),
@@ -826,7 +847,7 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
             icon: const Icon(Iconsax.close_circle, size: 16),
             onPressed: () {
               context.read<PurchaseOrderBloc>().add(
-                const ClearPendingPurchaseReportFilters(),
+                const ClearAgedCreditPaymentReportFilters(),
               );
             },
           ),
@@ -837,12 +858,11 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
 
   String _buildFilterDescription(PurchaseReportFilters filters) {
     final parts = <String>[];
-    if (filters.dateFrom != null) parts.add('Start Range');
-    if (filters.dateTo != null) parts.add('End Range');
-    if (filters.itemId != null) parts.add('Selected item: ${filters.itemId}');
-    if (filters.supplierId != null) {
-      parts.add('Selected supplier: ${filters.supplierId}');
+    if (filters.supplierId != null) parts.add('Supplier Filtered');
+    if (filters.purchaseType != null) {
+      parts.add('${filters.purchaseType.toString()} Purchase Type Filtered');
     }
+    if (filters.dateFrom != null) parts.add('Date Range');
 
     return parts.isNotEmpty ? 'Active: ${parts.join(', ')}' : 'No filters';
   }

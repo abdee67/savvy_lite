@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:savvy_stock/debug_credit_payment.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_report_repo.dart';
@@ -120,10 +121,11 @@ Future<void> _initializeAndRunApp() async {
     // await LocalDatabaseService().debugTable('quote_order_header');
     // await LocalDatabaseService().debugTable('quote_order_detail');
     // await LocalDatabaseService().debugTable('supplier_table');
-    //await LocalDatabaseService().debugTable('purchase_order_header');
+    await LocalDatabaseService().debugTable('purchase_order_header');
     //await LocalDatabaseService().debugTable('purchase_order_detail');
     //await LocalDatabaseService().debugTable('purchase_order_receiver');
-    await LocalDatabaseService().debugTable('credit_payment_table');
+    //await LocalDatabaseService().debugTable('credit_payment_table');
+    debugCreditPayment();
   } catch (error, stackTrace) {
     developer.log('Initialization error: $error');
     developer.log('Stack trace: $stackTrace');
