@@ -553,7 +553,7 @@ class _CreditPaymentReportState extends State<CreditPaymentReport>
     final screenHeight = MediaQuery.of(context).size.height;
     // For responsiveness:
     final collapsedHeight = isCompact
-        ? screenHeight * 0.14
+        ? screenHeight * 0.16
         : screenHeight * 0.6;
     final expandedHeight = isCompact ? screenHeight * 0.4 : screenHeight * 0.35;
 
