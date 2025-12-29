@@ -4,8 +4,6 @@ import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/credit_receipt_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
-import 'package:savvy_stock/features/reports/cash_flow/models/cash_flow_transaction_DTO.dart';
-import 'package:savvy_stock/features/sales/sales_order/header/model/other_income.dart';
 import 'package:sqflite/sqflite.dart';
 
 class SalesOrderReportRepository {

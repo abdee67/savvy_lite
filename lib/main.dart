@@ -589,12 +589,11 @@ class _SavvyStockState extends State<SavvyStock> {
         ],
         child: MaterialApp.router(
           debugShowCheckedModeBanner: false,
-          title: 'Savvy Stock',
+          title: 'Savvy Lite',
           routerConfig: _router,
           theme: ThemeData(
-            primarySwatch: Colors.deepPurple,
             appBarTheme: AppBarTheme(
-              backgroundColor: Color(0xFF155888),
+              backgroundColor: Color.fromARGB(255, 8, 33, 102),
               foregroundColor: Colors.white,
               elevation: 0,
               iconTheme: IconThemeData(color: Colors.white),
@@ -608,7 +607,7 @@ class _SavvyStockState extends State<SavvyStock> {
             ),
             elevatedButtonTheme: ElevatedButtonThemeData(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF155888),
+                backgroundColor: Color.fromARGB(255, 8, 33, 102),
                 foregroundColor: Colors.white,
                 padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
