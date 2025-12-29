@@ -417,9 +417,9 @@ class _InventoryTransactionReportPageState
     final screenHeight = MediaQuery.of(context).size.height;
     // For responsiveness:
     final collapsedHeight = isCompact
-        ? screenHeight * 0.14
+        ? screenHeight * 0.18
         : screenHeight * 0.6;
-    final expandedHeight = isCompact ? screenHeight * 0.4 : screenHeight * 0.35;
+    final expandedHeight = isCompact ? screenHeight * 0.5 : screenHeight * 0.35;
 
     return GestureDetector(
       onTap: () => isExpanded
@@ -637,18 +637,20 @@ class _InventoryTransactionReportPageState
             Iconsax.nexo_nexo,
             isCompact,
           ),
-          _buildDetailItem(
-            'Supplier: ',
-            itemTransaction.supplierDetail?.supplierName ?? 'N/A',
-            Iconsax.nexo_nexo,
-            isCompact,
-          ),
-          _buildDetailItem(
-            'Customer : ',
-            itemTransaction.customerDetail?.customerName ?? 'N/A',
-            Iconsax.nexo_nexo,
-            isCompact,
-          ),
+          if (itemTransaction.supplier != null)
+            _buildDetailItem(
+              'Supplier: ',
+              itemTransaction.supplierDetail?.supplierName ?? 'N/A',
+              Iconsax.nexo_nexo,
+              isCompact,
+            ),
+          if (itemTransaction.customer != null)
+            _buildDetailItem(
+              'Customer : ',
+              itemTransaction.customerDetail?.customerName ?? 'N/A',
+              Iconsax.nexo_nexo,
+              isCompact,
+            ),
           _buildDetailItem(
             'Transaction Qunatity: ',
             itemTransaction.quantityTransaction.toString() ?? 'N/A',

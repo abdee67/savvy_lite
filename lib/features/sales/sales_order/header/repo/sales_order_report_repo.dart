@@ -4,6 +4,8 @@ import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/credit_receipt_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
+import 'package:savvy_stock/features/reports/cash_flow/models/cash_flow_transaction_DTO.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/model/other_income.dart';
 import 'package:sqflite/sqflite.dart';
 
 class SalesOrderReportRepository {
@@ -295,7 +297,6 @@ class SalesOrderReportRepository {
           emp.name_first as employee_name_first,
           emp.name_middle as employee_name_middle,
           emp.name_last as employee_name_last,
-          emp.phone as employee_phone,
           emp.email as employee_email,
           (sod.extended_price - sod.amount_cost) as gross_profit_detail,
           it.id as items_table_id,

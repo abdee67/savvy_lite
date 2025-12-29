@@ -1181,7 +1181,9 @@ class ItemTransactionRepository {
     var query = '''
         SELECT it.*,
              il.location,
+             lcm.location_description as location_description,
              lm.lot_number,
+             lm.batch_number_supplier as batch_number_supplier,
              ib.quantity_available,
              i.item_description as item_description,
              b.description as branch_name,
@@ -1193,6 +1195,7 @@ class ItemTransactionRepository {
              udm.description_1 as unit_of_measure_description
       FROM item_transactions it
       LEFT JOIN item_location il ON it.item_location = il.id
+      LEFT JOIN location_master lcm ON il.location = lcm.id
       LEFT JOIN lot_master lm ON it.lot_number = lm.id
       LEFT JOIN items_in_branch ib ON it.item_branch = ib.id
       LEFT JOIN items_table i ON it.item_number = i.id

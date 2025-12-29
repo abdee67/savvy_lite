@@ -559,9 +559,9 @@ class _BalanceOfItemReportState extends State<BalanceOfItemReport>
     final screenHeight = MediaQuery.of(context).size.height;
     // For responsiveness:
     final collapsedHeight = isCompact
-        ? screenHeight * 0.14
+        ? screenHeight * 0.18
         : screenHeight * 0.6;
-    final expandedHeight = isCompact ? screenHeight * 0.4 : screenHeight * 0.35;
+    final expandedHeight = isCompact ? screenHeight * 0.5 : screenHeight * 0.35;
 
     return GestureDetector(
       onTap: () => isExpanded ? _hideItemDetail() : _showItemDetail(item),

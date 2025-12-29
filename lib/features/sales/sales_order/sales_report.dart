@@ -680,7 +680,7 @@ class _SalesReviewPageState extends State<SalesReviewPage>
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'FS Number - ${salesOrder.fsNumber ?? 'N/A'}',
+                                    'FS - ${salesOrder.fsNumber ?? 'N/A'}',
                                     style: TextStyle(
                                       color: const Color(0xFF373737),
                                       fontSize: isCompact ? 20 : 24,
@@ -744,32 +744,10 @@ class _SalesReviewPageState extends State<SalesReviewPage>
                                       ),
                                     ),
                                     child: Text(
-                                      'From ${_formatDateTime(salesOrder.orderDate ?? DateTime.now())}',
+                                      'Order Date : ${_formatDateTime(salesOrder.orderDate ?? DateTime.now())}',
                                       style: TextStyle(
                                         fontSize: 10,
                                         color: Colors.blue[800],
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.green[50],
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: Colors.green[200]!,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      'To ${_formatDateTime(salesOrder.shippedDate ?? DateTime.now())}',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.green[800],
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
