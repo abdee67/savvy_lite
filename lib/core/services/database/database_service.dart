@@ -30,7 +30,7 @@ class LocalDatabaseService {
     String path = join(await getDatabasesPath(), 'savvy_stock.db');
     return await openDatabase(
       path,
-      version: 1, // Increment this for future migrations
+      version: 2, // Incremented for proforma fields migration
       onCreate: _onCreate,
       onUpgrade: _onUpgrade, // Add upgrade handler
       onOpen: (db) async {
@@ -43,10 +43,17 @@ class LocalDatabaseService {
     developer.log('Upgrading database from $oldVersion to $newVersion');
 
     if (oldVersion < 2) {
-      // Example migration for version 2
+      // Add proforma fields to sales_order_header for quotation conversion tracking
+      developer.log(
+        'Adding proforma_flag and proforma_reference columns to sales_order_header',
+      );
       await db.execute('''
-      ALTER TABLE system_constant ADD COLUMN new_column TEXT DEFAULT NULL
-    ''');
+        ALTER TABLE sales_order_header ADD COLUMN proforma_flag TEXT
+      ''');
+      await db.execute('''
+        ALTER TABLE sales_order_header ADD COLUMN proforma_reference TEXT
+      ''');
+      developer.log('Successfully added proforma fields to sales_order_header');
     }
 
     if (oldVersion < 3) {
@@ -289,6 +296,7 @@ CREATE TABLE items_table (
   margin_rate REAL,
   margin_type TEXT,           -- e.g. '%' or 'N'
   reorder_point REAL,
+  reference_id TEXT,
   FOREIGN KEY (company) REFERENCES company_table(id) ON DELETE CASCADE,
   FOREIGN KEY (unit_of_measure) REFERENCES udc_details(id)
 );
@@ -383,6 +391,9 @@ CREATE INDEX idx_items_in_branch_uom ON items_in_branch(unit_of_measure);
         lot_type INTEGER,
         location_category_level INTEGER DEFAULT 1,
         lot_qty_auto_for_sales TEXT DEFAULT 'Y',
+        discount_display TEXT DEFAULT 'N',
+        tax_info_display TEXT DEFAULT 'N',
+        reorder_point_uom_type TEXT DEFAULT 'I',
         is_synced INTEGER DEFAULT 1,
         last_sync_time INTEGER,
         created_at INTEGER DEFAULT (strftime('%s', 'now')),
@@ -544,7 +555,7 @@ CREATE INDEX idx_supplier_table_user_id ON supplier_table(user_id);
   CREATE TABLE purchase_order_header (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     supplier_id INTEGER,
-    date_transation TEXT,
+    date_transaction TEXT,
     date_delivery TEXT,
     po_receive_status INTEGER,
     company INTEGER,
@@ -564,6 +575,7 @@ CREATE INDEX idx_supplier_table_user_id ON supplier_table(user_id);
     payment_term INTEGER,
     order_type INTEGER,
     credit_due_date TEXT,
+    invoice_number TEXT,
     FOREIGN KEY (supplier_id) REFERENCES supplier_table (id),
     FOREIGN KEY (company) REFERENCES company_table (id),
     FOREIGN KEY (po_receive_status) REFERENCES udc_details (id),
@@ -751,6 +763,536 @@ CREATE INDEX idx_next_number_company ON next_number(company);
 ''');
     developer.log('Created table: lot_expiration_colors');
 
+    //26. create sales_order_header table
+    await db.execute('''
+  CREATE TABLE sales_order_header (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_date TEXT,
+  required_date TEXT,
+  shipped_date TEXT,
+  sales_type TEXT,
+  payment_method TEXT,
+  payment_instrument INTEGER,
+  discount TEXT,
+  add_on TEXT,
+  tax REAL,
+  with_hold_apply TEXT,
+  withhold_amount REAL,
+  discount_amount REAL,
+  discount_in_percent REAL,
+  reference_note1 TEXT,
+  reference_note_2 TEXT,
+  reference_note3 TEXT,
+  reference_note4 TEXT,
+  proforma_flag TEXT,
+  proforma_reference TEXT,
+  credit_date_topay TEXT,
+  fs_number TEXT,
+  void_indicator TEXT,
+  customer_bill_to INTEGER NOT NULL,
+  customer_table_id INTEGER NOT NULL,
+  employees_id INTEGER NOT NULL,
+  amount_total REAL,
+  company INTEGER,
+  payment_term INTEGER,
+  payment_status INTEGER,
+  order_number INTEGER,
+  amount_open REAL,
+  order_type INTEGER,
+  unit_cost REAL,
+  amount_cost REAL,
+  FOREIGN KEY (customer_bill_to) REFERENCES customer_table (id),
+  FOREIGN KEY (customer_table_id) REFERENCES customer_table (id),
+  FOREIGN KEY (employees_id) REFERENCES employees (id),
+  FOREIGN KEY (company) REFERENCES company_table (id),
+  FOREIGN KEY (payment_instrument) REFERENCES udc_details (id),
+  FOREIGN KEY (payment_status) REFERENCES udc_details (id),
+  FOREIGN KEY (order_type) REFERENCES udc_details (id)
+);
+CREATE INDEX idx_sales_order_header_customer_bill_to ON sales_order_header(customer_bill_to);
+CREATE INDEX idx_sales_order_header_customer_table_id ON sales_order_header(customer_table_id);
+CREATE INDEX idx_sales_order_header_employees_id ON sales_order_header(employees_id);
+CREATE INDEX idx_sales_order_header_company ON sales_order_header(company);
+CREATE INDEX idx_sales_order_header_payment_instrument ON sales_order_header(payment_instrument);
+CREATE INDEX idx_sales_order_header_payment_status ON sales_order_header(payment_status);
+CREATE INDEX idx_sales_order_header_order_type ON sales_order_header(order_type);
+''');
+    developer.log('Created table: sales_order_header');
+    //27. create sales_order_details table
+    await db.execute('''
+  CREATE TABLE sales_order_details (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    unit_price REAL,
+    quantity REAL,
+    extended_price REAL,
+    taxable TEXT,
+    reference1 TEXT,
+    reference2 TEXT,
+    sales_order_header_id INTEGER NOT NULL,
+    items_table_id INTEGER NOT NULL,
+    item_in_branch INTEGER,
+    company INTEGER,
+    lot_number INTEGER,
+    unit_cost REAL,
+    amount_cost REAL,
+    unit_of_measure INTEGER,
+    FOREIGN KEY (sales_order_header_id) REFERENCES sales_order_header (id) ON DELETE CASCADE,
+    FOREIGN KEY (items_table_id) REFERENCES items_table (id),
+    FOREIGN KEY (item_in_branch) REFERENCES items_in_branch (id),
+    FOREIGN KEY (company) REFERENCES company_table (id),
+    FOREIGN KEY (lot_number) REFERENCES lot_master (id),
+    FOREIGN KEY (unit_of_measure) REFERENCES udc_details (id)
+  );
+  CREATE INDEX idx_sales_order_details_sales_order_header_id ON sales_order_details(sales_order_header_id);
+  CREATE INDEX idx_sales_order_details_items_table_id ON sales_order_details(items_table_id);
+  CREATE INDEX idx_sales_order_details_item_in_branch ON sales_order_details(item_in_branch);
+  CREATE INDEX idx_sales_order_details_company ON sales_order_details(company);
+  CREATE INDEX idx_sales_order_details_lot_number ON sales_order_details(lot_number);
+  CREATE INDEX idx_sales_order_details_unit_of_measure ON sales_order_details(unit_of_measure);
+''');
+    developer.log('Created table: sales_order_details');
+
+    //create item master table
+    await db.execute('''
+    CREATE TABLE item_master (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_description TEXT NOT NULL,
+  company_category INTEGER,
+  category_code_01 INTEGER,
+  category_code_02 INTEGER,
+  category_code_03 INTEGER,
+  category_code_04 INTEGER,
+  category_code_05 INTEGER,
+  category_code_06 INTEGER,
+  category_code_07 INTEGER,
+  category_code_08 INTEGER,
+  category_code_09 INTEGER,
+  category_code_10 INTEGER,
+  created_by_flag TEXT DEFAULT 'Y',
+  defualt_uom INTEGER,
+  taxable_flag TEXT DEFAULT 'Y',
+  UNIQUE (item_description, company_category),
+  FOREIGN KEY (company_category) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_01) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_02) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_03) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_04) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_05) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_06) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_07) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_08) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_09) REFERENCES udc_details (id),
+  FOREIGN KEY (category_code_10) REFERENCES udc_details (id),
+  FOREIGN KEY (defualt_uom) REFERENCES udc_details (id)
+);
+CREATE INDEX idx_item_master_company ON item_master(company);
+CREATE INDEX idx_item_master_category_code_01 ON item_master(category_code_01);
+CREATE INDEX idx_item_master_category_code_02 ON item_master(category_code_02);
+CREATE INDEX idx_item_master_category_code_03 ON item_master(category_code_03);
+CREATE INDEX idx_item_master_category_code_04 ON item_master(category_code_04);
+CREATE INDEX idx_item_master_category_code_05 ON item_master(category_code_05);
+CREATE INDEX idx_item_master_category_code_06 ON item_master(category_code_06);
+CREATE INDEX idx_item_master_category_code_07 ON item_master(category_code_07);
+CREATE INDEX idx_item_master_category_code_08 ON item_master(category_code_08);
+CREATE INDEX idx_item_master_category_code_09 ON item_master(category_code_09);
+CREATE INDEX idx_item_master_category_code_10 ON item_master(category_code_10);
+CREATE INDEX idx_item_master_defualt_uom ON item_master(defualt_uom);
+''');
+    developer.log('Created table: item_master');
+
+    //invoice header table
+    await db.execute('''
+CREATE TABLE invoice_history_header (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  fs_number TEXT,
+  customer_name TEXT,
+  tin_number TEXT,
+  phone_number TEXT,
+  country TEXT,
+  city TEXT,
+  region TEXT,
+  tax_amount REAL,
+  withhold_amount REAL,
+  total_amount REAL,
+  date_transaction TEXT, -- store as ISO8601 string (e.g., "2025-11-13")
+  sales_person TEXT,
+  mrc_number TEXT,
+  discount_amount REAL,
+  amount_beforeTax REAL,
+  company INTEGER,
+  FOREIGN KEY (company) REFERENCES company_table(id)
+);
+CREATE INDEX idx_invoice_history_header_company ON invoice_history_header(company);
+
+''');
+    developer.log('Created table: invoice_history_header');
+    //invoice for detail
+    await db.execute('''
+CREATE TABLE invoice_history_detail (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  invoice_history INTEGER,
+  item TEXT,
+  unit_of_measure TEXT,
+  quantity_transaction REAL,
+  amount_unit_price REAL,
+  amount_extended_price REAL,
+  company INTEGER,
+  FOREIGN KEY (invoice_history) REFERENCES invoice_history_header(id),
+  FOREIGN KEY (company) REFERENCES company_table(id)
+);
+CREATE INDEX idx_invoice_history_detail_invoice_history ON invoice_history_detail(invoice_history);
+CREATE INDEX idx_invoice_history_detail_company ON invoice_history_detail(company);
+''');
+    developer.log('Created table: invoice_history_detail');
+
+    //sales person table
+    await db.execute('''
+CREATE TABLE salespersons (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  uuid TEXT NOT NULL,
+  full_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone_number TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  referral_code TEXT NOT NULL,
+  parent_salesperson_id INTEGER,
+  status TEXT NOT NULL DEFAULT 'ACTIVE',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+
+  UNIQUE (uuid),
+  UNIQUE (email),
+  UNIQUE (phone_number),
+  UNIQUE (referral_code),
+
+  FOREIGN KEY (parent_salesperson_id) REFERENCES salespersons(id)
+);
+
+CREATE INDEX idx_sales_person_company ON salespersons(company);
+''');
+    developer.log('Created table: salespersons');
+
+    // create sales retrun header table
+    await db.execute('''
+  CREATE TABLE sales_return_header (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+  order_date TEXT,
+  required_date TEXT,
+  shipped_date TEXT,
+  return_date TEXT,
+
+  sales_type TEXT,
+  payment_method TEXT,
+  payment_instrument INTEGER,
+  discount TEXT,
+  add_on TEXT,
+  tax REAL,
+  with_hold_apply TEXT,
+  withhold_amount REAL,
+  discount_amount REAL,
+  discount_in_percent REAL,
+
+  reference_note1 TEXT,
+  reference_note_2 TEXT,
+  reference_note3 TEXT,
+  reference_note4 TEXT,
+
+  comments_sales TEXT,
+  credit_date_topay TEXT,
+  fs_number TEXT,
+  void_indicator TEXT,
+
+  customer_bill_to INTEGER NOT NULL,
+  customer_table_id INTEGER NOT NULL,
+  employees_id INTEGER NOT NULL,
+
+  amount_total REAL,
+  company INTEGER,
+  payment_term INTEGER,
+  payment_status INTEGER,
+  order_number INTEGER,
+  amount_open REAL,
+  order_type INTEGER,
+  unit_cost REAL,
+  amount_cost REAL,
+  return_status INTEGER,
+  sales_represent TEXT,
+  comment_for_return TEXT,
+
+  -- FOREIGN KEYS
+  FOREIGN KEY (customer_bill_to) REFERENCES customer_table(id),
+  FOREIGN KEY (customer_table_id) REFERENCES customer_table(id),
+  FOREIGN KEY (employees_id) REFERENCES employees(id),
+  FOREIGN KEY (company) REFERENCES company_table(id),
+  FOREIGN KEY (payment_instrument) REFERENCES udc_details(id),
+  FOREIGN KEY (payment_status) REFERENCES udc_details(id),
+  FOREIGN KEY (order_type) REFERENCES udc_details(id),
+  FOREIGN KEY (return_status) REFERENCES udc_details(id)
+);
+CREATE UNIQUE INDEX idx_sales_return_header_id_unique
+ON sales_return_header (id);
+
+CREATE INDEX idx_srh_customer_bill_to
+ON sales_return_header (customer_bill_to);
+
+CREATE INDEX idx_srh_customer_table_id
+ON sales_return_header (customer_table_id);
+
+CREATE INDEX idx_srh_employees_id
+ON sales_return_header (employees_id);
+
+CREATE INDEX idx_srh_company
+ON sales_return_header (company);
+
+CREATE INDEX idx_srh_payment_instrument
+ON sales_return_header (payment_instrument);
+
+CREATE INDEX idx_srh_payment_status
+ON sales_return_header (payment_status);
+
+CREATE INDEX idx_srh_order_type
+ON sales_return_header (order_type);
+
+CREATE INDEX idx_srh_return_status
+ON sales_return_header (return_status);
+
+''');
+    developer.log('Created table: sales_return_header');
+    //sales return detail table
+    await db.execute('''
+CREATE TABLE sales_return_details (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  unit_price REAL,
+  quantity REAL,
+  extended_price REAL,
+  taxable TEXT,
+  reference1 TEXT,
+  reference2 TEXT,
+  sales_return_header_id INTEGER NOT NULL,
+  items_table_id INTEGER NOT NULL,
+  item_in_branch INTEGER,
+  company INTEGER,
+  lot_number INTEGER,
+  unit_cost REAL,
+  return_quantity REAL,
+  return_amount_cost REAL,
+  return_amount_price REAL,
+  return_extended_price REAL,
+  amount_cost REAL,
+  unit_of_measure INTEGER,
+  return_status INTEGER,
+  return_reason INTEGER,
+
+  -- FOREIGN KEYS
+  FOREIGN KEY (sales_return_header_id) REFERENCES sales_return_header(id),
+  FOREIGN KEY (items_table_id) REFERENCES items_table(id),
+  FOREIGN KEY (item_in_branch) REFERENCES items_in_branch(id),
+  FOREIGN KEY (company) REFERENCES company_table(id),
+  FOREIGN KEY (lot_number) REFERENCES lot_master(id),
+  FOREIGN KEY (unit_of_measure) REFERENCES udc_details(id),
+  FOREIGN KEY (return_status) REFERENCES udc_details(id),
+  FOREIGN KEY (return_reason) REFERENCES udc_details(id)
+);
+
+
+CREATE INDEX idx_srd_sales_return_header_id
+ON sales_return_detail (sales_return_header_id);
+
+CREATE INDEX idx_srd_item_id
+ON sales_return_detail (item_id);
+
+''');
+    developer.log('Created table: sales_return_detail');
+
+    //crete proforma header table
+    await db.execute('''
+CREATE TABLE quote_order_header (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_number INTEGER NOT NULL,
+  order_date TEXT,
+  conversion_date TEXT,
+  required_date TEXT,
+  shipped_date TEXT,
+  sales_type TEXT,
+  quotation_validation_in_days INTEGER DEFAULT 30,
+  payment_method TEXT,
+  payment_instrument INTEGER,
+  payment_term INTEGER,
+  payment_status INTEGER,
+  credit_date_topay TEXT,
+  currency_code TEXT DEFAULT 'ETB',
+  exchange_rate REAL DEFAULT 1,
+  discount TEXT,
+  discount_amount REAL,
+  discount_in_percent REAL,
+  add_on TEXT,
+  tax REAL,
+  with_hold_apply TEXT,
+  withhold_amount REAL,
+  amount_total REAL,
+  amount_open REAL,
+  unit_cost REAL,
+  amount_cost REAL,
+  order_type INTEGER,
+  order_status TEXT DEFAULT 'Draft',
+  conversion_status TEXT,
+  prforma_status TEXT,
+  void_indicator TEXT,
+  reference_note1 TEXT,
+  reference_note_2 TEXT,
+  reference_note3 TEXT,
+  reference_note4 TEXT,
+  external_ref_number TEXT,
+  fs_number TEXT,
+  sales_represent TEXT,
+  converted_items TEXT,
+  customer_bill_to INTEGER NOT NULL,
+  customer_table_id INTEGER NOT NULL,
+  employees_id INTEGER NOT NULL,
+  company INTEGER,
+  branch_id INTEGER,
+  created_at TEXT,
+  updated_at TEXT,
+  created_by INTEGER,
+  updated_by INTEGER,
+  comments_reason TEXT,
+
+  -- FOREIGN KEYS
+  FOREIGN KEY (customer_bill_to) REFERENCES customer_table(id),
+  FOREIGN KEY (customer_table_id) REFERENCES customer_table(id),
+  FOREIGN KEY (employees_id) REFERENCES employees(id),
+  FOREIGN KEY (company) REFERENCES company_table(id),
+  FOREIGN KEY (branch_id) REFERENCES branch(id),
+  FOREIGN KEY (payment_instrument) REFERENCES udc_details(id),
+  FOREIGN KEY (payment_status) REFERENCES udc_details(id),
+  FOREIGN KEY (order_type) REFERENCES udc_details(id),
+  FOREIGN KEY (prforma_status) REFERENCES udc_details(id)
+);
+CREATE UNIQUE INDEX idx_proforma_header_id_unique
+ON proforma_header (id);
+
+CREATE INDEX idx_ph_customer_bill_to
+ON proforma_header (customer_bill_to);
+
+CREATE INDEX idx_ph_customer_table_id
+ON proforma_header (customer_table_id);
+
+CREATE INDEX idx_ph_employees_id
+ON proforma_header (employees_id);
+
+CREATE INDEX idx_ph_company
+ON proforma_header (company);
+
+CREATE INDEX idx_ph_payment_instrument
+ON proforma_header (payment_instrument);
+
+CREATE INDEX idx_ph_payment_status
+ON proforma_header (payment_status);
+
+CREATE INDEX idx_ph_order_type
+ON proforma_header (order_type);
+
+CREATE INDEX idx_ph_prforma_status
+ON proforma_header (prforma_status);
+    ''');
+    developer.log('Created table: proforma_header');
+
+    //create quote order detail table
+    await db.execute('''
+CREATE TABLE quote_order_detail (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+  quote_order_header_id INTEGER NOT NULL,
+  items_table_id INTEGER NOT NULL,
+  item_in_branch INTEGER,
+  company INTEGER,
+  unit_price REAL,
+  quantity REAL,
+  extended_price REAL,
+  unit_cost REAL,
+  amount_cost REAL,
+  taxable TEXT,
+  discount_percent REAL,
+  discount_amount REAL,
+  unit_of_measure INTEGER,
+  line_status TEXT DEFAULT 'Open',
+  reference1 TEXT,
+  reference2 TEXT,
+  prforma_status INTEGER,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  created_by INTEGER,
+  updated_by INTEGER,
+
+  -- FOREIGN KEYS
+  FOREIGN KEY (quote_order_header_id) REFERENCES quote_order_header(id),
+  FOREIGN KEY (items_table_id) REFERENCES items_table(id),
+  FOREIGN KEY (item_in_branch) REFERENCES items_in_branch(id),
+  FOREIGN KEY (company) REFERENCES company_table(id),
+  FOREIGN KEY (unit_of_measure) REFERENCES udc_details(id),
+  FOREIGN KEY (prforma_status) REFERENCES udc_details(id)
+);
+
+CREATE INDEX idx_qod_quote_order_header_id
+ON quote_order_detail (quote_order_header_id);
+
+CREATE INDEX idx_qod_item_id
+ON quote_order_detail (item_in_branch);
+
+CREATE INDEX idx_qod_company
+ON quote_order_detail (company);
+
+CREATE INDEX idx_qod_unit_of_measure
+ON quote_order_detail (unit_of_measure);
+
+CREATE INDEX idx_qod_prforma_status
+ON quote_order_detail (prforma_status);
+    ''');
+    developer.log('Created table: quote_order_detail');
+
+    //create credit payment(on purchase)
+    await db.execute('''
+CREATE TABLE credit_payment_table (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  po_header INTEGER,
+  payment_amount REAL,
+  date_payment TEXT,
+  payment_instrument INTEGER,
+  company INTEGER,
+  user_id INTEGER,
+  date_updated TEXT,
+
+  -- FOREIGN KEYS
+  FOREIGN KEY (po_header) REFERENCES purchase_order_header(id),
+  FOREIGN KEY (payment_instrument) REFERENCES udc_details(id),
+  FOREIGN KEY (company) REFERENCES company_table(id),
+  FOREIGN KEY (user_id) REFERENCES user_table(id)
+);
+
+    ''');
+    developer.log('Created table: credit_payment_table');
+
+    //create sales credit receipt
+    await db.execute('''
+CREATE TABLE credit_receipt_table (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  so_header INTEGER,
+  receipt_amount REAL,
+  date_receipt TEXT,
+  payment_instrument INTEGER,
+  company INTEGER,
+  user_id INTEGER,
+  date_updated TEXT,
+
+  FOREIGN KEY (company) REFERENCES company_table(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  FOREIGN KEY (payment_instrument) REFERENCES udc_details(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  FOREIGN KEY (so_header) REFERENCES sales_order_header(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES user_table(id) ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+    ''');
+    developer.log('Created table: credit_receipt_table');
+
     //. Create sync_queue table
     await db.execute('''
       CREATE TABLE sync_queue (
@@ -764,7 +1306,6 @@ CREATE INDEX idx_next_number_company ON next_number(company);
         last_attempt INTEGER
       )
     ''');
-    developer.log('Created table: sync_queue');
 
     // Add indexes for better performance
     await db.execute('CREATE INDEX idx_company ON company_table(id)');
@@ -839,6 +1380,7 @@ CREATE INDEX idx_next_number_company ON next_number(company);
       {'id': 19, 'header_code': 'C9', 'udc_description': 'Item Category 9'},
       {'id': 20, 'header_code': 'C10', 'udc_description': 'Item Category 10'},
       {'id': 21, 'header_code': 'LT', 'udc_description': 'Lot Type'},
+      {'id': 22, 'header_code': 'SR', 'udc_description': 'Sales Return Status'},
     ];
 
     for (final udcHeader in udcHeaderSeedData) {
@@ -926,7 +1468,7 @@ CREATE INDEX idx_next_number_company ON next_number(company);
       // --- Purchased Receive Status (PR) ---
       {
         'id': 10,
-        'detail_code': 'NEW',
+        'detail_code': 'N',
         'description_1': 'New',
         'description_2': null,
         'record_header': 3,
@@ -934,7 +1476,7 @@ CREATE INDEX idx_next_number_company ON next_number(company);
       },
       {
         'id': 11,
-        'detail_code': 'PARTIAL',
+        'detail_code': 'P',
         'description_1': 'Partially Received',
         'description_2': null,
         'record_header': 3,
@@ -942,7 +1484,7 @@ CREATE INDEX idx_next_number_company ON next_number(company);
       },
       {
         'id': 12,
-        'detail_code': 'COMPLETE',
+        'detail_code': 'C',
         'description_1': 'Completely Received',
         'description_2': null,
         'record_header': 3,
@@ -986,15 +1528,15 @@ CREATE INDEX idx_next_number_company ON next_number(company);
       // --- Payment Status (PS) ---
       {
         'id': 17,
-        'detail_code': 'PENDING',
-        'description_1': 'Pending',
+        'detail_code': 'N',
+        'description_1': 'Not paid',
         'description_2': null,
         'record_header': 5,
         'udc_group': 'PS',
       },
       {
         'id': 18,
-        'detail_code': 'PAID',
+        'detail_code': 'P',
         'description_1': 'Paid',
         'description_2': null,
         'record_header': 5,
@@ -1002,8 +1544,8 @@ CREATE INDEX idx_next_number_company ON next_number(company);
       },
       {
         'id': 19,
-        'detail_code': 'OVERDUE',
-        'description_1': 'Overdue',
+        'detail_code': 'S',
+        'description_1': 'Partially paid',
         'description_2': null,
         'record_header': 5,
         'udc_group': 'PS',
@@ -1169,24 +1711,24 @@ CREATE INDEX idx_next_number_company ON next_number(company);
       // --- Transaction Type (TT) ---
       {
         'id': 27,
-        'detail_code': 'SALE',
-        'description_1': 'Sales Transaction',
+        'detail_code': 'T',
+        'description_1': ' Inventory transfer',
         'description_2': null,
         'record_header': 8,
         'udc_group': 'TT',
       },
       {
         'id': 28,
-        'detail_code': 'PURCHASE',
-        'description_1': 'Purchase Transaction',
+        'detail_code': 'I',
+        'description_1': 'Inventory issue',
         'description_2': null,
         'record_header': 8,
         'udc_group': 'TT',
       },
       {
         'id': 29,
-        'detail_code': 'RETURN',
-        'description_1': 'Return Transaction',
+        'detail_code': 'A',
+        'description_1': 'Inventory adjustment',
         'description_2': null,
         'record_header': 8,
         'udc_group': 'TT',
@@ -1314,6 +1856,317 @@ CREATE INDEX idx_next_number_company ON next_number(company);
         'description_2': 'Select items by receipt date',
         'record_header': 21,
         'udc_group': 'LT',
+      },
+      {
+        'id': 44,
+        'detail_code': 'DG',
+        'description_1': 'Damaged Goods',
+        'description_2': 'Product arrived broken or defective',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 45,
+        'detail_code': 'EG',
+        'description_1': 'Expired Goods',
+        'description_2': 'Expired items (pharmacy, food, etc.)',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 46,
+        'detail_code': 'WI',
+        'description_1': 'Wrong Item Supplied',
+        'description_2': 'Item mismatch compared to customer order',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 47,
+        'detail_code': 'WQ',
+        'description_1': 'Wrong Quantity Supplied',
+        'description_2': 'More or fewer units supplied than ordered',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 48,
+        'detail_code': 'QI',
+        'description_1': 'Quality Issues',
+        'description_2': 'Customer not satisfied with product quality',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 49,
+        'detail_code': 'PR',
+        'description_1': 'Product Recall',
+        'description_2': 'Manufacturer recall due to safety/defect issues',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 50,
+        'detail_code': 'CM',
+        'description_1': 'Customer Changed Mind',
+        'description_2': 'Return allowed within grace period',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 51,
+        'detail_code': 'OC',
+        'description_1': 'Order Cancellation',
+        'description_2': 'Customer canceled after invoicing but before usage',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 52,
+        'detail_code': 'LD',
+        'description_1': 'Late Delivery',
+        'description_2': 'Goods delivered outside agreed time',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 53,
+        'detail_code': 'PI',
+        'description_1': 'Packaging Issues',
+        'description_2': 'Leaking, tampered, or opened package',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 54,
+        'detail_code': 'WC',
+        'description_1': 'Warranty / Guarantee Claim',
+        'description_2': 'Returned within warranty terms',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 55,
+        'detail_code': 'ND',
+        'description_1': 'Not as Described',
+        'description_2': 'Product specs don’t match description',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 56,
+        'detail_code': 'DS',
+        'description_1': 'Duplicate Sale',
+        'description_2': 'Mistaken duplicate invoice/order',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 57,
+        'detail_code': 'W1',
+        'description_1': 'Wrong Customer Selected',
+        'description_2': 'Sale recorded under wrong customer',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 58,
+        'detail_code': 'W2',
+        'description_1': 'Wrong Item Selected',
+        'description_2': 'Wrong product/service chosen before finalizing sale',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 59,
+        'detail_code': 'W3',
+        'description_1': 'Wrong Price Applied',
+        'description_2': 'Pricing error discovered immediately',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 60,
+        'detail_code': 'D1',
+        'description_1': 'Discount Mistake',
+        'description_2': 'Wrong discount percentage applied',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 61,
+        'detail_code': 'P2',
+        'description_1': 'Payment Error',
+        'description_2':
+            'Customer payment failed or incorrect payment recorded',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 62,
+        'detail_code': 'C3',
+        'description_1': 'Cashier Mistake',
+        'description_2': 'Accidental entry (e.g., double billing)',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 63,
+        'detail_code': 'T4',
+        'description_1': 'Training/Test Transaction',
+        'description_2': 'Dummy transactions during training/testing',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 64,
+        'detail_code': 'S5',
+        'description_1': 'System Error / Power Failure',
+        'description_2': 'Technical issue during transaction',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 65,
+        'detail_code': 'C6',
+        'description_1': 'Customer Walked Away / No Payment',
+        'description_2': 'Customer didn’t complete purchase',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 66,
+        'detail_code': 'FP',
+        'description_1': 'Fraud Prevention',
+        'description_2': 'Suspicious sale identified and canceled',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 67,
+        'detail_code': 'DI',
+        'description_1': 'Duplicate Invoice',
+        'description_2': 'Accidentally issued two invoices for same order',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 68,
+        'detail_code': 'O7',
+        'description_1': 'Order Cancelled Before Fulfillment',
+        'description_2': 'Sale voided before goods delivered',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 69,
+        'detail_code': 'S1',
+        'description_1': 'Incorrect Size/Variant',
+        'description_2':
+            'Product returned due to wrong size, color, or variant selection',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 70,
+        'detail_code': 'S2',
+        'description_1': 'Late Defect Discovery',
+        'description_2': 'Customer discovers a defect after initial inspection',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 71,
+        'detail_code': 'S3',
+        'description_1': 'Allergic Reaction / Health Issue',
+        'description_2':
+            'Returned due to personal health issues (pharma, food, etc.)',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 72,
+        'detail_code': 'S4',
+        'description_1': 'Price/Offer Mismatch',
+        'description_2':
+            'Customer returns because of price difference or promotion mismatch',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 73,
+        'detail_code': 'S8',
+        'description_1': 'Gift Return',
+        'description_2':
+            'Returned because it was gifted, not wanted by recipient',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 74,
+        'detail_code': 'S6',
+        'description_1': 'Shipping Damage (Carrier Fault)',
+        'description_2':
+            'Product damaged during transit, not manufacturer fault',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 75,
+        'detail_code': 'S7',
+        'description_1': 'Seasonal / Promotional Return',
+        'description_2': 'Customer returns a promotional or seasonal item',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 76,
+        'detail_code': 'V1',
+        'description_1': 'Customer Changed Mind Before Payment',
+        'description_2': 'Sale canceled before payment attempt',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 77,
+        'detail_code': 'V2',
+        'description_1': 'System Timeout / Session Expiry',
+        'description_2': 'Transaction aborted due to system timeout',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 78,
+        'detail_code': 'V3',
+        'description_1': 'Inventory Not Available',
+        'description_2': 'Sale voided because stock was not actually available',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 79,
+        'detail_code': 'V4',
+        'description_1': 'Duplicate Entry Detected Before Invoice',
+        'description_2': 'Mistaken entry detected before invoicing',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 80,
+        'detail_code': 'V5',
+        'description_1': 'Promotional / Discount Override Error',
+        'description_2':
+            'Sale voided because a promotion or discount was misapplied',
+        'record_header': 23,
+        'udc_group': 'SR',
+      },
+      {
+        'id': 81,
+        'detail_code': 'OT',
+        'description_1': 'Others',
+        'description_2': 'Other Reason',
+        'record_header': 23,
+        'udc_group': 'SR',
       },
     ];
 
@@ -1567,6 +2420,13 @@ CREATE INDEX idx_next_number_company ON next_number(company);
       AppRoutes.customerEntry,
       AppRoutes.salesCustomerInfo,
       AppRoutes.salesItemEntry,
+      AppRoutes.salesReport,
+      AppRoutes.salesReturn,
+      AppRoutes.quotationOrder,
+      AppRoutes.quotationItemEntry,
+      AppRoutes.quotationOrderPayment,
+      AppRoutes.quotationInvoiceReview,
+      AppRoutes.quotationOrderReview,
     ];
 
     for (final uri in salesPrivileges) {
@@ -1714,31 +2574,38 @@ CREATE INDEX idx_next_number_company ON next_number(company);
       await db.insert('user_role', userRole);
     }
     developer.log('Inserted user roles');
+    //insert sales persons
+    final salesPersons = [
+      {
+        'full_name': 'Sales1',
+        'uuid': '1',
+        'email': 'john.doe@gmail.com',
+        'phone_number': '12345678900',
+        'password_hash': argon2Hash,
+        'referral_code': 'ref001',
+        'parent_salesperson_id': 1,
+        'status': 'ACTIVE',
+        'created_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      {
+        'full_name': 'Sales2',
+        'uuid': '2',
+        'email': 'jane.doe@gmail.com',
+        'phone_number': '12345678901',
+        'password_hash': argon2Hash,
+        'referral_code': 'ref002',
+        'parent_salesperson_id': 1,
+        'status': 'ACTIVE',
+        'created_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+    ];
 
-    await db.insert('system_constant', {
-      'apply_lot_mgm': 'Y',
-      'apply_location_mgm': 'Y',
-      'interface_customer': 'Y',
-      'interface_employee': 'Y',
-      'decimal_places': 2,
-      'date_last_updated': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      'time_last_updated': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      'updated_by': 1,
-      'generate_barcode_for_item': 'Y',
-      'company': 1,
-      'rate_vat_percentage': 17.0,
-      'rate_with_percentage': 1.0,
-      'with_hold_initials': 2000.0,
-      'auto_sales_price': 'Y',
-      'lot_type': 'Expiration Date',
-      'location_category_level': 2,
-      'lot_qty_auto_for_sales': 'Y',
-      'is_synced': 1,
-      'last_sync_time': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      'updated_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-    });
-    developer.log('created system constant');
+    for (final salesPerson in salesPersons) {
+      await db.insert('salespersons', salesPerson);
+    }
+    developer.log('Inserted sales persons');
 
     await db.execute('''
   CREATE TABLE customer_table (
@@ -1752,6 +2619,7 @@ CREATE INDEX idx_next_number_company ON next_number(company);
     region TEXT,
     city TEXT,
     tin_number TEXT,
+    defaults_value TEXT,
     address1 TEXT,
     address2 TEXT,
     address3 TEXT,

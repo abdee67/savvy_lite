@@ -4,21 +4,25 @@ import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.da
 class ItemInBranchModel {
   final int id;
   final int itemNumber;
-  final Branch? branchrefrence;
   final ItemEntryModel? item;
   final int branch;
   final double? unitPrice;
-  final double? quantityAvailable;
+  double? quantityAvailable;
   final int? company;
   final int? unitOfMeasure;
   final double? marginRate;
   final String? marginType;
+  double? reorderPoint;
+  int? tempId;
+
+  // Additional fields from joins
+  ItemEntryModel? itemRef;
+  Branch? branchRef;
 
   ItemInBranchModel({
     required this.id,
     required this.itemNumber,
     this.item,
-    this.branchrefrence,
     required this.branch,
     this.unitPrice,
     this.quantityAvailable,
@@ -26,6 +30,10 @@ class ItemInBranchModel {
     this.unitOfMeasure,
     this.marginRate,
     this.marginType,
+    this.reorderPoint,
+    this.tempId,
+    this.itemRef,
+    this.branchRef,
   });
 
   factory ItemInBranchModel.empty() {
@@ -58,6 +66,38 @@ class ItemInBranchModel {
       unitOfMeasure: asInt(map['unit_of_measure']),
       marginRate: asDouble(map['margin_rate']),
       marginType: map['margin_type']?.toString(),
+      reorderPoint: asDouble(map['reorder_point']),
+      branchRef: map['branch'] != null
+          ? Branch(
+              id: asInt(map['branch']) ?? 0,
+              referenceId: map['branch_reference']?.toString(),
+              description: map['branch_description']?.toString(),
+              city: map['branch_city']?.toString(),
+              region: map['branch_region']?.toString(),
+              state: map['branch_state']?.toString(),
+              country: map['branch_country']?.toString(),
+              addressLine: map['branch_address_line']?.toString(),
+              company: asInt(map['branch_company']),
+              branchPhone: map['branch_phone']?.toString(),
+              marginRate: asDouble(map['branch_margin_rate']),
+              marginType: map['branch_margin_type']?.toString(),
+            )
+          : null,
+      itemRef: map['item_number'] != null
+          ? ItemEntryModel(
+              id: asInt(map['item_number']) ?? 0,
+              itemsId: map['items_id']?.toString(),
+              itemDescription: map['item_description']?.toString(),
+              unitOfMeasure: map['unit_of_measure']?.toString(),
+              unitPrice: asDouble(map['unit_price']),
+              taxable: map['taxable']?.toString(),
+              barcode: map['barcode']?.toString(),
+              company: asInt(map['item_company']) ?? asInt(map['company']),
+              marginRate: asDouble(map['item_margin_rate']),
+              marginType: map['item_margin_type']?.toString(),
+              reorderPoint: asDouble(map['item_reorder_point']),
+            )
+          : null,
     );
   }
 
@@ -85,6 +125,9 @@ class ItemInBranchModel {
     int? unitOfMeasure,
     double? marginRate,
     String? marginType,
+    int? tempId,
+    Branch? branchRef,
+    ItemEntryModel? itemRef,
   }) {
     return ItemInBranchModel(
       id: id ?? this.id,
@@ -96,6 +139,9 @@ class ItemInBranchModel {
       unitOfMeasure: unitOfMeasure ?? this.unitOfMeasure,
       marginRate: marginRate ?? this.marginRate,
       marginType: marginType ?? this.marginType,
+      tempId: tempId ?? this.tempId,
+      branchRef: branchRef ?? this.branchRef,
+      itemRef: itemRef ?? this.itemRef,
     );
   }
 }

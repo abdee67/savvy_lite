@@ -45,6 +45,20 @@ class PrivilegeHierarchy {
     AppRoutes.paymentSummary: AppRoutes.salesCustomerInfo,
     AppRoutes.salesInvoice: AppRoutes.salesCustomerInfo,
 
+    //Sales Report (child of Sales Dashboard)
+    AppRoutes.salesReport: AppRoutes.salesDashboard,
+    AppRoutes.salesCreditReceiptReview: AppRoutes.salesDashboard,
+
+    //Sales Return (child of Sales Dashboard)
+    AppRoutes.salesReturn: AppRoutes.salesDashboard,
+
+    //Quotation Order (child of Sales Dashboard)
+    AppRoutes.quotationOrder: AppRoutes.salesDashboard,
+    AppRoutes.quotationItemEntry: AppRoutes.quotationOrder,
+    AppRoutes.quotationOrderPayment: AppRoutes.quotationOrder,
+    AppRoutes.quotationInvoiceReview: AppRoutes.quotationOrder,
+
+    AppRoutes.quotationOrderReview: AppRoutes.salesDashboard,
     // Customer Entry (child of Sales Dashboard)
     AppRoutes.customerEntry: AppRoutes.salesDashboard,
     AppRoutes.customerCreate: AppRoutes.customerEntry,
@@ -70,7 +84,12 @@ class PrivilegeHierarchy {
 
     // UOM Management (child of Stock Dashboard)
     AppRoutes.uomManagement: AppRoutes.stockDashboard,
+
+    // Item Workbench (child of Stock Dashboard)
     AppRoutes.itemWorkbench: AppRoutes.stockDashboard,
+    AppRoutes.itemWorkbenchSingleCreate: AppRoutes.itemWorkbench,
+    AppRoutes.itemWorkbenchBatchUpload: AppRoutes.itemWorkbench,
+    AppRoutes.itemWorkbenchDelete: AppRoutes.itemWorkbench,
 
     // Item UoM Conversions (child of Stock Dashboard)
     AppRoutes.itemUomConversions: AppRoutes.stockDashboard,
@@ -96,7 +115,12 @@ class PrivilegeHierarchy {
     AppRoutes.lotColoringEdit: AppRoutes.lotColorings,
     AppRoutes.lotColoringDelete: AppRoutes.lotColorings,
 
+    //item Transactions Sub-Routes
     AppRoutes.inventoryTransaction: AppRoutes.stockDashboard,
+    AppRoutes.inventoryTransactionCreate: AppRoutes.inventoryTransaction,
+    AppRoutes.inventoryTransactionEdit: AppRoutes.inventoryTransaction,
+    AppRoutes.inventoryTransactionDelete: AppRoutes.inventoryTransaction,
+
     AppRoutes.itemBranchEntry: AppRoutes.stockDashboard,
     AppRoutes.barcodeFunction: AppRoutes.stockDashboard,
     AppRoutes.exportFunction: AppRoutes.stockDashboard,
@@ -106,6 +130,21 @@ class PrivilegeHierarchy {
     AppRoutes.branchCreation: AppRoutes.branchManagement,
     AppRoutes.branchEdit: AppRoutes.branchManagement,
     AppRoutes.branchDelete: AppRoutes.branchManagement,
+
+    // ==================== PURCHASE MODULE ====================
+    AppRoutes.supplierEntry: AppRoutes.purchaseDashboard,
+    AppRoutes.supplierCreate: AppRoutes.supplierEntry,
+    AppRoutes.supplierEdit: AppRoutes.supplierEntry,
+    AppRoutes.supplierDelete: AppRoutes.supplierEntry,
+
+    // AppRoutes.purchaseEntry: AppRoutes.purchaseDashboard,
+    AppRoutes.purchaseReview: AppRoutes.purchaseDashboard,
+    AppRoutes.purchaseSupplierInfo: AppRoutes.purchaseReview,
+    AppRoutes.purchaseItemEntry: AppRoutes.purchaseReview,
+    AppRoutes.purchaseOrderPayment: AppRoutes.purchaseReview,
+
+    // AppRoutes.purchaseOrderReceive: AppRoutes.purchaseReview,
+    AppRoutes.creditPurchaseReview: AppRoutes.purchaseDashboard,
   };
 
   /// Get the parent privilege for a given privilege URI

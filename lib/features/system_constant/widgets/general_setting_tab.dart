@@ -3,10 +3,12 @@ import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_state.dart';
-import 'package:savvy_stock/core/models/system_constant.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dart';
+import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
+import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
+import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
 import 'package:savvy_stock/core/theme/colors.dart';
 import 'package:savvy_stock/core/theme/text_styles.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -34,16 +36,22 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
   SystemConstant _localSystemConstant = SystemConstant();
   bool _isLoading = true;
   bool _isEdititng = false;
-
   @override
   void initState() {
     super.initState();
     // Load system constants when the tab is initialized
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<SystemConstantBloc>().add(
-        LoadSystemConstants(widget.authBloc.state.companyId!),
-      );
+      final companyId = widget.authBloc.state.companyId;
+      if (companyId == null) {
+        developer.log(
+          'companyId is null; skipping LoadSystemConstants until available',
+        );
+        // Optionally we could listen to the AuthBloc and retry when companyId becomes available.
+        return;
+      }
+
+      context.read<SystemConstantBloc>().add(LoadSystemConstants(companyId));
       context.read<UdcDetailsBloc>().add(LoadUdcDetailsByGroup('LT'));
     });
   }
@@ -143,9 +151,10 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
             ),
             const SizedBox(height: 16),
             _buildNumberField(
-              label: 'VAT (%)',
-              value: _localSystemConstant.rateVatPercentage ?? 0.0,
-              onChanged: (value) => _updateField(rateVatPercentage: value),
+              label: 'Rate Withhold (%)',
+              value: _localSystemConstant.rateWithholdingPercentage ?? 0.0,
+              onChanged: (value) =>
+                  _updateField(rateWithholdingPercentage: value),
               suffix: '%',
               min: 0,
               max: 100,
@@ -153,10 +162,9 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
             ),
             const SizedBox(height: 16),
             _buildNumberField(
-              label: 'Rate Withhold (%)',
-              value: _localSystemConstant.rateWithholdingPercentage ?? 0.0,
-              onChanged: (value) =>
-                  _updateField(rateWithholdingPercentage: value),
+              label: 'VAT (%)',
+              value: _localSystemConstant.rateVatPercentage ?? 0.0,
+              onChanged: (value) => _updateField(rateVatPercentage: value),
               suffix: '%',
               min: 0,
               max: 100,
@@ -218,6 +226,64 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
               onChanged: (value) =>
                   _updateField(generateBarcodeForItem: value ? 'Y' : 'N'),
             ),
+            const SizedBox(height: 16),
+            _buildSwitchTile(
+              title: 'Discount Display',
+              value: _localSystemConstant.discountDisplay == 'Y',
+              onChanged: (value) =>
+                  _updateField(discountDisplay: value ? 'Y' : 'N'),
+            ),
+            const SizedBox(height: 16),
+            _buildSwitchTile(
+              title: 'Tax Info Display',
+              value: _localSystemConstant.taxInfoDisplay == 'Y',
+              onChanged: (value) =>
+                  _updateField(taxInfoDisplay: value ? 'Y' : 'N'),
+            ),
+
+            // Reorder Point UOM Type Dropdown
+            CustomDropdown<String>(
+              // Specify type <String>
+              labelText: 'Reorder Point UOM Type',
+              prefixIcon: const Icon(Iconsax.setting_4),
+              items: [
+                DropdownMenuItem(value: 'I', child: Text('Itself')),
+                DropdownMenuItem(value: 'D', child: Text('Default')),
+              ],
+              value: _localSystemConstant.reorderPointUomType,
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _updateField(reorderPointUomType: value);
+                  });
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Decimal Place Dropdown
+            CustomDropdown<String>(
+              // Keep as String for display
+              labelText: 'Decimal Place',
+              prefixIcon: const Icon(Iconsax.setting_4),
+              items: [
+                '1',
+                '2',
+                '3',
+                '4',
+                '5',
+              ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+              value: _localSystemConstant.decimalPlaces?.toString(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _updateField(
+                      decimalPlaces: int.tryParse(value),
+                    ); // Convert back to int
+                  });
+                }
+              },
+            ),
 
             const SizedBox(height: 16),
             _buildNumberField(
@@ -262,19 +328,9 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
     bool isPercentage = false,
     bool isInteger = false,
   }) {
-    return TextFormField(
-      decoration: InputDecoration(
-        labelText: label,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        filled: true,
-        fillColor: Colors.white,
-        suffixText: suffix,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
-        ),
-      ),
-      initialValue: value.toString(),
+    return CustomTextField(
+      labelText: label,
+      value: value.toString(),
       keyboardType: TextInputType.numberWithOptions(decimal: !isInteger),
       validator: (value) {
         final numValue = double.tryParse(value ?? '');
@@ -285,7 +341,7 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
       },
       onChanged: (text) {
         final newValue = double.tryParse(text) ?? min;
-        if (newValue >= min && newValue <= max) {
+        if (newValue >= min && newValue <= max && newValue != value) {
           onChanged(newValue);
           _setEditingState();
         }
@@ -337,31 +393,22 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
       builder: (context, state) {
         // Create default options if lotTypes is empty
         developer.log('Lot types: ${state.groupCode}');
-        return DropdownButtonFormField<int>(
-          decoration: InputDecoration(
-            labelText: label,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
-          ),
-          initialValue: value,
+        return CustomDropdown<int>(
+          labelText: label,
+          prefixIcon: const Icon(Iconsax.setting_4),
           items: state.details.map((entry) {
             return DropdownMenuItem<int>(
               value: entry.id,
               child: Text(entry.description1, style: AppTextStyles.bodyMedium),
             );
           }).toList(),
-          onChanged: (value) {
-            onChanged(value);
-            _setEditingState();
+          value: value,
+          onChanged: (selected) {
+            if (selected != null && selected != value) {
+              onChanged(selected);
+              _setEditingState();
+            }
           },
-          onSaved: (value) => _setEditingState(),
-          dropdownColor: Colors.white,
-          borderRadius: BorderRadius.circular(12),
         );
       },
     );
@@ -387,6 +434,9 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
     String? lotQtyAutoForSales,
     String? autoSalesPrice,
     String? generateBarcodeForItem,
+    String? discountDisplay,
+    String? taxInfoDisplay,
+    String? reorderPointUomType,
     int? decimalPlaces,
     int? locationCategoryLevel,
   }) {
@@ -400,6 +450,9 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
         lotQtyAutoForSales: lotQtyAutoForSales,
         autoSalesPrice: autoSalesPrice,
         generateBarcodeForItem: generateBarcodeForItem,
+        discountDisplay: discountDisplay,
+        taxInfoDisplay: taxInfoDisplay,
+        reorderPointUomType: reorderPointUomType,
         decimalPlaces: decimalPlaces,
         locationCategoryLevel: locationCategoryLevel,
       );

@@ -1,7 +1,7 @@
 // bloc/item_uom_conversion_event.dart
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/models/item_UoM_conversions_model.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/models/item_uom_conversions_model.dart';
 
 @immutable
 abstract class ItemUomConversionEvent extends Equatable {
@@ -13,6 +13,23 @@ class LoadItemUomConversions extends ItemUomConversionEvent {
   const LoadItemUomConversions(this.companyId);
   @override
   List<Object> get props => [companyId];
+}
+
+class LoadItemUomConversionsByItem extends ItemUomConversionEvent {
+  final int companyId;
+  final int itemId;
+  const LoadItemUomConversionsByItem(this.companyId, this.itemId);
+  @override
+  List<Object> get props => [companyId, itemId];
+}
+
+class LoadUomsForItem extends ItemUomConversionEvent {
+  final int itemId;
+  final int companyId;
+  const LoadUomsForItem({required this.itemId, required this.companyId});
+
+  @override
+  List<Object?> get props => [itemId, companyId];
 }
 
 class SaveItemUomConversion extends ItemUomConversionEvent {
@@ -93,3 +110,59 @@ class CalculateUomConversion extends ItemUomConversionEvent {
   @override
   List<Object> get props => [itemId, fromUomId, toUomId, companyId];
 }
+
+class ValidateStructure extends ItemUomConversionEvent {
+  final List<ItemUomConversion> createItems;
+  final ItemUomConversion? currentItem;
+  const ValidateStructure({required this.createItems, this.currentItem});
+
+  @override
+  List<Object> get props => [createItems];
+}
+
+class CheckDuplication extends ItemUomConversionEvent {
+  final ItemUomConversion item;
+  const CheckDuplication(this.item);
+
+  @override
+  List<Object> get props => [item];
+}
+
+// Add this to your ItemUomConversionEvent
+class ResetUomConversionStatus extends ItemUomConversionEvent {
+  const ResetUomConversionStatus();
+
+  @override
+  List<Object> get props => [];
+}
+
+// Add these to your ItemUomConversionEvent
+class SearchItemUomConversions extends ItemUomConversionEvent {
+  final String query;
+  const SearchItemUomConversions(this.query);
+  @override
+  List<Object> get props => [query];
+}
+
+class SelectItemUomConversion extends ItemUomConversionEvent {
+  final ItemUomConversion conversion;
+  final bool selected;
+  const SelectItemUomConversion(this.conversion, this.selected);
+  @override
+  List<Object> get props => [conversion, selected];
+}
+
+class ClearSelection extends ItemUomConversionEvent {
+  const ClearSelection();
+  @override
+  List<Object> get props => [];
+}
+
+class DeleteMultipleItemUomConversions extends ItemUomConversionEvent {
+  final List<ItemUomConversion> conversions;
+  const DeleteMultipleItemUomConversions(this.conversions);
+  @override
+  List<Object> get props => [conversions];
+}
+
+// Add handlers for these events in your bloc

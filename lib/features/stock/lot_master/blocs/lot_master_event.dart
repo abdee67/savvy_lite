@@ -2,7 +2,7 @@
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
-import 'package:savvy_stock/features/purchase/supplier/models/purchase_order_receiver_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
@@ -24,6 +24,7 @@ class LoadLotMasters extends LotMasterEvent {
 
 class FilterLotMasters extends LotMasterEvent {
   final int? itemId;
+  final int? branchId;
   final DateTime? expStart;
   final DateTime? expEnd;
   final int? locationId;
@@ -31,6 +32,7 @@ class FilterLotMasters extends LotMasterEvent {
 
   const FilterLotMasters({
     this.itemId,
+    this.branchId,
     this.expStart,
     this.expEnd,
     this.locationId,
@@ -182,7 +184,7 @@ class RemoveFromCreateList extends LotMasterEvent {
 }
 
 class AutoCreateLotForPO extends LotMasterEvent {
-  final PurchaseOrderReceiverModel por;
+  final PurchaseOrderReceiver por;
   final int transactionNumber;
   const AutoCreateLotForPO(this.por, this.transactionNumber);
 }
@@ -193,10 +195,42 @@ class CalculateLotStatus extends LotMasterEvent {
   const CalculateLotStatus(this.item, this.lotTypeUdcDetail);
 }
 
-class ClaculateMultipleLotStatus extends LotMasterEvent {
-  const ClaculateMultipleLotStatus();
-}
-
 class CalculateLotColors extends LotMasterEvent {
   const CalculateLotColors();
+}
+
+class CalculateMultipleLotStatus extends LotMasterEvent {}
+
+class ValidateLotDates extends LotMasterEvent {
+  final LotMaster item;
+  final String? lotType;
+  const ValidateLotDates(this.item, this.lotType);
+
+  @override
+  List<Object> get props => [item, lotType ?? ''];
+}
+
+class CheckLotNumberDuplication extends LotMasterEvent {
+  final int lotNumber;
+  final int? excludeId;
+  const CheckLotNumberDuplication(this.lotNumber, {this.excludeId});
+
+  @override
+  List<Object> get props => [lotNumber, excludeId ?? 0];
+}
+
+class GetExpiringLots extends LotMasterEvent {
+  final int daysThreshold;
+  const GetExpiringLots(this.daysThreshold);
+
+  @override
+  List<Object> get props => [daysThreshold];
+}
+
+class GetLotQuantitySummary extends LotMasterEvent {
+  final int companyId;
+  const GetLotQuantitySummary(this.companyId);
+
+  @override
+  List<Object> get props => [companyId];
 }

@@ -48,7 +48,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
     // Set up animations
     _setupAnimations();
 
-    context.read<StockItemEntryBloc>().add(
+    context.read<StockItemsEntryBloc>().add(
       LoadItems(widget.authBloc.state.companyId!),
     );
   }
@@ -86,16 +86,16 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
   }
 
   void _handleSearch(String query) {
-    context.read<StockItemEntryBloc>().add(SearchItems(query));
+    context.read<StockItemsEntryBloc>().add(SearchItems(query));
   }
 
   void _clearSearch() {
     _searchController.clear();
-    context.read<StockItemEntryBloc>().add(SearchItems(''));
+    context.read<StockItemsEntryBloc>().add(SearchItems(''));
   }
 
   void _toggleItemEntryModelSelection(ItemEntryModel items, bool selected) {
-    context.read<StockItemEntryBloc>().add(SelectItem(items, selected));
+    context.read<StockItemsEntryBloc>().add(SelectItem(items, selected));
   }
 
   void _showItemDetail(ItemEntryModel item) {
@@ -121,7 +121,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
   }
 
   void _clearSelection() {
-    context.read<StockItemEntryBloc>().add(ClearSelection());
+    context.read<StockItemsEntryBloc>().add(ClearSelection());
     setState(() {
       _isSelectionMode = false;
     });
@@ -138,7 +138,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
   }
 
   void _exportItem(ItemEntryModel item) {
-    context.read<StockItemEntryBloc>().add(ExportSingleItem(item));
+    context.read<StockItemsEntryBloc>().add(ExportSingleItem(item));
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Item data exported')));
@@ -153,7 +153,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
   }
 
   void _safeDelete(BuildContext context, {int? index}) {
-    final bloc = context.read<StockItemEntryBloc>();
+    final bloc = context.read<StockItemsEntryBloc>();
     final state = bloc.state;
 
     // CASE 1: Multiple users
@@ -257,7 +257,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
       ),
-      body: BlocConsumer<StockItemEntryBloc, ItemEntryState>(
+      body: BlocConsumer<StockItemsEntryBloc, ItemEntryState>(
         listener: (context, state) {
           if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
             setState(() {
@@ -374,7 +374,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
   }
 
   Widget _buildFloatingActionButton(BuildContext context) {
-    return BlocBuilder<StockItemEntryBloc, ItemEntryState>(
+    return BlocBuilder<StockItemsEntryBloc, ItemEntryState>(
       builder: (context, state) {
         return ElevatedButton(
           onPressed: () {
@@ -418,15 +418,15 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+            const Icon(Icons.error_outline, size: 64, color: Colors.white),
             const SizedBox(height: 16),
             Text(
               state.message ?? 'Failed to load Items',
-              style: const TextStyle(color: Colors.grey),
+              style: const TextStyle(color: Colors.white),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => context.read<StockItemEntryBloc>().add(
+              onPressed: () => context.read<StockItemsEntryBloc>().add(
                 LoadItems(widget.authBloc.state.companyId!),
               ),
               child: const Text('Retry'),
@@ -441,13 +441,13 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Iconsax.box, size: 64, color: Colors.grey),
+            const Icon(Iconsax.box, size: 64, color: Colors.white),
             const SizedBox(height: 16),
             Text(
               state.searchQuery.isEmpty
                   ? 'No items found'
                   : 'No results for "${state.searchQuery}"',
-              style: const TextStyle(color: Colors.grey, fontSize: 16),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
           ],
         ),
@@ -769,7 +769,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
         children: [
           _buildItemInfoItem(
             'Item ID : ',
-            item.id.toString(),
+            item.itemsId.toString(),
             Iconsax.card,
             isCompact,
           ),

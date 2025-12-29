@@ -70,7 +70,7 @@ class _LotExpirationColorsDashboardState
     context.read<BranchBloc>().add(
       LoadBranchs(widget.authBloc.state.companyId!),
     );
-    context.read<StockItemEntryBloc>().add(
+    context.read<StockItemsEntryBloc>().add(
       LoadItems(widget.authBloc.state.companyId!),
     );
     context.read<LotExpirationColorsBloc>().add(
@@ -338,11 +338,13 @@ class _LotExpirationColorsDashboardState
     }
   }
 
-  Color _getColorFromType(LotExpirationColor color) {
-    if (color.colorTypeCode == null && color.colorTypeName!.isEmpty) {
-      return Colors.transparent;
-    }
-    switch (color.colorTypeCode?.toUpperCase()) {
+  Color _getColorFromType(LotExpirationColor? color) {
+    if (color == null) return Colors.grey.shade200;
+
+    final code = (color.colorTypeCode ?? '').trim().toUpperCase();
+    final name = (color.colorTypeName ?? '').trim().toLowerCase();
+
+    switch (code) {
       case 'RED':
         return Colors.red;
       case 'BLU':
@@ -351,8 +353,29 @@ class _LotExpirationColorsDashboardState
         return Colors.green;
       case 'BLK':
         return Colors.black;
-      default:
+      case 'YL':
+        return Colors.yellow;
+      case 'ORG':
+        return Colors.orange;
+      case 'GRY':
         return Colors.grey;
+      case 'OV':
+        return const Color.fromARGB(255, 14, 90, 4);
+      case 'PRPL':
+        return Colors.purple;
+      case 'LM':
+        return Colors.lime;
+
+      default:
+        // Fallback to name matching
+        if (name.contains('red')) return Colors.red;
+        if (name.contains('blue')) return Colors.blue;
+        if (name.contains('green')) return Colors.green;
+        if (name.contains('yellow')) return Colors.yellow;
+        if (name.contains('orange')) return Colors.orange;
+        if (name.contains('black')) return Colors.black;
+
+        return Colors.grey.shade200;
     }
   }
 
@@ -369,7 +392,7 @@ class _LotExpirationColorsDashboardState
   }
 
   String _getItemName(int itemId) {
-    final itemBloc = context.read<StockItemEntryBloc>();
+    final itemBloc = context.read<StockItemsEntryBloc>();
     final itemDescription =
         itemBloc.state.items
             .where((entry) => entry.id == itemId)
@@ -578,7 +601,7 @@ class _LotExpirationColorsDashboardState
           // Item Dropdown (for Level 3 and 4)
           if (_selectedLevel != null &&
               (_selectedLevel == '3' || _selectedLevel == '4'))
-            BlocBuilder<StockItemEntryBloc, ItemEntryState>(
+            BlocBuilder<StockItemsEntryBloc, ItemEntryState>(
               builder: (context, state) {
                 return CustomDropdown(
                   labelText: 'Item Number',

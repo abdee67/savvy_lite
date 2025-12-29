@@ -1,5 +1,5 @@
 // models/uom_conversion_ui_state.dart
-import 'package:savvy_stock/features/stock/item_UoM_conversions/models/item_UoM_conversions_model.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/models/item_uom_conversions_model.dart';
 
 class UomConversionUiState {
   final List<ItemUomConversion> createItems;

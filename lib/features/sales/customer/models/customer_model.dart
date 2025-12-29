@@ -20,6 +20,8 @@ class Customer extends Equatable {
   final String? contactName;
   final String? contactTitle;
   final int? company;
+  final String? defaultsValue;
+  final int? tempId;
 
   const Customer({
     this.id,
@@ -41,29 +43,33 @@ class Customer extends Equatable {
     this.contactName,
     this.contactTitle,
     this.company,
+    this.defaultsValue,
+    this.tempId,
   });
 
   factory Customer.fromMap(Map<String, dynamic> map) {
     return Customer(
-      id: map['id'],
-      customerId: map['customer_id'],
-      customerName: map['customer_name'],
-      phoneNumber: map['phone_number'],
-      address: map['address'],
-      country: map['country'],
-      state: map['state'],
-      region: map['region'],
-      city: map['city'],
-      tinNumber: map['tin_number'],
-      address1: map['address1'],
-      address2: map['address2'],
-      address3: map['address3'],
-      address4: map['address4'],
-      fax: map['fax'],
-      phone2: map['phone_2'],
-      contactName: map['contact_name'],
-      contactTitle: map['contact_title'],
-      company: map['company'],
+      id: (map['id'] as num?)?.toInt(),
+      customerId: (map['customer_id'] as num?)?.toInt(),
+      customerName: map['customer_name']?.toString(),
+      phoneNumber: map['phone_number']?.toString(),
+      address: map['address']?.toString(),
+      country: map['country']?.toString(),
+      state: map['state']?.toString(),
+      region: map['region']?.toString(),
+      city: map['city']?.toString(),
+      tinNumber: map['tin_number']?.toString(),
+      address1: map['address1']?.toString(),
+      address2: map['address2']?.toString(),
+      address3: map['address3']?.toString(),
+      address4: map['address4']?.toString(),
+      fax: map['fax']?.toString(),
+      phone2: map['phone_2']?.toString(),
+      contactName: map['contact_name']?.toString(),
+      contactTitle: map['contact_title']?.toString(),
+      company: (map['company'] as num?)?.toInt(),
+      defaultsValue: map['defaults_value']?.toString(),
+      tempId: (map['temp_id'] as num?)?.toInt(),
     );
   }
 
@@ -88,6 +94,8 @@ class Customer extends Equatable {
       'contact_name': contactName,
       'contact_title': contactTitle,
       'company': company,
+      'defaults_value': defaultsValue,
+      if (tempId != null) 'temp_id': tempId,
     };
   }
 
@@ -111,10 +119,13 @@ class Customer extends Equatable {
     contactName: '',
     contactTitle: '',
     company: 0,
+    defaultsValue: 'N',
+    tempId: null,
   );
 
-  bool get isEmpty => id == 'empty'; // Use this for checking
-  bool get isNotEmpty => id != 'empty';
+  // Proper empty checks: consider missing id or no name as empty
+  bool get isEmpty => id == null || id == 0 || (customerName?.isEmpty ?? true);
+  bool get isNotEmpty => !isEmpty;
 
   @override
   bool operator ==(Object other) {
@@ -139,7 +150,9 @@ class Customer extends Equatable {
         other.phone2 == phone2 &&
         other.contactName == contactName &&
         other.contactTitle == contactTitle &&
-        other.company == company;
+        other.company == company &&
+        other.defaultsValue == defaultsValue &&
+        other.tempId == tempId;
   }
 
   @override
@@ -164,6 +177,7 @@ class Customer extends Equatable {
       contactName,
       contactTitle,
       company,
+      defaultsValue,
     );
   }
 
@@ -187,6 +201,8 @@ class Customer extends Equatable {
     String? contactName,
     String? contactTitle,
     int? company,
+    String? defaultsValue,
+    int? tempId,
   }) {
     return Customer(
       id: id ?? this.id,
@@ -208,6 +224,8 @@ class Customer extends Equatable {
       contactName: contactName ?? this.contactName,
       contactTitle: contactTitle ?? this.contactTitle,
       company: company ?? this.company,
+      defaultsValue: defaultsValue ?? this.defaultsValue,
+      tempId: tempId ?? this.tempId,
     );
   }
 
@@ -232,5 +250,7 @@ class Customer extends Equatable {
     contactName,
     contactTitle,
     company,
+    defaultsValue,
+    tempId,
   ];
 }

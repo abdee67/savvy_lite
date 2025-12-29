@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:savvy_stock/core/widgets/custom_searchable_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -12,9 +13,11 @@ import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_e
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_state.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_bloc.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_state.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_event.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_event.dart';
-import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_state.dart';
 
 class ItemInBranchFormPage extends StatefulWidget {
   final ItemInBranchModel? item;
@@ -37,7 +40,7 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
 
   // Controllers
   final TextEditingController _itemNumberController = TextEditingController();
-  final TextEditingController _qunatityAvailableController =
+  final TextEditingController _quantityAvailableController =
       TextEditingController();
   final TextEditingController _unitPriceController = TextEditingController();
   final TextEditingController _marginRateController = TextEditingController();
@@ -45,6 +48,8 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
   String? _selectedMarginType;
   int? _selectedUom;
   int? _branch;
+  // Track the underlying ItemEntry DB id when available (used for itemNumber)
+  int? _itemEntryId;
 
   final List<String> _marginTypes = ['Flat', 'Percentage'];
 
@@ -64,42 +69,73 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
   }
 
   void _initializeControllers() {
-    //for editing
+    // Editing existing ItemInBranch
     if (widget.item != null) {
-      final item = widget.item ?? ItemInBranchModel.empty();
-      _itemNumberController.text = item.itemNumber.toString();
-      _qunatityAvailableController.text =
+      final item = widget.item!;
+      // item.itemNumber stores the ItemEntry.id (DB PK)
+      _itemEntryId = item.itemNumber;
+      // Prefer to display the human-friendly itemsId if available
+      _itemNumberController.text =
+          item.itemRef?.itemsId?.toString() ?? item.itemNumber.toString();
+      _quantityAvailableController.text =
           item.quantityAvailable?.toString() ?? '';
       _unitPriceController.text = item.unitPrice?.toString() ?? '';
       _marginRateController.text = item.marginRate?.toString() ?? '';
-      _marginRateController.text = item.marginRate?.toString() ?? '';
-      _selectedMarginType = item.marginType;
+      final marginType = item.marginType;
+      if (marginType != null) {
+        _selectedMarginType = marginType;
+      } else {
+        _selectedMarginType = null;
+      }
       _selectedUom = item.unitOfMeasure;
       _branch = item.branch;
     }
-    //for creating
+    // Creating from an ItemEntry
     else if (widget.itemEntry != null) {
-      final item = widget.itemEntry ?? ItemEntryModel.empty();
-
-      _itemNumberController.text = item.itemsId.toString();
-      _qunatityAvailableController.text = '0';
-      _unitPriceController.text = item.unitPrice?.toString() ?? '';
-      _marginRateController.text = item.marginRate?.toString() ?? '';
-      _marginRateController.text = item.marginRate?.toString() ?? '';
+      final entry = widget.itemEntry!;
+      _itemEntryId = entry.id;
+      _itemNumberController.text =
+          entry.itemsId?.toString() ?? entry.id.toString();
+      _quantityAvailableController.text = '0';
+      _unitPriceController.text = entry.unitPrice?.toString() ?? '';
+      _marginRateController.text = entry.marginRate?.toString() ?? '';
+      final marginType = entry.marginType;
+      if (marginType != null &&
+          marginType.isNotEmpty &&
+          _marginTypes.contains(marginType)) {
+        _selectedMarginType = marginType;
+      } else {
+        _selectedMarginType = null;
+      }
+      _selectedUom = int.tryParse(entry.unitOfMeasure ?? '');
     }
-    //for empty(may be for creating new item)
+    // Empty/new
     else {
+      _itemEntryId = null;
       _itemNumberController.text = '';
-      _qunatityAvailableController.text = '0';
+      _quantityAvailableController.text = '0';
       _unitPriceController.text = '';
       _marginRateController.text = '';
+      _selectedMarginType = null;
+      _selectedUom = null;
+      _branch = null;
+    }
+
+    // After resolving the underlying ItemEntry id, load available UoMs
+    if (_itemEntryId != null) {
+      context.read<ItemUomConversionBloc>().add(
+        LoadUomsForItem(
+          itemId: _itemEntryId!,
+          companyId: widget.authBloc.state.companyId!,
+        ),
+      );
     }
   }
 
   // Add this method to properly reset the form
   void _resetForm() {
     // Clear all text controllers
-    _qunatityAvailableController.clear();
+    _quantityAvailableController.clear();
     _unitPriceController.clear();
     _marginRateController.clear();
 
@@ -131,7 +167,7 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
   @override
   void dispose() {
     _itemNumberController.dispose();
-    _qunatityAvailableController.dispose();
+    _quantityAvailableController.dispose();
     _unitPriceController.dispose();
     _marginRateController.dispose();
     super.dispose();
@@ -139,24 +175,42 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
 
   void _saveItem(ItemInBranchState state) {
     if (_formKey.currentState!.validate()) {
-      if (_selectedMarginType == null ||
-          _selectedUom == null ||
-          _branch == null) {
+      if (_selectedUom == null || _branch == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text(
-              'Please select margin type, unit of measure, and branch',
-            ),
+            content: const Text('Please select unit of measure and branch'),
             backgroundColor: Colors.red,
           ),
         );
         return;
       }
+      // Determine the ItemEntry id to store in itemNumber.
+      // Priority: tracked _itemEntryId (set when initialized from models) ->
+      // widget.itemEntry (creating) -> widget.item.itemNumber (editing) ->
+      // fallback parse from text field.
+      final int? parsedFromText = int.tryParse(
+        _itemNumberController.text.trim(),
+      );
+      final int? resolvedItemEntryId =
+          _itemEntryId ??
+          widget.itemEntry?.id ??
+          widget.item?.itemNumber ??
+          parsedFromText;
+      if (resolvedItemEntryId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid or missing item entry id'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      final int itemNumber = resolvedItemEntryId;
       final item = ItemInBranchModel(
         id: widget.item?.id ?? 0,
-        itemNumber: _parseInt(_itemNumberController.text.trim())!,
+        itemNumber: itemNumber,
         quantityAvailable: _parseDouble(
-          _qunatityAvailableController.text.trim(),
+          _quantityAvailableController.text.trim(),
         ),
         unitPrice: _parseDouble(_unitPriceController.text.trim()),
         marginRate: _parseDouble(_marginRateController.text.trim()),
@@ -237,7 +291,9 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
         },
         child: SafeArea(
           child: SingleChildScrollView(
-            child: Column(children: [_buildForm(), _buildBottomNavigation()]),
+            child: Expanded(
+              child: Column(children: [_buildForm(), _buildBottomNavigation()]),
+            ),
           ),
         ),
       ),
@@ -263,7 +319,9 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
                 return null;
               },
               onChanged: (value) {
-                _itemNumberController.text = value;
+                // If user edits the shown item number, clear any stored ItemEntry id
+                // so we don't accidentally save the previous ItemEntry id.
+                _itemEntryId = null;
               },
               prefixIcon: const Icon(Icons.numbers),
             ),
@@ -274,16 +332,6 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
                 if (state.status == BranchStatus.loading) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                if (state.branchs.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8.0),
-                    child: Text(
-                      'No branch available for item to add',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  );
-                }
-
                 // Safe employee list with null check
                 final branch = state.branchs.toList();
                 if (branch.isEmpty) {
@@ -296,94 +344,118 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
                   );
                 }
 
-                return CustomDropdown(
-                  labelText: 'Branch *',
-                  value: _branch,
-                  prefixIcon: const Icon(Iconsax.profile_circle),
-                  items: state.branchs.map((branch) {
-                    return DropdownMenuItem<int>(
-                      value: branch.id,
-                      child: Text('${branch.description}'),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _branch = value;
-                    });
-                  },
-                  validator: (value) {
-                    if (value == null) {
-                      return 'Please select an branch';
+                // Use CustomSearchableDropdown which works with String options.
+                // We map branch descriptions to ids when selection changes.
+                return Builder(
+                  builder: (context) {
+                    String? currentBranchDesc;
+                    if (_branch != null) {
+                      final match = branch.where((b) => b.id == _branch);
+                      if (match.isNotEmpty) {
+                        currentBranchDesc = match.first.description;
+                      }
                     }
-                    return null;
+
+                    return CustomSearchableDropdown(
+                      labelText: 'Branch *',
+                      options: branch.map((b) => b.description ?? '').toList(),
+                      value: currentBranchDesc,
+                      prefixIcon: Iconsax.profile_circle,
+                      allowCustomEntries: false,
+                      onChanged: (value) {
+                        setState(() {
+                          if (value == null) {
+                            _branch = null;
+                          } else {
+                            final matches = branch.where(
+                              (b) => b.description == value,
+                            );
+                            _branch = matches.isNotEmpty
+                                ? matches.first.id
+                                : null;
+                          }
+                        });
+                      },
+                      validator: (value) {
+                        if (_branch == null) {
+                          return 'Please select a branch';
+                        }
+                        return null;
+                      },
+                    );
                   },
                 );
               },
             ),
             const SizedBox(height: 16),
-            BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
+            // Unit of Measure
+            BlocBuilder<ItemUomConversionBloc, ItemUomConversionState>(
               builder: (context, state) {
-                if (state.status == UdcDetailsStatus.loading) {
+                if (state.isLoadingUomsForItem ||
+                    state.status == ItemUomConversionStatus.loading) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                if (state.details.isEmpty) {
+
+                final udcList = state.availableUomsForItem;
+
+                if (udcList.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8.0),
                     child: Text(
-                      'No udc available for item to add',
+                      'No unit of measure available',
                       style: TextStyle(color: Colors.grey),
                     ),
                   );
                 }
 
-                // Safe employee list with null check
-                final udc = state.details.toList();
-                if (udc.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8.0),
-                    child: Text(
-                      'No valid udc found',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  );
-                }
-
-                return CustomDropdown(
-                  labelText: 'Udc *',
-                  value: _selectedUom,
-                  prefixIcon: const Icon(Iconsax.bag_tick_2),
-                  items: state.details.map((udc) {
-                    return DropdownMenuItem<int>(
-                      value: udc.id,
-                      child: Text(udc.description1),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedUom = value;
-                    });
-                  },
-                  validator: (value) {
-                    if (value == null) {
-                      return 'Please select an udc';
+                return Builder(
+                  builder: (context) {
+                    String? currentUomDesc;
+                    if (_selectedUom != null) {
+                      final match = udcList.where((u) => u.id == _selectedUom);
+                      if (match.isNotEmpty) {
+                        currentUomDesc = match.first.description1;
+                      }
                     }
-                    return null;
+
+                    return CustomSearchableDropdown(
+                      labelText: 'Unit of Measure *',
+                      options: udcList.map((u) => u.description1).toList(),
+                      value: currentUomDesc,
+                      prefixIcon: Iconsax.ruler,
+                      allowCustomEntries: false,
+                      onChanged: (value) {
+                        setState(() {
+                          if (value == null) {
+                            _selectedUom = null;
+                          } else {
+                            final matches = udcList.where(
+                              (u) => u.description1 == value,
+                            );
+                            _selectedUom = matches.isNotEmpty
+                                ? matches.first.id
+                                : null;
+                          }
+                        });
+                      },
+                      validator: (value) {
+                        if (_selectedUom == null) {
+                          return 'Please select a unit of measure';
+                        }
+                        return null;
+                      },
+                    );
                   },
                 );
               },
             ),
             const SizedBox(height: 16),
             CustomTextField(
-              labelText: 'Available Quantity *',
-              controller: _qunatityAvailableController,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Available Quantity is required';
-                }
-                return null;
-              },
+              labelText: 'Available Quantity',
+              controller: _quantityAvailableController,
+              readOnly: true,
               onChanged: (value) {
-                _qunatityAvailableController.text = value;
+                _quantityAvailableController.text = value;
               },
               prefixIcon: const Icon(Icons.description),
             ),
@@ -425,16 +497,12 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
               labelText: 'Margin Rate',
               controller: _marginRateController,
               keyboardType: TextInputType.number,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Margin Rate is required';
-                }
-                return null;
-              },
               onChanged: (value) {
                 _marginRateController.text = value;
               },
-              prefixIcon: const Icon(Icons.attach_money),
+              prefixIcon: _selectedMarginType == 'Percentage'
+                  ? const Icon(Icons.percent)
+                  : const Icon(Icons.attach_money),
             ),
           ],
         ),
@@ -443,41 +511,44 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
   }
 
   Widget _buildBottomNavigation() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        IconButton(
-          icon: const Icon(Iconsax.backward),
-          style: IconButton.styleFrom(
-            backgroundColor: Colors.amber,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          IconButton(
+            icon: const Icon(Iconsax.backward),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.amber,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+            },
+          ),
+          ElevatedButton(
+            onPressed: () =>
+                _saveItem(context.read<StockItemInBranchBloc>().state),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF155888),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: Text(
+              widget.item == null
+                  ? 'Add Item to Branch'
+                  : 'Update Item in Branch',
+              style: const TextStyle(color: Colors.white),
             ),
           ),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-        ElevatedButton(
-          onPressed: () =>
-              _saveItem(context.read<StockItemInBranchBloc>().state),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF155888),
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
-          child: Text(
-            widget.item == null
-                ? 'Add Item to Branch'
-                : 'Update Item in Branch',
-            style: const TextStyle(color: Colors.white),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

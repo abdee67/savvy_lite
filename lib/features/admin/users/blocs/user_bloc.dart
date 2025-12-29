@@ -100,7 +100,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     try {
       final db = await databaseService.database;
       final companyId = authBloc.state.companyId;
-      final createdBy = authBloc.state.userId!;
+      final createdBy = authBloc.state.userId!.id;
       final password = await UserModel.generateArgon2Hash(event.user.password!);
 
       final userMap = event.user
@@ -202,7 +202,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     try {
       final db = await databaseService.database;
       final companyId = authBloc.state.companyId;
-      final updatedBy = authBloc.state.userId!;
+      final updatedBy = authBloc.state.userId!.id;
       // Check if password is being updated (new password provided)
       String? finalPassword;
       if (event.newPassword != null && event.newPassword!.isNotEmpty) {

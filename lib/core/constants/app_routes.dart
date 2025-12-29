@@ -61,6 +61,21 @@ class AppRoutes {
   static const String paymentSummary = '$salesCustomerInfo/payment-summary';
   static const String salesInvoice = '$salesCustomerInfo/sales-invoice';
 
+  static const String salesReport = '$salesDashboard/sales-report';
+  static const String salesCreditReceiptReview =
+      '$salesDashboard/sales-credit-receipt-review';
+
+  static const String salesReturn = '$salesDashboard/sales-return';
+
+  static const String quotationOrder = '$salesDashboard/quotation-order';
+  static const String quotationItemEntry =
+      '$quotationOrder/quotation-item-entry';
+  static const String quotationOrderPayment = '$quotationOrder/payment-summary';
+  static const String quotationInvoiceReview =
+      '$quotationOrder/quotation-invoice-review';
+
+  static const String quotationOrderReview = '$salesDashboard/quotation-report';
+
   //Role sub-routes
   static const String roleCreation = '$roleManagement/add-role';
   static const String roleEdit = '$roleManagement/edit-role';
@@ -82,7 +97,15 @@ class AppRoutes {
   static const String importItemInBranch = '$itemInBranch/import-item';
 
   static const String uomManagement = '$stock/uom-management';
+
+  //item workbench
   static const String itemWorkbench = '$stock/item-workbench';
+  static const String itemWorkbenchSingleCreate =
+      '$itemWorkbench/create-item-workbench';
+  static const String itemWorkbenchBatchUpload =
+      '$itemWorkbench/batch-upload-item-workbench';
+  static const String itemWorkbenchDelete =
+      '$itemWorkbench/delete-item-workbench';
 
   static const String itemUomConversions = '$stock/item-uom-conversions';
   static const String itemUomConversionsCreate =
@@ -110,7 +133,15 @@ class AppRoutes {
   static const String lotColoringEdit = '$lotColorings/lot-coloring-edit';
   static const String lotColoringDelete = '$lotColorings/lot-coloring-delete';
 
+  //item Transactions Sub-Routes
   static const String inventoryTransaction = '$stock/inventory-transaction';
+  static const String inventoryTransactionCreate =
+      '$inventoryTransaction/inventory-transaction-create';
+  static const String inventoryTransactionEdit =
+      '$inventoryTransaction/inventory-transaction-edit';
+  static const String inventoryTransactionDelete =
+      '$inventoryTransaction/inventory-transaction-delete';
+
   static const String itemBranchEntry = '$stock/item-branch-entry';
   static const String barcodeFunction = '$stock/barcode-function';
   static const String exportFunction = '$stock/export-function';
@@ -121,6 +152,23 @@ class AppRoutes {
   static const String branchCreation = '$branchManagement/branch-creation';
   static const String branchEdit = '$branchManagement/edit-branch';
   static const String branchDelete = '$branchManagement/delete-branch';
+
+  //////////Purchase ROUTES///////////////
+
+  static const String supplierEntry = '$purchase/supplier-dashboard';
+  static const String supplierCreate = '$supplierEntry/create-supplier';
+  static const String supplierEdit = '$supplierEntry/edit-supplier';
+  static const String supplierDelete = '$supplierEntry/delete-supplier';
+
+  //static const String purchaseEntry = '$purchase/purchase-dashboard';
+  static const String purchaseReview = '$purchase/purchase-review';
+  static const String purchaseSupplierInfo =
+      '$purchaseReview/purchase-supplier-info';
+  static const String purchaseItemEntry = '$purchaseReview/purchase-item-entry';
+  static const String purchaseOrderPayment = '$purchaseReview/payment-summary';
+  static const String purchaseOrderReceive = '$purchaseReview/purchase-receive';
+
+  static const String creditPurchaseReview = '$purchase/credit-purchase-review';
 
   // Helper method to get all dashboard routes
   static List<String> get dashboardRoutes => [

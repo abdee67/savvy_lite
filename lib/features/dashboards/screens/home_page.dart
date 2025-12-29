@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_state.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_event.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_event.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
 import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
@@ -101,78 +101,80 @@ class _HomePageState extends State<HomePage> {
         return BlocBuilder<SystemConstantBloc, SystemConstantState>(
           builder: (context, scState) {
             return Scaffold(
-          body: LiquidPullToRefresh(
-            color: Color(0xFF155888),
-            backgroundColor: Colors.amber,
-            showChildOpacityTransition: false,
-            onRefresh: () async {
-              // Trigger reload of system constants and other global data so changes appear instantly
-              final companyId = context.read<AuthBloc>().state.companyId;
-              if (companyId != null) {
-                context.read<SystemConstantBloc>().add(LoadSystemConstants(companyId));
-              }
-              // Small delay to allow blocs to process and UI to reflect changes
-              await Future.delayed(const Duration(milliseconds: 600));
-              // Optionally show a quick feedback
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Refreshed')),
-                );
-              }
-            },
-            // The child must be scrollable for RefreshIndicator to work
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: MediaQuery.of(context).size.height,
-                ),
-                child: Container(
-                  decoration: const BoxDecoration(color: Colors.white),
-                  child: Stack(
-                    children: [
-                      // Background with radial gradient
-                      Container(
-                        width: double.infinity,
-                        height: 167,
-                        decoration: const BoxDecoration(
-                          gradient: RadialGradient(
-                            center: Alignment(0.5, -0.5),
-                            radius: 2.5,
-                            colors: [Color(0xFF383838), Color(0xFF565555)],
-                            stops: [0.46, 1.0],
-                          ),
-                        ),
-                      ),
-
-                      // Main content
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              body: LiquidPullToRefresh(
+                color: Color(0xFF155888),
+                backgroundColor: Colors.amber,
+                showChildOpacityTransition: false,
+                onRefresh: () async {
+                  // Trigger reload of system constants and other global data so changes appear instantly
+                  final companyId = context.read<AuthBloc>().state.companyId;
+                  if (companyId != null) {
+                    context.read<SystemConstantBloc>().add(
+                      LoadSystemConstants(companyId),
+                    );
+                  }
+                  // Small delay to allow blocs to process and UI to reflect changes
+                  await Future.delayed(const Duration(milliseconds: 600));
+                  // Optionally show a quick feedback
+                  if (mounted) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(const SnackBar(content: Text('Refreshed')));
+                  }
+                },
+                // The child must be scrollable for RefreshIndicator to work
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: MediaQuery.of(context).size.height,
+                    ),
+                    child: Container(
+                      decoration: const BoxDecoration(color: Colors.white),
+                      child: Stack(
                         children: [
-                          _buildHeaderSection(context, authState),
-                          Column(
-                            children: [
-                              _buildDashboardSelector(
-                                context,
-                                availableDashboards,
-                                authState,
+                          // Background with radial gradient
+                          Container(
+                            width: double.infinity,
+                            height: 167,
+                            decoration: const BoxDecoration(
+                              gradient: RadialGradient(
+                                center: Alignment(0.5, -0.5),
+                                radius: 2.5,
+                                colors: [Color(0xFF383838), Color(0xFF565555)],
+                                stops: [0.46, 1.0],
                               ),
-                              _buildFeaturesSection(context, authState),
+                            ),
+                          ),
+
+                          // Main content
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildHeaderSection(context, authState),
+                              Column(
+                                children: [
+                                  _buildDashboardSelector(
+                                    context,
+                                    availableDashboards,
+                                    authState,
+                                  ),
+                                  _buildFeaturesSection(context, authState),
+                                ],
+                              ),
                             ],
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-          bottomSheet: _buildFooter(),
+              bottomSheet: _buildFooter(),
+            );
+          },
         );
       },
-        );
-      }
     );
   }
 

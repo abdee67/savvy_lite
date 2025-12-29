@@ -207,6 +207,57 @@ class PrivilegeSeeder {
         'delete_customer',
       ),
 
+      //Sales Report
+      _createPrivilege(
+        'Sales Report',
+        'link',
+        AppRoutes.salesReport,
+        'sales_report',
+      ),
+      _createPrivilege(
+        'Sales Credit Receipt',
+        'link',
+        AppRoutes.salesCreditReceiptReview,
+        'sales_credit_receipt',
+      ),
+
+      _createPrivilege(
+        'Sales Return',
+        'link',
+        AppRoutes.salesReturn,
+        'sales_return',
+      ),
+      _createPrivilege(
+        'Quotation Order',
+        'link',
+        AppRoutes.quotationOrder,
+        'quotation_order',
+      ),
+      _createPrivilege(
+        'Quotation Item Entry',
+        'link',
+        AppRoutes.quotationItemEntry,
+        'quotatio_item_entry',
+      ),
+      _createPrivilege(
+        'Quotation Order Payment',
+        'link',
+        AppRoutes.quotationOrderPayment,
+        'quotation_order_payment',
+      ),
+      _createPrivilege(
+        'Quotation Invoice Review',
+        'link',
+        AppRoutes.quotationInvoiceReview,
+        'quotation_invoice_review',
+      ),
+      _createPrivilege(
+        'Quotation Order Review',
+        'link',
+        AppRoutes.quotationOrderReview,
+        'quotation_report',
+      ),
+
       // ==================== STOCK MODULE ====================
       //item entry
       _createPrivilege('Item Entry', 'link', AppRoutes.itemEntry, 'item_entry'),
@@ -354,12 +405,59 @@ class PrivilegeSeeder {
         'delete_lot_colorings',
       ),
 
+      //item Transactions Sub-Routes
       _createPrivilege(
         'Inventory Transaction',
         'link',
         AppRoutes.inventoryTransaction,
         'inventory_transaction',
       ),
+      _createPrivilege(
+        'Create Inventory Transaction',
+        'button',
+        AppRoutes.inventoryTransactionCreate,
+        'create_inventory_transaction',
+      ),
+      _createPrivilege(
+        'Edit Inventory Transaction',
+        'button',
+        AppRoutes.inventoryTransactionEdit,
+        'edit_inventory_transaction',
+      ),
+      _createPrivilege(
+        'Delete Inventory Transaction',
+        'button',
+        AppRoutes.inventoryTransactionDelete,
+        'delete_inventory_transaction',
+      ),
+
+      //item entry workbench
+      _createPrivilege(
+        'Item Entry Workbench',
+        'link',
+        AppRoutes.itemWorkbench,
+        'item_entry_workbench',
+      ),
+      _createPrivilege(
+        'Single Item Entry',
+        'button',
+        AppRoutes.itemWorkbenchSingleCreate,
+        'single_item_entry',
+      ),
+      _createPrivilege(
+        'Batch Upload',
+        'button',
+        AppRoutes.itemWorkbenchBatchUpload,
+        'batch_upload',
+      ),
+
+      _createPrivilege(
+        'Delete Item',
+        'button',
+        AppRoutes.itemWorkbenchDelete,
+        'delete_item',
+      ),
+
       _createPrivilege(
         'Item Branch Entry',
         'link',
@@ -403,6 +501,74 @@ class PrivilegeSeeder {
         'button',
         AppRoutes.branchDelete,
         'delete_branch',
+      ),
+
+      // ==================== PURCHASE MODULE ====================
+      _createPrivilege(
+        'Supplier Entry',
+        'link',
+        AppRoutes.supplierEntry,
+        'supplier_entry',
+      ),
+      _createPrivilege(
+        'Add Supplier',
+        'button',
+        AppRoutes.supplierCreate,
+        'create_supplier',
+      ),
+      _createPrivilege(
+        'Edit Supplier',
+        'button',
+        AppRoutes.supplierEdit,
+        'edit_supplier',
+      ),
+      _createPrivilege(
+        'Delete Supplier',
+        'button',
+        AppRoutes.supplierDelete,
+        'delete_supplier',
+      ),
+      /*  _createPrivilege(
+        'Purchase Order Entry',
+        'link',
+        AppRoutes.purchaseEntry,
+        'purchase_order_entry',
+      ),*/
+      _createPrivilege(
+        'Purchase Order',
+        'button',
+        AppRoutes.purchaseReview,
+        'review_purchase_order',
+      ),
+      _createPrivilege(
+        'Supplier Info',
+        'button',
+        AppRoutes.purchaseSupplierInfo,
+        'purchase_supplier_info',
+      ),
+      _createPrivilege(
+        'Purchase Item Entry',
+        'button',
+        AppRoutes.purchaseItemEntry,
+        'purchase_item_entry',
+      ),
+      _createPrivilege(
+        'Purchase Payment',
+        'button',
+        AppRoutes.purchaseOrderPayment,
+        'purchase_order_payment',
+      ),
+      _createPrivilege(
+        'Purchase Receive',
+        'button',
+        AppRoutes.purchaseOrderReceive,
+        'purchase_order_receive',
+      ),
+      _createPrivilege(
+        'Credit Purchase',
+        'button',
+        AppRoutes.creditPurchaseReview,
+        'review_credit_purchase_order',
       ),
     ];
 

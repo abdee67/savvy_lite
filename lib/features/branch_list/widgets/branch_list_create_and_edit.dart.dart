@@ -170,7 +170,13 @@ class _BranchFormPageState extends State<BranchFormPage> {
             );
           }
         },
-        child: Column(children: [_buildForm(), _buildBottomNavigation()]),
+        child: Column(
+          children: [
+            Expanded(child: _buildForm()),
+            _buildBottomNavigation(),
+            const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
   }
@@ -204,17 +210,11 @@ class _BranchFormPageState extends State<BranchFormPage> {
             const SizedBox(height: 16),
             _buildTextField(
               _stateController,
-              'State',
+              'State *',
               Icons.location_on_rounded,
-              TextInputType.phone,
             ),
             const SizedBox(height: 16),
-            _buildTextField(
-              _regionController,
-              'Region',
-              Icons.location_city,
-              TextInputType.phone,
-            ),
+            _buildTextField(_regionController, 'Region', Icons.location_city),
             const SizedBox(height: 16),
             _buildTextField(
               _phoneController,
@@ -282,6 +282,12 @@ class _BranchFormPageState extends State<BranchFormPage> {
       validator: (value) {
         if (label.contains('*') && (value == null || value.isEmpty)) {
           return 'This field is required';
+        }
+        if (label.contains('Phone') && (value == null || value.isEmpty)) {
+          return 'Phone number is required';
+        }
+        if (label.contains('Phone') && (value!.length != 10)) {
+          return 'Phone number must be 10 digits';
         }
         return null;
       },

@@ -27,23 +27,44 @@ import 'package:savvy_stock/features/branch_list/widgets/branch_list_create_and_
 import 'package:savvy_stock/features/dashboards/screens/home_page.dart';
 import 'package:savvy_stock/features/onboarding/screens/welcome_screen.dart';
 import 'package:savvy_stock/features/onboarding/widgets/getStarted.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/screens/credit_purchase/credit_purchase_review.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/screens/purchase_item_entry/screens/purchase_item_entry.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/screens/purchase_payment/screens/payment_screen.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/screens/purchase_review.dart';
+import 'package:savvy_stock/features/purchase/supplier_entry/models/supplier_model.dart';
+import 'package:savvy_stock/features/purchase/supplier_entry/screens/supplier_info_screen.dart';
+import 'package:savvy_stock/features/purchase/supplier_entry/screens/supplier_list.dart';
+import 'package:savvy_stock/features/purchase/supplier_entry/widget/supplier_create_edit.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/customer/screens/customer_list.dart';
-import 'package:savvy_stock/features/sales/customer/screens/customer_screen.dart';
+import 'package:savvy_stock/features/sales/customer/screens/sales_customer_screen.dart';
 import 'package:savvy_stock/features/sales/customer/widget/customer_create_edit.dart';
-import 'package:savvy_stock/features/sales/invoice/screens/invoice_review_screen.dart';
-import 'package:savvy_stock/features/sales/payment/screens/payment_screen.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/models/confirmed_item.dart';
-import 'package:savvy_stock/features/sales/sales_item_entry/screens/sales_item_entry.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/models/item_UoM_conversions_model.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/screens/item_UoM_conversion_dashboard.dart';
-import 'package:savvy_stock/features/stock/item_UoM_conversions/widgets/item_UoM_conversion_create_and_edit.dart.dart';
+import 'package:savvy_stock/features/sales/quotation_order/screens/quotation_review.dart';
+import 'package:savvy_stock/features/sales/quotation_order/screens/quote_customer_screen/quote_customer_entry.dart';
+import 'package:savvy_stock/features/sales/quotation_order/screens/quote_invoice_screen/quote_invoice_review_screen.dart';
+import 'package:savvy_stock/features/sales/quotation_order/screens/quote_item_entry_screen/quote_item_entry.dart';
+import 'package:savvy_stock/features/sales/quotation_order/screens/quote_payment_screen/quote_payment_screen.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/credit_receipt/sales_credit_receipt_reveiw.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/screens/invoice_review_screen.dart';
+import 'package:savvy_stock/features/sales/sales_order/payment/screens/payment_screen.dart';
+import 'package:savvy_stock/features/sales/sales_order/sales_item_entry/screens/sales_item_entry.dart';
+import 'package:savvy_stock/features/sales/sales_order/sales_report.dart';
+import 'package:savvy_stock/features/sales/sales_return/screens/sales_return_screen.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/models/item_uom_conversions_model.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/screens/item_uom_conversion_dashboard.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/widgets/item_uom_conversion_create_and_edit.dart.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/screens/item_entry_dashboard.dart';
 import 'package:savvy_stock/features/stock/item_entry/widgets/item_entry_create_and_edit.dart.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/screens/item_master_create.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/widgets/batch_upload_section.dart';
+import 'package:savvy_stock/features/stock/item_entry_workbench/widgets/single_item_entry_form.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/screens/item_in_branch_dashboard.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/widgets/item_in_branch_create_and_edit.dart.dart';
+import 'package:savvy_stock/features/stock/item_transactions/model/item_transaction_model.dart';
+import 'package:savvy_stock/features/stock/item_transactions/screens/item_transaction_dashboard.dart';
+import 'package:savvy_stock/features/stock/item_transactions/widgets/item_tansaction_form.dart';
 import 'package:savvy_stock/features/stock/location_entry/models/location_master_model.dart';
 import 'package:savvy_stock/features/stock/location_entry/screens/location_master_screen.dart';
 import 'package:savvy_stock/features/stock/location_entry/screens/location_master_create_edit.dart';
@@ -144,7 +165,10 @@ class AppRouter {
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: AppRoutes.salesCustomerInfo,
           parentPrivilege: AppRoutes.salesDashboard,
-          child: CustomerInfoScreen(authBloc: authBloc),
+          child: CustomerInfoScreen(
+            authBloc: authBloc,
+            extra: state.extra as Map<String, dynamic>?,
+          ),
         ),
         redirect: _protectedRouteRedirect,
       ),
@@ -158,30 +182,34 @@ class AppRouter {
         redirect: _protectedRouteRedirect,
       ),
       GoRoute(
+        path: AppRoutes.salesReport,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.salesReport,
+          parentPrivilege: AppRoutes.salesDashboard,
+          child: SalesReviewPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.salesCreditReceiptReview,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.salesCreditReceiptReview,
+          parentPrivilege: AppRoutes.salesDashboard,
+          child: CreditSalesReviewPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+
+      GoRoute(
         path: AppRoutes.paymentSummary,
-        builder: (context, state) {
-          final args = state.extra as Map<String, dynamic>?;
-
-          if (args == null ||
-              args['confirmedItems'] == null ||
-              args['totalAmount'] == null ||
-              args['customer'] == null) {
-            return Scaffold(
-              body: Center(child: Text('Missing payment arguments')),
-            );
-          }
-
-          return PrivilegeRouteGuard(
-            requiredPrivilege: AppRoutes.paymentSummary,
-            parentPrivilege: AppRoutes.salesCustomerInfo,
-            child: PaymentScreen(
-              confirmedItems: args['confirmedItems'] as List<ConfirmedItem>,
-              totalAmount: args['totalAmount'] as double,
-              customer: args['customer'] as Customer,
-              authBloc: authBloc,
-            ),
-          );
-        },
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.paymentSummary,
+          parentPrivilege: AppRoutes.salesCustomerInfo,
+          child: PaymentScreen(
+            authBloc: authBloc,
+            orderData: state.extra as Map<String, dynamic>?,
+          ),
+        ),
         redirect: _protectedRouteRedirect,
       ),
       GoRoute(
@@ -193,7 +221,64 @@ class AppRouter {
         ),
         redirect: _protectedRouteRedirect,
       ),
-
+      GoRoute(
+        path: AppRoutes.salesReturn,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.salesReturn,
+          parentPrivilege: AppRoutes.salesDashboard,
+          child: SalesReturnScreen(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      //Quotation Order
+      GoRoute(
+        path: AppRoutes.quotationOrder,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.quotationOrder,
+          parentPrivilege: AppRoutes.salesDashboard,
+          child: QuotationCustomerInfoScreen(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.quotationItemEntry,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.quotationItemEntry,
+          parentPrivilege: AppRoutes.quotationOrder,
+          child: QuotationItemEntryScreen(),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.quotationOrderPayment,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.quotationOrderPayment,
+          parentPrivilege: AppRoutes.quotationOrder,
+          child: QuotePaymentScreen(
+            authBloc: authBloc,
+            orderData: state.extra as Map<String, dynamic>?,
+          ),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.quotationInvoiceReview,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.quotationInvoiceReview,
+          parentPrivilege: AppRoutes.quotationOrder,
+          child: QuotationInvoiceReviewScreen(),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.quotationOrderReview,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.quotationOrderReview,
+          parentPrivilege: AppRoutes.salesDashboard,
+          child: QuotationReviewPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
       // Admin Routes
       GoRoute(
         path: AppRoutes.roleManagement,
@@ -436,6 +521,7 @@ class AppRouter {
         builder: (context, state) {
           final extra = state.extra;
           final item = extra != null ? extra as ItemInBranchModel? : null;
+          // final itemEntry = extra != null ? extra as ItemEntryModel? : null;
           return PrivilegeRouteGuard(
             requiredPrivilege: AppRoutes.editItemInBranch,
             parentPrivilege: AppRoutes.itemInBranch,
@@ -606,6 +692,77 @@ class AppRouter {
         redirect: _protectedRouteRedirect,
       ),
 
+      //item Transactions Sub-Routes
+      GoRoute(
+        path: AppRoutes.inventoryTransaction,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.inventoryTransaction,
+          parentPrivilege: AppRoutes.stockDashboard,
+          child: ItemTransactionsListPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+
+      GoRoute(
+        path: AppRoutes.inventoryTransactionCreate,
+        builder: (context, state) {
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.inventoryTransaction,
+            parentPrivilege: AppRoutes.lotColorings,
+            child: ItemTransactionsFormPage(authBloc: authBloc),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.inventoryTransactionEdit,
+        builder: (context, state) {
+          final extra = state.extra;
+          final item = extra != null ? extra as ItemTransactionModel? : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.inventoryTransaction,
+            parentPrivilege: AppRoutes.lotColorings,
+            child: ItemTransactionsFormPage(
+              authBloc: authBloc,
+              existingTransaction: item,
+            ),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+
+      //item master sub routes
+      GoRoute(
+        path: AppRoutes.itemWorkbench,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.itemWorkbench,
+          parentPrivilege: AppRoutes.stockDashboard,
+          child: ItemMasterCreatePage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.itemWorkbenchSingleCreate,
+        builder: (context, state) {
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.itemWorkbenchSingleCreate,
+            parentPrivilege: AppRoutes.itemWorkbench,
+            child: SingleItemEntryForm(authBloc: authBloc),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.itemWorkbenchBatchUpload,
+        builder: (context, state) {
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.itemWorkbenchBatchUpload,
+            parentPrivilege: AppRoutes.itemWorkbench,
+            child: BatchUploadSection(),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
       GoRoute(
         path: AppRoutes.branchManagement,
         builder: (context, state) => PrivilegeRouteGuard(
@@ -635,6 +792,89 @@ class AppRouter {
             child: BranchFormPage(branch: branch, authBloc: authBloc),
           );
         },
+        redirect: _protectedRouteRedirect,
+      ),
+      // Purchase Routes
+      GoRoute(
+        path: AppRoutes.supplierEntry,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.supplierEntry,
+          parentPrivilege: AppRoutes.purchaseDashboard,
+          child: SupplierListPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.supplierCreate,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.supplierCreate,
+          parentPrivilege: AppRoutes.supplierEntry,
+          child: SupplierEntryScreen(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.supplierEdit,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final supplier = extra != null
+              ? extra['supplier'] as SupplierModel?
+              : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.supplierEdit,
+            parentPrivilege: AppRoutes.supplierEntry,
+            child: SupplierEntryScreen(authBloc: authBloc, supplier: supplier),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.purchaseReview,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.purchaseReview,
+          parentPrivilege: AppRoutes.purchaseDashboard,
+          child: PurchaseReviewPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.purchaseSupplierInfo,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.purchaseSupplierInfo,
+          parentPrivilege: AppRoutes.purchaseReview,
+          child: SupplierInfoScreen(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.purchaseItemEntry,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.purchaseItemEntry,
+          parentPrivilege: AppRoutes.purchaseSupplierInfo,
+          child: PurchaseItemEntryScreen(
+            orderData: state.extra as Map<String, dynamic>,
+          ),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.purchaseOrderPayment,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.purchaseOrderPayment,
+          parentPrivilege: AppRoutes.purchaseItemEntry,
+          child: PurchasePaymentScreen(
+            orderData: state.extra as Map<String, dynamic>,
+          ),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.creditPurchaseReview,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.creditPurchaseReview,
+          parentPrivilege: AppRoutes.purchaseDashboard,
+          child: CreditPurchaseReviewPage(authBloc: authBloc),
+        ),
         redirect: _protectedRouteRedirect,
       ),
       // System Constants

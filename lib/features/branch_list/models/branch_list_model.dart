@@ -48,18 +48,18 @@ class Branch {
 
   factory Branch.fromMap(Map<String, dynamic> map) {
     return Branch(
-      id: map['id'] as int,
-      referenceId: map['reference_id'] as String,
-      description: map['description'] as String?,
-      city: map['city'] as String?,
-      region: map['region'] as String?,
-      state: map['state'] as String?,
-      country: map['country'] as String?,
-      addressLine: map['address_line'] as String?,
-      company: map['company'] as int?,
-      branchPhone: map['branch_phone'] as String?,
+      id: (map['id'] as num).toInt(),
+      referenceId: map['reference_id']?.toString(),
+      description: map['description']?.toString(),
+      city: map['city']?.toString(),
+      region: map['region']?.toString(),
+      state: map['state']?.toString(),
+      country: map['country']?.toString(),
+      addressLine: map['address_line']?.toString(),
+      company: (map['company'] as num?)?.toInt(),
+      branchPhone: map['branch_phone']?.toString(),
       marginRate: (map['margin_rate'] as num?)?.toDouble(),
-      marginType: map['margin_type'] as String?,
+      marginType: map['margin_type']?.toString(),
     );
   }
 

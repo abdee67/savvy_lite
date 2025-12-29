@@ -464,13 +464,13 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+            const Icon(Icons.error_outline, size: 64, color: Colors.white),
             const SizedBox(height: 16),
             Text(
               state.message.isEmpty
                   ? 'Failed to load locations'
                   : state.message,
-              style: const TextStyle(color: Colors.grey),
+              style: const TextStyle(color: Colors.white),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -489,13 +489,13 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Iconsax.location, size: 64, color: Colors.grey),
+            const Icon(Iconsax.location, size: 64, color: Colors.white),
             const SizedBox(height: 16),
             Text(
               _searchController.text.isEmpty
                   ? 'No locations found'
                   : 'No results for "${_searchController.text}"',
-              style: const TextStyle(color: Colors.grey, fontSize: 16),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
           ],
         ),

@@ -95,9 +95,7 @@ class _CustomerListPageState extends State<CustomerListPage>
   }
 
   void _toggleCustomerSelection(Customer customer, bool selected) {
-    context.read<CustomerBloc>().add(
-      SelectCustomer(customer, isSelected: selected),
-    );
+    context.read<CustomerBloc>().add(SelectCustomer(customer, selected));
   }
 
   void _showCustomerDetail(Customer customer) {
@@ -163,11 +161,7 @@ class _CustomerListPageState extends State<CustomerListPage>
           'Are you sure you want to delete "${itemToDelete.customerName}"?',
       onConfirm: () {
         bloc.add(
-          DeleteCustomer(
-            deletedItem: itemToDelete,
-            deletedIndex: index,
-            customerId: itemToDelete.id!,
-          ),
+          DeleteCustomer(deletedItem: itemToDelete, deletedIndex: index),
         );
       },
     );
@@ -193,7 +187,6 @@ class _CustomerListPageState extends State<CustomerListPage>
   }
 
   void _exportCustomer(Customer customer) {
-    context.read<CustomerBloc>().add(ExportCustomer(customer));
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Customer data exported')));
@@ -606,14 +599,45 @@ class _CustomerListPageState extends State<CustomerListPage>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                customer.customerName ?? 'Unknown Customer',
-                                style: TextStyle(
-                                  color: const Color(0xFF373737),
-                                  fontSize: isCompact ? 20 : 24,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w800,
-                                ),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    customer.customerName ?? 'Unknown Customer',
+                                    style: TextStyle(
+                                      color: const Color(0xFF373737),
+                                      fontSize: isCompact ? 20 : 24,
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  if (customer.defaultsValue == 'Y')
+                                    Container(
+                                      margin: const EdgeInsets.only(top: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green[50],
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: Colors.green),
+                                      ),
+                                      child: Text(
+                                        customer.defaultsValue == 'Y'
+                                            ? 'Default Customer'
+                                            : '',
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: isCompact ? 12 : 14,
+                                          fontStyle: FontStyle.italic,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                               Text(
                                 customer.phoneNumber ?? 'No Phone',

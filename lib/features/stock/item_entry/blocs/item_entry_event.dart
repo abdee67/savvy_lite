@@ -49,12 +49,21 @@ class DeleteItem extends ItemEntryEvent {
   List<Object> get props => [itemId, deletedItem, deletedIndex];
 }
 
+// Filter and search events
+class FilterItemList extends ItemEntryEvent {
+  const FilterItemList();
+}
+
 class SearchItems extends ItemEntryEvent {
   final String query;
   const SearchItems(this.query);
 
   @override
   List<Object> get props => [query];
+}
+
+class GenerateBarcodes extends ItemEntryEvent {
+  const GenerateBarcodes();
 }
 
 class SelectItem extends ItemEntryEvent {
@@ -140,4 +149,125 @@ class ExportSingleItem extends ItemEntryEvent {
 
   @override
   List<Object> get props => [itemToExport];
+}
+
+// Preparation events (from Java controller)
+class PrepareCreate extends ItemEntryEvent {}
+
+class PrepareCopy extends ItemEntryEvent {
+  final ItemEntryModel itemToCopy;
+
+  const PrepareCopy(this.itemToCopy);
+}
+
+class PrepareCreateInCreate extends ItemEntryEvent {
+  const PrepareCreateInCreate();
+}
+
+class PrepareCreateInCreate1 extends ItemEntryEvent {
+  const PrepareCreateInCreate1();
+}
+
+class PrepareCreateInCreateFormain extends ItemEntryEvent {
+  const PrepareCreateInCreateFormain();
+}
+
+class PrepareCreateInEdit extends ItemEntryEvent {
+  const PrepareCreateInEdit();
+}
+
+class PrepareEdit extends ItemEntryEvent {
+  const PrepareEdit();
+}
+
+class PrepareEdit1 extends ItemEntryEvent {
+  final int item;
+
+  const PrepareEdit1(this.item);
+}
+
+// Complex business operations (from Java controller)
+class SaveRow extends ItemEntryEvent {
+  final ItemEntryModel item;
+
+  const SaveRow(this.item);
+}
+
+class SaveRow1 extends ItemEntryEvent {
+  final ItemEntryModel item;
+
+  const SaveRow1(this.item);
+}
+
+class SaveRowMain extends ItemEntryEvent {
+  final ItemEntryModel item;
+
+  const SaveRowMain(this.item);
+}
+
+class SaveInEdit extends ItemEntryEvent {
+  final List<ItemEntryModel> items;
+
+  const SaveInEdit(this.items);
+}
+
+class CreateInEdit extends ItemEntryEvent {
+  const CreateInEdit();
+}
+
+class RemoveInCreate extends ItemEntryEvent {
+  final ItemEntryModel item;
+
+  const RemoveInCreate(this.item);
+}
+
+class RemoveInEdit extends ItemEntryEvent {
+  final ItemEntryModel item;
+
+  const RemoveInEdit(this.item);
+}
+
+class RemoveRecord extends ItemEntryEvent {
+  final ItemEntryModel item;
+
+  const RemoveRecord(this.item);
+}
+
+class CancelUpdate extends ItemEntryEvent {
+  const CancelUpdate();
+}
+
+class CancelCreate extends ItemEntryEvent {
+  const CancelCreate();
+}
+
+class DiscardChanges extends ItemEntryEvent {
+  const DiscardChanges();
+}
+
+class RefreshList extends ItemEntryEvent {
+  const RefreshList();
+}
+
+class RefreshList1 extends ItemEntryEvent {
+  const RefreshList1();
+}
+
+// Navigation events
+class SaveAndClose extends ItemEntryEvent {
+  final String linkName;
+
+  const SaveAndClose(this.linkName);
+}
+
+class SaveAndAddNew extends ItemEntryEvent {
+  final String linkName;
+
+  const SaveAndAddNew(this.linkName);
+}
+
+class SaveAndAddContinue extends ItemEntryEvent {
+  final String linkName;
+
+  const SaveAndAddContinue(this.linkName);
 }

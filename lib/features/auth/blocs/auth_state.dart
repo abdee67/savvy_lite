@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/core/constants/privilege_heirarchy.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
+import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/admin/users/models/user_with_role.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_event.dart';
 import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart';
@@ -21,7 +22,7 @@ class AuthState extends Equatable {
   final AuthStatus status;
   final String? message;
 
-  final int? userId;
+  final UserModel? userId;
   final String? username;
   final int? companyId;
   final int? branchId;
@@ -190,7 +191,7 @@ class AuthState extends Equatable {
   }
 
   factory AuthState.authenticated({
-    required int userId,
+    required UserModel userId,
     required String username,
     required List<Privilege> privileges,
     required List<Role> roles,
@@ -233,7 +234,7 @@ class AuthState extends Equatable {
   AuthState copyWith({
     AuthStatus? status,
     String? message,
-    int? userId,
+    UserModel? userId,
     String? username,
     int? companyId,
     int? branchId,

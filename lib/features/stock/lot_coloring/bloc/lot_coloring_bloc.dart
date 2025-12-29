@@ -1,24 +1,22 @@
 import 'dart:async';
 import 'package:bloc/bloc.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_bloc.dart';
-import 'package:savvy_stock/core/blocs/system_constant/system_constant_state.dart';
-import 'package:savvy_stock/core/services/database/database_service.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/bloc/lot_coloring_event.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/bloc/lot_coloring_state.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/model/lot_coloring_model.dart';
-import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
+import 'package:savvy_stock/features/stock/lot_coloring/repo/lot_expiration_repo.dart';
 
 class LotExpirationColorsBloc
     extends Bloc<LotExpirationColorsEvent, LotExpirationColorsState> {
-  final LocalDatabaseService databaseService;
+  final LotExpirationColorsRepository repository;
   final AuthBloc authBloc;
   final SystemConstantBloc systemConstantBloc;
   StreamSubscription? _authSubscription;
   StreamSubscription? _systemConstantSubscription;
 
   LotExpirationColorsBloc({
-    required this.databaseService,
+    required this.repository,
     required this.authBloc,
     required this.systemConstantBloc,
   }) : super(const LotExpirationColorsState()) {
@@ -49,41 +47,6 @@ class LotExpirationColorsBloc
     on<RecalculateAllColor>(_onRecalculateAllColor);
   }
 
-  // Helpers to build scope-based where clauses for queries (company + level-specific scope)
-  String _scopeWhereClause(LotExpirationColor color) {
-    switch (color.lotExpLevel) {
-      case '1':
-        return 'company = ? AND branch IS NULL AND item_number IS NULL';
-      case '2':
-        return 'company = ? AND branch = ? AND item_number IS NULL';
-      case '3':
-        return 'company = ? AND branch IS NULL AND item_number = ?';
-      case '4':
-        return 'company = ? AND branch = ? AND item_number = ?';
-      default:
-        return 'company = ?';
-    }
-  }
-
-  List<dynamic> _scopeWhereArgs(LotExpirationColor color, int? companyId) {
-    final args = <dynamic>[companyId];
-    switch (color.lotExpLevel) {
-      case '2':
-        args.add(color.branch);
-        break;
-      case '3':
-        args.add(color.itemNumber);
-        break;
-      case '4':
-        args.add(color.branch);
-        args.add(color.itemNumber);
-        break;
-      default:
-        break;
-    }
-    return args;
-  }
-
   @override
   Future<void> close() {
     _authSubscription?.cancel();
@@ -97,42 +60,12 @@ class LotExpirationColorsBloc
   ) async {
     emit(state.copyWith(status: LotExpirationColorsStatus.loading));
     try {
-      final db = await databaseService.database;
-      final colors = await db.rawQuery(
-        '''
-        SELECT lec.*,
-               b.description as branch_name,
-               it.item_description,
-               it.item_description as item_description,
-               ud.detail_code as color_type_code,
-               ud.description_1 as color_type_name
-        FROM lot_expiration_colors lec
-        LEFT JOIN branch_table b ON lec.branch = b.id
-        LEFT JOIN items_table it ON lec.item_number = it.id
-        LEFT JOIN udc_details ud ON lec.color_type = ud.id
-        WHERE lec.company = ?
-        ORDER BY 
-          CASE 
-            WHEN lec.lot_exp_level = '1' THEN 1
-            WHEN lec.lot_exp_level = '2' THEN 2  
-            WHEN lec.lot_exp_level = '3' THEN 3
-            WHEN lec.lot_exp_level = '4' THEN 4
-            ELSE 5
-          END,
-          lec.days_minimum
-      ''',
-        [event.companyId],
-      );
-
-      final colorList = colors
-          .map((p) => LotExpirationColor.fromMap(p))
-          .toList();
-
+      final colors = await repository.loadLotExpirationColors(event.companyId);
       emit(
         state.copyWith(
           status: LotExpirationColorsStatus.loaded,
-          items: colorList,
-          filteredItems: colorList,
+          items: colors,
+          filteredItems: colors,
         ),
       );
     } catch (e) {
@@ -151,8 +84,6 @@ class LotExpirationColorsBloc
   ) async {
     emit(state.copyWith(status: LotExpirationColorsStatus.saving));
     try {
-      final db = await databaseService.database;
-
       // Validate before saving
       final validationResult = await _validateColor(event.color);
       if (!validationResult.isValid) {
@@ -166,27 +97,28 @@ class LotExpirationColorsBloc
       }
 
       // Additional adjacency validation against existing DB ranges for the same level/scope
-      final existingForScope = await db.query(
-        'lot_expiration_colors',
-        where: _scopeWhereClause(event.color),
-        whereArgs: _scopeWhereArgs(event.color, authBloc.state.companyId),
+      final existingColors = await repository.getColorsForScope(
+        event.color,
+        authBloc.state.companyId!,
       );
 
-      final existingColors = existingForScope.map((m) => LotExpirationColor.fromMap(m)).toList();
-      final combined = <LotExpirationColor>[]..addAll(existingColors)..add(event.color);
+      final combined = <LotExpirationColor>[...existingColors, event.color];
       final rangesValid = await _validateRanges(combined);
       if (!rangesValid) {
-        emit(state.copyWith(
-          status: LotExpirationColorsStatus.failure,
-          message: 'Ranges must be consecutive and non-overlapping for the selected level/scope',
-        ));
+        emit(
+          state.copyWith(
+            status: LotExpirationColorsStatus.failure,
+            message:
+                'Ranges must be consecutive and non-overlapping for the selected level/scope',
+          ),
+        );
         return;
       }
 
-      final colorMap = event.color.toMap();
-      colorMap.remove('id');
-
-      await db.insert('lot_expiration_colors', colorMap);
+      await repository.insertLotExpirationColor(
+        event.color,
+        authBloc.state.companyId!,
+      );
 
       add(LoadLotExpirationColors(authBloc.state.companyId!));
       emit(
@@ -211,8 +143,6 @@ class LotExpirationColorsBloc
   ) async {
     emit(state.copyWith(status: LotExpirationColorsStatus.saving));
     try {
-      final db = await databaseService.database;
-
       // Validate before updating
       final validationResult = await _validateColor(event.color);
       if (!validationResult.isValid) {
@@ -226,28 +156,31 @@ class LotExpirationColorsBloc
       }
 
       // Additional adjacency validation against existing DB ranges for the same level/scope (exclude current record)
-      final existingForScope = await db.query(
-        'lot_expiration_colors',
-        where: '${_scopeWhereClause(event.color)} AND id != ?',
-        whereArgs: [..._scopeWhereArgs(event.color, authBloc.state.companyId), event.color.id],
+      final existingColors = await repository.getColorsForScope(
+        event.color,
+        authBloc.state.companyId!,
       );
 
-      final existingColors = existingForScope.map((m) => LotExpirationColor.fromMap(m)).toList();
-      final combined = <LotExpirationColor>[...existingColors, event.color];
+      // Filter out the current record being updated
+      final otherColors = existingColors
+          .where((c) => c.id != event.color.id)
+          .toList();
+      final combined = <LotExpirationColor>[...otherColors, event.color];
       final rangesValid = await _validateRanges(combined);
       if (!rangesValid) {
-        emit(state.copyWith(
-          status: LotExpirationColorsStatus.failure,
-          message: 'Ranges must be consecutive and non-overlapping for the selected level/scope',
-        ));
+        emit(
+          state.copyWith(
+            status: LotExpirationColorsStatus.failure,
+            message:
+                'Ranges must be consecutive and non-overlapping for the selected level/scope',
+          ),
+        );
         return;
       }
 
-      await db.update(
-        'lot_expiration_colors',
-        event.color.toMap(),
-        where: 'id = ? AND company = ?',
-        whereArgs: [event.color.id, authBloc.state.companyId],
+      await repository.updateLotExpirationColor(
+        event.color,
+        authBloc.state.companyId!,
       );
 
       add(LoadLotExpirationColors(authBloc.state.companyId!));
@@ -273,12 +206,9 @@ class LotExpirationColorsBloc
   ) async {
     emit(state.copyWith(status: LotExpirationColorsStatus.deleting));
     try {
-      final db = await databaseService.database;
-
-      await db.delete(
-        'lot_expiration_colors',
-        where: 'id = ? AND company = ?',
-        whereArgs: [event.color.id, authBloc.state.companyId],
+      await repository.deleteLotExpirationColor(
+        event.color.id!,
+        authBloc.state.companyId!,
       );
 
       add(LoadLotExpirationColors(authBloc.state.companyId!));
@@ -304,18 +234,11 @@ class LotExpirationColorsBloc
   ) async {
     emit(state.copyWith(status: LotExpirationColorsStatus.deleting));
     try {
-      final db = await databaseService.database;
-      final batch = db.batch();
+      await repository.deleteMultipleLotExpirationColors(
+        event.colors,
+        authBloc.state.companyId!,
+      );
 
-      for (final color in event.colors) {
-        batch.delete(
-          'lot_expiration_colors',
-          where: 'id = ? AND company = ?',
-          whereArgs: [color.id, authBloc.state.companyId],
-        );
-      }
-
-      await batch.commit();
       add(LoadLotExpirationColors(authBloc.state.companyId!));
       emit(
         state.copyWith(
@@ -467,6 +390,28 @@ class LotExpirationColorsBloc
     emit(state.copyWith(selectedItems: []));
   }
 
+  Future<void> _onRecalculateAllColor(
+    RecalculateAllColor event,
+    Emitter<LotExpirationColorsState> emit,
+  ) async {
+    try {
+      // This would typically be called from LotMasterBloc when system constants change
+      // Recalculate colors for all lots based on new system constants
+      emit(state.copyWith(status: LotExpirationColorsStatus.recalculating));
+
+      // You can add logic here to recalculate colors if needed
+      // For now, just reload to ensure fresh data
+      add(LoadLotExpirationColors(authBloc.state.companyId!));
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: LotExpirationColorsStatus.failure,
+          message: 'Failed to recalculate colors: $e',
+        ),
+      );
+    }
+  }
+
   // Core validation methods
   Future<ValidationResult> _validateColor(LotExpirationColor color) async {
     // Check required fields
@@ -515,7 +460,10 @@ class LotExpirationColorsBloc
     }
 
     // Check for duplicates
-    final isDuplicate = await _checkForDuplicate(color);
+    final isDuplicate = await repository.checkForDuplicate(
+      color,
+      authBloc.state.companyId!,
+    );
     if (isDuplicate) {
       return ValidationResult(
         false,
@@ -524,45 +472,6 @@ class LotExpirationColorsBloc
     }
 
     return ValidationResult(true, '');
-  }
-
-  Future<bool> _checkForDuplicate(LotExpirationColor color) async {
-    final db = await databaseService.database;
-
-    var whereClause = 'company = ? AND color_type = ?';
-    final whereArgs = <dynamic>[authBloc.state.companyId, color.colorType];
-
-    switch (color.lotExpLevel) {
-      case '1': // Company level
-        whereClause += ' AND branch IS NULL AND item_number IS NULL';
-        break;
-      case '2': // Store level
-        whereClause += ' AND branch = ? AND item_number IS NULL';
-        whereArgs.add(color.branch);
-        break;
-      case '3': // Item level
-        whereClause += ' AND branch IS NULL AND item_number = ?';
-        whereArgs.add(color.itemNumber);
-        break;
-      case '4': // Item store level
-        whereClause += ' AND branch = ? AND item_number = ?';
-        whereArgs.addAll([color.branch, color.itemNumber]);
-        break;
-    }
-
-    // Exclude current record when updating
-    if (color.id != null) {
-      whereClause += ' AND id != ?';
-      whereArgs.add(color.id);
-    }
-
-    final result = await db.query(
-      'lot_expiration_colors',
-      where: whereClause,
-      whereArgs: whereArgs,
-    );
-
-    return result.isNotEmpty;
   }
 
   Future<bool> _validateRanges(List<LotExpirationColor> colors) async {
@@ -601,11 +510,6 @@ class LotExpirationColorsBloc
       // Both ends must be present to validate adjacency
       if (prevMin == null || nextMax == null) return false;
 
-      // Check overlap (should not overlap)
-      if (prev.daysMaximum != null && next.daysMinimum != null) {
-        if (prev.daysMaximum! >= next.daysMinimum!) return false;
-      }
-
       // Enforce consecutive boundary: nextMax == prevMin - 1
       if (nextMax != prevMin - 1) return false;
     }
@@ -613,146 +517,45 @@ class LotExpirationColorsBloc
     return true;
   }
 
-Future<LotExpirationColor?> _getLotExpirationColorByDetails(
-  int? branchId,
-  int? itemId,
-  DateTime? expirationDate,
-  DateTime? effectiveDate,
-  DateTime? receivedDate,
-) async {
-  if (itemId == null) {
-    print('❌ Item ID is null in color calculation');
-    return null;
-  }
+  Future<LotExpirationColor?> _getLotExpirationColorByDetails(
+    int? branchId,
+    int? itemId,
+    DateTime? expirationDate,
+    DateTime? effectiveDate,
+    DateTime? receivedDate,
+  ) async {
+    if (itemId == null) {
+      return null;
+    }
 
-  final db = await databaseService.database;
-  
-  // Get system constant for lot type
-  final systemConstant = systemConstantBloc.state.selected;
-  // If Apply Lot Management is disabled, skip color calculation
-  if (systemConstant?.applyLotMgmBoolean != true) {
-    print('⚠️ Apply Lot Management is disabled in system constants - skipping color calculation');
-    return null;
-  }
-  final lotTypeUdcDetail = await _getLotTypeUdcDetail(systemConstant?.lotType);
-  final lotType = lotTypeUdcDetail?.detailCode.toUpperCase();
+    // Get system constant for lot type
+    final systemConstant = systemConstantBloc.state.selected;
+    // If Apply Lot Management is disabled, skip color calculation
+    if (systemConstant?.applyLotMgmBoolean != true) {
+      return null;
+    }
 
-  final daysDifference = calculateDaysDifference(
-    expirationDate,
-    effectiveDate,
-    receivedDate,
-    lotType,
-  );
-
-  print('''
-🎨 COLOR CALCULATION:
-  Branch: $branchId, Item: $itemId
-  Lot Type: $lotType
-  Days Difference: $daysDifference
-  Expiration: $expirationDate
-  Effective: $effectiveDate
-  Received: $receivedDate
-''');
-
-  List<Map<String, dynamic>> results = [];
-
-  // Try different levels in order of specificity
-  // At this point itemId is already guaranteed non-null (we returned earlier if it was null),
-  // so only check branchId here for level 4.
-  if (branchId != null) {
-    // Level 4: Item Store Level
-    print('  ▶ Query Level 4 (Item Store) with args: company=${authBloc.state.companyId}, item=$itemId, branch=$branchId, days=$daysDifference');
-    results = await db.rawQuery(
-      '''
-      SELECT lec.*, ud.detail_code as color_type_code, ud.description_1 as color_type_name
-      FROM lot_expiration_colors lec
-      LEFT JOIN udc_details ud ON lec.color_type = ud.id
-      WHERE lec.company = ? 
-      AND lec.item_number = ? 
-      AND lec.branch = ?
-      AND ? BETWEEN lec.days_minimum AND lec.days_maximum
-      AND lec.active_for_sales_flag = 'Y'
-      LIMIT 1
-      ''',
-      [authBloc.state.companyId, itemId, branchId, daysDifference],
+    final lotTypeUdcDetail = await repository.getLotTypeUdcDetail(
+      systemConstant?.lotType,
     );
-    print('  ℹ Level 4 returned: ${results.length} rows');
-    if (results.isNotEmpty) print('  ✅ Found Level 4 configuration -> ${results.first}');
-  }
+    final lotType = lotTypeUdcDetail?.detailCode.toUpperCase();
 
-  if (results.isEmpty) {
-    // Level 3: Item Level
-    print('  ▶ Query Level 3 (Item) with args: company=${authBloc.state.companyId}, item=$itemId, days=$daysDifference');
-    results = await db.rawQuery(
-      '''
-      SELECT lec.*, ud.detail_code as color_type_code, ud.description_1 as color_type_name
-      FROM lot_expiration_colors lec
-      LEFT JOIN udc_details ud ON lec.color_type = ud.id
-      WHERE lec.company = ? 
-      AND lec.item_number = ? 
-      AND lec.branch IS NULL
-      AND ? BETWEEN lec.days_minimum AND lec.days_maximum
-      AND lec.active_for_sales_flag = 'Y'
-      LIMIT 1
-      ''',
-      [authBloc.state.companyId, itemId, daysDifference],
+    final daysDifference = calculateDaysDifference(
+      expirationDate,
+      effectiveDate,
+      receivedDate,
+      lotType,
     );
-    print('  ℹ Level 3 returned: ${results.length} rows');
-    if (results.isNotEmpty) print('  ✅ Found Level 3 configuration -> ${results.first}');
-  }
-
-  if (results.isEmpty && branchId != null) {
-    // Level 2: Store Level
-    print('  ▶ Query Level 2 (Store) with args: company=${authBloc.state.companyId}, branch=$branchId, days=$daysDifference');
-    results = await db.rawQuery(
-      '''
-      SELECT lec.*, ud.detail_code as color_type_code, ud.description_1 as color_type_name
-      FROM lot_expiration_colors lec
-      LEFT JOIN udc_details ud ON lec.color_type = ud.id
-      WHERE lec.company = ? 
-      AND lec.branch = ?
-      AND lec.item_number IS NULL
-      AND ? BETWEEN lec.days_minimum AND lec.days_maximum
-      AND lec.active_for_sales_flag = 'Y'
-      LIMIT 1
-      ''',
-      [authBloc.state.companyId, branchId, daysDifference],
+    final color = await repository.getLotExpirationColorByDetails(
+      companyId: authBloc.state.companyId!,
+      branchId: branchId,
+      itemId: itemId,
+      daysDifference: daysDifference,
     );
-    print('  ℹ Level 2 returned: ${results.length} rows');
-    if (results.isNotEmpty) print('  ✅ Found Level 2 configuration -> ${results.first}');
+
+    return color;
   }
 
-  if (results.isEmpty) {
-    // Level 1: Company Level
-    print('  ▶ Query Level 1 (Company) with args: company=${authBloc.state.companyId}, days=$daysDifference');
-    results = await db.rawQuery(
-      '''
-      SELECT lec.*, ud.detail_code as color_type_code, ud.description_1 as color_type_name
-      FROM lot_expiration_colors lec
-      LEFT JOIN udc_details ud ON lec.color_type = ud.id
-      WHERE lec.company = ? 
-      AND lec.branch IS NULL
-      AND lec.item_number IS NULL
-      AND ? BETWEEN lec.days_minimum AND lec.days_maximum
-      AND lec.active_for_sales_flag = 'Y'
-      LIMIT 1
-      ''',
-      [authBloc.state.companyId, daysDifference],
-    );
-    print('  ℹ Level 1 returned: ${results.length} rows');
-    if (results.isNotEmpty) print('  ✅ Found Level 1 configuration -> ${results.first}');
-  }
-
-  if (results.isEmpty) {
-    print('  ❌ No color configuration found for any level');
-    print('  🔎 Search params -> company: ${authBloc.state.companyId}, branch: $branchId, item: $itemId, lotType: $lotType, daysDifference: $daysDifference');
-    return null;
-  }
-
-  final color = LotExpirationColor.fromMap(results.first);
-  print('  🎯 Final Color: ${color.colorTypeName} (${color.colorTypeCode})');
-  return color;
-}
   int calculateDaysDifference(
     DateTime? expirationDate,
     DateTime? effectiveDate,
@@ -777,68 +580,6 @@ Future<LotExpirationColor?> _getLotExpirationColorByDetails(
     final difference = targetDate.difference(now).inDays;
     // For Received type, use absolute value (same as Java logic)
     return lotType?.toUpperCase() == 'R' ? difference.abs() : difference;
-  }
-
-Future<UdcDetails?> _getLotTypeUdcDetail(int? lotTypeId) async {
-  if (lotTypeId == null) {
-    print('❌ Lot type ID is null');
-    return null;
-  }
-  
-  try {
-    final db = await databaseService.database;
-    final result = await db.rawQuery(
-      '''
-      SELECT * FROM udc_details 
-      WHERE id = ? AND record_header = (SELECT id FROM udc_header WHERE header_code = 'LT')
-      ''',
-      [lotTypeId],
-    );
-
-    if (result.isNotEmpty) {
-      final udc = UdcDetails.fromJson(result.first);
-      print('✅ Found UDC detail: ${udc.detailCode} - ${udc.description1}');
-      return udc;
-    } else {
-      print('❌ No UDC detail found for ID: $lotTypeId with header LT');
-      // Try without header constraint as fallback
-      final fallbackResult = await db.rawQuery(
-        'SELECT * FROM udc_details WHERE id = ?',
-        [lotTypeId],
-      );
-      if (fallbackResult.isNotEmpty) {
-        final udc = UdcDetails.fromJson(fallbackResult.first);
-        print('✅ Found UDC detail (fallback): ${udc.detailCode} - ${udc.description1}');
-        return udc;
-      }
-      return null;
-    }
-  } catch (e) {
-    print('❌ Error getting lot type UDC: $e');
-    return null;
-  }
-}
-
-  Future<void> _onRecalculateAllColor(
-    RecalculateAllColor event,
-    Emitter<LotExpirationColorsState> emit,
-  ) async {
-    try {
-      // This would typically be called from LotMasterBloc when system constants change
-      // Recalculate colors for all lots based on new system constants
-      emit(state.copyWith(status: LotExpirationColorsStatus.recalculating));
-
-      // You can add logic here to recalculate colors if needed
-      // For now, just reload to ensure fresh data
-      add(LoadLotExpirationColors(authBloc.state.companyId!));
-    } catch (e) {
-      emit(
-        state.copyWith(
-          status: LotExpirationColorsStatus.failure,
-          message: 'Failed to recalculate colors: $e',
-        ),
-      );
-    }
   }
 
   // Public method for other blocs to use
