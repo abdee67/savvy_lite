@@ -75,11 +75,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       developer.log('Username entered: ${event.username}');
       developer.log('Hashed password: $hashedPassword');
 
-      // Check user credentials
-      final users = await db.query(
-        'user_table',
-        where: 'user_name = ? AND password = ? AND status = "active"',
-        whereArgs: [event.username, hashedPassword],
+      // Check user credentials with company info
+      final users = await db.rawQuery(
+        '''
+        SELECT u.*, c.company_name, c.logo_company
+        FROM user_table u
+        LEFT JOIN company_table c ON u.company = c.id
+        WHERE u.user_name = ? AND u.password = ? AND u.status = "active"
+      ''',
+        [event.username, hashedPassword],
       );
 
       developer.log('Found ${users.length} users matching credentials');
@@ -101,15 +105,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final user = UserModel.fromMap(userData);
 
       // Get user roles with their privileges through proper joins
-      final userWithRoles = await _getUserWithRolesAndPrivileges(
-        db,
-        user.id,
-        user.company!,
-        user.branch!,
-        user.userName!,
-
-        user.password!,
-      );
+      // Get user roles with their privileges through proper joins
+      final userWithRoles = await _getUserWithRolesAndPrivileges(db, user);
 
       // Create mock JWT token
       final token = _createToken(
@@ -131,6 +128,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           userId: user,
           username: user.userName,
           companyId: user.company,
+          companyLogo: user.companyRef?.logoCompany,
           branchId: user.branch,
           roles: userWithRoles.roles,
           privileges: userWithRoles.allPrivileges,
@@ -177,11 +175,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<UserWithRole> _getUserWithRolesAndPrivileges(
     Database db,
-    int userId,
-    int companyId,
-    int branchId,
-    String username,
-    String password,
+    UserModel user,
   ) async {
     // Get user roles and privileges
     final rolesResult = await db.rawQuery(
@@ -190,23 +184,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         INNER JOIN user_role ur ON ur.role_table_id = r.id
           WHERE ur.user_id = ? AND r.company = ?
         ''',
-      [userId, companyId],
+      [user.id, user.company!],
     );
 
     final roles = await Future.wait(
       rolesResult.map((roleData) => Role.withPrivileges(roleData, db)),
     );
 
-    return UserWithRole(
-      user: UserModel(
-        id: userId,
-        userName: username,
-        company: companyId,
-        branch: branchId,
-        password: password,
-      ), // Minimal user object
-      roles: roles,
-    );
+    return UserWithRole(user: user, roles: roles);
   }
 
   Future<List<Company>> _getCompaniesForUsers(
@@ -302,6 +287,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             userId: user,
             username: user.userName,
             companyId: user.company,
+            companyLogo: user.companyRef?.logoCompany,
             roles: roles,
             privileges: privileges,
             authenticatedAt: DateTime.fromMillisecondsSinceEpoch(
@@ -311,13 +297,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           ),
         );
       } catch (e) {
+        developer.log('Auth Check Failed: $e');
         await _clearStorage();
-        emit(
-          AuthState(
-            status: AuthStatus.failure,
-            message: 'Failed to check authentication status: $e',
-          ),
-        );
+        emit(AuthState.unauthenticated(message: 'Session expired or invalid'));
       }
     } else {
       //No token stored:clear state
@@ -379,6 +361,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           userId: oldState.userId,
           username: oldState.username,
           companyId: oldState.companyId,
+          companyLogo: oldState.companyLogo,
           branchId: oldState.branchId,
           roles: oldState.roles,
           privileges: oldState.privileges,
@@ -437,8 +420,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     List<Privilege> privileges,
     List<Role> roles,
   ) {
+    final userMap = user.user.toMap();
+    // developer.log('Creating Token with User Map: $userMap');
+
     final tokenData = {
-      'user': user.user.toMap(),
+      'user': userMap,
       'privileges': privileges.map((p) => p.toMap()).toList(),
       'roles': roles.map((r) => r.toMap()).toList(),
       'auth_time': DateTime.now().millisecondsSinceEpoch,
