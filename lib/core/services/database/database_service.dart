@@ -106,6 +106,7 @@ class LocalDatabaseService {
         date_updated TEXT,
         margin_rate REAL,
         margin_type TEXT,
+        reorder_point INTEGER,
         inventory_planner INTEGER,
         FOREIGN KEY (category_code) REFERENCES udc_details (detail_code) ON DELETE NO ACTION ON UPDATE NO ACTION
       )
@@ -2258,6 +2259,8 @@ ON other_income_table (user_id);
         'margin_type': 'Percentage',
         'inventory_planner': 1,
         'category_code': 1,
+        'reorder_point': 20,
+        'logo_company': 'assets/images/onboarding_background.png',
         'date_created': DateTime.now().millisecondsSinceEpoch,
         'date_updated': DateTime.now().millisecondsSinceEpoch,
       },
