@@ -148,6 +148,13 @@ class AppRoutes {
   static const String barcodeFunction = '$stock/barcode-function';
   static const String exportFunction = '$stock/export-function';
 
+  // Company Sub-Routes
+  static const String companyManagement = '$company/company-management';
+
+  static const String companyCreation = '$companyManagement/company-creation';
+  static const String companyEdit = '$companyManagement/edit-company';
+  static const String companyDelete = '$companyManagement/delete-company';
+
   // Branch Sub-Routes
   static const String branchManagement = '$branch/branch-management';
 

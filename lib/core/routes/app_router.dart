@@ -25,6 +25,10 @@ import 'package:savvy_stock/features/auth/screens/login_screen.dart';
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 import 'package:savvy_stock/features/branch_list/screens/branch_list_dashboard.dart';
 import 'package:savvy_stock/features/branch_list/widgets/branch_list_create_and_edit.dart.dart';
+import 'package:savvy_stock/features/company/blocs/company_bloc.dart';
+import 'package:savvy_stock/features/company/models/company_model.dart';
+import 'package:savvy_stock/features/company/screens/company_dashboard.dart';
+import 'package:savvy_stock/features/company/widgets/company_create_and_edit.dart.dart';
 import 'package:savvy_stock/features/dashboards/screens/home_page.dart';
 import 'package:savvy_stock/features/onboarding/screens/welcome_screen.dart';
 import 'package:savvy_stock/features/onboarding/widgets/getStarted.dart';
@@ -786,6 +790,43 @@ class AppRouter {
             requiredPrivilege: AppRoutes.itemWorkbenchBatchUpload,
             parentPrivilege: AppRoutes.itemWorkbench,
             child: BatchUploadSection(),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.companyManagement,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.companyManagement,
+          parentPrivilege: AppRoutes.companyDashboard,
+          child: CompanyDashboard(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.companyCreation,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.companyCreation,
+          parentPrivilege: AppRoutes.companyManagement,
+          child: BlocProvider.value(
+            value: getIt<CompanyBloc>(),
+            child: CompanyFormPage(authBloc: authBloc),
+          ),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.companyEdit,
+        builder: (context, state) {
+          final extra = state.extra;
+          final company = extra != null ? extra as Company? : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.companyEdit,
+            parentPrivilege: AppRoutes.companyManagement,
+            child: BlocProvider.value(
+              value: getIt<CompanyBloc>(),
+              child: CompanyFormPage(company: company, authBloc: authBloc),
+            ),
           );
         },
         redirect: _protectedRouteRedirect,

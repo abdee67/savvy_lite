@@ -126,6 +126,11 @@ class PrivilegeHierarchy {
     AppRoutes.barcodeFunction: AppRoutes.stockDashboard,
     AppRoutes.exportFunction: AppRoutes.stockDashboard,
 
+    // ==================== COMPANY MODULE ====================
+    AppRoutes.companyManagement: AppRoutes.companyDashboard,
+    AppRoutes.companyCreation: AppRoutes.companyManagement,
+    AppRoutes.companyEdit: AppRoutes.companyManagement,
+    AppRoutes.companyDelete: AppRoutes.companyManagement,
     // ==================== BRANCH MODULE ====================
     AppRoutes.branchManagement: AppRoutes.branchListDashboard,
     AppRoutes.branchCreation: AppRoutes.branchManagement,
