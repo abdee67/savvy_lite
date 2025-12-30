@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -200,7 +202,32 @@ class _HomePageState extends State<HomePage> {
                   color: Colors.white,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.person, color: Colors.black),
+                clipBehavior: Clip.antiAlias,
+                child:
+                    authState.companyLogo != null &&
+                        authState.companyLogo!.isNotEmpty
+                    ? (authState.companyLogo!.startsWith('assets/')
+                          ? Image.asset(
+                              authState.companyLogo!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Icon(
+                                  Icons.business,
+                                  color: Colors.grey,
+                                );
+                              },
+                            )
+                          : Image.file(
+                              File(authState.companyLogo!),
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Icon(
+                                  Icons.business,
+                                  color: Colors.grey,
+                                );
+                              },
+                            ))
+                    : const Icon(Icons.business, color: Colors.grey),
               ),
               const SizedBox(width: 16),
               Expanded(
