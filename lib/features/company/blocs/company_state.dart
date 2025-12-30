@@ -1,8 +1,7 @@
 import 'package:equatable/equatable.dart';
-import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
-import 'package:savvy_stock/features/admin/role/models/role_model.dart';
+import 'package:savvy_stock/features/company/models/company_model.dart';
 
-enum EmployeeStatus {
+enum CompanyStatus {
   initial,
   loading,
   searching,
@@ -14,139 +13,104 @@ enum EmployeeStatus {
   exporting,
 }
 
-enum EmployeeDetailStatus { hidden, showing, editing }
+enum CompanyDetailStatus { hidden, showing, editing }
 
-class EmployeeState extends Equatable {
-  final EmployeeStatus status;
+class CompanyState extends Equatable {
+  final CompanyStatus status;
   final String? message;
-  final int? employeeId;
   final int? companyId;
-  final List<Employee> employees;
-  final List<Employee> filteredEmployees;
+  final List<Company> companys;
+  final List<Company> filteredCompanys;
   final String searchQuery;
-  final List<Employee> selectedEmployees;
-  final List<Role> selectedRolesForAssignment;
-  final bool hasRoleChanges;
+  final List<Company> selectedCompanys;
+  final Company? companyForm;
 
-  final EmployeeDetailStatus detailStatus;
-  final Employee? employeeDetail;
-  final Employee? employeeForm;
+  final CompanyDetailStatus detailStatus;
+  final Company? companyDetail;
 
-  final List<Employee> recentlyDeleted;
+  final List<Company> recentlyDeleted;
   final List<int> recentlyDeletedIndexes;
 
-  final int currentPage;
   final bool isExporting;
-  final List<Employee> exportedEmployees; //export multiple employees
-  final Employee? exportedEmployee; //export single employee
+  final List<Company> exportedCompanys; //export multiple Companys
+  final Company? exportedCompany; //export single Company
 
   // Role management state
-  final bool isRoleManagementMode;
-  final String roleSearchQuery;
-  final int? employeeInRoleManagement;
 
-  const EmployeeState({
-    this.status = EmployeeStatus.initial,
+  const CompanyState({
+    this.status = CompanyStatus.initial,
     this.message,
-    this.employeeId,
     this.companyId,
-    this.employees = const [],
-    this.filteredEmployees = const [],
+    this.companys = const [],
+    this.filteredCompanys = const [],
     this.searchQuery = '',
-    this.selectedEmployees = const [],
-    this.detailStatus = EmployeeDetailStatus.hidden,
-    this.employeeDetail,
-    this.employeeForm,
+    this.selectedCompanys = const [],
+    this.companyForm,
+    this.detailStatus = CompanyDetailStatus.hidden,
+    this.companyDetail,
     this.recentlyDeleted = const [],
     this.recentlyDeletedIndexes = const [],
-    this.currentPage = 0,
     this.isExporting = false,
-    this.exportedEmployees = const [],
-    this.exportedEmployee,
-    this.isRoleManagementMode = false,
-    this.roleSearchQuery = '',
-    this.employeeInRoleManagement,
-    this.selectedRolesForAssignment = const [],
-    this.hasRoleChanges = false,
+    this.exportedCompanys = const [],
+    this.exportedCompany,
   });
 
   // --- Helper Getters ---
-  bool get isLoading => status == EmployeeStatus.loading;
-  bool get isSuccess => status == EmployeeStatus.success;
-  bool get isFailure => status == EmployeeStatus.failure;
-  bool get isCreating => status == EmployeeStatus.creating;
-  bool get isUpdating => status == EmployeeStatus.updating;
-  bool get isDeleting => status == EmployeeStatus.deleting;
-  bool get isExportingData => status == EmployeeStatus.exporting;
+  bool get isLoading => status == CompanyStatus.loading;
+  bool get isSuccess => status == CompanyStatus.success;
+  bool get isFailure => status == CompanyStatus.failure;
+  bool get isCreating => status == CompanyStatus.creating;
+  bool get isUpdating => status == CompanyStatus.updating;
+  bool get isDeleting => status == CompanyStatus.deleting;
+  bool get isExportingData => status == CompanyStatus.exporting;
 
-  bool get isDetailVisible => detailStatus != EmployeeDetailStatus.hidden;
-  bool get isDetailEditing => detailStatus == EmployeeDetailStatus.editing;
+  bool get isDetailVisible => detailStatus != CompanyDetailStatus.hidden;
+  bool get isDetailEditing => detailStatus == CompanyDetailStatus.editing;
 
-  bool get hasEmployees => employees.isNotEmpty;
-  bool get hasFilteredEmployees => filteredEmployees.isNotEmpty;
-  bool get hasSelection => selectedEmployees.isNotEmpty;
-  bool get canEdit => selectedEmployees.length == 1;
-  bool get canDelete => selectedEmployees.isNotEmpty;
-  bool get canExport => filteredEmployees.isNotEmpty;
+  bool get hasCompanys => companys.isNotEmpty;
+  bool get hasFilteredCompanys => filteredCompanys.isNotEmpty;
+  bool get hasSelection => selectedCompanys.isNotEmpty;
+  bool get canEdit => selectedCompanys.length == 1;
+  bool get canDelete => selectedCompanys.isNotEmpty;
+  bool get canExport => filteredCompanys.isNotEmpty;
 
   bool get hasRecentDeletions => recentlyDeleted.isNotEmpty;
 
-  bool get isRoleManagementModeActive =>
-      isRoleManagementMode && employeeInRoleManagement != null;
-
-  Employee get currentEmployeeForm => employeeForm!;
-
   // --- CopyWith for immutability ---
-  EmployeeState copyWith({
-    EmployeeStatus? status,
+  CompanyState copyWith({
+    CompanyStatus? status,
     String? message,
-    int? employeeId,
     int? companyId,
-    List<Employee>? employees,
-    List<Employee>? filteredEmployees,
+    List<Company>? companys,
+    List<Company>? filteredCompanys,
     String? searchQuery,
-    List<Employee>? selectedEmployees,
-    EmployeeDetailStatus? detailStatus,
-    Employee? employeeDetail,
-    Employee? employeeForm,
-    List<Employee>? recentlyDeleted,
+    List<Company>? selectedCompanys,
+    Company? companyForm,
+    CompanyDetailStatus? detailStatus,
+    Company? companyDetail,
+    List<Company>? recentlyDeleted,
     List<int>? recentlyDeletedIndexes,
-    int? currentPage,
     bool? isExporting,
-    List<Employee>? exportedEmployees,
-    Employee? exportedEmployee,
-    bool? isRoleManagementMode,
-    String? roleSearchQuery,
-    int? employeeInRoleManagement,
-    List<Role>? selectedRolesForAssignment,
-    bool? hasRoleChanges,
+    List<Company>? exportedCompanys,
+    Company? exportedCompany,
   }) {
-    return EmployeeState(
+    return CompanyState(
       status: status ?? this.status,
       message: message ?? this.message,
-      employeeId: employeeId ?? this.employeeId,
       companyId: companyId ?? this.companyId,
-      employees: employees ?? this.employees,
-      filteredEmployees: filteredEmployees ?? this.filteredEmployees,
+      companys: companys ?? this.companys,
+      filteredCompanys: filteredCompanys ?? this.filteredCompanys,
       searchQuery: searchQuery ?? this.searchQuery,
-      selectedEmployees: selectedEmployees ?? this.selectedEmployees,
+      selectedCompanys: selectedCompanys ?? this.selectedCompanys,
+      companyForm: companyForm ?? this.companyForm,
       detailStatus: detailStatus ?? this.detailStatus,
-      employeeDetail: employeeDetail ?? this.employeeDetail,
-      employeeForm: employeeForm ?? this.employeeForm,
+      companyDetail: companyDetail ?? this.companyDetail,
       recentlyDeleted: recentlyDeleted ?? this.recentlyDeleted,
       recentlyDeletedIndexes:
           recentlyDeletedIndexes ?? this.recentlyDeletedIndexes,
-      currentPage: currentPage ?? this.currentPage,
       isExporting: isExporting ?? this.isExporting,
-      exportedEmployees: exportedEmployees ?? this.exportedEmployees,
-      exportedEmployee: exportedEmployee ?? this.exportedEmployee,
-      isRoleManagementMode: isRoleManagementMode ?? this.isRoleManagementMode,
-      roleSearchQuery: roleSearchQuery ?? this.roleSearchQuery,
-      employeeInRoleManagement:
-          employeeInRoleManagement ?? this.employeeInRoleManagement,
-      selectedRolesForAssignment:
-          selectedRolesForAssignment ?? this.selectedRolesForAssignment,
-      hasRoleChanges: hasRoleChanges ?? this.hasRoleChanges,
+      exportedCompanys: exportedCompanys ?? this.exportedCompanys,
+      exportedCompany: exportedCompany ?? this.exportedCompany,
     );
   }
 
@@ -154,25 +118,18 @@ class EmployeeState extends Equatable {
   List<Object?> get props => [
     status,
     message,
-    employeeId,
     companyId,
-    employees,
-    filteredEmployees,
+    companys,
+    filteredCompanys,
     searchQuery,
-    selectedEmployees,
+    selectedCompanys,
+    companyForm,
     detailStatus,
-    employeeDetail,
-    employeeForm,
+    companyDetail,
     recentlyDeleted,
     recentlyDeletedIndexes,
-    currentPage,
     isExporting,
-    exportedEmployees,
-    exportedEmployee,
-    isRoleManagementMode,
-    roleSearchQuery,
-    employeeInRoleManagement,
-    selectedRolesForAssignment,
-    hasRoleChanges,
+    exportedCompanys,
+    exportedCompany,
   ];
 }

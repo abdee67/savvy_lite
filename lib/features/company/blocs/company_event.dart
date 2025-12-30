@@ -1,101 +1,111 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
-import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
-import 'package:savvy_stock/features/admin/role/models/role_model.dart';
+import 'package:savvy_stock/features/company/models/company_model.dart';
 
 @immutable
-abstract class EmployeeEvent extends Equatable {
-  const EmployeeEvent();
+abstract class CompanyEvent extends Equatable {
+  const CompanyEvent();
 
   @override
   List<Object> get props => [];
 }
 
-class LoadEmployees extends EmployeeEvent {
+class LoadCompanys extends CompanyEvent {
   final int companyId;
-  const LoadEmployees(this.companyId);
+  const LoadCompanys(this.companyId);
 
   @override
   List<Object> get props => [companyId];
 }
 
-class CreateEmployee extends EmployeeEvent {
-  final Employee employee;
-  const CreateEmployee(this.employee);
+class CreateCompany extends CompanyEvent {
+  final Company company;
+  const CreateCompany(this.company);
 
   @override
-  List<Object> get props => [employee];
+  List<Object> get props => [Company];
 }
 
-class UpdateEmployee extends EmployeeEvent {
-  final Employee employee;
-  const UpdateEmployee(this.employee);
+class UpdateCompany extends CompanyEvent {
+  final Company company;
+  const UpdateCompany(this.company);
 
   @override
-  List<Object> get props => [employee];
+  List<Object> get props => [Company];
 }
 
-class DeleteEmployee extends EmployeeEvent {
-  final int employeeId;
-  final Employee deletedEmployee;
+class DeleteCompany extends CompanyEvent {
+  final int companyId;
+  final Company deletedCompany;
   final int deletedIndex;
 
-  const DeleteEmployee({
-    required this.employeeId,
-    required this.deletedEmployee,
+  const DeleteCompany({
+    required this.companyId,
+    required this.deletedCompany,
     required this.deletedIndex,
   });
 
   @override
-  List<Object> get props => [employeeId, deletedEmployee, deletedIndex];
+  List<Object> get props => [companyId, deletedCompany, deletedIndex];
 }
 
-class SearchEmployees extends EmployeeEvent {
+class SearchCompanys extends CompanyEvent {
   final String query;
-  const SearchEmployees(this.query);
+  const SearchCompanys(this.query);
 
   @override
   List<Object> get props => [query];
 }
 
-class SelectEmployee extends EmployeeEvent {
-  final Employee employee;
+class SelectCompany extends CompanyEvent {
+  final Company company;
   final bool isSelected;
-  const SelectEmployee(this.employee, this.isSelected);
+  const SelectCompany(this.company, this.isSelected);
 
   @override
-  List<Object> get props => [employee, isSelected];
+  List<Object> get props => [Company, isSelected];
 }
 
-class SelectAllEmployees extends EmployeeEvent {
-  final List<Employee> employees;
-  const SelectAllEmployees(this.employees);
+class SelectAllCompanys extends CompanyEvent {
+  final List<Company> companys;
+  const SelectAllCompanys(this.companys);
 
   @override
-  List<Object> get props => [employees];
+  List<Object> get props => [companys];
 }
 
-class DeleteSelectedEmployees extends EmployeeEvent {
-  final List<int> selectedEmployees;
-  final List<Employee> deletedEmployees;
+class ClearSelection extends CompanyEvent {
+  const ClearSelection();
+
+  @override
+  List<Object> get props => [];
+}
+
+class SetCompanyForm extends CompanyEvent {
+  final Company company;
+  const SetCompanyForm(this.company);
+
+  @override
+  List<Object> get props => [company];
+}
+
+class DeleteSelectedCompanys extends CompanyEvent {
+  final List<int> selectedCompanys;
+  final List<Company> deletedCompanys;
   final List<int> deletedIndexes;
 
-  const DeleteSelectedEmployees({
-    required this.selectedEmployees,
-    required this.deletedEmployees,
+  const DeleteSelectedCompanys({
+    required this.selectedCompanys,
+    required this.deletedCompanys,
     required this.deletedIndexes,
   });
 
   @override
-  List<Object> get props => [
-    selectedEmployees,
-    deletedEmployees,
-    deletedIndexes,
-  ];
+  List<Object> get props => [selectedCompanys, deletedCompanys, deletedIndexes];
 }
 
-class UndoDelete extends EmployeeEvent {
-  final List<Employee> deletedItems;
+class UndoDelete extends CompanyEvent {
+  final List<Company> deletedItems;
   final List<int> deletedIndexes;
 
   const UndoDelete({required this.deletedItems, required this.deletedIndexes});
@@ -104,101 +114,30 @@ class UndoDelete extends EmployeeEvent {
   List<Object> get props => [deletedItems, deletedIndexes];
 }
 
-class ShowEmployeeDetail extends EmployeeEvent {
-  final Employee employee;
-  const ShowEmployeeDetail(this.employee);
+class ShowCompanyDetail extends CompanyEvent {
+  final Company company;
+  const ShowCompanyDetail(this.company);
 
   @override
-  List<Object> get props => [employee];
+  List<Object> get props => [company];
 }
 
-class HideEmployeeDetail extends EmployeeEvent {
-  const HideEmployeeDetail();
+class HideCompanyDetail extends CompanyEvent {
+  const HideCompanyDetail();
 }
 
-class ExportEmployee extends EmployeeEvent {
-  final List<Employee> employeesToExport;
-  const ExportEmployee(this.employeesToExport);
+class ExportCompany extends CompanyEvent {
+  final List<Company> companysToExport;
+  const ExportCompany(this.companysToExport);
 
   @override
-  List<Object> get props => [employeesToExport];
+  List<Object> get props => [companysToExport];
 }
 
-class ExportSingleEmployee extends EmployeeEvent {
-  final Employee employeeToExport;
-  const ExportSingleEmployee(this.employeeToExport);
+class ExportSingleCompany extends CompanyEvent {
+  final Company companyToExport;
+  const ExportSingleCompany(this.companyToExport);
 
   @override
-  List<Object> get props => [employeeToExport];
-}
-
-class ClearSelection extends EmployeeEvent {
-  const ClearSelection();
-}
-
-class SetEmployeeForm extends EmployeeEvent {
-  final Employee employee;
-  const SetEmployeeForm(this.employee);
-
-  @override
-  List<Object> get props => [employee];
-}
-
-class ResetEmployeeForm extends EmployeeEvent {
-  const ResetEmployeeForm();
-}
-
-class ChangeEmployeePage extends EmployeeEvent {
-  final int pageIndex;
-  const ChangeEmployeePage(this.pageIndex);
-
-  @override
-  List<Object> get props => [pageIndex];
-}
-
-class UpdateEmployeeFormField extends EmployeeEvent {
-  final String field;
-  final dynamic value;
-  const UpdateEmployeeFormField(this.field, this.value);
-
-  @override
-  List<Object> get props => [field, value];
-}
-
-class ToggleRoleManagement extends EmployeeEvent {
-  final int employeeId;
-  const ToggleRoleManagement(this.employeeId);
-
-  @override
-  List<Object> get props => [employeeId];
-}
-// Add to your existing EmployeeEvent classes
-
-class SelectRoleForAssignment extends EmployeeEvent {
-  final Role role;
-  const SelectRoleForAssignment(this.role);
-
-  @override
-  List<Object> get props => [role];
-}
-
-class DeselectRoleForAssignment extends EmployeeEvent {
-  final Role role;
-  const DeselectRoleForAssignment(this.role);
-
-  @override
-  List<Object> get props => [role];
-}
-
-class ClearRoleSelection extends EmployeeEvent {
-  const ClearRoleSelection();
-}
-
-class SaveRoleChanges extends EmployeeEvent {
-  final int employeeId;
-  final List<int> roleIds;
-  const SaveRoleChanges(this.employeeId, this.roleIds);
-
-  @override
-  List<Object> get props => [employeeId, roleIds];
+  List<Object> get props => [companyToExport];
 }
