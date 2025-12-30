@@ -483,6 +483,32 @@ class PrivilegeSeeder {
         'export_function',
       ),
 
+      // ==================== COMPANY MODULE ====================
+      _createPrivilege(
+        'Company Management',
+        'link',
+        AppRoutes.companyManagement,
+        'company_management',
+      ),
+      _createPrivilege(
+        'Add Company',
+        'button',
+        AppRoutes.companyCreation,
+        'add_company',
+      ),
+      _createPrivilege(
+        'Edit Company',
+        'button',
+        AppRoutes.companyEdit,
+        'edit_company',
+      ),
+      _createPrivilege(
+        'Delete Company',
+        'button',
+        AppRoutes.companyDelete,
+        'delete_company',
+      ),
+
       // ==================== BRANCH MODULE ====================
       _createPrivilege(
         'Branch Management',
