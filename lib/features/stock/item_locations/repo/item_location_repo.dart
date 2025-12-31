@@ -87,6 +87,23 @@ class ItemLocationsRepository extends BaseRepository {
     return items.isNotEmpty ? ItemLocation.fromMap(items.first) : null;
   }
 
+  // Get item location by Item, Branch, Location
+  Future<ItemLocation?> getItemLocationByItemBranchLocation({
+    required int branchId,
+    required int itemNumber,
+    required int locationId,
+    required int companyId,
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
+    final items = await db.query(
+      'item_location',
+      where: 'company = ? AND branch = ? AND item_number = ? AND location = ?',
+      whereArgs: [companyId, branchId, itemNumber, locationId],
+    );
+    return items.isNotEmpty ? ItemLocation.fromMap(items.first) : null;
+  }
+
   // Create new item location
   Future<int> createItemLocation(ItemLocation item, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
@@ -176,6 +193,32 @@ class ItemLocationsRepository extends BaseRepository {
       where: 'company = ? AND location = ? ',
       whereArgs: [companyId, locationId],
     );
+    return items.map((p) => ItemLocation.fromMap(p)).toList();
+  }
+
+  // Get all item locations by item number (across all branches/locations)
+  Future<List<ItemLocation>> getItemLocationsByItemNumber({
+    required int companyId,
+    required int itemId,
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
+    final items = await db.rawQuery(
+      '''
+      SELECT il.*,
+             lm.location_description,
+             it.item_description,
+             it.unit_of_measure,
+             b.description as branch_name
+      FROM item_location il
+      LEFT JOIN location_master lm ON il.location = lm.id
+      LEFT JOIN items_table it ON il.item_number = it.id
+      LEFT JOIN branch_table b ON il.branch = b.id
+      WHERE il.company = ? AND il.item_number = ?
+    ''',
+      [companyId, itemId],
+    );
+
     return items.map((p) => ItemLocation.fromMap(p)).toList();
   }
 

@@ -300,6 +300,22 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
         return;
       }
 
+      // Check for Over-Deduction (Decrease)
+      if (!item.adjustToIncrease &&
+          _selectedTransactionType?.detailCode == 'A') {
+        if (item.quantityTransaction > item.beforeStoreQuantityAvailable) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Insufficient quantity for item ${item.itemNumber} (Available: ${item.beforeStoreQuantityAvailable})',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+      }
+
       if (item.quantityTransaction <= 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -365,6 +381,7 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
       transactionNumber: _transactionNumber,
       transactionType: _selectedTransactionType?.id,
       branch: _selectedFromBranch,
+      branchTo: _selectedToBranch,
       remark: _remark,
       company: widget.authBloc.state.companyId,
       dateCreated: DateTime.now(),
@@ -762,22 +779,32 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
               item.itemNumber = v;
               item.itemLocation = null; // Reset location when item changes
               item.lotNumber = null; // Reset lot when item changes
+
+              // Set limit from Item Branch if no other management is active
+              if (v != null) {
+                final match = branchItems.where((b) => b.itemNumber == v);
+                if (match.isNotEmpty) {
+                  item.beforeStoreQuantityAvailable =
+                      match.first.quantityAvailable ?? 0.0;
+                }
+              }
             });
 
-            // Load locations for the selected item
-            if (v != null && _selectedFromBranch != null) {
+            // Load locations for the selected item (across all branches)
+            if (v != null) {
               context.read<StockItemLocationBloc>().add(
-                LoadItemLocationsByBranchAndItem(
-                  branchId: _selectedFromBranch!,
+                LoadItemLocationsByItemNumber(
                   itemId: v,
                   companyId: widget.authBloc.state.companyId!,
                 ),
               );
 
               // Load lots for the selected item
-              context.read<LotMasterBloc>().add(
-                FilterLotMasters(itemId: v, branchId: _selectedFromBranch!),
-              );
+              if (_selectedFromBranch != null) {
+                context.read<LotMasterBloc>().add(
+                  FilterLotMasters(itemId: v, branchId: _selectedFromBranch!),
+                );
+              }
               //load uom for item default from iteminbranch and its conversion from item uom conversion
               context.read<ItemUomConversionBloc>().add(
                 LoadUomsForItem(
@@ -797,7 +824,11 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
     return BlocBuilder<StockItemLocationBloc, ItemLocationsState>(
       builder: (context, state) {
         final locations = state.items
-            .where((loc) => loc.itemNumber == item.itemNumber)
+            .where(
+              (loc) =>
+                  loc.itemNumber == item.itemNumber &&
+                  loc.branch == _selectedFromBranch,
+            )
             .toList();
 
         // Find selected location object
@@ -854,7 +885,11 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
           ],
           onItemSelected: (selectedLoc) {
             if (selectedLoc != null) {
-              setState(() => item.itemLocation = selectedLoc.id);
+              setState(() {
+                item.itemLocation = selectedLoc.id;
+                item.beforeStoreQuantityAvailable =
+                    selectedLoc.quantityOnHand ?? 0.0;
+              });
 
               // Load lots for the selected location
               if (item.itemNumber != null && _selectedFromBranch != null) {
@@ -991,6 +1026,8 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
             if (selectedLot != null) {
               setState(() {
                 item.lotNumber = selectedLot.id;
+                item.beforeStoreQuantityAvailable =
+                    selectedLot.quantityAvailable ?? 0.0;
               });
             }
           },
@@ -1000,7 +1037,8 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
   }
 
   Widget _buildToLocationDropdown(ItemTransactionModel item) {
-    return BlocBuilder<StockItemLocationBloc, ItemLocationsState>(
+    return BlocConsumer<StockItemLocationBloc, ItemLocationsState>(
+      listener: (context, state) {},
       builder: (context, state) {
         final toLocations = state.items
             .where(
@@ -1010,9 +1048,10 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
             )
             .toList();
 
-        // Find selected to location object
+        // Find selected to location object (ItemLocation)
+        // itemLocationsTo is storing the LocationMaster ID (loc.location)
         final selectedToLocation = toLocations.firstWhere(
-          (loc) => loc.id == item.itemLocationsTo,
+          (loc) => loc.location == item.itemLocationsTo,
           orElse: () =>
               toLocations.isNotEmpty ? toLocations.first : ItemLocation(),
         );
@@ -1025,7 +1064,7 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
           selectedValue: selectedToLocation,
           showSearch: true,
           searchHint: 'Search to locations...',
-          leadingIcon: Icon(Icons.arrow_forward, size: 16),
+          leadingIcon: const Icon(Iconsax.arrow_right_3, size: 16),
           columns: [
             TableColumnConfig(
               header: 'To Location',
@@ -1036,12 +1075,15 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
                   Text(
                     loc.locationDescription?.locationDescription ??
                         'No Description',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                  SizedBox(height: 2),
+                  const SizedBox(height: 2),
                   Text(
-                    'Branch: ${loc.branch}',
-                    style: TextStyle(fontSize: 8, color: Colors.grey),
+                    'Branch: ${loc.branch}', // Or branch name if available
+                    style: const TextStyle(fontSize: 8, color: Colors.grey),
                   ),
                 ],
               ),
@@ -1065,7 +1107,7 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
           ],
           onItemSelected: (selectedLoc) {
             if (selectedLoc != null) {
-              setState(() => item.itemLocationsTo = selectedLoc.id);
+              setState(() => item.itemLocationsTo = selectedLoc.location);
             }
           },
         );

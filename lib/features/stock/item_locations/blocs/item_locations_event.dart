@@ -47,6 +47,18 @@ class LoadItemLocationsForBranch extends ItemLocationsEvent {
   List<Object> get props => [companyId, branchId];
 }
 
+class LoadItemLocationsByItemNumber extends ItemLocationsEvent {
+  final int companyId;
+  final int itemId;
+  const LoadItemLocationsByItemNumber({
+    required this.companyId,
+    required this.itemId,
+  });
+
+  @override
+  List<Object> get props => [companyId, itemId];
+}
+
 class CreateItemLocation extends ItemLocationsEvent {
   final ItemLocation item;
   const CreateItemLocation(this.item);

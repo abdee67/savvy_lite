@@ -145,6 +145,7 @@ void initDependencies() {
       lotMasterRepository: getIt(),
       itemInBranchRepository: getIt(),
       itemLocationsRepository: getIt(),
+      locationMasterRepository: getIt(),
       itemUomConversionBloc: getIt(),
       itemUomConversionRepository: getIt(),
       itemCostRepository: getIt(),

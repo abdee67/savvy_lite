@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:intl/intl.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/utils/ui_helper.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -9,6 +10,7 @@ import 'package:savvy_stock/features/stock/item_transactions/blocs/item_transact
 import 'package:savvy_stock/features/stock/item_transactions/blocs/item_transaction_event.dart';
 import 'package:savvy_stock/features/stock/item_transactions/blocs/item_transaction_state.dart';
 import 'package:savvy_stock/features/stock/item_transactions/model/item_transaction_model.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 
 class ItemTransactionsListPage extends StatefulWidget {
   final AuthBloc authBloc;
@@ -36,6 +38,8 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
   ItemTransactionModel? _selectedTransaction;
   bool _transactionDetail = false;
 
+  int? decmialPlace;
+
   @override
   void initState() {
     super.initState();
@@ -53,6 +57,11 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
     context.read<ItemTransactionsBloc>().add(
       LoadItemTransactions(companyId: widget.authBloc.state.companyId!),
     );
+    decmialPlace = context
+        .read<SystemConstantBloc>()
+        .state
+        .selected
+        ?.decimalPlaces;
   }
 
   void _setupAnimations() {
@@ -644,7 +653,7 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
 
     // For responsiveness:
     final collapsedHeight = isCompact
-        ? screenHeight * 0.22
+        ? screenHeight * 0.19
         : screenHeight * 0.14;
 
     final expandedHeight = isCompact
@@ -767,7 +776,7 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Transaction #${transaction.transactionNumber ?? 'N/A'}',
+                                    'Txn - ${transaction.transactionNumber ?? 'N/A'}',
                                     style: TextStyle(
                                       color: const Color(0xFF373737),
                                       fontSize: isCompact ? 20 : 24,
@@ -821,71 +830,24 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
                                   fontWeight: FontWeight.w300,
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              // Store and date info
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue[50],
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: Colors.blue[200]!,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      transaction.branchDetail?.description ??
-                                          'Store ${transaction.branch}',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.blue[800],
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.green[50],
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: Colors.green[200]!,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      _formatDate(transaction.dateCreated),
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.green[800],
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
+
                               // Quantity and amount
                               Row(
                                 children: [
                                   Text(
-                                    'Qty: ${transaction.quantityTransaction}',
+                                    'Qty: ${transaction.quantityTransaction} ,',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Colors.grey[700],
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
-                                  const SizedBox(width: 16),
+                                  const SizedBox(width: 6),
                                   Text(
-                                    'Amount: \$${transaction.amountCost.toStringAsFixed(2)}',
+                                    NumberFormat.currency(
+                                      decimalDigits: decmialPlace,
+                                      symbol: 'Birr ',
+                                    ).format(transaction.amountCost),
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Colors.grey[700],
@@ -1050,7 +1012,10 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
           ),
           _buildTransactionInfoItem(
             'Amount Cost : ',
-            '\$${transaction.amountCost.toStringAsFixed(2)}',
+            NumberFormat.currency(
+              decimalDigits: decmialPlace,
+              symbol: 'Birr ',
+            ).format(transaction.amountCost),
             Iconsax.dollar_circle,
             isCompact,
           ),
@@ -1196,6 +1161,12 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
     if (isSelected) {
       backgroundColor = const Color.fromARGB(255, 28, 66, 146);
       iconColor = Colors.white;
+    } else if (transaction.adjustToIncrease == true) {
+      backgroundColor = Colors.grey[200]!;
+      iconColor = Colors.green;
+    } else if (transaction.adjustToIncrease == false) {
+      backgroundColor = Colors.grey[200]!;
+      iconColor = Colors.red;
     } else {
       backgroundColor = Colors.grey[200]!;
       iconColor = Colors.grey[600]!;
