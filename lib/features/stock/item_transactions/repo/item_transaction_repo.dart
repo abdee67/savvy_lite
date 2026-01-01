@@ -1039,13 +1039,6 @@ class ItemTransactionRepository {
         if (sourceLot != null && destLocMaster != null) {
           final branchTo = destLocMaster.branch!;
 
-          // A. Find or Create Destination LotMaster
-          // Matches Item, Batch Number (String), Branch, Location
-          // Note: sourceLot.lotNumber is the Serial/Batch String usually?
-          // Or is it ID? Model says `int? lotNumber` (ID) but `LotMaster` has field/string?
-          // Checking LotMaster model: 'lotNumber' (String), 'batchNumber' (String).
-          // We use the same 'lotNumber' string and 'batchNumber' string.
-
           final destLotList = await lotMasterRepository
               .getLotMastersByItemAndBranch(
                 itemNumber: item.itemNumber!,
@@ -1074,20 +1067,10 @@ class ItemTransactionRepository {
               quantityAvailable: 0.0,
               dateReceived: DateTime.now(),
             );
-            // Need create method in repository that returns ID
-            // createLotMaster usually exists?
-            // Checking repo for create method usage..
-            // If not available, might need to add it or use database service directly?
-            // Assuming `createLotMaster` exists or `add`?
-            // The repo usually has create.
+
             final newId = await lotMasterRepository.createLotMaster(newLot);
             destLot = newLot.copyWith(id: newId);
           }
-
-          // B. Find or Create Destination ItemLocation (needed for consistency?)
-          // Usually Logic is: LotMaster holds Qty.
-          // But do we also update ItemLocation sum? Yes usually.
-
           var il = await itemLocationsRepository
               .getItemLocationByItemBranchLocation(
                 branchId: branchTo,

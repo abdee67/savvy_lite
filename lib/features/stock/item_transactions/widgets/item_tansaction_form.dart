@@ -1123,9 +1123,9 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
         children: [
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: _addNewTransactionItem,
+              onPressed: _applyTransactions,
               icon: const Icon(Iconsax.add),
-              label: const Text('Add New Item'),
+              label: const Text('Apply'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF155888),
                 foregroundColor: Colors.white,

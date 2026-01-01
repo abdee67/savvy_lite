@@ -102,10 +102,10 @@ Future<void> _initializeAndRunApp() async {
       developer.log('💾 Using local database only');
     }
     // Debug database tables (optional - remove in production)
-    await LocalDatabaseService().debugTable('items_in_branch');
-    await LocalDatabaseService().debugTable('item_cost');
+    // await LocalDatabaseService().debugTable('items_in_branch');
+    // await LocalDatabaseService().debugTable('item_cost');
     await LocalDatabaseService().debugTable('item_location');
-    await LocalDatabaseService().debugTable('lot_master');
+    await LocalDatabaseService().debugTable('location_master');
     // await LocalDatabaseService().debugTable('sales_order_header');
     //await LocalDatabaseService().debugTable('credit_receipt_table');
     // await LocalDatabaseService().debugTable('sales_order_details');
@@ -113,7 +113,7 @@ Future<void> _initializeAndRunApp() async {
     //await LocalDatabaseService().debugTable('sales_return_details');
     //await LocalDatabaseService().debugTable('invoice_history_header');
     // await LocalDatabaseService().debugTable('invoice_history_detail');
-    await LocalDatabaseService().debugTable('item_transactions');
+    //await LocalDatabaseService().debugTable('item_transactions');
     // await LocalDatabaseService().debugTable('quote_order_header');
     // await LocalDatabaseService().debugTable('quote_order_detail');
     // await LocalDatabaseService().debugTable('supplier_table');
