@@ -12,6 +12,7 @@ import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_
 import 'package:savvy_stock/features/stock/location_entry/widget/branch_dropdown.dart';
 import 'package:savvy_stock/features/stock/location_entry/widget/item_pick_list.dart';
 import 'package:savvy_stock/features/stock/location_entry/widget/location_code.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import '../blocs/location_master_bloc.dart';
 import '../models/location_master_model.dart';
 
@@ -69,7 +70,7 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.isEditMode ? 'Edit Location ' : 'Create Location'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: const Color(0xFF155888),
         actions: [
           // Single Save button in AppBar
           BlocBuilder<LocationMasterBloc, LocationMasterState>(
@@ -79,14 +80,22 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
               // Determine edit mode from state if not explicitly passed
               final isEditMode =
                   widget.isEditMode || state.selected?.id != null;
-              return IconButton(
-                icon: const Icon(Icons.save),
+              return ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(20)),
+                  ),
+                ),
                 onPressed: isSaveEnabled
-                    ? () => _saveAndAddNew(context, state)
+                    ? () => _saveLocation(context, state)
                     : isEditMode
-                    ? () => _saveAndClose(context, state)
+                    ? () => _saveLocation(context, state)
                     : null,
-                tooltip: 'Save',
+                child: Text(
+                  isEditMode ? 'Update' : 'Save',
+                  style: TextStyle(color: Colors.white),
+                ),
               );
             },
           ),
@@ -159,17 +168,10 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
                             const SizedBox(height: 16),
 
                             // Items Pick List Section
-                            ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxWidth: MediaQuery.of(context).size.width * 1,
-                                maxHeight:
-                                    MediaQuery.of(context).size.height * 1,
-                              ),
-                              child: _buildItemsPickListSection(
-                                context,
-                                state,
-                                widget.isEditMode,
-                              ),
+                            _buildItemsPickListSection(
+                              context,
+                              state,
+                              widget.isEditMode,
                             ),
                           ],
                         ),
@@ -286,45 +288,62 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
     LocationMasterState state,
     bool isEditMode,
   ) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SizedBox(
-          width: constraints.maxWidth,
-          height: MediaQuery.of(context).size.height * 0.8,
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Items to Location Attachment',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: ItemsPickList(
-                    sourceItems: state.dualListSource,
-                    targetItems: state.dualListTarget,
-                    authBloc: context.read<AuthBloc>(),
-                    onSelectionChanged: (source, target) {
-                      context.read<LocationMasterBloc>().add(
-                        UpdateDualListModel(source, target),
-                      );
-                    },
-                    isEditMode: isEditMode,
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final sectionHeight = (screenHeight * 0.6).clamp(400.0, 800.0);
+
+    return SizedBox(
+      height: sectionHeight,
+      child: Card(
+        elevation: 0, // Modern flat look, or use 2 for shadow
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.swap_horiz, color: Theme.of(context).primaryColor),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Item Assignment',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
+                ],
+              ),
+              const Divider(height: 24), // Visual separation
+              Expanded(
+                child: ItemsPickList(
+                  sourceItems: state.dualListSource,
+                  targetItems: state.dualListTarget,
+                  authBloc: context.read<AuthBloc>(),
+                  onSelectionChanged: (source, target) {
+                    context.read<LocationMasterBloc>().add(
+                      UpdateDualListModel(source, target),
+                    );
+                  },
+                  isEditMode: isEditMode,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
   bool _shouldShowMarginFields() {
     // This would come from your system settings
-    // For now, return true to show them
+    // final showMargin = context
+    //   .read<SystemConstantBloc>()
+    // .state
+    //.selected
+    //.au;
     return true;
   }
 
@@ -414,9 +433,41 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
   void _saveLocation(BuildContext context, LocationMasterState state) {
     if (_formKey.currentState?.validate() ?? false) {
       if (state.selected != null && state.dualListTarget.isNotEmpty) {
-        context.read<LocationMasterBloc>().add(
-          SaveLocationMaster(state.selected!, state.dualListTarget),
-        );
+        final isEditMode = widget.isEditMode || state.selected?.id != null;
+
+        if (isEditMode) {
+          context.read<LocationMasterBloc>().add(
+            UpdateLocationMaster(state.selected!, state.dualListTarget),
+          );
+        } else {
+          context.read<LocationMasterBloc>().add(
+            SaveLocationMaster(state.selected!, state.dualListTarget),
+          );
+        }
+
+        // Listen for success then navigate back or clear for new
+        final bloc = context.read<LocationMasterBloc>();
+        subscription?.cancel(); // Cancel previous subscription if any
+        subscription = bloc.stream.listen((state) {
+          if (state.status == LocationMasterStatus.success) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (isEditMode) {
+                Navigator.of(context).pop();
+              } else {
+                // Clear form for new entry if it was a create
+                context.read<LocationMasterBloc>().add(ClearCreateList());
+                context.read<LocationMasterBloc>().add(
+                  PrepareCreateLocation(state.companyId!),
+                );
+                // Clear controllers
+                for (var controller in _codeControllers) {
+                  controller.clear();
+                }
+              }
+              subscription?.cancel();
+            });
+          }
+        });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -424,55 +475,6 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
             backgroundColor: Colors.orange,
           ),
         );
-      }
-    }
-  }
-
-  void _saveAndClose(BuildContext context, LocationMasterState state) {
-    if (_formKey.currentState?.validate() ?? false) {
-      if (state.selected != null && state.dualListTarget.isNotEmpty) {
-        context.read<LocationMasterBloc>().add(
-          SaveLocationMaster(state.selected!, state.dualListTarget),
-        );
-
-        // Listen for success then navigate back
-        final bloc = context.read<LocationMasterBloc>();
-        subscription = bloc.stream.listen((state) {
-          if (state.status == LocationMasterStatus.success) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              Navigator.of(context).pop();
-            });
-          }
-        });
-      }
-    }
-  }
-
-  void _saveAndAddNew(BuildContext context, LocationMasterState state) {
-    if (_formKey.currentState?.validate() ?? false) {
-      if (state.selected != null && state.dualListTarget.isNotEmpty) {
-        context.read<LocationMasterBloc>().add(
-          SaveLocationMaster(state.selected!, state.dualListTarget),
-        );
-
-        // Listen for success then clear form for new entry
-        final bloc = context.read<LocationMasterBloc>();
-        subscription = bloc.stream.listen((state) {
-          if (state.status == LocationMasterStatus.success) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              // Clear form for new entry
-              context.read<LocationMasterBloc>().add(ClearCreateList());
-              context.read<LocationMasterBloc>().add(
-                PrepareCreateLocation(state.companyId!),
-              );
-              // Clear controllers
-              for (var controller in _codeControllers) {
-                controller.clear();
-              }
-              subscription!.cancel();
-            });
-          }
-        });
       }
     }
   }

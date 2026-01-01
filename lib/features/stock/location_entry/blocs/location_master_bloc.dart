@@ -217,6 +217,19 @@ class LocationMasterBloc
         return;
       }
 
+      // Check for duplication
+      final isDuplication = await locationMasterRepository
+          .checkDuplicateLocation(event.item, companyId);
+      if (isDuplication) {
+        emit(
+          state.copyWith(
+            status: LocationMasterStatus.duplication,
+            message: 'Location already exists for this branch',
+          ),
+        );
+        return;
+      }
+
       await locationMasterRepository.updateLocationMaster(
         event.item,
         userId!.id,
