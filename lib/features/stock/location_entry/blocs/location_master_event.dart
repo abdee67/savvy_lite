@@ -106,6 +106,17 @@ class LoadLocationsByBranch extends LocationMasterEvent {
   final String locationDescription;
   final int branchId;
   const LoadLocationsByBranch(this.branchId, this.locationDescription);
+
+  @override
+  List<Object?> get props => [branchId, locationDescription];
+}
+
+class FilterLocationsByBranch extends LocationMasterEvent {
+  final int? branchId;
+  const FilterLocationsByBranch(this.branchId);
+
+  @override
+  List<Object?> get props => [branchId];
 }
 
 class CancelCreate extends LocationMasterEvent {}

@@ -42,6 +42,7 @@ class LocationMasterBloc
     on<UpdateDualListModel>(_onUpdateDualList);
     on<LoadItemsForBranch>(_onLoadItemsForBranch);
     on<LoadLocationsByBranch>(_onLoadLocationsByBranch);
+    on<FilterLocationsByBranch>(_onFilterLocationsByBranch);
     on<CancelCreate>(_onCancelCreate);
     on<CancelUpdate>(_onCancelUpdate);
     on<ClearLocations>(_onClearLocations);
@@ -216,6 +217,19 @@ class LocationMasterBloc
         return;
       }
 
+      // Check for duplication
+      final isDuplication = await locationMasterRepository
+          .checkDuplicateLocation(event.item, companyId);
+      if (isDuplication) {
+        emit(
+          state.copyWith(
+            status: LocationMasterStatus.duplication,
+            message: 'Location already exists for this branch',
+          ),
+        );
+        return;
+      }
+
       await locationMasterRepository.updateLocationMaster(
         event.item,
         userId!.id,
@@ -343,6 +357,37 @@ class LocationMasterBloc
         state.copyWith(
           status: LocationMasterStatus.failure,
           message: 'Failed to load locations by branch: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onFilterLocationsByBranch(
+    FilterLocationsByBranch event,
+    Emitter<LocationMasterState> emit,
+  ) async {
+    emit(state.copyWith(status: LocationMasterStatus.loading));
+    try {
+      final locations = await locationMasterRepository.filterLocationsByBranch(
+        event.branchId,
+        authBloc.state.companyId!,
+      );
+
+      emit(
+        state.copyWith(
+          status: LocationMasterStatus.loaded,
+          filteredItems: locations,
+          items: locations,
+          message: locations.isEmpty
+              ? 'No locations found for this branch'
+              : null,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: LocationMasterStatus.failure,
+          message: 'Failed to filter locations by branch: $e',
         ),
       );
     }

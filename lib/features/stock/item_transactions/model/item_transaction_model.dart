@@ -25,11 +25,12 @@ class ItemTransactionModel {
   int? itemNumber;
   final int? lotStatus;
   final int? branch;
+  final int? branchTo;
   final int? supplier;
   final int? customer;
   final int? orderType;
   int? unitOfMeasure;
-  final double beforeStoreQuantityAvailable;
+  double beforeStoreQuantityAvailable;
   final double unitCost;
   final double amountCost;
   final double beforeAmountCost;
@@ -66,6 +67,7 @@ class ItemTransactionModel {
     this.itemNumber,
     this.lotStatus,
     this.branch,
+    this.branchTo,
     this.supplier,
     this.customer,
     this.orderType,
@@ -236,7 +238,7 @@ class ItemTransactionModel {
       transactionTypeDetail: map['transaction_type_description'] != null
           ? UdcDetails(
               id: _toInt(map['transaction_type']) ?? 0,
-              detailCode: map['detail_code']?.toString() ?? '',
+              detailCode: map['transaction_type_code']?.toString() ?? '',
               description1:
                   map['transaction_type_description']?.toString() ?? '',
             )
@@ -244,14 +246,14 @@ class ItemTransactionModel {
       lotStatusDetail: map['lot_status_description'] != null
           ? UdcDetails(
               id: _toInt(map['lot_status']) ?? 0,
-              detailCode: map['detail_code']?.toString() ?? '',
+              detailCode: map['lot_status_code']?.toString() ?? '',
               description1: map['lot_status_description']?.toString() ?? '',
             )
           : null,
       orderTypeDetail: map['order_type_description'] != null
           ? UdcDetails(
               id: _toInt(map['order_type']) ?? 0,
-              detailCode: map['detail_code']?.toString() ?? '',
+              detailCode: map['order_type_code']?.toString() ?? '',
               description1: map['order_type_description']?.toString() ?? '',
             )
           : null,
@@ -265,6 +267,7 @@ class ItemTransactionModel {
           ? ItemLocation(
               id: _toInt(map['item_location']) ?? 0,
               location: _toInt(map['location']) ?? 0,
+              quantityOnHand: _toDouble(map['quantity_on_hand']) ?? 0.0,
               locationDescription: map['location_description'] != null
                   ? LocationMaster(
                       id: _toInt(map['location']) ?? 0,

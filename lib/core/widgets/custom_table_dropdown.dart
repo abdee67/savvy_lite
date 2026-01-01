@@ -55,7 +55,7 @@ class CustomTableDropdown<T> extends StatefulWidget {
     this.borderRadius,
     this.backgroundColor = const Color(0xFFEDEDED),
     this.expandedBackgroundColor = const Color(0xFFFDD105),
-    this.selectedColor = const Color(0xFF145888),
+    this.selectedColor = Colors.transparent,
     this.textColor = Colors.white,
     this.selectedTextColor = Colors.white,
     this.showHeaderRow = true,
@@ -399,13 +399,18 @@ class _CustomTableDropdownState<T> extends State<CustomTableDropdown<T>>
   }
 
   Widget _buildItemCard(T item, bool isSelected) {
+    Color? rowColor = widget.rowBackgroundColor?.call(item, isSelected);
+
+    // If rowColor is provided and not transparent, use it.
+    // Otherwise, if selected, use selectedColor.
+    final backgroundColor = (rowColor != null && rowColor != Colors.transparent)
+        ? rowColor
+        : (isSelected ? widget.selectedColor : Colors.transparent);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
-        color: isSelected
-            ? widget.selectedColor
-            : (widget.rowBackgroundColor?.call(item, isSelected) ??
-                  Colors.transparent),
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Material(

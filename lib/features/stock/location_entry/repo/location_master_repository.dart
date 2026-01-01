@@ -345,16 +345,12 @@ class LocationMasterRepository {
     Transaction? txn,
   }) async {
     final db = txn ?? await databaseService.database;
+    final generatedDescription = _generateLocationDescription(location);
 
     final idCondition = location.id != null ? 'AND id != ?' : '';
     final whereArgs = location.id != null
-        ? [
-            location.locationDescription,
-            location.branch,
-            companyId,
-            location.id,
-          ]
-        : [location.locationDescription, location.branch, companyId];
+        ? [generatedDescription, location.branch, companyId, location.id]
+        : [generatedDescription, location.branch, companyId];
 
     final existing = await db.rawQuery('''
       SELECT COUNT(*) as count FROM location_master 

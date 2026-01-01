@@ -2,7 +2,10 @@
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/item_transactions/model/paginated_item_transaction_result.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_bloc.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
+import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
+import 'package:savvy_stock/features/stock/lot_master/repo/lot_master_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
@@ -14,9 +17,7 @@ import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_re
 import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
 import 'package:savvy_stock/features/stock/item_locations/repo/item_location_repo.dart';
 import 'package:savvy_stock/features/stock/item_transactions/model/item_transaction_model.dart';
-import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
-import 'package:savvy_stock/features/stock/lot_master/repo/lot_master_repo.dart';
-import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_bloc.dart';
+import 'package:savvy_stock/features/stock/location_entry/repo/location_master_repository.dart';
 
 class ItemTransactionRepository {
   final LocalDatabaseService databaseService;
@@ -30,6 +31,7 @@ class ItemTransactionRepository {
   final StockItemInBranchRepository itemInBranchRepository;
   final ItemLocationsRepository itemLocationsRepository;
   final LotMasterRepository lotMasterRepository;
+  final LocationMasterRepository locationMasterRepository;
 
   final ItemUomConversionsRepository itemUomConversionRepository;
   final ItemCostRepository itemCostRepository;
@@ -44,6 +46,7 @@ class ItemTransactionRepository {
     required this.itemInBranchRepository,
     required this.itemLocationsRepository,
     required this.lotMasterRepository,
+    required this.locationMasterRepository,
     required this.itemUomConversionRepository,
     required this.itemCostRepository,
   });
@@ -558,23 +561,86 @@ class ItemTransactionRepository {
       final db = await databaseService.database;
       final batch = db.batch();
 
-      for (final transaction in detailTransactions) {
-        // Enrich detail with master/defaults and resolved references before saving
-        final resolvedIb =
-            (transaction.itemNumber != null && masterTransaction.branch != null)
-            ? await itemInBranchRepository.findByItemAndBranch(
-                transaction.itemNumber!,
-                masterTransaction.branch!,
-                companyId,
-              )
-            : null;
+      // Resolve Transaction Type Code ONCE
+      final udc = await udcDetailsController.getUdcDetailById(
+        masterTransaction.transactionType!,
+      );
+      final transactionTypeCode = udc?.detailCode;
 
-        final resolvedLot = (transaction.lotNumber != null)
-            ? await lotMasterRepository.getLotMasterById(
-                transaction.lotNumber!,
+      if (transactionTypeCode == null) {
+        throw Exception(
+          'Transaction Type Detail Code not found (UDC may be missing)',
+        );
+      }
+      final masterWithCode = masterTransaction.copyWith(
+        transactionTypeDetail: udc,
+      );
+
+      for (final transaction in detailTransactions) {
+        // 1. Resolve Item Branch / Location / Lot relative fields
+        double currentQtyAvailable = 0.0;
+        int? effectiveUom;
+
+        // Resolve references
+        ItemInBranchModel? resolvedIb;
+        LotMaster? resolvedLot;
+
+        if (transaction.itemNumber != null &&
+            masterTransaction.branch != null) {
+          resolvedIb = await itemInBranchRepository.findByItemAndBranch(
+            transaction.itemNumber!,
+            masterTransaction.branch!,
+            companyId,
+          );
+        }
+
+        if (transaction.lotNumber != null) {
+          resolvedLot = await lotMasterRepository.getLotMasterById(
+            transaction.lotNumber!,
+            companyId,
+          );
+        }
+
+        // Determine current available quantity based on management policy
+        if (applyLotMgmt && resolvedLot != null) {
+          currentQtyAvailable = resolvedLot.quantityAvailable ?? 0.0;
+          effectiveUom = resolvedIb?.unitOfMeasure;
+        } else if (applyLocationMgmt && transaction.itemLocation != null) {
+          final il = await itemLocationsRepository.getItemLocationById(
+            transaction.itemLocation!,
+            companyId,
+          );
+          currentQtyAvailable = il?.quantityOnHand ?? 0.0;
+          effectiveUom = resolvedIb?.unitOfMeasure;
+        } else {
+          currentQtyAvailable = resolvedIb?.quantityAvailable ?? 0.0;
+          effectiveUom = resolvedIb?.unitOfMeasure;
+        }
+
+        // 2. Resolve Cost
+        final itemCostObj = await itemCostRepository.findByItem(
+          transaction.itemNumber!,
+          companyId,
+        );
+        final unitCost = itemCostObj?.amountUnitCost ?? 0.0;
+
+        // 3. UoM Conversion Factor (from transaction UoM to Primary/Base)
+        double factorToPrimary = 1.0;
+        if (transaction.unitOfMeasure != null && effectiveUom != null) {
+          factorToPrimary = await itemUomConversionRepository
+              .fromOtherToPrimary(
+                transaction.itemNumber!,
+                transaction.unitOfMeasure!,
                 companyId,
-              )
-            : null;
+              );
+        }
+
+        // Calculate Amounts
+        final beforeStoreQty = currentQtyAvailable;
+        final beforeAmtCost = beforeStoreQty * unitCost;
+
+        final qtyTrans = transaction.quantityTransaction;
+        final amtCost = (qtyTrans * factorToPrimary) * unitCost;
 
         final enriched = transaction.copyWith(
           remark: transaction.remark ?? masterTransaction.remark,
@@ -590,14 +656,20 @@ class ItemTransactionRepository {
           customer: transaction.customer ?? masterTransaction.customer,
           orderType: transaction.orderType ?? masterTransaction.orderType,
           supplier: transaction.supplier ?? masterTransaction.supplier,
+          // Populated Snapshots
+          beforeStoreQuantityAvailable: beforeStoreQty,
+          unitCost: unitCost,
+          amountCost: amtCost,
+          beforeAmountCost: beforeAmtCost,
         );
 
         await _processInventoryTransaction(
           enriched,
-          masterTransaction,
+          masterWithCode,
           applyLocationMgmt,
           applyLotMgmt,
           companyId,
+          explicitCode: transactionTypeCode,
         );
         batch.insert('item_transactions', enriched.toMap());
       }
@@ -654,22 +726,86 @@ class ItemTransactionRepository {
     bool applyLotMgmt,
     int companyId,
   ) async {
-    if (!applyLocationMgmt && !applyLotMgmt) {
-      final ib = await itemInBranchRepository.findByItemAndBranch(
-        item.itemNumber!,
-        masterTransaction.branch!,
-        companyId,
-      );
-      if (ib == null) return false;
+    // Determine conversion factor from Transaction UoM -> Storage UoM
+    Future<double> getFactor(int? storeUom) async {
+      if (item.unitOfMeasure != null && storeUom != null) {
+        return await itemUomConversionRepository.fromOtherToAnother(
+          item.itemNumber!,
+          item.unitOfMeasure!,
+          storeUom,
+          companyId,
+        );
+      }
+      return 1.0;
+    }
 
-      final currentQty = ib.quantityAvailable ?? 0.0;
-      final adjustmentQty = item.quantityTransaction;
+    if (!item.adjustToIncrease) {
+      // Validating Decrease Logic
+      if (!applyLocationMgmt && !applyLotMgmt) {
+        // Branch Check
+        final ib = await itemInBranchRepository.findByItemAndBranch(
+          item.itemNumber!,
+          masterTransaction.branch!,
+          companyId,
+        );
+        if (ib == null) throw Exception('Item not found in branch');
 
-      if (!item.adjustToIncrease && currentQty < adjustmentQty.abs()) {
-        return false; // Insufficient quantity for decrease
+        final factor = await getFactor(ib.unitOfMeasure);
+        final currentQty = ib.quantityAvailable ?? 0.0;
+        final deduction = (item.quantityTransaction * factor).abs();
+
+        if (currentQty < deduction) {
+          throw Exception('Insufficient quantity in store for item');
+        }
+      } else if (applyLocationMgmt && !applyLotMgmt) {
+        // Location Check
+        if (item.itemLocation == null) throw Exception('Location is required');
+        final il = await itemLocationsRepository.getItemLocationById(
+          item.itemLocation!,
+          companyId,
+        );
+        if (il == null) throw Exception('Location record not found');
+
+        // Assuming Location uses Primary UoM or we fetch it from Item/Branch
+        final ib = await itemInBranchRepository.findByItemAndBranch(
+          item.itemNumber!,
+          masterTransaction.branch!,
+          companyId,
+        );
+
+        final factor = await getFactor(ib?.unitOfMeasure);
+        final currentQty = il.quantityOnHand ?? 0.0;
+        final deduction = (item.quantityTransaction * factor).abs();
+
+        if (currentQty < deduction) {
+          throw Exception(
+            'Insufficient quantity in location ${il.locationDescription?.locationDescription}',
+          );
+        }
+      } else if (applyLotMgmt) {
+        // Lot Check (covers Lot + Location if managed)
+        if (item.lotNumber == null) throw Exception('Lot is required');
+        final lm = await lotMasterRepository.getLotMasterById(
+          item.lotNumber!,
+          companyId,
+        );
+        if (lm == null) throw Exception('Lot record not found');
+
+        final ib = await itemInBranchRepository.findByItemAndBranch(
+          item.itemNumber!,
+          masterTransaction.branch!,
+          companyId,
+        );
+        final factor = await getFactor(ib?.unitOfMeasure);
+        final currentQty = lm.quantityAvailable ?? 0.0;
+        final deduction = (item.quantityTransaction * factor).abs();
+
+        if (currentQty < deduction) {
+          throw Exception('Insufficient quantity in Lot ${lm.lotNumber}');
+        }
       }
     }
-    // Add similar validations for location and lot management
+
     return true;
   }
 
@@ -702,11 +838,12 @@ class ItemTransactionRepository {
     ItemTransactionModel masterTransaction,
     bool applyLocationMgmt,
     bool applyLotMgmt,
-    int companyId,
-  ) async {
+    int companyId, {
+    String? explicitCode,
+  }) async {
     // Derive transaction type code from UDC using the id to avoid relying on unset relations
-    String? transactionType;
-    if (masterTransaction.transactionType != null) {
+    String? transactionType = explicitCode;
+    if (transactionType == null && masterTransaction.transactionType != null) {
       final udc = await udcDetailsController.getUdcDetailById(
         masterTransaction.transactionType,
       );
@@ -767,13 +904,239 @@ class ItemTransactionRepository {
     bool applyLotMgmt,
     int companyId,
   ) async {
-    // Similar implementation for transfer transactions
+    // 1. Branch to Branch Transfer (No Location, No Lot)
     if (!applyLocationMgmt && !applyLotMgmt) {
+      // Decrease from Source Branch
       await _adjustItemBranch(item, masterTransaction, 'D', companyId);
-    } else if (applyLocationMgmt && !applyLotMgmt) {
+
+      // Increase in Destination Branch
+      // Use pass branchTo from masterTransaction (set in Form)
+      final branchTo = masterTransaction.branchTo;
+
+      if (branchTo != null) {
+        final ibTo = await _getOrCreateItemInBranch(
+          item.itemNumber!,
+          branchTo,
+          companyId,
+          masterTransaction.createdBy ?? 0,
+          int.tryParse(item.item?.unitOfMeasure ?? ''),
+        );
+
+        double factor = 1.0;
+        if (item.unitOfMeasure != null && ibTo.unitOfMeasure != null) {
+          factor = await itemUomConversionRepository.fromOtherToAnother(
+            item.itemNumber!,
+            item.unitOfMeasure!,
+            ibTo.unitOfMeasure!,
+            companyId,
+          );
+        }
+        final qI = (factor * item.quantityTransaction).abs();
+
+        await itemInBranchRepository.update(
+          ibTo.copyWith(
+            quantityAvailable: (ibTo.quantityAvailable ?? 0.0) + qI,
+          ),
+        );
+      }
+    }
+    // 2. Location to Location Transfer
+    else if (applyLocationMgmt && !applyLotMgmt) {
+      // Decrease from Source Location (and Source Branch)
       await _adjustItemLocation(item, masterTransaction, 'D', companyId);
-    } else if (applyLocationMgmt && applyLotMgmt) {
+
+      // Increase in Destination Location
+      if (item.itemLocationsTo != null) {
+        // itemLocationsTo is LocationMaster ID (Where to go)
+        // Need to find Branch of this location to update ItemInBranch
+        final locMaster = await locationMasterRepository.getLocationMasterById(
+          item.itemLocationsTo!,
+          companyId,
+        );
+
+        if (locMaster != null) {
+          final branchTo = locMaster.branch!;
+
+          // A. Find or Create Destination ItemLocation
+          var il = await itemLocationsRepository
+              .getItemLocationByItemBranchLocation(
+                branchId: branchTo,
+                itemNumber: item.itemNumber!,
+                locationId: locMaster.id!,
+                companyId: companyId,
+              );
+
+          if (il == null) {
+            final newItemLocation = ItemLocation(
+              branch: branchTo,
+              itemNumber: item.itemNumber,
+              location: locMaster.id,
+              quantityOnHand: 0.0,
+              company: companyId,
+              dateCreated: DateTime.now(),
+              dateUpdated: DateTime.now(),
+              createdBy: masterTransaction.createdBy ?? 0,
+              updatedBy: masterTransaction.createdBy ?? 0,
+            );
+            final id = await itemLocationsRepository.createItemLocation(
+              newItemLocation,
+            );
+            il = newItemLocation.copyWith(id: id);
+          }
+
+          // B. Update ItemLocation Quantity
+          // Check UoM conversion against ItemInBranch (Storage UoM)
+          // We need ItemInBranch for Destination
+          final ibTo = await _getOrCreateItemInBranch(
+            item.itemNumber!,
+            branchTo,
+            companyId,
+            masterTransaction.createdBy ?? 0,
+            int.tryParse(item.item?.unitOfMeasure ?? ''),
+          );
+
+          double factor = 1.0;
+          if (item.unitOfMeasure != null && ibTo.unitOfMeasure != null) {
+            factor = await itemUomConversionRepository.fromOtherToAnother(
+              item.itemNumber!,
+              item.unitOfMeasure!,
+              ibTo.unitOfMeasure!,
+              companyId,
+            );
+          }
+
+          final qI = (factor * item.quantityTransaction).abs();
+
+          await itemLocationsRepository.updateItemLocation(
+            il!.copyWith(quantityOnHand: (il.quantityOnHand ?? 0.0) + qI),
+          );
+
+          // C. Update ItemInBranch Quantity
+          await itemInBranchRepository.update(
+            ibTo.copyWith(
+              quantityAvailable: (ibTo.quantityAvailable ?? 0.0) + qI,
+            ),
+          );
+        }
+      }
+    }
+    // 3. Lot to Lot Transfer (with Location & Branch)
+    else if (applyLocationMgmt && applyLotMgmt) {
+      // Decrease from Source Lot (Location & Branch)
       await _adjustLotMaster(item, masterTransaction, 'D', companyId);
+
+      // Increase in Destination
+      if (item.itemLocationsTo != null && item.lotNumber != null) {
+        // Get Source Lot Details
+        final sourceLot = await lotMasterRepository.getLotMasterById(
+          item.lotNumber!,
+          companyId,
+        );
+
+        final destLocMaster = await locationMasterRepository
+            .getLocationMasterById(item.itemLocationsTo!, companyId);
+
+        if (sourceLot != null && destLocMaster != null) {
+          final branchTo = destLocMaster.branch!;
+
+          final destLotList = await lotMasterRepository
+              .getLotMastersByItemAndBranch(
+                itemNumber: item.itemNumber!,
+                branch: branchTo,
+                companyId: companyId,
+              );
+
+          // Filter by Location and Lot Number String
+          LotMaster? destLot;
+          try {
+            destLot = destLotList.firstWhere(
+              (l) =>
+                  l.lotNumber == sourceLot.lotNumber &&
+                  l.location == destLocMaster.id,
+            );
+          } catch (e) {
+            destLot = null;
+          }
+
+          if (destLot == null) {
+            // Create New Lot
+            final newLot = sourceLot.copyWith(
+              id: null, // New ID
+              branch: branchTo,
+              location: destLocMaster.id,
+              quantityAvailable: 0.0,
+              dateReceived: DateTime.now(),
+            );
+
+            final newId = await lotMasterRepository.createLotMaster(newLot);
+            destLot = newLot.copyWith(id: newId);
+          }
+          var il = await itemLocationsRepository
+              .getItemLocationByItemBranchLocation(
+                branchId: branchTo,
+                itemNumber: item.itemNumber!,
+                locationId: destLocMaster.id!,
+                companyId: companyId,
+              );
+
+          if (il == null) {
+            final newIl = ItemLocation(
+              branch: branchTo,
+              itemNumber: item.itemNumber,
+              location: destLocMaster.id,
+              quantityOnHand: 0.0,
+              company: companyId,
+              dateCreated: DateTime.now(),
+              dateUpdated: DateTime.now(),
+              createdBy: masterTransaction.createdBy,
+              updatedBy: masterTransaction.createdBy,
+            );
+            final id = await itemLocationsRepository.createItemLocation(newIl);
+            il = newIl.copyWith(id: id);
+          }
+
+          // C. Get/Create ItemInBranch
+          final ibTo = await _getOrCreateItemInBranch(
+            item.itemNumber!,
+            branchTo,
+            companyId,
+            masterTransaction.createdBy ?? 0,
+            int.tryParse(item.item?.unitOfMeasure ?? ''),
+          );
+
+          // D. Calculate Quantity
+          double factor = 1.0;
+          if (item.unitOfMeasure != null && ibTo.unitOfMeasure != null) {
+            factor = await itemUomConversionRepository.fromOtherToAnother(
+              item.itemNumber!,
+              item.unitOfMeasure!,
+              ibTo.unitOfMeasure!,
+              companyId,
+            );
+          }
+          final qI = (factor * item.quantityTransaction).abs();
+
+          // E. Update All 3 Entities
+          // 1. Lot
+          await lotMasterRepository.updateLotMaster(
+            destLot!.copyWith(
+              quantityAvailable: (destLot.quantityAvailable ?? 0.0) + qI,
+            ),
+          );
+
+          // 2. Location
+          await itemLocationsRepository.updateItemLocation(
+            il!.copyWith(quantityOnHand: (il.quantityOnHand ?? 0.0) + qI),
+          );
+
+          // 3. Branch
+          await itemInBranchRepository.update(
+            ibTo.copyWith(
+              quantityAvailable: (ibTo.quantityAvailable ?? 0.0) + qI,
+            ),
+          );
+        }
+      }
     }
     return true;
   }
@@ -810,7 +1173,20 @@ class ItemTransactionRepository {
 
     if (ib != null) {
       final currentQty = ib.quantityAvailable ?? 0.0;
-      final adjustmentQty = item.quantityTransaction;
+
+      // Calculate Factor: Transaction UoM -> Item Branch UoM (usually Primary)
+      double factor = 1.0;
+      if (item.unitOfMeasure != null && ib.unitOfMeasure != null) {
+        // Assuming 'ib.unitOfMeasure' is the storage UoM
+        factor = await itemUomConversionRepository.fromOtherToAnother(
+          item.itemNumber!,
+          item.unitOfMeasure!,
+          ib.unitOfMeasure!,
+          companyId,
+        );
+      }
+
+      final adjustmentQty = (item.quantityTransaction * factor).abs();
 
       final newQty = incDec == 'I'
           ? currentQty + adjustmentQty
@@ -827,34 +1203,62 @@ class ItemTransactionRepository {
     String incDec,
     int companyId,
   ) async {
-    if (item.itemLocationRef?.location != null) {
-      final il = item.itemLocationRef!;
-      final qb = il.quantityOnHand ?? 0.0;
-      final uom = await _getItemBranchUoM(
-        item.itemNumber!,
-        masterTransaction.branch!,
-        companyId,
-      );
-      final factor = await itemUomConversionRepository.fromOtherToAnother(
-        item.itemNumber!,
-        uom!,
-        item.unitOfMeasure!,
+    if (item.itemLocation != null) {
+      // 1. Fetch by ID
+      final il = await itemLocationsRepository.getItemLocationById(
+        item.itemLocation!,
         companyId,
       );
 
-      final qI = factor * (item.quantityTransaction).abs();
+      if (il != null) {
+        final qb = il.quantityOnHand ?? 0.0;
 
-      if (qI < 0.0 && qb < qI.abs()) {
-        return; // Quantity greater than expected
+        // 2. Conversion: Transaction UoM -> Item Primary (Standard)
+        // We assume Locations store in Primary UoM for simplicity, or we check IB's UoM.
+        final ib = await itemInBranchRepository.findByItemAndBranch(
+          item.itemNumber!,
+          masterTransaction.branch!,
+          companyId,
+        );
+
+        double factor = 1.0;
+        if (item.unitOfMeasure != null && ib?.unitOfMeasure != null) {
+          factor = await itemUomConversionRepository.fromOtherToAnother(
+            item.itemNumber!,
+            item.unitOfMeasure!,
+            ib!.unitOfMeasure!,
+            companyId,
+          );
+        }
+
+        final qI = (factor * item.quantityTransaction).abs();
+
+        // Validation (Optional here since we already validated, but good safety)
+        if (incDec == 'D' && qb < qI) {
+          print(
+            'WARNING: Negative inventory in Location adjustment ignored for safety.',
+          );
+          // return; // or throw?
+        }
+
+        final newQty = (incDec == 'I') ? qb + qI : qb - qI;
+        final updatedLoc = il.copyWith(quantityOnHand: newQty);
+
+        await itemLocationsRepository.updateItemLocation(updatedLoc);
+
+        // 3. Cascade to Branch
+        // We apply the SAME delta (qI) to the branch
+        if (ib != null) {
+          final currentBranchQty = ib.quantityAvailable ?? 0.0;
+          final newBranchQty = (incDec == 'I')
+              ? currentBranchQty + qI
+              : currentBranchQty - qI;
+
+          await itemInBranchRepository.update(
+            ib.copyWith(quantityAvailable: newBranchQty),
+          );
+        }
       }
-
-      if (incDec == 'I') {
-        il.quantityOnHand = qb + qI;
-      } else {
-        il.quantityOnHand = qb - qI;
-      }
-
-      itemLocationsRepository.updateItemLocation(item.itemLocationRef!);
     }
   }
 
@@ -864,34 +1268,75 @@ class ItemTransactionRepository {
     String incDec,
     int companyId,
   ) async {
-    if (item.lotNumberRef != null) {
-      final lm = item.lotNumberRef!;
-      final qb = lm.quantityAvailable ?? 0.0;
-      final uom = await _getItemBranchUoM(
-        item.itemNumber!,
-        masterTransaction.branch!,
-        companyId,
-      );
-      final factor = await itemUomConversionRepository.fromOtherToAnother(
-        item.itemNumber!,
-        uom!,
-        item.unitOfMeasure!,
+    if (item.lotNumber != null) {
+      // 1. Fetch by ID
+      final lm = await lotMasterRepository.getLotMasterById(
+        item.lotNumber!,
         companyId,
       );
 
-      final qI = factor * (item.quantityTransaction).abs();
+      if (lm != null) {
+        final qb = lm.quantityAvailable ?? 0.0;
 
-      if (qI < 0.0 && qb < qI.abs()) {
-        return; // Quantity greater than expected
+        // 2. Conversion
+        final ib = await itemInBranchRepository.findByItemAndBranch(
+          item.itemNumber!,
+          masterTransaction.branch!,
+          companyId,
+        );
+
+        double factor = 1.0;
+        if (item.unitOfMeasure != null && ib?.unitOfMeasure != null) {
+          factor = await itemUomConversionRepository.fromOtherToAnother(
+            item.itemNumber!,
+            item.unitOfMeasure!,
+            ib!.unitOfMeasure!,
+            companyId,
+          );
+        }
+
+        final qI = (factor * item.quantityTransaction).abs();
+
+        // Validation
+        if (incDec == 'D' && qb < qI) {
+          print(
+            'WARNING: Negative inventory in Lot adjustment ignored for safety.',
+          );
+        }
+
+        final newQty = (incDec == 'I') ? qb + qI : qb - qI;
+        final updatedLot = lm.copyWith(quantityAvailable: newQty);
+
+        await lotMasterRepository.updateLotMaster(updatedLot);
+
+        // 3. Cascade - Location (if exists)
+        if (lm.location != null) {
+          final il = await itemLocationsRepository.getItemLocationById(
+            lm.location!,
+            companyId,
+          );
+          if (il != null) {
+            final currentLocQty = il.quantityOnHand ?? 0.0;
+            final newLocQty = (incDec == 'I')
+                ? currentLocQty + qI
+                : currentLocQty - qI;
+            await itemLocationsRepository.updateItemLocation(
+              il.copyWith(quantityOnHand: newLocQty),
+            );
+          }
+        }
+
+        // 4. Cascade - Branch
+        if (ib != null) {
+          final currentBranchQty = ib.quantityAvailable ?? 0.0;
+          final newBranchQty = (incDec == 'I')
+              ? currentBranchQty + qI
+              : currentBranchQty - qI;
+          await itemInBranchRepository.update(
+            ib.copyWith(quantityAvailable: newBranchQty),
+          );
+        }
       }
-
-      if (incDec == 'I') {
-        lm.quantityAvailable = qb + qI;
-      } else {
-        lm.quantityAvailable = qb - qI;
-      }
-
-      lotMasterRepository.updateLotMaster(lm);
     }
   }
 
@@ -1138,8 +1583,11 @@ class ItemTransactionRepository {
              i.item_description as item_description,
              b.description as branch_name,
              udt.description_1 as transaction_type_description,
+             udt.detail_code as transaction_type_code,
              uds.description_1 as lot_status_description,
+             uds.detail_code as lot_status_code,
              udo.description_1 as order_type_description,
+             udo.detail_code as order_type_code,
              sup.supplier_name as supplier_name,
              cus.customer_name as customer_name,
              lm.batch_number_supplier as batch_number_supplier,
@@ -1885,5 +2333,38 @@ class ItemTransactionRepository {
       print('Error in amountEnding: $e');
       return 0.0;
     }
+  }
+
+  Future<ItemInBranchModel> _getOrCreateItemInBranch(
+    int itemNumber,
+    int branchId,
+    int companyId,
+    int createdBy,
+    int? uom,
+  ) async {
+    final ib = await itemInBranchRepository.findByItemAndBranch(
+      itemNumber,
+      branchId,
+      companyId,
+    );
+
+    if (ib != null) {
+      return ib;
+    }
+
+    // Create new ItemInBranch
+    final newIb = ItemInBranchModel(
+      id: 0,
+      itemNumber: itemNumber,
+      branch: branchId,
+      company: companyId,
+      quantityAvailable: 0.0,
+      //averageCost: 0.0, // Default
+      unitOfMeasure: uom,
+      reorderPoint: 0.0,
+    );
+
+    final id = await itemInBranchRepository.create(newIb);
+    return newIb.copyWith(id: id);
   }
 }

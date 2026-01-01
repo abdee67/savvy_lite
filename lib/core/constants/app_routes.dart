@@ -29,14 +29,14 @@ class AppRoutes {
   static const String reportDashboard = '$report/dashboard';
 
   // Admin Sub-Routes
-  static const String privilegeManagement = '$admin/privilege-management';
+  // static const String privilegeManagement = '$admin/privilege-management';
   static const String roleManagement = '$admin/role-management';
   static const String employeeManagement = '$admin/employee-management';
   static const String userManagement = '$admin/user-management';
 
-  static const String createPrivilege = '$privilegeManagement/create-privilege';
-  static const String deletePrivilege = '$privilegeManagement/delete-privilege';
-  static const String editPrivilege = '$privilegeManagement/edit-privilege';
+  // static const String createPrivilege = '$privilegeManagement/create-privilege';
+  // static const String deletePrivilege = '$privilegeManagement/delete-privilege';
+  //static const String editPrivilege = '$privilegeManagement/edit-privilege';
 
   // Employee Sub-Routes
   static const String employeeCreation =
@@ -144,9 +144,16 @@ class AppRoutes {
   static const String inventoryTransactionDelete =
       '$inventoryTransaction/inventory-transaction-delete';
 
-  static const String itemBranchEntry = '$stock/item-branch-entry';
-  static const String barcodeFunction = '$stock/barcode-function';
-  static const String exportFunction = '$stock/export-function';
+  // static const String itemBranchEntry = '$stock/item-branch-entry';
+  //static const String barcodeFunction = '$stock/barcode-function';
+  //static const String exportFunction = '$stock/export-function';
+
+  // Company Sub-Routes
+  static const String companyManagement = '$company/company-management';
+
+  static const String companyCreation = '$companyManagement/company-creation';
+  static const String companyEdit = '$companyManagement/edit-company';
+  static const String companyDelete = '$companyManagement/delete-company';
 
   // Branch Sub-Routes
   static const String branchManagement = '$branch/branch-management';

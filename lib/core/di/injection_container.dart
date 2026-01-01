@@ -1,6 +1,7 @@
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
+import 'package:savvy_stock/features/company/blocs/company_bloc.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_report_repo.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_repository.dart';
@@ -144,6 +145,7 @@ void initDependencies() {
       lotMasterRepository: getIt(),
       itemInBranchRepository: getIt(),
       itemLocationsRepository: getIt(),
+      locationMasterRepository: getIt(),
       itemUomConversionBloc: getIt(),
       itemUomConversionRepository: getIt(),
       itemCostRepository: getIt(),
@@ -504,5 +506,8 @@ void initDependencies() {
   // Cash Flow
   getIt.registerFactory<CashFlowBloc>(
     () => CashFlowBloc(authBloc: getIt(), cashFlowRepository: getIt()),
+  );
+  getIt.registerFactory<CompanyBloc>(
+    () => CompanyBloc(authBloc: getIt(), databaseService: getIt()),
   );
 }

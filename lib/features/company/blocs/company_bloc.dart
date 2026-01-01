@@ -1,52 +1,41 @@
-// features/Employee/blocs/Employee_bloc.dart
+// features/Company/blocs/Company_bloc.dart
 
 import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
-import 'package:savvy_stock/features/admin/employees/blocs/employee_event.dart';
-import 'package:savvy_stock/features/admin/employees/blocs/employee_state.dart';
-import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
-import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:savvy_stock/features/company/blocs/company_event.dart';
+import 'package:savvy_stock/features/company/blocs/company_state.dart';
+import 'package:savvy_stock/features/company/models/company_model.dart';
 
-class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
+class CompanyBloc extends Bloc<CompanyEvent, CompanyState> {
   final LocalDatabaseService databaseService;
   final AuthBloc authBloc;
   StreamSubscription? _authSubscription;
 
-  EmployeeBloc({required this.databaseService, required this.authBloc})
-    : super(const EmployeeState()) {
+  CompanyBloc({required this.databaseService, required this.authBloc})
+    : super(const CompanyState()) {
     // Listen to auth state changes
     _authSubscription = authBloc.stream.listen((authState) {
       if (authState.isAuthenticated && authState.companyId != null) {
-        add(LoadEmployees(authState.companyId!));
+        add(LoadCompanys(authState.companyId!));
       }
     });
-    on<LoadEmployees>(_onLoadEmployees);
-    on<CreateEmployee>(_onCreateEmployee);
-    on<UpdateEmployee>(_onUpdateEmployee);
-    on<DeleteEmployee>(_onDeleteEmployee);
-    on<SearchEmployees>(_onSearchEmployees);
-    on<SelectEmployee>(_onSelectEmployee);
-    on<SelectAllEmployees>(_onSelectAllEmployees);
-    on<DeleteSelectedEmployees>(_onDeleteSelectedEmployees);
-    on<UndoDelete>(_onUndoDelete);
-    on<ShowEmployeeDetail>(_onShowEmployeeDetail);
-    on<HideEmployeeDetail>(_onHideEmployeeDetail);
-    on<ExportEmployee>(_onExportEmployee);
-    on<ExportSingleEmployee>(_onExportSingleEmployee);
+    on<LoadCompanys>(_onLoadCompanys);
+    on<CreateCompany>(_onCreateCompany);
+    on<UpdateCompany>(_onUpdateCompany);
+    on<DeleteCompany>(_onDeleteCompany);
+    on<SearchCompanys>(_onSearchCompanys);
+    on<SelectCompany>(_onSelectCompany);
+    on<SelectAllCompanys>(_onSelectAllCompanys);
     on<ClearSelection>(_onClearSelection);
-    on<SetEmployeeForm>(_onSetEmployeeForm);
-    on<ResetEmployeeForm>(_onResetEmployeeForm);
-    on<ChangeEmployeePage>(_onChangeEmployeePage);
-    on<UpdateEmployeeFormField>(_onUpdateEmployeeFormField);
-    on<ToggleRoleManagement>(_onToggleRoleManagement);
-    on<SelectRoleForAssignment>(_onSelectRoleForAssignment);
-    on<DeselectRoleForAssignment>(_onDeselectRoleForAssignment);
-    on<ClearRoleSelection>(_onClearRoleSelection);
-    on<SaveRoleChanges>(_onSaveRoleChanges);
+    on<DeleteSelectedCompanys>(_onDeleteSelectedCompanys);
+    on<ShowCompanyDetail>(_onShowCompanyDetail);
+    on<HideCompanyDetail>(_onHideCompanyDetail);
+    on<ExportCompany>(_onExportCompany);
+    on<ExportSingleCompany>(_onExportSingleCompany);
+    on<SetCompanyForm>(_onSetCompanyForm);
   }
 
   @override
@@ -55,519 +44,395 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
     return super.close();
   }
 
-  Future<void> _onLoadEmployees(
-    LoadEmployees event,
-    Emitter<EmployeeState> emit,
+  Future<void> _onLoadCompanys(
+    LoadCompanys event,
+    Emitter<CompanyState> emit,
   ) async {
-    emit(EmployeeState(status: EmployeeStatus.loading));
+    emit(CompanyState(status: CompanyStatus.loading));
     try {
       final db = await databaseService.database;
-      final employees = await db.query(
-        'employees',
-        where: 'company = ?',
+      final companys = await db.query(
+        'company_table',
+        where: 'id = ?',
         whereArgs: [event.companyId],
-        orderBy: 'name_first ASC, name_last ASC',
       );
 
-      final employeeList = employees.map((p) => Employee.fromMap(p)).toList();
+      final companyList = companys.map((p) => Company.fromMap(p)).toList();
 
       emit(
-        EmployeeState(
-          status: EmployeeStatus.success,
-          employees: employeeList,
-          filteredEmployees: employeeList,
+        CompanyState(
+          status: CompanyStatus.success,
+          companys: companyList,
+          filteredCompanys: companyList,
           searchQuery: '',
-          detailStatus: EmployeeDetailStatus.hidden,
+          detailStatus: CompanyDetailStatus.hidden,
           companyId: event.companyId,
-          selectedEmployees: [],
+          selectedCompanys: [],
         ),
       );
     } catch (e) {
       emit(
-        EmployeeState(
-          status: EmployeeStatus.failure,
-          message: 'Failed to load Employees: $e',
+        CompanyState(
+          status: CompanyStatus.failure,
+          message: 'Failed to load Companys: $e',
         ),
       );
     }
   }
 
-  Future<void> _onCreateEmployee(
-    CreateEmployee event,
-    Emitter<EmployeeState> emit,
+  Future<void> _onCreateCompany(
+    CreateCompany event,
+    Emitter<CompanyState> emit,
   ) async {
     emit(
       state.copyWith(
-        status: EmployeeStatus.creating,
-        message: 'Creating Employee...',
+        status: CompanyStatus.creating,
+        message: 'Creating Company...',
       ),
     );
     try {
       final db = await databaseService.database;
-      final employeeMap = event.employee.toMap();
+      final companyMap = event.company.toMap();
 
-      //remove id for new employee insrtion
-      employeeMap.remove('id');
+      //remove id for new company insertion
+      companyMap.remove('id');
 
-      //add creation metadata
-      employeeMap['company'] = authBloc.state.companyId!;
-
-      await db.insert('employees', employeeMap);
-      add(LoadEmployees(authBloc.state.companyId!));
+      await db.insert('company_table', companyMap);
+      add(LoadCompanys(authBloc.state.companyId!));
       emit(
         state.copyWith(
-          status: EmployeeStatus.success,
-          message: 'Employee created successfully',
+          status: CompanyStatus.success,
+          message: 'Company created successfully',
         ),
       );
     } catch (e) {
       emit(
-        EmployeeState(
-          status: EmployeeStatus.failure,
-          message: 'Failed to create Employee: $e',
+        CompanyState(
+          status: CompanyStatus.failure,
+          message: 'Failed to create Company: $e',
         ),
       );
     }
   }
 
-  Future<void> _onUpdateEmployee(
-    UpdateEmployee event,
-    Emitter<EmployeeState> emit,
+  Future<void> _onUpdateCompany(
+    UpdateCompany event,
+    Emitter<CompanyState> emit,
   ) async {
     emit(
       state.copyWith(
-        status: EmployeeStatus.updating,
-        message: 'Updating Employee...',
+        status: CompanyStatus.updating,
+        message: 'Updating Company...',
       ),
     );
     try {
       final db = await databaseService.database;
-      final employeeMap = event.employee.toMap();
+      final companyId = authBloc.state.companyId;
 
-      //add update metadata
+      // FIX: Add null checks
+      if (companyId == null) {
+        emit(
+          state.copyWith(
+            status: CompanyStatus.failure,
+            message: 'Authentication error: Company ID not found',
+          ),
+        );
+        return;
+      }
+
+      // Authorization check: Ensure user can only update their own company
+      if (event.company.id != companyId) {
+        emit(
+          state.copyWith(
+            status: CompanyStatus.failure,
+            message: 'Unauthorized: You can only update your own company',
+          ),
+        );
+        return;
+      }
+
+      final companyMap = event.company.toMap();
+
       await db.update(
-        'employees',
-        employeeMap,
-        where: 'id = ? AND company = ?',
-        whereArgs: [event.employee.id, authBloc.state.companyId!],
+        'company_table',
+        companyMap,
+        where: 'id = ?',
+        whereArgs: [event.company.id],
       );
-      add(LoadEmployees(authBloc.state.companyId!));
+
+      add(LoadCompanys(companyId));
+
       emit(
         state.copyWith(
-          status: EmployeeStatus.success,
-          message: 'Employee updated successfully',
+          status: CompanyStatus.success,
+          message: 'Company updated successfully',
         ),
       );
     } catch (e) {
       emit(
-        EmployeeState(
-          status: EmployeeStatus.failure,
-          message: 'Failed to update Employee: $e',
+        state.copyWith(
+          status: CompanyStatus.failure,
+          message: 'Failed to update Company: $e',
         ),
       );
     }
   }
 
-  void _onSetEmployeeForm(SetEmployeeForm event, Emitter<EmployeeState> emit) {
-    emit(state.copyWith(employeeForm: event.employee));
-  }
-
-  void _onResetEmployeeForm(
-    ResetEmployeeForm event,
-    Emitter<EmployeeState> emit,
-  ) {
-    emit(state.copyWith(employeeForm: Employee.empty()));
-  }
-
-  void _onChangeEmployeePage(
-    ChangeEmployeePage event,
-    Emitter<EmployeeState> emit,
-  ) {
-    emit(state.copyWith(currentPage: event.pageIndex));
-  }
-
-  void _onUpdateEmployeeFormField(
-    UpdateEmployeeFormField event,
-    Emitter<EmployeeState> emit,
-  ) {
-    final updatedEmployee = state.employeeForm!.copyWithField(
-      event.field,
-      event.value,
-    );
-    emit(state.copyWith(employeeForm: updatedEmployee));
-  }
-
-  Future<void> _onDeleteEmployee(
-    DeleteEmployee event,
-    Emitter<EmployeeState> emit,
+  Future<void> _onDeleteCompany(
+    DeleteCompany event,
+    Emitter<CompanyState> emit,
   ) async {
-    emit(
-      state.copyWith(status: EmployeeStatus.deleting, message: 'Deleting..'),
-    );
+    emit(state.copyWith(status: CompanyStatus.deleting, message: 'Deleting..'));
     try {
       final db = await databaseService.database;
+      final companyId = authBloc.state.companyId;
+
+      // Authorization check: Ensure user can only delete their own company
+      if (companyId == null) {
+        emit(
+          state.copyWith(
+            status: CompanyStatus.failure,
+            message: 'Authentication error: Company ID not found',
+          ),
+        );
+        return;
+      }
+
+      if (event.companyId != companyId) {
+        emit(
+          state.copyWith(
+            status: CompanyStatus.failure,
+            message: 'Unauthorized: You can only delete your own company',
+          ),
+        );
+        return;
+      }
+
       await db.delete(
-        'employees',
-        where: 'id = ? AND company = ?',
-        whereArgs: [event.employeeId, authBloc.state.companyId!],
+        'company_table',
+        where: 'id = ?',
+        whereArgs: [event.companyId],
       );
-      final updateEmployees = List<Employee>.from(state.employees)
-        ..removeWhere((p) => p.id == event.employeeId);
-      final updateFilteredEmployees = List<Employee>.from(
-        state.filteredEmployees,
-      )..removeWhere((p) => p.id == event.employeeId);
+      final updateCompanys = List<Company>.from(state.companys)
+        ..removeWhere((p) => p.id == event.companyId);
+      final updateFilteredCompanys = List<Company>.from(state.filteredCompanys)
+        ..removeWhere((p) => p.id == event.companyId);
       emit(
         state.copyWith(
-          employees: updateEmployees,
-          filteredEmployees: updateFilteredEmployees,
-          recentlyDeleted: [...state.recentlyDeleted, event.deletedEmployee],
+          companys: updateCompanys,
+          filteredCompanys: updateFilteredCompanys,
+          recentlyDeleted: [...state.recentlyDeleted, event.deletedCompany],
           recentlyDeletedIndexes: [
             ...state.recentlyDeletedIndexes,
             event.deletedIndex,
           ],
-          message: 'Employee deleted successfully',
+          message: 'Company deleted successfully',
         ),
       );
-      add(LoadEmployees(authBloc.state.companyId!));
+      add(LoadCompanys(authBloc.state.companyId!));
     } catch (e) {
       emit(
-        EmployeeState(
-          status: EmployeeStatus.failure,
-          message: 'Failed to delete Employee: $e',
+        CompanyState(
+          status: CompanyStatus.failure,
+          message: 'Failed to delete Company: $e',
         ),
       );
     }
   }
 
-  void _onClearSelection(ClearSelection event, Emitter<EmployeeState> emit) {
-    emit(state.copyWith(selectedEmployees: []));
+  void _onClearSelection(ClearSelection event, Emitter<CompanyState> emit) {
+    emit(state.copyWith(selectedCompanys: []));
   }
 
-  void _onSearchEmployees(SearchEmployees event, Emitter<EmployeeState> emit) {
+  void _onSearchCompanys(SearchCompanys event, Emitter<CompanyState> emit) {
     final query = event.query.toLowerCase().trim();
 
     if (query.isEmpty) {
       emit(
         state.copyWith(
-          filteredEmployees: state.employees,
-          selectedEmployees: [],
+          filteredCompanys: state.companys,
+          selectedCompanys: [],
           searchQuery: '',
-          status: EmployeeStatus.success,
+          status: CompanyStatus.success,
         ),
       );
       return;
     }
 
-    final filtered = state.employees.where((employee) {
-      return employee.nameFirst.toLowerCase().contains(query) ||
-          employee.nameLast.toLowerCase().contains(query) ||
-          employee.phone.toLowerCase().contains(query) ||
-          employee.email.toLowerCase().contains(query);
+    final filtered = state.companys.where((company) {
+      return company.companyName.toLowerCase().contains(query) ||
+          company.city!.toLowerCase().contains(query) ||
+          company.addressLine!.toLowerCase().contains(query);
     }).toList();
 
     emit(
       state.copyWith(
-        filteredEmployees: filtered,
+        filteredCompanys: filtered,
         searchQuery: query,
-        selectedEmployees: [],
-        status: EmployeeStatus.searching,
+        selectedCompanys: [],
+        status: CompanyStatus.searching,
       ),
     );
   }
 
-  void _onSelectEmployee(SelectEmployee event, Emitter<EmployeeState> emit) {
-    final selectedEmployees = List<Employee>.from(state.selectedEmployees);
+  void _onSelectCompany(SelectCompany event, Emitter<CompanyState> emit) {
+    final selectedCompanys = List<Company>.from(state.selectedCompanys);
     if (event.isSelected) {
-      selectedEmployees.add(event.employee);
+      selectedCompanys.add(event.company);
     } else {
-      selectedEmployees.removeWhere(
-        (employee) => employee.id == event.employee.id,
-      );
+      selectedCompanys.removeWhere((company) => company.id == event.company.id);
     }
-    emit(state.copyWith(selectedEmployees: selectedEmployees));
+    emit(state.copyWith(selectedCompanys: selectedCompanys));
   }
 
-  void _onSelectAllEmployees(
-    SelectAllEmployees event,
-    Emitter<EmployeeState> emit,
+  void _onSelectAllCompanys(
+    SelectAllCompanys event,
+    Emitter<CompanyState> emit,
   ) {
-    if (state.selectedEmployees.length == event.employees.length) {
+    if (state.selectedCompanys.length == event.companys.length) {
       // If all are selected, clear selection
-      emit(state.copyWith(selectedEmployees: []));
+      emit(state.copyWith(selectedCompanys: []));
     } else {
       // Select all
-      emit(state.copyWith(selectedEmployees: List.from(event.employees)));
+      emit(state.copyWith(selectedCompanys: List.from(event.companys)));
     }
   }
 
-  void _onDeleteSelectedEmployees(
-    DeleteSelectedEmployees event,
-    Emitter<EmployeeState> emit,
+  void _onSetCompanyForm(SetCompanyForm event, Emitter<CompanyState> emit) {
+    emit(state.copyWith(companyForm: event.company));
+  }
+
+  void _onDeleteSelectedCompanys(
+    DeleteSelectedCompanys event,
+    Emitter<CompanyState> emit,
   ) async {
     try {
       final db = await databaseService.database;
+      final companyId = authBloc.state.companyId;
+
+      // Authorization check: Ensure user can only delete their own company
+      if (companyId == null) {
+        emit(
+          state.copyWith(
+            status: CompanyStatus.failure,
+            message: 'Authentication error: Company ID not found',
+          ),
+        );
+        return;
+      }
+
+      // Verify all selected companies belong to the user
+      for (final selectedId in event.selectedCompanys) {
+        if (selectedId != companyId) {
+          emit(
+            state.copyWith(
+              status: CompanyStatus.failure,
+              message: 'Unauthorized: You can only delete your own company',
+            ),
+          );
+          return;
+        }
+      }
+
       final placeholders = List.filled(
-        event.selectedEmployees.length,
+        event.selectedCompanys.length,
         '?',
       ).join(',');
-      final whereArgs = [...event.selectedEmployees, authBloc.state.companyId];
+      final whereArgs = [...event.selectedCompanys];
       await db.delete(
-        'employees',
-        where: 'id IN ($placeholders) AND company = ?',
+        'company_table',
+        where: 'id IN ($placeholders)',
         whereArgs: whereArgs,
       );
-      final updatedEmployees = state.employees
-          .where((e) => !event.selectedEmployees.contains(e.id))
+      final updatedCompanys = state.companys
+          .where((e) => !event.selectedCompanys.contains(e.id))
           .toList();
-      final updatedFiltered = state.filteredEmployees
-          .where((e) => !event.selectedEmployees.contains(e.id))
+      final updatedFiltered = state.filteredCompanys
+          .where((e) => !event.selectedCompanys.contains(e.id))
           .toList();
 
       emit(
         state.copyWith(
-          employees: updatedEmployees,
-          filteredEmployees: updatedFiltered,
-          selectedEmployees: [],
-          recentlyDeleted: [
-            ...state.recentlyDeleted,
-            ...event.deletedEmployees,
-          ],
+          companys: updatedCompanys,
+          filteredCompanys: updatedFiltered,
+          selectedCompanys: [],
+          recentlyDeleted: [...state.recentlyDeleted, ...event.deletedCompanys],
           recentlyDeletedIndexes: [
             ...state.recentlyDeletedIndexes,
             ...event.deletedIndexes,
           ],
           message:
-              '${event.selectedEmployees.length} employees deleted successfully',
+              '${event.selectedCompanys.length} employees deleted successfully',
         ),
       );
-      add(LoadEmployees(authBloc.state.companyId!));
+      add(LoadCompanys(authBloc.state.companyId!));
     } catch (e) {
       emit(
-        EmployeeState(
-          status: EmployeeStatus.failure,
-          message: 'Failed to delete selected Employees: $e',
+        CompanyState(
+          status: CompanyStatus.failure,
+          message: 'Failed to delete selected Companys: $e',
         ),
       );
     }
   }
 
-  Future<void> _onUndoDelete(
-    UndoDelete event,
-    Emitter<EmployeeState> emit,
-  ) async {
-    try {
-      final db = await databaseService.database;
-
-      // Reinsert at original positions in memory
-      final updatedEmployees = List<Employee>.from(state.employees);
-
-      // Restore items at their original positions
-      for (int i = 0; i < event.deletedItems.length; i++) {
-        final item = event.deletedItems[i];
-        final index = event.deletedIndexes[i];
-
-        if (index >= 0 && index <= updatedEmployees.length) {
-          updatedEmployees.insert(index, item);
-        } else {
-          updatedEmployees.add(item); // fallback if index is invalid
-        }
-
-        // Also restore to DB
-        await db.insert(
-          'employees',
-          item.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-
-        emit(
-          state.copyWith(
-            employees: updatedEmployees,
-            filteredEmployees: updatedEmployees,
-            recentlyDeleted: [],
-            recentlyDeletedIndexes: [],
-          ),
-        );
-      }
-    } catch (e) {
-      emit(
-        state.copyWith(
-          status: EmployeeStatus.failure,
-          message: 'Failed to undo delete: $e',
-        ),
-      );
-    }
-  }
-
-  void _onShowEmployeeDetail(
-    ShowEmployeeDetail event,
-    Emitter<EmployeeState> emit,
+  void _onShowCompanyDetail(
+    ShowCompanyDetail event,
+    Emitter<CompanyState> emit,
   ) {
     emit(
       state.copyWith(
-        employeeDetail: event.employee,
-        detailStatus: EmployeeDetailStatus.showing,
+        companyDetail: event.company,
+        detailStatus: CompanyDetailStatus.showing,
       ),
     );
   }
 
-  void _onHideEmployeeDetail(
-    HideEmployeeDetail event,
-    Emitter<EmployeeState> emit,
+  void _onHideCompanyDetail(
+    HideCompanyDetail event,
+    Emitter<CompanyState> emit,
   ) {
     emit(
       state.copyWith(
-        detailStatus: EmployeeDetailStatus.hidden,
-        employeeDetail: null,
+        detailStatus: CompanyDetailStatus.hidden,
+        companyDetail: null,
       ),
     );
   }
 
-  void _onExportEmployee(ExportEmployee event, Emitter<EmployeeState> emit) {
-    emit(state.copyWith(status: EmployeeStatus.exporting, isExporting: true));
+  void _onExportCompany(ExportCompany event, Emitter<CompanyState> emit) {
+    emit(state.copyWith(status: CompanyStatus.exporting, isExporting: true));
 
     // Simulate export process
     Future.delayed(const Duration(seconds: 2), () {
       emit(
         state.copyWith(
-          status: EmployeeStatus.success,
+          status: CompanyStatus.success,
           isExporting: false,
-          exportedEmployees: event.employeesToExport,
+          exportedCompanys: event.companysToExport,
           message:
-              'Exported ${event.employeesToExport.length} employees successfully',
+              'Exported ${event.companysToExport.length} companys successfully',
         ),
       );
     });
   }
 
-  void _onExportSingleEmployee(
-    ExportSingleEmployee event,
-    Emitter<EmployeeState> emit,
+  void _onExportSingleCompany(
+    ExportSingleCompany event,
+    Emitter<CompanyState> emit,
   ) {
-    emit(state.copyWith(status: EmployeeStatus.exporting, isExporting: true));
+    emit(state.copyWith(status: CompanyStatus.exporting, isExporting: true));
 
     // Simulate export process
     Future.delayed(const Duration(seconds: 2), () {
       emit(
         state.copyWith(
-          status: EmployeeStatus.success,
+          status: CompanyStatus.success,
           isExporting: false,
-          exportedEmployee: event.employeeToExport,
-          message: 'Exported ${event.employeeToExport} employees successfully',
+          exportedCompany: event.companyToExport,
+          message: 'Exported ${event.companyToExport} companys successfully',
         ),
       );
     });
-  }
-
-  void _onToggleRoleManagement(
-    ToggleRoleManagement event,
-    Emitter<EmployeeState> emit,
-  ) async {
-    if (state.isRoleManagementMode) {
-      emit(
-        state.copyWith(
-          isRoleManagementMode: false,
-          employeeInRoleManagement: null,
-          selectedRolesForAssignment: [],
-          roleSearchQuery: '',
-          hasRoleChanges: false,
-        ),
-      );
-    } else {
-      // Entering role management mode - only if employee has user account
-      final employee = state.employees.firstWhere(
-        (e) => e.id == event.employeeId,
-        orElse: () => Employee.empty(),
-      );
-
-      if (employee.id == 0) {
-        // Employee not found, don't enter role management
-        emit(state);
-        return;
-      }
-
-      // Check if this employee has a user account (you'll need to implement this check)
-      final hasUserAccount = await _checkIfEmployeeHasUserAccount(
-        event.employeeId,
-      );
-
-      if (!hasUserAccount) {
-        // Employee doesn't have user account, don't enter role management
-        emit(state);
-        return;
-      }
-
-      emit(
-        state.copyWith(
-          isRoleManagementMode: true,
-          employeeInRoleManagement: event.employeeId,
-          selectedRolesForAssignment: [],
-          roleSearchQuery: '',
-          hasRoleChanges: false,
-        ),
-      );
-    }
-  }
-
-  // Helper method to check if employee has user account
-  Future<bool> _checkIfEmployeeHasUserAccount(int employeeId) async {
-    try {
-      final db = await databaseService.database;
-      final users = await db.query(
-        'user_table',
-        where: 'employees_id = ?',
-        whereArgs: [employeeId],
-      );
-      return users.isNotEmpty;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  void _onSelectRoleForAssignment(
-    SelectRoleForAssignment event,
-    Emitter<EmployeeState> emit,
-  ) {
-    final selectedRoles = List<Role>.from(state.selectedRolesForAssignment);
-
-    if (selectedRoles.any((role) => role.id == event.role.id)) {
-      selectedRoles.removeWhere((role) => role.id == event.role.id);
-    } else {
-      selectedRoles.add(event.role);
-    }
-
-    emit(
-      state.copyWith(
-        selectedRolesForAssignment: selectedRoles,
-        hasRoleChanges: selectedRoles.isNotEmpty,
-      ),
-    );
-  }
-
-  void _onDeselectRoleForAssignment(
-    DeselectRoleForAssignment event,
-    Emitter<EmployeeState> emit,
-  ) {
-    final selectedRoles = List<Role>.from(state.selectedRolesForAssignment);
-    selectedRoles.removeWhere((role) => role.id == event.role.id);
-
-    emit(
-      state.copyWith(
-        selectedRolesForAssignment: selectedRoles,
-        hasRoleChanges: selectedRoles.isNotEmpty,
-      ),
-    );
-  }
-
-  void _onClearRoleSelection(
-    ClearRoleSelection event,
-    Emitter<EmployeeState> emit,
-  ) {
-    emit(state.copyWith(selectedRolesForAssignment: [], hasRoleChanges: false));
-  }
-
-  void _onSaveRoleChanges(SaveRoleChanges event, Emitter<EmployeeState> emit) {
-    // This will be handled by the UI using UserBloc directly
-    // We just reset the state
-    emit(state.copyWith(selectedRolesForAssignment: [], hasRoleChanges: false));
   }
 }

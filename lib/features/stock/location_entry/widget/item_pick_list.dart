@@ -55,11 +55,11 @@ class _ItemsPickListState extends State<ItemsPickList> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Available items section - FIXED: Use Expanded for proper constraints
-        Expanded(child: _buildAvailableItemsSection(theme, colors)),
+        Flexible(child: _buildAvailableItemsSection(theme, colors)),
         const SizedBox(height: 10),
         // Show assigned items section in edit mode
         if (widget.isEditMode && widget.targetItems.isNotEmpty) ...[
-          _buildAssignedItemsSection(theme, colors),
+          Flexible(child: _buildAssignedItemsSection(theme, colors)),
           const SizedBox(height: 10),
         ],
       ],
@@ -336,7 +336,7 @@ class _ItemsPickListState extends State<ItemsPickList> {
         ),
 
         // Items List - FIXED: Use Expanded for proper scrolling
-        Expanded(
+        Flexible(
           child: _filteredItems.isEmpty
               ? _buildEmptyState(theme, colors)
               : _buildItemsList(theme, colors),
@@ -451,7 +451,7 @@ class _ItemsPickListState extends State<ItemsPickList> {
               hasSearchQuery
                   ? Icons.search_off_outlined
                   : Icons.inventory_2_outlined,
-              size: 64,
+              size: 30,
               color: colors.onSurface.withOpacity(0.3),
             ),
             const SizedBox(height: 16),

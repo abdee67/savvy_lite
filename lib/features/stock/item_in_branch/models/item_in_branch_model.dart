@@ -19,6 +19,7 @@ class ItemInBranchModel {
   // Additional fields from joins
   ItemEntryModel? itemRef;
   Branch? branchRef;
+  final UdcDetails? unitOfMeasureRef;
 
   ItemInBranchModel({
     required this.id,
@@ -35,6 +36,7 @@ class ItemInBranchModel {
     this.tempId,
     this.itemRef,
     this.branchRef,
+    this.unitOfMeasureRef,
   });
 
   factory ItemInBranchModel.empty() {
@@ -82,6 +84,13 @@ class ItemInBranchModel {
               branchPhone: map['branch_phone']?.toString(),
               marginRate: asDouble(map['branch_margin_rate']),
               marginType: map['branch_margin_type']?.toString(),
+            )
+          : null,
+      unitOfMeasureRef: map['unit_of_measure'] != null
+          ? UdcDetails(
+              id: asInt(map['unit_of_measure']) ?? 0,
+              description1: map['unit_of_measure_description'],
+              detailCode: map['unit_of_measure_code'],
             )
           : null,
       itemRef: map['item_number'] != null

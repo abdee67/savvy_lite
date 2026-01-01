@@ -26,10 +26,9 @@ class Company extends Equatable {
   final DateTime? dateUpdated;
   final double? marginRate;
   final String? marginType;
+  final int? reorderPoint;
   final int? inventoryPlanner;
-  final bool? isActive;
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
+  //final bool? isActive;
 
   const Company({
     this.id,
@@ -57,13 +56,60 @@ class Company extends Equatable {
     this.dateUpdated,
     this.marginRate,
     this.marginType,
+    this.reorderPoint,
     this.inventoryPlanner,
-    this.isActive = true,
-    this.createdAt,
-    this.updatedAt,
+    //this.isActive = true,
   });
 
+  static Company empty() {
+    return Company(
+      id: 0,
+      companyName: '',
+      tinNumber: '',
+      phoneNumber1: '',
+      phoneNumber2: '',
+      phoneNumber3: '',
+      emailAddress1: '',
+      emailAddress2: '',
+      city: '',
+      region: '',
+      state: '',
+      addressLine: '',
+      logoCompany: '',
+      subscriptionFee: 0,
+      userLimmit: 0,
+      branchLimmit: 0,
+      daysLeft: 0,
+      woreda: '',
+      categoryCode: 0,
+      referredBySalespersonId: 0,
+      dateCreated: DateTime.now(),
+      dateUpdated: DateTime.now(),
+      marginRate: 0,
+      marginType: '',
+      reorderPoint: 0,
+      inventoryPlanner: 0,
+      // isActive: true,
+    );
+  }
+
   factory Company.fromMap(Map<String, dynamic> map) {
+    // Helper function to parse dates that could be TEXT or INTEGER
+    DateTime? parseDate(dynamic value) {
+      if (value == null) return null;
+      if (value is int) {
+        return DateTime.fromMillisecondsSinceEpoch(value);
+      }
+      if (value is String) {
+        try {
+          return DateTime.parse(value);
+        } catch (e) {
+          return null;
+        }
+      }
+      return null;
+    }
+
     return Company(
       id: map['id'] as int?,
       companyName: map['company_name'] as String,
@@ -86,22 +132,13 @@ class Company extends Equatable {
       woreda: map['woreda'] as String?,
       categoryCode: map['category_code'] as int?,
       referredBySalespersonId: map['referred_by_salesperson_id'] as int?,
-      dateCreated: map['date_created'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['date_created'] as int)
-          : null,
-      dateUpdated: map['date_updated'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['date_updated'] as int)
-          : null,
+      dateCreated: parseDate(map['date_created']),
+      dateUpdated: parseDate(map['date_updated']),
       marginRate: map['margin_rate']?.toDouble(),
       marginType: map['margin_type'] as String?,
+      reorderPoint: map['reorder_point'] as int?,
       inventoryPlanner: map['inventory_planner'] as int?,
-      isActive: map['is_active'] == 1,
-      createdAt: map['created_at'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int)
-          : null,
-      updatedAt: map['updated_at'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['updated_at'] as int)
-          : null,
+      //  isActive: map['is_active'] == 1,
     );
   }
 
@@ -118,7 +155,7 @@ class Company extends Equatable {
       'city': city,
       'region': region,
       'state': state,
-      'country': country,
+      'country': country ?? 'Ethiopia',
       'address_line': addressLine,
       'logo_company': logoCompany,
       'subscription_fee': subscriptionFee,
@@ -132,10 +169,9 @@ class Company extends Equatable {
       'date_updated': dateUpdated?.millisecondsSinceEpoch,
       'margin_rate': marginRate,
       'margin_type': marginType,
+      'reorder_point': reorderPoint,
       'inventory_planner': inventoryPlanner,
-      'is_active': isActive == true ? 1 : 0,
-      'created_at': createdAt?.millisecondsSinceEpoch,
-      'updated_at': updatedAt?.millisecondsSinceEpoch,
+      // 'is_active': isActive == true ? 1 : 0,
     };
   }
 
@@ -165,10 +201,9 @@ class Company extends Equatable {
     DateTime? dateUpdated,
     double? marginRate,
     String? marginType,
+    int? reorderPoint,
     int? inventoryPlanner,
-    bool? isActive,
-    DateTime? createdAt,
-    DateTime? updatedAt,
+    //bool? isActive,
   }) {
     return Company(
       id: id ?? this.id,
@@ -197,10 +232,9 @@ class Company extends Equatable {
       dateUpdated: dateUpdated ?? this.dateUpdated,
       marginRate: marginRate ?? this.marginRate,
       marginType: marginType ?? this.marginType,
+      reorderPoint: reorderPoint ?? this.reorderPoint,
       inventoryPlanner: inventoryPlanner ?? this.inventoryPlanner,
-      isActive: isActive ?? this.isActive,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
+      // isActive: isActive ?? this.isActive,
     );
   }
 
@@ -257,15 +291,14 @@ class Company extends Equatable {
     dateUpdated,
     marginRate,
     marginType,
+    reorderPoint,
     inventoryPlanner,
-    isActive,
-    createdAt,
-    updatedAt,
+    //isActive,
   ];
 
   @override
   String toString() {
-    return 'Company(id: $id, companyName: $companyName, tinNumber: $tinNumber, phoneNumber1: $phoneNumber1, emailAddress1: $emailAddress1, city: $city, country: $country, isActive: $isActive)';
+    return 'Company(id: $id, companyName: $companyName, tinNumber: $tinNumber, phoneNumber1: $phoneNumber1, emailAddress1: $emailAddress1, city: $city, country: $country)';
   }
 }
 

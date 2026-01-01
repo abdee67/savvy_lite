@@ -55,7 +55,7 @@ class PrivilegeSeeder {
       ),
 
       // ==================== ADMIN MANAGEMENT ====================
-      // Privilege Management
+      /* // Privilege Management
       _createPrivilege(
         'Privilege Management',
         'link',
@@ -79,7 +79,7 @@ class PrivilegeSeeder {
         'button',
         AppRoutes.deletePrivilege,
         'delete_privilege',
-      ),
+      ),*/
 
       // Role Management
       _createPrivilege(
@@ -315,12 +315,6 @@ class PrivilegeSeeder {
         AppRoutes.uomManagement,
         'uom_management',
       ),
-      _createPrivilege(
-        'Item Workbench',
-        'link',
-        AppRoutes.itemWorkbench,
-        'item_workbench',
-      ),
 
       //item uom conversions
       _createPrivilege(
@@ -464,23 +458,30 @@ class PrivilegeSeeder {
         'delete_item',
       ),
 
+      // ==================== COMPANY MODULE ====================
       _createPrivilege(
-        'Item Branch Entry',
+        'Company Management',
         'link',
-        AppRoutes.itemBranchEntry,
-        'item_branch_entry',
+        AppRoutes.companyManagement,
+        'company_management',
       ),
       _createPrivilege(
-        'Barcode Function',
-        'link',
-        AppRoutes.barcodeFunction,
-        'barcode_function',
+        'Add Company',
+        'button',
+        AppRoutes.companyCreation,
+        'add_company',
       ),
       _createPrivilege(
-        'Export Function',
-        'link',
-        AppRoutes.exportFunction,
-        'export_function',
+        'Edit Company',
+        'button',
+        AppRoutes.companyEdit,
+        'edit_company',
+      ),
+      _createPrivilege(
+        'Delete Company',
+        'button',
+        AppRoutes.companyDelete,
+        'delete_company',
       ),
 
       // ==================== BRANCH MODULE ====================

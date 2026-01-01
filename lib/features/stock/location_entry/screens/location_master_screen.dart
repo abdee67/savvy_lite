@@ -449,8 +449,8 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
   }
 
   Widget _buildLocationList(LocationMasterState state) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final screenHeight = MediaQuery.sizeOf(context).height;
     final isSmallScreen = screenWidth < 700;
     final cardSpacing = screenHeight * 0.02;
     final cardWidth = isSmallScreen ? screenWidth * 0.85 : screenWidth * 0.8;
@@ -538,8 +538,8 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
   ) {
     final offset = _dragOffset[index] ?? 0.0;
     final isExpanded = _locationDetail == true && _selectedLocation == location;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final screenHeight = MediaQuery.sizeOf(context).height;
 
     // For responsiveness:
     final collapsedHeight = isCompact

@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:argon2/argon2.dart';
+import 'package:savvy_stock/features/company/models/company_model.dart';
 
 class UserModel {
   final int id;
@@ -22,6 +23,8 @@ class UserModel {
   final String? type;
   final int? salesperson;
 
+  final Company? companyRef;
+
   UserModel({
     required this.id,
     required this.password,
@@ -41,6 +44,7 @@ class UserModel {
     this.userName,
     this.type = 'Company',
     this.salesperson,
+    this.companyRef,
   });
 
   factory UserModel.fromMap(Map<String, dynamic> json) {
@@ -98,6 +102,13 @@ class UserModel {
       userName: asString(json['user_name']),
       type: asString(json['type']) ?? 'Company',
       salesperson: asInt(json['salesperson']),
+      companyRef: json['company'] != null
+          ? Company(
+              id: json['company'],
+              companyName: json['company_name'] ?? '',
+              logoCompany: json['logo_company'],
+            )
+          : null,
     );
   }
   // Argon2 password hashing helper
@@ -176,6 +187,10 @@ class UserModel {
       'user_name': userName,
       'type': type,
       'salesperson': salesperson,
+      if (companyRef != null) ...{
+        'company_name': companyRef!.companyName,
+        'logo_company': companyRef!.logoCompany,
+      },
     };
   }
 
@@ -199,6 +214,7 @@ class UserModel {
     String? userName,
     String? type,
     int? salesperson,
+    Company? companyRef,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -220,6 +236,7 @@ class UserModel {
       userName: userName ?? this.userName,
       type: type ?? this.type,
       salesperson: salesperson ?? this.salesperson,
+      companyRef: companyRef ?? this.companyRef,
     );
   }
 
@@ -242,6 +259,7 @@ class UserModel {
     userName,
     type,
     salesperson,
+    companyRef,
   ];
   @override
   String toString() {
