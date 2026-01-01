@@ -15,10 +15,10 @@ class PrivilegeHierarchy {
 
     // ==================== ADMIN MANAGEMENT ====================
     // Privilege Management (child of Admin Dashboard)
-    AppRoutes.privilegeManagement: AppRoutes.adminDashboard,
+    /* AppRoutes.privilegeManagement: AppRoutes.adminDashboard,
     AppRoutes.createPrivilege: AppRoutes.privilegeManagement,
     AppRoutes.editPrivilege: AppRoutes.privilegeManagement,
-    AppRoutes.deletePrivilege: AppRoutes.privilegeManagement,
+    AppRoutes.deletePrivilege: AppRoutes.privilegeManagement,*/
 
     // Role Management (child of Admin Dashboard)
     AppRoutes.roleManagement: AppRoutes.adminDashboard,
@@ -121,10 +121,6 @@ class PrivilegeHierarchy {
     AppRoutes.inventoryTransactionCreate: AppRoutes.inventoryTransaction,
     AppRoutes.inventoryTransactionEdit: AppRoutes.inventoryTransaction,
     AppRoutes.inventoryTransactionDelete: AppRoutes.inventoryTransaction,
-
-    AppRoutes.itemBranchEntry: AppRoutes.stockDashboard,
-    AppRoutes.barcodeFunction: AppRoutes.stockDashboard,
-    AppRoutes.exportFunction: AppRoutes.stockDashboard,
 
     // ==================== COMPANY MODULE ====================
     AppRoutes.companyManagement: AppRoutes.companyDashboard,

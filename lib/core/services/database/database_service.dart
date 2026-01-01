@@ -2520,9 +2520,6 @@ ON other_income_table (user_id);
       AppRoutes.lotEntry,
       AppRoutes.lotColorings,
       AppRoutes.inventoryTransaction,
-      AppRoutes.itemBranchEntry,
-      AppRoutes.barcodeFunction,
-      AppRoutes.exportFunction,
     ];
 
     for (final uri in stockPrivileges) {

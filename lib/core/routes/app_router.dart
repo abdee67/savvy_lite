@@ -342,7 +342,7 @@ class AppRouter {
         },
         redirect: _protectedRouteRedirect,
       ),
-      GoRoute(
+      /*  GoRoute(
         path: AppRoutes.privilegeManagement,
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: AppRoutes.privilegeManagement,
@@ -374,7 +374,7 @@ class AppRouter {
           child: PrivilegeForm(),
         ),
         redirect: _protectedRouteRedirect,
-      ),
+      ),*/
       GoRoute(
         path: AppRoutes.userManagement,
         builder: (context, state) => PrivilegeRouteGuard(

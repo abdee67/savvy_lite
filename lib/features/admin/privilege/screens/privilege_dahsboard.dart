@@ -33,12 +33,12 @@ class _PrivilegeManagementScreenState extends State<PrivilegeManagementScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Privilege Management'),
-        actions: [
+        /*actions: [
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => context.push(AppRoutes.createPrivilege),
           ),
-        ],
+        ],*/
       ),
       body: BlocBuilder<PrivilegeBloc, PrivilegeState>(
         builder: (context, state) {
@@ -77,7 +77,7 @@ class _PrivilegeManagementScreenState extends State<PrivilegeManagementScreen> {
                 Text('Type: ${privilege.type}'),
               ],
             ),
-            trailing: Row(
+            /*trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
@@ -95,7 +95,7 @@ class _PrivilegeManagementScreenState extends State<PrivilegeManagementScreen> {
                     onPressed: () => _deletePrivilege(context, privilege.id),
                   ),
               ],
-            ),
+            ),*/
           ),
         );
       },
