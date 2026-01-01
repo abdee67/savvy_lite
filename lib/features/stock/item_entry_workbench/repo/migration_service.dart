@@ -75,6 +75,8 @@ class MigrationService {
 
           print('🔄 Starting migration for: ${item.itemDescription}');
 
+          //step 1. Create/ update item master table
+
           // Step 1: Create/Update ItemsTable
           final itemsTable = await _processItemsTable(
             item,

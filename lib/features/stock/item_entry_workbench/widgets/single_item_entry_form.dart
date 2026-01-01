@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
+import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
+import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_state.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
@@ -70,7 +73,15 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
       context.read<SystemConstantBloc>().add(
         LoadSystemConstants(widget.authBloc.state.companyId!),
       );
-      //context.read<ItemMasterBloc>().add(LoadItemMasters());
+
+      // Load items table
+      context.read<StockItemsEntryBloc>().add(
+        LoadItems(widget.authBloc.state.companyId!),
+      );
+
+      context.read<ItemMasterBloc>().add(
+        LoadItemMasters(widget.authBloc.state.companyId),
+      );
     }
   }
 
@@ -385,38 +396,57 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
 
   Widget _buildItemDescriptionField(int index) {
     return BlocBuilder<ItemMasterBloc, ItemMasterState>(
-      builder: (context, state) {
-        if (state.status == ItemMasterStatus.loading) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final itemDescriptions = state.items
-            .where(
-              (item) =>
-                  item.itemDescription != null &&
-                  item.itemDescription!.isNotEmpty,
-            )
-            .map((item) => item.itemDescription!)
-            .toSet()
-            .toList();
-        // In your form widget
-        return CustomSearchableDropdown(
-          labelText: 'Item Description',
-          options: itemDescriptions,
-          value: _items[index].itemDescription,
-          onChanged: (value) {
-            setState(() {
-              _items[index] = _items[index].copyWith(itemDescription: value);
-            });
-            print('Selected: $value');
-          },
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Please select or enter an item description';
+      builder: (context, masterState) {
+        return BlocBuilder<StockItemsEntryBloc, ItemEntryState>(
+          builder: (context, entryState) {
+            if (masterState.status == ItemMasterStatus.loading ||
+                entryState.status == ItemEntryStatus.loading) {
+              return const Center(child: CircularProgressIndicator());
             }
-            return null;
+
+            // Combine descriptions from both sources
+            final Set<String> descriptions = {};
+
+            // Add from ItemMaster (Workbench)
+            for (var item in masterState.items) {
+              if (item.itemDescription != null &&
+                  item.itemDescription!.isNotEmpty) {
+                descriptions.add(item.itemDescription!);
+              }
+            }
+
+            // Add from ItemEntry (Main Items table)
+            for (var item in entryState.items) {
+              if (item.itemDescription != null &&
+                  item.itemDescription!.isNotEmpty) {
+                descriptions.add(item.itemDescription!);
+              }
+            }
+
+            final sortedDescriptions = descriptions.toList()..sort();
+
+            return CustomSearchableDropdown(
+              labelText: 'Item Description',
+              options: sortedDescriptions,
+              value: _items[index].itemDescription,
+              onChanged: (value) {
+                setState(() {
+                  _items[index] = _items[index].copyWith(
+                    itemDescription: value,
+                  );
+                });
+                print('Selected: $value');
+              },
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please select or enter an item description';
+                }
+                return null;
+              },
+              prefixIcon: Icons.description,
+              allowCustomEntries: true,
+            );
           },
-          prefixIcon: Icons.description,
-          allowCustomEntries: true, // Set to false if you only want selection
         );
       },
     );

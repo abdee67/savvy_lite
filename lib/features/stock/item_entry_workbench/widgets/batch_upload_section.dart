@@ -259,7 +259,7 @@ class BatchUploadSection extends StatelessWidget {
                     IconButton(
                       onPressed: () {
                         context.read<ItemMasterBloc>().add(
-                          const CancelCreate(),
+                          const CancelCreateItemMaster(),
                         );
                       },
                       icon: const Icon(Icons.close),

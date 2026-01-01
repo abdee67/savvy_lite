@@ -40,75 +40,75 @@ class DeleteSelectedItemMasters extends ItemMasterEvent {
 }
 
 // ========== PREPARATION OPERATIONS ==========
-class PrepareCreate extends ItemMasterEvent {
-  const PrepareCreate();
+class PrepareCreateItemMaster extends ItemMasterEvent {
+  const PrepareCreateItemMaster();
 }
 
-class PrepareCopy extends ItemMasterEvent {
-  const PrepareCopy();
+class PrepareCopyItemMaster extends ItemMasterEvent {
+  const PrepareCopyItemMaster();
 }
 
-class PrepareCreateInCreate extends ItemMasterEvent {
-  const PrepareCreateInCreate();
+class PrepareCreateInCreateItemMaster extends ItemMasterEvent {
+  const PrepareCreateInCreateItemMaster();
 }
 
-class PrepareCreate1 extends ItemMasterEvent {
-  const PrepareCreate1();
+class PrepareCreate1ItemMaster extends ItemMasterEvent {
+  const PrepareCreate1ItemMaster();
 }
 
-class PrepareCreateInEdit extends ItemMasterEvent {
-  const PrepareCreateInEdit();
+class PrepareCreateInEditItemMaster extends ItemMasterEvent {
+  const PrepareCreateInEditItemMaster();
 }
 
-class PrepareEdit extends ItemMasterEvent {
-  const PrepareEdit();
+class PrepareEditItemMaster extends ItemMasterEvent {
+  const PrepareEditItemMaster();
 }
 
 // ========== COMPLEX BUSINESS OPERATIONS ==========
-class SaveRow extends ItemMasterEvent {
-  const SaveRow();
+class SaveRowItemMaster extends ItemMasterEvent {
+  const SaveRowItemMaster();
 }
 
-class SaveInEdit extends ItemMasterEvent {
-  const SaveInEdit();
+class SaveInEditItemMaster extends ItemMasterEvent {
+  const SaveInEditItemMaster();
 }
 
-class CreateInEdit extends ItemMasterEvent {
-  const CreateInEdit();
+class CreateInEditItemMaster extends ItemMasterEvent {
+  const CreateInEditItemMaster();
 }
 
-class RemoveInCreate extends ItemMasterEvent {
+class RemoveInCreateItemMaster extends ItemMasterEvent {
   final ItemMaster item;
 
-  const RemoveInCreate(this.item);
+  const RemoveInCreateItemMaster(this.item);
 }
 
-class RemoveInEdit extends ItemMasterEvent {
+class RemoveInEditItemMaster extends ItemMasterEvent {
   final ItemMaster item;
 
-  const RemoveInEdit(this.item);
+  const RemoveInEditItemMaster(this.item);
 }
 
-class RemoveRecord extends ItemMasterEvent {
+class RemoveRecordItemMaster extends ItemMasterEvent {
   final ItemMaster item;
 
-  const RemoveRecord(this.item);
+  const RemoveRecordItemMaster(this.item);
 }
 
-class CancelUpdate extends ItemMasterEvent {
-  const CancelUpdate();
+class CancelUpdateItemMaster extends ItemMasterEvent {
+  const CancelUpdateItemMaster();
 }
 
-class CancelCreate extends ItemMasterEvent {
-  const CancelCreate();
+class CancelCreateItemMaster extends ItemMasterEvent {
+  const CancelCreateItemMaster();
 }
 
-class DiscardChanges extends ItemMasterEvent {
-  const DiscardChanges();
+class DiscardChangesItemMaster extends ItemMasterEvent {
+  const DiscardChangesItemMaster();
 }
 
-class RefreshList extends ItemMasterEvent {
-  const RefreshList();
+class RefreshListItemMaster extends ItemMasterEvent {
+  const RefreshListItemMaster();
 }
 
 // ========== DATA MIGRATION OPERATIONS ==========
@@ -257,22 +257,22 @@ class UpdateFirst extends ItemMasterEvent {
   const UpdateFirst(this.first);
 }
 
-class SaveAndClose extends ItemMasterEvent {
+class SaveAndCloseItemMaster extends ItemMasterEvent {
   final String linkName;
 
-  const SaveAndClose(this.linkName);
+  const SaveAndCloseItemMaster(this.linkName);
 }
 
-class SaveAndAddNew extends ItemMasterEvent {
+class SaveAndAddNewItemMaster extends ItemMasterEvent {
   final String linkName;
 
-  const SaveAndAddNew(this.linkName);
+  const SaveAndAddNewItemMaster(this.linkName);
 }
 
-class SaveAndAddContinue extends ItemMasterEvent {
+class SaveAndAddContinueItemMaster extends ItemMasterEvent {
   final String linkName;
 
-  const SaveAndAddContinue(this.linkName);
+  const SaveAndAddContinueItemMaster(this.linkName);
 }
 
 class CheckDuplicate extends ItemMasterEvent {
