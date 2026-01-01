@@ -919,7 +919,7 @@ class ItemTransactionRepository {
           branchTo,
           companyId,
           masterTransaction.createdBy ?? 0,
-          item.item?.unitOfMeasure as int?,
+          int.tryParse(item.item?.unitOfMeasure ?? ''),
         );
 
         double factor = 1.0;
@@ -992,7 +992,7 @@ class ItemTransactionRepository {
             branchTo,
             companyId,
             masterTransaction.createdBy ?? 0,
-            item.item?.unitOfMeasure as int?,
+            int.tryParse(item.item?.unitOfMeasure ?? ''),
           );
 
           double factor = 1.0;
@@ -1101,7 +1101,7 @@ class ItemTransactionRepository {
             branchTo,
             companyId,
             masterTransaction.createdBy ?? 0,
-            item.item?.unitOfMeasure as int?,
+            int.tryParse(item.item?.unitOfMeasure ?? ''),
           );
 
           // D. Calculate Quantity

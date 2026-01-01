@@ -100,6 +100,18 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
     }
   }
 
+  void _resetForm() {
+    setState(() {
+      _items.clear();
+      _items.add(ItemMaster(itemDescription: ''));
+      _effectiveDate = null;
+      _expirationDate = null;
+      _receivedDate = null;
+      _selectedItem = null;
+      _updateDateControllers();
+    });
+  }
+
   void _onItemDescriptionChanged(int index, String value) {
     setState(() {
       _items[index] = _items[index].copyWith(itemDescription: value);
@@ -182,48 +194,57 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Header with Add button
-        Padding(
-          padding: const EdgeInsets.only(bottom: 16.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Item Entries',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF155888),
-                ),
-              ),
-              /* ElevatedButton.icon(
-                onPressed: _addNewItem,
-                icon: const Icon(Icons.add, size: 20),
-                label: const Text('Add Item'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF155888),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+    return BlocListener<ItemMasterBloc, ItemMasterState>(
+      listener: (context, state) {
+        if (state.status == ItemMasterStatus.success) {
+          _resetForm();
+          // The message is already shown by BlocConsumer in the parent or should be here
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message ?? 'Item saved successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else if (state.status == ItemMasterStatus.failure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message ?? 'Failed to save item'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+      child: Column(
+        children: [
+          // Header with Add button
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Item Entries',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF155888),
                   ),
                 ),
-              ),*/
-            ],
-          ),
-        ),
-
-        // Items List
-        Expanded(
-          child: Form(
-            key: _formKey,
-            child: ListView.builder(
-              itemCount: _items.length,
-              itemBuilder: (context, index) => _buildItemCard(index),
+              ],
             ),
           ),
-        ),
-      ],
+
+          // Items List
+          Expanded(
+            child: Form(
+              key: _formKey,
+              child: ListView.builder(
+                itemCount: _items.length,
+                itemBuilder: (context, index) => _buildItemCard(index),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -418,6 +439,7 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
         return CustomDropdown(
           labelText: 'Store *',
           prefixIcon: const Icon(Icons.store),
+          value: _items[index].branch?.toString(),
           items: branches.map((branch) {
             return DropdownMenuItem(
               value: branch.id.toString(),
@@ -533,7 +555,8 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
   Widget _buildUnitPriceField(int index) {
     return CustomTextField(
       labelText: 'Unit Price',
-      keyboardType: TextInputType.numberWithOptions(decimal: true),
+      value: _items[index].unitPrice?.toString(),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
       onChanged: (value) {
         setState(() {
           _items[index] = _items[index].copyWith(
@@ -548,7 +571,8 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
   Widget _buildUnitCostField(int index) {
     return CustomTextField(
       labelText: 'Unit Cost',
-      keyboardType: TextInputType.numberWithOptions(decimal: true),
+      value: _items[index].unitCost?.toString(),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
       onChanged: (value) {
         setState(() {
           _items[index] = _items[index].copyWith(
@@ -582,8 +606,43 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
   }
 
   Widget _buildLocationField(int index, int locationNumber) {
+    String? locationValue;
+    switch (locationNumber) {
+      case 1:
+        locationValue = _items[index].locationCode1;
+        break;
+      case 2:
+        locationValue = _items[index].locationCode2;
+        break;
+      case 3:
+        locationValue = _items[index].locationCode3;
+        break;
+      case 4:
+        locationValue = _items[index].locationCode4;
+        break;
+      case 5:
+        locationValue = _items[index].locationCode5;
+        break;
+      case 6:
+        locationValue = _items[index].locationCode6;
+        break;
+      case 7:
+        locationValue = _items[index].locationCode7;
+        break;
+      case 8:
+        locationValue = _items[index].locationCode8;
+        break;
+      case 9:
+        locationValue = _items[index].locationCode9;
+        break;
+      case 10:
+        locationValue = _items[index].locationCode10;
+        break;
+    }
+
     return CustomTextField(
       labelText: 'Location $locationNumber *',
+      value: locationValue,
       onChanged: (value) {
         setState(() {
           switch (locationNumber) {
@@ -633,7 +692,8 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
   Widget _buildQuantityField(int index) {
     return CustomTextField(
       labelText: 'Quantity *',
-      keyboardType: TextInputType.numberWithOptions(decimal: true),
+      value: _items[index].quantity?.toString(),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
       onChanged: (value) {
         setState(() {
           _items[index] = _items[index].copyWith(
@@ -763,6 +823,7 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
   Widget _buildBatchNumberField(int index) {
     return CustomTextField(
       labelText: 'Batch Number',
+      value: _items[index].batchNumber,
       onChanged: (value) {
         setState(() {
           _items[index] = _items[index].copyWith(batchNumber: value);

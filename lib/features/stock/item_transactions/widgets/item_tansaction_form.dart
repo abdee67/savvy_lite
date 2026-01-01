@@ -437,13 +437,6 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
           isEditMode ? 'Edit Item Transaction' : 'Create Item Transaction',
         ),
         backgroundColor: const Color(0xFF155888),
-        actions: [
-          IconButton(
-            icon: const Icon(Iconsax.tick_circle),
-            onPressed: _applyTransactions,
-            tooltip: 'Apply',
-          ),
-        ],
       ),
       body: BlocListener<ItemTransactionsBloc, ItemTransactionsState>(
         listener: (context, state) {
@@ -943,7 +936,7 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
               flex: 2,
               cellBuilder: (lot) => Text(
                 lot.lotNumber.toString(),
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w500,
                   color: Colors.white,
@@ -955,15 +948,15 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
               flex: 1,
               cellBuilder: (lot) => Text(
                 '${lot.quantityAvailable ?? 0.0}',
-                style: TextStyle(fontSize: 10, color: Colors.white),
+                style: const TextStyle(fontSize: 10, color: Colors.white),
               ),
             ),
             TableColumnConfig(
               header: 'Status',
               flex: 1,
               cellBuilder: (lot) => Text(
-                lot.statusDescription.toString(),
-                style: TextStyle(
+                lot.statusDescription?.toString() ?? 'N/A',
+                style: const TextStyle(
                   fontSize: 8,
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -974,8 +967,10 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
               header: 'UoM',
               flex: 1,
               cellBuilder: (lot) => Text(
-                lot.itemRef?.unitOfMeasure ?? 'N/A',
-                style: TextStyle(
+                lot.itemRef?.unitOfMeasureDescription?.detailCode ??
+                    lot.itemRef?.unitOfMeasure ??
+                    'N/A',
+                style: const TextStyle(
                   fontSize: 8,
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -987,8 +982,10 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
                 header: 'Expiration',
                 flex: 2,
                 cellBuilder: (lot) => Text(
-                  _formatDate(selectedLot.dateExpiration!),
-                  style: TextStyle(
+                  lot.dateExpiration != null
+                      ? _formatDate(lot.dateExpiration!)
+                      : '-',
+                  style: const TextStyle(
                     fontSize: 9,
                     overflow: TextOverflow.ellipsis,
                     color: Colors.white,
@@ -1000,8 +997,10 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
                 header: 'Effective',
                 flex: 2,
                 cellBuilder: (lot) => Text(
-                  _formatDate(selectedLot.dateEffective!),
-                  style: TextStyle(
+                  lot.dateEffective != null
+                      ? _formatDate(lot.dateEffective!)
+                      : '-',
+                  style: const TextStyle(
                     fontSize: 9,
                     overflow: TextOverflow.ellipsis,
                     color: Colors.white,
@@ -1013,11 +1012,13 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
                 header: 'Received',
                 flex: 2,
                 cellBuilder: (lot) => Text(
-                  _formatDate(selectedLot.dateReceived!),
-                  style: TextStyle(
+                  lot.dateReceived != null
+                      ? _formatDate(lot.dateReceived!)
+                      : '-',
+                  style: const TextStyle(
                     fontSize: 9,
                     overflow: TextOverflow.ellipsis,
-                    color: Colors.white,
+                    color: Colors.black,
                   ),
                 ),
               ),
@@ -1124,7 +1125,7 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
           Expanded(
             child: ElevatedButton.icon(
               onPressed: _applyTransactions,
-              icon: const Icon(Iconsax.add),
+              icon: const Icon(Iconsax.tick_circle),
               label: const Text('Apply'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF155888),
@@ -1159,35 +1160,29 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
     final code = (color.colorTypeCode ?? '').trim().toUpperCase();
     final name = (color.colorTypeName ?? '').trim().toLowerCase();
 
-    switch (code) {
-      case 'RED':
-        return Colors.red.withOpacity(1.0);
-      case 'BLU':
-        return Colors.blue.withOpacity(1.0);
-      case 'GRN':
-        return Colors.green.withOpacity(1.0);
-      case 'BLK':
-        return Colors.black.withOpacity(1.0);
-      case 'YL':
-        return Colors.yellow.withOpacity(1.0);
-      case 'ORG':
-        return Colors.orange.withOpacity(1.0);
-      case 'GRY':
-        return Colors.grey.withOpacity(1.0);
-      case 'OV':
-        return const Color.fromARGB(255, 14, 90, 4).withOpacity(1.0);
-      case 'PRPL':
-        return Colors.purple.withOpacity(1.0);
-      case 'LM':
-        return Colors.lime.withOpacity(1.0);
-      default:
-        if (name.contains('red')) return Colors.red.withOpacity(1.0);
-        if (name.contains('blue')) return Colors.blue.withOpacity(1.0);
-        if (name.contains('green')) return Colors.green.withOpacity(1.0);
-        if (name.contains('yellow')) return Colors.yellow.withOpacity(1.0);
-        if (name.contains('orange')) return Colors.orange.withOpacity(1.0);
-        if (name.contains('black')) return Colors.black.withOpacity(1.0);
-        return Colors.transparent;
-    }
+    const double opacity = 0.8;
+
+    if (code == 'RED' || name.contains('red'))
+      return Colors.red.withOpacity(opacity);
+    if (code == 'BLU' || name.contains('blue'))
+      return Colors.blue.withOpacity(opacity);
+    if (code == 'GRN' || name.contains('green'))
+      return Colors.green.withOpacity(opacity);
+    if (code == 'YL' || name.contains('yellow'))
+      return Colors.yellow.withOpacity(opacity);
+    if (code == 'ORG' || name.contains('orange'))
+      return Colors.orange.withOpacity(opacity);
+    if (code == 'BLK' || name.contains('black'))
+      return Colors.black.withOpacity(opacity);
+    if (code == 'GRY' || name.contains('grey'))
+      return Colors.grey.withOpacity(opacity);
+    if (code == 'PRPL' || name.contains('purple'))
+      return Colors.purple.withOpacity(opacity);
+    if (code == 'OV' || name.contains('over'))
+      return const Color.fromARGB(255, 14, 90, 4).withOpacity(opacity);
+    if (code == 'LM' || name.contains('lime'))
+      return Colors.lime.withOpacity(opacity);
+
+    return Colors.transparent;
   }
 }

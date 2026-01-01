@@ -662,12 +662,13 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
 
       if (result.success) {
         // Refresh data after successful migration
-        add(LoadItemMasters(authBloc.state.companyId));
 
         emit(
           state.copyWith(
             status: ItemMasterStatus.success,
             message: result.message,
+            createItems: const [],
+            selected: null,
           ),
         );
       } else {
@@ -678,6 +679,7 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
           ),
         );
       }
+      add(LoadItemMasters(authBloc.state.companyId));
     } catch (e) {
       emit(
         state.copyWith(
