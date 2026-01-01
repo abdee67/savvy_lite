@@ -102,11 +102,17 @@ class StockItemInBranchRepository extends BaseRepository {
 
     final maps = await db.rawQuery('''
       SELECT ib.*, 
-             i.item_description, i.barcode, i.items_id,
-             b.description as branch_description, b.reference_id as branch_reference
+             i.item_description,
+             i.barcode,
+             i.items_id,
+             b.description as branch_description,
+             b.reference_id as branch_reference,
+             u.description_1 as unit_of_measure_description,
+             u.detail_code as unit_of_measure_code
       FROM items_in_branch ib
       LEFT JOIN items_table i ON ib.item_number = i.id
       LEFT JOIN branch_table b ON ib.branch = b.id
+      LEFT JOIN udc_details u ON ib.unit_of_measure = u.id
       $whereClause
       ORDER BY i.item_description ASC
     ''', whereArgs);
@@ -125,11 +131,17 @@ class StockItemInBranchRepository extends BaseRepository {
     final maps = await db.rawQuery(
       '''
       SELECT ib.*, 
-             i.item_description, i.barcode, i.items_id,
-             b.description as branch_description, b.reference_id as branch_reference
+             i.item_description,
+             i.barcode,
+             i.items_id,
+             b.description as branch_description,
+             b.reference_id as branch_reference,
+             u.description_1 as unit_of_measure_description,
+             u.detail_code as unit_of_measure_code
       FROM items_in_branch ib
       LEFT JOIN items_table i ON ib.item_number = i.id
       LEFT JOIN branch_table b ON ib.branch = b.id
+      LEFT JOIN udc_details u ON ib.unit_of_measure = u.id
       WHERE ib.item_number = ? AND ib.branch = ? AND ib.company = ?
     ''',
       [itemNumber, branchId, companyId],
@@ -151,11 +163,17 @@ class StockItemInBranchRepository extends BaseRepository {
     final maps = await db.rawQuery(
       '''
       SELECT ib.*, 
-             i.item_description, i.barcode, i.items_id,
-             b.description as branch_description, b.reference_id as branch_reference
+             i.item_description,
+             i.barcode,
+             i.items_id,
+             b.description as branch_description,
+             b.reference_id as branch_reference,
+             u.description_1 as unit_of_measure_description,
+             u.detail_code as unit_of_measure_code
       FROM items_in_branch ib
       LEFT JOIN items_table i ON ib.item_number = i.id
       LEFT JOIN branch_table b ON ib.branch = b.id
+      LEFT JOIN udc_details u ON ib.unit_of_measure = u.id
       WHERE ib.item_number = ? AND ib.company = ?
     ''',
       [itemNumber, companyId],
@@ -173,11 +191,17 @@ class StockItemInBranchRepository extends BaseRepository {
     final maps = await db.rawQuery(
       '''
       SELECT ib.*, 
-             i.item_description, i.barcode, i.items_id,
-             b.description as branch_description, b.reference_id as branch_reference
+             i.item_description,
+             i.barcode,
+             i.items_id,
+             b.description as branch_description,
+             b.reference_id as branch_reference,
+             u.description_1 as unit_of_measure_description,
+             u.detail_code as unit_of_measure_code
       FROM items_in_branch ib
       LEFT JOIN items_table i ON ib.item_number = i.id
       LEFT JOIN branch_table b ON ib.branch = b.id
+      LEFT JOIN udc_details u ON ib.unit_of_measure = u.id
       WHERE ib.branch = ? AND ib.company = ?
     ''',
       [branchId, companyId],
@@ -195,11 +219,17 @@ class StockItemInBranchRepository extends BaseRepository {
     final maps = await db.rawQuery(
       '''
       SELECT ib.*, 
-             i.item_description, i.barcode, i.items_id,
-             b.description as branch_description, b.reference_id as branch_reference
+             i.item_description,
+             i.barcode,
+             i.items_id,
+             b.description as branch_description,
+             b.reference_id as branch_reference,
+             u.description_1 as unit_of_measure_description,
+             u.detail_code as unit_of_measure_code
       FROM items_in_branch ib
       LEFT JOIN items_table i ON ib.item_number = i.id
       LEFT JOIN branch_table b ON ib.branch = b.id
+      LEFT JOIN udc_details u ON ib.unit_of_measure = u.id
       WHERE i.barcode = ? AND ib.company = ?
     ''',
       [barcode, companyId],
@@ -299,11 +329,17 @@ class StockItemInBranchRepository extends BaseRepository {
 
     final maps = await db.rawQuery('''
       SELECT ib.*, 
-             i.item_description, i.barcode, i.items_id,
-             b.description as branch_description, b.reference_id as branch_reference
+             i.item_description,
+             i.barcode,
+             i.items_id,
+             b.description as branch_description,
+             b.reference_id as branch_reference,
+             u.description_1 as unit_of_measure_description,
+             u.detail_code as unit_of_measure_code
       FROM items_in_branch ib
       LEFT JOIN items_table i ON ib.item_number = i.id
       LEFT JOIN branch_table b ON ib.branch = b.id
+      LEFT JOIN udc_details u ON ib.unit_of_measure = u.id
       WHERE $whereClause
       ORDER BY i.item_description ASC
     ''', whereArgs);

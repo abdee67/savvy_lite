@@ -831,7 +831,7 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
           ),
           _buildItemInfoItem(
             'Unit of Measure : ',
-            item.unitOfMeasure?.toString() ?? 'N/A',
+            item.unitOfMeasureRef?.description1.toString() ?? 'N/A',
             Iconsax.rulerpen,
             screenWidth,
           ),
