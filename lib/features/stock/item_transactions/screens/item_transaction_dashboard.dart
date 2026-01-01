@@ -653,7 +653,7 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
 
     // For responsiveness:
     final collapsedHeight = isCompact
-        ? screenHeight * 0.19
+        ? screenHeight * 0.20
         : screenHeight * 0.14;
 
     final expandedHeight = isCompact

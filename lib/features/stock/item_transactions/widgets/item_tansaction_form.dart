@@ -1123,24 +1123,24 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
       child: Row(
         children: [
           Expanded(
-            child: ElevatedButton.icon(
+            child: OutlinedButton.icon(
+              onPressed: _cancelCreate,
+              icon: const Icon(Iconsax.close_circle),
+              label: const Text('Cancel'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: OutlinedButton.icon(
               onPressed: _applyTransactions,
               icon: const Icon(Iconsax.tick_circle),
               label: const Text('Apply'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF155888),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: _cancelCreate,
-              icon: const Icon(Iconsax.close_circle),
-              label: const Text('Cancel'),
-              style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
             ),

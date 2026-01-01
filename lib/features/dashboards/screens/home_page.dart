@@ -148,7 +148,7 @@ class _HomePageState extends State<HomePage> {
                             Container(
                               margin: const EdgeInsets.only(bottom: 50),
                               width: double.infinity,
-                              height: 200,
+                              height: 167,
                               decoration: const BoxDecoration(
                                 gradient: RadialGradient(
                                   center: Alignment(0.5, -0.5),
@@ -199,7 +199,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildHeaderSection(BuildContext context, AuthState authState) {
     return Padding(
-      padding: const EdgeInsets.only(top: 40, left: 16, right: 16),
+      padding: const EdgeInsets.only(top: 20, left: 16, right: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -296,7 +296,7 @@ class _HomePageState extends State<HomePage> {
     AuthState authState,
   ) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(15),
         border: Border.all(color: const Color(0xFFEBEBEB), width: 0.3),
