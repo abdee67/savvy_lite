@@ -109,71 +109,81 @@ class _HomePageState extends State<HomePage> {
         return BlocBuilder<SystemConstantBloc, SystemConstantState>(
           builder: (context, scState) {
             return Scaffold(
-              body: LiquidPullToRefresh(
-                color: Color(0xFF155888),
-                backgroundColor: Colors.amber,
-                showChildOpacityTransition: false,
-                onRefresh: () async {
-                  // Trigger reload of system constants and other global data so changes appear instantly
-                  final companyId = context.read<AuthBloc>().state.companyId;
-                  if (companyId != null) {
-                    context.read<SystemConstantBloc>().add(
-                      LoadSystemConstants(companyId),
-                    );
-                  }
-                  // Small delay to allow blocs to process and UI to reflect changes
-                  await Future.delayed(const Duration(milliseconds: 600));
-                  // Optionally show a quick feedback
-                  if (mounted) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(const SnackBar(content: Text('Refreshed')));
-                  }
-                },
-                // The child must be scrollable for RefreshIndicator to work
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: MediaQuery.of(context).size.height,
-                    ),
-                    child: Container(
-                      decoration: const BoxDecoration(color: Colors.white),
-                      child: Stack(
-                        children: [
-                          // Background with radial gradient
-                          Container(
-                            margin: const EdgeInsets.only(bottom: 50),
-                            width: double.infinity,
-                            height: 167,
-                            decoration: const BoxDecoration(
-                              gradient: RadialGradient(
-                                center: Alignment(0.5, -0.5),
-                                radius: 2.5,
-                                colors: [Color(0xFF383838), Color(0xFF565555)],
-                                stops: [0.46, 1.0],
+              body: SafeArea(
+                bottom: false,
+                top: false,
+                child: LiquidPullToRefresh(
+                  color: Color(0xFF155888),
+                  backgroundColor: Colors.amber,
+                  showChildOpacityTransition: false,
+                  onRefresh: () async {
+                    // Trigger reload of system constants and other global data so changes appear instantly
+                    final companyId = context.read<AuthBloc>().state.companyId;
+                    if (companyId != null) {
+                      context.read<SystemConstantBloc>().add(
+                        LoadSystemConstants(companyId),
+                      );
+                    }
+                    // Small delay to allow blocs to process and UI to reflect changes
+                    await Future.delayed(const Duration(milliseconds: 600));
+                    // Optionally show a quick feedback
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Refreshed')),
+                      );
+                    }
+                  },
+                  // The child must be scrollable for RefreshIndicator to work
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: MediaQuery.sizeOf(context).height,
+                      ),
+                      child: Container(
+                        decoration: const BoxDecoration(color: Colors.white),
+                        child: Stack(
+                          children: [
+                            // Background with radial gradient
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 50),
+                              width: double.infinity,
+                              height: 200,
+                              decoration: const BoxDecoration(
+                                gradient: RadialGradient(
+                                  center: Alignment(0.5, -0.5),
+                                  radius: 2.5,
+                                  colors: [
+                                    Color(0xFF383838),
+                                    Color(0xFF565555),
+                                  ],
+                                  stops: [0.46, 1.0],
+                                ),
                               ),
                             ),
-                          ),
 
-                          // Main content
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildHeaderSection(context, authState),
-                              Column(
-                                children: [
-                                  _buildDashboardSelector(
-                                    context,
-                                    availableDashboards,
-                                    authState,
-                                  ),
-                                  _buildFeaturesSection(context, authState),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
+                            // Main content
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildHeaderSection(context, authState),
+                                Column(
+                                  children: [
+                                    _buildDashboardSelector(
+                                      context,
+                                      availableDashboards,
+                                      authState,
+                                    ),
+                                    _buildFeaturesSection(context, authState),
+                                    const SizedBox(
+                                      height: 40,
+                                    ), // Added space for footer visibility
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -312,7 +322,7 @@ class _HomePageState extends State<HomePage> {
                   child: Scrollbar(
                     thumbVisibility:
                         false, // Always show scrollbar when scrollable
-                    thickness: 4,
+                    thickness: 2,
                     radius: const Radius.circular(2),
                     child: ListView(
                       scrollDirection: Axis.horizontal,
@@ -557,15 +567,47 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           const SizedBox(height: 16),
-          ...filteredFeatures.map(
-            (privilege) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _FeatureButton(
-                privilege: privilege,
-                color: config?.color ?? Colors.grey,
-                onPressed: () => _handleFeatureNavigation(context, privilege),
-              ),
-            ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 600;
+              if (isWide) {
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 3.2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  itemCount: filteredFeatures.length,
+                  itemBuilder: (context, index) {
+                    final privilege = filteredFeatures[index];
+                    return _FeatureButton(
+                      privilege: privilege,
+                      color: config?.color ?? Colors.grey,
+                      onPressed: () =>
+                          _handleFeatureNavigation(context, privilege),
+                    );
+                  },
+                );
+              }
+              return Column(
+                children: filteredFeatures
+                    .map(
+                      (privilege) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _FeatureButton(
+                          privilege: privilege,
+                          color: config?.color ?? Colors.grey,
+                          onPressed: () =>
+                              _handleFeatureNavigation(context, privilege),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              );
+            },
           ),
         ],
       ),
@@ -641,12 +683,26 @@ Widget _buildFooter() {
       border: Border(top: BorderSide(color: Colors.grey[300]!)),
     ),
     child: const Center(
-      child: Text(
-        'POWERED BY TECH EQUATIONS',
-        style: TextStyle(
-          color: Colors.black54,
-          fontSize: 14,
-          fontWeight: FontWeight.w300,
+      child: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: 'POWERED BY ',
+              style: TextStyle(
+                color: Colors.amber,
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            TextSpan(
+              text: 'TECH EQUATIONS',
+              style: TextStyle(
+                color: Color(0xFF155888),
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
         ),
       ),
     ),
