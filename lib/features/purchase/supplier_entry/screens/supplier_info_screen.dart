@@ -92,7 +92,7 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
     // Set default dates
     final now = DateTime.now();
     _transactionDate = now;
-    _deliveryDate = now.add(const Duration(days: 7));
+    //_deliveryDate = now.add(const Duration(days: 7));
     _receivingDate = now;
 
     _updateDateControllers();

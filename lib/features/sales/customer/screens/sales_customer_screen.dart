@@ -446,7 +446,7 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
   }
 
   Widget _buildSalesPersonField(SalesOrderCoordinatorState state) {
-    final salesPerson = state.currentHeader?.employee?.fullName ?? '';
+    final salesPerson = widget.authBloc.state.userId?.userName ?? '';
     if (salesPerson.isNotEmpty && _salesPersonController.text.isEmpty) {
       _salesPersonController.text = salesPerson;
     }

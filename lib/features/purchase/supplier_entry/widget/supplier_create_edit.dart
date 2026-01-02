@@ -409,10 +409,10 @@ class _SupplierEntryScreenState extends State<SupplierEntryScreen> {
                         const SizedBox(height: 16),
                         _buildTextField(
                           _contactPersonController,
-                          'Contact Person *',
+                          'Contact Person ',
                           Icons.person,
                           TextInputType.text,
-                          true,
+                          false,
                         ),
                         const SizedBox(height: 16),
                         _buildTextField(

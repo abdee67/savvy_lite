@@ -199,7 +199,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildHeaderSection(BuildContext context, AuthState authState) {
     return Padding(
-      padding: const EdgeInsets.only(top: 20, left: 16, right: 16),
+      padding: const EdgeInsets.only(top: 30, left: 16, right: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

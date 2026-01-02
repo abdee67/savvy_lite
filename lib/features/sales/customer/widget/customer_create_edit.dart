@@ -371,7 +371,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
           const SizedBox(height: 16),
           _buildTextField(
             _contactPhone1Controller,
-            'Customer Phone 1 *',
+            'Customer Phone 1 ',
             Icons.phone,
             TextInputType.phone,
           ),
@@ -454,7 +454,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
           const SizedBox(height: 16),
           _buildTextField(
             _contactNameController,
-            'Contact Name *',
+            'Contact Name ',
             Icons.person,
           ),
           const SizedBox(height: 16),

@@ -906,7 +906,7 @@ class _PurchaseReviewPageState extends State<CreditPurchaseReviewPage>
               children: [
                 _buildActionButton(
                   Iconsax.convert_3d_cube,
-                  'Receive Item',
+                  'Pay Credit',
                   () => _payCredit(purchaseOrder),
                   isCompact,
                 ),

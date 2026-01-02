@@ -175,6 +175,10 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
   void _onFromBranchChanged(int? branchId) {
     setState(() {
       _selectedFromBranch = branchId;
+      // Reset To Branch if it matches From Branch to prevent Dropdown error
+      if (_selectedToBranch == branchId) {
+        _selectedToBranch = null;
+      }
       _transactionItems.clear();
       _addNewTransactionItem();
     });
@@ -193,6 +197,10 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
   void _onToBranchChanged(int? branchId) {
     setState(() {
       _selectedToBranch = branchId;
+      // Reset From Branch if it matches To Branch to prevent Dropdown error
+      if (_selectedFromBranch == branchId) {
+        _selectedFromBranch = null;
+      }
       _transactionItems.clear();
       _addNewTransactionItem();
     });
@@ -554,12 +562,20 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
                 ),
               ),
               if (_selectedTransactionType?.detailCode == 'T') ...[
-                const SizedBox(width: 16),
+                const SizedBox(width: 8),
                 Expanded(
                   child: BlocBuilder<BranchBloc, BranchState>(
                     builder: (context, state) => CustomDropdown<int>(
                       labelText: 'To Store *',
-                      value: _selectedToBranch,
+                      // Ensure value exists in items to avoid "There should be exactly one item with DropdownButton's value" error
+                      value:
+                          state.branchs.any(
+                            (b) =>
+                                b.id == _selectedToBranch &&
+                                b.id != _selectedFromBranch,
+                          )
+                          ? _selectedToBranch
+                          : null,
                       items: state.branchs
                           .where(
                             (b) => b.id != _selectedFromBranch,
@@ -1162,26 +1178,36 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
 
     const double opacity = 0.8;
 
-    if (code == 'RED' || name.contains('red'))
+    if (code == 'RED' || name.contains('red')) {
       return Colors.red.withOpacity(opacity);
-    if (code == 'BLU' || name.contains('blue'))
+    }
+    if (code == 'BLU' || name.contains('blue')) {
       return Colors.blue.withOpacity(opacity);
-    if (code == 'GRN' || name.contains('green'))
+    }
+    if (code == 'GRN' || name.contains('green')) {
       return Colors.green.withOpacity(opacity);
-    if (code == 'YL' || name.contains('yellow'))
+    }
+    if (code == 'YL' || name.contains('yellow')) {
       return Colors.yellow.withOpacity(opacity);
-    if (code == 'ORG' || name.contains('orange'))
+    }
+    if (code == 'ORG' || name.contains('orange')) {
       return Colors.orange.withOpacity(opacity);
-    if (code == 'BLK' || name.contains('black'))
+    }
+    if (code == 'BLK' || name.contains('black')) {
       return Colors.black.withOpacity(opacity);
-    if (code == 'GRY' || name.contains('grey'))
+    }
+    if (code == 'GRY' || name.contains('grey')) {
       return Colors.grey.withOpacity(opacity);
-    if (code == 'PRPL' || name.contains('purple'))
+    }
+    if (code == 'PRPL' || name.contains('purple')) {
       return Colors.purple.withOpacity(opacity);
-    if (code == 'OV' || name.contains('over'))
+    }
+    if (code == 'OV' || name.contains('over')) {
       return const Color.fromARGB(255, 14, 90, 4).withOpacity(opacity);
-    if (code == 'LM' || name.contains('lime'))
+    }
+    if (code == 'LM' || name.contains('lime')) {
       return Colors.lime.withOpacity(opacity);
+    }
 
     return Colors.transparent;
   }

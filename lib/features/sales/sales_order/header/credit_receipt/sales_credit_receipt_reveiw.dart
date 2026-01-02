@@ -706,7 +706,7 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'FS Number - ${salesOrder.fsNumber ?? 'N/A'}',
+                                    'FS - ${salesOrder.fsNumber ?? 'N/A'}',
                                     style: TextStyle(
                                       color: const Color(0xFF373737),
                                       fontSize: isCompact ? 20 : 24,

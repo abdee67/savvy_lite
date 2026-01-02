@@ -12,7 +12,6 @@ import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_
 import 'package:savvy_stock/features/stock/location_entry/widget/branch_dropdown.dart';
 import 'package:savvy_stock/features/stock/location_entry/widget/item_pick_list.dart';
 import 'package:savvy_stock/features/stock/location_entry/widget/location_code.dart';
-import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import '../blocs/location_master_bloc.dart';
 import '../models/location_master_model.dart';
 

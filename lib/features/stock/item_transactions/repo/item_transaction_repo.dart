@@ -1008,7 +1008,7 @@ class ItemTransactionRepository {
           final qI = (factor * item.quantityTransaction).abs();
 
           await itemLocationsRepository.updateItemLocation(
-            il!.copyWith(quantityOnHand: (il.quantityOnHand ?? 0.0) + qI),
+            il.copyWith(quantityOnHand: (il.quantityOnHand ?? 0.0) + qI),
           );
 
           // C. Update ItemInBranch Quantity
@@ -1119,14 +1119,14 @@ class ItemTransactionRepository {
           // E. Update All 3 Entities
           // 1. Lot
           await lotMasterRepository.updateLotMaster(
-            destLot!.copyWith(
+            destLot.copyWith(
               quantityAvailable: (destLot.quantityAvailable ?? 0.0) + qI,
             ),
           );
 
           // 2. Location
           await itemLocationsRepository.updateItemLocation(
-            il!.copyWith(quantityOnHand: (il.quantityOnHand ?? 0.0) + qI),
+            il.copyWith(quantityOnHand: (il.quantityOnHand ?? 0.0) + qI),
           );
 
           // 3. Branch

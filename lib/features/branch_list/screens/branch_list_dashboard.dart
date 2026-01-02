@@ -428,7 +428,7 @@ class _BranchDashboardState extends State<BranchDashboard>
 
     // For responsiveness:
     final collapsedHeight = isCompact
-        ? screenHeight * 0.15
+        ? screenHeight * 0.20
         : screenHeight * 0.14;
 
     final expandedHeight = isCompact
