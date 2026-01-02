@@ -106,7 +106,7 @@ Future<void> _initializeAndRunApp() async {
     // await LocalDatabaseService().debugTable('item_cost');
     //await LocalDatabaseService().debugTable('item_location');
     //  await LocalDatabaseService().debugTable('location_master');
-    await LocalDatabaseService().debugTable('item_master');
+    // await LocalDatabaseService().debugTable('item_master');
     //await LocalDatabaseService().debugTable('items_table');
     // await LocalDatabaseService().debugTable('sales_order_header');
     //await LocalDatabaseService().debugTable('credit_receipt_table');
@@ -124,6 +124,7 @@ Future<void> _initializeAndRunApp() async {
     //await LocalDatabaseService().debugTable('purchase_order_receiver');
     //await LocalDatabaseService().debugTable('credit_payment_table');
     //await LocalDatabaseService().debugTable('company_table');
+    await LocalDatabaseService().debugTable('udc_details');
   } catch (error, stackTrace) {
     developer.log('Initialization error: $error');
     developer.log('Stack trace: $stackTrace');
@@ -411,8 +412,11 @@ class _SavvyStockState extends State<SavvyStock> {
             ),
           ),
           BlocProvider<UdcDetailsBloc>(
-            create: (context) =>
-                UdcDetailsBloc(databaseService: getIt(), authBloc: _authBloc),
+            create: (context) => UdcDetailsBloc(
+              databaseService: getIt(),
+              authBloc: _authBloc,
+              udcRepository: _udcRepository,
+            ),
           ),
           BlocProvider<LocationMasterBloc>(
             create: (context) => LocationMasterBloc(

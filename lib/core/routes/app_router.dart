@@ -8,9 +8,6 @@ import 'package:savvy_stock/core/widgets/route_guard.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
 import 'package:savvy_stock/features/admin/employees/screens/employee_dashboard.dart';
 import 'package:savvy_stock/features/admin/employees/widgets/emloyee_create_and_edit.dart.dart';
-import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart';
-import 'package:savvy_stock/features/admin/privilege/screens/privilege_dahsboard.dart';
-import 'package:savvy_stock/features/admin/privilege/widgets/privilege_form.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 import 'package:savvy_stock/features/admin/role/screens/role_dashboard.dart';
 import 'package:savvy_stock/features/admin/role/widgets/role_form.dart';
@@ -106,6 +103,9 @@ import 'package:savvy_stock/features/system_constant/screen/system_constants_scr
 
 import 'package:savvy_stock/core/di/injection_container.dart';
 import 'package:savvy_stock/features/reports/cash_flow/bloc/cash_flow_bloc.dart';
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
+import 'package:savvy_stock/features/udc_detail/screens/uom_dashboard.dart';
+import 'package:savvy_stock/features/udc_detail/widgets/uom_create_and_edit.dart.dart';
 
 // Import your screen files for missing routes
 // import 'package:savvy_stock/features/sales/sales_entry/screens/sales_entry_screen.dart';
@@ -574,6 +574,41 @@ class AppRouter {
         },
         redirect: _protectedRouteRedirect,
       ),
+      //UOM Management
+      GoRoute(
+        path: AppRoutes.uomManagement,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.uomManagement,
+          parentPrivilege: AppRoutes.stockDashboard,
+          child: UomDashboard(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.uomCreation,
+        builder: (context, state) {
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.uomCreation,
+            parentPrivilege: AppRoutes.uomManagement,
+            child: UomCreateAndEdit(authBloc: authBloc),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.uomEdit,
+        builder: (context, state) {
+          final extra = state.extra;
+          final item = extra != null ? extra as UdcDetails? : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.uomEdit,
+            parentPrivilege: AppRoutes.uomManagement,
+            child: UomCreateAndEdit(item: item, authBloc: authBloc),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+
       // UOM Conversion
       GoRoute(
         path: AppRoutes.itemUomConversions,

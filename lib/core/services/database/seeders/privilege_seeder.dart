@@ -315,6 +315,8 @@ class PrivilegeSeeder {
         AppRoutes.uomManagement,
         'uom_management',
       ),
+      _createPrivilege('Add UoM', 'button', AppRoutes.uomCreation, 'add_uom'),
+      _createPrivilege('Edit UoM', 'button', AppRoutes.uomEdit, 'edit_uom'),
 
       //item uom conversions
       _createPrivilege(

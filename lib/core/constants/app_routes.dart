@@ -99,6 +99,8 @@ class AppRoutes {
   static const String importItemInBranch = '$itemInBranch/import-item';
 
   static const String uomManagement = '$stock/uom-management';
+  static const String uomCreation = '$uomManagement/add-uom';
+  static const String uomEdit = '$uomManagement/edit-uom';
 
   //item workbench
   static const String itemWorkbench = '$stock/item-workbench';

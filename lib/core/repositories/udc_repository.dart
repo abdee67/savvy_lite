@@ -172,6 +172,38 @@ class UdcRepository extends BaseRepository {
     }
   }
 
+  // Save UOM entry (matching Java logic)
+  Future<void> saveUomEntry(UdcDetails detail) async {
+    final db = await databaseService.database;
+    try {
+      final headerId = await getRecordHeaderId('UM');
+      if (headerId == null) {
+        throw Exception('UdcHeader with code UM not found');
+      }
+
+      final map = detail.toDatabaseMap();
+      // Ensure these are always set for UOM
+      map['record_header'] = headerId;
+      map['udc_group'] = 'UM';
+
+      if (detail.id == 0) {
+        // If it's a new record
+        map.remove('id'); // ID is autoincrement
+        await db.insert('udc_details', map);
+      } else {
+        await db.update(
+          'udc_details',
+          map,
+          where: 'id = ?',
+          whereArgs: [detail.id],
+        );
+      }
+    } catch (e) {
+      developer.log('Error saving UOM entry: $e');
+      rethrow;
+    }
+  }
+
   //get record header id
   Future<int?> getRecordHeaderId(String headerCode) async {
     try {

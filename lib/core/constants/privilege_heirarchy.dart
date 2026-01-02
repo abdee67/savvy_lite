@@ -85,6 +85,8 @@ class PrivilegeHierarchy {
 
     // UOM Management (child of Stock Dashboard)
     AppRoutes.uomManagement: AppRoutes.stockDashboard,
+    AppRoutes.uomCreation: AppRoutes.uomManagement,
+    AppRoutes.uomEdit: AppRoutes.uomManagement,
 
     // Item Workbench (child of Stock Dashboard)
     AppRoutes.itemWorkbench: AppRoutes.stockDashboard,

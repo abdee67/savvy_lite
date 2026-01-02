@@ -334,7 +334,11 @@ void initDependencies() {
     () => ItemUomConversionBloc(repository: getIt(), authBloc: getIt()),
   );
   getIt.registerFactory<UdcDetailsBloc>(
-    () => UdcDetailsBloc(databaseService: getIt(), authBloc: getIt()),
+    () => UdcDetailsBloc(
+      databaseService: getIt(),
+      authBloc: getIt(),
+      udcRepository: getIt(),
+    ),
   );
   getIt.registerFactory<LocationMasterBloc>(
     () => LocationMasterBloc(
