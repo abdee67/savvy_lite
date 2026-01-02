@@ -44,6 +44,7 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
     return SizedBox(
       height: widget.isTablet ? 60 : 56,
       child: DropdownButtonFormField<T>(
+        isExpanded: true,
         initialValue: widget.value,
         items: widget.items,
         validator: widget.validator,
