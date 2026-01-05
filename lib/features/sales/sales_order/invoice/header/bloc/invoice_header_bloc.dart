@@ -152,6 +152,7 @@ class InvoiceHistoryHeaderBloc
           errorMessage: 'Failed to create invoice history header: $e',
         ),
       );
+      print('Failed to create invoice history header: $e');
     }
   }
 

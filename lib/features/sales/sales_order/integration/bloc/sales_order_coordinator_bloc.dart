@@ -1267,7 +1267,7 @@ class SalesOrderCoordinatorBloc
         city: state.defaultCustomer?.city ?? '',
         country: state.defaultCustomer?.country ?? '',
         region: state.defaultCustomer?.region ?? '',
-        // salesPerson: currentDetails.first.,
+        salesPerson: authBloc.state.userId?.userName,
         totalAmount: state.lastTotalAmount ?? 0.0,
         taxAmount: state.lastTax ?? 0.0,
         withholdAmount: state.lastWithholdAmount ?? 0.0,
@@ -1279,7 +1279,7 @@ class SalesOrderCoordinatorBloc
       invoiceHeaderBloc.add(CreateInvoiceHistoryHeader(header: invoiceHeader));
 
       // Wait for header creation
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 1000));
 
       // Get the created header ID
       final createdHeader = invoiceHeaderBloc.state.selected;

@@ -106,12 +106,10 @@ class SalesOrderDetail extends Equatable {
       tempId: (map['temp_id'] as num?)?.toInt(),
 
       // 👇 Joined objects (optional)
-      item: (map['items_table_id'] != null || map['item_number_string'] != null)
+      item: (map['items_table_id'] != null)
           ? ItemEntryModel(
               id: map['items_table_id'] ?? 0,
-              itemsId:
-                  map['items_id']?.toString() ??
-                  map['item_number_string']?.toString(),
+              itemsId: map['items_id']?.toString(),
               itemDescription: map['item_description']?.toString(),
               unitOfMeasure: map['unit_of_measure']?.toString(),
               unitPrice: (map['unit_price'] as num?)?.toDouble(),

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
@@ -9,6 +10,7 @@ import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 
 class SalesItemEntryConfirmedItem extends StatefulWidget {
   final Function(SalesOrderDetail, int) onEditItem;
@@ -23,22 +25,25 @@ class SalesItemEntryConfirmedItem extends StatefulWidget {
 class _SalesItemEntryConfirmedItemState
     extends State<SalesItemEntryConfirmedItem> {
   final Map<int, double> _dragOffset = {};
-  static const _containerHeight = 20.0;
-  static const _containerWidth = 20.0;
-  static const _circularProgressStrokeWidth = 2.0;
   static const _elevatedButtonBorderRadius = 20.0;
   static const _horizontalPadding32 = 32.0;
   static const _verticalPadding12 = 12.0;
-  static const _sizedBoxHeight16 = 16.0;
-  static const _sizedBoxHeight8 = 8.0;
-  static const _sizedBoxHeight20 = 20.0;
-  static const _sizedBoxWidth16 = 16.0;
-  static const _appBarFontSize = 25.0;
   static const _titleFontSize = 16.0;
-  static const _detailLabelWidth = 100.0;
-  static const _cardElevation = 2.0;
-  static const _cardPadding = 16.0;
-  static const _verticalDetailPadding = 4.0;
+  late int? decimalPlace;
+
+  @override
+  void initState() {
+    super.initState();
+    _initialize();
+  }
+
+  void _initialize() {
+    decimalPlace = context
+        .read<SystemConstantBloc>()
+        .state
+        .selected
+        ?.decimalPlaces;
+  }
 
   void _safeDeleteItem(BuildContext context, int index) {
     final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
@@ -240,7 +245,7 @@ class _SalesItemEntryConfirmedItemState
                     ),
                     const Spacer(),
                     Text(
-                      'Total: \$${totalAmount.toStringAsFixed(2)}',
+                      'Total: ${NumberFormat.currency(decimalDigits: decimalPlace, symbol: 'Birr ').format(totalAmount)}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -263,8 +268,8 @@ class _SalesItemEntryConfirmedItemState
                           final offset = _dragOffset[index] ?? 0.0;
 
                           return Container(
-                            height: 80,
-                            margin: const EdgeInsets.only(bottom: 8),
+                            height: 65,
+                            margin: const EdgeInsets.only(bottom: 4),
                             child: GestureDetector(
                               onDoubleTap: () => _moveToEdit(context, index),
                               onHorizontalDragUpdate: (details) =>
@@ -315,10 +320,11 @@ class _SalesItemEntryConfirmedItemState
                                     child: Padding(
                                       padding: const EdgeInsets.all(12),
                                       child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
                                           // Item info
                                           Expanded(
-                                            flex: 3,
                                             child: Column(
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
@@ -326,7 +332,8 @@ class _SalesItemEntryConfirmedItemState
                                                   MainAxisAlignment.center,
                                               children: [
                                                 Text(
-                                                  'Item ${index + 1}',
+                                                  item.item?.itemDescription ??
+                                                      'Item ${index + 1}',
                                                   style: const TextStyle(
                                                     fontWeight: FontWeight.bold,
                                                     fontSize: 14,
@@ -337,7 +344,7 @@ class _SalesItemEntryConfirmedItemState
                                                 ),
                                                 if (item.extendedPrice != null)
                                                   Text(
-                                                    'Total: \$${item.extendedPrice!.toStringAsFixed(2)}',
+                                                    'Total: ${NumberFormat.currency(decimalDigits: decimalPlace, symbol: 'Birr ').format(item.extendedPrice)}',
                                                     style: const TextStyle(
                                                       color: Colors.green,
                                                       fontWeight:
@@ -354,27 +361,33 @@ class _SalesItemEntryConfirmedItemState
 
                                           // Quantity
                                           Expanded(
-                                            child: Text(
-                                              'Qty: ${item.quantity?.toStringAsFixed(2) ?? '0'}',
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                              ),
-                                              textAlign: TextAlign.center,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-
-                                          // Unit Price
-                                          Expanded(
-                                            child: Text(
-                                              'Price: \$${item.unitPrice?.toStringAsFixed(2) ?? '0'}',
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                              ),
-                                              textAlign: TextAlign.center,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.end,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Text(
+                                                  'Qty: ${item.quantity?.toStringAsFixed(decimalPlace ?? 2) ?? '0'}',
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                                Text(
+                                                  'Price: ${NumberFormat.currency(decimalDigits: decimalPlace, symbol: 'Birr ').format(item.unitPrice)}',
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ],
@@ -436,18 +449,6 @@ class _SalesItemEntryConfirmedItemState
                         ],
                       ),
                     ),
-
-                    const SizedBox(height: 8),
-
-                    // Help text
-                    Text(
-                      'Double tap to edit • Swipe to delete',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.grey[600],
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -463,16 +464,11 @@ class _SalesItemEntryConfirmedItemState
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.shopping_cart_outlined, size: 48, color: Colors.grey[400]),
+          Icon(Icons.shopping_cart_outlined, size: 30, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
             'No items confirmed yet',
             style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Add items using the form above',
-            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
           ),
         ],
       ),

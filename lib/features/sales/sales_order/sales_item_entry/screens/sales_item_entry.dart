@@ -12,6 +12,7 @@ import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_or
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
 import 'package:savvy_stock/core/di/injection_container.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/service/sales_order_integration_service.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 
 class ItemEntryScreen extends StatelessWidget {
   final Map<String, dynamic>? customerData;
@@ -275,7 +276,7 @@ class _ItemEntryScreenContentState extends State<ItemEntryScreenContent> {
 
             // Confirmed Items Section
             Expanded(
-              flex: 2,
+              flex: 3,
               child: SalesItemEntryConfirmedItem(onEditItem: _startEditingItem),
             ),
           ],

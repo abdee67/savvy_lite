@@ -608,22 +608,22 @@ class LotMasterRepository extends BaseRepository {
           if (days <= 0) {
             // Expired or past effective date
             lotStatus = await udcRepository.getSingleUdcDetailsByCode(
-              'LS',
               'E',
+              'LS',
             );
           } else {
             // Active - preserve existing status unless it's expired
             if (item.lotStatus == null || item.statusCode == 'E') {
               lotStatus = await udcRepository.getSingleUdcDetailsByCode(
-                'LS',
                 'A',
+                'LS',
               );
             } else {
               // Preserve existing status
               if (item.statusCode != null) {
                 lotStatus = await udcRepository.getSingleUdcDetailsByCode(
-                  'LS',
                   item.statusCode!,
+                  'LS',
                 );
               }
             }
@@ -631,7 +631,7 @@ class LotMasterRepository extends BaseRepository {
         } else {
           // For 'R' (Received) type, always set to Active if null
           lotStatus = item.statusCode != null
-              ? await udcRepository.getSingleUdcDetailsByCode('LS', 'A')
+              ? await udcRepository.getSingleUdcDetailsByCode('A', 'LS')
               : null;
         }
       }

@@ -21,10 +21,10 @@ class PaymentDetails extends StatefulWidget {
 }
 
 class _PaymentDetailsState extends State<PaymentDetails> {
-  final NumberFormat _currencyFormat = NumberFormat('#,##0.00');
   final TextEditingController _discountController = TextEditingController();
   bool _discountEnabled = false;
   bool _systemConstantsLoaded = false;
+  late int? decimalPlace;
 
   @override
   void initState() {
@@ -47,6 +47,11 @@ class _PaymentDetailsState extends State<PaymentDetails> {
         }
       }
     });
+    decimalPlace = context
+        .read<SystemConstantBloc>()
+        .state
+        .selected
+        ?.decimalPlaces;
   }
 
   void _onDiscountChanged() {
@@ -221,7 +226,10 @@ class _PaymentDetailsState extends State<PaymentDetails> {
             _buildReadOnlyField(
               context,
               'Subtotal',
-              _currencyFormat.format(state.lastSubTotal),
+              NumberFormat.currency(
+                decimalDigits: decimalPlace,
+                symbol: 'Birr ',
+              ).format(state.lastSubTotal),
               icon: Icons.shopping_cart,
             ),
             const SizedBox(height: 6),
@@ -286,7 +294,10 @@ class _PaymentDetailsState extends State<PaymentDetails> {
     return _buildReadOnlyField(
       context,
       'Tax (${vatRate.toStringAsFixed(1)}%)',
-      _currencyFormat.format(taxAmount),
+      NumberFormat.currency(
+        decimalDigits: decimalPlace,
+        symbol: 'Birr ',
+      ).format(taxAmount),
       icon: Icons.receipt,
       subtitle: 'VAT rate from system configuration',
     );
@@ -392,7 +403,10 @@ class _PaymentDetailsState extends State<PaymentDetails> {
         : const Color(0xFF1C1C1C);
 
     final withholdingAmountText = isWithholdingApplied
-        ? _currencyFormat.format(state.withholdingAmount)
+        ? NumberFormat.currency(
+            decimalDigits: decimalPlace,
+            symbol: 'Birr ',
+          ).format(state.withholdingAmount)
         : '----';
 
     final withholdingDisplayText = isWithholdingApplied
@@ -550,7 +564,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Withholding is enabled but cannot be applied because subtotal is below \$${_currencyFormat.format(state.withholdingInitial)}',
+              'Withholding is enabled but cannot be applied because subtotal is below \$${NumberFormat.currency(decimalDigits: decimalPlace, symbol: 'Birr ').format(state.withholdingInitial)}',
               style: TextStyle(fontSize: 12, color: Colors.amber),
             ),
           ),
@@ -616,7 +630,10 @@ class _PaymentDetailsState extends State<PaymentDetails> {
             ),
           ),
           Text(
-            '\$${_currencyFormat.format(value)}',
+            NumberFormat.currency(
+              decimalDigits: decimalPlace,
+              symbol: 'Birr ',
+            ).format(value),
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,

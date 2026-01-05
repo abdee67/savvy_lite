@@ -66,9 +66,11 @@ class SalesOrderDetailRepository {
     final query = '''
       SELECT sod.*, 
              soh.order_type as order_type,
+             it.item_description as item_description,
              soh.customer_bill_to as customer_bill_to
       FROM sales_order_details sod
       LEFT JOIN sales_order_header soh ON sod.sales_order_header_id = soh.id
+      LEFT JOIN items_table it ON sod.items_table_id = it.id
       WHERE sod.id = ?
     ''';
     final maps = await db.rawQuery(query, [id]);

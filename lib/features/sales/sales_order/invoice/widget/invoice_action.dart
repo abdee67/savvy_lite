@@ -51,12 +51,7 @@ class _InvoiceActionState extends State<InvoiceAction> {
     SalesOrderCoordinatorState state,
   ) {
     // 🎯 Centralized state handling prevents race conditions
-    if (state.isOrderComplete && state.invoiceGenerated) {
-      _showSuccessDialog(context, state);
-    } else if (state.status == SalesOrderCoordinatorStatus.error &&
-        state.error != null) {
-      _showErrorDialog(context, state.error ?? 'Unknown error occurred');
-    }
+    _showSuccessDialog(context, state);
   }
 
   Widget _buildActionBar(
@@ -166,14 +161,8 @@ class _InvoiceActionState extends State<InvoiceAction> {
       builder: (context) =>
           BlocConsumer<SalesOrderCoordinatorBloc, SalesOrderCoordinatorState>(
             listener: (context, state) {
-              if (state.isOrderComplete && state.invoiceGenerated) {
-                Navigator.of(context).pop(); // Close processing dialog
-                _showSuccessDialog(context, state);
-              } else if (state.status == SalesOrderCoordinatorStatus.error &&
-                  state.error != null) {
-                Navigator.of(context).pop(); // Close processing dialog
-                _showErrorDialog(context, state.error!);
-              }
+              Navigator.of(context).pop(); // Close processing dialog
+              _showSuccessDialog(context, state);
               //print(state.error!);
             },
 
@@ -196,28 +185,6 @@ class _InvoiceActionState extends State<InvoiceAction> {
         invoiceNumber: state.invoiceFsNumber,
         totalAmount: state.lastTotalAmount,
         onDone: () => _navigateToHome(context),
-      ),
-    );
-  }
-
-  void _showErrorDialog(BuildContext context, String error) {
-    showDialog(
-      context: context,
-      builder: (context) => ErrorDialog(
-        error: error,
-        onRetry: () => _processFinalization(context),
-        onCancel: () => _navigateToHome(context),
-      ),
-    );
-  }
-
-  void _showRetryDialog(BuildContext context, String error) {
-    showDialog(
-      context: context,
-      builder: (context) => RetryDialog(
-        error: error,
-        onRetry: () => _processFinalization(context),
-        onCancel: () => Navigator.of(context).pop(),
       ),
     );
   }
