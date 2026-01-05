@@ -885,7 +885,7 @@ class _SalesReviewPageState extends State<SalesReviewPage>
               'Withhold Amount : ',
               NumberFormat.currency(
                     decimalDigits: _decimalPlace,
-                    symbol: 'Birr ',
+                    symbol: 'ETB ',
                   ).format(salesOrder.withholdAmount!) ??
                   'N/A',
               Iconsax.barcode,
@@ -896,7 +896,7 @@ class _SalesReviewPageState extends State<SalesReviewPage>
               'Tax : ',
               NumberFormat.currency(
                     decimalDigits: _decimalPlace,
-                    symbol: 'Birr ',
+                    symbol: 'ETB ',
                   ).format(salesOrder.tax!) ??
                   'N/A',
               Iconsax.profile_2user,
@@ -907,7 +907,7 @@ class _SalesReviewPageState extends State<SalesReviewPage>
               'Discount : ',
               NumberFormat.currency(
                     decimalDigits: _decimalPlace,
-                    symbol: 'Birr ',
+                    symbol: 'ETB ',
                   ).format(salesOrder.discountAmount!) ??
                   'N/A',
               Iconsax.profile_circle,
@@ -925,7 +925,7 @@ class _SalesReviewPageState extends State<SalesReviewPage>
               'Amount Cost : ',
               NumberFormat.currency(
                     decimalDigits: _decimalPlace,
-                    symbol: 'Birr ',
+                    symbol: 'ETB ',
                   ).format(salesOrder.amountCost!) ??
                   'N/A',
               Iconsax.dollar_circle,

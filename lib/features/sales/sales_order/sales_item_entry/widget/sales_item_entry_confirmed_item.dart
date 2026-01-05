@@ -245,7 +245,7 @@ class _SalesItemEntryConfirmedItemState
                     ),
                     const Spacer(),
                     Text(
-                      'Total: ${NumberFormat.currency(decimalDigits: decimalPlace, symbol: 'Birr ').format(totalAmount)}',
+                      'Total: ${NumberFormat.currency(decimalDigits: decimalPlace, symbol: 'ETB ').format(totalAmount)}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -344,7 +344,7 @@ class _SalesItemEntryConfirmedItemState
                                                 ),
                                                 if (item.extendedPrice != null)
                                                   Text(
-                                                    'Total: ${NumberFormat.currency(decimalDigits: decimalPlace, symbol: 'Birr ').format(item.extendedPrice)}',
+                                                    'Total: ${NumberFormat.currency(decimalDigits: decimalPlace, symbol: 'ETB ').format(item.extendedPrice)}',
                                                     style: const TextStyle(
                                                       color: Colors.green,
                                                       fontWeight:
@@ -378,7 +378,7 @@ class _SalesItemEntryConfirmedItemState
                                                       TextOverflow.ellipsis,
                                                 ),
                                                 Text(
-                                                  'Price: ${NumberFormat.currency(decimalDigits: decimalPlace, symbol: 'Birr ').format(item.unitPrice)}',
+                                                  'Price: ${NumberFormat.currency(decimalDigits: decimalPlace, symbol: 'ETB ').format(item.unitPrice)}',
                                                   style: const TextStyle(
                                                     fontSize: 12,
                                                   ),

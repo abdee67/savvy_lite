@@ -659,7 +659,7 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
                               ),
 
                               Text(
-                                'Received Amount - ${NumberFormat.currency(symbol: 'Birr ', decimalDigits: 2).format(purchaseOrder.amountReceived ?? 0)}',
+                                'Received Amount - ${NumberFormat.currency(symbol: 'ETB ', decimalDigits: 2).format(purchaseOrder.amountReceived ?? 0)}',
                                 style: TextStyle(
                                   color: const Color(0xFF887F7F),
                                   fontSize: isCompact ? 12 : 14,

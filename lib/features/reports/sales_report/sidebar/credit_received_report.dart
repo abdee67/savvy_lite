@@ -280,7 +280,7 @@ class _CreditReceivedReportState extends State<CreditReceivedReport>
                   'Total Receipt Amount',
                   NumberFormat.currency(
                     decimalDigits: decimalPlace,
-                    symbol: 'Birr ',
+                    symbol: 'ETB ',
                   ).format(totalAmount),
                   Iconsax.trontron_trx,
                   Colors.orange,
@@ -733,7 +733,7 @@ class _CreditReceivedReportState extends State<CreditReceivedReport>
             'Remaining Amount: ',
             NumberFormat.currency(
                   decimalDigits: decimalPlace,
-                  symbol: 'Birr ',
+                  symbol: 'ETB ',
                 ).format(item.remainingValues) ??
                 'N/A',
             Iconsax.wallet,

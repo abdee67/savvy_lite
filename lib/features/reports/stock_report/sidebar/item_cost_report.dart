@@ -583,7 +583,7 @@ class _ItemCostReportPageState extends State<ItemCostReportPage>
           _buildDetailItem(
             'Unit Cost: ',
             itemCost.amountUnitCost != null
-                ? '${itemCost.amountUnitCost!.toStringAsFixed(2)} Birr'
+                ? '${itemCost.amountUnitCost!.toStringAsFixed(2)} ETB'
                 : 'N/A',
             Iconsax.dollar_circle,
             isCompact,
@@ -741,7 +741,7 @@ class _ItemCostReportPageState extends State<ItemCostReportPage>
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            '${itemCost.amountUnitCost.toString()} Birr/ ${itemCost.itemRef?.unitOfMeasureDescription?.description1}',
+            '${itemCost.amountUnitCost.toString()} ETB/ ${itemCost.itemRef?.unitOfMeasureDescription?.description1}',
             style: TextStyle(
               fontSize: 10,
               color: Colors.blue,

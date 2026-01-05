@@ -163,10 +163,10 @@ class PrivilegeSeeder {
       // ==================== SALES MODULE ====================
       // Sales Entry & Sub-features
       _createPrivilege(
-        'Sales Customer Info',
+        'Sales Entry',
         'link',
         AppRoutes.salesCustomerInfo,
-        'sales_customer_info',
+        'sales_entry',
       ),
       _createPrivilege(
         'Sales Item Entry',

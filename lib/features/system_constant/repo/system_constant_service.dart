@@ -44,7 +44,7 @@ class SystemConstantsService with ChangeNotifier {
   bool get discountDisplay => _currentSystemConstant?.discountDisplay == 'Y';
   bool get taxInfoDisplay => _currentSystemConstant?.taxInfoDisplay == 'Y';
   int get daysLeft => _currentSystemConstant?.daysLeft ?? 180;
-  String get currencyCode => _currentSystemConstant?.currencyCode ?? 'Birr';
+  String get currencyCode => _currentSystemConstant?.currencyCode ?? 'ETB';
   bool get reorderPointUomType =>
       _currentSystemConstant?.reorderPointUomType == 'I';
   int get locationCategoryLevel =>
@@ -85,7 +85,7 @@ class SystemConstantsService with ChangeNotifier {
           discountDisplay: 'N',
           taxInfoDisplay: 'N',
           daysLeft: 180,
-          currencyCode: 'Birr',
+          currencyCode: 'ETB',
           reorderPointUomType: 'I',
           locationCategoryLevel: 1,
           isSynced: false,
@@ -154,7 +154,7 @@ class SystemConstantsService with ChangeNotifier {
         discountDisplay: 'N',
         taxInfoDisplay: 'N',
         daysLeft: 180,
-        currencyCode: 'Birr',
+        currencyCode: 'ETB',
         reorderPointUomType: 'I',
         locationCategoryLevel: 1,
         // Ensure company ID is set if possible, or handle it upstream

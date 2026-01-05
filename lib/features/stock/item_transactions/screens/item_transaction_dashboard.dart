@@ -846,7 +846,7 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
                                   Text(
                                     NumberFormat.currency(
                                       decimalDigits: decmialPlace,
-                                      symbol: 'Birr ',
+                                      symbol: 'ETB ',
                                     ).format(transaction.amountCost),
                                     style: TextStyle(
                                       fontSize: 12,
@@ -1014,7 +1014,7 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
             'Amount Cost : ',
             NumberFormat.currency(
               decimalDigits: decmialPlace,
-              symbol: 'Birr ',
+              symbol: 'ETB ',
             ).format(transaction.amountCost),
             Iconsax.dollar_circle,
             isCompact,

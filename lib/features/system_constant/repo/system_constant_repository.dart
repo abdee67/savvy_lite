@@ -143,7 +143,7 @@ class SystemConstantRepository {
       discountDisplay: 'Y',
       taxInfoDisplay: 'Y',
       daysLeft: 180,
-      currencyCode: 'Birr',
+      currencyCode: 'ETB',
       reorderPointUomType: 'I',
       locationCategoryLevel: 1,
       isSynced: false, // Mark as not synced since it's local

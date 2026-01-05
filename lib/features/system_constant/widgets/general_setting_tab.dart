@@ -252,7 +252,7 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
             const SizedBox(height: 16),
             _buildTextField(
               label: 'Currency Code',
-              value: _localSystemConstant.currencyCode ?? 'Birr',
+              value: _localSystemConstant.currencyCode ?? 'ETB',
               onChanged: (value) => _updateField(currencyCode: value),
             ),
             const SizedBox(height: 16),

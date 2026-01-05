@@ -468,7 +468,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
                       cellBuilder: (item) => Text(
                         NumberFormat.currency(
                           decimalDigits: decimalPlace,
-                          symbol: 'Birr ',
+                          symbol: 'ETB ',
                         ).format(item.unitPrice),
                         style: const TextStyle(
                           fontSize: 10,
@@ -526,7 +526,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
                         cellBuilder: (itemInBranch) => Text(
                           NumberFormat.currency(
                             decimalDigits: decimalPlace,
-                            symbol: 'Birr ',
+                            symbol: 'ETB ',
                           ).format(itemInBranch.unitPrice),
                           style: const TextStyle(
                             fontSize: 10,

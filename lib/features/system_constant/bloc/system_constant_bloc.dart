@@ -435,7 +435,7 @@ class SystemConstantBloc
           discountDisplay: 'Y',
           taxInfoDisplay: 'Y',
           daysLeft: 180,
-          currencyCode: 'Birr',
+          currencyCode: 'ETB',
         );
       }
 

@@ -191,7 +191,7 @@ class _InvoiceActionState extends State<InvoiceAction> {
 
   void _navigateToHome(BuildContext context) {
     // 🎯 Use GoRouter for proper navigation stack management
-    context.go(AppRoutes.homePage);
+    context.push(AppRoutes.homePage);
 
     // 🎯 Clear state after successful navigation
     WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -228,7 +228,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
               'Subtotal',
               NumberFormat.currency(
                 decimalDigits: decimalPlace,
-                symbol: 'Birr ',
+                symbol: 'ETB ',
               ).format(state.lastSubTotal),
               icon: Icons.shopping_cart,
             ),
@@ -296,7 +296,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
       'Tax (${vatRate.toStringAsFixed(1)}%)',
       NumberFormat.currency(
         decimalDigits: decimalPlace,
-        symbol: 'Birr ',
+        symbol: 'ETB ',
       ).format(taxAmount),
       icon: Icons.receipt,
       subtitle: 'VAT rate from system configuration',
@@ -405,7 +405,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
     final withholdingAmountText = isWithholdingApplied
         ? NumberFormat.currency(
             decimalDigits: decimalPlace,
-            symbol: 'Birr ',
+            symbol: 'ETB ',
           ).format(state.withholdingAmount)
         : '----';
 
@@ -564,7 +564,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Withholding is enabled but cannot be applied because subtotal is below \$${NumberFormat.currency(decimalDigits: decimalPlace, symbol: 'Birr ').format(state.withholdingInitial)}',
+              'Withholding is enabled but cannot be applied because subtotal is below \$${NumberFormat.currency(decimalDigits: decimalPlace, symbol: 'ETB ').format(state.withholdingInitial)}',
               style: TextStyle(fontSize: 12, color: Colors.amber),
             ),
           ),
@@ -632,7 +632,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
           Text(
             NumberFormat.currency(
               decimalDigits: decimalPlace,
-              symbol: 'Birr ',
+              symbol: 'ETB ',
             ).format(value),
             style: const TextStyle(
               fontSize: 18,

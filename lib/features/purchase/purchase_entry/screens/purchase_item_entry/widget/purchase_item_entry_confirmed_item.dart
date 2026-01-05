@@ -291,7 +291,7 @@ class _PurchaseItemEntryConfirmedItemState
                               ),
                             ),
                             Text(
-                              '${totalAmount.toStringAsFixed(2)} Birr',
+                              '${totalAmount.toStringAsFixed(2)} ETB',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 20,

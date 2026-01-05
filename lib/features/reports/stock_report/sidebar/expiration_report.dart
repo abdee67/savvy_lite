@@ -272,7 +272,7 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
                 ),
                 _buildSummaryItem(
                   'Total Value',
-                  '${state.expirationReportTotalCost.toStringAsFixed(2)} Birr',
+                  '${state.expirationReportTotalCost.toStringAsFixed(2)} ETB',
                   Iconsax.dollar_circle,
                   Colors.green,
                 ),
@@ -728,7 +728,7 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
           _buildDetailItem(
             'Unit Price: ',
             lot.unitPrice != null
-                ? '${lot.unitPrice!.toStringAsFixed(2)} Birr'
+                ? '${lot.unitPrice!.toStringAsFixed(2)} ETB'
                 : 'N/A',
             Iconsax.dollar_circle,
             isCompact,
@@ -772,7 +772,7 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
               return _buildDetailItem(
                 'Total Cost: ',
                 snapshot.hasData
-                    ? '${snapshot.data!.toStringAsFixed(2)} Birr'
+                    ? '${snapshot.data!.toStringAsFixed(2)} ETB'
                     : 'Calculating...',
                 Iconsax.dollar_square,
                 isCompact,

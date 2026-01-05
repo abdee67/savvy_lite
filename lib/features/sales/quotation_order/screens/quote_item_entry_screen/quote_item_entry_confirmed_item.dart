@@ -382,7 +382,7 @@ class _QuoteItemEntryConfirmedItemState
                                                 // Unit Price
                                                 Expanded(
                                                   child: Text(
-                                                    '${item.unitPrice?.toStringAsFixed(2) ?? '0'} Birr/${item.uomRef?.description1 ?? 'unit'}',
+                                                    '${item.unitPrice?.toStringAsFixed(2) ?? '0'} ETB/${item.uomRef?.description1 ?? 'unit'}',
                                                     style: const TextStyle(
                                                       fontSize: 12,
                                                     ),

@@ -819,7 +819,7 @@ class _PurchaseReviewPageState extends State<CreditPurchaseReviewPage>
               ' Discount : ',
               NumberFormat.currency(
                     decimalDigits: decimalPlace,
-                    symbol: 'Birr',
+                    symbol: 'ETB',
                   ).format(purchaseOrder.amountDiscount!) ??
                   'N/A',
               Iconsax.rulerpen,
@@ -830,7 +830,7 @@ class _PurchaseReviewPageState extends State<CreditPurchaseReviewPage>
               ' Grand Total : ',
               NumberFormat.currency(
                     decimalDigits: decimalPlace,
-                    symbol: 'Birr',
+                    symbol: 'ETB',
                   ).format(purchaseOrder.amountGrandTotalCost!) ??
                   'N/A',
               Iconsax.rulerpen,
@@ -841,7 +841,7 @@ class _PurchaseReviewPageState extends State<CreditPurchaseReviewPage>
               'Unreceived Credit : ',
               NumberFormat.currency(
                     decimalDigits: decimalPlace,
-                    symbol: 'Birr',
+                    symbol: 'ETB',
                   ).format(purchaseOrder.amountOpenCredit!) ??
                   'N/A',
               Iconsax.receipt_edit,

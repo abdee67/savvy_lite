@@ -1721,9 +1721,9 @@ class SalesOrderHeaderBloc
     final centsInWords = _convertNumberToWords(cents);
 
     if (cents == 0) {
-      return '$dollarsInWords Birr Only';
+      return '$dollarsInWords ETB Only';
     } else {
-      return '$dollarsInWords Birr and $centsInWords Cents Only';
+      return '$dollarsInWords ETB and $centsInWords Cents Only';
     }
   }
 

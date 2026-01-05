@@ -378,7 +378,7 @@ CREATE INDEX idx_items_in_branch_uom ON items_in_branch(unit_of_measure);
         discount_display TEXT DEFAULT 'N',
         tax_info_display TEXT DEFAULT 'N',
         days_left INTEGER,
-        currency_code TEXT DEFAULT 'Birr',
+        currency_code TEXT DEFAULT 'ETB',
         reorder_point_uom_type TEXT DEFAULT 'I',
         is_synced INTEGER DEFAULT 1,
         last_sync_time INTEGER,
