@@ -323,7 +323,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     }
 
     // 2. Prevent self-deletion
-    if (event.userId == currentUserId) {
+    if (event.userId == currentUserId.id) {
       final currentUser = authBloc.state.username;
       emit(
         state.copyWith(

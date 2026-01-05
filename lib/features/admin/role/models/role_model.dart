@@ -1,8 +1,8 @@
-// features/role/models/role_model.dart
+import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart';
 import 'package:sqflite/sqflite.dart';
 
-class Role {
+class Role extends Equatable {
   final int id;
   final String name;
   final String description;
@@ -101,4 +101,17 @@ class Role {
       privileges: privileges ?? this.privileges,
     );
   }
+
+  @override
+  List<Object?> get props => [
+    id,
+    name,
+    description,
+    companyId,
+    dateCreated,
+    dateUpdated,
+    createdBy,
+    updatedBy,
+    privileges,
+  ];
 }

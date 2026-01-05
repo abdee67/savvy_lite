@@ -1,9 +1,9 @@
 import 'dart:typed_data';
-
+import 'package:equatable/equatable.dart';
 import 'package:argon2/argon2.dart';
 import 'package:savvy_stock/features/company/models/company_model.dart';
 
-class UserModel {
+class UserModel extends Equatable {
   final int id;
   final String? password;
   final int? employeesId;
@@ -25,7 +25,7 @@ class UserModel {
 
   final Company? companyRef;
 
-  UserModel({
+  const UserModel({
     required this.id,
     required this.password,
     this.employeesId,
@@ -240,6 +240,7 @@ class UserModel {
     );
   }
 
+  @override
   List<Object?> get props => [
     id,
     password,

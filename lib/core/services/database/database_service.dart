@@ -2355,7 +2355,7 @@ ON other_income_table (user_id);
     final employees = [
       {
         'employee_id': 'EMP001',
-        'name_first': 'Abdi(admin)',
+        'name_first': 'admin',
         'name_last': 'G',
         'gender': 'M',
         'hire_date': '2022-01-01',
@@ -2373,7 +2373,7 @@ ON other_income_table (user_id);
       },
       {
         'employee_id': 'EMP002',
-        'name_first': 'Chalatu(salesManager)',
+        'name_first': 'salesManager',
         'name_last': 'C',
         'gender': 'F',
         'hire_date': '2000-01-01',
@@ -2391,8 +2391,8 @@ ON other_income_table (user_id);
       },
       {
         'employee_id': 'EMP003',
-        'name_first': 'pimp',
-        'name_last': 'slickback',
+        'name_first': 'emp',
+        'name_last': '1',
         'gender': 'M',
         'hire_date': '2000-01-01',
         'city': 'Addis Ababa',
@@ -2408,9 +2408,9 @@ ON other_income_table (user_id);
         'email': 'stockManager@gmail.com',
       },
       {
-        'employee_id': 'EMP003',
-        'name_first': 'baby',
-        'name_last': 'slickback',
+        'employee_id': 'EMP004',
+        'name_first': 'emp',
+        'name_last': '2',
         'gender': 'F',
         'hire_date': '2000-01-01',
         'city': 'Addis Ababa',
@@ -2423,7 +2423,7 @@ ON other_income_table (user_id);
         'address': 'Addis Ababa',
         'region': 'Addis',
         'phone': '+2519111111',
-        'email': 'babyManager@gmail.com',
+        'email': 'emp2@gmail.com',
       },
     ];
     for (final employee in employees) {

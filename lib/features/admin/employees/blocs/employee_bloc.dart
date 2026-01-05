@@ -12,10 +12,8 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
   final AuthBloc authBloc;
   StreamSubscription? _authSubscription;
 
-  EmployeeBloc({
-    required this.repository,
-    required this.authBloc,
-  }) : super(const EmployeeState()) {
+  EmployeeBloc({required this.repository, required this.authBloc})
+    : super(const EmployeeState()) {
     // Listen to auth state changes
     _authSubscription = authBloc.stream.listen((authState) {
       if (authState.isAuthenticated && authState.companyId != null) {
@@ -95,10 +93,10 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
     );
     try {
       await repository.insertEmployee(
-        event.employee, 
-        authBloc.state.companyId!
+        event.employee,
+        authBloc.state.companyId!,
       );
-      
+
       add(LoadEmployees(authBloc.state.companyId!));
       emit(
         state.copyWith(
@@ -128,10 +126,10 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
     );
     try {
       await repository.updateEmployee(
-        event.employee, 
-        authBloc.state.companyId!
+        event.employee,
+        authBloc.state.companyId!,
       );
-      
+
       add(LoadEmployees(authBloc.state.companyId!));
       emit(
         state.copyWith(
@@ -183,23 +181,20 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
     Emitter<EmployeeState> emit,
   ) async {
     emit(
-      state.copyWith(
-        status: EmployeeStatus.deleting, 
-        message: 'Deleting..'
-      ),
+      state.copyWith(status: EmployeeStatus.deleting, message: 'Deleting..'),
     );
     try {
       await repository.deleteEmployee(
-        event.employeeId, 
-        authBloc.state.companyId!
+        event.employeeId,
+        authBloc.state.companyId!,
       );
-      
+
       final updateEmployees = List<Employee>.from(state.employees)
         ..removeWhere((p) => p.id == event.employeeId);
       final updateFilteredEmployees = List<Employee>.from(
         state.filteredEmployees,
       )..removeWhere((p) => p.id == event.employeeId);
-      
+
       emit(
         state.copyWith(
           employees: updateEmployees,
@@ -212,7 +207,7 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
           message: 'Employee deleted successfully',
         ),
       );
-      
+
       add(LoadEmployees(authBloc.state.companyId!));
     } catch (e) {
       emit(
@@ -229,8 +224,8 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
   }
 
   Future<void> _onSearchEmployees(
-    SearchEmployees event, 
-    Emitter<EmployeeState> emit
+    SearchEmployees event,
+    Emitter<EmployeeState> emit,
   ) async {
     final query = event.query.toLowerCase().trim();
 
@@ -249,8 +244,8 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
     try {
       // Use repository for search to handle large datasets efficiently
       final filtered = await repository.searchEmployees(
-        query, 
-        authBloc.state.companyId!
+        query,
+        authBloc.state.companyId!,
       );
 
       emit(
@@ -312,12 +307,12 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
   ) async {
     try {
       final employeeIds = event.selectedEmployees;
-      
+
       await repository.deleteMultipleEmployees(
-        employeeIds, 
-        authBloc.state.companyId!
+        employeeIds,
+        authBloc.state.companyId!,
       );
-      
+
       final updatedEmployees = state.employees
           .where((e) => !employeeIds.contains(e.id))
           .toList();
@@ -342,7 +337,7 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
               '${event.selectedEmployees.length} employees deleted successfully',
         ),
       );
-      
+
       add(LoadEmployees(authBloc.state.companyId!));
     } catch (e) {
       emit(
@@ -383,7 +378,8 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
           filteredEmployees: updatedEmployees,
           recentlyDeleted: [],
           recentlyDeletedIndexes: [],
-          message: '${event.deletedItems.length} employees restored successfully',
+          message:
+              '${event.deletedItems.length} employees restored successfully',
         ),
       );
     } catch (e) {
@@ -473,8 +469,8 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
     } else {
       // Entering role management mode - only if employee has user account
       final employee = await repository.getEmployeeById(
-        event.employeeId, 
-        authBloc.state.companyId!
+        event.employeeId,
+        authBloc.state.companyId!,
       );
 
       if (employee == null) {
@@ -551,26 +547,28 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
   void _onSaveRoleChanges(SaveRoleChanges event, Emitter<EmployeeState> emit) {
     // This will be handled by the UI using UserBloc directly
     // We just reset the state
-    emit(state.copyWith(
-      selectedRolesForAssignment: [], 
-      hasRoleChanges: false,
-      isRoleManagementMode: false,
-      employeeInRoleManagement: null,
-    ));
+    emit(
+      state.copyWith(
+        selectedRolesForAssignment: [],
+        hasRoleChanges: false,
+        isRoleManagementMode: false,
+        employeeInRoleManagement: null,
+      ),
+    );
   }
 
   // Public helper methods
   Future<Employee?> getEmployeeById(int employeeId) async {
     return await repository.getEmployeeById(
-      employeeId, 
-      authBloc.state.companyId!
+      employeeId,
+      authBloc.state.companyId!,
     );
   }
 
   Future<List<Employee>> getEmployeesByIds(List<int> employeeIds) async {
     return await repository.getEmployeesByIds(
-      employeeIds, 
-      authBloc.state.companyId!
+      employeeIds,
+      authBloc.state.companyId!,
     );
   }
 }
