@@ -286,33 +286,35 @@ class _UserDashboardState extends State<UserDashboard>
     return Scaffold(
       backgroundColor: Colors.grey,
       appBar: AppBar(title: const Text('User List')),
-      body: BlocConsumer<UserBloc, UserState>(
-        listener: (context, state) {
-          if (state.usersWithRole.isNotEmpty && !_isSelectionMode) {
-            setState(() {
-              _isSelectionMode = true;
-            });
-          } else if (state.usersWithRole.isEmpty && _isSelectionMode) {
-            setState(() {
-              _isSelectionMode = false;
-            });
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Header with Search and Actions
-                  _buildSearchBar(),
-                  _buildActionButtons(state),
-                  // user List
-                  Expanded(child: _buildUserList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+      body: SafeArea(
+        child: BlocConsumer<UserBloc, UserState>(
+          listener: (context, state) {
+            if (state.usersWithRole.isNotEmpty && !_isSelectionMode) {
+              setState(() {
+                _isSelectionMode = true;
+              });
+            } else if (state.usersWithRole.isEmpty && _isSelectionMode) {
+              setState(() {
+                _isSelectionMode = false;
+              });
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Header with Search and Actions
+                    _buildSearchBar(),
+                    _buildActionButtons(state),
+                    // user List
+                    Expanded(child: _buildUserList(state)),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

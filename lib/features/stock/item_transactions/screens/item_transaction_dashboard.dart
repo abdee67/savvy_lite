@@ -297,152 +297,59 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
           ),
         ],
       ),
-      body: BlocConsumer<ItemTransactionsBloc, ItemTransactionsState>(
-        listener: (context, state) {
-          if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
-            setState(() {
-              _isSelectionMode = true;
-            });
-          } else if (state.selectedItems.isEmpty && _isSelectionMode) {
-            setState(() {
-              _isSelectionMode = false;
-            });
-          }
+      body: SafeArea(
+        child: BlocConsumer<ItemTransactionsBloc, ItemTransactionsState>(
+          listener: (context, state) {
+            if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
+              setState(() {
+                _isSelectionMode = true;
+              });
+            } else if (state.selectedItems.isEmpty && _isSelectionMode) {
+              setState(() {
+                _isSelectionMode = false;
+              });
+            }
 
-          if (state.status == ItemTransactionsStatus.success) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  state.successmessage ?? 'Operation completed successfully',
+            if (state.status == ItemTransactionsStatus.success) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    state.successmessage ?? 'Operation completed successfully',
+                  ),
+                  backgroundColor: Colors.green,
                 ),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
+              );
+            }
 
-          if (state.status == ItemTransactionsStatus.error) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.error ?? 'An error occurred'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Toolbar
-                  // _buildToolbar(),
-
-                  // Search Bar
-                  _buildSearchBar(),
-                  _buildActionButtons(state),
-
-                  // Transactions List
-                  Expanded(child: _buildTransactionsList(state)),
-                ],
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildToolbar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
-      ),
-      child: Row(
-        children: [
-          // Refresh Button
-          ElevatedButton.icon(
-            onPressed: _refreshList,
-            icon: const Icon(Iconsax.refresh, size: 16),
-            label: const Text('Refresh'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: const Color.fromARGB(255, 28, 66, 146),
-              side: BorderSide(
-                color: const Color.fromARGB(255, 28, 66, 146).withOpacity(0.3),
-              ),
-            ),
-          ),
-          const Spacer(),
-
-          // Export Menu
-          PopupMenuButton<String>(
-            icon: const Icon(
-              Iconsax.export,
-              color: Color.fromARGB(255, 28, 66, 146),
-            ),
-            offset: const Offset(0, 50),
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'excel',
-                child: Row(
+            if (state.status == ItemTransactionsStatus.error) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.error ?? 'An error occurred'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
                   children: [
-                    Icon(Iconsax.document, size: 16),
-                    SizedBox(width: 8),
-                    Text('Excel'),
+                    // Toolbar
+                    // _buildToolbar(),
+
+                    // Search Bar
+                    _buildSearchBar(),
+                    _buildActionButtons(state),
+
+                    // Transactions List
+                    Expanded(child: _buildTransactionsList(state)),
                   ],
                 ),
-              ),
-              const PopupMenuItem(
-                value: 'csv',
-                child: Row(
-                  children: [
-                    Icon(Iconsax.document_copy, size: 16),
-                    SizedBox(width: 8),
-                    Text('CSV'),
-                  ],
-                ),
-              ),
-            ],
-            onSelected: (value) {
-              if (value == 'excel') {
-                _exportToExcel();
-              } else if (value == 'csv') {
-                _exportToCSV();
-              }
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(
-                  color: const Color.fromARGB(
-                    255,
-                    28,
-                    66,
-                    146,
-                  ).withOpacity(0.3),
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Row(
-                children: [
-                  Icon(
-                    Iconsax.export,
-                    size: 16,
-                    color: Color.fromARGB(255, 28, 66, 146),
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    'Export',
-                    style: TextStyle(color: Color.fromARGB(255, 28, 66, 146)),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+              ],
+            );
+          },
+        ),
       ),
     );
   }

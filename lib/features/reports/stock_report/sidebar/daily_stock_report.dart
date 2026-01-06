@@ -240,43 +240,45 @@ class _DailyStockReportState extends State<DailyStockReport>
           ),
         ],
       ),
-      body: BlocConsumer<StockItemsEntryBloc, ItemEntryState>(
-        listener: (context, state) {
-          if (state.status == ItemEntryStatus.exportReportSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message!),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        },
-
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Summary Card
-                  _buildSummaryCard(state),
-
-                  // Active Filters Indicator
-                  if (state.itemReportFilters.hasFilters)
-                    _buildActiveFiltersIndicator(state),
-
-                  // Lot List
-                  Expanded(child: _buildLotList(state)),
-                ],
-              ),
-              // Loading Overlay
-              if (state.status == ItemEntryStatus.loadingItemReport)
-                Container(
-                  color: Colors.black.withOpacity(0.5),
-                  child: const Center(child: CircularProgressIndicator()),
+      body: SafeArea(
+        child: BlocConsumer<StockItemsEntryBloc, ItemEntryState>(
+          listener: (context, state) {
+            if (state.status == ItemEntryStatus.exportReportSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message!),
+                  backgroundColor: Colors.green,
                 ),
-            ],
-          );
-        },
+              );
+            }
+          },
+
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Summary Card
+                    _buildSummaryCard(state),
+
+                    // Active Filters Indicator
+                    if (state.itemReportFilters.hasFilters)
+                      _buildActiveFiltersIndicator(state),
+
+                    // Lot List
+                    Expanded(child: _buildLotList(state)),
+                  ],
+                ),
+                // Loading Overlay
+                if (state.status == ItemEntryStatus.loadingItemReport)
+                  Container(
+                    color: Colors.black.withOpacity(0.5),
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

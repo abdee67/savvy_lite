@@ -146,27 +146,29 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: _buildAppBar(context),
-        body: BlocBuilder<SupplierBloc, SupplierState>(
-          builder: (context, supplierState) {
-            return BlocBuilder<PurchaseOrderBloc, PurchaseOrderState>(
-              builder: (context, purchaseState) {
-                final isValid =
-                    _selectedSupplier != null &&
-                    purchaseState.selectedHeader != null;
+        body: SafeArea(
+          child: BlocBuilder<SupplierBloc, SupplierState>(
+            builder: (context, supplierState) {
+              return BlocBuilder<PurchaseOrderBloc, PurchaseOrderState>(
+                builder: (context, purchaseState) {
+                  final isValid =
+                      _selectedSupplier != null &&
+                      purchaseState.selectedHeader != null;
 
-                return Stack(
-                  children: [
-                    _buildContent(purchaseState, isValid, supplierState),
-                    if (purchaseState.status == PurchaseOrderStatus.loading &&
-                        purchaseState.pendingOperations.contains(
-                          'prepare_create_purchase_order',
-                        ))
-                      const _LoadingOverlay(),
-                  ],
-                );
-              },
-            );
-          },
+                  return Stack(
+                    children: [
+                      _buildContent(purchaseState, isValid, supplierState),
+                      if (purchaseState.status == PurchaseOrderStatus.loading &&
+                          purchaseState.pendingOperations.contains(
+                            'prepare_create_purchase_order',
+                          ))
+                        const _LoadingOverlay(),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
         ),
       ),
     );

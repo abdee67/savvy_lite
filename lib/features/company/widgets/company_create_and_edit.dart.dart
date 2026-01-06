@@ -291,37 +291,40 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
             ),
           ],
         ),
-        body: Column(
-          children: [
-            // Progress Indicator
-            Container(
-              padding: const EdgeInsets.all(8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildProgressStep(1, 'Company Info', _currentPage >= 0),
-                  _buildProgressStep(2, 'Contact Info', _currentPage >= 1),
-                  _buildProgressStep(3, 'Location', _currentPage >= 2),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: PageView(
-                  controller: _pageController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  onPageChanged: (page) => setState(() => _currentPage = page),
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Progress Indicator
+              Container(
+                padding: const EdgeInsets.all(8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildCompanyInfoSlide(),
-                    _buildContactInfoSlide(),
-                    _buildLocationSlide(),
+                    _buildProgressStep(1, 'Company Info', _currentPage >= 0),
+                    _buildProgressStep(2, 'Contact Info', _currentPage >= 1),
+                    _buildProgressStep(3, 'Location', _currentPage >= 2),
                   ],
                 ),
               ),
-            ),
-            _buildBottomNavigation(),
-          ],
+              Expanded(
+                child: Form(
+                  key: _formKey,
+                  child: PageView(
+                    controller: _pageController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    onPageChanged: (page) =>
+                        setState(() => _currentPage = page),
+                    children: [
+                      _buildCompanyInfoSlide(),
+                      _buildContactInfoSlide(),
+                      _buildLocationSlide(),
+                    ],
+                  ),
+                ),
+              ),
+              _buildBottomNavigation(),
+            ],
+          ),
         ),
       ),
     );

@@ -51,7 +51,13 @@ class _InvoiceActionState extends State<InvoiceAction> {
     SalesOrderCoordinatorState state,
   ) {
     // 🎯 Centralized state handling prevents race conditions
-    _showSuccessDialog(context, state);
+    if (state.isOrderComplete && state.invoiceGenerated) {
+      _showSuccessDialog(context, state);
+    } else if (state.status == SalesOrderCoordinatorStatus.error &&
+        state.error != null &&
+        !state.pendingOperations.contains('create_order')) {
+      _showErrorDialog(context, state.error ?? 'Unknown error occurred');
+    }
   }
 
   Widget _buildActionBar(
@@ -146,7 +152,7 @@ class _InvoiceActionState extends State<InvoiceAction> {
     // Close confirmation dialog
     Navigator.of(context).pop();
 
-    // 🎯 Dispatch the event - this is what was missing!
+    // 🎯 Dispatch the event
     coordinatorBloc.add(
       CreateCompleteSalesOrder(
         header: state.currentHeader!,
@@ -161,11 +167,16 @@ class _InvoiceActionState extends State<InvoiceAction> {
       builder: (context) =>
           BlocConsumer<SalesOrderCoordinatorBloc, SalesOrderCoordinatorState>(
             listener: (context, state) {
-              Navigator.of(context).pop(); // Close processing dialog
-              _showSuccessDialog(context, state);
-              //print(state.error!);
+              // ✅ Only close dialog and show result when order is complete OR there's an error
+              if (state.isOrderComplete && state.invoiceGenerated) {
+                Navigator.of(context).pop(); // Close processing dialog
+                _showSuccessDialog(context, state);
+              } else if (state.status == SalesOrderCoordinatorStatus.error &&
+                  state.error != null) {
+                Navigator.of(context).pop(); // Close processing dialog
+                _showErrorDialog(context, state.error!);
+              }
             },
-
             builder: (context, state) {
               return OrderProcessingDialog();
             },
@@ -185,6 +196,17 @@ class _InvoiceActionState extends State<InvoiceAction> {
         invoiceNumber: state.invoiceFsNumber,
         totalAmount: state.lastTotalAmount,
         onDone: () => _navigateToHome(context),
+      ),
+    );
+  }
+
+  void _showErrorDialog(BuildContext context, String error) {
+    showDialog(
+      context: context,
+      builder: (context) => ErrorDialog(
+        error: error,
+        onRetry: () => _processFinalization(context),
+        onCancel: () => _navigateToHome(context),
       ),
     );
   }
@@ -210,6 +232,8 @@ final _elevatedButtonStyle = ElevatedButton.styleFrom(
 );
 
 final _outlinedButtonStyle = OutlinedButton.styleFrom(
+  backgroundColor: Colors.amber,
+  foregroundColor: Colors.white,
   padding: const EdgeInsets.symmetric(vertical: 16),
   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
 );

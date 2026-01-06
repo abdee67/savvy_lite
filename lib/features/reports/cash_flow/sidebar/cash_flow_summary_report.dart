@@ -115,79 +115,82 @@ class _CashFlowSummaryReportPageState extends State<CashFlowSummaryReportPage> {
           ),
         ],
       ),
-      body: BlocConsumer<CashFlowBloc, CashFlowState>(
-        listener: (context, state) {
-          if (state.exportCashFlowSummaryReportMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.exportCashFlowSummaryReportMessage!),
-              ),
-            );
-          }
-          if (state.status == CashFlowStatus.error && state.error != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Error: ${state.error}'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          return BlocBuilder<SystemConstantBloc, SystemConstantState>(
-            builder: (context, systemState) {
-              final systemConstant = systemState.systemConstants.isNotEmpty
-                  ? systemState.systemConstants.first
-                  : null;
-              final currencySymbol = systemConstant?.currencyCode ?? '\$';
-
-              if (state.status == CashFlowStatus.loadingCashFlowSummaryReport &&
-                  state.cashFlowSummaryReport.isEmpty) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              return Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    // Summary Cards
-                    _buildSummaryCards(state, currencySymbol),
-                    const SizedBox(height: 16),
-
-                    // Main Content
-                    Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          if (constraints.maxWidth > 600) {
-                            return _buildDesktopTable(
-                              state,
-                              currencySymbol,
-                              constraints,
-                            );
-                          } else {
-                            return _buildMobileList(
-                              state,
-                              currencySymbol,
-                              constraints,
-                            );
-                          }
-                        },
-                      ),
-                    ),
-
-                    // Loading More Indicator
-                    if (state.status ==
-                        CashFlowStatus.loadingMoreCashFlowSummaryReport)
-                      const Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: CircularProgressIndicator(),
-                      ),
-                  ],
+      body: SafeArea(
+        child: BlocConsumer<CashFlowBloc, CashFlowState>(
+          listener: (context, state) {
+            if (state.exportCashFlowSummaryReportMessage != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.exportCashFlowSummaryReportMessage!),
                 ),
               );
-            },
-          );
-        },
+            }
+            if (state.status == CashFlowStatus.error && state.error != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error: ${state.error}'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            return BlocBuilder<SystemConstantBloc, SystemConstantState>(
+              builder: (context, systemState) {
+                final systemConstant = systemState.systemConstants.isNotEmpty
+                    ? systemState.systemConstants.first
+                    : null;
+                final currencySymbol = systemConstant?.currencyCode ?? '\$';
+
+                if (state.status ==
+                        CashFlowStatus.loadingCashFlowSummaryReport &&
+                    state.cashFlowSummaryReport.isEmpty) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      // Summary Cards
+                      _buildSummaryCards(state, currencySymbol),
+                      const SizedBox(height: 16),
+
+                      // Main Content
+                      Expanded(
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            if (constraints.maxWidth > 600) {
+                              return _buildDesktopTable(
+                                state,
+                                currencySymbol,
+                                constraints,
+                              );
+                            } else {
+                              return _buildMobileList(
+                                state,
+                                currencySymbol,
+                                constraints,
+                              );
+                            }
+                          },
+                        ),
+                      ),
+
+                      // Loading More Indicator
+                      if (state.status ==
+                          CashFlowStatus.loadingMoreCashFlowSummaryReport)
+                        const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: CircularProgressIndicator(),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

@@ -38,18 +38,20 @@ class _PrivilegeManagementScreenState extends State<PrivilegeManagementScreen> {
           ),
         ],*/
       ),
-      body: BlocBuilder<PrivilegeBloc, PrivilegeState>(
-        builder: (context, state) {
-          if (state.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (state.isSuccess) {
-            return _buildPrivilegeList(state.privileges, context);
-          } else if (state.isFailure) {
-            return Center(child: Text('Error: ${state.message}'));
-          } else {
-            return const Center(child: Text('No privileges found'));
-          }
-        },
+      body: SafeArea(
+        child: BlocBuilder<PrivilegeBloc, PrivilegeState>(
+          builder: (context, state) {
+            if (state.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (state.isSuccess) {
+              return _buildPrivilegeList(state.privileges, context);
+            } else if (state.isFailure) {
+              return Center(child: Text('Error: ${state.message}'));
+            } else {
+              return const Center(child: Text('No privileges found'));
+            }
+          },
+        ),
       ),
     );
   }

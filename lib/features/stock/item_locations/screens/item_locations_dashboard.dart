@@ -5,30 +5,31 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/utils/ui_helper.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
-import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
-import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
-import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_state.dart';
-import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_bloc.dart';
+import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_event.dart';
+import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_state.dart';
+import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
 
-class ItemEntryDashboard extends StatefulWidget {
+class ItemLocationDashboard extends StatefulWidget {
   final AuthBloc authBloc;
-  const ItemEntryDashboard({super.key, required this.authBloc});
+  const ItemLocationDashboard({super.key, required this.authBloc});
 
   @override
-  State<ItemEntryDashboard> createState() => _ItemEntryDashboardState();
+  State<ItemLocationDashboard> createState() => _ItemLocationDashboardState();
 }
 
-class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
+class _ItemLocationDashboardState extends State<ItemLocationDashboard> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isSelectionMode = false;
   final Map<int, double> _dragOffset = {};
+  ItemLocation? _selectedItemLocation;
 
   @override
   void initState() {
     super.initState();
-    context.read<StockItemsEntryBloc>().add(
-      LoadItems(widget.authBloc.state.companyId!),
+    context.read<StockItemLocationBloc>().add(
+      LoadItemLocations(widget.authBloc.state.companyId!),
     );
   }
 
@@ -40,30 +41,38 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
   }
 
   void _handleSearch(String query) {
-    context.read<StockItemsEntryBloc>().add(SearchItems(query));
+    context.read<StockItemLocationBloc>().add(SearchItemLocations(query));
   }
 
   void _clearSearch() {
     _searchController.clear();
-    context.read<StockItemsEntryBloc>().add(SearchItems(''));
+    context.read<StockItemLocationBloc>().add(SearchItemLocations(''));
   }
 
-  void _toggleItemEntryModelSelection(ItemEntryModel items, bool selected) {
-    context.read<StockItemsEntryBloc>().add(SelectItem(items, selected));
+  void _toggleItemLocationSelection(ItemLocation items, bool selected) {
+    context.read<StockItemLocationBloc>().add(
+      SelectItemLocation(items, selected),
+    );
   }
 
-  void _showItemDetail(ItemEntryModel item) {
-    if (!_isSelectionMode) {
-      context.read<StockItemsEntryBloc>().add(ShowItemDetail(item));
-    }
+  void _showItemDetail(ItemLocation item) {
+    setState(() {
+      _selectedItemLocation = item;
+      _isSelectionMode = false;
+    });
   }
 
   void _hideItemDetail() {
-    context.read<StockItemsEntryBloc>().add(HideItemDetail());
+    if (mounted) {
+      setState(() {
+        _selectedItemLocation = null;
+        _isSelectionMode = false;
+      });
+    }
   }
 
   void _clearSelection() {
-    context.read<StockItemsEntryBloc>().add(ClearSelection());
+    context.read<StockItemLocationBloc>().add(ClearSelection());
     setState(() {
       _isSelectionMode = false;
     });
@@ -79,14 +88,14 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
     print('Emailing: $itemId');
   }
 
-  void _exportItem(ItemEntryModel item) {
-    context.read<StockItemsEntryBloc>().add(ExportSingleItem(item));
+  void _exportItem(ItemLocation item) {
+    // context.read<StockItemLocationBloc>().add(ExportSingleItem(item));
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Item data exported')));
   }
 
-  void _navigateToEditScreen(ItemEntryModel item) {
+  void _navigateToEditScreen(ItemLocation item) {
     context.push(AppRoutes.itemEdit, extra: item);
   }
 
@@ -95,7 +104,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
   }
 
   void _safeDelete(BuildContext context, {int? index}) {
-    final bloc = context.read<StockItemsEntryBloc>();
+    final bloc = context.read<StockItemLocationBloc>();
     final state = bloc.state;
 
     // CASE 1: Multiple users
@@ -108,12 +117,12 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
         content:
             'Are you sure you want to delete ${itemsToDelete.length} Items?',
         onConfirm: () {
-          final ids = itemsToDelete.map((e) => e.id).toList();
+          final ids = itemsToDelete.map((e) => e.id!).toList();
           final deletedIndexes = itemsToDelete
               .map((emp) => state.items.indexOf(emp))
               .toList();
           bloc.add(
-            DeleteSelectedItems(
+            DeleteSelectedItemLocations(
               selectedItems: ids,
               deletedItems: itemsToDelete,
               deletedIndexes: deletedIndexes,
@@ -136,15 +145,16 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
 
     showDeleteDialog(
       context,
-      title: 'Delete "${itemToDelete.itemDescription}"?',
+      title:
+          'Delete "${itemToDelete.locationDescription?.locationDescription}"?',
       content:
-          'Are you sure you want to delete "${itemToDelete.itemDescription}"?',
+          'Are you sure you want to delete "${itemToDelete.locationDescription?.locationDescription}"?',
       onConfirm: () {
         bloc.add(
-          DeleteItem(
+          DeleteItemLocation(
             deletedItem: itemToDelete,
             deletedIndex: index,
-            itemId: itemToDelete.id,
+            itemId: itemToDelete.id!,
           ),
         );
       },
@@ -199,68 +209,71 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
       ),
-      body: BlocConsumer<StockItemsEntryBloc, ItemEntryState>(
-        listener: (context, state) {
-          if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
-            setState(() {
-              _isSelectionMode = true;
-            });
-          } else if (state.selectedItems.isEmpty && _isSelectionMode) {
-            setState(() {
-              _isSelectionMode = false;
-            });
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Search Bar
-                  _buildSearchBar(),
-                  _buildActionButtons(state),
+      body: SafeArea(
+        child: BlocConsumer<StockItemLocationBloc, ItemLocationsState>(
+          listener: (context, state) {
+            if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
+              setState(() {
+                _isSelectionMode = true;
+              });
+            } else if (state.selectedItems.isEmpty && _isSelectionMode) {
+              setState(() {
+                _isSelectionMode = false;
+              });
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Search Bar
+                    _buildSearchBar(),
+                    _buildActionButtons(state),
 
-                  // Role List
-                  Expanded(child: _buildRoleList(state)),
-                ],
-              ),
-              if (state.showDetailPanel && state.itemDetail != null)
-                _buildDetailPanel(state.itemDetail!),
-            ],
-          );
-        },
+                    // Role List
+                    Expanded(child: _buildRoleList(state)),
+                  ],
+                ),
+                if (state.showDetailPanel && state.itemDetail != null)
+                  _buildDetailPanel(state.itemDetail!),
+              ],
+            );
+          },
+        ),
       ),
       // Floating Action Button for Add
-      floatingActionButton: BlocBuilder<StockItemsEntryBloc, ItemEntryState>(
-        builder: (context, state) {
-          if (state.showDetailPanel) {
-            return const SizedBox.shrink();
-          }
-          return FloatingActionButton(
-            onPressed: () {
-              if (state.canEdit && state.selectedItems.isNotEmpty) {
-                // Navigate to edit screen with selected customer
-                final customer = state.selectedItems.first;
-                _navigateToEditScreen(customer);
-              } else {
-                // Navigate to add screen
-                _navigateToAddScreen();
+      floatingActionButton:
+          BlocBuilder<StockItemLocationBloc, ItemLocationsState>(
+            builder: (context, state) {
+              if (state.showDetailPanel) {
+                return const SizedBox.shrink();
               }
+              return FloatingActionButton(
+                onPressed: () {
+                  if (state.canEdit && state.selectedItems.isNotEmpty) {
+                    // Navigate to edit screen with selected customer
+                    final customer = state.selectedItems.first;
+                    _navigateToEditScreen(customer);
+                  } else {
+                    // Navigate to add screen
+                    _navigateToAddScreen();
+                  }
+                },
+                backgroundColor: Color.fromARGB(255, 28, 66, 146),
+                child: Icon(
+                  state.canEdit && state.selectedItems.isNotEmpty
+                      ? Icons.edit
+                      : Icons.add,
+                  color: Colors.white,
+                ),
+              );
             },
-            backgroundColor: Color.fromARGB(255, 28, 66, 146),
-            child: Icon(
-              state.canEdit && state.selectedItems.isNotEmpty
-                  ? Icons.edit
-                  : Icons.add,
-              color: Colors.white,
-            ),
-          );
-        },
-      ),
+          ),
     );
   }
 
-  Widget _buildActionButtons(ItemEntryState state) {
+  Widget _buildActionButtons(ItemLocationsState state) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       height: state.hasSelection ? 60 : 0,
@@ -346,12 +359,12 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
     );
   }
 
-  Widget _buildRoleList(ItemEntryState state) {
-    if (state.status == ItemEntryStatus.loading) {
+  Widget _buildRoleList(ItemLocationsState state) {
+    if (state.status == ItemLocationsStatus.loading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (state.status == ItemEntryStatus.failure) {
+    if (state.status == ItemLocationsStatus.failure) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -364,8 +377,8 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => context.read<StockItemsEntryBloc>().add(
-                LoadItems(widget.authBloc.state.companyId!),
+              onPressed: () => context.read<StockItemLocationBloc>().add(
+                LoadItemLocations(widget.authBloc.state.companyId!),
               ),
               child: const Text('Retry'),
             ),
@@ -383,7 +396,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
             const SizedBox(height: 16),
             Text(
               state.searchQuery.isEmpty
-                  ? 'No roles found'
+                  ? 'No Item Locations found'
                   : 'No results for "${state.searchQuery}"',
               style: const TextStyle(color: Colors.grey, fontSize: 16),
             ),
@@ -402,7 +415,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
         final screenWidth = MediaQuery.of(context).size.width;
         final useCompactLayout = screenWidth < 700;
 
-        return _buildItemEntryModelListItem(
+        return _buildItemLocationListItem(
           item,
           state,
           isSelected,
@@ -413,9 +426,9 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
     );
   }
 
-  Widget _buildItemEntryModelListItem(
-    ItemEntryModel item,
-    ItemEntryState state,
+  Widget _buildItemLocationListItem(
+    ItemLocation item,
+    ItemLocationsState state,
     bool isSelected,
     int index,
     bool isCompact,
@@ -425,7 +438,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
     return GestureDetector(
       onTap: () {
         if (_isSelectionMode) {
-          _toggleItemEntryModelSelection(item, !isSelected);
+          _toggleItemLocationSelection(item, !isSelected);
         }
       },
       onLongPress: () {
@@ -434,7 +447,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
             _isSelectionMode = true;
           });
         }
-        _toggleItemEntryModelSelection(item, !isSelected);
+        _toggleItemLocationSelection(item, !isSelected);
       },
       onDoubleTap: () => _showItemDetail(item),
       onHorizontalDragUpdate: (details) =>
@@ -482,15 +495,14 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
             ),
             child: ListTile(
               contentPadding: const EdgeInsets.all(16),
-              leading: _buildItemEntryModelAvatar(item, isSelected, isCompact),
+              leading: _buildItemLocationAvatar(item, isSelected, isCompact),
               title: Text(
-                item.itemDescription!,
+                item.locationDescription?.locationDescription ?? '',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),
               ),
-              trailing: _buildItemEntryModelTrailing(item),
             ),
           ),
         ],
@@ -498,7 +510,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
     );
   }
 
-  Widget _buildDetailPanel(ItemEntryModel item) {
+  Widget _buildDetailPanel(ItemLocation item) {
     return Positioned(
       bottom: 0,
       left: 0,
@@ -532,7 +544,8 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
                   children: [
                     // Item Title
                     Text(
-                      item.itemDescription ?? 'No Description',
+                      item.locationDescription?.locationDescription ??
+                          'No Description',
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -542,7 +555,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Item ID: ${item.itemsId ?? 'N/A'}',
+                      'Branch: ${item.branchRef?.description ?? 'N/A'}',
                       style: const TextStyle(
                         fontSize: 15,
                         color: Colors.black54,
@@ -556,47 +569,36 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
                       runSpacing: 16,
                       children: [
                         _buildDetailCard(
-                          title: 'Barcode',
-                          value: item.barcode ?? 'N/A',
+                          title: 'Location',
+                          value:
+                              item.locationDescription?.locationDescription ??
+                              'N/A',
                           color: Colors.blue,
                         ),
                         _buildDetailCard(
-                          title: 'Unit Price',
-                          value: item.unitPrice != null
-                              ? '\$${item.unitPrice!.toStringAsFixed(2)}'
-                              : 'N/A',
+                          title: 'Item',
+                          value: item.itemRef?.itemDescription ?? 'N/A',
                           color: Colors.blue,
                         ),
                         _buildDetailCard(
-                          title: 'Margin Rate',
-                          value: item.marginRate?.toStringAsFixed(2) ?? 'N/A',
+                          title: 'Branch',
+                          value: item.branchRef?.description ?? 'N/A',
                           color: Colors.blue,
                         ),
                         _buildDetailCard(
-                          title: 'Margin Type',
-                          value: item.marginType ?? 'N/A',
+                          title: 'Qunatity On Hand',
+                          value:
+                              item.quantityOnHand?.toStringAsFixed(2) ?? 'N/A',
                           color: Colors.blue,
                         ),
                         _buildDetailCard(
-                          title: 'Unit of Measure',
-                          value: item.unitOfMeasure ?? 'N/A',
+                          title: 'Created On',
+                          value: item.dateCreated?.toString() ?? 'N/A',
                           color: Colors.blue,
                         ),
                         _buildDetailCard(
-                          title: 'Reorder Point',
-                          value: item.reorderPoint?.toStringAsFixed(2) ?? 'N/A',
-                          color: Colors.blue,
-                        ),
-                        _buildDetailCard(
-                          title: 'Taxable',
-                          value: item.taxable == 'Y' ? 'Yes' : 'No',
-                          color: item.taxable == 'Y'
-                              ? Colors.red
-                              : Colors.green,
-                        ),
-                        _buildDetailCard(
-                          title: 'Status',
-                          value: 'Active',
+                          title: 'Updated On',
+                          value: item.dateUpdated?.toString() ?? 'N/A',
                           color: Colors.blue,
                         ),
                       ],
@@ -615,7 +617,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
   }
 
   // Header with drag handle + close
-  Widget _buildHeader(ItemEntryModel item) {
+  Widget _buildHeader(ItemLocation item) {
     return Container(
       padding: const EdgeInsets.only(top: 10, bottom: 8),
       decoration: const BoxDecoration(
@@ -723,7 +725,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
   }
 
   // Bottom action bar
-  Widget _buildActionBar(ItemEntryModel item) {
+  Widget _buildActionBar(ItemLocation item) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       decoration: const BoxDecoration(
@@ -787,8 +789,8 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
     );
   }
 
-  Widget _buildItemEntryModelAvatar(
-    ItemEntryModel item,
+  Widget _buildItemLocationAvatar(
+    ItemLocation item,
     bool isSelected,
     bool isCompact,
   ) {
@@ -806,48 +808,6 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard> {
         color: Colors.white,
         size: isCompact ? 20 : 24,
       ),
-    );
-  }
-
-  Widget _buildItemEntryModelTrailing(ItemEntryModel item) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        // Taxable status badge
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: item.taxable == 'Y'
-                ? Colors.red.withOpacity(0.1)
-                : Colors.green.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: item.taxable == 'Y' ? Colors.red : Colors.green,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                item.taxable == 'Y' ? Icons.receipt : Icons.money_off,
-                size: 12,
-                color: item.taxable == 'Y' ? Colors.red : Colors.green,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                item.taxable == 'Y' ? 'Taxable' : 'Non-Tax',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: item.taxable == 'Y' ? Colors.red : Colors.green,
-                  fontFamily: 'Roboto',
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

@@ -110,7 +110,6 @@ class _HomePageState extends State<HomePage> {
           builder: (context, scState) {
             return Scaffold(
               body: SafeArea(
-                bottom: false,
                 top: false,
                 child: LiquidPullToRefresh(
                   color: Color(0xFF155888),
@@ -175,9 +174,8 @@ class _HomePageState extends State<HomePage> {
                                       authState,
                                     ),
                                     _buildFeaturesSection(context, authState),
-                                    const SizedBox(
-                                      height: 40,
-                                    ), // Added space for footer visibility
+                                    // Added space for footer visibility
+                                    const SizedBox(height: 40),
                                   ],
                                 ),
                               ],

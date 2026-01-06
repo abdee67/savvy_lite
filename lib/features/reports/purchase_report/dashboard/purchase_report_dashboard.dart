@@ -42,50 +42,52 @@ class _PurchaseReportDashboardState extends State<PurchaseReportDashboard> {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: Colors.grey[50],
-      body: Stack(
-        children: [
-          // Main Content
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            left: _sidebarExpanded && isDesktop ? _sidebarWidth : 0,
-            right: 0,
-            top: 0,
-            bottom: 0,
-            child: _buildMainContent(),
-          ),
-
-          // Overlay for Mobile/Tablet when sidebar is open
-          if (_showSidebarOverlay && (isMobile || isTablet))
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: _hideSidebar,
-                child: Container(color: Colors.black.withOpacity(0.5)),
-              ),
-            ),
-
-          // Sidebar
-          if (_sidebarExpanded || isDesktop)
-            Positioned(
-              left: 0,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            // Main Content
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              left: _sidebarExpanded && isDesktop ? _sidebarWidth : 0,
+              right: 0,
               top: 0,
               bottom: 0,
-              child: _buildSidebar(screenSize),
+              child: _buildMainContent(),
             ),
 
-          // Floating Menu Button for Mobile/Tablet
-          if (!isDesktop && !_sidebarExpanded)
-            Positioned(
-              left: 16,
-              top: MediaQuery.paddingOf(context).top + 16,
-              child: FloatingActionButton.small(
-                backgroundColor: const Color(0xFF155888),
-                foregroundColor: Colors.white,
-                onPressed: _toggleSidebar,
-                child: const Icon(Icons.menu),
+            // Overlay for Mobile/Tablet when sidebar is open
+            if (_showSidebarOverlay && (isMobile || isTablet))
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: _hideSidebar,
+                  child: Container(color: Colors.black.withOpacity(0.5)),
+                ),
               ),
-            ),
-        ],
+
+            // Sidebar
+            if (_sidebarExpanded || isDesktop)
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                child: _buildSidebar(screenSize),
+              ),
+
+            // Floating Menu Button for Mobile/Tablet
+            if (!isDesktop && !_sidebarExpanded)
+              Positioned(
+                left: 16,
+                top: MediaQuery.paddingOf(context).top + 16,
+                child: FloatingActionButton.small(
+                  backgroundColor: const Color(0xFF155888),
+                  foregroundColor: Colors.white,
+                  onPressed: _toggleSidebar,
+                  child: const Icon(Icons.menu),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

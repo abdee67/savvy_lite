@@ -411,35 +411,37 @@ class _LotExpirationColorsDashboardState
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
       ),
-      body: BlocConsumer<LotExpirationColorsBloc, LotExpirationColorsState>(
-        listener: (context, state) {
-          if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
-            setState(() {
-              _isSelectionMode = true;
-            });
-          } else if (state.selectedItems.isEmpty && _isSelectionMode) {
-            setState(() {
-              _isSelectionMode = false;
-            });
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  _buildSearchBar(),
-                  // Filter Section
-                  _buildFilterSection(),
+      body: SafeArea(
+        child: BlocConsumer<LotExpirationColorsBloc, LotExpirationColorsState>(
+          listener: (context, state) {
+            if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
+              setState(() {
+                _isSelectionMode = true;
+              });
+            } else if (state.selectedItems.isEmpty && _isSelectionMode) {
+              setState(() {
+                _isSelectionMode = false;
+              });
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    _buildSearchBar(),
+                    // Filter Section
+                    _buildFilterSection(),
 
-                  _buildActionButtons(state),
-                  // Color List
-                  Expanded(child: _buildColorList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+                    _buildActionButtons(state),
+                    // Color List
+                    Expanded(child: _buildColorList(state)),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

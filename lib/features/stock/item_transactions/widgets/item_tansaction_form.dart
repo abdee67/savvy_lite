@@ -446,48 +446,50 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
         ),
         backgroundColor: const Color(0xFF155888),
       ),
-      body: BlocListener<ItemTransactionsBloc, ItemTransactionsState>(
-        listener: (context, state) {
-          if (state.status == ItemTransactionsStatus.success) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  state.successmessage ?? 'Transaction successfully created!',
+      body: SafeArea(
+        child: BlocListener<ItemTransactionsBloc, ItemTransactionsState>(
+          listener: (context, state) {
+            if (state.status == ItemTransactionsStatus.success) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    state.successmessage ?? 'Transaction successfully created!',
+                  ),
+                  backgroundColor: Colors.green,
                 ),
-                backgroundColor: Colors.green,
-              ),
-            );
-            Navigator.pop(context); // Go back to list
-          }
+              );
+              Navigator.pop(context); // Go back to list
+            }
 
-          if (state.status == ItemTransactionsStatus.error) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  state.error ?? 'Error occurred, please contact vendor!',
+            if (state.status == ItemTransactionsStatus.error) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    state.error ?? 'Error occurred, please contact vendor!',
+                  ),
+                  backgroundColor: Colors.red,
                 ),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(8),
-            children: [
-              _buildMasterTransactionCard(),
-              const SizedBox(height: 16),
-              const Divider(thickness: 1),
-              const SizedBox(height: 8),
-              const Text(
-                'Transaction Items',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              ..._transactionItems.map(_buildTransactionItemCard),
-              const SizedBox(height: 12),
-            ],
+              );
+            }
+          },
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(8),
+              children: [
+                _buildMasterTransactionCard(),
+                const SizedBox(height: 16),
+                const Divider(thickness: 1),
+                const SizedBox(height: 8),
+                const Text(
+                  'Transaction Items',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                ..._transactionItems.map(_buildTransactionItemCard),
+                const SizedBox(height: 12),
+              ],
+            ),
           ),
         ),
       ),
@@ -1133,35 +1135,37 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
   }
 
   Widget _buildBottomBar() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      color: Colors.white,
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: _cancelCreate,
-              icon: const Icon(Iconsax.close_circle),
-              label: const Text('Cancel'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
+    return SafeArea(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        color: Colors.white,
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _cancelCreate,
+                icon: const Icon(Iconsax.close_circle),
+                label: const Text('Cancel'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: _applyTransactions,
-              icon: const Icon(Iconsax.tick_circle),
-              label: const Text('Apply'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF155888),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _applyTransactions,
+                icon: const Icon(Iconsax.tick_circle),
+                label: const Text('Apply'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF155888),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

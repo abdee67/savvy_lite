@@ -80,34 +80,36 @@ class _UomCreateAndEditState extends State<UomCreateAndEdit> {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: BlocListener<UdcDetailsBloc, UdcDetailsState>(
-        listener: (context, state) {
-          if (state.status == UdcDetailsStatus.failure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message ?? 'An error occurred'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          } else if (state.status == UdcDetailsStatus.success) {
-            Navigator.of(context).pop();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  widget.item == null
-                      ? 'UOM created successfully'
-                      : 'UOM updated successfully',
+      body: SafeArea(
+        child: BlocListener<UdcDetailsBloc, UdcDetailsState>(
+          listener: (context, state) {
+            if (state.status == UdcDetailsStatus.failure) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message ?? 'An error occurred'),
+                  backgroundColor: Colors.red,
                 ),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        },
-        child: Column(
-          children: [
-            Expanded(child: _buildForm()),
-            _buildBottomNavigation(),
-          ],
+              );
+            } else if (state.status == UdcDetailsStatus.success) {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    widget.item == null
+                        ? 'UOM created successfully'
+                        : 'UOM updated successfully',
+                  ),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          },
+          child: Column(
+            children: [
+              Expanded(child: _buildForm()),
+              _buildBottomNavigation(),
+            ],
+          ),
         ),
       ),
     );

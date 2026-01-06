@@ -184,40 +184,42 @@ class _CompanyDashboardState extends State<CompanyDashboard>
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
       ),
-      body: BlocConsumer<CompanyBloc, CompanyState>(
-        listener: (context, state) {
-          if (state.status == CompanyStatus.failure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message ?? 'Operation failed'),
-                backgroundColor: Colors.red,
-              ),
+      body: SafeArea(
+        child: BlocConsumer<CompanyBloc, CompanyState>(
+          listener: (context, state) {
+            if (state.status == CompanyStatus.failure) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message ?? 'Operation failed'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            } else if (state.status == CompanyStatus.success &&
+                state.message != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message!),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Search Bar
+                    _buildSearchBar(),
+                    _buildActionButtons(state),
+                    // Company List
+                    Expanded(child: _buildCompanyList(state)),
+                  ],
+                ),
+              ],
             );
-          } else if (state.status == CompanyStatus.success &&
-              state.message != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message!),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Search Bar
-                  _buildSearchBar(),
-                  _buildActionButtons(state),
-                  // Company List
-                  Expanded(child: _buildCompanyList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+          },
+        ),
       ),
     );
   }

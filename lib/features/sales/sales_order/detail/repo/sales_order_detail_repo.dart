@@ -95,6 +95,7 @@ class SalesOrderDetailRepository {
            lm.quantity_available as lot_quantity_available,
            lm.date_expiration as lot_expiration,
            u.description_1 as unit_of_measure_description,
+           u.detail_code as unit_of_measure_code,
            soh.order_type as order_type,
            soh.customer_bill_to as customer_bill_to
     FROM sales_order_details sod
@@ -456,7 +457,8 @@ class SalesOrderDetailRepository {
            lm.date_expiration as lot_expiration,
            soh.order_type as order_type,
            soh.customer_bill_to as customer_bill_to,
-           u.description_1 as unit_of_measure_description
+           u.description_1 as unit_of_measure_description,
+           u.detail_code as unit_of_measure_code
     FROM sales_order_details sod
     LEFT JOIN items_table it ON sod.items_table_id = it.id
     LEFT JOIN items_in_branch ib ON sod.item_in_branch = ib.id

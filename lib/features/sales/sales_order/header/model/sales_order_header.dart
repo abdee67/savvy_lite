@@ -163,10 +163,18 @@ class SalesOrderHeader {
               tinNumber: map['customer_bill_to_tin'],
             )
           : null,
+      customerTableRef: map['customer_table_name'] != null
+          ? Customer(
+              id: map['customer_table_id'],
+              customerName: map['customer_table_name'],
+              phoneNumber: map['customer_table_phone'],
+              tinNumber: map['customer_table_tin'],
+            )
+          : null,
       employee: map['employee_name'] != null
           ? Employee(
               id: map['employees_id'],
-              nameFirst: map['employee_name_first'] ?? map['employee_name'],
+              nameFirst: map['name_first'] ?? map['employee_name'],
               nameMiddle: map['employee_name_middle'] ?? '',
               nameLast: map['employee_name_last'] ?? '',
               phone: map['employee_phone'] ?? '',

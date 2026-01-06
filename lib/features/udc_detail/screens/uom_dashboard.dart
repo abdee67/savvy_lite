@@ -67,48 +67,50 @@ class _UomDashboardState extends State<UomDashboard> {
           ),
         ],
       ),
-      body: BlocConsumer<UdcDetailsBloc, UdcDetailsState>(
-        listener: (context, state) {
-          if (state.status == UdcDetailsStatus.failure &&
-              state.failure != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Error: ${state.failure}'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                if (state.status == UdcDetailsStatus.failure)
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      state.failure ?? 'Unknown Error',
-                      style: const TextStyle(color: Colors.red),
+      body: SafeArea(
+        child: BlocConsumer<UdcDetailsBloc, UdcDetailsState>(
+          listener: (context, state) {
+            if (state.status == UdcDetailsStatus.failure &&
+                state.failure != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error: ${state.failure}'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  if (state.status == UdcDetailsStatus.failure)
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        state.failure ?? 'Unknown Error',
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ),
+
+                  // Main Content (Responsive)
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        if (constraints.maxWidth > 600) {
+                          return _buildDesktopTable(state, constraints);
+                        } else {
+                          return _buildMobileList(state, constraints);
+                        }
+                      },
                     ),
                   ),
-
-                // Main Content (Responsive)
-                Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      if (constraints.maxWidth > 600) {
-                        return _buildDesktopTable(state, constraints);
-                      } else {
-                        return _buildMobileList(state, constraints);
-                      }
-                    },
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

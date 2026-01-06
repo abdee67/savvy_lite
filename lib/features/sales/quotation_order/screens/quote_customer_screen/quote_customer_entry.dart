@@ -123,37 +123,39 @@ class _QuotationCustomerInfoScreenContentState
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: _buildAppBar(context),
-        body: BlocBuilder<CustomerBloc, CustomerState>(
-          builder: (context, customerState) {
-            return BlocBuilder<QuotationOrderBloc, QuotationOrderState>(
-              builder: (context, quotationState) {
-                // Use post-frame callback to initialize default customer AFTER build
-                if (!_isInitialized &&
-                    quotationState.defaultCustomer != null &&
-                    quotationState.defaultCustomer!.isNotEmpty &&
-                    customerState.customers.isNotEmpty) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    _initializeDefaultCustomer(quotationState, customerState);
-                  });
-                }
+        body: SafeArea(
+          child: BlocBuilder<CustomerBloc, CustomerState>(
+            builder: (context, customerState) {
+              return BlocBuilder<QuotationOrderBloc, QuotationOrderState>(
+                builder: (context, quotationState) {
+                  // Use post-frame callback to initialize default customer AFTER build
+                  if (!_isInitialized &&
+                      quotationState.defaultCustomer != null &&
+                      quotationState.defaultCustomer!.isNotEmpty &&
+                      customerState.customers.isNotEmpty) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _initializeDefaultCustomer(quotationState, customerState);
+                    });
+                  }
 
-                final isValid =
-                    _selectedBillToCustomer != null &&
-                    _selectedShipToCustomer != null &&
-                    quotationState.selectedHeader != null;
+                  final isValid =
+                      _selectedBillToCustomer != null &&
+                      _selectedShipToCustomer != null &&
+                      quotationState.selectedHeader != null;
 
-                return Stack(
-                  children: [
-                    _buildContent(quotationState, isValid, customerState),
-                    if (quotationState.pendingOperations.contains(
-                      'prepare_new_quotation_order',
-                    ))
-                      const _LoadingOverlay(),
-                  ],
-                );
-              },
-            );
-          },
+                  return Stack(
+                    children: [
+                      _buildContent(quotationState, isValid, customerState),
+                      if (quotationState.pendingOperations.contains(
+                        'prepare_new_quotation_order',
+                      ))
+                        const _LoadingOverlay(),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
         ),
       ),
     );
@@ -443,12 +445,28 @@ class _QuotationCustomerInfoScreenContentState
               ),
             ),
             const SizedBox(height: _sizedBoxHeight8),
-            _buildDetailRow('Name', customer.customerName),
-            _buildDetailRow('TIN Number', customer.tinNumber),
-            _buildDetailRow('Phone', customer.phoneNumber),
-            _buildDetailRow('Country', customer.country),
-            _buildDetailRow('Region', customer.region),
-            _buildDetailRow('City', customer.city),
+            Row(
+              children: [
+                Expanded(child: _buildDetailRow('Name', customer.customerName)),
+                Expanded(
+                  child: _buildDetailRow('TIN Number', customer.tinNumber),
+                ),
+              ],
+            ),
+            const SizedBox(height: _sizedBoxHeight8),
+            Row(
+              children: [
+                Expanded(child: _buildDetailRow('Phone', customer.phoneNumber)),
+                Expanded(child: _buildDetailRow('Country', customer.country)),
+              ],
+            ),
+            const SizedBox(height: _sizedBoxHeight8),
+            Row(
+              children: [
+                Expanded(child: _buildDetailRow('Region', customer.region)),
+                Expanded(child: _buildDetailRow('City', customer.city)),
+              ],
+            ),
             if (customer.defaultsValue == 'Y')
               _buildDetailRow('Status', 'Default Customer'),
           ],

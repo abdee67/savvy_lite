@@ -210,87 +210,93 @@ class _SalesTransactionReportPageState extends State<SalesTransactionReportPage>
           ),
         ],
       ),
-      body: MultiBlocListener(
-        listeners: [
-          BlocListener<SalesOrderHeaderBloc, SalesOrderHeaderState>(
-            listener: (context, state) {
-              if (state.exportSalesTransactionMessage != null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(state.exportSalesTransactionMessage!)),
-                );
-              }
+      body: SafeArea(
+        child: MultiBlocListener(
+          listeners: [
+            BlocListener<SalesOrderHeaderBloc, SalesOrderHeaderState>(
+              listener: (context, state) {
+                if (state.exportSalesTransactionMessage != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.exportSalesTransactionMessage!),
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+          child: BlocBuilder<SystemConstantBloc, SystemConstantState>(
+            builder: (context, systemState) {
+              final systemConstant = systemState.systemConstants.isNotEmpty
+                  ? systemState.systemConstants.first
+                  : null;
+
+              return BlocBuilder<SalesOrderHeaderBloc, SalesOrderHeaderState>(
+                builder: (context, state) {
+                  return Stack(
+                    children: [
+                      Column(
+                        children: [
+                          // Summary Cards
+                          _buildSummaryCards(state, systemConstant),
+
+                          // Active Filters Indicator
+                          if (state.salesTransactionFilters.hasFilters)
+                            _buildActiveFiltersIndicator(state),
+
+                          // List Header
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 8,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  state.salesTransactionFilters.isDetailView
+                                      ? 'Detail Transactions'
+                                      : 'Header Transactions',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF1C4292),
+                                  ),
+                                ),
+                                Text(
+                                  'Total Items: ${state.salesTransactionTotalCount}',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors
+                                        .white, // Changed to white as per bg
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Transaction List
+                          Expanded(
+                            child: _buildTransactionList(state, systemConstant),
+                          ),
+                        ],
+                      ),
+
+                      // Loading Overlay
+                      if (state.status == SalesOrderHeaderStatus.loading)
+                        Container(
+                          color: Colors.black.withOpacity(0.5),
+                          child: const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              );
             },
           ),
-        ],
-        child: BlocBuilder<SystemConstantBloc, SystemConstantState>(
-          builder: (context, systemState) {
-            final systemConstant = systemState.systemConstants.isNotEmpty
-                ? systemState.systemConstants.first
-                : null;
-
-            return BlocBuilder<SalesOrderHeaderBloc, SalesOrderHeaderState>(
-              builder: (context, state) {
-                return Stack(
-                  children: [
-                    Column(
-                      children: [
-                        // Summary Cards
-                        _buildSummaryCards(state, systemConstant),
-
-                        // Active Filters Indicator
-                        if (state.salesTransactionFilters.hasFilters)
-                          _buildActiveFiltersIndicator(state),
-
-                        // List Header
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 8,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                state.salesTransactionFilters.isDetailView
-                                    ? 'Detail Transactions'
-                                    : 'Header Transactions',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1C4292),
-                                ),
-                              ),
-                              Text(
-                                'Total Items: ${state.salesTransactionTotalCount}',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Colors
-                                      .white, // Changed to white as per bg
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Transaction List
-                        Expanded(
-                          child: _buildTransactionList(state, systemConstant),
-                        ),
-                      ],
-                    ),
-
-                    // Loading Overlay
-                    if (state.status == SalesOrderHeaderStatus.loading)
-                      Container(
-                        color: Colors.black.withOpacity(0.5),
-                        child: const Center(child: CircularProgressIndicator()),
-                      ),
-                  ],
-                );
-              },
-            );
-          },
         ),
       ),
     );

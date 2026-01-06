@@ -409,61 +409,85 @@ class _SalesReturnScreen extends State<SalesReturnScreen> {
             LayoutBuilder(
               builder: (context, constraints) {
                 final isWide = constraints.maxWidth > 600;
-                return GridView.count(
-                  crossAxisCount: isWide ? 2 : 1,
-                  shrinkWrap: true,
-                  childAspectRatio: isWide ? 6 : 4,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
+                final width = isWide
+                    ? (constraints.maxWidth - 16) / 2
+                    : constraints.maxWidth;
+
+                return Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
                   children: [
-                    CustomTextField(
-                      labelText: 'Customer Bill To',
-                      controller: _customerBillToController,
-                      readOnly: true,
-                      prefixIcon: const Icon(Iconsax.user),
+                    SizedBox(
+                      width: width,
+                      child: CustomTextField(
+                        labelText: 'Customer Bill To',
+                        controller: _customerBillToController,
+                        readOnly: true,
+                        prefixIcon: const Icon(Iconsax.user),
+                      ),
                     ),
-                    CustomTextField(
-                      labelText: 'Customer Ship To',
-                      controller: _customerShipToController,
-                      readOnly: true,
-                      prefixIcon: const Icon(Iconsax.user),
+                    SizedBox(
+                      width: width,
+                      child: CustomTextField(
+                        labelText: 'Customer Ship To',
+                        controller: _customerShipToController,
+                        readOnly: true,
+                        prefixIcon: const Icon(Iconsax.user),
+                      ),
                     ),
-                    CustomTextField(
-                      labelText: 'FS Number',
-                      controller: _fsNumberController,
-                      readOnly: true,
-                      prefixIcon: const Icon(Iconsax.document),
+                    SizedBox(
+                      width: width,
+                      child: CustomTextField(
+                        labelText: 'FS Number',
+                        controller: _fsNumberController,
+                        readOnly: true,
+                        prefixIcon: const Icon(Iconsax.document),
+                      ),
                     ),
-                    CustomTextField(
-                      labelText: 'Order Date',
-                      controller: _orderDateController,
-                      readOnly: true,
-                      prefixIcon: const Icon(Iconsax.calendar),
+                    SizedBox(
+                      width: width,
+                      child: CustomTextField(
+                        labelText: 'Order Date',
+                        controller: _orderDateController,
+                        readOnly: true,
+                        prefixIcon: const Icon(Iconsax.calendar),
+                      ),
                     ),
-                    CustomTextField(
-                      labelText: 'Order Number',
-                      controller: _orderNumberController,
-                      readOnly: true,
-                      prefixIcon: const Icon(Iconsax.hashtag),
+                    SizedBox(
+                      width: width,
+                      child: CustomTextField(
+                        labelText: 'Order Number',
+                        controller: _orderNumberController,
+                        readOnly: true,
+                        prefixIcon: const Icon(Iconsax.hashtag),
+                      ),
                     ),
-                    CustomTextField(
-                      labelText: 'Tax',
-                      controller: _taxController,
-                      readOnly: true,
-                      prefixIcon: const Icon(Iconsax.receipt),
+                    SizedBox(
+                      width: width,
+                      child: CustomTextField(
+                        labelText: 'Tax',
+                        controller: _taxController,
+                        readOnly: true,
+                        prefixIcon: const Icon(Iconsax.receipt),
+                      ),
                     ),
-                    CustomTextField(
-                      labelText: 'With Hold',
-                      controller: _withholdAmountController,
-                      readOnly: true,
-                      prefixIcon: const Icon(Iconsax.money),
+                    SizedBox(
+                      width: width,
+                      child: CustomTextField(
+                        labelText: 'With Hold',
+                        controller: _withholdAmountController,
+                        readOnly: true,
+                        prefixIcon: const Icon(Iconsax.money),
+                      ),
                     ),
-                    CustomTextField(
-                      labelText: 'Total Amount',
-                      controller: _totalAmountController,
-                      readOnly: true,
-                      prefixIcon: const Icon(Iconsax.dollar_circle),
+                    SizedBox(
+                      width: width,
+                      child: CustomTextField(
+                        labelText: 'Total Amount',
+                        controller: _totalAmountController,
+                        readOnly: true,
+                        prefixIcon: const Icon(Iconsax.dollar_circle),
+                      ),
                     ),
                   ],
                 );
@@ -497,58 +521,60 @@ class _SalesReturnScreen extends State<SalesReturnScreen> {
             LayoutBuilder(
               builder: (context, constraints) {
                 final isWide = constraints.maxWidth > 600;
-                return GridView.count(
-                  crossAxisCount: isWide ? 2 : 1,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  childAspectRatio: isWide ? 4 : 3,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  children: [
-                    BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
-                      builder: (context, state) {
-                        final returnReasons = state.details
-                            .where((udc) => udc.udcGroup == 'SR')
-                            .toList();
+                final width = isWide
+                    ? (constraints.maxWidth - 16) / 2
+                    : constraints.maxWidth;
 
-                        return CustomDropdown(
-                          labelText: 'Reason *',
-                          value: _selectedReturnReason,
-                          prefixIcon: const Icon(Iconsax.info_circle),
-                          items: returnReasons.map((reason) {
-                            return DropdownMenuItem<int>(
-                              value: reason.id,
-                              child: Text(reason.description1),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedReturnReason = value;
-                            });
-                          },
-                          validator: (value) {
-                            if (value == null) return 'Reason must be selected';
-                            return null;
-                          },
-                        );
-                      },
-                    ),
-                    CustomTextField(
-                      labelText: 'Return Date',
-                      controller: _returnDateController,
-                      readOnly: true,
-                      prefixIcon: const Icon(Iconsax.calendar),
-                      suffixIcon: IconButton(
-                        icon: const Icon(Iconsax.calendar),
-                        onPressed: _selectReturnDate,
+                return Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: [
+                    SizedBox(
+                      width: width,
+                      child: BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
+                        builder: (context, state) {
+                          final returnReasons = state.details
+                              .where((udc) => udc.udcGroup == 'SR')
+                              .toList();
+
+                          return CustomDropdown(
+                            labelText: 'Reason *',
+                            value: _selectedReturnReason,
+                            prefixIcon: const Icon(Iconsax.info_circle),
+                            items: returnReasons.map((reason) {
+                              return DropdownMenuItem<int>(
+                                value: reason.id,
+                                child: Text(reason.description1),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedReturnReason = value;
+                              });
+                            },
+                            validator: (value) {
+                              if (value == null)
+                                return 'Reason must be selected';
+                              return null;
+                            },
+                          );
+                        },
                       ),
-                      onTap: _selectReturnDate,
                     ),
-                    if (!(MediaQuery.of(context).size.width > 600)) ...[
-                      const SizedBox.shrink(),
-                    ] else ...[
-                      const SizedBox.shrink(),
-                    ],
+                    SizedBox(
+                      width: width,
+                      child: CustomTextField(
+                        labelText: 'Return Date',
+                        controller: _returnDateController,
+                        readOnly: true,
+                        prefixIcon: const Icon(Iconsax.calendar),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Iconsax.calendar),
+                          onPressed: _selectReturnDate,
+                        ),
+                        onTap: _selectReturnDate,
+                      ),
+                    ),
                   ],
                 );
               },
@@ -638,44 +664,62 @@ class _SalesReturnScreen extends State<SalesReturnScreen> {
           LayoutBuilder(
             builder: (context, constraints) {
               final isWide = constraints.maxWidth > 400;
-              return GridView.count(
-                crossAxisCount: isWide ? 2 : 1,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                childAspectRatio: isWide ? 4 : 2.5,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 8,
+              final width = isWide
+                  ? (constraints.maxWidth - 12) / 2
+                  : constraints.maxWidth;
+
+              return Wrap(
+                spacing: 12,
+                runSpacing: 8,
                 children: [
-                  _buildItemDetailRow(
-                    'Description',
-                    item.itemEntryRef?.itemDescription ?? 'N/A',
-                    Iconsax.box,
+                  SizedBox(
+                    width: width,
+                    child: _buildItemDetailRow(
+                      'Description',
+                      item.itemEntryRef?.itemDescription ?? 'N/A',
+                      Iconsax.box,
+                    ),
                   ),
-                  _buildItemDetailRow(
-                    'Branch',
-                    item.itemInBranch.toString() ?? 'N/A',
-                    Iconsax.building,
+                  SizedBox(
+                    width: width,
+                    child: _buildItemDetailRow(
+                      'Branch',
+                      item.itemInBranch.toString(),
+                      Iconsax.building,
+                    ),
                   ),
-                  _buildItemDetailRow(
-                    'UOM',
-                    item.unitOfMeasureRef?.description1 ?? 'N/A',
-                    Iconsax.rulerpen,
+                  SizedBox(
+                    width: width,
+                    child: _buildItemDetailRow(
+                      'UOM',
+                      item.unitOfMeasureRef?.description1 ?? 'N/A',
+                      Iconsax.rulerpen,
+                    ),
                   ),
-                  _buildItemDetailRow(
-                    'Quantity',
-                    item.quantity?.toStringAsFixed(2) ?? '0.00',
-                    Iconsax.weight,
+                  SizedBox(
+                    width: width,
+                    child: _buildItemDetailRow(
+                      'Quantity',
+                      item.quantity?.toStringAsFixed(2) ?? '0.00',
+                      Iconsax.weight,
+                    ),
                   ),
-                  _buildItemDetailRow(
-                    'Unit Price',
-                    '\$${item.unitPrice?.toStringAsFixed(2) ?? '0.00'}',
-                    Iconsax.dollar_circle,
+                  SizedBox(
+                    width: width,
+                    child: _buildItemDetailRow(
+                      'Unit Price',
+                      '\$${item.unitPrice?.toStringAsFixed(2) ?? '0.00'}',
+                      Iconsax.dollar_circle,
+                    ),
                   ),
-                  _buildItemDetailRow(
-                    'Total Price',
-                    '\$${item.extendedPrice?.toStringAsFixed(2) ?? '0.00'}',
-                    Iconsax.dollar_square,
-                    isTotal: true,
+                  SizedBox(
+                    width: width,
+                    child: _buildItemDetailRow(
+                      'Total Price',
+                      '\$${item.extendedPrice?.toStringAsFixed(2) ?? '0.00'}',
+                      Iconsax.dollar_square,
+                      isTotal: true,
+                    ),
                   ),
                 ],
               );
@@ -791,9 +835,11 @@ class _SalesReturnScreen extends State<SalesReturnScreen> {
   void _autoFillForm(SalesReturnHeader header) {
     setState(() {
       _customerBillToController.text =
-          header.customerBillToRef?.customerName ?? 'N/A';
+          header.customerBillToRef?.customerName ??
+          header.customerBillTo.toString();
       _customerShipToController.text =
-          header.customerTableIdRef?.customerName ?? 'N/A';
+          header.customerTableIdRef?.customerName ??
+          header.customerTableId.toString();
       _fsNumberController.text = header.fsNumber ?? '';
       _orderDateController.text = header.orderDate != null
           ? '${header.orderDate!.month.toString().padLeft(2, '0')}/${header.orderDate!.day.toString().padLeft(2, '0')}/${header.orderDate!.year}'

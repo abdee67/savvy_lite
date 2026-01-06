@@ -211,80 +211,84 @@ class _PurchaseTransactionReportPageState
           ),
         ],
       ),
-      body: MultiBlocListener(
-        listeners: [
-          BlocListener<PurchaseOrderBloc, PurchaseOrderState>(
-            listener: (context, state) {
-              if (state.exportPurchaseTransactionMessage != null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(state.exportPurchaseTransactionMessage!),
-                  ),
-                );
-              }
+      body: SafeArea(
+        child: MultiBlocListener(
+          listeners: [
+            BlocListener<PurchaseOrderBloc, PurchaseOrderState>(
+              listener: (context, state) {
+                if (state.exportPurchaseTransactionMessage != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.exportPurchaseTransactionMessage!),
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+          child: BlocBuilder<SystemConstantBloc, SystemConstantState>(
+            builder: (context, systemState) {
+              final systemConstant = systemState.systemConstants.isNotEmpty
+                  ? systemState.systemConstants.first
+                  : null;
+
+              return BlocBuilder<PurchaseOrderBloc, PurchaseOrderState>(
+                builder: (context, state) {
+                  return Stack(
+                    children: [
+                      Column(
+                        children: [
+                          // Summary Cards
+                          _buildSummaryCards(state, systemConstant),
+
+                          // Active Filters Indicator
+                          if (state.purchaseTransactionFilters.hasFilters)
+                            _buildActiveFiltersIndicator(state),
+
+                          // List Header
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 8,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Total Items: ${state.purchaseTransactionTotalCount}',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors
+                                        .white, // Changed to white as per bg
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Transaction List
+                          Expanded(
+                            child: _buildTransactionList(state, systemConstant),
+                          ),
+                        ],
+                      ),
+
+                      // Loading Overlay
+                      if (state.status ==
+                          PurchaseOrderStatus.loadedPurchaseTransactionReport)
+                        Container(
+                          color: Colors.black.withOpacity(0.5),
+                          child: const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              );
             },
           ),
-        ],
-        child: BlocBuilder<SystemConstantBloc, SystemConstantState>(
-          builder: (context, systemState) {
-            final systemConstant = systemState.systemConstants.isNotEmpty
-                ? systemState.systemConstants.first
-                : null;
-
-            return BlocBuilder<PurchaseOrderBloc, PurchaseOrderState>(
-              builder: (context, state) {
-                return Stack(
-                  children: [
-                    Column(
-                      children: [
-                        // Summary Cards
-                        _buildSummaryCards(state, systemConstant),
-
-                        // Active Filters Indicator
-                        if (state.purchaseTransactionFilters.hasFilters)
-                          _buildActiveFiltersIndicator(state),
-
-                        // List Header
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 8,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Total Items: ${state.purchaseTransactionTotalCount}',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Colors
-                                      .white, // Changed to white as per bg
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Transaction List
-                        Expanded(
-                          child: _buildTransactionList(state, systemConstant),
-                        ),
-                      ],
-                    ),
-
-                    // Loading Overlay
-                    if (state.status ==
-                        PurchaseOrderStatus.loadedPurchaseTransactionReport)
-                      Container(
-                        color: Colors.black.withOpacity(0.5),
-                        child: const Center(child: CircularProgressIndicator()),
-                      ),
-                  ],
-                );
-              },
-            );
-          },
         ),
       ),
     );

@@ -43,7 +43,7 @@ class _QuotationItemEntryScreenState extends State<QuotationItemEntryScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: const QuotationItemEntryScreenContent(),
+      body: SafeArea(child: const QuotationItemEntryScreenContent()),
     );
   }
 
@@ -318,7 +318,7 @@ class _QuotationItemEntryScreenContentState
             // Form Section - Always visible
             if (_currentFormDetail != null) // ✅ Fixed: was == null
               Expanded(
-                flex: 3,
+                flex: 2,
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: QuoteItemEntryForm(

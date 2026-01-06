@@ -59,23 +59,25 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              // Role Information Section
-              _buildRoleInfoSection(),
-              const SizedBox(height: 24),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              children: [
+                // Role Information Section
+                _buildRoleInfoSection(),
+                const SizedBox(height: 24),
 
-              // Privilege Management Section
-              _buildPrivilegeManagementSection(),
-              const SizedBox(height: 24),
+                // Privilege Management Section
+                _buildPrivilegeManagementSection(),
+                const SizedBox(height: 24),
 
-              // Action Buttons
-              _buildActionButtons(),
-            ],
+                // Action Buttons
+                _buildActionButtons(),
+              ],
+            ),
           ),
         ),
       ),

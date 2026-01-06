@@ -307,47 +307,49 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
           ),
         ],
       ),
-      body: BlocConsumer<SalesOrderHeaderBloc, SalesOrderHeaderState>(
-        listener: (context, state) {
-          if (state.status == SalesOrderHeaderStatus.success) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  state.successmessage ?? 'Operation completed successfully',
+      body: SafeArea(
+        child: BlocConsumer<SalesOrderHeaderBloc, SalesOrderHeaderState>(
+          listener: (context, state) {
+            if (state.status == SalesOrderHeaderStatus.success) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    state.successmessage ?? 'Operation completed successfully',
+                  ),
+                  backgroundColor: Colors.green,
                 ),
-                backgroundColor: Colors.green,
-              ),
+              );
+            }
+
+            if (state.status == SalesOrderHeaderStatus.error) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.error ?? 'An error occurred'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Toolbar
+                    // _buildToolbar(),
+
+                    // Search Bar
+                    _buildSearchBar(),
+                    //  _buildActionButtons(state),
+
+                    // salesOrders List
+                    Expanded(child: _buildsalesOrdersList(state)),
+                  ],
+                ),
+              ],
             );
-          }
-
-          if (state.status == SalesOrderHeaderStatus.error) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.error ?? 'An error occurred'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Toolbar
-                  // _buildToolbar(),
-
-                  // Search Bar
-                  _buildSearchBar(),
-                  //  _buildActionButtons(state),
-
-                  // salesOrders List
-                  Expanded(child: _buildsalesOrdersList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+          },
+        ),
       ),
     );
   }

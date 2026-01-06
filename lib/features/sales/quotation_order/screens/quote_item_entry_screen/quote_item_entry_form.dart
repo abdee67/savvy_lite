@@ -25,6 +25,7 @@ import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_
 import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_bloc.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_event.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_state.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_event.dart';
 
@@ -60,8 +61,8 @@ class _QuoteItemEntryFormState extends State<QuoteItemEntryForm> {
   Branch? _selectedBranch;
   ItemInBranchModel? _selectedItemInBranch;
   int? _selectedUom;
-
   bool _isInitializing = true;
+  late int? decimalPlace;
 
   @override
   void initState() {
@@ -77,6 +78,11 @@ class _QuoteItemEntryFormState extends State<QuoteItemEntryForm> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadInitialData();
     });
+    decimalPlace = context
+        .read<SystemConstantBloc>()
+        .state
+        .selected
+        ?.decimalPlaces;
   }
 
   void _loadInitialData() {
@@ -394,42 +400,6 @@ class _QuoteItemEntryFormState extends State<QuoteItemEntryForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Row(
-                children: [
-                  Icon(
-                    widget.isEditing ? Icons.edit : Icons.add,
-                    color: widget.isEditing
-                        ? Colors.orange
-                        : const Color(0xFF155888),
-                    size: 24,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    widget.isEditing ? 'Editing Item' : 'Add New Item',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: widget.isEditing
-                          ? Colors.orange
-                          : const Color(0xFF155888),
-                    ),
-                  ),
-                  const Spacer(),
-                  if (widget.isEditing && widget.onCancel != null)
-                    TextButton(
-                      onPressed: widget.onCancel,
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(color: Colors.red),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-
             // Item Selection
             BlocBuilder<StockItemsEntryBloc, ItemEntryState>(
               builder: (context, itemsState) {
@@ -474,7 +444,10 @@ class _QuoteItemEntryFormState extends State<QuoteItemEntryForm> {
                       header: 'Price',
                       flex: 1,
                       cellBuilder: (item) => Text(
-                        '\$${(item.unitPrice ?? 0).toStringAsFixed(2)}',
+                        NumberFormat.currency(
+                          decimalDigits: decimalPlace,
+                          symbol: 'ETB ',
+                        ).format(item.unitPrice),
                         style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
@@ -529,7 +502,10 @@ class _QuoteItemEntryFormState extends State<QuoteItemEntryForm> {
                         header: 'Price',
                         flex: 1,
                         cellBuilder: (itemInBranch) => Text(
-                          '\$${(itemInBranch.unitPrice ?? 0).toStringAsFixed(2)}',
+                          NumberFormat.currency(
+                            decimalDigits: decimalPlace,
+                            symbol: 'ETB ',
+                          ).format(itemInBranch.unitPrice),
                           style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w500,

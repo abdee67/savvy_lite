@@ -237,6 +237,8 @@ final _elevatedButtonStyle = ElevatedButton.styleFrom(
 );
 
 final _outlinedButtonStyle = OutlinedButton.styleFrom(
+  backgroundColor: Colors.amber,
+  foregroundColor: Colors.white,
   padding: const EdgeInsets.symmetric(vertical: 16),
   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
 );

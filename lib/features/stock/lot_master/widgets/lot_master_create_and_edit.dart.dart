@@ -423,61 +423,65 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
         backgroundColor: const Color(0xFF155888),
         elevation: 0,
       ),
-      body: MultiBlocListener(
-        listeners: [
-          BlocListener<LotMasterBloc, LotMasterState>(
-            listener: (context, state) {
-              // Update lot number when it's generated or changed
-              if (state.selected?.lotNumber != null &&
-                  (() {
-                    final txt = _lotNumberController.text.trim();
-                    final current = int.tryParse(txt);
-                    return current == null ||
-                        state.selected!.lotNumber != current;
-                  })()) {
-                setState(() {
-                  _lotNumberController.text = state.selected!.lotNumber
-                      .toString();
-                });
-              }
-              if (state.status == LotMasterStatus.success) {
-                _showSuccessDialog();
-              } else if (state.status == LotMasterStatus.failure) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(state.message ?? 'An error occurred'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-          ),
-          BlocListener<StockItemInBranchBloc, ItemInBranchState>(
-            listener: (context, state) {
-              if (state.status == ItemInBranchStatus.loaded) {
-                setState(() {
-                  _branchItems = state.items;
-                });
-                print('📦 Loaded ${_branchItems.length} items for branch');
-              }
-            },
-          ),
-          BlocListener<StockItemLocationBloc, ItemLocationsState>(
-            listener: (context, state) {
-              if (state.status == ItemLocationsStatus.success) {
-                setState(() {
-                  _itemLocations = state.items;
-                });
-                print('📍 Loaded ${_itemLocations.length} locations for item');
-              }
-            },
-          ),
-        ],
-        child: Column(
-          children: [
-            Expanded(child: _buildForm()),
-            _buildBottomNavigation(),
+      body: SafeArea(
+        child: MultiBlocListener(
+          listeners: [
+            BlocListener<LotMasterBloc, LotMasterState>(
+              listener: (context, state) {
+                // Update lot number when it's generated or changed
+                if (state.selected?.lotNumber != null &&
+                    (() {
+                      final txt = _lotNumberController.text.trim();
+                      final current = int.tryParse(txt);
+                      return current == null ||
+                          state.selected!.lotNumber != current;
+                    })()) {
+                  setState(() {
+                    _lotNumberController.text = state.selected!.lotNumber
+                        .toString();
+                  });
+                }
+                if (state.status == LotMasterStatus.success) {
+                  _showSuccessDialog();
+                } else if (state.status == LotMasterStatus.failure) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message ?? 'An error occurred'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+            ),
+            BlocListener<StockItemInBranchBloc, ItemInBranchState>(
+              listener: (context, state) {
+                if (state.status == ItemInBranchStatus.loaded) {
+                  setState(() {
+                    _branchItems = state.items;
+                  });
+                  print('📦 Loaded ${_branchItems.length} items for branch');
+                }
+              },
+            ),
+            BlocListener<StockItemLocationBloc, ItemLocationsState>(
+              listener: (context, state) {
+                if (state.status == ItemLocationsStatus.success) {
+                  setState(() {
+                    _itemLocations = state.items;
+                  });
+                  print(
+                    '📍 Loaded ${_itemLocations.length} locations for item',
+                  );
+                }
+              },
+            ),
           ],
+          child: Column(
+            children: [
+              Expanded(child: _buildForm()),
+              _buildBottomNavigation(),
+            ],
+          ),
         ),
       ),
     );

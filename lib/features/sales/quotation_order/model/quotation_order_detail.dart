@@ -115,7 +115,14 @@ class QuotationOrderDetail {
               referenceId: map['reference_id'],
               tempId: map['temp_id'],
               validCell: map['valid_cell'],
-              unitOfMeasureDescription: map['unit_of_measure_description'],
+              unitOfMeasureDescription:
+                  map['unit_of_measure_description'] != null
+                  ? UdcDetails(
+                      id: map['unit_of_measure'],
+                      description1: map['unit_of_measure_description'],
+                      detailCode: map['unit_of_measure_code'],
+                    )
+                  : null,
             )
           : null,
       itemBranchRef: map['item_in_branch'] != null

@@ -58,7 +58,8 @@ class SalesReturnRepository {
       ud.description_1 as payment_instrument_ref,
       ud.description_1 as return_status_ref,
       FROM sales_return_header srh
-      INNER JOIN customer cu ON srh.customer_id = cu.id
+      INNER JOIN customer cu ON srh.customer_table_id = cu.id
+      INNER JOIN customer cu ON srh.customer_bill_to = cu.id
       INNER JOIN employee emp ON srh.employee_id = emp.id
       INNER JOIN udc_details ud ON srh.payment_term_id = ud.id
       INNER JOIN udc_details ud ON srh.payment_status_id = ud.id
@@ -85,7 +86,8 @@ class SalesReturnRepository {
       ud.description_1 as payment_instrument_ref,
       ud.description_1 as return_status_ref,
       FROM sales_return_header srh
-      INNER JOIN customer cu ON srh.customer_id = cu.id
+      INNER JOIN customer cu ON srh.customer_table_id = cu.id
+      INNER JOIN customer cu ON srh.customer_bill_to = cu.id
       INNER JOIN employee emp ON srh.employee_id = emp.id
       INNER JOIN udc_details ud ON srh.payment_term_id = ud.id
       INNER JOIN udc_details ud ON srh.payment_status_id = ud.id

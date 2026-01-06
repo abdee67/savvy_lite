@@ -300,52 +300,54 @@ class _ItemUomConversionListScreenState
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
       ),
-      body: BlocConsumer<ItemUomConversionBloc, ItemUomConversionState>(
-        listener: (context, state) {
-          if (state.multiSelectionItems.isNotEmpty && !_isSelectionMode) {
-            setState(() {
-              _isSelectionMode = true;
-            });
-          } else if (state.multiSelectionItems.isEmpty && _isSelectionMode) {
-            setState(() {
-              _isSelectionMode = false;
-            });
-          }
+      body: SafeArea(
+        child: BlocConsumer<ItemUomConversionBloc, ItemUomConversionState>(
+          listener: (context, state) {
+            if (state.multiSelectionItems.isNotEmpty && !_isSelectionMode) {
+              setState(() {
+                _isSelectionMode = true;
+              });
+            } else if (state.multiSelectionItems.isEmpty && _isSelectionMode) {
+              setState(() {
+                _isSelectionMode = false;
+              });
+            }
 
-          if (state.status == ItemUomConversionStatus.success) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  state.message ?? 'Operation completed successfully',
+            if (state.status == ItemUomConversionStatus.success) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    state.message ?? 'Operation completed successfully',
+                  ),
+                  backgroundColor: Colors.green,
                 ),
-                backgroundColor: Colors.green,
-              ),
+              );
+            } else if (state.status == ItemUomConversionStatus.failure) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message ?? 'An error occurred'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    _buildSearchBar(),
+                    // Filter Section
+                    _buildFilterSection(),
+                    _buildActionButtons(state),
+                    // Conversion List
+                    Expanded(child: _buildConversionList(state)),
+                  ],
+                ),
+              ],
             );
-          } else if (state.status == ItemUomConversionStatus.failure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message ?? 'An error occurred'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  _buildSearchBar(),
-                  // Filter Section
-                  _buildFilterSection(),
-                  _buildActionButtons(state),
-                  // Conversion List
-                  Expanded(child: _buildConversionList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+          },
+        ),
       ),
     );
   }

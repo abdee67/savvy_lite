@@ -298,14 +298,16 @@ class _SavvyStockState extends State<SavvyStock> {
     if (isLoading) {
       return MaterialApp(
         home: Scaffold(
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Initializing Savvy Stock...'),
-              ],
+          body: SafeArea(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Initializing Savvy Stock...'),
+                ],
+              ),
             ),
           ),
         ),
@@ -315,30 +317,35 @@ class _SavvyStockState extends State<SavvyStock> {
     if (hasError) {
       return MaterialApp(
         home: Scaffold(
-          body: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 64, color: Colors.red),
-                  SizedBox(height: 16),
-                  Text(
-                    'Initialization Error',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    errorMessage ?? 'Unknown error occurred',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _initializeApp,
-                    child: Text('Retry'),
-                  ),
-                ],
+          body: SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, size: 64, color: Colors.red),
+                    SizedBox(height: 16),
+                    Text(
+                      'Initialization Error',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      errorMessage ?? 'Unknown error occurred',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: _initializeApp,
+                      child: Text('Retry'),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

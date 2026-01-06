@@ -190,7 +190,7 @@ class _RoleDashboardState extends State<RoleDashboard>
     int index,
     DragEndDetails details,
   ) {
-    final screenWidth = MediaQuery.of(context).size.width;
+    final screenWidth = MediaQuery.sizeOf(context).width;
     final threshold = screenWidth * 0.3;
     final current = _dragOffset[index] ?? 0;
     if (current.abs() > threshold) {
@@ -222,41 +222,43 @@ class _RoleDashboardState extends State<RoleDashboard>
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
       ),
-      body: BlocConsumer<RoleBloc, RoleState>(
-        listener: (context, state) {
-          if (state.status == RoleStatus.failure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message ?? 'Operation failed'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          } else if (state.status == RoleStatus.success &&
-              state.message != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message!),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Search Bar
-                  _buildSearchBar(),
-                  _buildActionButtons(state),
+      body: SafeArea(
+        child: BlocConsumer<RoleBloc, RoleState>(
+          listener: (context, state) {
+            if (state.status == RoleStatus.failure) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message ?? 'Operation failed'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            } else if (state.status == RoleStatus.success &&
+                state.message != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message!),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Search Bar
+                    _buildSearchBar(),
+                    _buildActionButtons(state),
 
-                  // Role List
-                  Expanded(child: _buildRoleList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+                    // Role List
+                    Expanded(child: _buildRoleList(state)),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -373,8 +375,8 @@ class _RoleDashboardState extends State<RoleDashboard>
   }
 
   Widget _buildRoleList(RoleState state) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final screenHeight = MediaQuery.sizeOf(context).height;
     final isSmallScreen = screenWidth < 700;
     final cardSpacing = screenHeight * 0.02;
     final cardWidth = isSmallScreen ? screenWidth * 0.85 : screenWidth * 0.8;
@@ -460,8 +462,8 @@ class _RoleDashboardState extends State<RoleDashboard>
   ) {
     final offset = _dragOffset[index] ?? 0.0;
     final isExpanded = _roleDetail == true && _selectedRole == role;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final screenHeight = MediaQuery.sizeOf(context).height;
 
     // For responsiveness:
     final collapsedHeight = isCompact

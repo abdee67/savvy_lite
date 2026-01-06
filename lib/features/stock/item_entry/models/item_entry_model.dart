@@ -91,7 +91,7 @@ class ItemEntryModel {
           ? UdcDetails(
               id: (map['unit_of_measure']),
               description1: map['unit_of_measure_description'],
-              detailCode: map['unit_of_measure_code'],
+              detailCode: map['unit_of_measure_code'] ?? '',
             )
           : null,
     );

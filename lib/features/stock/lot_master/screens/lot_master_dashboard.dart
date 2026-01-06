@@ -490,35 +490,37 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
       ),
-      body: BlocConsumer<LotMasterBloc, LotMasterState>(
-        listener: (context, state) {
-          if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
-            setState(() {
-              _isSelectionMode = true;
-            });
-          } else if (state.selectedItems.isEmpty && _isSelectionMode) {
-            setState(() {
-              _isSelectionMode = false;
-            });
-          }
-        },
+      body: SafeArea(
+        child: BlocConsumer<LotMasterBloc, LotMasterState>(
+          listener: (context, state) {
+            if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
+              setState(() {
+                _isSelectionMode = true;
+              });
+            } else if (state.selectedItems.isEmpty && _isSelectionMode) {
+              setState(() {
+                _isSelectionMode = false;
+              });
+            }
+          },
 
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Search Bar
-                  _buildSearchBar(),
-                  _buildActionButtons(state),
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Search Bar
+                    _buildSearchBar(),
+                    _buildActionButtons(state),
 
-                  // Lot List
-                  Expanded(child: _buildLotList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+                    // Lot List
+                    Expanded(child: _buildLotList(state)),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

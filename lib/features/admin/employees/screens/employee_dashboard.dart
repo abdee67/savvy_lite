@@ -284,33 +284,35 @@ class _EmployeeListPageState extends State<EmployeeListPage>
     return Scaffold(
       backgroundColor: Colors.grey,
       appBar: AppBar(title: const Text('Employee List')),
-      body: BlocConsumer<EmployeeBloc, EmployeeState>(
-        listener: (context, state) {
-          if (state.employees.isNotEmpty && !_isSelectionMode) {
-            setState(() {
-              _isSelectionMode = true;
-            });
-          } else if (state.employees.isEmpty && _isSelectionMode) {
-            setState(() {
-              _isSelectionMode = false;
-            });
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Header with Search and Actions
-                  _buildSearchBar(),
-                  _buildActionButtons(state),
-                  // Employee List
-                  Expanded(child: _buildEmployeeList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+      body: SafeArea(
+        child: BlocConsumer<EmployeeBloc, EmployeeState>(
+          listener: (context, state) {
+            if (state.employees.isNotEmpty && !_isSelectionMode) {
+              setState(() {
+                _isSelectionMode = true;
+              });
+            } else if (state.employees.isEmpty && _isSelectionMode) {
+              setState(() {
+                _isSelectionMode = false;
+              });
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Header with Search and Actions
+                    _buildSearchBar(),
+                    _buildActionButtons(state),
+                    // Employee List
+                    Expanded(child: _buildEmployeeList(state)),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

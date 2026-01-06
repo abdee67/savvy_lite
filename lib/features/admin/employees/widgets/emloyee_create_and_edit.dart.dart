@@ -205,44 +205,47 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
         backgroundColor: Color(0xFF145888),
         elevation: 0,
       ),
-      body: BlocListener<EmployeeBloc, EmployeeState>(
-        listener: (context, state) {
-          if (state.status == EmployeeStatus.failure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message ?? 'An error occurred'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        child: Column(
-          children: [
-            // Progress Indicator
-            Container(
-              padding: const EdgeInsets.all(8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildProgressStep(1, 'Basic Info', _currentPage >= 0),
-                  _buildProgressStep(2, 'Details', _currentPage >= 1),
-                ],
-              ),
-            ),
-
-            // Form
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: PageView(
-                  controller: _pageController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  onPageChanged: (page) => setState(() => _currentPage = page),
-                  children: [_buildSlide1(), _buildSlide2()],
+      body: SafeArea(
+        child: BlocListener<EmployeeBloc, EmployeeState>(
+          listener: (context, state) {
+            if (state.status == EmployeeStatus.failure) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message ?? 'An error occurred'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          child: Column(
+            children: [
+              // Progress Indicator
+              Container(
+                padding: const EdgeInsets.all(8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildProgressStep(1, 'Basic Info', _currentPage >= 0),
+                    _buildProgressStep(2, 'Details', _currentPage >= 1),
+                  ],
                 ),
               ),
-            ),
-          ],
+
+              // Form
+              Expanded(
+                child: Form(
+                  key: _formKey,
+                  child: PageView(
+                    controller: _pageController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    onPageChanged: (page) =>
+                        setState(() => _currentPage = page),
+                    children: [_buildSlide1(), _buildSlide2()],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

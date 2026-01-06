@@ -268,31 +268,35 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
         backgroundColor: const Color(0xFF155888),
         elevation: 0,
       ),
-      body: BlocListener<StockItemInBranchBloc, ItemInBranchState>(
-        listener: (context, state) {
-          if (state.status == ItemInBranchStatus.duplication) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message!),
-                backgroundColor: Colors.red,
+      body: SafeArea(
+        child: BlocListener<StockItemInBranchBloc, ItemInBranchState>(
+          listener: (context, state) {
+            if (state.status == ItemInBranchStatus.duplication) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message!),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              return;
+            } else if (state.status == ItemInBranchStatus.success) {
+              _showSuccessDialog();
+            } else if (state.status == ItemInBranchStatus.failure) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message ?? 'An error occurred'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          child: SafeArea(
+            child: SingleChildScrollView(
+              child: Expanded(
+                child: Column(
+                  children: [_buildForm(), _buildBottomNavigation()],
+                ),
               ),
-            );
-            return;
-          } else if (state.status == ItemInBranchStatus.success) {
-            _showSuccessDialog();
-          } else if (state.status == ItemInBranchStatus.failure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message ?? 'An error occurred'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        child: SafeArea(
-          child: SingleChildScrollView(
-            child: Expanded(
-              child: Column(children: [_buildForm(), _buildBottomNavigation()]),
             ),
           ),
         ),

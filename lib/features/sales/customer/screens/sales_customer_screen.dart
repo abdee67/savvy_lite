@@ -149,40 +149,45 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: _buildAppBar(context),
-        body: BlocBuilder<CustomerBloc, CustomerState>(
-          builder: (context, customerState) {
-            return BlocBuilder<
-              SalesOrderCoordinatorBloc,
-              SalesOrderCoordinatorState
-            >(
-              builder: (context, coordinatorState) {
-                // Use post-frame callback to initialize default customer AFTER build
-                if (!_isInitialized &&
-                    coordinatorState.defaultCustomer != null &&
-                    coordinatorState.defaultCustomer!.isNotEmpty &&
-                    customerState.customers.isNotEmpty) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    _initializeDefaultCustomer(coordinatorState, customerState);
-                  });
-                }
+        body: SafeArea(
+          child: BlocBuilder<CustomerBloc, CustomerState>(
+            builder: (context, customerState) {
+              return BlocBuilder<
+                SalesOrderCoordinatorBloc,
+                SalesOrderCoordinatorState
+              >(
+                builder: (context, coordinatorState) {
+                  // Use post-frame callback to initialize default customer AFTER build
+                  if (!_isInitialized &&
+                      coordinatorState.defaultCustomer != null &&
+                      coordinatorState.defaultCustomer!.isNotEmpty &&
+                      customerState.customers.isNotEmpty) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _initializeDefaultCustomer(
+                        coordinatorState,
+                        customerState,
+                      );
+                    });
+                  }
 
-                final isValid =
-                    _selectedBillToCustomer != null &&
-                    _selectedShipToCustomer != null &&
-                    coordinatorState.currentHeader != null;
+                  final isValid =
+                      _selectedBillToCustomer != null &&
+                      _selectedShipToCustomer != null &&
+                      coordinatorState.currentHeader != null;
 
-                return Stack(
-                  children: [
-                    _buildContent(coordinatorState, isValid, customerState),
-                    if (coordinatorState.pendingOperations.contains(
-                      'prepare_new_order',
-                    ))
-                      const _LoadingOverlay(),
-                  ],
-                );
-              },
-            );
-          },
+                  return Stack(
+                    children: [
+                      _buildContent(coordinatorState, isValid, customerState),
+                      if (coordinatorState.pendingOperations.contains(
+                        'prepare_new_order',
+                      ))
+                        const _LoadingOverlay(),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
         ),
       ),
     );
@@ -486,12 +491,41 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
               ),
             ),
             const SizedBox(height: _sizedBoxHeight8),
-            _buildDetailRow('Name', displayCustomer.customerName),
-            _buildDetailRow('TIN Number', displayCustomer.tinNumber),
-            _buildDetailRow('Phone', displayCustomer.phoneNumber),
-            _buildDetailRow('Country', displayCustomer.country),
-            _buildDetailRow('Region', displayCustomer.region),
-            _buildDetailRow('City', displayCustomer.city),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _buildDetailRow('Name', displayCustomer.customerName),
+                ),
+                Expanded(
+                  child: _buildDetailRow(
+                    'TIN Number',
+                    displayCustomer.tinNumber,
+                  ),
+                ),
+              ],
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _buildDetailRow('Phone', displayCustomer.phoneNumber),
+                ),
+                Expanded(
+                  child: _buildDetailRow('Country', displayCustomer.country),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                Expanded(child: _buildDetailRow('City', displayCustomer.city)),
+                Expanded(
+                  child: _buildDetailRow('Region', displayCustomer.region),
+                ),
+              ],
+            ),
             if (displayCustomer.defaultsValue == 'Y')
               _buildDetailRow('Status', 'Default Customer'),
           ],

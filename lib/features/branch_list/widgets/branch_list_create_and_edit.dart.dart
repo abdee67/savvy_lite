@@ -159,23 +159,25 @@ class _BranchFormPageState extends State<BranchFormPage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         elevation: 0,
       ),
-      body: BlocListener<BranchBloc, BranchState>(
-        listener: (context, state) {
-          if (state.status == BranchStatus.failure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message ?? 'An error occurred'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        child: Column(
-          children: [
-            Expanded(child: _buildForm()),
-            _buildBottomNavigation(),
-            const SizedBox(height: 16),
-          ],
+      body: SafeArea(
+        child: BlocListener<BranchBloc, BranchState>(
+          listener: (context, state) {
+            if (state.status == BranchStatus.failure) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message ?? 'An error occurred'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          child: Column(
+            children: [
+              Expanded(child: _buildForm()),
+              _buildBottomNavigation(),
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );

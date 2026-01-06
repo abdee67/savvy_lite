@@ -378,7 +378,7 @@ class _SalesItemEntryConfirmedItemState
                                                       TextOverflow.ellipsis,
                                                 ),
                                                 Text(
-                                                  'Price: ${NumberFormat.currency(decimalDigits: decimalPlace, symbol: 'ETB ').format(item.unitPrice)}',
+                                                  'Price: ${NumberFormat.currency(decimalDigits: decimalPlace, symbol: 'ETB ').format(item.unitPrice)} / ${item.uom?.description1}',
                                                   style: const TextStyle(
                                                     fontSize: 12,
                                                   ),

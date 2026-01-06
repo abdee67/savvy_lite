@@ -212,43 +212,45 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
           ),
         ],
       ),
-      body: BlocConsumer<LotMasterBloc, LotMasterState>(
-        listener: (context, state) {
-          if (state.status == LotMasterStatus.exportReportSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.exportReportMessage),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        },
-
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Summary Card
-                  _buildSummaryCard(state),
-
-                  // Active Filters Indicator
-                  if (state.expirationReportFilters.hasFilters)
-                    _buildActiveFiltersIndicator(state),
-
-                  // Lot List
-                  Expanded(child: _buildLotList(state)),
-                ],
-              ),
-              // Loading Overlay
-              if (state.status == LotMasterStatus.loadingExpirationReport)
-                Container(
-                  color: Colors.black.withOpacity(0.5),
-                  child: const Center(child: CircularProgressIndicator()),
+      body: SafeArea(
+        child: BlocConsumer<LotMasterBloc, LotMasterState>(
+          listener: (context, state) {
+            if (state.status == LotMasterStatus.exportReportSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.exportReportMessage),
+                  backgroundColor: Colors.green,
                 ),
-            ],
-          );
-        },
+              );
+            }
+          },
+
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Summary Card
+                    _buildSummaryCard(state),
+
+                    // Active Filters Indicator
+                    if (state.expirationReportFilters.hasFilters)
+                      _buildActiveFiltersIndicator(state),
+
+                    // Lot List
+                    Expanded(child: _buildLotList(state)),
+                  ],
+                ),
+                // Loading Overlay
+                if (state.status == LotMasterStatus.loadingExpirationReport)
+                  Container(
+                    color: Colors.black.withOpacity(0.5),
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

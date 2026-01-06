@@ -184,40 +184,42 @@ class _BranchDashboardState extends State<BranchDashboard>
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
       ),
-      body: BlocConsumer<BranchBloc, BranchState>(
-        listener: (context, state) {
-          if (state.status == BranchStatus.failure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message ?? 'Operation failed'),
-                backgroundColor: Colors.red,
-              ),
+      body: SafeArea(
+        child: BlocConsumer<BranchBloc, BranchState>(
+          listener: (context, state) {
+            if (state.status == BranchStatus.failure) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message ?? 'Operation failed'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            } else if (state.status == BranchStatus.success &&
+                state.message != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message!),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Search Bar
+                    _buildSearchBar(),
+                    _buildActionButtons(state),
+                    // Branch List
+                    Expanded(child: _buildBranchList(state)),
+                  ],
+                ),
+              ],
             );
-          } else if (state.status == BranchStatus.success &&
-              state.message != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message!),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Search Bar
-                  _buildSearchBar(),
-                  _buildActionButtons(state),
-                  // Branch List
-                  Expanded(child: _buildBranchList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+          },
+        ),
       ),
     );
   }

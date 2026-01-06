@@ -38,7 +38,7 @@ class ItemLocationsRepository extends BaseRepository {
              lm.location_description,
              it.item_description,
              it.unit_of_measure,
-             b.description as branch_name
+             b.description as branch_description
       FROM item_location il
       LEFT JOIN location_master lm ON il.location = lm.id
       LEFT JOIN items_table it ON il.item_number = it.id
@@ -62,9 +62,11 @@ class ItemLocationsRepository extends BaseRepository {
       '''
       SELECT 
         il.*,
-        lm.location_description as location_description
+        lm.location_description as location_description,
+        b.description as branch_description
       FROM item_location il
       LEFT JOIN location_master lm ON il.location = lm.id
+      LEFT JOIN branch_table b ON il.branch = b.id
       WHERE il.company = ? AND il.branch = ?
       ''',
       [companyId, branchId],
@@ -168,7 +170,7 @@ class ItemLocationsRepository extends BaseRepository {
       SELECT il.*,
              lm.location_description,
              it.item_description,
-             b.description as branch_name
+             b.description as branch_description
       FROM item_location il
       LEFT JOIN location_master lm ON il.location = lm.id
       LEFT JOIN items_table it ON il.item_number = it.id
@@ -209,7 +211,7 @@ class ItemLocationsRepository extends BaseRepository {
              lm.location_description,
              it.item_description,
              it.unit_of_measure,
-             b.description as branch_name
+             b.description as branch_description
       FROM item_location il
       LEFT JOIN location_master lm ON il.location = lm.id
       LEFT JOIN items_table it ON il.item_number = it.id

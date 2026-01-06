@@ -113,89 +113,91 @@ class _CashInflowReportPageState extends State<CashInflowReportPage> {
           ),
         ],
       ),
-      body: BlocConsumer<CashFlowBloc, CashFlowState>(
-        listener: (context, state) {
-          if (state.exportCashInFlowReportMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.exportCashInFlowReportMessage!)),
+      body: SafeArea(
+        child: BlocConsumer<CashFlowBloc, CashFlowState>(
+          listener: (context, state) {
+            if (state.exportCashInFlowReportMessage != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(state.exportCashInFlowReportMessage!)),
+              );
+            }
+            if (state.status == CashFlowStatus.error && state.error != null) {
+              print('CashInflowPage: Error state: ${state.error}');
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error: ${state.error}'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            print(
+              'CashInflowPage: Rebuild. Status: ${state.status}, Totals: ${state.cashInFlowReportTotals?.totalCount}, ListSize: ${state.cashInFlowReport.length}',
             );
-          }
-          if (state.status == CashFlowStatus.error && state.error != null) {
-            print('CashInflowPage: Error state: ${state.error}');
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Error: ${state.error}'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          print(
-            'CashInflowPage: Rebuild. Status: ${state.status}, Totals: ${state.cashInFlowReportTotals?.totalCount}, ListSize: ${state.cashInFlowReport.length}',
-          );
-          return BlocBuilder<SystemConstantBloc, SystemConstantState>(
-            builder: (context, systemState) {
-              final systemConstant = systemState.systemConstants.isNotEmpty
-                  ? systemState.systemConstants.first
-                  : null;
-              final currencySymbol = systemConstant?.currencyCode ?? '\$';
+            return BlocBuilder<SystemConstantBloc, SystemConstantState>(
+              builder: (context, systemState) {
+                final systemConstant = systemState.systemConstants.isNotEmpty
+                    ? systemState.systemConstants.first
+                    : null;
+                final currencySymbol = systemConstant?.currencyCode ?? '\$';
 
-              if (state.status == CashFlowStatus.loadingCashInFlowReport &&
-                  state.cashInFlowReport.isEmpty) {
-                return const Center(child: CircularProgressIndicator());
-              }
+                if (state.status == CashFlowStatus.loadingCashInFlowReport &&
+                    state.cashInFlowReport.isEmpty) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-              return Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    // Summary Cards
-                    _buildSummaryCards(state, currencySymbol),
-                    const SizedBox(height: 16),
-                    if (state.status == CashFlowStatus.error)
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text(
-                          state.error ?? 'Unknown Error',
-                          style: const TextStyle(color: Colors.red),
+                return Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      // Summary Cards
+                      _buildSummaryCards(state, currencySymbol),
+                      const SizedBox(height: 16),
+                      if (state.status == CashFlowStatus.error)
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            state.error ?? 'Unknown Error',
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        ),
+
+                      // Main Content (Responsive)
+                      Expanded(
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            if (constraints.maxWidth > 600) {
+                              return _buildDesktopTable(
+                                state,
+                                currencySymbol,
+                                constraints,
+                              );
+                            } else {
+                              return _buildMobileList(
+                                state,
+                                currencySymbol,
+                                constraints,
+                              );
+                            }
+                          },
                         ),
                       ),
 
-                    // Main Content (Responsive)
-                    Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          if (constraints.maxWidth > 600) {
-                            return _buildDesktopTable(
-                              state,
-                              currencySymbol,
-                              constraints,
-                            );
-                          } else {
-                            return _buildMobileList(
-                              state,
-                              currencySymbol,
-                              constraints,
-                            );
-                          }
-                        },
-                      ),
-                    ),
-
-                    // Loading More Indicator
-                    if (state.status ==
-                        CashFlowStatus.loadingMoreCashInFlowReport)
-                      const Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: CircularProgressIndicator(),
-                      ),
-                  ],
-                ),
-              );
-            },
-          );
-        },
+                      // Loading More Indicator
+                      if (state.status ==
+                          CashFlowStatus.loadingMoreCashInFlowReport)
+                        const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: CircularProgressIndicator(),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

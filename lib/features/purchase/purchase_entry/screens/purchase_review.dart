@@ -298,13 +298,14 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
           ),
         ],
       ),
-      body: BlocConsumer<PurchaseOrderBloc, PurchaseOrderState>(
-        listener: (context, state) {
-          if (state.status == PurchaseOrderStatus.success) {
-            if (state.lastOperation == 'receive_items' &&
-                state.selectedReceiver != null) {
-              // Navigate to Sales Customer Info with extra data
-              /*  context
+      body: SafeArea(
+        child: BlocConsumer<PurchaseOrderBloc, PurchaseOrderState>(
+          listener: (context, state) {
+            if (state.status == PurchaseOrderStatus.success) {
+              if (state.lastOperation == 'receive_items' &&
+                  state.selectedReceiver != null) {
+                // Navigate to Sales Customer Info with extra data
+                /*  context
                   .push(
                     AppRoutes.receiveItem,
                     extra: {'details': state.selectedReceiver},
@@ -316,37 +317,38 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
                     );
                   });
 */
-              // Also reset immediately to prevent double push if rebuild happens
-              context.read<PurchaseOrderBloc>().add(
-                ResetPurchaseOrderSettings(),
+                // Also reset immediately to prevent double push if rebuild happens
+                context.read<PurchaseOrderBloc>().add(
+                  ResetPurchaseOrderSettings(),
+                );
+              }
+            }
+
+            if (state.status == PurchaseOrderStatus.error) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.error ?? 'An error occurred'),
+                  backgroundColor: Colors.red,
+                ),
               );
             }
-          }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Search Bar
+                    _buildSearchBar(),
 
-          if (state.status == PurchaseOrderStatus.error) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.error ?? 'An error occurred'),
-                backgroundColor: Colors.red,
-              ),
+                    // purchaseOrders List
+                    Expanded(child: _buildPurchaseOrdersList(state)),
+                  ],
+                ),
+              ],
             );
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Search Bar
-                  _buildSearchBar(),
-
-                  // purchaseOrders List
-                  Expanded(child: _buildPurchaseOrdersList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+          },
+        ),
       ),
     );
   }

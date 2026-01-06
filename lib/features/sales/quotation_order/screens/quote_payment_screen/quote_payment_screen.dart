@@ -122,7 +122,6 @@ class _QuotePaymentScreenState extends State<QuotePaymentScreen> {
             children: [
               // Upper Section - Order Items
               Expanded(
-                flex: 1,
                 child: Container(
                   color: Colors.white,
                   child: Column(

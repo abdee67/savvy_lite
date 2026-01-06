@@ -1323,12 +1323,8 @@ class SalesOrderCoordinatorBloc
         'Coordinator: Invoice generated - FS Number: $nextFsNumber, Items: ${invoiceDetails.length}',
       );
     } catch (e) {
-      emit(
-        state.errorState(
-          'Failed to generate invoice: $e',
-          operation: 'generate_invoice',
-        ),
-      );
+      emit(state.errorState('', operation: 'generate_invoice'));
+      print('Failed to generate invoice: $e');
     }
   }
 

@@ -305,33 +305,35 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
           ),
         ],
       ),
-      body: BlocConsumer<LocationMasterBloc, LocationMasterState>(
-        listener: (context, state) {
-          if (state.status == LocationMasterStatus.failure &&
-              state.message.isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
+      body: SafeArea(
+        child: BlocConsumer<LocationMasterBloc, LocationMasterState>(
+          listener: (context, state) {
+            if (state.status == LocationMasterStatus.failure &&
+                state.message.isNotEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Search Bar
+                    _buildSearchBar(),
+                    _buildActionButtons(state),
+                    // Location List
+                    Expanded(child: _buildLocationList(state)),
+                  ],
+                ),
+              ],
             );
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Search Bar
-                  _buildSearchBar(),
-                  _buildActionButtons(state),
-                  // Location List
-                  Expanded(child: _buildLocationList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+          },
+        ),
       ),
     );
   }

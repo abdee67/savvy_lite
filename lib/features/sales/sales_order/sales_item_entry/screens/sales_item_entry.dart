@@ -32,7 +32,7 @@ class ItemEntryScreen extends StatelessWidget {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: ItemEntryScreenContent(),
+      body: SafeArea(child: ItemEntryScreenContent()),
     );
   }
 

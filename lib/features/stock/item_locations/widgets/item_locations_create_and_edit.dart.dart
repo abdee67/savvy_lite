@@ -202,39 +202,41 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         elevation: 0,
       ),
-      body: MultiBlocListener(
-        listeners: [
-          BlocListener<StockItemsEntryBloc, ItemEntryState>(
-            listener: (context, state) {
-              if (state.status == ItemEntryStatus.failure) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(state.message ?? 'An error occurred'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-          ),
-          BlocListener<SystemConstantBloc, SystemConstantState>(
-            listener: (context, state) {
-              if (state.status == SystemConstantStatus.failure) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(state.errorMessage ?? 'An error occurred'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-          ),
-        ],
-        child: Column(
-          children: [
-            _buildBarcodeInfo(),
-            Expanded(child: _buildForm()),
-            _buildBottomNavigation(),
+      body: SafeArea(
+        child: MultiBlocListener(
+          listeners: [
+            BlocListener<StockItemsEntryBloc, ItemEntryState>(
+              listener: (context, state) {
+                if (state.status == ItemEntryStatus.failure) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message ?? 'An error occurred'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+            ),
+            BlocListener<SystemConstantBloc, SystemConstantState>(
+              listener: (context, state) {
+                if (state.status == SystemConstantStatus.failure) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.errorMessage ?? 'An error occurred'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+            ),
           ],
+          child: Column(
+            children: [
+              _buildBarcodeInfo(),
+              Expanded(child: _buildForm()),
+              _buildBottomNavigation(),
+            ],
+          ),
         ),
       ),
     );

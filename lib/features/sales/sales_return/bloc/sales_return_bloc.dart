@@ -128,7 +128,7 @@ class SalesReturnBloc extends Bloc<SalesReturnEvent, SalesReturnState> {
           customerTableId: salesOrder.customerTableId ?? 0,
           employeesId: salesOrder.employeesId ?? 0,
           company: event.companyId,
-          fsNumber: salesOrder.fsNumber,
+          fsNumber: salesOrder.fsNumber, //  1
           amountTotal: salesOrder.amountTotal,
           tax: salesOrder.tax,
           withholdAmount: salesOrder.withholdAmount,
@@ -156,7 +156,7 @@ class SalesReturnBloc extends Bloc<SalesReturnEvent, SalesReturnState> {
                 unitCost: detail.unitCost,
                 itemInBranch: detail.itemInBranch,
                 unitOfMeasure: detail.unitOfMeasure,
-                taxable: detail.taxable,
+                taxable: detail.taxable, // 2
                 // Populate refs
                 itemEntryRef: detail.item,
                 itemInBranchRef: detail.itemBranch,

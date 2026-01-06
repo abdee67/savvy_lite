@@ -236,34 +236,36 @@ class _CustomerListPageState extends State<CustomerListPage>
     return Scaffold(
       backgroundColor: Colors.grey,
       appBar: AppBar(title: const Text('Customer List')),
-      body: BlocConsumer<CustomerBloc, CustomerState>(
-        listener: (context, state) {
-          // Update selection mode based on state
-          if (state.selectedCustomers.isNotEmpty && !_isSelectionMode) {
-            setState(() {
-              _isSelectionMode = true;
-            });
-          } else if (state.selectedCustomers.isEmpty && _isSelectionMode) {
-            setState(() {
-              _isSelectionMode = false;
-            });
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Header with Search and Actions
-                  _buildSearchBar(),
-                  _buildActionButtons(state),
-                  // Customer List
-                  Expanded(child: _buildCustomerList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+      body: SafeArea(
+        child: BlocConsumer<CustomerBloc, CustomerState>(
+          listener: (context, state) {
+            // Update selection mode based on state
+            if (state.selectedCustomers.isNotEmpty && !_isSelectionMode) {
+              setState(() {
+                _isSelectionMode = true;
+              });
+            } else if (state.selectedCustomers.isEmpty && _isSelectionMode) {
+              setState(() {
+                _isSelectionMode = false;
+              });
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Header with Search and Actions
+                    _buildSearchBar(),
+                    _buildActionButtons(state),
+                    // Customer List
+                    Expanded(child: _buildCustomerList(state)),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

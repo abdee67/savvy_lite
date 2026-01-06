@@ -98,6 +98,8 @@ class QuotationOrderRepository {
         pm.detail_code as payment_method_detail_code,
         ot.description_1 as order_type_description1,
         ot.detail_code as order_type_detail_code,
+        uom.description_1 as unit_of_measure_description,
+        uom.detail_code as unit_of_measure_detail_code,
         b.description as branch_name
       FROM quote_order_header qoh
       LEFT JOIN customer_table cb ON qoh.customer_bill_to = cb.id
@@ -108,6 +110,7 @@ class QuotationOrderRepository {
       LEFT JOIN udc_details ps ON qoh.payment_status = ps.id
       LEFT JOIN udc_details pm ON qoh.payment_method = pm.id
       LEFT JOIN udc_details ot ON qoh.order_type = ot.id
+      LEFT JOIN unit_of_measure uom ON qoh.unit_of_measure = uom.id
       LEFT JOIN branch_table b ON qoh.branch_id = b.id
       WHERE $where
       ORDER BY qoh.id DESC
@@ -633,6 +636,7 @@ class QuotationOrderRepository {
       SELECT qod.*,
              it.item_description as item_description,
              it.barcode as barcode,
+             uom.detail_code as unit_of_measure_detail_code,
              uom.description_1 as unit_of_measure_description
       FROM quote_order_detail qod
       LEFT JOIN items_table it ON qod.items_table_id = it.id
