@@ -19,6 +19,10 @@ class PrivilegeHierarchy {
     AppRoutes.createPrivilege: AppRoutes.privilegeManagement,
     AppRoutes.editPrivilege: AppRoutes.privilegeManagement,
     AppRoutes.deletePrivilege: AppRoutes.privilegeManagement,*/
+    AppRoutes.fsnmrManagement: AppRoutes.fsnmrDashboard,
+    AppRoutes.fsnmrCreate: AppRoutes.fsnmrManagement,
+    AppRoutes.fsnmrEdit: AppRoutes.fsnmrManagement,
+    AppRoutes.fsnmrDelete: AppRoutes.fsnmrManagement,
 
     // Role Management (child of Admin Dashboard)
     AppRoutes.roleManagement: AppRoutes.adminDashboard,

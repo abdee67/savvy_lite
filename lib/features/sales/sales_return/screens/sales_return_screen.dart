@@ -553,8 +553,9 @@ class _SalesReturnScreen extends State<SalesReturnScreen> {
                               });
                             },
                             validator: (value) {
-                              if (value == null)
+                              if (value == null) {
                                 return 'Reason must be selected';
+                              }
                               return null;
                             },
                           );

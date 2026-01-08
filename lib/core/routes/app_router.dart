@@ -5,6 +5,10 @@ import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/errors/unauthorized_screen.dart';
 import 'package:savvy_stock/core/widgets/route_guard.dart';
+import 'package:savvy_stock/features/FSNMR/blocs/FSNMR_bloc.dart';
+import 'package:savvy_stock/features/FSNMR/models/fast_slow_nonmoving_rule.dart';
+import 'package:savvy_stock/features/FSNMR/screens/FSNMR_dashboard.dart';
+import 'package:savvy_stock/features/FSNMR/widgets/FSNMR_create_and_edit.dart.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
 import 'package:savvy_stock/features/admin/employees/screens/employee_dashboard.dart';
 import 'package:savvy_stock/features/admin/employees/widgets/emloyee_create_and_edit.dart.dart';
@@ -1217,12 +1221,51 @@ class AppRouter {
         ),
         redirect: _protectedRouteRedirect,
       ),
+
+      GoRoute(
+        path: AppRoutes.fsnmrManagement,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.fsnmrManagement,
+          parentPrivilege: AppRoutes.fsnmr,
+          child: BlocProvider(
+            create: (context) => getIt<FSNMRBloc>(),
+            child: FSNMRDashboard(authBloc: authBloc),
+          ),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.fsnmrCreate,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.fsnmrCreate,
+          parentPrivilege: AppRoutes.fsnmrManagement,
+          child: BlocProvider(
+            create: (context) => getIt<FSNMRBloc>(),
+            child: FSNMRCreateAndEditPage(authBloc: authBloc),
+          ),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+
+      GoRoute(
+        path: AppRoutes.fsnmrEdit,
+        builder: (context, state) {
+          final extra = state.extra;
+          final item = extra != null ? extra as FastSlowNonMovingRule? : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.fsnmrEdit,
+            parentPrivilege: AppRoutes.fsnmrManagement,
+            child: FSNMRCreateAndEditPage(authBloc: authBloc, rule: item),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+
       // System Constants
       GoRoute(
         path: AppRoutes.systemConstants,
         builder: (context, state) => SystemConstantsScreen(authBloc: authBloc),
       ),
-
       // Unauthorized
       GoRoute(
         path: AppRoutes.unauthorized,

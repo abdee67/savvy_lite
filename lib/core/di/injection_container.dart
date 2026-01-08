@@ -1,5 +1,7 @@
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
+import 'package:savvy_stock/features/FSNMR/blocs/FSNMR_bloc.dart';
+import 'package:savvy_stock/features/FSNMR/repo/FSNMR_repository.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
 import 'package:savvy_stock/features/company/blocs/company_bloc.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
@@ -277,6 +279,10 @@ void initDependencies() {
   );
   getIt.registerLazySingleton<CashFlowRepository>(() => CashFlowRepository());
 
+  getIt.registerLazySingleton<FSNMRRepository>(
+    () => FSNMRRepository(databaseService: getIt()),
+  );
+
   ///////////// BLoCs///////////////
 
   getIt.registerLazySingleton<AuthBloc>(
@@ -513,5 +519,10 @@ void initDependencies() {
   );
   getIt.registerFactory<CompanyBloc>(
     () => CompanyBloc(authBloc: getIt(), databaseService: getIt()),
+  );
+
+  // FSNMR
+  getIt.registerFactory<FSNMRBloc>(
+    () => FSNMRBloc(authBloc: getIt(), repository: getIt()),
   );
 }

@@ -53,6 +53,26 @@ class PrivilegeSeeder {
         AppRoutes.reportDashboard,
         'report_dashboard',
       ),
+      _createPrivilege(
+        'FSNMR Dashboard',
+        'link',
+        AppRoutes.fsnmrDashboard,
+        'fsnmr_dashboard',
+      ),
+      _createPrivilege(
+        'FSNMR Management',
+        'link',
+        AppRoutes.fsnmrManagement,
+        'fsnmr_management',
+      ),
+      _createPrivilege('FSNMR', 'link', AppRoutes.fsnmr, 'fsnmr'),
+      _createPrivilege(
+        'FSNMR Create',
+        'link',
+        AppRoutes.fsnmrCreate,
+        'fsnmr_create',
+      ),
+      _createPrivilege('FSNMR Edit', 'link', AppRoutes.fsnmrEdit, 'fsnmr_edit'),
 
       // ==================== ADMIN MANAGEMENT ====================
       /* // Privilege Management

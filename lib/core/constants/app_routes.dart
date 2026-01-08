@@ -8,6 +8,13 @@ class AppRoutes {
   static const String unauthorized = '/unauthorized';
   static const String systemConstants = '/system-constants';
 
+  static const String fsnmr = '/fsnmr';
+  static const String fsnmrDashboard = '$fsnmr/dashboard';
+  static const String fsnmrManagement = '$fsnmrDashboard/management';
+  static const String fsnmrCreate = '$fsnmrManagement/create';
+  static const String fsnmrEdit = '$fsnmrManagement/edit';
+  static const String fsnmrDelete = '$fsnmrManagement/delete';
+
   // Dashboard Base Paths
   static const String admin = '/admin';
   static const String sales = '/sales';

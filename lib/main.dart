@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:savvy_stock/features/FSNMR/blocs/FSNMR_bloc.dart';
+import 'package:savvy_stock/features/FSNMR/repo/FSNMR_repository.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
 import 'package:savvy_stock/features/company/blocs/company_bloc.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
@@ -93,7 +95,7 @@ Future<void> _initializeAndRunApp() async {
     await ConnectivityService().initConnectivity();
     initDependencies();
 
-    //await LocalDatabaseService().resetDatabase();
+    // await LocalDatabaseService().resetDatabase();
     // await LocalDatabaseService().debugTable('branch_table');
 
     if (AppConfig.isTestMode) {
@@ -199,6 +201,7 @@ class _SavvyStockState extends State<SavvyStock> {
   late PurchaseOrderReportRepository _purchaseOrderReportRepository;
   late SalesOrderReportRepository _salesOrderReportRepository;
   late CashFlowRepository _cashFlowRepository;
+  late FSNMRRepository _fsnmrRepository;
 
   @override
   void initState() {
@@ -252,6 +255,8 @@ class _SavvyStockState extends State<SavvyStock> {
     _purchaseOrderReportRepository = getIt<PurchaseOrderReportRepository>();
     _salesOrderReportRepository = getIt<SalesOrderReportRepository>();
     _cashFlowRepository = getIt<CashFlowRepository>();
+    _fsnmrRepository = getIt<FSNMRRepository>();
+
     // Ensure system constants are loaded when companyId becomes available.
     final cid = _authBloc.state.companyId;
     if (cid != null) {
@@ -605,6 +610,10 @@ class _SavvyStockState extends State<SavvyStock> {
           BlocProvider<CompanyBloc>(
             create: (context) =>
                 CompanyBloc(databaseService: getIt(), authBloc: _authBloc),
+          ),
+          BlocProvider<FSNMRBloc>(
+            create: (context) =>
+                FSNMRBloc(repository: _fsnmrRepository, authBloc: _authBloc),
           ),
         ],
         child: MaterialApp.router(

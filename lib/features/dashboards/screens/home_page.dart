@@ -265,6 +265,8 @@ class _HomePageState extends State<HomePage> {
                 onSelected: (value) {
                   if (value == 'System Constants') {
                     context.push(AppRoutes.systemConstants);
+                  } else if (value == 'FSNMR') {
+                    context.push(AppRoutes.fsnmrManagement);
                   } else if (value == 'Logout') {
                     context.read<AuthBloc>().add(LogoutRequested(context));
                   }
@@ -273,6 +275,10 @@ class _HomePageState extends State<HomePage> {
                   const PopupMenuItem<String>(
                     value: 'System Constants',
                     child: Text('System Constants'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'FSNMR',
+                    child: Text('FSNMR'),
                   ),
                   const PopupMenuItem<String>(
                     value: 'Logout',
