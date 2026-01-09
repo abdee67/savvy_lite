@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_event.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_state.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 
 class PurchaseItemEntryConfirmedItem extends StatefulWidget {
   final Function(PurchaseOrderDetail, int) onEditItem;
@@ -28,6 +30,17 @@ class PurchaseItemEntryConfirmedItem extends StatefulWidget {
 class _PurchaseItemEntryConfirmedItemState
     extends State<PurchaseItemEntryConfirmedItem> {
   final Map<int, double> _dragOffset = {};
+  late int? decimalPlace;
+
+  @override
+  void initState() {
+    super.initState();
+    decimalPlace = context
+        .read<SystemConstantBloc>()
+        .state
+        .selected
+        ?.decimalPlaces;
+  }
 
   void _safeDeleteItem(BuildContext context, int index) {
     final purchaseOrderBloc = context.read<PurchaseOrderBloc>();
@@ -182,14 +195,8 @@ class _PurchaseItemEntryConfirmedItemState
               for (final detail in details) {
                 bloc.add(RemovePurchaseOrderDetail(detail: detail));
               }
-
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('All items cleared'),
-                  backgroundColor: Colors.orange,
-                ),
-              );
+              Navigator.pop(context);
             },
             child: const Text('Clear All', style: TextStyle(color: Colors.red)),
           ),
@@ -226,7 +233,7 @@ class _PurchaseItemEntryConfirmedItemState
             children: [
               // Header with Actions
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: const Color(0xFF155888),
                   borderRadius: const BorderRadius.only(
@@ -318,7 +325,7 @@ class _PurchaseItemEntryConfirmedItemState
                           final offset = _dragOffset[index] ?? 0.0;
 
                           return Container(
-                            height: 90,
+                            height: 65,
                             margin: const EdgeInsets.only(bottom: 8),
                             child: GestureDetector(
                               onDoubleTap: () => _moveToEdit(context, index),
@@ -370,30 +377,10 @@ class _PurchaseItemEntryConfirmedItemState
                                     child: Padding(
                                       padding: const EdgeInsets.all(12),
                                       child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
-                                          // Item Number
-                                          Container(
-                                            width: 36,
-                                            height: 36,
-                                            decoration: BoxDecoration(
-                                              color: const Color(
-                                                0xFF155888,
-                                              ).withOpacity(0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(18),
-                                            ),
-                                            alignment: Alignment.center,
-                                            child: Text(
-                                              '${index + 1}',
-                                              style: const TextStyle(
-                                                color: Color(0xFF155888),
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 12),
-
-                                          // Item details
+                                          // Item info
                                           Expanded(
                                             child: Column(
                                               crossAxisAlignment:
@@ -401,107 +388,64 @@ class _PurchaseItemEntryConfirmedItemState
                                               mainAxisAlignment:
                                                   MainAxisAlignment.center,
                                               children: [
-                                                // Item Name
                                                 Text(
                                                   item
                                                           .itemNumberRef
                                                           ?.itemDescription ??
-                                                      'Item #${item.itemNumber ?? 'N/A'}',
+                                                      'Item ${index + 1}',
                                                   style: const TextStyle(
-                                                    fontWeight: FontWeight.w600,
+                                                    fontWeight: FontWeight.bold,
                                                     fontSize: 14,
                                                   ),
                                                   maxLines: 1,
                                                   overflow:
                                                       TextOverflow.ellipsis,
                                                 ),
-                                                const SizedBox(height: 4),
-
-                                                // Details row
-                                                Row(
-                                                  children: [
-                                                    // Quantity
-                                                    _buildDetailChip(
-                                                      icon: Icons.scale,
-                                                      text:
-                                                          '${item.quantityTransaction?.toStringAsFixed(2) ?? '0'} ${item.unitOfMeasureRef?.description1 ?? 'EA'}',
-                                                      color: Colors.blue,
-                                                    ),
-                                                    const SizedBox(width: 8),
-
-                                                    // Unit Cost
-                                                    _buildDetailChip(
-                                                      icon: Icons.attach_money,
-                                                      text:
-                                                          '\$${item.unitCost?.toStringAsFixed(2) ?? '0'}',
-                                                      color: Colors.green,
-                                                    ),
-                                                  ],
-                                                ),
-
-                                                // Batch number if exists
-                                                if (item.batchNumberSupplier !=
-                                                        null &&
-                                                    item
-                                                        .batchNumberSupplier!
-                                                        .isNotEmpty)
-                                                  Padding(
-                                                    padding:
-                                                        const EdgeInsets.only(
-                                                          top: 4,
-                                                        ),
-                                                    child: Text(
-                                                      'Batch: ${item.batchNumberSupplier}',
-                                                      style: const TextStyle(
-                                                        fontSize: 10,
-                                                        color: Colors.grey,
-                                                      ),
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
+                                                Text(
+                                                  'Total: ${NumberFormat.currency(decimalDigits: decimalPlace, symbol: 'ETB ').format(totalAmount)}',
+                                                  style: const TextStyle(
+                                                    color: Colors.green,
+                                                    fontWeight: FontWeight.w500,
+                                                    fontSize: 12,
                                                   ),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
                                               ],
                                             ),
                                           ),
 
-                                          // Extended Cost
-                                          Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.end,
-                                            children: [
-                                              const Text(
-                                                'Total',
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: Colors.grey,
+                                          // Quantity
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.end,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Text(
+                                                  'Qty: ${item.quantityTransaction?.toStringAsFixed(decimalPlace ?? 2) ?? '0'}',
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                 ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                '\$${item.amountExtendedCost?.toStringAsFixed(2) ?? '0.00'}',
-                                                style: const TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Color(0xFF155888),
+                                                Text(
+                                                  'Price: ${NumberFormat.currency(decimalDigits: decimalPlace, symbol: 'ETB ').format(item.unitCost)} / ${item.unitOfMeasureRef?.description1}',
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                 ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(width: 8),
-
-                                          // Edit Icon
-                                          IconButton(
-                                            icon: const Icon(
-                                              Icons.edit,
-                                              size: 18,
-                                              color: Colors.grey,
+                                              ],
                                             ),
-                                            onPressed: () =>
-                                                _moveToEdit(context, index),
-                                            tooltip: 'Edit Item',
                                           ),
                                         ],
                                       ),
@@ -531,69 +475,45 @@ class _PurchaseItemEntryConfirmedItemState
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // Back Button
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              context.pop();
-                            },
-                            icon: const Icon(Icons.arrow_back),
-                            label: const Text('Back'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF155888),
-                              side: const BorderSide(color: Color(0xFF155888)),
-                            ),
+                          Expanded(
+                            child:
+                                // Back Button
+                                ElevatedButton.icon(
+                                  onPressed: () => _clearAllItems(context),
+                                  icon: const Icon(Icons.arrow_back),
+                                  label: const Text('Back'),
+                                  style: ElevatedButton.styleFrom(
+                                    foregroundColor: Colors.white,
+                                    backgroundColor: Colors.amber,
+                                    side: const BorderSide(color: Colors.white),
+                                  ),
+                                ),
                           ),
-
-                          // Proceed Button
-                          ElevatedButton.icon(
-                            onPressed: confirmedDetails.isNotEmpty
-                                ? () => _validateAndProceed(context)
-                                : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: confirmedDetails.isNotEmpty
-                                  ? const Color(0xFF155888)
-                                  : Colors.grey,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 12,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                            ),
-                            icon: const Icon(Icons.arrow_forward),
-                            label: const Text('Proceed to Review'),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child:
+                                // Proceed Button
+                                ElevatedButton.icon(
+                                  onPressed: confirmedDetails.isNotEmpty
+                                      ? () => _validateAndProceed(context)
+                                      : null,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: confirmedDetails.isNotEmpty
+                                        ? const Color(0xFF155888)
+                                        : Colors.grey,
+                                    foregroundColor: Colors.white,
+                                    side: const BorderSide(color: Colors.white),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                  label: const Text('Proceed'),
+                                  icon: const Icon(Icons.arrow_forward),
+                                ),
                           ),
                         ],
                       ),
-
-                      const SizedBox(height: 8),
-
-                      // Help text
-                      Text(
-                        'Double tap or tap edit icon to edit • Swipe left to delete',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey[600],
-                          fontStyle: FontStyle.italic,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-
-                      // Item count summary
-                      if (confirmedDetails.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            '$itemCount item${itemCount == 1 ? '' : 's'} • Total: \$${totalAmount.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                 ),
@@ -601,36 +521,6 @@ class _PurchaseItemEntryConfirmedItemState
           ),
         );
       },
-    );
-  }
-
-  Widget _buildDetailChip({
-    required IconData icon,
-    required String text,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withOpacity(0.3), width: 0.5),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 10, color: color),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 10,
-              color: color,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
     );
   }
 
