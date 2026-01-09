@@ -111,6 +111,7 @@ class _HomePageState extends State<HomePage> {
             return Scaffold(
               body: SafeArea(
                 top: false,
+                bottom: false,
                 child: LiquidPullToRefresh(
                   color: Color(0xFF155888),
                   backgroundColor: Colors.amber,

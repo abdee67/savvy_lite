@@ -349,9 +349,6 @@ class _PurchaseItemEntryScreenContentState
           body: SafeArea(
             child: Column(
               children: [
-                // Order Information Banner
-                _buildOrderInfoBanner(purchaseState),
-
                 // Main Content (Form + Confirmed Items)
                 Expanded(
                   child: Column(

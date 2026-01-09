@@ -229,7 +229,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
               NumberFormat.currency(
                 decimalDigits: decimalPlace,
                 symbol: 'ETB ',
-              ).format(state.lastSubTotal),
+              ).format(state.lastSubTotal ?? 0.0),
               icon: Icons.shopping_cart,
             ),
             const SizedBox(height: 6),
@@ -406,7 +406,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
         ? NumberFormat.currency(
             decimalDigits: decimalPlace,
             symbol: 'ETB ',
-          ).format(state.withholdingAmount)
+          ).format(state.withholdingAmount ?? 0.0)
         : '----';
 
     final withholdingDisplayText = isWithholdingApplied
@@ -564,7 +564,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Withholding is enabled but cannot be applied because subtotal is below \$${NumberFormat.currency(decimalDigits: decimalPlace, symbol: 'ETB ').format(state.withholdingInitial)}',
+              'Withholding is enabled but cannot be applied because subtotal is below \$${NumberFormat.currency(decimalDigits: decimalPlace, symbol: 'ETB ').format(state.withholdingInitial ?? 0.0)}',
               style: TextStyle(fontSize: 12, color: Colors.amber),
             ),
           ),
