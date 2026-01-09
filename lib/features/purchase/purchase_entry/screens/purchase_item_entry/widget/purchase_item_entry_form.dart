@@ -271,7 +271,7 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
 
     final updatedDetail = detail.copyWith(
       itemNumber: _selectedItem?.id,
-      // itemDescription: _selectedItem?.itemDescription,
+      itemNumberRef: _selectedItem,
       quantityTransaction: double.tryParse(_quantityController.text),
       unitCost: double.tryParse(_unitCostController.text),
       amountExtendedCost: double.tryParse(_extendedAmountController.text),
@@ -429,6 +429,7 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
 
     return detail.copyWith(
       itemNumber: _selectedItem?.id,
+      itemNumberRef: _selectedItem,
       quantityTransaction: double.tryParse(_quantityController.text),
       unitCost: double.tryParse(_unitCostController.text),
       amountExtendedCost: double.tryParse(_extendedAmountController.text),
@@ -479,42 +480,6 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
-              Container(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Row(
-                  children: [
-                    Icon(
-                      widget.isEditing ? Icons.edit : Icons.add,
-                      color: widget.isEditing
-                          ? Colors.orange
-                          : const Color(0xFF155888),
-                      size: 24,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      widget.isEditing ? 'Editing Item' : 'Add Purchase Item',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: widget.isEditing
-                            ? Colors.orange
-                            : const Color(0xFF155888),
-                      ),
-                    ),
-                    const Spacer(),
-                    if (widget.isEditing && widget.onCancel != null)
-                      TextButton(
-                        onPressed: widget.onCancel,
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-
               // Item Selection
               BlocBuilder<StockItemsEntryBloc, ItemEntryState>(
                 builder: (context, itemsState) {
