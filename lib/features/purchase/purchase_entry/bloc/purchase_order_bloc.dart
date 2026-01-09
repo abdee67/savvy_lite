@@ -900,18 +900,48 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     Emitter<PurchaseOrderState> emit,
   ) async {
     try {
-      final newDetail = event.detail.copyWith(
-        tempId: _getNextDetailTempId(state.createDetails),
-        company: state.selectedHeader?.company,
-        poHeader: state.selectedHeader?.id,
+      // Check if item already exists
+      final existingIndex = state.createDetails.indexWhere(
+        (d) =>
+            d.itemNumber == event.detail.itemNumber &&
+            d.unitOfMeasure == event.detail.unitOfMeasure,
       );
 
-      final updatedDetails = [...state.createDetails, newDetail];
+      List<PurchaseOrderDetail> updatedDetails;
+
+      if (existingIndex != -1) {
+        // Merge with existing item
+        final existingItem = state.createDetails[existingIndex];
+        final newQuantity =
+            (existingItem.quantityTransaction ?? 0) +
+            (event.detail.quantityTransaction ?? 0);
+        final newExtendedCost = (existingItem.unitCost ?? 0) * newQuantity;
+
+        final mergedDetail = existingItem.copyWith(
+          quantityTransaction: newQuantity,
+          amountExtendedCost: newExtendedCost,
+          quantityOpen: newQuantity,
+          amountOpen: newExtendedCost,
+        );
+
+        updatedDetails = List<PurchaseOrderDetail>.from(state.createDetails);
+        updatedDetails[existingIndex] = mergedDetail;
+      } else {
+        // Add new item
+        final newDetail = event.detail.copyWith(
+          tempId: _getNextDetailTempId(state.createDetails),
+          company: state.selectedHeader?.company,
+          poHeader: state.selectedHeader?.id,
+        );
+        updatedDetails = [...state.createDetails, newDetail];
+      }
 
       emit(
         state.copyWith(
           createDetails: updatedDetails,
-          selectedDetail: newDetail,
+          selectedDetail: existingIndex != -1
+              ? updatedDetails[existingIndex]
+              : updatedDetails.last,
           status: PurchaseOrderStatus.success,
           //  successMessage: 'Purchase order detail added',
         ),

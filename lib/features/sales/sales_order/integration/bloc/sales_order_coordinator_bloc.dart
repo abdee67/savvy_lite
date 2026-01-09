@@ -920,11 +920,45 @@ class SalesOrderCoordinatorBloc
     print('Coordinator: Adding detail to order - ${event.detail.tempId}');
 
     try {
-      // Add to detail bloc first
-      detailBloc.add(AddToCreateItemsSalesOrderDetails(item: event.detail));
+      // Check if item already exists
+      final existingIndex = state.currentDetails.indexWhere(
+        (d) =>
+            d.itemInBranch == event.detail.itemInBranch &&
+            d.unitOfMeasure == event.detail.unitOfMeasure &&
+            d.itemsTableId == event.detail.itemsTableId,
+      );
 
-      // Update coordinator state with the new detail
-      final updatedDetails = [...state.currentDetails, event.detail];
+      List<SalesOrderDetail> updatedDetails;
+
+      if (existingIndex != -1) {
+        // Merge with existing item
+        final existingItem = state.currentDetails[existingIndex];
+        final newQuantity =
+            (existingItem.quantity ?? 0) + (event.detail.quantity ?? 0);
+        final newExtendedPrice = (existingItem.unitPrice ?? 0) * newQuantity;
+
+        final mergedDetail = existingItem.copyWith(
+          quantity: newQuantity,
+          extendedPrice: newExtendedPrice,
+        );
+
+        // Update in detail bloc
+        detailBloc.add(
+          UpdateInCreateItemsSalesOrderDetails(
+            item: mergedDetail,
+            index: existingIndex,
+          ),
+        );
+
+        updatedDetails = List<SalesOrderDetail>.from(state.currentDetails);
+        updatedDetails[existingIndex] = mergedDetail;
+
+        print('Coordinator: Merged item. New Quantity: $newQuantity');
+      } else {
+        // Add new item
+        detailBloc.add(AddToCreateItemsSalesOrderDetails(item: event.detail));
+        updatedDetails = [...state.currentDetails, event.detail];
+      }
 
       emit(
         state.copyWith(
@@ -932,12 +966,14 @@ class SalesOrderCoordinatorBloc
           isStockValidated: false,
           isCalculationsComplete: false,
           status: SalesOrderCoordinatorStatus.success,
-          lastOperation: 'Item added to order',
+          lastOperation: existingIndex != -1
+              ? 'Item merged in order'
+              : 'Item added to order',
         ),
       );
 
       print(
-        'Coordinator: Detail added successfully. Total items: ${updatedDetails.length}',
+        'Coordinator: Detail process completed. Total items: ${updatedDetails.length}',
       );
 
       // Schedule validation and calculation for later to avoid blocking
@@ -1047,6 +1083,7 @@ class SalesOrderCoordinatorBloc
     Emitter<SalesOrderCoordinatorState> emit,
   ) {
     detailBloc.add(const ClearCreateItemsSalesOrderDetails());
+    detailBloc.add(const ResetSalesOrderDetails());
 
     emit(
       state.copyWith(
