@@ -7,7 +7,7 @@ import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/widget/dialogs/error_and_retry_dialog.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/widget/dialogs/order_confirmation_dialog.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/widget/dialogs/order_processing_dialog.dart';
-import 'package:savvy_stock/features/sales/sales_order/invoice/widget/dialogs/order_success_dialog.dart';
+// import 'package:savvy_stock/features/sales/sales_order/invoice/widget/dialogs/order_success_dialog.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
@@ -51,9 +51,7 @@ class _InvoiceActionState extends State<InvoiceAction> {
     SalesOrderCoordinatorState state,
   ) {
     // 🎯 Centralized state handling prevents race conditions
-    if (state.isOrderComplete && state.invoiceGenerated) {
-      _showSuccessDialog(context, state);
-    } else if (state.status == SalesOrderCoordinatorStatus.error &&
+    if (state.status == SalesOrderCoordinatorStatus.error &&
         state.error != null &&
         !state.pendingOperations.contains('create_order')) {
       _showErrorDialog(context, state.error ?? 'Unknown error occurred');
@@ -170,7 +168,7 @@ class _InvoiceActionState extends State<InvoiceAction> {
               // ✅ Only close dialog and show result when order is complete OR there's an error
               if (state.isOrderComplete && state.invoiceGenerated) {
                 Navigator.of(context).pop(); // Close processing dialog
-                _showSuccessDialog(context, state);
+                _navigateToHome();
               } else if (state.status == SalesOrderCoordinatorStatus.error &&
                   state.error != null) {
                 Navigator.of(context).pop(); // Close processing dialog
@@ -184,41 +182,30 @@ class _InvoiceActionState extends State<InvoiceAction> {
     );
   }
 
-  void _showSuccessDialog(
-    BuildContext context,
-    SalesOrderCoordinatorState state,
-  ) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => OrderSuccessDialog(
-        orderNumber: state.currentHeader?.fsNumber,
-        invoiceNumber: state.invoiceFsNumber,
-        totalAmount: state.lastTotalAmount,
-        onDone: () => _navigateToHome(context),
-      ),
-    );
-  }
-
   void _showErrorDialog(BuildContext context, String error) {
     showDialog(
       context: context,
       builder: (context) => ErrorDialog(
         error: error,
         onRetry: () => _processFinalization(context),
-        onCancel: () => _navigateToHome(context),
+        onCancel: () => _navigateToHome(),
       ),
     );
   }
 
-  void _navigateToHome(BuildContext context) {
+  void _navigateToHome() {
+    if (!mounted) return;
+
+    // 🎯 Capture bloc reference before navigation to avoid context issues
+    final bloc = context.read<SalesOrderCoordinatorBloc>();
+
     // 🎯 Use GoRouter for proper navigation stack management
     context.push(AppRoutes.homePage);
 
-    // 🎯 Clear state after successful navigation
+    // 🎯 Clear state using captured bloc reference
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<SalesOrderCoordinatorBloc>().add(ClearOrderDetails());
-      context.read<SalesOrderCoordinatorBloc>().add(ResetCoordinatorState());
+      bloc.add(ClearOrderDetails());
+      bloc.add(ResetCoordinatorState());
     });
   }
 }
