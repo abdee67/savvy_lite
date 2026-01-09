@@ -30,7 +30,7 @@ class LocalDatabaseService {
     String path = join(await getDatabasesPath(), 'savvy_stock.db');
     return await openDatabase(
       path,
-      version: 2, // Incremented for proforma fields migration
+      version: 1, // Incremented for proforma fields migration
       onCreate: _onCreate,
       onUpgrade: _onUpgrade, // Add upgrade handler
       onOpen: (db) async {
@@ -42,11 +42,10 @@ class LocalDatabaseService {
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     developer.log('Upgrading database from $oldVersion to $newVersion');
 
-    if (oldVersion < 2) {
-      await db.execute('''
-
-      
-      ''');
+    if (oldVersion < 1) {
+      // Version 1 migration: Add any new columns or tables here
+      // Currently no schema changes needed for version 1
+      developer.log('Database upgraded to version 1');
     }
   }
 
