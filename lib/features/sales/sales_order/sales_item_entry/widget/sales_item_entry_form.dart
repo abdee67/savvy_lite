@@ -14,6 +14,8 @@ import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_d
 import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_event.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_state.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_state.dart';
@@ -311,14 +313,16 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
         );
 
         _selectedUom = itemInBranch.unitOfMeasure;
-        _availableQuantityController.text =
-            (itemInBranch.quantityAvailable ?? 0).toStringAsFixed(2);
+        _selectedUom = itemInBranch.unitOfMeasure;
 
-        // Only update unit price if not editing existing item or price not set
+        // Update price first
         if (!widget.isEditing || widget.detail.unitPrice == null) {
           _unitPriceController.text = (itemInBranch.unitPrice ?? 0)
               .toStringAsFixed(2);
         }
+
+        // Then update effective quantity
+        _updateEffectiveAvailableQuantity();
       } else {
         _selectedUom = null;
         _availableQuantityController.text = '0.00';
@@ -384,6 +388,48 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
         (double.tryParse(_quantityController.text) ?? 0) > 0;
   }
 
+  /// Calculates the total quantity already reserved in the confirmed items list
+  /// for a specific item in branch combination.
+  /// This excludes the current item being edited to allow full quantity access.
+  double _getPendingQuantityForItem(int itemInBranchId) {
+    final coordinatorState = context.read<SalesOrderCoordinatorBloc>().state;
+
+    return coordinatorState.currentDetails
+        .where((detail) {
+          // Match by itemInBranch ID
+          final matches = detail.itemInBranch == itemInBranchId;
+
+          // If we're editing, exclude the current item from pending calculation
+          // so user can access the full quantity of the item being edited
+          if (widget.isEditing && widget.detail.tempId != null) {
+            return matches && detail.tempId != widget.detail.tempId;
+          }
+          if (widget.isEditing && widget.detail.id != null) {
+            return matches && detail.id != widget.detail.id;
+          }
+
+          return matches;
+        })
+        .fold<double>(0.0, (sum, detail) => sum + (detail.quantity ?? 0.0));
+  }
+
+  /// Returns the effective available quantity for the selected item in branch.
+  /// This is the stock quantity minus quantities already confirmed in the order.
+  double _getEffectiveAvailableQuantity() {
+    if (_selectedItemInBranch == null) return 0.0;
+
+    final stockQty = _selectedItemInBranch!.quantityAvailable ?? 0.0;
+    final pendingQty = _getPendingQuantityForItem(_selectedItemInBranch!.id!);
+
+    return (stockQty - pendingQty).clamp(0.0, double.infinity);
+  }
+
+  /// Updates the available quantity controller with the effective quantity
+  void _updateEffectiveAvailableQuantity() {
+    final effectiveQty = _getEffectiveAvailableQuantity();
+    _availableQuantityController.text = effectiveQty.toStringAsFixed(2);
+  }
+
   @override
   Widget build(BuildContext context) {
     final availableBranches = _getAvailableBranchesForItem();
@@ -422,112 +468,61 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
             widget.onUpdate(updatedDetail);
           }
         },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Item Selection
-            BlocBuilder<StockItemsEntryBloc, ItemEntryState>(
-              builder: (context, itemsState) {
-                return CustomTableDropdown<ItemEntryModel>(
-                  title: 'Select Item *',
-                  items: itemsState.items,
-                  displayText: (item) =>
-                      item.itemDescription ?? 'No Description',
-                  selectedValue: _selectedItem,
-                  showSearch: true,
-                  searchHint: 'Search items...',
-                  leadingIcon: const Icon(Icons.inventory_2, size: 16),
-                  columns: [
-                    TableColumnConfig(
-                      header: 'Item Name',
-                      flex: 3,
-                      cellBuilder: (item) => Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.itemDescription ?? 'No Description',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          if (item.itemsId != null)
-                            Text(
-                              'ID: ${item.itemsId!}',
-                              style: const TextStyle(
-                                fontSize: 9,
-                                color: Colors.grey,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    TableColumnConfig(
-                      header: 'Price',
-                      flex: 1,
-                      cellBuilder: (item) => Text(
-                        NumberFormat.currency(
-                          decimalDigits: decimalPlace,
-                          symbol: 'ETB ',
-                        ).format(item.unitPrice),
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                  onItemSelected: _onItemSelected,
-                );
-              },
-            ),
-
-            const SizedBox(height: 16),
-
-            // Branch Selection (only show if item is selected)
-            if (_selectedItem != null) ...[
-              BlocBuilder<StockItemInBranchBloc, ItemInBranchState>(
-                builder: (context, branchState) {
-                  return CustomTableDropdown<ItemInBranchModel>(
-                    title: 'Select Branch *',
-                    items: availableBranches,
-                    displayText: (itemInBranch) =>
-                        itemInBranch.branchRef?.description ?? 'No Branch',
-                    selectedValue: _selectedItemInBranch,
-                    // emptyMessage: 'No branches available for selected item',
+        child: BlocListener<SalesOrderCoordinatorBloc, SalesOrderCoordinatorState>(
+          listener: (context, state) {
+            // Update available quantity when coordinator state (confirmed items) changes
+            if (_selectedItemInBranch != null) {
+              _updateEffectiveAvailableQuantity();
+            }
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Item Selection
+              BlocBuilder<StockItemsEntryBloc, ItemEntryState>(
+                builder: (context, itemsState) {
+                  return CustomTableDropdown<ItemEntryModel>(
+                    title: 'Select Item *',
+                    items: itemsState.items,
+                    displayText: (item) =>
+                        item.itemDescription ?? 'No Description',
+                    selectedValue: _selectedItem,
+                    showSearch: true,
+                    searchHint: 'Search items...',
+                    leadingIcon: const Icon(Icons.inventory_2, size: 16),
                     columns: [
                       TableColumnConfig(
-                        header: 'Branch',
-                        flex: 2,
-                        cellBuilder: (itemInBranch) => Text(
-                          itemInBranch.branchRef?.description ?? 'No Branch',
-                          style: const TextStyle(fontSize: 10),
-                        ),
-                      ),
-                      TableColumnConfig(
-                        header: 'Available',
-                        flex: 1,
-                        cellBuilder: (itemInBranch) => Text(
-                          (itemInBranch.quantityAvailable ?? 0).toStringAsFixed(
-                            0,
-                          ),
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: (itemInBranch.quantityAvailable ?? 0) > 0
-                                ? Colors.green
-                                : Colors.red,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        header: 'Item Name',
+                        flex: 3,
+                        cellBuilder: (item) => Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.itemDescription ?? 'No Description',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            if (item.itemsId != null)
+                              Text(
+                                'ID: ${item.itemsId!}',
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                       TableColumnConfig(
                         header: 'Price',
                         flex: 1,
-                        cellBuilder: (itemInBranch) => Text(
+                        cellBuilder: (item) => Text(
                           NumberFormat.currency(
                             decimalDigits: decimalPlace,
                             symbol: 'ETB ',
-                          ).format(itemInBranch.unitPrice),
+                          ).format(item.unitPrice),
                           style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w500,
@@ -535,341 +530,416 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
                         ),
                       ),
                     ],
-                    onItemSelected: (itemInBranch) {
-                      _onBranchSelected(itemInBranch?.branchRef, itemInBranch);
-                    },
+                    onItemSelected: _onItemSelected,
                   );
                 },
               ),
+
               const SizedBox(height: 16),
-            ],
 
-            // Quantity Input
-            CustomTextField(
-              controller: _quantityController,
-              labelText: 'Quantity *',
-              keyboardType: TextInputType.number,
-              autovalidateMode: AutovalidateMode.onUserInteraction,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter quantity';
-                }
-                final quantity = double.tryParse(value);
-                if (quantity == null || quantity <= 0) {
-                  return 'Please enter valid quantity';
-                }
-
-                // Check stock availability
-                if (_selectedItemInBranch != null) {
-                  final availableQty =
-                      _selectedItemInBranch!.quantityAvailable ?? 0;
-                  if (quantity > availableQty) {
-                    return 'Quantity exceeds available stock ($availableQty)';
-                  }
-                }
-
-                return null;
-              },
-              onChanged: (value) {
-                // Dispatch update for price recalculation
-                if (_selectedItemInBranch != null) {
-                  final selectedUomDetail = _resolveSelectedUomDetail();
-
-                  final currentDetail = widget.detail.copyWith(
-                    itemsTableId: _selectedItem?.id,
-                    itemInBranch: _selectedItemInBranch?.id,
-                    itemBranch: _selectedItemInBranch,
-                    quantity: double.tryParse(value) ?? 0.0,
-                    unitOfMeasure: _selectedUom,
-                    uom: selectedUomDetail,
-                    item: _selectedItem,
-                  );
-
-                  context.read<SalesOrderDetailBloc>().add(
-                    UpdateUnitPriceWithUom(
-                      salesOrderDetail: currentDetail,
-                      itemsInBranch: _selectedItemInBranch,
-                      manualUnitPrice: double.tryParse(
-                        _unitPriceController.text,
-                      ),
-                    ),
-                  );
-                } else {
-                  _calculateExtendedPrice();
-                }
-              },
-            ),
-
-            const SizedBox(height: 16),
-            // UOM Selection (from branch)
-            if (_selectedItemInBranch != null)
-              BlocBuilder<ItemUomConversionBloc, ItemUomConversionState>(
-                builder: (context, state) {
-                  if (state.isLoadingUomsForItem ||
-                      state.status == ItemUomConversionStatus.loading) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  final udcList = state.availableUomsForItem;
-
-                  if (udcList.isEmpty) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8.0),
-                      child: Text(
-                        'No unit of measure available',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    );
-                  }
-
-                  return Builder(
-                    builder: (context) {
-                      String? currentUomDesc;
-                      if (_selectedUom != null) {
-                        final match = udcList.where(
-                          (u) => u.id == _selectedUom,
-                        );
-                        if (match.isNotEmpty) {
-                          currentUomDesc = match.first.description1;
-                        }
-                      }
-
-                      return CustomSearchableDropdown(
-                        labelText: 'Unit of Measure *',
-                        options: udcList.map((u) => u.description1).toList(),
-                        value: currentUomDesc,
-                        prefixIcon: Iconsax.ruler,
-                        allowCustomEntries: false,
-                        onChanged: (value) {
-                          setState(() {
-                            if (value == null) {
-                              _selectedUom = null;
-                            } else {
-                              final matches = udcList.where(
-                                (u) => u.description1 == value,
-                              );
-                              _selectedUom = matches.isNotEmpty
-                                  ? matches.first.id
-                                  : null;
-                            }
-                          });
-
-                          // Dispatch update for price recalculation
-                          if (_selectedItemInBranch != null) {
-                            final selectedUomDetail =
-                                _resolveSelectedUomDetail();
-
-                            final currentDetail = widget.detail.copyWith(
-                              itemsTableId: _selectedItem?.id,
-                              itemInBranch: _selectedItemInBranch?.id,
-                              itemBranch: _selectedItemInBranch,
-                              quantity:
-                                  double.tryParse(_quantityController.text) ??
-                                  0.0,
-                              unitOfMeasure: _selectedUom,
-                              uom: selectedUomDetail,
-                              item: _selectedItem,
+              // Branch Selection (only show if item is selected)
+              if (_selectedItem != null) ...[
+                BlocBuilder<StockItemInBranchBloc, ItemInBranchState>(
+                  builder: (context, branchState) {
+                    return CustomTableDropdown<ItemInBranchModel>(
+                      title: 'Select Branch *',
+                      items: availableBranches,
+                      displayText: (itemInBranch) =>
+                          itemInBranch.branchRef?.description ?? 'No Branch',
+                      selectedValue: _selectedItemInBranch,
+                      // emptyMessage: 'No branches available for selected item',
+                      columns: [
+                        TableColumnConfig(
+                          header: 'Branch',
+                          flex: 2,
+                          cellBuilder: (itemInBranch) => Text(
+                            itemInBranch.branchRef?.description ?? 'No Branch',
+                            style: const TextStyle(fontSize: 10),
+                          ),
+                        ),
+                        TableColumnConfig(
+                          header: 'Available',
+                          flex: 1,
+                          cellBuilder: (itemInBranch) {
+                            // Calculate effective availability for this branch item
+                            final stockQty =
+                                itemInBranch.quantityAvailable ?? 0.0;
+                            final pendingQty = _getPendingQuantityForItem(
+                              itemInBranch.id!,
+                            );
+                            final effectiveQty = (stockQty - pendingQty).clamp(
+                              0.0,
+                              double.infinity,
                             );
 
-                            context.read<SalesOrderDetailBloc>().add(
-                              UpdateUnitPriceWithUom(
-                                salesOrderDetail: currentDetail,
-                                itemsInBranch: _selectedItemInBranch,
+                            return Text(
+                              effectiveQty.toStringAsFixed(0),
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: effectiveQty > 0
+                                    ? Colors.green
+                                    : Colors.red,
+                                fontWeight: FontWeight.bold,
                               ),
                             );
-                          } else {
-                            _updateDetail();
-                          }
-                        },
-                        validator: (value) {
-                          if (_selectedUom == null) {
-                            return 'Please select a unit of measure';
-                          }
-                          return null;
-                        },
-                      );
-                    },
-                  );
+                          },
+                        ),
+                        TableColumnConfig(
+                          header: 'Price',
+                          flex: 1,
+                          cellBuilder: (itemInBranch) => Text(
+                            NumberFormat.currency(
+                              decimalDigits: decimalPlace,
+                              symbol: 'ETB ',
+                            ).format(itemInBranch.unitPrice),
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                      onItemSelected: (itemInBranch) {
+                        _onBranchSelected(
+                          itemInBranch?.branchRef,
+                          itemInBranch,
+                        );
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // Quantity Input
+              CustomTextField(
+                controller: _quantityController,
+                labelText: 'Quantity *',
+                keyboardType: TextInputType.number,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter quantity';
+                  }
+                  final quantity = double.tryParse(value);
+                  if (quantity == null || quantity <= 0) {
+                    return 'Please enter valid quantity';
+                  }
+
+                  // Check stock availability
+                  // Check stock availability
+                  if (_selectedItemInBranch != null) {
+                    final availableQty = _getEffectiveAvailableQuantity();
+                    if (quantity > availableQty) {
+                      return 'Quantity exceeds available stock ($availableQty)';
+                    }
+                  }
+
+                  return null;
+                },
+                onChanged: (value) {
+                  // Dispatch update for price recalculation
+                  if (_selectedItemInBranch != null) {
+                    final selectedUomDetail = _resolveSelectedUomDetail();
+
+                    final currentDetail = widget.detail.copyWith(
+                      itemsTableId: _selectedItem?.id,
+                      itemInBranch: _selectedItemInBranch?.id,
+                      itemBranch: _selectedItemInBranch,
+                      quantity: double.tryParse(value) ?? 0.0,
+                      unitOfMeasure: _selectedUom,
+                      uom: selectedUomDetail,
+                      item: _selectedItem,
+                    );
+
+                    context.read<SalesOrderDetailBloc>().add(
+                      UpdateUnitPriceWithUom(
+                        salesOrderDetail: currentDetail,
+                        itemsInBranch: _selectedItemInBranch,
+                        manualUnitPrice: double.tryParse(
+                          _unitPriceController.text,
+                        ),
+                      ),
+                    );
+                  } else {
+                    _calculateExtendedPrice();
+                  }
                 },
               ),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              // UOM Selection (from branch)
+              if (_selectedItemInBranch != null)
+                BlocBuilder<ItemUomConversionBloc, ItemUomConversionState>(
+                  builder: (context, state) {
+                    if (state.isLoadingUomsForItem ||
+                        state.status == ItemUomConversionStatus.loading) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-            // Available Quantity (Read-only)
-            CustomTextField(
-              controller: _availableQuantityController,
-              labelText: 'Available Quantity',
-              readOnly: true,
-            ),
+                    final udcList = state.availableUomsForItem;
 
-            const SizedBox(height: 16),
-
-            // Unit Price (read-only, driven by SalesOrderDetailBloc)
-            BlocBuilder<SalesOrderDetailBloc, SalesOrderDetailState>(
-              builder: (context, detailState) {
-                SalesOrderDetail effectiveDetail = widget.detail;
-
-                // Prefer the in-progress selected1 detail (for unconfirmed edits)
-                final selectedDetail = detailState.selected1;
-                if (selectedDetail != null &&
-                    ((selectedDetail.id != null &&
-                            selectedDetail.id == widget.detail.id) ||
-                        (selectedDetail.tempId != null &&
-                            selectedDetail.tempId == widget.detail.tempId))) {
-                  effectiveDetail = selectedDetail;
-                } else {
-                  final matching = detailState.createItems.firstWhere(
-                    (d) =>
-                        (d.id != null && d.id == widget.detail.id) ||
-                        (d.tempId != null && d.tempId == widget.detail.tempId),
-                    orElse: () => widget.detail,
-                  );
-
-                  effectiveDetail = matching;
-                }
-
-                final unitPrice =
-                    effectiveDetail.unitPrice ??
-                    double.tryParse(_unitPriceController.text) ??
-                    0.0;
-                final formatted = unitPrice.toStringAsFixed(2);
-                if (_unitPriceController.text != formatted) {
-                  _unitPriceController.text = formatted;
-                }
-
-                return CustomTextField(
-                  controller: _unitPriceController,
-                  labelText: 'Unit Price',
-                  keyboardType: TextInputType.number,
-                  onChanged: (value) {
-                    if (_selectedItemInBranch != null) {
-                      final selectedUomDetail = _resolveSelectedUomDetail();
-
-                      final currentDetail = widget.detail.copyWith(
-                        itemsTableId: _selectedItem?.id,
-                        itemInBranch: _selectedItemInBranch?.id,
-                        itemBranch: _selectedItemInBranch,
-                        quantity:
-                            double.tryParse(_quantityController.text) ?? 0.0,
-                        unitOfMeasure: _selectedUom,
-                        uom: selectedUomDetail,
-                        item: _selectedItem,
-                      );
-
-                      context.read<SalesOrderDetailBloc>().add(
-                        UpdateUnitPriceWithUom(
-                          salesOrderDetail: currentDetail,
-                          itemsInBranch: _selectedItemInBranch,
-                          manualUnitPrice: double.tryParse(value) ?? 0.0,
+                    if (udcList.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8.0),
+                        child: Text(
+                          'No unit of measure available',
+                          style: TextStyle(color: Colors.grey),
                         ),
                       );
                     }
-                  },
-                );
-              },
-            ),
 
-            const SizedBox(height: 16),
-
-            // Extended Price (read-only, driven by SalesOrderDetailBloc)
-            BlocBuilder<SalesOrderDetailBloc, SalesOrderDetailState>(
-              builder: (context, detailState) {
-                SalesOrderDetail effectiveDetail = widget.detail;
-
-                // Prefer the in-progress selected1 detail (for unconfirmed edits)
-                final selectedDetail = detailState.selected1;
-                if (selectedDetail != null &&
-                    ((selectedDetail.id != null &&
-                            selectedDetail.id == widget.detail.id) ||
-                        (selectedDetail.tempId != null &&
-                            selectedDetail.tempId == widget.detail.tempId))) {
-                  effectiveDetail = selectedDetail;
-                } else {
-                  final matching = detailState.createItems.firstWhere(
-                    (d) =>
-                        (d.id != null && d.id == widget.detail.id) ||
-                        (d.tempId != null && d.tempId == widget.detail.tempId),
-                    orElse: () => widget.detail,
-                  );
-
-                  effectiveDetail = matching;
-                }
-
-                final lineTotal =
-                    effectiveDetail.extendedPrice ??
-                    double.tryParse(_extendedPriceController.text) ??
-                    0.0;
-                final formatted = lineTotal.toStringAsFixed(2);
-                if (_extendedPriceController.text != formatted) {
-                  _extendedPriceController.text = formatted;
-                }
-
-                return CustomTextField(
-                  controller: _extendedPriceController,
-                  labelText: 'Line Total',
-                  readOnly: true,
-                );
-              },
-            ),
-
-            const SizedBox(height: 16),
-
-            // Confirm Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isFormValid()
-                    ? () {
-                        if (widget.formKey.currentState!.validate()) {
-                          widget.onConfirm();
+                    return Builder(
+                      builder: (context) {
+                        String? currentUomDesc;
+                        if (_selectedUom != null) {
+                          final match = udcList.where(
+                            (u) => u.id == _selectedUom,
+                          );
+                          if (match.isNotEmpty) {
+                            currentUomDesc = match.first.description1;
+                          }
                         }
+
+                        return CustomSearchableDropdown(
+                          labelText: 'Unit of Measure *',
+                          options: udcList.map((u) => u.description1).toList(),
+                          value: currentUomDesc,
+                          prefixIcon: Iconsax.ruler,
+                          allowCustomEntries: false,
+                          onChanged: (value) {
+                            setState(() {
+                              if (value == null) {
+                                _selectedUom = null;
+                              } else {
+                                final matches = udcList.where(
+                                  (u) => u.description1 == value,
+                                );
+                                _selectedUom = matches.isNotEmpty
+                                    ? matches.first.id
+                                    : null;
+                              }
+                            });
+
+                            // Dispatch update for price recalculation
+                            if (_selectedItemInBranch != null) {
+                              final selectedUomDetail =
+                                  _resolveSelectedUomDetail();
+
+                              final currentDetail = widget.detail.copyWith(
+                                itemsTableId: _selectedItem?.id,
+                                itemInBranch: _selectedItemInBranch?.id,
+                                itemBranch: _selectedItemInBranch,
+                                quantity:
+                                    double.tryParse(_quantityController.text) ??
+                                    0.0,
+                                unitOfMeasure: _selectedUom,
+                                uom: selectedUomDetail,
+                                item: _selectedItem,
+                              );
+
+                              context.read<SalesOrderDetailBloc>().add(
+                                UpdateUnitPriceWithUom(
+                                  salesOrderDetail: currentDetail,
+                                  itemsInBranch: _selectedItemInBranch,
+                                ),
+                              );
+                            } else {
+                              _updateDetail();
+                            }
+                          },
+                          validator: (value) {
+                            if (_selectedUom == null) {
+                              return 'Please select a unit of measure';
+                            }
+                            return null;
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
+
+              const SizedBox(height: 24),
+
+              // Available Quantity (Read-only)
+              CustomTextField(
+                controller: _availableQuantityController,
+                labelText: 'Available Quantity',
+                readOnly: true,
+              ),
+
+              const SizedBox(height: 16),
+
+              // Unit Price (read-only, driven by SalesOrderDetailBloc)
+              BlocBuilder<SalesOrderDetailBloc, SalesOrderDetailState>(
+                builder: (context, detailState) {
+                  SalesOrderDetail effectiveDetail = widget.detail;
+
+                  // Prefer the in-progress selected1 detail (for unconfirmed edits)
+                  final selectedDetail = detailState.selected1;
+                  if (selectedDetail != null &&
+                      ((selectedDetail.id != null &&
+                              selectedDetail.id == widget.detail.id) ||
+                          (selectedDetail.tempId != null &&
+                              selectedDetail.tempId == widget.detail.tempId))) {
+                    effectiveDetail = selectedDetail;
+                  } else {
+                    final matching = detailState.createItems.firstWhere(
+                      (d) =>
+                          (d.id != null && d.id == widget.detail.id) ||
+                          (d.tempId != null &&
+                              d.tempId == widget.detail.tempId),
+                      orElse: () => widget.detail,
+                    );
+
+                    effectiveDetail = matching;
+                  }
+
+                  final unitPrice =
+                      effectiveDetail.unitPrice ??
+                      double.tryParse(_unitPriceController.text) ??
+                      0.0;
+                  final formatted = unitPrice.toStringAsFixed(2);
+                  if (_unitPriceController.text != formatted) {
+                    _unitPriceController.text = formatted;
+                  }
+
+                  return CustomTextField(
+                    controller: _unitPriceController,
+                    labelText: 'Unit Price',
+                    keyboardType: TextInputType.number,
+                    onChanged: (value) {
+                      if (_selectedItemInBranch != null) {
+                        final selectedUomDetail = _resolveSelectedUomDetail();
+
+                        final currentDetail = widget.detail.copyWith(
+                          itemsTableId: _selectedItem?.id,
+                          itemInBranch: _selectedItemInBranch?.id,
+                          itemBranch: _selectedItemInBranch,
+                          quantity:
+                              double.tryParse(_quantityController.text) ?? 0.0,
+                          unitOfMeasure: _selectedUom,
+                          uom: selectedUomDetail,
+                          item: _selectedItem,
+                        );
+
+                        context.read<SalesOrderDetailBloc>().add(
+                          UpdateUnitPriceWithUom(
+                            salesOrderDetail: currentDetail,
+                            itemsInBranch: _selectedItemInBranch,
+                            manualUnitPrice: double.tryParse(value) ?? 0.0,
+                          ),
+                        );
                       }
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _isFormValid()
-                      ? const Color(0xFF155888)
-                      : Colors.grey,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    },
+                  );
+                },
+              ),
+
+              const SizedBox(height: 16),
+
+              // Extended Price (read-only, driven by SalesOrderDetailBloc)
+              BlocBuilder<SalesOrderDetailBloc, SalesOrderDetailState>(
+                builder: (context, detailState) {
+                  SalesOrderDetail effectiveDetail = widget.detail;
+
+                  // Prefer the in-progress selected1 detail (for unconfirmed edits)
+                  final selectedDetail = detailState.selected1;
+                  if (selectedDetail != null &&
+                      ((selectedDetail.id != null &&
+                              selectedDetail.id == widget.detail.id) ||
+                          (selectedDetail.tempId != null &&
+                              selectedDetail.tempId == widget.detail.tempId))) {
+                    effectiveDetail = selectedDetail;
+                  } else {
+                    final matching = detailState.createItems.firstWhere(
+                      (d) =>
+                          (d.id != null && d.id == widget.detail.id) ||
+                          (d.tempId != null &&
+                              d.tempId == widget.detail.tempId),
+                      orElse: () => widget.detail,
+                    );
+
+                    effectiveDetail = matching;
+                  }
+
+                  final lineTotal =
+                      effectiveDetail.extendedPrice ??
+                      double.tryParse(_extendedPriceController.text) ??
+                      0.0;
+                  final formatted = lineTotal.toStringAsFixed(2);
+                  if (_extendedPriceController.text != formatted) {
+                    _extendedPriceController.text = formatted;
+                  }
+
+                  return CustomTextField(
+                    controller: _extendedPriceController,
+                    labelText: 'Line Total',
+                    readOnly: true,
+                  );
+                },
+              ),
+
+              const SizedBox(height: 16),
+
+              // Confirm Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isFormValid()
+                      ? () {
+                          if (widget.formKey.currentState!.validate()) {
+                            widget.onConfirm();
+                          }
+                        }
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _isFormValid()
+                        ? const Color(0xFF155888)
+                        : Colors.grey,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        widget.isEditing ? Icons.save : Icons.check_circle,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        widget.isEditing ? 'Update Item' : 'Confirm Item',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      widget.isEditing ? Icons.save : Icons.check_circle,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      widget.isEditing ? 'Update Item' : 'Confirm Item',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+              ),
+
+              const SizedBox(height: 8),
+
+              // Help text
+              Text(
+                widget.isEditing
+                    ? 'Item will be updated in the confirmed list below'
+                    : 'Item will be added to the confirmed list below',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                  fontStyle: FontStyle.italic,
                 ),
+                textAlign: TextAlign.center,
               ),
-            ),
-
-            const SizedBox(height: 8),
-
-            // Help text
-            Text(
-              widget.isEditing
-                  ? 'Item will be updated in the confirmed list below'
-                  : 'Item will be added to the confirmed list below',
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.grey,
-                fontStyle: FontStyle.italic,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
