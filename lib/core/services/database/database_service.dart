@@ -1,8 +1,5 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
-import 'package:argon2/argon2.dart';
-import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/services/database/seeders/privilege_seeder.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 import 'package:sqflite/sqflite.dart';
@@ -1407,6 +1404,95 @@ ON fast_slow_nonmoving_rule (report_frequency);
 ''');
     developer.log('Created table: fast_slow_nonmoving_rule');
 
+    //subscription management table
+    await db.execute('''
+CREATE TABLE subscription_management (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  initial_subscription_branches INTEGER,
+  initial_subscription_users INTEGER,
+  initial_payment REAL,
+  initial_subscription_days INTEGER,
+  updated_by INTEGER,
+  date_updated TEXT,
+  status TEXT,
+  name TEXT,
+  description TEXT,
+  max_storage INTEGER,
+  features TEXT,
+
+  FOREIGN KEY (updated_by)
+    REFERENCES user_table(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE
+);
+
+CREATE INDEX idx_sm_updated_by
+ON subscription_management (updated_by);
+
+''');
+    developer.log('Created table: subscription_management');
+
+    //company subscription table
+    await db.execute('''
+CREATE TABLE company_subscription (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  company_id INTEGER,
+  subscription_id INTEGER,
+  date_subscribed TEXT,
+  date_effective TEXT,
+  date_expire TEXT,
+  status TEXT,
+
+  FOREIGN KEY (company_id)
+    REFERENCES company_table(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE,
+
+  FOREIGN KEY (subscription_id)
+    REFERENCES subscription_management(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE
+);
+
+CREATE INDEX idx_cs_company
+ON company_subscription (company_id);
+
+CREATE INDEX idx_cs_subscription_management
+ON company_subscription (subscription_id);
+''');
+    developer.log('Created table: company_subscription');
+
+    //fs tabe
+    await db.execute('''
+  CREATE TABLE fs_table (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fs_number INTEGER,
+    prefix_up_to_three TEXT,
+    postfix_up_to_four TEXT, 
+    branch INTEGER,
+    mrc_number TEXT,
+    company INTEGER,
+
+    FOREIGN KEY (company)
+      REFERENCES company_table(id)
+      ON DELETE SET NULL
+      ON UPDATE CASCADE,
+
+    FOREIGN KEY (branch)
+      REFERENCES branch_table(id)
+      ON DELETE SET NULL
+      ON UPDATE CASCADE
+
+);
+
+CREATE INDEX idx_fs_company
+ON fs_table (company);
+
+CREATE INDEX idx_fs_branch
+ON fs_table (branch);
+''');
+    developer.log('Created table: fs_table');
+
     //. Create sync_queue table
     await db.execute('''
       CREATE TABLE sync_queue (
@@ -2282,437 +2368,31 @@ ON fast_slow_nonmoving_rule (report_frequency);
     }
     developer.log('Inserted default udc headers and details');
 
-    // Insert Company
-    final companies = [
-      {
-        'id': 1,
-        'company_name': 'Savvy Corp',
-        'tin_number': 'TIN123456',
-        'phone_number_1': '+251911223344',
-        'email_address_1': 'info@savvy.com',
-        'city': 'Addis Ababa',
-        'country': 'Ethiopia',
-        'address_line': 'Bole Street, 5th Floor',
-        'subscription_fee': 999.99,
-        'user_limmit': 50,
-        'branch_limmit': 10,
-        'days_left': 30,
-        'margin_rate': 10.0,
-        'margin_type': 'Percentage',
-        'inventory_planner': 1,
-        'category_code': 1,
-        'reorder_point': 20,
-        'logo_company': 'assets/images/onboarding_background.png',
-        'date_created': DateTime.now().millisecondsSinceEpoch,
-        'date_updated': DateTime.now().millisecondsSinceEpoch,
-      },
-      /*{
-        'id': 2,
-        'company_name': 'ABCD Corp',
-        'tin_number': 'TIN77777',
-        'phone_number_1': '+251911223344',
-        'email_address_1': 'info@abcd.com',
-        'city': 'Addis Ababa',
-        'country': 'Ethiopia',
-        'address_line': 'Sar bet, 5th Floor',
-        'subscription_fee': 888.88,
-        'user_limmit': 20,
-        'branch_limmit': 5,
-        'days_left': 10,
-        'margin_rate': 15.0,
-        'margin_type': 'number',
-        'inventory_planner': 1,
-        'category_code': 2,
-        'date_created': DateTime.now().millisecondsSinceEpoch,
-        'date_updated': DateTime.now().millisecondsSinceEpoch,
-      }, */
-    ];
-
-    for (final company in companies) {
-      await db.insert('company_table', company);
-    }
-    developer.log('Inserted companies');
-
-    // Insert Branch
-    final branches = [
-      {
-        'id': 1,
-        'reference_id': 'M1001',
-        'description': 'Savvy Main Branch',
-        'city': 'Addis Ababa',
-        'region': 'Addis',
-        'country': 'Ethiopia',
-        'address_line': 'Kera road',
-        'company': 1,
-        'margin_rate': 10.0,
-        'margin_type': 'Percentage',
-        'branch_phone': '+2519111111',
-      },
-      /* {
-        'id': 2,
-        'reference_id': 'M1002',
-        'description': 'Sar bet Branch',
-        'city': 'Addis Ababa',
-        'region': 'Addis',
-        'country': 'Ethiopia',
-        'address_line': 'Kera Road',
-        'company': 1,
-        'margin_rate': 10.0,
-        'margin_type': 'Percentage',
-        'branch_phone': '+251911223355',
-      },
-      {
-        'id': 3,
-        'reference_id': 2001,
-        'description': 'ABCD Main Branch',
-        'city': 'Addis Ababa',
-        'region': 'Addis',
-        'country': 'Ethiopia',
-        'address_line': 'Bole Road',
-        'company': 2,
-        'margin_rate': 15.0,
-        'margin_type': 'number',
-        'branch_phone': '+2519222222',
-      },
-      {
-        'id': 4,
-        'reference_id': 2002,
-        'description': 'Bole Branch',
-        'city': 'Addis Ababa',
-        'region': 'Addis',
-        'country': 'Ethiopia',
-        'address_line': 'Bole Road',
-        'company': 2,
-        'margin_rate': 15.0,
-        'margin_type': 'number',
-        'branch_phone': '+251922222',
-      },*/
-    ];
-    for (final branch in branches) {
-      await db.insert('branch_table', branch);
-    }
-    developer.log('Inserted companies');
-
-    // Insert Employee
-    final employees = [
-      {
-        'employee_id': 'EMP001',
-        'name_first': 'admin',
-        'name_last': 'G',
-        'gender': 'M',
-        'hire_date': '2022-01-01',
-        'city': 'Addis Ababa',
-        'country': 'Ethiopia',
-        'company': 1,
-        'branch': 1,
-        'name_middle': 'M',
-        'title': 'Admin',
-        'birth_date': '2022-01-01',
-        'address': 'Addis Ababa',
-        'region': 'Addis',
-        'phone': '+2519111111',
-        'email': 'admin@gmail.com',
-      },
-      {
-        'employee_id': 'EMP002',
-        'name_first': 'salesManager',
-        'name_last': 'C',
-        'gender': 'F',
-        'hire_date': '2000-01-01',
-        'city': 'Addis Ababa',
-        'country': 'Ethiopia',
-        'company': 1,
-        'branch': 1,
-        'name_middle': 'M',
-        'title': 'Sales Manager',
-        'birth_date': '2022-01-01',
-        'address': 'Addis Ababa',
-        'region': 'Addis',
-        'phone': '+2519111111',
-        'email': 'salesManager@gmail.com',
-      },
-      {
-        'employee_id': 'EMP003',
-        'name_first': 'emp',
-        'name_last': '1',
-        'gender': 'M',
-        'hire_date': '2000-01-01',
-        'city': 'Addis Ababa',
-        'country': 'Ethiopia',
-        'company': 1,
-        'branch': 1,
-        'name_middle': 'M',
-        'title': 'Sales Manager',
-        'birth_date': '2022-01-01',
-        'address': 'Addis Ababa',
-        'region': 'Addis',
-        'phone': '+2519111111',
-        'email': 'stockManager@gmail.com',
-      },
-      {
-        'employee_id': 'EMP004',
-        'name_first': 'emp',
-        'name_last': '2',
-        'gender': 'F',
-        'hire_date': '2000-01-01',
-        'city': 'Addis Ababa',
-        'country': 'Ethiopia',
-        'company': 1,
-        'branch': 1,
-        'name_middle': 'M',
-        'title': 'Sales Manager',
-        'birth_date': '2022-01-01',
-        'address': 'Addis Ababa',
-        'region': 'Addis',
-        'phone': '+2519111111',
-        'email': 'emp2@gmail.com',
-      },
-    ];
-    for (final employee in employees) {
-      await db.insert('employees', employee);
-    }
-    developer.log('employee inewelsdfghbnvcxsdf');
-
-    // 1. Seed privileges
+    // Seed privileges (system-wide definitions - not company specific)
     await PrivilegeSeeder.seedPrivileges(db);
+    developer.log('Seeded privileges');
 
-    // 2. Fetch privileges back (with their IDs)
-    final privileges = await db.query('privilege_table');
+    // Seed default Admin role with all privileges (template for new companies)
+    final adminRoleId = await db.insert('role_table', {
+      'name': 'Admin',
+      'description': 'Default Administrator Role',
+      'created_by': 1,
+      'date_created': DateTime.now().toIso8601String(),
+      'company': null,
+    });
 
-    // 3. Use map for quick lookup
-    final privilegeByUri = {
-      for (var p in privileges) p['link'] as String: p['id'] as int,
-    };
-
-    final roles = [
-      {
-        'name': 'Administrator',
-        'description': 'Full system access with all privileges',
-      },
-      {
-        'name': 'Sales Manager',
-        'description': 'Sales operations with customer management',
-      },
-      {
-        'name': 'Stock Manager',
-        'description': 'Inventory and stock management',
-      },
-    ];
-
-    final roleIds = <String, int>{};
-
-    for (final role in roles) {
-      role['company'] = '1';
-      role['created_by'] = '1';
-      role['date_created'] = DateTime.now().toIso8601String();
-      role['updated_by'] = '1';
-      role['date_updated'] = DateTime.now().toIso8601String();
-      final id = await db.insert('role_table', role);
-      roleIds[role['name']!] = id;
-    }
-
-    // Example: assign all to Admin
-    for (final privilege in privileges) {
+    final allPrivileges = await db.query('privilege_table');
+    for (final privilege in allPrivileges) {
       await db.insert('role_privilege', {
-        'role_table_id': roleIds['Administrator'],
+        'role_table_id': adminRoleId,
         'privilege_table_id': privilege['id'],
         'created_by': 1,
         'date_created': DateTime.now().toIso8601String(),
       });
     }
+    developer.log('Seeded default Admin role with all privileges');
 
-    developer.log('Inserted admin role privileges');
-
-    // Example: Sales Manager subset
-    final salesPrivileges = [
-      AppRoutes.salesDashboard,
-      AppRoutes.customerEntry,
-      AppRoutes.salesCustomerInfo,
-      AppRoutes.salesItemEntry,
-      AppRoutes.salesReview,
-      AppRoutes.salesReturn,
-      AppRoutes.quotationOrder,
-      AppRoutes.quotationItemEntry,
-      AppRoutes.quotationOrderPayment,
-      AppRoutes.quotationInvoiceReview,
-      AppRoutes.quotationOrderReview,
-    ];
-
-    for (final uri in salesPrivileges) {
-      final pid = privilegeByUri[uri];
-      if (pid != null) {
-        await db.insert('role_privilege', {
-          'role_table_id': roleIds['Sales Manager'],
-          'privilege_table_id': pid,
-          'created_by': 1,
-          'date_created': DateTime.now().toIso8601String(),
-        });
-      }
-    }
-    developer.log('Inserted sales manager role privileges');
-
-    // Example: Stock Manager subset
-    final stockPrivileges = [
-      AppRoutes.stockDashboard,
-      AppRoutes.itemEntry,
-      AppRoutes.uomManagement,
-      AppRoutes.itemWorkbench,
-      AppRoutes.itemUomConversions,
-      AppRoutes.locationEntry,
-      AppRoutes.lotEntry,
-      AppRoutes.lotColorings,
-      AppRoutes.inventoryTransaction,
-    ];
-
-    for (final uri in stockPrivileges) {
-      final pid = privilegeByUri[uri];
-      if (pid != null) {
-        await db.insert('role_privilege', {
-          'role_table_id': roleIds['Stock Manager'],
-          'privilege_table_id': pid,
-          'created_by': 1,
-          'date_created': DateTime.now().toIso8601String(),
-        });
-      }
-    }
-    developer.log('Inserted stock manager role privileges');
-
-    // Helper function to generate Argon2 hash
-    Future<String> generateArgon2Hash(password) async {
-      final salt = 'somesalt'.toBytesLatin1();
-      final parameters = Argon2Parameters(
-        Argon2Parameters.ARGON2_i,
-        salt,
-        version: Argon2Parameters.ARGON2_VERSION_10,
-        iterations: 2,
-        memoryPowerOf2: 16,
-      );
-
-      final argon2 = Argon2BytesGenerator();
-      argon2.init(parameters);
-      final passwordBytes = parameters.converter.convert(password);
-      final result = Uint8List(32);
-      argon2.generateBytes(passwordBytes, result, 0, result.length);
-      return result.toHexString();
-    }
-
-    // Insert User (password = "password123", argon-hashed)
-    // Generate Argon2 hash for "admin123"
-    final argon2Hash = await generateArgon2Hash('a');
-    final users = [
-      {
-        'password': argon2Hash,
-        'employees_id': 1,
-        'created_by': 1,
-        'branch': 1,
-        'company': 1,
-        'user_name': 'a',
-        'status': 'active',
-        'password_last_updated': DateTime.now().millisecondsSinceEpoch,
-        'usercol': 'admin',
-        'user_email': 'admin@gmail.com',
-        'confirmation_code': '123456',
-        'confirmations_expire_time': DateTime.now().millisecondsSinceEpoch,
-        'type': 'Company',
-        'salesperson': 1,
-        'date_created': DateTime.now().millisecondsSinceEpoch,
-        'date_updated': DateTime.now().millisecondsSinceEpoch,
-      },
-
-      {
-        'password': argon2Hash,
-        'employees_id': 2,
-        'created_by': 1,
-        'branch': 1,
-        'company': 1,
-        'user_name': 'salesManager',
-        'status': 'active',
-        'date_created': DateTime.now().millisecondsSinceEpoch,
-        'password_last_updated': DateTime.now().millisecondsSinceEpoch,
-        'user_email': 'salesManager@gmail.com',
-        'confirmation_code': '123456',
-        'confirmations_expire_time': DateTime.now().millisecondsSinceEpoch,
-        'type': 'Company',
-        'salesperson': 1,
-        'date_updated': DateTime.now().millisecondsSinceEpoch,
-      },
-      {
-        'password': argon2Hash,
-        'employees_id': 3,
-        'created_by': 1,
-        'branch': 1,
-        'company': 1,
-        'user_name': 'StockManager',
-        'status': 'active',
-        'date_created': DateTime.now().millisecondsSinceEpoch,
-        'password_last_updated': DateTime.now().millisecondsSinceEpoch,
-        'user_email': 'stockManager@gmail.com',
-        'confirmation_code': '123456',
-        'confirmations_expire_time': DateTime.now().millisecondsSinceEpoch,
-        'type': 'Company',
-        'salesperson': 1,
-        'date_updated': DateTime.now().millisecondsSinceEpoch,
-      },
-    ];
-
-    for (final user in users) {
-      await db.insert('user_table', user);
-    }
-    developer.log('Inserted users');
-
-    final userRoles = [
-      {
-        'user_id': 1, // admin user
-        'role_table_id': roleIds['Administrator'],
-        'created_by': 1,
-        'date_created': DateTime.now().toIso8601String(),
-      },
-
-      {
-        'user_id': 2, // stock manager
-        'role_table_id': roleIds['Stock Manager'],
-        'created_by': 1,
-        'date_created': DateTime.now().toIso8601String(),
-      },
-    ];
-
-    for (final userRole in userRoles) {
-      await db.insert('user_role', userRole);
-    }
-    developer.log('Inserted user roles');
-    //insert sales persons
-    final salesPersons = [
-      {
-        'full_name': 'Sales1',
-        'uuid': '1',
-        'email': 'john.doe@gmail.com',
-        'phone_number': '12345678900',
-        'password_hash': argon2Hash,
-        'referral_code': 'ref001',
-        'parent_salesperson_id': 1,
-        'status': 'ACTIVE',
-        'created_at': DateTime.now().toIso8601String(),
-        'updated_at': DateTime.now().toIso8601String(),
-      },
-      {
-        'full_name': 'Sales2',
-        'uuid': '2',
-        'email': 'jane.doe@gmail.com',
-        'phone_number': '12345678901',
-        'password_hash': argon2Hash,
-        'referral_code': 'ref002',
-        'parent_salesperson_id': 1,
-        'status': 'ACTIVE',
-        'created_at': DateTime.now().toIso8601String(),
-        'updated_at': DateTime.now().toIso8601String(),
-      },
-    ];
-
-    for (final salesPerson in salesPersons) {
-      await db.insert('salespersons', salesPerson);
-    }
-    developer.log('Inserted sales persons');
-
+    // Create customer table
     await db.execute('''
   CREATE TABLE customer_table (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2738,9 +2418,11 @@ ON fast_slow_nonmoving_rule (report_frequency);
     FOREIGN KEY (company) REFERENCES company_table (id) ON DELETE NO ACTION ON UPDATE NO ACTION
   )
 ''');
-    developer.log('created customer table');
+    developer.log('Created customer table');
 
-    developer.log('✅ Sample user and related data inserted successfully.');
+    developer.log(
+      '✅ Database initialized. User registration will create company data.',
+    );
   }
 
   Future<void> _debugPrintTablesAndData(Database db) async {
