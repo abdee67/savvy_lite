@@ -178,6 +178,18 @@ class RegistrationService {
             'created_by': employeeId,
             'date_created': DateTime.now().toIso8601String(),
           });
+
+          // Assign ALL privileges to this Admin role
+          final allPrivileges = await txn.query('privilege_table');
+          for (final privilege in allPrivileges) {
+            await txn.insert('role_privilege', {
+              'role_table_id': adminRoleId,
+              'privilege_table_id': privilege['id'],
+              'date_created': DateTime.now().toIso8601String(),
+              'created_by': employeeId,
+            });
+          }
+          developer.log('Assigned all privileges to Admin role');
         } else {
           for (final defaultRole in defaultRoles) {
             // Create company-specific role
