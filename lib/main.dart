@@ -15,6 +15,8 @@ import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_orde
 import 'package:savvy_stock/features/purchase/purchase_entry/services/purchase_order_stock_service.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/blocs/supplier_bloc.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/repo/supplier_repo.dart';
+import 'package:savvy_stock/features/registration/blocs/registration_bloc.dart';
+import 'package:savvy_stock/features/registration/services/registration_service.dart';
 import 'package:savvy_stock/features/reports/cash_flow/bloc/cash_flow_bloc.dart';
 import 'package:savvy_stock/features/reports/cash_flow/repo/cash_flow_repo.dart';
 import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
@@ -95,7 +97,7 @@ Future<void> _initializeAndRunApp() async {
     await ConnectivityService().initConnectivity();
     initDependencies();
 
-    // await LocalDatabaseService().resetDatabase();
+    await LocalDatabaseService().resetDatabase();
     // await LocalDatabaseService().debugTable('branch_table');
 
     if (AppConfig.isTestMode) {
@@ -110,12 +112,12 @@ Future<void> _initializeAndRunApp() async {
     //  await LocalDatabaseService().debugTable('location_master');
     // await LocalDatabaseService().debugTable('item_master');
     //await LocalDatabaseService().debugTable('items_table');
-    await LocalDatabaseService().debugTable('sales_order_header');
+    // await LocalDatabaseService().debugTable('sales_order_header');
     //await LocalDatabaseService().debugTable('credit_receipt_table');
     // await LocalDatabaseService().debugTable('sales_order_details');
     // await LocalDatabaseService().debugTable('sales_return_header');
     //await LocalDatabaseService().debugTable('sales_return_details');
-    await LocalDatabaseService().debugTable('invoice_history_header');
+    // await LocalDatabaseService().debugTable('invoice_history_header');
     // await LocalDatabaseService().debugTable('invoice_history_detail');
     //await LocalDatabaseService().debugTable('item_transactions');
     // await LocalDatabaseService().debugTable('quote_order_header');
@@ -127,6 +129,7 @@ Future<void> _initializeAndRunApp() async {
     //await LocalDatabaseService().debugTable('credit_payment_table');
     //await LocalDatabaseService().debugTable('company_table');
     //await LocalDatabaseService().debugTable('udc_details');
+    await LocalDatabaseService().debugTable('user_table');
   } catch (error, stackTrace) {
     developer.log('Initialization error: $error');
     developer.log('Stack trace: $stackTrace');
@@ -202,6 +205,7 @@ class _SavvyStockState extends State<SavvyStock> {
   late SalesOrderReportRepository _salesOrderReportRepository;
   late CashFlowRepository _cashFlowRepository;
   late FSNMRRepository _fsnmrRepository;
+  late RegistrationService _registrationService;
 
   @override
   void initState() {
@@ -256,6 +260,7 @@ class _SavvyStockState extends State<SavvyStock> {
     _salesOrderReportRepository = getIt<SalesOrderReportRepository>();
     _cashFlowRepository = getIt<CashFlowRepository>();
     _fsnmrRepository = getIt<FSNMRRepository>();
+    _registrationService = getIt<RegistrationService>();
 
     // Ensure system constants are loaded when companyId becomes available.
     final cid = _authBloc.state.companyId;
@@ -614,6 +619,10 @@ class _SavvyStockState extends State<SavvyStock> {
           BlocProvider<FSNMRBloc>(
             create: (context) =>
                 FSNMRBloc(repository: _fsnmrRepository, authBloc: _authBloc),
+          ),
+          BlocProvider<RegistrationBloc>(
+            create: (context) =>
+                RegistrationBloc(registrationService: _registrationService),
           ),
         ],
         child: MaterialApp.router(

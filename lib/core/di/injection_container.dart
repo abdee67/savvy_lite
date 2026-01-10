@@ -10,6 +10,8 @@ import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_orde
 import 'package:savvy_stock/features/purchase/purchase_entry/services/purchase_order_stock_service.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/blocs/supplier_bloc.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/repo/supplier_repo.dart';
+import 'package:savvy_stock/features/registration/blocs/registration_bloc.dart';
+import 'package:savvy_stock/features/registration/services/registration_service.dart';
 import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
 import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_bloc.dart';
 import 'package:savvy_stock/features/sales/quotation_order/repo/quotation_order_repo.dart';
@@ -282,6 +284,9 @@ void initDependencies() {
   getIt.registerLazySingleton<FSNMRRepository>(
     () => FSNMRRepository(databaseService: getIt()),
   );
+  getIt.registerLazySingleton<RegistrationService>(
+    () => RegistrationService(databaseService: getIt()),
+  );
 
   ///////////// BLoCs///////////////
 
@@ -524,5 +529,8 @@ void initDependencies() {
   // FSNMR
   getIt.registerFactory<FSNMRBloc>(
     () => FSNMRBloc(authBloc: getIt(), repository: getIt()),
+  );
+  getIt.registerLazySingleton<RegistrationBloc>(
+    () => RegistrationBloc(registrationService: getIt()),
   );
 }
