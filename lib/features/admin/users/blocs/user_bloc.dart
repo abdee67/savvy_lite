@@ -298,7 +298,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
 
   Future<void> _onDeleteUser(DeleteUser event, Emitter<UserState> emit) async {
     // Add null checks for critical authentication values
-    final currentUserId = authBloc.state.userId;
+    final currentUserId = authBloc.state.userId?.id;
     final companyId = authBloc.state.companyId;
 
     if (currentUserId == null || companyId == null) {
@@ -323,7 +323,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     }
 
     // 2. Prevent self-deletion
-    if (event.userId == currentUserId.id) {
+    if (event.userId == currentUserId) {
       final currentUser = authBloc.state.username;
       emit(
         state.copyWith(
