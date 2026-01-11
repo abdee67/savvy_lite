@@ -99,34 +99,12 @@ class _CompanyFormState extends State<CompanyForm> {
               // 🔹 Scrollable Main Form
               SingleChildScrollView(
                 padding: EdgeInsets.symmetric(
-                  horizontal: isTablet ? 80 : 28,
-                  vertical: isTablet ? 10 : 20,
+                  horizontal: isTablet ? 80 : 20,
+                  vertical: isTablet ? 60 : 40,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 🔹 Info Banner
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Text(
-                        "Start your free 7-day trial — includes 1 branch and up to 5 users at no cost.",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
                     // 🔹 Title
                     Center(
                       child: Text.rich(
@@ -152,21 +130,11 @@ class _CompanyFormState extends State<CompanyForm> {
                         ),
                       ),
                     ),
-
-                    const SizedBox(height: 10),
-                    // 🔹 Signup Type
-                    _buildDropdownRow(
-                      label: "Signing up as",
-                      value: selectedSignupType,
-                      items: const ["Company", "Individual"],
-                      onChanged: (val) =>
-                          setState(() => selectedSignupType = val!),
-                    ),
                     const SizedBox(height: 25),
                     // 🔹 Step Chips (Top Center)
                     Center(child: _buildStepChips()),
 
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 20),
 
                     // 🔹 Text Fields
                     _buildTextField(
@@ -259,7 +227,7 @@ class _CompanyFormState extends State<CompanyForm> {
         final isActive = step == "Company";
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 5),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 7),
           decoration: BoxDecoration(
             color: isActive
                 ? Colors.amber
@@ -305,6 +273,9 @@ class _CompanyFormState extends State<CompanyForm> {
             borderRadius: BorderRadius.circular(20),
             borderSide: const BorderSide(color: Colors.amber, width: 1.5),
           ),
+          errorText: required && controller!.text.isEmpty
+              ? "This field is required"
+              : null,
         ),
       ),
     );

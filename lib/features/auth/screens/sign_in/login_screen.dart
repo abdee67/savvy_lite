@@ -236,7 +236,9 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 16),
             _buildForgotPasswordButton(isLoading),
             const SizedBox(height: 32),
-            _buildSignUpButton(isLoading),
+
+            //if there is company in the device dont render sign up button
+            if (!state.hasExistingCompany) _buildSignUpButton(isLoading),
           ],
         ),
       ),

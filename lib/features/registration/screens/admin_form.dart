@@ -90,10 +90,10 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
     }
 
     // Validate password length
-    if (passwordController.text.length < 4) {
+    if (passwordController.text.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Password must be at least 4 characters'),
+          content: Text('Password must be at least 6 characters'),
           backgroundColor: Colors.red,
         ),
       );
@@ -149,7 +149,7 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screen = MediaQuery.of(context).size;
+    final screen = MediaQuery.sizeOf(context);
     final isTablet = screen.width > 600;
 
     return Scaffold(
@@ -175,7 +175,7 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
               SingleChildScrollView(
                 padding: EdgeInsets.symmetric(
                   horizontal: isTablet ? 80 : 28,
-                  vertical: isTablet ? 60 : 40,
+                  vertical: isTablet ? 100 : 40,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -229,7 +229,7 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
                       },
                     ),
 
-                    const SizedBox(height: 50),
+                    const SizedBox(height: 30),
 
                     // 🔹 Buttons Row (Responsive)
                     Row(
@@ -245,14 +245,11 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
                               borderRadius: BorderRadius.circular(25),
                             ),
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 12,
+                              horizontal: 40,
+                              vertical: 18,
                             ),
                           ),
-                          icon: const Icon(
-                            Icons.arrow_back,
-                            color: Colors.white,
-                          ),
+
                           label: const Text(
                             "Back",
                             style: TextStyle(color: Colors.white),
@@ -263,7 +260,7 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.amber,
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 60,
+                              horizontal: 40,
                               vertical: 16,
                             ),
                             shape: RoundedRectangleBorder(
@@ -315,14 +312,14 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
 
   // 🌟 Step Dots (Top Center)
   Widget _buildStepDots() {
-    final steps = ["Profile", "Address", "Branch", "Admin", "Confirm"];
+    final steps = ["Company", "Address", "Branch", "Admin", "Confirm"];
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: steps.map((step) {
         final isActive = step == "Admin";
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 5),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 7),
           decoration: BoxDecoration(
             color: isActive
                 ? Colors.amber
@@ -382,6 +379,10 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
             borderRadius: BorderRadius.circular(20),
             borderSide: const BorderSide(color: Colors.amber, width: 1.5),
           ),
+          errorText: required && controller!.text.isEmpty
+              ? 'This field is required'
+              : null,
+          errorMaxLines: 3,
         ),
       ),
     );

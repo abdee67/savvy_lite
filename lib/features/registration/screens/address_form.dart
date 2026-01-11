@@ -46,6 +46,12 @@ class _AddressFormPageState extends State<AddressFormPage> {
   }
 
   void _saveAndNavigate() {
+    if (regionController.text.isEmpty || cityController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill in all required fields")),
+      );
+      return;
+    }
     // Save address data to company in BLoC
     final bloc = context.read<RegistrationBloc>();
     final updatedCompany = bloc.state.company.copyWith(
@@ -94,8 +100,8 @@ class _AddressFormPageState extends State<AddressFormPage> {
               // 🔹 Scrollable main content
               SingleChildScrollView(
                 padding: EdgeInsets.symmetric(
-                  horizontal: isTablet ? 80 : 28,
-                  vertical: isTablet ? 60 : 40,
+                  horizontal: isTablet ? 80 : 20,
+                  vertical: isTablet ? 100 : 40,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -116,18 +122,14 @@ class _AddressFormPageState extends State<AddressFormPage> {
                       controller: cityController,
                       required: true,
                     ),
-                    _buildTextField(
-                      "State",
-                      controller: stateController,
-                      required: true,
-                    ),
+                    _buildTextField("State", controller: stateController),
                     _buildTextField("Woreda", controller: woredaController),
                     _buildTextField(
                       "Specific Address / Landmark",
                       controller: addressController,
                     ),
 
-                    const SizedBox(height: 60),
+                    const SizedBox(height: 30),
 
                     // 🔹 Navigation buttons
                     Row(
@@ -143,8 +145,8 @@ class _AddressFormPageState extends State<AddressFormPage> {
                               borderRadius: BorderRadius.circular(25),
                             ),
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 12,
+                              horizontal: 60,
+                              vertical: 16,
                             ),
                           ),
                           icon: const Icon(
@@ -220,7 +222,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
         final isActive = step == "Address";
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 5),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 7),
           decoration: BoxDecoration(
             color: isActive
                 ? Colors.amber
@@ -266,6 +268,9 @@ class _AddressFormPageState extends State<AddressFormPage> {
             borderRadius: BorderRadius.circular(20),
             borderSide: const BorderSide(color: Colors.amber, width: 1.5),
           ),
+          errorText: required && controller!.text.isEmpty
+              ? "This field is required"
+              : null,
         ),
       ),
     );

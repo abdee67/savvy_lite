@@ -70,6 +70,24 @@ class _BranchFormScreenState extends State<BranchFormScreen> {
       );
       return;
     }
+    if (regionController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Region is required'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    if (cityController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('City is required'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     // Save branch data to BLoC
     final bloc = context.read<RegistrationBloc>();
@@ -96,7 +114,7 @@ class _BranchFormScreenState extends State<BranchFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screen = MediaQuery.of(context).size;
+    final screen = MediaQuery.sizeOf(context);
     final isTablet = screen.width > 600;
 
     return Scaffold(
@@ -121,8 +139,8 @@ class _BranchFormScreenState extends State<BranchFormScreen> {
               // 🔹 Scrollable Content
               SingleChildScrollView(
                 padding: EdgeInsets.symmetric(
-                  horizontal: isTablet ? 80 : 28,
-                  vertical: isTablet ? 60 : 40,
+                  horizontal: isTablet ? 80 : 20,
+                  vertical: isTablet ? 100 : 40,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -187,7 +205,7 @@ class _BranchFormScreenState extends State<BranchFormScreen> {
                       controller: addressController,
                     ),
 
-                    const SizedBox(height: 60),
+                    const SizedBox(height: 40),
 
                     // 🔹 Navigation Buttons
                     Row(
@@ -203,8 +221,8 @@ class _BranchFormScreenState extends State<BranchFormScreen> {
                               borderRadius: BorderRadius.circular(25),
                             ),
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 12,
+                              horizontal: 60,
+                              vertical: 18,
                             ),
                           ),
                           icon: const Icon(
@@ -280,7 +298,7 @@ class _BranchFormScreenState extends State<BranchFormScreen> {
         final isActive = step == "Branch";
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 5),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 7),
           decoration: BoxDecoration(
             color: isActive
                 ? Colors.amber
@@ -326,6 +344,12 @@ class _BranchFormScreenState extends State<BranchFormScreen> {
             borderRadius: BorderRadius.circular(20),
             borderSide: const BorderSide(color: Colors.amber, width: 1.5),
           ),
+
+          //if required true then show red color
+          errorText: required && controller!.text.isEmpty
+              ? 'This field is required'
+              : null,
+          errorMaxLines: 3,
         ),
       ),
     );

@@ -419,7 +419,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
     if (_selectedItemInBranch == null) return 0.0;
 
     final stockQty = _selectedItemInBranch!.quantityAvailable ?? 0.0;
-    final pendingQty = _getPendingQuantityForItem(_selectedItemInBranch!.id!);
+    final pendingQty = _getPendingQuantityForItem(_selectedItemInBranch!.id);
 
     return (stockQty - pendingQty).clamp(0.0, double.infinity);
   }
@@ -565,7 +565,7 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
                             final stockQty =
                                 itemInBranch.quantityAvailable ?? 0.0;
                             final pendingQty = _getPendingQuantityForItem(
-                              itemInBranch.id!,
+                              itemInBranch.id,
                             );
                             final effectiveQty = (stockQty - pendingQty).clamp(
                               0.0,

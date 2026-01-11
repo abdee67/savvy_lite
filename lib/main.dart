@@ -97,7 +97,7 @@ Future<void> _initializeAndRunApp() async {
     await ConnectivityService().initConnectivity();
     initDependencies();
 
-    //await LocalDatabaseService().resetDatabase();
+    // await LocalDatabaseService().resetDatabase();
     // await LocalDatabaseService().debugTable('branch_table');
 
     if (AppConfig.isTestMode) {
@@ -131,7 +131,7 @@ Future<void> _initializeAndRunApp() async {
     //await LocalDatabaseService().debugTable('udc_details');
     await LocalDatabaseService().debugTable('user_table');
     await LocalDatabaseService().debugTable('user_role');
-    await LocalDatabaseService().debugTable('role_privilege');
+    //await LocalDatabaseService().debugTable('role_privilege');
   } catch (error, stackTrace) {
     developer.log('Initialization error: $error');
     developer.log('Stack trace: $stackTrace');

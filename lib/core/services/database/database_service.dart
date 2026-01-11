@@ -2547,6 +2547,23 @@ ON fs_table (branch);
       _database = null;
     }
   }
+
+  Future<bool> hasAnyCompany() async {
+    final db = await database;
+    try {
+      final results = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM company_table',
+      );
+      if (results.isNotEmpty) {
+        final count = results.first['count'] as int;
+        return count > 0;
+      }
+      return false;
+    } catch (e) {
+      developer.log('Error checking if company exists: $e');
+      return false;
+    }
+  }
 }
 
 // Example usage and testing
@@ -2585,7 +2602,6 @@ void testDatabase() async {
   await dbService.debugTable('system_constant');
 }
 
-// Add this method to your LocalDatabaseService class
 Future<List<Map<String, dynamic>>> getUdcDetailsByCode(
   String detailCode,
 ) async {
