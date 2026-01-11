@@ -100,14 +100,14 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
       add(LoadEmployees(authBloc.state.companyId!));
       emit(
         state.copyWith(
-          status: EmployeeStatus.success,
+          status: EmployeeStatus.created,
           message: 'Employee created successfully',
         ),
       );
     } catch (e) {
       emit(
         state.copyWith(
-          status: EmployeeStatus.failure,
+          status: EmployeeStatus.creatingFailed,
           message: 'Failed to create Employee: $e',
         ),
       );
