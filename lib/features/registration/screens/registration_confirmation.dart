@@ -2,9 +2,12 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:savvy_stock/features/auth/screens/sign_in/login_screen.dart';
+import 'package:go_router/go_router.dart';
+import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/features/registration/blocs/registration_bloc.dart';
 import 'package:savvy_stock/features/registration/screens/terms.dart';
+import 'package:savvy_stock/features/registration/screens/privacy.dart';
+import 'package:flutter/gestures.dart';
 
 class ConfirmationPage extends StatefulWidget {
   const ConfirmationPage({super.key});
@@ -20,6 +23,12 @@ class _ConfirmationPageState extends State<ConfirmationPage> {
   void onSubscribe() {
     if (!agreeTerms) return;
     context.read<RegistrationBloc>().add(const SubmitRegistration());
+  }
+
+  void _redirectToLogin() {
+    if (mounted) {
+      context.push(AppRoutes.login);
+    }
   }
 
   void _showSuccessDialog(BuildContext context) {
@@ -72,13 +81,7 @@ class _ConfirmationPageState extends State<ConfirmationPage> {
                     borderRadius: BorderRadius.circular(25),
                   ),
                 ),
-                onPressed: () {
-                  // Navigate to login screen
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    (route) => false,
-                  );
-                },
+                onPressed: _redirectToLogin,
                 child: const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   child: Text(
@@ -99,7 +102,7 @@ class _ConfirmationPageState extends State<ConfirmationPage> {
 
   @override
   Widget build(BuildContext context) {
-    final screen = MediaQuery.of(context).size;
+    final screen = MediaQuery.sizeOf(context);
     final isTablet = screen.width > 600;
 
     return BlocListener<RegistrationBloc, RegistrationState>(
@@ -138,7 +141,7 @@ class _ConfirmationPageState extends State<ConfirmationPage> {
           child: SafeArea(
             child: SingleChildScrollView(
               padding: EdgeInsets.symmetric(
-                horizontal: isTablet ? 80 : 28,
+                horizontal: isTablet ? 80 : 20,
                 vertical: isTablet ? 60 : 40,
               ),
               child: BlocBuilder<RegistrationBloc, RegistrationState>(
@@ -256,60 +259,68 @@ class _ConfirmationPageState extends State<ConfirmationPage> {
                           ),
                           const SizedBox(width: 10),
                           Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const TermsPage(),
+                            child: Text.rich(
+                              TextSpan(
+                                children: [
+                                  const TextSpan(
+                                    text: 'I Agree to the ',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
-                                );
-                              },
-                              child: Text.rich(
-                                TextSpan(
-                                  children: [
-                                    const TextSpan(
-                                      text: 'I Agree to the ',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                                  TextSpan(
+                                    text: 'Terms of Service',
+                                    style: TextStyle(
+                                      color: Colors.amber.shade200,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                    TextSpan(
-                                      text: 'Terms of Service',
-                                      style: TextStyle(
-                                        color: Colors.amber.shade200,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w800,
-                                      ),
+                                    recognizer: TapGestureRecognizer()
+                                      ..onTap = () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => const TermsPage(),
+                                          ),
+                                        );
+                                      },
+                                  ),
+                                  const TextSpan(
+                                    text: ' and ',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
                                     ),
-                                    const TextSpan(
-                                      text: ' and ',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                                  ),
+                                  TextSpan(
+                                    text: 'Privacy Policy',
+                                    style: TextStyle(
+                                      color: Colors.amber.shade200,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                    TextSpan(
-                                      text: 'Privacy Policy',
-                                      style: TextStyle(
-                                        color: Colors.amber.shade200,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w800,
-                                      ),
+                                    recognizer: TapGestureRecognizer()
+                                      ..onTap = () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => const PrivacyPage(),
+                                          ),
+                                        );
+                                      },
+                                  ),
+                                  const TextSpan(
+                                    text: ' *',
+                                    style: TextStyle(
+                                      color: Colors.redAccent,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
                                     ),
-                                    const TextSpan(
-                                      text: ' *',
-                                      style: TextStyle(
-                                        color: Colors.redAccent,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -396,14 +407,14 @@ class _ConfirmationPageState extends State<ConfirmationPage> {
 
   // 🟣 Step Dots (Top)
   Widget _buildStepDots() {
-    final steps = ["Profile", "Address", "Branch", "Admin", "Confirm"];
+    final steps = ["Company", "Address", "Branch", "Admin", "Confirm"];
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: steps.map((step) {
         final isActive = step == "Confirm";
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 5),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 7),
           decoration: BoxDecoration(
             color: isActive
                 ? Colors.amber
