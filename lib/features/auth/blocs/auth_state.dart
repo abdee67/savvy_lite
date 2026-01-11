@@ -42,6 +42,7 @@ class AuthState extends Equatable {
   final String? tokenRefreshRequiredAt;
   final CompanySelectionRequired? companySelectionRequired;
   final String? companyLogo;
+  final bool hasExistingCompany;
 
   const AuthState({
     required this.status,
@@ -64,6 +65,7 @@ class AuthState extends Equatable {
     this.tokenRefreshRequiredAt,
     this.companySelectionRequired,
     this.companyLogo,
+    this.hasExistingCompany = false,
   });
 
   // --- Helper Getters ---
@@ -256,6 +258,7 @@ class AuthState extends Equatable {
     String? password,
     CompanySelectionRequired? companySelectionRequired,
     String? companyLogo,
+    bool? hasExistingCompany,
   }) {
     return AuthState(
       status: status ?? this.status,
@@ -280,6 +283,7 @@ class AuthState extends Equatable {
       companySelectionRequired:
           companySelectionRequired ?? this.companySelectionRequired,
       companyLogo: companyLogo ?? this.companyLogo,
+      hasExistingCompany: hasExistingCompany ?? this.hasExistingCompany,
     );
   }
 
@@ -305,6 +309,7 @@ class AuthState extends Equatable {
     password,
     companySelectionRequired,
     companyLogo,
+    hasExistingCompany,
   ];
 }
 

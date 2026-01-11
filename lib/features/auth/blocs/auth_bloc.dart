@@ -132,6 +132,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           branchId: user.branch,
           roles: userWithRoles.roles,
           privileges: userWithRoles.allPrivileges,
+          hasExistingCompany: true,
         ),
       );
     } catch (e) {
@@ -237,6 +238,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         message: 'Checking authentication status...',
       ),
     );
+
+    // Check if any company exists on the device
+    final hasCompany = await databaseService.hasAnyCompany();
+
     final token = await secureStorage.read(key: 'jwt_token');
     if (token != null) {
       try {
@@ -245,7 +250,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         if (tokenData == null) {
           await _clearStorage();
           emit(
-            AuthState(status: AuthStatus.initial, message: 'Token is invalid'),
+            AuthState(
+              status: AuthStatus.initial,
+              message: 'Token is invalid',
+              hasExistingCompany: hasCompany,
+            ),
           );
           return;
         }
@@ -267,6 +276,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
                 tokenData['privileges'].map((p) => Privilege.fromMap(p)),
               ),
               tokenExpiryTime: expiry,
+              hasExistingCompany: hasCompany,
             ),
           );
           return;
@@ -294,12 +304,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
               tokenData['auth_time'] as int,
             ),
             tokenExpiryTime: expiry,
+            hasExistingCompany: hasCompany,
           ),
         );
       } catch (e) {
         developer.log('Auth Check Failed: $e');
         await _clearStorage();
-        emit(AuthState.unauthenticated(message: 'Session expired or invalid'));
+        emit(
+          AuthState.unauthenticated(
+            message: 'Session expired or invalid',
+          ).copyWith(hasExistingCompany: hasCompany),
+        );
       }
     } else {
       //No token stored:clear state
@@ -307,6 +322,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         AuthState(
           status: AuthStatus.unauthenticated,
           message: 'No token stored',
+          hasExistingCompany: hasCompany,
         ),
       );
     }
