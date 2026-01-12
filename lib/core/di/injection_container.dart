@@ -1,9 +1,12 @@
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:savvy_stock/features/FSNMR/blocs/FSNMR_bloc.dart';
 import 'package:savvy_stock/features/FSNMR/repo/FSNMR_repository.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
 import 'package:savvy_stock/features/company/blocs/company_bloc.dart';
+import 'package:savvy_stock/features/licensing/bloc/license_bloc.dart';
+import 'package:savvy_stock/features/licensing/services/license_service.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_report_repo.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_repository.dart';
@@ -78,6 +81,7 @@ void initDependencies() {
   getIt.registerLazySingleton<FlutterSecureStorage>(
     () => FlutterSecureStorage(),
   );
+  getIt.registerLazySingleton<DeviceInfoPlugin>(() => DeviceInfoPlugin());
 
   // HTTP Client
   getIt.registerLazySingleton<http.Client>(() => http.Client());
@@ -286,6 +290,9 @@ void initDependencies() {
   );
   getIt.registerLazySingleton<RegistrationService>(
     () => RegistrationService(databaseService: getIt()),
+  );
+  getIt.registerLazySingleton<LicenseService>(
+    () => LicenseService(secureStorage: getIt(), deviceInfoPlugin: getIt()),
   );
 
   ///////////// BLoCs///////////////
@@ -532,5 +539,8 @@ void initDependencies() {
   );
   getIt.registerLazySingleton<RegistrationBloc>(
     () => RegistrationBloc(registrationService: getIt()),
+  );
+  getIt.registerLazySingleton<LicenseBloc>(
+    () => LicenseBloc(licenseService: getIt()),
   );
 }

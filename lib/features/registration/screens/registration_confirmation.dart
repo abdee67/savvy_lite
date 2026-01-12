@@ -2,12 +2,15 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
-import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/features/registration/blocs/registration_bloc.dart';
+import 'package:savvy_stock/features/licensing/screens/license_activation_page.dart';
+import 'package:savvy_stock/features/licensing/bloc/license_bloc.dart';
+import 'package:savvy_stock/features/licensing/services/license_service.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/gestures.dart';
 import 'package:savvy_stock/features/registration/screens/terms.dart';
 import 'package:savvy_stock/features/registration/screens/privacy.dart';
-import 'package:flutter/gestures.dart';
 
 class ConfirmationPage extends StatefulWidget {
   const ConfirmationPage({super.key});
@@ -25,9 +28,23 @@ class _ConfirmationPageState extends State<ConfirmationPage> {
     context.read<RegistrationBloc>().add(const SubmitRegistration());
   }
 
-  void _redirectToLogin() {
+  void _redirectToLicenseActivation() {
     if (mounted) {
-      context.push(AppRoutes.login);
+      // Navigate to license activation page with LicenseBloc
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => BlocProvider(
+            create: (context) => LicenseBloc(
+              licenseService: LicenseService(
+                secureStorage: const FlutterSecureStorage(),
+                deviceInfoPlugin: DeviceInfoPlugin(),
+              ),
+            ),
+            child: const LicenseActivationPage(isFromRegistration: true),
+          ),
+        ),
+        (route) => false,
+      );
     }
   }
 
@@ -69,7 +86,7 @@ class _ConfirmationPageState extends State<ConfirmationPage> {
               ),
               const SizedBox(height: 10),
               const Text(
-                "Your account has been created successfully. Please login with your credentials.",
+                "Your account has been created successfully. Now let's activate your software license.",
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.white70),
               ),
@@ -81,11 +98,11 @@ class _ConfirmationPageState extends State<ConfirmationPage> {
                     borderRadius: BorderRadius.circular(25),
                   ),
                 ),
-                onPressed: _redirectToLogin,
+                onPressed: _redirectToLicenseActivation,
                 child: const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   child: Text(
-                    "Go to Login",
+                    "Activate License",
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.black,

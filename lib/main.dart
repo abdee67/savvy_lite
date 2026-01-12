@@ -9,6 +9,8 @@ import 'package:savvy_stock/features/FSNMR/blocs/FSNMR_bloc.dart';
 import 'package:savvy_stock/features/FSNMR/repo/FSNMR_repository.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
 import 'package:savvy_stock/features/company/blocs/company_bloc.dart';
+import 'package:savvy_stock/features/licensing/bloc/license_bloc.dart';
+import 'package:savvy_stock/features/licensing/services/license_service.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_report_repo.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_repository.dart';
@@ -97,7 +99,7 @@ Future<void> _initializeAndRunApp() async {
     await ConnectivityService().initConnectivity();
     initDependencies();
 
-    // await LocalDatabaseService().resetDatabase();
+    await LocalDatabaseService().resetDatabase();
     // await LocalDatabaseService().debugTable('branch_table');
 
     if (AppConfig.isTestMode) {
@@ -208,6 +210,7 @@ class _SavvyStockState extends State<SavvyStock> {
   late CashFlowRepository _cashFlowRepository;
   late FSNMRRepository _fsnmrRepository;
   late RegistrationService _registrationService;
+  late LicenseService _licenseService;
 
   @override
   void initState() {
@@ -263,6 +266,7 @@ class _SavvyStockState extends State<SavvyStock> {
     _cashFlowRepository = getIt<CashFlowRepository>();
     _fsnmrRepository = getIt<FSNMRRepository>();
     _registrationService = getIt<RegistrationService>();
+    _licenseService = getIt<LicenseService>();
 
     // Ensure system constants are loaded when companyId becomes available.
     final cid = _authBloc.state.companyId;
@@ -625,6 +629,9 @@ class _SavvyStockState extends State<SavvyStock> {
           BlocProvider<RegistrationBloc>(
             create: (context) =>
                 RegistrationBloc(registrationService: _registrationService),
+          ),
+          BlocProvider<LicenseBloc>(
+            create: (context) => LicenseBloc(licenseService: _licenseService),
           ),
         ],
         child: MaterialApp.router(
