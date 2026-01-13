@@ -16,6 +16,7 @@ enum AuthStatus {
   authenticated,
   unauthenticated,
   error,
+  licenseActivationRequired,
 }
 
 class AuthState extends Equatable {

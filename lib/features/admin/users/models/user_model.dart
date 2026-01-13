@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:equatable/equatable.dart';
 import 'package:argon2/argon2.dart';
+import 'package:pointycastle/digests/sha256.dart';
 import 'package:savvy_stock/features/company/models/company_model.dart';
 
 class UserModel extends Equatable {
@@ -112,7 +114,7 @@ class UserModel extends Equatable {
     );
   }
   // Argon2 password hashing helper
-  static Future<String> generateArgon2Hash(password) async {
+  /* static Future<String> generateArgon2Hash(password) async {
     final salt = 'somesalt'.toBytesLatin1();
     final parameters = Argon2Parameters(
       Argon2Parameters.ARGON2_i,
@@ -128,6 +130,13 @@ class UserModel extends Equatable {
     final result = Uint8List(32);
     argon2.generateBytes(passwordBytes, result, 0, result.length);
     return result.toHexString();
+  }*/
+
+  static Future<String> sha256Hash(password) async {
+    final bytes = utf8.encode(password);
+    final digest = SHA256Digest();
+    final hash = digest.process(bytes);
+    return hash.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
   }
 
   // Factory method for creating new users with hashed password
@@ -140,7 +149,7 @@ class UserModel extends Equatable {
     int? company,
     int? employeesId,
   }) async {
-    final hashedPassword = await generateArgon2Hash(plainPassword);
+    final hashedPassword = await sha256Hash(plainPassword);
     return UserModel(
       id: id,
       password: hashedPassword,
@@ -157,7 +166,7 @@ class UserModel extends Equatable {
   // Method to verify password
   Future<bool> verifyPassword(String plainPassword) async {
     if (password == null) return false;
-    final hashedInput = await generateArgon2Hash(plainPassword);
+    final hashedInput = await sha256Hash(plainPassword);
     return hashedInput == password;
   }
 

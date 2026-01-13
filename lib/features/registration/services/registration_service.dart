@@ -110,7 +110,7 @@ class RegistrationService {
         developer.log('Created employee with ID: $employeeId');
 
         // 5. Create Admin User
-        final hashedPassword = await UserModel.generateArgon2Hash(
+        final hashedPassword = await UserModel.sha256Hash(
           signupData.adminUser.password!,
         );
         confirmationCode = _generateConfirmationCode();
