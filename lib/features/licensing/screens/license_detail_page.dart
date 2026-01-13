@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/features/licensing/bloc/license_bloc.dart';
-import 'package:savvy_stock/features/licensing/bloc/license_event.dart';
 import 'package:savvy_stock/features/licensing/bloc/license_state.dart';
 import 'package:savvy_stock/features/licensing/model/license_payload_model.dart';
+import 'package:go_router/go_router.dart';
+import 'package:savvy_stock/core/constants/app_routes.dart';
 
 class LicenseDetailsPage extends StatelessWidget {
   const LicenseDetailsPage({super.key});
@@ -15,18 +16,20 @@ class LicenseDetailsPage extends StatelessWidget {
         title: const Text('License Information'),
         backgroundColor: Colors.blue[800],
       ),
-      body: BlocBuilder<LicenseBloc, LicenseState>(
-        builder: (context, state) {
-          if (state.status == LicenseStatus.loading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: SafeArea(
+        child: BlocBuilder<LicenseBloc, LicenseState>(
+          builder: (context, state) {
+            if (state.status == LicenseStatus.loading) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          if (state.licensePayload == null) {
-            return _buildErrorView();
-          }
+            if (state.licensePayload == null) {
+              return _buildErrorView();
+            }
 
-          return _buildLicenseDetails(state.licensePayload!);
-        },
+            return _buildLicenseDetails(context, state.licensePayload!);
+          },
+        ),
       ),
     );
   }
@@ -56,7 +59,7 @@ class LicenseDetailsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildLicenseDetails(LicensePayload payload) {
+  Widget _buildLicenseDetails(BuildContext context, LicensePayload payload) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20.0),
       child: Card(
@@ -74,6 +77,28 @@ class LicenseDetailsPage extends StatelessWidget {
               _buildFeatures(payload),
               const SizedBox(height: 32),
               _buildLimits(payload),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => context.go(AppRoutes.login),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue[800],
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'Continue to Login',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),

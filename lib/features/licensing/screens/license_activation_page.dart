@@ -74,17 +74,17 @@ class _LicenseActivationPageState extends State<LicenseActivationPage> {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text(
-                    'License activated successfully! Please login to continue.',
+                    'License activated successfully! Redirecting to details...',
                   ),
                   backgroundColor: Colors.green,
                   duration: Duration(seconds: 3),
                 ),
               );
 
-              // Navigate to login screen
+              // Navigate to license details screen
               Future.delayed(const Duration(seconds: 1), () {
                 if (mounted) {
-                  context.go(AppRoutes.login);
+                  context.go(AppRoutes.licenseDetails);
                 }
               });
             } else if (state.status == LicenseStatus.error ||

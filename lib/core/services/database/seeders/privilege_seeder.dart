@@ -746,6 +746,12 @@ class PrivilegeSeeder {
         AppRoutes.cashOutFlowReport,
         'cash_out_flow_report',
       ),
+      _createPrivilege(
+        'License',
+        'link',
+        AppRoutes.licenseDetails,
+        'license_details',
+      ),
     ];
 
     for (final privilege in privileges) {

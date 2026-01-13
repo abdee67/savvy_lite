@@ -110,6 +110,8 @@ import 'package:savvy_stock/features/reports/cash_flow/bloc/cash_flow_bloc.dart'
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 import 'package:savvy_stock/features/udc_detail/screens/uom_dashboard.dart';
 import 'package:savvy_stock/features/udc_detail/widgets/uom_create_and_edit.dart.dart';
+import 'package:savvy_stock/features/licensing/screens/license_detail_page.dart';
+import 'package:savvy_stock/features/licensing/screens/license_activation_page.dart';
 
 // Import your screen files for missing routes
 // import 'package:savvy_stock/features/sales/sales_entry/screens/sales_entry_screen.dart';
@@ -151,6 +153,14 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.signup,
         builder: (context, state) => const TrialOptionScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.licenseDetails,
+        builder: (context, state) => const LicenseDetailsPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.licenseActivation,
+        builder: (context, state) => const LicenseActivationPage(),
       ),
 
       // Main Dashboard
@@ -1300,12 +1310,18 @@ class AppRouter {
       final intended = state.uri.queryParameters['redirect'];
       return intended ?? AppRoutes.homePage;
     }
+    if (authState.status == AuthStatus.licenseActivationRequired) {
+      return AppRoutes.licenseActivation;
+    }
     return AppRoutes.login;
   }
 
   String? _loginRedirect(BuildContext context, GoRouterState state) {
     if (authBloc.state.status == AuthStatus.authenticated) {
       return AppRoutes.homePage;
+    }
+    if (authBloc.state.status == AuthStatus.licenseActivationRequired) {
+      return AppRoutes.licenseActivation;
     }
     return null;
   }

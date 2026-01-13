@@ -69,6 +69,7 @@ dependencies:
   pointycastle: ^3.9.1
   x509_plus: ^0.3.2
   flutter_dotenv: ^6.0.0
+  ntp: ^2.0.0
   
 
 dev_dependencies:

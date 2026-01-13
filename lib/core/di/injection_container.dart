@@ -298,10 +298,18 @@ void initDependencies() {
   ///////////// BLoCs///////////////
 
   getIt.registerLazySingleton<AuthBloc>(
-    () => AuthBloc(databaseService: getIt(), secureStorage: getIt()),
+    () => AuthBloc(
+      databaseService: getIt(),
+      secureStorage: getIt(),
+      licenseService: getIt(),
+    ),
   );
   getIt.registerLazySingleton<UserBloc>(
-    () => UserBloc(databaseService: getIt(), authBloc: getIt()),
+    () => UserBloc(
+      databaseService: getIt(),
+      authBloc: getIt(),
+      licenseService: getIt(),
+    ),
   );
   getIt.registerLazySingleton<EmployeeBloc>(
     () => EmployeeBloc(repository: getIt(), authBloc: getIt()),
@@ -324,7 +332,11 @@ void initDependencies() {
   );
 
   getIt.registerFactory<BranchBloc>(
-    () => BranchBloc(databaseService: getIt(), authBloc: getIt()),
+    () => BranchBloc(
+      databaseService: getIt(),
+      authBloc: getIt(),
+      licenseService: getIt(),
+    ),
   );
 
   getIt.registerFactory<StockItemsEntryBloc>(

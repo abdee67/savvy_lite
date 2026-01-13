@@ -99,8 +99,10 @@ Future<void> _initializeAndRunApp() async {
     await ConnectivityService().initConnectivity();
     initDependencies();
 
-    await LocalDatabaseService().resetDatabase();
+    // await LocalDatabaseService().resetDatabase();
+    // await getIt<LicenseService>().clearLicense();
     // await LocalDatabaseService().debugTable('branch_table');
+    await getIt<LicenseService>().initialize();
 
     if (AppConfig.isTestMode) {
       developer.log('🚀 APP RUNNING IN TEST MODE');
@@ -381,8 +383,11 @@ class _SavvyStockState extends State<SavvyStock> {
                 EmployeeBloc(repository: getIt(), authBloc: _authBloc),
           ),
           BlocProvider<UserBloc>(
-            create: (context) =>
-                UserBloc(databaseService: getIt(), authBloc: _authBloc),
+            create: (context) => UserBloc(
+              databaseService: getIt(),
+              authBloc: _authBloc,
+              licenseService: _licenseService,
+            ),
           ),
           BlocProvider<PrivilegeBloc>(
             create: (context) =>
@@ -406,8 +411,11 @@ class _SavvyStockState extends State<SavvyStock> {
             value: getIt<SystemConstantBloc>(),
           ),
           BlocProvider<BranchBloc>(
-            create: (context) =>
-                BranchBloc(databaseService: getIt(), authBloc: _authBloc),
+            create: (context) => BranchBloc(
+              databaseService: getIt(),
+              authBloc: _authBloc,
+              licenseService: _licenseService,
+            ),
           ),
           BlocProvider<StockItemsEntryBloc>(
             create: (context) => StockItemsEntryBloc(

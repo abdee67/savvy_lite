@@ -6,6 +6,8 @@ class AppRoutes {
   static const String signup = '/signup';
   static const String homePage = '/homePage';
   static const String unauthorized = '/unauthorized';
+  static const String licenseDetails = '/license-details';
+  static const String licenseActivation = '/license-activation';
   static const String systemConstants = '/system-constants';
 
   static const String fsnmr = '/fsnmr';
