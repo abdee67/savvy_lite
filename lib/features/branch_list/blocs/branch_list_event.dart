@@ -37,16 +37,11 @@ class UpdateBranch extends BranchEvent {
 class DeleteBranch extends BranchEvent {
   final int branchId;
   final Branch deletedBranch;
-  final int deletedIndex;
 
-  const DeleteBranch({
-    required this.branchId,
-    required this.deletedBranch,
-    required this.deletedIndex,
-  });
+  const DeleteBranch({required this.branchId, required this.deletedBranch});
 
   @override
-  List<Object> get props => [branchId, deletedBranch, deletedIndex];
+  List<Object> get props => [branchId, deletedBranch];
 }
 
 class SearchBranchs extends BranchEvent {

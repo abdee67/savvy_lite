@@ -162,7 +162,7 @@ class _BranchDashboardState extends State<BranchDashboard>
       });
 
       Future.delayed(const Duration(milliseconds: 300), () {
-        // _safeDelete(context, index: index);
+        //_safeDelete(context, index: index);
         setState(() {
           _dragOffset.remove(index);
         });
@@ -867,7 +867,9 @@ class _BranchDashboardState extends State<BranchDashboard>
       title: 'Delete "${branch.description}"?',
       content: 'Are you sure you want to delete "${branch.description}"?',
       onConfirm: () {
-        // context.read<BranchBloc>().add(DeleteBranch(branch));
+        context.read<BranchBloc>().add(
+          DeleteBranch(branchId: branch.id, deletedBranch: branch),
+        );
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Branch deleted')));

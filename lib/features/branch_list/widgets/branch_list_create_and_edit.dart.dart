@@ -116,7 +116,17 @@ class _BranchFormPageState extends State<BranchFormPage> {
       } else {
         context.read<BranchBloc>().add(UpdateBranch(branch));
       }
-
+      //if there is an error creating or updating
+      final state = context.read<BranchBloc>().state;
+      if (state.status == BranchStatus.failure) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(state.message ?? 'An error occurred'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
       _showSuccessDialog();
     }
   }
