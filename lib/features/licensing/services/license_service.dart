@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:ntp/ntp.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:pointycastle/export.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -14,6 +15,8 @@ import 'package:x509_plus/x509.dart' as x509;
 class LicenseService {
   static const String _licenseStorageKey = 'app_license_key';
   static const String _licensePayloadKey = 'app_license_payload';
+  static const String _lastKnownTimeKey = 'license_last_known_time';
+  static const String _activationTimeKey = 'license_activation_time';
   static const String _publicKeyPath = 'assets/keys/public_key.cer';
 
   final FlutterSecureStorage _secureStorage;
@@ -111,16 +114,43 @@ class LicenseService {
         );
       }
 
-      // 6. Check Expiration Date
-      final now = DateTime.now();
-      if (now.isAfter(payload.validTo)) {
+      // 6. Check Time Tampering (System clock rollback)
+      final now = await _getCurrentTime();
+      final lastKnownTimeStr = await _secureStorage.read(
+        key: _lastKnownTimeKey,
+      );
+      if (lastKnownTimeStr != null) {
+        final lastKnownTime = DateTime.parse(lastKnownTimeStr).toUtc();
+        // Allow 5 minutes buffer for minor clock drifts
+        if (now.isBefore(lastKnownTime.subtract(const Duration(minutes: 5)))) {
+          return LicenseValidationResult.invalid(
+            'System clock rollback detected. Please check your device date and time settings.\n'
+            'Current (UTC): $now\n'
+            'Last Known (UTC): $lastKnownTime',
+          );
+        }
+      }
+
+      // 7. Check Expiration Date (UTC)
+      if (now.isAfter(payload.validTo.toUtc())) {
+        print('License expired on ${payload.validTo.toUtc()}');
         return LicenseValidationResult.invalid(
           'License expired on ${payload.validTo.toLocal()}',
         );
       }
 
-      // 7. Calculate days remaining
-      final daysRemaining = payload.validTo.difference(now).inDays;
+      // 8. Update Last Known Time
+      // Only update if now is later than the last stored time
+      if (lastKnownTimeStr == null ||
+          now.isAfter(DateTime.parse(lastKnownTimeStr).toUtc())) {
+        await _secureStorage.write(
+          key: _lastKnownTimeKey,
+          value: now.toIso8601String(),
+        );
+      }
+
+      // 9. Calculate days remaining
+      final daysRemaining = payload.validTo.toUtc().difference(now).inDays;
 
       return LicenseValidationResult.valid(payload, daysRemaining);
     } catch (e) {
@@ -134,12 +164,15 @@ class LicenseService {
 
   /// Save license key to secure storage
   Future<void> saveLicense(String licenseKey, LicensePayload payload) async {
+    final nowUtc = (await _getCurrentTime()).toIso8601String();
     await Future.wait([
       _secureStorage.write(key: _licenseStorageKey, value: licenseKey),
       _secureStorage.write(
         key: _licensePayloadKey,
         value: json.encode(payload.toJson()),
       ),
+      _secureStorage.write(key: _activationTimeKey, value: nowUtc),
+      _secureStorage.write(key: _lastKnownTimeKey, value: nowUtc),
     ]);
   }
 
@@ -164,7 +197,10 @@ class LicenseService {
     await Future.wait([
       _secureStorage.delete(key: _licenseStorageKey),
       _secureStorage.delete(key: _licensePayloadKey),
+      _secureStorage.delete(key: _lastKnownTimeKey),
+      _secureStorage.delete(key: _activationTimeKey),
     ]);
+    print('all cleared');
   }
 
   /// Check if license is about to expire (within 15 days)
@@ -175,7 +211,8 @@ class LicenseService {
 
       final payloadMap = json.decode(payloadJson);
       final payload = LicensePayload.fromJson(payloadMap);
-      final daysRemaining = payload.validTo.difference(DateTime.now()).inDays;
+      final now = await _getCurrentTime();
+      final daysRemaining = payload.validTo.toUtc().difference(now).inDays;
 
       return daysRemaining >= 0 && daysRemaining <= 15;
     } catch (e) {
@@ -191,7 +228,8 @@ class LicenseService {
 
       final payloadMap = json.decode(payloadJson);
       final payload = LicensePayload.fromJson(payloadMap);
-      final daysRemaining = payload.validTo.difference(DateTime.now()).inDays;
+      final now = await _getCurrentTime();
+      final daysRemaining = payload.validTo.toUtc().difference(now).inDays;
 
       return daysRemaining > 0 ? daysRemaining : 0;
     } catch (e) {
@@ -310,6 +348,18 @@ class LicenseService {
     final digest = Digest('SHA-256');
     final hash = digest.process(bytes);
     return hash.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
+  }
+
+  /// Get current time from NTP or fallback to system time
+  Future<DateTime> _getCurrentTime() async {
+    try {
+      // Use a short timeout to avoid blocking offline apps
+      final now = await NTP.now(timeout: const Duration(seconds: 2));
+      return now.toUtc();
+    } catch (e) {
+      // Fallback to system time if offline or NTP fails
+      return DateTime.now().toUtc();
+    }
   }
 
   String _generateFallbackId() {
