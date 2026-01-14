@@ -99,8 +99,8 @@ Future<void> _initializeAndRunApp() async {
     await ConnectivityService().initConnectivity();
     initDependencies();
 
-    // await LocalDatabaseService().resetDatabase();
-    // await getIt<LicenseService>().clearLicense();
+    //await LocalDatabaseService().resetDatabase();
+    //await getIt<LicenseService>().clearLicense();
     // await LocalDatabaseService().debugTable('branch_table');
     await getIt<LicenseService>().initialize();
 

@@ -193,11 +193,13 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
                       "Admin Email",
                       controller: emailController,
                       required: true,
+                      isEmail: true,
                     ),
                     _buildTextField(
                       "Admin Phone",
                       controller: phoneController,
                       required: true,
+                      isPhone: true,
                     ),
                     _buildTextField(
                       "Username",
@@ -345,6 +347,8 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
     bool obscure = false,
     bool required = false,
     bool isPassword = false,
+    bool isEmail = false,
+    bool isPhone = false,
     bool showPassword = false,
     VoidCallback? toggleVisibility,
     TextEditingController? controller,
@@ -356,6 +360,12 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
         obscureText: obscure && !showPassword,
         style: const TextStyle(color: Colors.white, fontSize: 16),
         cursorColor: Colors.amber,
+        keyboardType: isEmail
+            ? TextInputType.emailAddress
+            : isPhone
+            ? TextInputType.phone
+            : TextInputType.text,
+        textInputAction: TextInputAction.next,
         decoration: InputDecoration(
           floatingLabelBehavior: FloatingLabelBehavior.auto,
           labelText: required ? "$label *" : label,

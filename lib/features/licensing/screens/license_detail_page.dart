@@ -12,10 +12,6 @@ class LicenseDetailsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('License Information'),
-        backgroundColor: Colors.blue[800],
-      ),
       body: SafeArea(
         child: BlocBuilder<LicenseBloc, LicenseState>(
           builder: (context, state) {
@@ -61,29 +57,38 @@ class LicenseDetailsPage extends StatelessWidget {
 
   Widget _buildLicenseDetails(BuildContext context, LicensePayload payload) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20.0),
-      child: Card(
-        elevation: 3,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      padding: const EdgeInsets.all(10.0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHeader(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               _buildLicenseInfo(payload),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               _buildFeatures(payload),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
               _buildLimits(payload),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () => context.go(AppRoutes.login),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue[800],
+                    backgroundColor: Color(0xFF145888),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -115,7 +120,7 @@ class LicenseDetailsPage extends StatelessWidget {
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: Colors.blue[800],
+            color: Color(0xFF145888),
           ),
         ),
         const SizedBox(height: 8),
@@ -204,22 +209,24 @@ class LicenseDetailsPage extends StatelessWidget {
         _buildLimitCard(
           Icons.people,
           'User Limit',
-          '${payload.userLimit} users',
-          Colors.blue[700]!,
+          '${payload.userLimit} ',
+          Colors.amber,
         ),
         _buildLimitCard(
           Icons.business,
           'Branch Limit',
-          '${payload.branchLimit} branches',
-          Colors.green[700]!,
+          '${payload.branchLimit} ',
+          Color(0xFF145888),
         ),
         _buildLimitCard(
           Icons.calendar_today,
           'Status',
-          payload.validTo.isAfter(DateTime.now()) ? 'Active' : 'Expired',
-          payload.validTo.isAfter(DateTime.now())
-              ? Colors.green[700]!
-              : Colors.red[700]!,
+          payload.validTo.isAfter(DateTime.now().toUtc())
+              ? 'Active'
+              : 'Expired',
+          payload.validTo.isAfter(DateTime.now().toUtc())
+              ? Colors.green[900]!
+              : Colors.red[900]!,
         ),
       ],
     );

@@ -111,17 +111,15 @@ class _LicenseActivationPageState extends State<LicenseActivationPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 40),
-
                     // Logo and Header
                     _buildHeader(),
 
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 20),
 
                     // Main Card
                     _buildLicenseCard(),
 
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 20),
 
                     // Support Section
                     _buildSupportSection(),
@@ -149,7 +147,7 @@ class _LicenseActivationPageState extends State<LicenseActivationPage> {
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
-            color: Colors.blue[800],
+            color: Color(0xFF145888),
           ),
         ),
         const SizedBox(height: 8),
@@ -162,9 +160,18 @@ class _LicenseActivationPageState extends State<LicenseActivationPage> {
   }
 
   Widget _buildLicenseCard() {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
       child: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -211,7 +218,7 @@ class _LicenseActivationPageState extends State<LicenseActivationPage> {
               child: ElevatedButton(
                 onPressed: _isSubmitting ? null : _activateLicense,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue[700],
+                  backgroundColor: Color(0xFF145888),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),

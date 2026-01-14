@@ -285,7 +285,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const PopupMenuItem<String>(
                     value: 'License Detail',
-                    child: Text('FSNMR'),
+                    child: Text('License Detail'),
                   ),
 
                   const PopupMenuItem<String>(
