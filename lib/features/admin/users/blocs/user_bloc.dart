@@ -107,6 +107,22 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       final companyId = authBloc.state.companyId;
       final createdBy = authBloc.state.userId!.id;
 
+      //check if user name is not duplicated
+      final user = await db.query(
+        'user_table',
+        where: 'user_name = ?',
+        whereArgs: [event.user.userName],
+      );
+      if (user.isNotEmpty) {
+        emit(
+          state.copyWith(
+            status: UserStatus.failure,
+            message: 'User name already exists',
+          ),
+        );
+        return;
+      }
+
       // License Logic: Check User Limit
       final licenseResult = await licenseService.loadAndValidateLicense();
       if (!licenseResult.isValid) {
@@ -175,9 +191,10 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       emit(
         state.copyWith(
           status: UserStatus.failure,
-          message: 'Failed to create user: $e',
+          message: 'Failed to create user',
         ),
       );
+      print('Failed to create user: $e');
     }
   }
 
