@@ -1,4 +1,7 @@
 // features/stock/fast_slow_nonmoving_rule/repositories/fast_slow_nonmoving_rule_repository.dart
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/FSNMR/models/fast_slow_nonmoving_rule.dart';
@@ -183,7 +186,9 @@ class FSNMRRepository extends BaseRepository {
 
       return false;
     } catch (e) {
-      print('Error in duplicateChecker: $e');
+      if (kDebugMode) {
+        developer.log('Error in duplicateChecker: $e');
+      }
       return false;
     }
   }

@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -73,7 +76,9 @@ class MigrationService {
             );
           }
 
-          print('🔄 Starting migration for: ${item.itemDescription}');
+          if (kDebugMode) {
+            developer.log('🔄 Starting migration for: ${item.itemDescription}');
+          }
 
           //step 1. Create/ update item master table
 
@@ -143,9 +148,11 @@ class MigrationService {
             }
           }
 
-          print(
-            '✅ Migration completed successfully for: ${item.itemDescription}',
-          );
+          if (kDebugMode) {
+            developer.log(
+              '✅ Migration completed successfully for: ${item.itemDescription}',
+            );
+          }
 
           return MigrationResult(
             success: true,
@@ -153,12 +160,16 @@ class MigrationService {
           );
         } catch (e) {
           // This will trigger transaction rollback
-          print('❌ Migration transaction failed: $e');
+          if (kDebugMode) {
+            developer.log('❌ Migration transaction failed: $e');
+          }
           rethrow; // Important: rethrow to ensure transaction rollback
         }
       });
     } catch (e) {
-      print('❌ Migration failed with rollback: $e');
+      if (kDebugMode) {
+        developer.log('❌ Migration failed with rollback: $e');
+      }
       return MigrationResult(success: false, message: 'Migration failed: $e');
     }
   }
@@ -183,7 +194,11 @@ class MigrationService {
       );
 
       if (existingItems != null) {
-        print('📦 Using existing ItemsTable: ${item.itemDescription}');
+        if (kDebugMode) {
+          developer.log(
+            '📦 Using existing ItemsTable: ${item.itemDescription}',
+          );
+        }
         return existingItems;
       } else {
         final newItemsTable = await _createItemsTable(
@@ -192,11 +207,15 @@ class MigrationService {
           userId,
           txn,
         );
-        print('📦 Created new ItemsTable: ${item.itemDescription}');
+        if (kDebugMode) {
+          developer.log('📦 Created new ItemsTable: ${item.itemDescription}');
+        }
         return newItemsTable;
       }
     } catch (e) {
-      print('❌ Error processing ItemsTable: $e');
+      if (kDebugMode) {
+        developer.log('❌ Error processing ItemsTable: $e');
+      }
       rethrow;
     }
   }
@@ -262,13 +281,19 @@ class MigrationService {
           amountUnitCost: item.unitCost ?? 0.0,
         );
         await itemCostRepository.update(updatedCost, txn: txn);
-        print('💰 Updated item costs for: ${item.itemDescription}');
+        if (kDebugMode) {
+          developer.log('💰 Updated item costs for: ${item.itemDescription}');
+        }
       } else {
         await itemCostRepository.create(itemCost, txn: txn);
-        print('💰 Created item costs for: ${item.itemDescription}');
+        if (kDebugMode) {
+          developer.log('💰 Created item costs for: ${item.itemDescription}');
+        }
       }
     } catch (e) {
-      print('❌ Error updating item costs: $e');
+      if (kDebugMode) {
+        developer.log('❌ Error updating item costs: $e');
+      }
       rethrow;
     }
   }
@@ -295,7 +320,11 @@ class MigrationService {
           );
 
       if (existingLocation.isNotEmpty) {
-        print('📍 Using existing LocationMaster: $locationDescription');
+        if (kDebugMode) {
+          developer.log(
+            '📍 Using existing LocationMaster: $locationDescription',
+          );
+        }
         return existingLocation.first;
       } else {
         final newLocation = await _createLocationMaster(
@@ -304,11 +333,15 @@ class MigrationService {
           userId,
           txn,
         );
-        print('📍 Created new LocationMaster: $locationDescription');
+        if (kDebugMode) {
+          developer.log('📍 Created new LocationMaster: $locationDescription');
+        }
         return newLocation;
       }
     } catch (e) {
-      print('❌ Error processing LocationMaster: $e');
+      if (kDebugMode) {
+        developer.log('❌ Error processing LocationMaster: $e');
+      }
       rethrow;
     }
   }
@@ -383,20 +416,30 @@ class MigrationService {
         );
 
         await itemsInBranchRepository.update(updatedItem, txn: txn);
-        print('🏬 Updated ItemsInBranch for: ${item.itemDescription}');
+        if (kDebugMode) {
+          developer.log(
+            '🏬 Updated ItemsInBranch for: ${item.itemDescription}',
+          );
+        }
         return updatedItem;
       } else if (existingItemsInBranch == null) {
         final id = await itemsInBranchRepository.create(
           itemsInBranch,
           txn: txn,
         );
-        print('🏬 Created new ItemsInBranch for: ${item.itemDescription}');
+        if (kDebugMode) {
+          developer.log(
+            '🏬 Created new ItemsInBranch for: ${item.itemDescription}',
+          );
+        }
         return itemsInBranch.copyWith(id: id);
       }
 
       return existingItemsInBranch;
     } catch (e) {
-      print('❌ Error processing ItemsInBranch: $e');
+      if (kDebugMode) {
+        developer.log('❌ Error processing ItemsInBranch: $e');
+      }
       rethrow;
     }
   }
@@ -444,20 +487,30 @@ class MigrationService {
           updatedLocation,
           txn: txn,
         );
-        print('📍 Updated ItemLocations for: ${item.itemDescription}');
+        if (kDebugMode) {
+          developer.log(
+            '📍 Updated ItemLocations for: ${item.itemDescription}',
+          );
+        }
         return updatedLocation;
       } else if (existingItemLocations.isEmpty) {
         final id = await itemLocationsRepository.createItemLocation(
           itemLocation,
           txn: txn,
         );
-        print('📍 Created new ItemLocations for: ${item.itemDescription}');
+        if (kDebugMode) {
+          developer.log(
+            '📍 Created new ItemLocations for: ${item.itemDescription}',
+          );
+        }
         return itemLocation.copyWith(id: id);
       }
 
       return existingItemLocations.first;
     } catch (e) {
-      print('❌ Error processing ItemLocations: $e');
+      if (kDebugMode) {
+        developer.log('❌ Error processing ItemLocations: $e');
+      }
       rethrow;
     }
   }
@@ -528,20 +581,28 @@ class MigrationService {
               (existingLotMaster.quantityAvailable ?? 0.0) + item.quantity!,
         );
         await lotMasterRepository.updateLotMaster(updatedLotMaster, txn: txn);
-        print('🏷️ Updated LotMaster for: ${item.itemDescription}');
+        if (kDebugMode) {
+          developer.log('🏷️ Updated LotMaster for: ${item.itemDescription}');
+        }
         return updatedLotMaster;
       } else if (existingLotMaster == null) {
         final id = await lotMasterRepository.createLotMaster(
           lotMaster,
           txn: txn,
         );
-        print('🏷️ Created new LotMaster for: ${item.itemDescription}');
+        if (kDebugMode) {
+          developer.log(
+            '🏷️ Created new LotMaster for: ${item.itemDescription}',
+          );
+        }
         return lotMaster.copyWith(id: id);
       }
 
       return existingLotMaster;
     } catch (e) {
-      print('❌ Error processing LotMaster: $e');
+      if (kDebugMode) {
+        developer.log('❌ Error processing LotMaster: $e');
+      }
       rethrow;
     }
   }

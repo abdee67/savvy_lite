@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -538,34 +541,48 @@ class _QuotationCustomerInfoScreenContentState
   }
 
   void _goToNextPage(BuildContext context) async {
-    print('🔵 NAVIGATION: Starting _goToNextPage');
+    if (kDebugMode) {
+      developer.log('🔵 NAVIGATION: Starting _goToNextPage');
+    }
 
     if (_selectedBillToCustomer == null) {
       _showErrorSnackBar(context, 'Please select a customer first');
       return;
     }
 
-    print('🔵 NAVIGATION: Customer selected, getting header');
+    if (kDebugMode) {
+      developer.log('🔵 NAVIGATION: Customer selected, getting header');
+    }
     final header = context.read<QuotationOrderBloc>().state.selectedHeader;
-    print('🔵 NAVIGATION: Header obtained: ${header?.fsNumber}');
+    if (kDebugMode) {
+      developer.log('🔵 NAVIGATION: Header obtained: ${header?.fsNumber}');
+    }
 
-    print('🔵 NAVIGATION: Dispatching UpdateCustomerInfo');
+    if (kDebugMode) {
+      developer.log('🔵 NAVIGATION: Dispatching UpdateCustomerInfo');
+    }
     context.read<QuotationOrderBloc>().add(
       UpdateCustomerInfo(
         customer: _selectedBillToCustomer!,
         currentHeader: header,
       ),
     );
-    print('🔵 NAVIGATION: UpdateCustomerInfo dispatched');
+    if (kDebugMode) {
+      developer.log('🔵 NAVIGATION: UpdateCustomerInfo dispatched');
+    }
 
     // Wait a frame to ensure the event is processed
     await Future.delayed(const Duration(milliseconds: 50));
-    print('🔵 NAVIGATION: Delay complete');
+    if (kDebugMode) {
+      developer.log('🔵 NAVIGATION: Delay complete');
+    }
 
     if (context.read<AuthBloc>().state.hasAccessToPrivilege(
       AppRoutes.quotationItemEntry,
     )) {
-      print('🔵 NAVIGATION: Access granted, preparing customer data');
+      if (kDebugMode) {
+        developer.log('🔵 NAVIGATION: Access granted, preparing customer data');
+      }
       final customerData = {
         'billToCustomer': _selectedBillToCustomer,
         'shipToCustomer': _selectedShipToCustomer,
@@ -575,15 +592,23 @@ class _QuotationCustomerInfoScreenContentState
             .selectedHeader,
       };
 
-      print('🔵 NAVIGATION: About to push route');
+      if (kDebugMode) {
+        developer.log('🔵 NAVIGATION: About to push route');
+      }
       if (mounted) {
         context.push(AppRoutes.quotationItemEntry, extra: customerData);
-        print('🔵 NAVIGATION: Route pushed successfully');
+        if (kDebugMode) {
+          developer.log('🔵 NAVIGATION: Route pushed successfully');
+        }
       } else {
-        print('❌ NAVIGATION: Widget not mounted');
+        if (kDebugMode) {
+          developer.log('❌ NAVIGATION: Widget not mounted');
+        }
       }
     } else {
-      print('❌ NAVIGATION: No access to quotation item entry');
+      if (kDebugMode) {
+        developer.log('❌ NAVIGATION: No access to quotation item entry');
+      }
       _showErrorSnackBar(context, 'No access to quotation item entry');
     }
   }

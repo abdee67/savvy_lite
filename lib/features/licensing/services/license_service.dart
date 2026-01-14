@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:ntp/ntp.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:pointycastle/export.dart';
@@ -62,7 +64,9 @@ class LicenseService {
       _cachedMachineId = hash;
       return hash;
     } catch (e) {
-      print('Error generating machine ID: $e');
+      if (kDebugMode) {
+        developer.log('Error generating machine ID: $e');
+      }
       _cachedMachineId = _generateFallbackId();
       return _cachedMachineId!;
     }
@@ -133,7 +137,9 @@ class LicenseService {
 
       // 7. Check Expiration Date (UTC)
       if (now.isAfter(payload.validTo.toUtc())) {
-        print('License expired on ${payload.validTo.toUtc()}');
+        if (kDebugMode) {
+          developer.log('License expired on ${payload.validTo.toUtc()}');
+        }
         return LicenseValidationResult.invalid(
           'License expired on ${payload.validTo.toLocal()}',
         );
@@ -154,7 +160,9 @@ class LicenseService {
 
       return LicenseValidationResult.valid(payload, daysRemaining);
     } catch (e) {
-      print('License validation failed: ${e.toString()}');
+      if (kDebugMode) {
+        developer.log('License validation failed: ${e.toString()}');
+      }
 
       return LicenseValidationResult.invalid(
         'License validation failed: ${e.toString()}',
@@ -200,7 +208,9 @@ class LicenseService {
       _secureStorage.delete(key: _lastKnownTimeKey),
       _secureStorage.delete(key: _activationTimeKey),
     ]);
-    print('all cleared');
+    if (kDebugMode) {
+      developer.log('all cleared');
+    }
   }
 
   /// Check if license is about to expire (within 15 days)
@@ -299,10 +309,14 @@ class LicenseService {
       _publicKey = RSAPublicKey(modulus, exponent);
     } catch (e) {
       // Log the error but don't throw - allow app to continue without license validation
-      print('Warning: Could not load public key certificate: $e');
-      print(
-        'License validation will not be available until a valid certificate is added to assets/keys/public_key.cer',
-      );
+      if (kDebugMode) {
+        developer.log('Warning: Could not load public key certificate: $e');
+      }
+      if (kDebugMode) {
+        developer.log(
+          'License validation will not be available until a valid certificate is added to assets/keys/public_key.cer',
+        );
+      }
     }
   }
 
@@ -325,7 +339,9 @@ class LicenseService {
 
       return result;
     } catch (e) {
-      print('Debug: Exception during signature verification: $e');
+      if (kDebugMode) {
+        developer.log('Debug: Exception during signature verification: $e');
+      }
       return false;
     }
   }

@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -155,7 +157,9 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
         });
       }
     });
-    print('Transaction number: $_transactionNumber');
+    if (kDebugMode) {
+      developer.log('Transaction number: $_transactionNumber');
+    }
   }
 
   void _onTransactionTypeChanged(UdcDetails? transactionType) {

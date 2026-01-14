@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -184,7 +187,9 @@ class _LotExpirationColorsDashboardState
 
   void _exportLot(LotExpirationColor color) {
     // Implement export functionality
-    print('Exporting lot: ${color.colorType}');
+    if (kDebugMode) {
+      developer.log('Exporting lot: ${color.colorType}');
+    }
   }
 
   void _navigateToCreateScreen() {

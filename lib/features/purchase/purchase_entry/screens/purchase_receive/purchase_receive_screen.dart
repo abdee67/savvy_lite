@@ -1,4 +1,7 @@
 // features/purchase/purchase_entry/ui/receiving/purchase_receiving_screen.dart
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -116,7 +119,9 @@ class _PurchaseReceivingScreenState extends State<PurchaseReceivingScreen> {
         }
       }
     } catch (e) {
-      print('Error initializing receiving: $e');
+      if (kDebugMode) {
+        developer.log('Error initializing receiving: $e');
+      }
     } finally {
       setState(() {
         _isLoading = false;
@@ -148,7 +153,9 @@ class _PurchaseReceivingScreenState extends State<PurchaseReceivingScreen> {
       });
 
       // Load locations for selected branch
-      print('📍 Loading locations for branch ID: ${branch.id}');
+      if (kDebugMode) {
+        developer.log('📍 Loading locations for branch ID: ${branch.id}');
+      }
       _loadBranchLocations(branch.id);
 
       // Update current receiver
@@ -166,15 +173,19 @@ class _PurchaseReceivingScreenState extends State<PurchaseReceivingScreen> {
     final companyId = authBloc.state.companyId;
 
     if (companyId != null) {
-      print(
-        '🔄 Dispatching LoadItemLocationsForBranch - Branch: $branchId, Company: $companyId',
-      );
+      if (kDebugMode) {
+        developer.log(
+          '🔄 Dispatching LoadItemLocationsForBranch - Branch: $branchId, Company: $companyId',
+        );
+      }
       final locationsBloc = context.read<StockItemLocationBloc>();
       locationsBloc.add(
         LoadItemLocationsForBranch(branchId: branchId, companyId: companyId),
       );
     } else {
-      print('❌ Company ID is null');
+      if (kDebugMode) {
+        developer.log('❌ Company ID is null');
+      }
     }
   }
 
@@ -680,7 +691,11 @@ class _PurchaseReceivingScreenState extends State<PurchaseReceivingScreen> {
               prefixIcon: Icons.business,
               allowCustomEntries: false,
               onChanged: (selectedBranchDesc) {
-                print('🔹 Branch dropdown changed to: $selectedBranchDesc');
+                if (kDebugMode) {
+                  developer.log(
+                    '🔹 Branch dropdown changed to: $selectedBranchDesc',
+                  );
+                }
                 _onBranchSelected(
                   branchState.branchs.firstWhere(
                     (branch) => branch.description == selectedBranchDesc,
@@ -705,9 +720,11 @@ class _PurchaseReceivingScreenState extends State<PurchaseReceivingScreen> {
           if (_selectedBranch != null) ...[
             BlocBuilder<StockItemLocationBloc, ItemLocationsState>(
               builder: (context, locationState) {
-                print(
-                  '📋 BlocBuilder rebuilt - Status: ${locationState.status}, Items count: ${locationState.items.length}',
-                );
+                if (kDebugMode) {
+                  developer.log(
+                    '📋 BlocBuilder rebuilt - Status: ${locationState.status}, Items count: ${locationState.items.length}',
+                  );
+                }
                 return CustomSearchableDropdown(
                   labelText: 'Location',
                   options: locationState.items
@@ -723,9 +740,11 @@ class _PurchaseReceivingScreenState extends State<PurchaseReceivingScreen> {
                   prefixIcon: Icons.location_on,
                   allowCustomEntries: false,
                   onChanged: (selectedLocationDesc) {
-                    print(
-                      '🔹 Location dropdown changed to: $selectedLocationDesc',
-                    );
+                    if (kDebugMode) {
+                      developer.log(
+                        '🔹 Location dropdown changed to: $selectedLocationDesc',
+                      );
+                    }
                     _onLocationSelected(
                       locationState.items.firstWhere(
                         (location) =>

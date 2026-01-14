@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -95,18 +98,28 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
       final header = widget.extra!['header'];
       final details = widget.extra!['details'];
 
-      print(
-        'DEBUG CustomerInfo: Found converted data - header: $header, details count: ${details?.length}',
-      );
+      if (kDebugMode) {
+        developer.log(
+          'DEBUG CustomerInfo: Found converted data - header: $header, details count: ${details?.length}',
+        );
+      }
 
       context.read<SalesOrderCoordinatorBloc>().add(
         InitializeFromQuotation(header: header, details: details),
       );
-      print('DEBUG CustomerInfo: Dispatched InitializeFromQuotation event');
+      if (kDebugMode) {
+        developer.log(
+          'DEBUG CustomerInfo: Dispatched InitializeFromQuotation event',
+        );
+      }
       return;
     }
 
-    print('DEBUG CustomerInfo: No converted data found, preparing new order');
+    if (kDebugMode) {
+      developer.log(
+        'DEBUG CustomerInfo: No converted data found, preparing new order',
+      );
+    }
     // Otherwise, prepare a new sales order
     final companyId = widget.authBloc.state.companyId;
     final userId = widget.authBloc.state.userId?.id;

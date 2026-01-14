@@ -1,4 +1,7 @@
 // features/stock/item_locations/repositories/item_locations_repository.dart
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
@@ -283,7 +286,9 @@ class ItemLocationsRepository extends BaseRepository {
       qtyChange = newQty - oldQty;
 
       await updateItemLocation(location);
-      print('Quantity on hand updated: ${location.quantityOnHand}');
+      if (kDebugMode) {
+        developer.log('Quantity on hand updated: ${location.quantityOnHand}');
+      }
     }
 
     // Only cascade if quantity changed

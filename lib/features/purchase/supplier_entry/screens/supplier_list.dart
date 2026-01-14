@@ -178,13 +178,11 @@ class _SupplierListPageState extends State<SupplierListPage>
 
   void _callCustomer(String phone) {
     // Implement phone call functionality
-    print('Calling: $phone');
   }
 
   void _emailCustomer(String? email) {
     if (email != null) {
       // Implement email functionality
-      print('Emailing: $email');
     }
   }
 

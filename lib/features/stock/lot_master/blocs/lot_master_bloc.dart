@@ -1,6 +1,8 @@
 // features/stock/lot_master/blocs/lot_master_bloc.dart
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/expiration_report_filters.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
@@ -623,7 +625,9 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
         ),
       );
     } catch (e) {
-      print('Error calculating lot status: $e');
+      if (kDebugMode) {
+        developer.log('Error calculating lot status: $e');
+      }
     }
   }
 
@@ -647,7 +651,9 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
         state.copyWith(items: itemsWithColors, filteredItems: itemsWithColors),
       );
     } catch (e) {
-      print('Error recalculating all lot status: $e');
+      if (kDebugMode) {
+        developer.log('Error recalculating all lot status: $e');
+      }
     }
   }
 
@@ -668,7 +674,9 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
         ),
       );
     } catch (e) {
-      print('Error calculating lot colors: $e');
+      if (kDebugMode) {
+        developer.log('Error calculating lot colors: $e');
+      }
     }
   }
 
@@ -705,7 +713,9 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
       final expiringWithColors = await _calculateColorsForLots(expiringLots);
       emit(state.copyWith(expiringLots: expiringWithColors));
     } catch (e) {
-      print('Error getting expiring lots: $e');
+      if (kDebugMode) {
+        developer.log('Error getting expiring lots: $e');
+      }
     }
   }
 
@@ -719,7 +729,9 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
       );
       emit(state.copyWith(quantitySummary: quantitySummary));
     } catch (e) {
-      print('Error getting lot quantity summary: $e');
+      if (kDebugMode) {
+        developer.log('Error getting lot quantity summary: $e');
+      }
     }
   }
 
@@ -752,7 +764,9 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
         lot.dateReceived,
       );
     } catch (e) {
-      print('Error calculating lot color: $e');
+      if (kDebugMode) {
+        developer.log('Error calculating lot color: $e');
+      }
       return null;
     }
   }
@@ -1224,7 +1238,9 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
     // - excel: ^2.0.0-null-safety-3
     // - csv: ^5.0.0
     await Future.delayed(const Duration(seconds: 1));
-    print('Exporting ${data.length} rows to Excel');
+    if (kDebugMode) {
+      developer.log('Exporting ${data.length} rows to Excel');
+    }
   }
 
   Future<void> _simulatePDFExport(
@@ -1235,7 +1251,11 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
     // - pdf: ^3.10.6
     // - printing: ^5.11.2
     await Future.delayed(const Duration(seconds: 2));
-    print('Generating PDF for ${lots.length} lots, total cost: $totalCost');
+    if (kDebugMode) {
+      developer.log(
+        'Generating PDF for ${lots.length} lots, total cost: $totalCost',
+      );
+    }
   }
 
   // Public methods for pagination

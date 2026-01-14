@@ -1,6 +1,8 @@
 // features/sales/sales_return/bloc/sales_return_bloc.dart
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/repo/sales_order_header_repo.dart';
 import 'package:savvy_stock/features/sales/sales_return/bloc/sales_return_event.dart';
@@ -179,9 +181,13 @@ class SalesReturnBloc extends Bloc<SalesReturnEvent, SalesReturnState> {
       }
     } catch (e) {
       emit(state.errorState('Failed to load sales order for return: $e'));
-      print('Sales Return State: ${state.status} $e');
+      if (kDebugMode) {
+        developer.log('Sales Return State: ${state.status} $e');
+      }
     }
-    print('Sales Return State: ${state.status} ');
+    if (kDebugMode) {
+      developer.log('Sales Return State: ${state.status} ');
+    }
   }
 
   // Header CRUD Operations
@@ -352,7 +358,9 @@ class SalesReturnBloc extends Bloc<SalesReturnEvent, SalesReturnState> {
       );
     } catch (e) {
       //emit(state.errorState('Failed to save sales return details: $e'));
-      print('Failed to save sales return details: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save sales return details: $e');
+      }
     }
   }
 

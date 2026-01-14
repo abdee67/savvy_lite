@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/errors/exceptions.dart';
 import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 import 'package:savvy_stock/features/system_constant/repo/system_constant_repository.dart';
@@ -85,9 +86,11 @@ class SystemConstantBloc
           unsyncedCount: unSyncedCount,
         ),
       );
-      print(
-        '✅ SystemConstantBloc: State updated with lot_type: ${companyConstants.lotType}',
-      );
+      if (kDebugMode) {
+        developer.log(
+          '✅ SystemConstantBloc: State updated with lot_type: ${companyConstants.lotType}',
+        );
+      }
     } catch (e) {
       developer.log('Error loading system constants: $e');
       emit(
@@ -606,7 +609,9 @@ class SystemConstantBloc
           // errorMessage: 'Failed to save system constants: ${e.toString()}',
         ),
       );
-      print('Failed to save system constants: ${e.toString()}');
+      if (kDebugMode) {
+        developer.log('Failed to save system constants: ${e.toString()}');
+      }
     }
   }
 

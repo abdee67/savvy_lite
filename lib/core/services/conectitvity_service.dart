@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:flutter/foundation.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
@@ -19,7 +21,7 @@ class ConnectivityService with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       if (kDebugMode) {
-        print('Could not check connectivity: $e');
+        developer.log('Could not check connectivity: $e');
       }
     }
   }

@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:savvy_stock/features/onboarding/models/trial_model.dart';
 import 'package:savvy_stock/features/onboarding/widgets/language_toggle.dart';
@@ -177,7 +180,9 @@ class _TrialPageRefactoredState extends State<TrialPageRefactored> {
 
   void _handleFormSubmission() {
     // Handle form submission logic here
-    print('Form submitted with data: ${formData.toJson()}');
+    if (kDebugMode) {
+      developer.log('Form submitted with data: ${formData.toJson()}');
+    }
 
     // Show success message
     ScaffoldMessenger.of(context).showSnackBar(

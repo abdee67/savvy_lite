@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -232,9 +235,11 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
         _unitPriceController.text = itemInBranch.unitPrice?.toString() ?? '';
       });
 
-      print(
-        '🔄 Item selected - UOM: $_itemUom, Available Qty: $_availableQuantity',
-      );
+      if (kDebugMode) {
+        developer.log(
+          '🔄 Item selected - UOM: $_itemUom, Available Qty: $_availableQuantity',
+        );
+      }
     }
   }
 
@@ -459,7 +464,11 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
                   setState(() {
                     _branchItems = state.items;
                   });
-                  print('📦 Loaded ${_branchItems.length} items for branch');
+                  if (kDebugMode) {
+                    developer.log(
+                      '📦 Loaded ${_branchItems.length} items for branch',
+                    );
+                  }
                 }
               },
             ),
@@ -469,9 +478,11 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
                   setState(() {
                     _itemLocations = state.items;
                   });
-                  print(
-                    '📍 Loaded ${_itemLocations.length} locations for item',
-                  );
+                  if (kDebugMode) {
+                    developer.log(
+                      '📍 Loaded ${_itemLocations.length} locations for item',
+                    );
+                  }
                 }
               },
             ),

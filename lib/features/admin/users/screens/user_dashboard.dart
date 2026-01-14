@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -144,13 +147,17 @@ class _UserDashboardState extends State<UserDashboard>
 
   void _callUser(String phone) {
     // Implement phone call functionality
-    print('Calling: $phone');
+    if (kDebugMode) {
+      developer.log('Calling: $phone');
+    }
   }
 
   void _emailUser(String? email) {
     if (email != null) {
       // Implement email functionality
-      print('Emailing: $email');
+      if (kDebugMode) {
+        developer.log('Emailing: $email');
+      }
     }
   }
 

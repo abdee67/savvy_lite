@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -185,7 +188,9 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
       // Load UOM conversions for this item
       _loadUomConversions(itemId);
     } catch (e) {
-      print('Item not found: $itemId');
+      if (kDebugMode) {
+        developer.log('Item not found: $itemId');
+      }
     }
   }
 
@@ -314,7 +319,11 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
   }
 
   void _onBranchSelected(Branch? branch) {
-    print('🔔 Branch selected: ${branch?.description} (ID: ${branch?.id})');
+    if (kDebugMode) {
+      developer.log(
+        '🔔 Branch selected: ${branch?.description} (ID: ${branch?.id})',
+      );
+    }
     setState(() {
       _selectedBranch = branch;
       _selectedLocation = null;
@@ -322,7 +331,9 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
 
     if (branch != null) {
       // Load locations for selected branch
-      print('📍 Loading locations for branch ID: ${branch.id}');
+      if (kDebugMode) {
+        developer.log('📍 Loading locations for branch ID: ${branch.id}');
+      }
       _loadBranchLocations(branch.id);
     }
   }
@@ -332,15 +343,19 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
     final companyId = authBloc.state.companyId;
 
     if (companyId != null) {
-      print(
-        '🔄 Dispatching LoadItemLocationsForBranch - Branch: $branchId, Company: $companyId',
-      );
+      if (kDebugMode) {
+        developer.log(
+          '🔄 Dispatching LoadItemLocationsForBranch - Branch: $branchId, Company: $companyId',
+        );
+      }
       final locationsBloc = context.read<StockItemLocationBloc>();
       locationsBloc.add(
         LoadItemLocationsForBranch(branchId: branchId, companyId: companyId),
       );
     } else {
-      print('❌ Company ID is null');
+      if (kDebugMode) {
+        developer.log('❌ Company ID is null');
+      }
     }
   }
 
@@ -663,9 +678,11 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
                       prefixIcon: Icons.business,
                       allowCustomEntries: false,
                       onChanged: (selectedBranchDesc) {
-                        print(
-                          '🔹 Branch dropdown changed to: $selectedBranchDesc',
-                        );
+                        if (kDebugMode) {
+                          developer.log(
+                            '🔹 Branch dropdown changed to: $selectedBranchDesc',
+                          );
+                        }
                         _onBranchSelected(
                           branchState.branchs.firstWhere(
                             (branch) =>
@@ -690,9 +707,11 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
                 if (_selectedBranch != null) ...[
                   BlocBuilder<StockItemLocationBloc, ItemLocationsState>(
                     builder: (context, locationState) {
-                      print(
-                        '📋 BlocBuilder rebuilt - Status: ${locationState.status}, Items count: ${locationState.items.length}',
-                      );
+                      if (kDebugMode) {
+                        developer.log(
+                          '📋 BlocBuilder rebuilt - Status: ${locationState.status}, Items count: ${locationState.items.length}',
+                        );
+                      }
                       return CustomSearchableDropdown(
                         labelText: 'Location',
                         options: locationState.items
@@ -710,9 +729,11 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
                         prefixIcon: Icons.location_on,
                         allowCustomEntries: false,
                         onChanged: (selectedLocationDesc) {
-                          print(
-                            '🔹 Location dropdown changed to: $selectedLocationDesc',
-                          );
+                          if (kDebugMode) {
+                            developer.log(
+                              '🔹 Location dropdown changed to: $selectedLocationDesc',
+                            );
+                          }
                           _onLocationSelected(
                             locationState.items.firstWhere(
                               (location) =>

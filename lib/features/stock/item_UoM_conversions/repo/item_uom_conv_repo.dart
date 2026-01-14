@@ -1,4 +1,7 @@
 // features/stock/item_uom_conversions/repositories/item_uom_conversions_repository.dart
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/models/item_uom_conversions_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
@@ -140,7 +143,9 @@ class ItemUomConversionsRepository {
 
       return uomDetailsResult.map((row) => UdcDetails.fromJson(row)).toList();
     } catch (e) {
-      print('Error getting UoMs for item: $e');
+      if (kDebugMode) {
+        developer.log('Error getting UoMs for item: $e');
+      }
       return [];
     }
   }

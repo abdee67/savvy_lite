@@ -1,8 +1,10 @@
 // features/user/blocs/user_bloc.dart
 
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
@@ -194,7 +196,9 @@ class UserBloc extends Bloc<UserEvent, UserState> {
           message: 'Failed to create user',
         ),
       );
-      print('Failed to create user: $e');
+      if (kDebugMode) {
+        developer.log('Failed to create user: $e');
+      }
     }
   }
 

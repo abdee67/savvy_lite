@@ -1,4 +1,7 @@
 // features/sales/sales_item_entry/widgets/sales_item_entry_form.dart
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -172,7 +175,9 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
         _selectedItem = existingItem;
       } catch (e) {
         // Item not found, continue without pre-selection
-        print('Item not found: ${detail.itemsTableId}');
+        if (kDebugMode) {
+          developer.log('Item not found: ${detail.itemsTableId}');
+        }
       }
     }
 
@@ -200,7 +205,9 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
         }
       } catch (e) {
         // Item in branch not found
-        print('Item in branch not found: ${detail.itemInBranch}');
+        if (kDebugMode) {
+          developer.log('Item in branch not found: ${detail.itemInBranch}');
+        }
       }
     }
   }
@@ -370,7 +377,9 @@ class _SalesItemEntryFormState extends State<SalesItemEntryForm> {
 
   List<ItemInBranchModel> _getAvailableBranchesForItem() {
     if (_selectedItem == null) return [];
-    print('selectedItem: ${_selectedItem!.id}');
+    if (kDebugMode) {
+      developer.log('selectedItem: ${_selectedItem!.id}');
+    }
     final itemsInBranchBloc = context.read<StockItemInBranchBloc>();
     return itemsInBranchBloc.state.items
         .where((itemInBranch) => itemInBranch.itemNumber == _selectedItem!.id)

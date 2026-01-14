@@ -1,6 +1,8 @@
 // features/purchase_order/bloc/purchase_order_bloc.dart
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/next_number/repo/next_number_repo.dart';
@@ -775,7 +777,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       add(RefreshPurchaseOrders());
     } catch (e) {
       //emit(state.errorState('Failed to save purchase order: $e'));
-      print('Failed to save purchase order: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save purchase order: $e');
+      }
     }
   }
 
@@ -864,7 +868,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       }
     } catch (e) {
       // Log error but don't fail the entire operation
-      print('Auto receipt failed: $e');
+      if (kDebugMode) {
+        developer.log('Auto receipt failed: $e');
+      }
     }
   }
 
@@ -1085,7 +1091,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       );
     } catch (e) {
       //emit(state.errorState('Failed to save row: $e'));
-      print('Failed to save row: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save row: $e');
+      }
     }
   }
 
@@ -1120,7 +1128,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       );
     } catch (e) {
       //emit(state.errorState('Failed to save row: $e'));
-      print('Failed to save row: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save row: $e');
+      }
     }
   }
 
@@ -1205,7 +1215,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       }
     } catch (e) {
       // Silently fail, just don't set UOM
-      print('Default uom not setted: $e');
+      if (kDebugMode) {
+        developer.log('Default uom not setted: $e');
+      }
     }
   }
 
@@ -1535,13 +1547,15 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
 
         int id;
         if (receiver.id == null) {
-          print('💾 Creating receiver with:');
-          print('  poDetail: ${receiverToSave.poDetail}');
-          print('  itemNumber: ${receiverToSave.itemNumber}');
-          print('  company: ${receiverToSave.company}');
-          print('  branchRecieved: ${receiverToSave.branchRecieved}');
-          print('  location: ${receiverToSave.location}');
-          print('  unitOfMeasure: ${receiverToSave.unitOfMeasure}');
+          if (kDebugMode) {
+            developer.log('💾 Creating receiver with:');
+            developer.log('  poDetail: ${receiverToSave.poDetail}');
+            developer.log('  itemNumber: ${receiverToSave.itemNumber}');
+            developer.log('  company: ${receiverToSave.company}');
+            developer.log('  branchRecieved: ${receiverToSave.branchRecieved}');
+            developer.log('  location: ${receiverToSave.location}');
+            developer.log('  unitOfMeasure: ${receiverToSave.unitOfMeasure}');
+          }
 
           id = await repository.createPurchaseOrderReceiver(receiverToSave);
           final savedReceiver = receiverToSave.copyWith(id: id);
@@ -1558,10 +1572,12 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
             companyId ??= detail?.company;
           }
 
-          print(
-            '🔎 Stock update check - headerId: ${state.selectedHeader?.id}, '
-            'orderNumber: $orderNumber, companyId: $companyId',
-          );
+          if (kDebugMode) {
+            developer.log(
+              '🔎 Stock update check - headerId: ${state.selectedHeader?.id}, '
+              'orderNumber: $orderNumber, companyId: $companyId',
+            );
+          }
 
           // 🎯 ENRICH RECEIVER WITH DETAIL (ENSURE SUPPLIER/ORDERTYPE)
           var enrichedReceiver = savedReceiver;
@@ -1576,9 +1592,11 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
                 );
               }
             } catch (e) {
-              print(
-                'WARNING: Could not enrich PurchaseOrderReceiver with detail: $e',
-              );
+              if (kDebugMode) {
+                developer.log(
+                  'WARNING: Could not enrich PurchaseOrderReceiver with detail: $e',
+                );
+              }
             }
           }
 
@@ -1589,7 +1607,11 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
               orderNumber: orderNumber,
             );
           } else {
-            print('⚠️ Skipping stock update: missing orderNumber or companyId');
+            if (kDebugMode) {
+              developer.log(
+                '⚠️ Skipping stock update: missing orderNumber or companyId',
+              );
+            }
           }
 
           hasSuccess = true;
@@ -1649,7 +1671,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       }
     } catch (e) {
       //emit(state.errorState('Failed to save receipt and update stock: $e'));
-      print('Failed to save receipt and update stock: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save receipt and update stock: $e');
+      }
     }
   }
 
@@ -1688,7 +1712,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       await repository.updateHeaderReceiptStatus(updatedDetail.poHeader!);
       await repository.updateItemCostsForHeader(updatedDetail.poHeader!);
     } else {
-      print('⚠️ poHeader is null, skipping header status update');
+      if (kDebugMode) {
+        developer.log('⚠️ poHeader is null, skipping header status update');
+      }
     }
   }
 
@@ -1698,35 +1724,43 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     final effectiveDate = receiver.dateEffective;
     final expirationDate = receiver.dateExpiration;
 
-    print('🔍 Validating receiver:');
-    print('  itemNumber: ${receiver.itemNumber}');
-    print('  unitOfMeasure: ${receiver.unitOfMeasure}');
-    print('  quantityRecieved: $quantityRecieved');
-    print('  quantityOpen: $quantityOpen');
-    print('  effectiveDate: $effectiveDate');
-    print('  expirationDate: $expirationDate');
-    print('  branchRecieved: ${receiver.branchRecieved}');
-    print('  location: ${receiver.location}');
+    if (kDebugMode) {
+      developer.log('🔍 Validating receiver:');
+      developer.log('  itemNumber: ${receiver.itemNumber}');
+      developer.log('  unitOfMeasure: ${receiver.unitOfMeasure}');
+      developer.log('  quantityRecieved: $quantityRecieved');
+      developer.log('  quantityOpen: $quantityOpen');
+      developer.log('  effectiveDate: $effectiveDate');
+      developer.log('  expirationDate: $expirationDate');
+      developer.log('  branchRecieved: ${receiver.branchRecieved}');
+      developer.log('  location: ${receiver.location}');
+    }
 
     // Basic quantity validation
     if (quantityRecieved <= 0 || quantityRecieved > quantityOpen) {
-      print(
-        '❌ Quantity validation failed: recieved=$quantityRecieved, open=$quantityOpen',
-      );
+      if (kDebugMode) {
+        developer.log(
+          '❌ Quantity validation failed: recieved=$quantityRecieved, open=$quantityOpen',
+        );
+      }
       return false;
     }
 
     // Date validation (same as Java)
     if (effectiveDate != null && expirationDate != null) {
       if (effectiveDate.isAfter(expirationDate)) {
-        print(
-          '❌ Date validation failed: effective=$effectiveDate > expiration=$expirationDate',
-        );
+        if (kDebugMode) {
+          developer.log(
+            '❌ Date validation failed: effective=$effectiveDate > expiration=$expirationDate',
+          );
+        }
         return false;
       }
     }
 
-    print('✅ Receiver validation passed');
+    if (kDebugMode) {
+      developer.log('✅ Receiver validation passed');
+    }
     return true;
   }
 
@@ -1809,7 +1843,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       }
     } catch (e) {
       // Log but don't fail
-      print('Failed to update item cost table: $e');
+      if (kDebugMode) {
+        developer.log('Failed to update item cost table: $e');
+      }
     }
   }*/
 
@@ -1834,7 +1870,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       );
     } catch (e) {
       //emit(state.errorState('Failed to save receipt in edit: $e'));
-      print('Failed to save receipt in edit: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save receipt in edit: $e');
+      }
     }
   }
 
@@ -2268,7 +2306,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     } catch (e) {
       // Silently fail, default to 1
       emit(state.copyWith(nextOrderNumber: 1));
-      print('Failed to generate next order number: $e');
+      if (kDebugMode) {
+        developer.log('Failed to generate next order number: $e');
+      }
     }
   }
 
@@ -2450,7 +2490,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       add(RefreshPurchaseOrders());
     } catch (e) {
       //emit(state.errorState('Failed to save multiple purchase orders: $e'));
-      print('Failed to save multiple purchase orders: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save multiple purchase orders: $e');
+      }
     }
   }
 
@@ -2750,7 +2792,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
           creditPaymentSuccess: false,
         ),
       );
-      print('Failed to save credit payment: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save credit payment: $e');
+      }
     }
   }
 

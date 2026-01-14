@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/core/widgets/custom_searchable_dropdown.dart';
@@ -320,7 +323,9 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
       builder: (context, state) {
         final isAutoGenerateEnabled =
             state.selected?.generateBarcodeForItem == 'Y';
-        print(isAutoGenerateEnabled);
+        if (kDebugMode) {
+          developer.log(isAutoGenerateEnabled.toString());
+        }
 
         if (isAutoGenerateEnabled) {
           return Container(

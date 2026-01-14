@@ -1,6 +1,8 @@
 // bloc/sales_order_header_bloc.dart
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/aged_credit_receipt_totals_mode.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/credit_receipt_model.dart';
@@ -458,7 +460,9 @@ class SalesOrderHeaderBloc
       );
     } catch (e) {
       // emit(state.errorState('Failed to create sales order: $e'));
-      print({'Failed to create sales order: $e'});
+      if (kDebugMode) {
+        developer.log('Failed to create sales order: $e');
+      }
     }
   }
 
@@ -1056,10 +1060,16 @@ class SalesOrderHeaderBloc
                 'header defaultCustomer: company=${event.companyId}, count=${defaultCustomer ?? 0}',
           ),
         );
-        print(
-          'header defaultCustomer: company=${event.companyId}, count=${defaultCustomer ?? 0}',
-        );
-        print('header company=${event.companyId}, Header=${newHeader.id}');
+        if (kDebugMode) {
+          developer.log(
+            'header defaultCustomer: company=${event.companyId}, count=${defaultCustomer ?? 0}',
+          );
+        }
+        if (kDebugMode) {
+          developer.log(
+            'header company=${event.companyId}, Header=${newHeader.id}',
+          );
+        }
       }
     } catch (e) {
       emit(state.errorState('Failed to prepare create: $e'));
@@ -1211,7 +1221,9 @@ class SalesOrderHeaderBloc
       }
     } catch (e) {
       //emit(state.errorState('Failed to save sales order: $e'));
-      print('Failed to save sales order: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save sales order: $e');
+      }
     }
   }
 
@@ -1351,7 +1363,9 @@ class SalesOrderHeaderBloc
       );
     } catch (e) {
       //emit(state.errorState('Failed to load credit receipts: $e'));
-      print('Failed to load credit receipts: $e');
+      if (kDebugMode) {
+        developer.log('Failed to load credit receipts: $e');
+      }
     }
   }
 
@@ -1541,7 +1555,9 @@ class SalesOrderHeaderBloc
           creditReceiptSuccess: false,
         ),
       );
-      print('Failed to save credit receipt: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save credit receipt: $e');
+      }
     }
   }
 

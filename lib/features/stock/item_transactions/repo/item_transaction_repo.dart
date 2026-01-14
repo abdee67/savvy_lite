@@ -1,4 +1,7 @@
 // repositories/item_transaction_repository.dart
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/item_transactions/model/paginated_item_transaction_result.dart';
@@ -67,9 +70,11 @@ class ItemTransactionRepository {
     int? customer,
   }) async {
     try {
-      print(
-        'DEBUG: stockCardCreation started. ib: $ib, loc: $loc, lm: $lm, qty: $qty',
-      );
+      if (kDebugMode) {
+        developer.log(
+          'DEBUG: stockCardCreation started. ib: $ib, loc: $loc, lm: $lm, qty: $qty',
+        );
+      }
       if (ib != null || loc != null || lm != null) {
         final systemConstant = systemConstantBloc.state.selected;
         final applyLotMgmt = systemConstant?.applyLotMgmBoolean ?? false;
@@ -83,7 +88,9 @@ class ItemTransactionRepository {
         }
 
         if (ib != null && !applyLocationMgmt && !applyLotMgmt && qty != 0.0) {
-          print('DEBUG: Creating ItemBranchTransaction');
+          if (kDebugMode) {
+            developer.log('DEBUG: Creating ItemBranchTransaction');
+          }
           await _createItemBranchTransaction(
             ib: ib,
             transactionType: transactionType,
@@ -102,7 +109,9 @@ class ItemTransactionRepository {
             applyLocationMgmt &&
             !applyLotMgmt &&
             qty != 0.0) {
-          print('DEBUG: Creating LocationTransaction');
+          if (kDebugMode) {
+            developer.log('DEBUG: Creating LocationTransaction');
+          }
           await _createLocationTransaction(
             loc: loc,
             transactionType: transactionType,
@@ -121,7 +130,9 @@ class ItemTransactionRepository {
             applyLocationMgmt &&
             applyLotMgmt &&
             qty != 0.0) {
-          print('DEBUG: Creating LotTransaction');
+          if (kDebugMode) {
+            developer.log('DEBUG: Creating LotTransaction');
+          }
           await _createLotTransaction(
             lm: lm,
             transactionType: transactionType,
@@ -139,8 +150,10 @@ class ItemTransactionRepository {
         }
       }
     } catch (e, stackTrace) {
-      print('DEBUG: Error in stock card creation: $e');
-      print('DEBUG: StackTrace: $stackTrace');
+      if (kDebugMode) {
+        developer.log('DEBUG: Error in stock card creation: $e');
+        developer.log('DEBUG: StackTrace: $stackTrace');
+      }
       throw Exception('Error in stock card creation: $e');
     }
   }
@@ -390,9 +403,11 @@ class ItemTransactionRepository {
     required int user,
     required int companyId,
   }) async {
-    print(
-      'DEBUG: _createLotTransaction started. lm: ${lm.id}, item: ${lm.itemNumber}, branch: ${lm.branch}',
-    );
+    if (kDebugMode) {
+      developer.log(
+        'DEBUG: _createLotTransaction started. lm: ${lm.id}, item: ${lm.itemNumber}, branch: ${lm.branch}',
+      );
+    }
     final db = await databaseService.database;
 
     // Get transaction type UDC
@@ -412,9 +427,11 @@ class ItemTransactionRepository {
     }
 
     // Get item branch
-    print(
-      'DEBUG: Finding ItemBranch for item: ${lm.itemNumber}, branch: ${lm.branch}',
-    );
+    if (kDebugMode) {
+      developer.log(
+        'DEBUG: Finding ItemBranch for item: ${lm.itemNumber}, branch: ${lm.branch}',
+      );
+    }
     final ib = await itemInBranchRepository.findByItemAndBranch(
       lm.itemNumber!,
       lm.branch!,
@@ -438,7 +455,9 @@ class ItemTransactionRepository {
     // Calculate quantities and costs
     final qtyAvInStore = ib.quantityAvailable ?? 0.0;
 
-    print('DEBUG: Finding ItemCost for item: ${lm.itemNumber}');
+    if (kDebugMode) {
+      developer.log('DEBUG: Finding ItemCost for item: ${lm.itemNumber}');
+    }
     final itemCost = await itemCostRepository.findByItem(
       lm.itemNumber!,
       companyId,
@@ -447,30 +466,40 @@ class ItemTransactionRepository {
 
     // Checks moved to top of function
 
-    print(
-      'DEBUG: Getting UoM for item: ${lm.itemNumber}, branch: ${lm.branch}',
-    );
+    if (kDebugMode) {
+      developer.log(
+        'DEBUG: Getting UoM for item: ${lm.itemNumber}, branch: ${lm.branch}',
+      );
+    }
     final uom = await _getItemBranchUoM(lm.itemNumber!, lm.branch!, companyId);
-    print('DEBUG: uom: $uom, ib.unitOfMeasure: ${ib.unitOfMeasure}');
+    if (kDebugMode) {
+      developer.log('DEBUG: uom: $uom, ib.unitOfMeasure: ${ib.unitOfMeasure}');
+    }
 
     if (ib.unitOfMeasure == null && uom == null) {
       throw Exception('Unit of measure not found for item: ${lm.itemNumber}');
     }
 
     final effectiveUom = ib.unitOfMeasure ?? uom;
-    print('DEBUG: effectiveUom: $effectiveUom');
+    if (kDebugMode) {
+      developer.log('DEBUG: effectiveUom: $effectiveUom');
+    }
 
     if (effectiveUom == null) {
       throw Exception('Effective UoM is null despite checks');
     }
 
-    print('DEBUG: Converting UoM');
+    if (kDebugMode) {
+      developer.log('DEBUG: Converting UoM');
+    }
     final factorP = await itemUomConversionRepository.fromOtherToPrimary(
       lm.itemNumber!,
       effectiveUom,
       companyId,
     );
-    print('DEBUG: factorP: $factorP');
+    if (kDebugMode) {
+      developer.log('DEBUG: factorP: $factorP');
+    }
 
     final qTrn = (factorP * qty).abs();
     final amountCost = qTrn * unitCost;
@@ -509,7 +538,9 @@ class ItemTransactionRepository {
           soD?.orderHeader?.customerBillTo,
     );
 
-    print('DEBUG: Inserting transaction');
+    if (kDebugMode) {
+      developer.log('DEBUG: Inserting transaction');
+    }
     await db.insert('item_transactions', transaction.toMap());
 
     // Update lot quantity
@@ -1235,9 +1266,11 @@ class ItemTransactionRepository {
 
         // Validation (Optional here since we already validated, but good safety)
         if (incDec == 'D' && qb < qI) {
-          print(
-            'WARNING: Negative inventory in Location adjustment ignored for safety.',
-          );
+          if (kDebugMode) {
+            developer.log(
+              'WARNING: Negative inventory in Location adjustment ignored for safety.',
+            );
+          }
           // return; // or throw?
         }
 
@@ -1299,9 +1332,11 @@ class ItemTransactionRepository {
 
         // Validation
         if (incDec == 'D' && qb < qI) {
-          print(
-            'WARNING: Negative inventory in Lot adjustment ignored for safety.',
-          );
+          if (kDebugMode) {
+            developer.log(
+              'WARNING: Negative inventory in Lot adjustment ignored for safety.',
+            );
+          }
         }
 
         final newQty = (incDec == 'I') ? qb + qI : qb - qI;
@@ -1524,7 +1559,9 @@ class ItemTransactionRepository {
 
       return qOpen;
     } catch (e) {
-      print('Error calculating opening amount: $e');
+      if (kDebugMode) {
+        developer.log('Error calculating opening amount: $e');
+      }
       throw Exception('Error calculating opening amount: $e');
     }
   }
@@ -1549,7 +1586,9 @@ class ItemTransactionRepository {
 
       return totalOpening;
     } catch (e) {
-      print('Error calculating total opening: $e');
+      if (kDebugMode) {
+        developer.log('Error calculating total opening: $e');
+      }
       throw Exception('Failed to calculate total opening: $e');
     }
   }
@@ -1816,7 +1855,9 @@ class ItemTransactionRepository {
 
       return (transValueTotal + totalPurchases) - cogs;
     } catch (e) {
-      print('Error in openingQuantityBefore: $e');
+      if (kDebugMode) {
+        developer.log('Error in openingQuantityBefore: $e');
+      }
       return 0.0;
     }
   }
@@ -1898,7 +1939,9 @@ class ItemTransactionRepository {
 
       return transValueTotal + totalPurchases;
     } catch (e) {
-      print('Error in openingQuantityBeforeToday: $e');
+      if (kDebugMode) {
+        developer.log('Error in openingQuantityBeforeToday: $e');
+      }
       return 0.0;
     }
   }
@@ -1961,7 +2004,9 @@ class ItemTransactionRepository {
 
       return totalAmt.abs();
     } catch (e) {
-      print('Error in salesQTYonthisdates: $e');
+      if (kDebugMode) {
+        developer.log('Error in salesQTYonthisdates: $e');
+      }
       return 0.0;
     }
   }
@@ -1985,7 +2030,9 @@ class ItemTransactionRepository {
 
       return amt;
     } catch (e) {
-      print('Error in diffrencesalesOnThisdatesQTY: $e');
+      if (kDebugMode) {
+        developer.log('Error in diffrencesalesOnThisdatesQTY: $e');
+      }
       return 0.0;
     }
   }
@@ -2056,7 +2103,9 @@ class ItemTransactionRepository {
 
       return balanceBefore + internalMovementsValue;
     } catch (e) {
-      print('Error in openingAmountInitial: $e');
+      if (kDebugMode) {
+        developer.log('Error in openingAmountInitial: $e');
+      }
       return 0.0;
     }
   }
@@ -2135,7 +2184,9 @@ class ItemTransactionRepository {
 
       return currentTotalValue;
     } catch (e) {
-      print('Error in openingAmountBefore: $e');
+      if (kDebugMode) {
+        developer.log('Error in openingAmountBefore: $e');
+      }
       return 0.0;
     }
   }
@@ -2180,7 +2231,9 @@ class ItemTransactionRepository {
       final totalAmt = (result.first['total'] as double?) ?? 0.0;
       return totalAmt;
     } catch (e) {
-      print('Error in purchaseAmountOnDate: $e');
+      if (kDebugMode) {
+        developer.log('Error in purchaseAmountOnDate: $e');
+      }
       return 0.0;
     }
   }
@@ -2225,7 +2278,9 @@ class ItemTransactionRepository {
       final totalAmt = (result.first['total'] as double?) ?? 0.0;
       return totalAmt;
     } catch (e) {
-      print('Error in salesAmountOnDate: $e');
+      if (kDebugMode) {
+        developer.log('Error in salesAmountOnDate: $e');
+      }
       return 0.0;
     }
   }
@@ -2270,7 +2325,9 @@ class ItemTransactionRepository {
       final totalAmt = (result.first['total'] as double?) ?? 0.0;
       return totalAmt;
     } catch (e) {
-      print('Error in salesAmountOnThisDateCOS: $e');
+      if (kDebugMode) {
+        developer.log('Error in salesAmountOnThisDateCOS: $e');
+      }
       return 0.0;
     }
   }
@@ -2297,7 +2354,9 @@ class ItemTransactionRepository {
       );
       return totalSalesAmountOnThisDate - totalSalesAmountCostOnThisDateCOS;
     } catch (e) {
-      print('Error in grossProfitOnThisDate: $e');
+      if (kDebugMode) {
+        developer.log('Error in grossProfitOnThisDate: $e');
+      }
       return 0.0;
     }
   }
@@ -2330,7 +2389,9 @@ class ItemTransactionRepository {
       );
       return oai + paotd - saotd;
     } catch (e) {
-      print('Error in amountEnding: $e');
+      if (kDebugMode) {
+        developer.log('Error in amountEnding: $e');
+      }
       return 0.0;
     }
   }

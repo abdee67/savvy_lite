@@ -545,7 +545,7 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
 
     // For responsiveness:
     final collapsedHeight = isCompact
-        ? screenHeight * 0.18
+        ? screenHeight * 0.22
         : screenHeight * 0.14;
 
     final expandedHeight = isCompact
@@ -690,7 +690,7 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 4),
                               // Location codes count badge
                               Container(
                                 padding: const EdgeInsets.symmetric(

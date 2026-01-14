@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_event.dart';
 import 'package:savvy_stock/features/stock/item_locations/blocs/item_locations_state.dart';
@@ -278,7 +280,9 @@ class StockItemLocationBloc
           //message: 'Failed to save item location: $e',
         ),
       );
-      print('Failed to save item location: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save item location: $e');
+      }
     }
   }
 

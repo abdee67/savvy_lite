@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -39,7 +42,11 @@ class _CashInflowReportPageState extends State<CashInflowReportPage> {
 
   void _loadInitialData() {
     final companyId = widget.authBloc.state.companyId;
-    print('CashInflowPage: Loading initial data. CompanyID: $companyId');
+    if (kDebugMode) {
+      developer.log(
+        'CashInflowPage: Loading initial data. CompanyID: $companyId',
+      );
+    }
     if (companyId != null) {
       context.read<CashFlowBloc>().add(
         LoadCashInFlowReport(
@@ -49,7 +56,9 @@ class _CashInflowReportPageState extends State<CashInflowReportPage> {
         ),
       );
     } else {
-      print('CashInflowPage: CompanyID is null!');
+      if (kDebugMode) {
+        developer.log('CashInflowPage: CompanyID is null!');
+      }
     }
   }
 
@@ -122,7 +131,9 @@ class _CashInflowReportPageState extends State<CashInflowReportPage> {
               );
             }
             if (state.status == CashFlowStatus.error && state.error != null) {
-              print('CashInflowPage: Error state: ${state.error}');
+              if (kDebugMode) {
+                developer.log('CashInflowPage: Error state: ${state.error}');
+              }
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('Error: ${state.error}'),
@@ -132,9 +143,11 @@ class _CashInflowReportPageState extends State<CashInflowReportPage> {
             }
           },
           builder: (context, state) {
-            print(
-              'CashInflowPage: Rebuild. Status: ${state.status}, Totals: ${state.cashInFlowReportTotals?.totalCount}, ListSize: ${state.cashInFlowReport.length}',
-            );
+            if (kDebugMode) {
+              developer.log(
+                'CashInflowPage: Rebuild. Status: ${state.status}, Totals: ${state.cashInFlowReportTotals?.totalCount}, ListSize: ${state.cashInFlowReport.length}',
+              );
+            }
             return BlocBuilder<SystemConstantBloc, SystemConstantState>(
               builder: (context, systemState) {
                 final systemConstant = systemState.systemConstants.isNotEmpty

@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/features/licensing/bloc/license_state.dart';
 import 'package:savvy_stock/features/licensing/services/license_service.dart';
 import 'package:savvy_stock/features/licensing/bloc/license_event.dart';
@@ -22,7 +24,9 @@ class LicenseBloc extends Bloc<LicenseEvent, LicenseState> {
           add(LoadLicense());
         })
         .catchError((error) {
-          print('Failed to initialize license service: $error');
+          if (kDebugMode) {
+            developer.log('Failed to initialize license service: $error');
+          }
         });
   }
 
@@ -211,7 +215,9 @@ class LicenseBloc extends Bloc<LicenseEvent, LicenseState> {
       );
     } catch (e) {
       // Don't change state if check fails
-      print('Failed to check license expiration: $e');
+      if (kDebugMode) {
+        developer.log('Failed to check license expiration: $e');
+      }
     }
   }
 }

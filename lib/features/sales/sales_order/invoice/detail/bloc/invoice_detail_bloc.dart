@@ -1,6 +1,8 @@
 // features/sales/invoice_history/bloc/invoice_history_detail_bloc.dart
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/detail/bloc/invoice_detail.event.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/detail/bloc/invoice_detail_state.dart';
@@ -497,7 +499,9 @@ class InvoiceHistoryDetailBloc
           //errorMessage: 'Failed to save invoice history: $e',
         ),
       );
-      print('Failed to save invoice history: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save invoice history: $e');
+      }
     }
   }
 
@@ -530,7 +534,9 @@ class InvoiceHistoryDetailBloc
           //errorMessage: 'Failed to save row: $e',
         ),
       );
-      print('Failed to save row: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save row: $e');
+      }
     }
   }
 
@@ -566,7 +572,9 @@ class InvoiceHistoryDetailBloc
           //errorMessage: 'Failed to save in edit: $e',
         ),
       );
-      print('Failed to save in edit: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save in edit: $e');
+      }
     }
   }
 

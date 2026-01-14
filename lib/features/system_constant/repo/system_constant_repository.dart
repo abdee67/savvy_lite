@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:savvy_stock/core/constants/api_constants.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
@@ -468,7 +469,9 @@ class SystemConstantRepository {
         }
       }
     } catch (e) {
-      print('Failed to pull latest system constants: $e');
+      if (kDebugMode) {
+        developer.log('Failed to pull latest system constants: $e');
+      }
     }
   }
 

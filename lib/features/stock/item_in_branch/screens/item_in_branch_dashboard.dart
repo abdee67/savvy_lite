@@ -140,12 +140,10 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
 
   void _callItem(String itemId) {
     // Implement phone call functionality
-    print('Calling: $itemId');
   }
 
   void _emailItem(String itemId) {
     // Implement email functionality
-    print('Emailing: $itemId');
   }
 
   void _exportItem(ItemInBranchModel item) {

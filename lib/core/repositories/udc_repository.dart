@@ -1,4 +1,5 @@
 import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
@@ -144,10 +145,16 @@ class UdcRepository extends BaseRepository {
         return result.first['id'] as int?;
       }
 
-      print('❌ No UDC found for header: $headerCode, detail: $detailCode');
+      if (kDebugMode) {
+        developer.log(
+          '❌ No UDC found for header: $headerCode, detail: $detailCode',
+        );
+      }
       return null;
     } catch (e) {
-      print('❌ Error getting UDC detail ID: $e');
+      if (kDebugMode) {
+        developer.log('❌ Error getting UDC detail ID: $e');
+      }
       return null;
     }
   }
@@ -220,10 +227,14 @@ class UdcRepository extends BaseRepository {
         return result.first['id'] as int?;
       }
 
-      print('❌ No UDC header found for code: $headerCode');
+      if (kDebugMode) {
+        developer.log('❌ No UDC header found for code: $headerCode');
+      }
       return null;
     } catch (e) {
-      print('❌ Error getting UDC header ID: $e');
+      if (kDebugMode) {
+        developer.log('❌ Error getting UDC header ID: $e');
+      }
       return null;
     }
   }

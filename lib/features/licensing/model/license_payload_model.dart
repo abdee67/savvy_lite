@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
 class LicensePayload {
@@ -49,7 +52,9 @@ class LicensePayload {
         final normalized = dateStr.replaceAll(RegExp(r'[\u202F\u00A0]'), ' ');
         return DateFormat('MMM d, yyyy, h:mm:ss a', 'en_US').parse(normalized);
       } catch (e2) {
-        print('Error parsing date: $dateStr - $e2');
+        if (kDebugMode) {
+          developer.log('Error parsing date: $dateStr - $e2');
+        }
         return DateTime.now(); // Fallback
       }
     }

@@ -1,6 +1,8 @@
 // bloc/location_master_bloc.dart
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_event.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_state.dart';
@@ -69,7 +71,11 @@ class LocationMasterBloc
     // Prevent duplicate loads
     if (state.status == LocationMasterStatus.loading) return;
 
-    print('🔄 BLoC: Loading locations for company ${event.companyId}');
+    if (kDebugMode) {
+      developer.log(
+        '🔄 BLoC: Loading locations for company ${event.companyId}',
+      );
+    }
     emit(state.copyWith(status: LocationMasterStatus.loading));
     try {
       final location = await locationMasterRepository.getLocationMasters(

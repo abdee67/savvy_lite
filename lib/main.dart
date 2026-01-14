@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -98,10 +99,6 @@ Future<void> _initializeAndRunApp() async {
   try {
     await ConnectivityService().initConnectivity();
     initDependencies();
-
-    //await LocalDatabaseService().resetDatabase();
-    //await getIt<LicenseService>().clearLicense();
-    // await LocalDatabaseService().debugTable('branch_table');
     await getIt<LicenseService>().initialize();
 
     if (AppConfig.isTestMode) {
@@ -109,36 +106,43 @@ Future<void> _initializeAndRunApp() async {
       developer.log('📱 API calls bypassed');
       developer.log('💾 Using local database only');
     }
-    // Debug database tables (optional - remove in production)
-    // await LocalDatabaseService().debugTable('items_in_branch');
-    // await LocalDatabaseService().debugTable('item_cost');
-    //await LocalDatabaseService().debugTable('item_location');
-    //  await LocalDatabaseService().debugTable('location_master');
-    // await LocalDatabaseService().debugTable('item_master');
-    //await LocalDatabaseService().debugTable('items_table');
-    // await LocalDatabaseService().debugTable('sales_order_header');
-    //await LocalDatabaseService().debugTable('credit_receipt_table');
-    // await LocalDatabaseService().debugTable('sales_order_details');
-    // await LocalDatabaseService().debugTable('sales_return_header');
-    //await LocalDatabaseService().debugTable('sales_return_details');
-    // await LocalDatabaseService().debugTable('invoice_history_header');
-    // await LocalDatabaseService().debugTable('invoice_history_detail');
-    //await LocalDatabaseService().debugTable('item_transactions');
-    // await LocalDatabaseService().debugTable('quote_order_header');
-    // await LocalDatabaseService().debugTable('quote_order_detail');
-    // await LocalDatabaseService().debugTable('supplier_table');
-    //await LocalDatabaseService().debugTable('purchase_order_header');
-    //await LocalDatabaseService().debugTable('purchase_order_detail');
-    //await LocalDatabaseService().debugTable('purchase_order_receiver');
-    //await LocalDatabaseService().debugTable('credit_payment_table');
-    //await LocalDatabaseService().debugTable('company_table');
-    //await LocalDatabaseService().debugTable('udc_details');
-    await LocalDatabaseService().debugTable('user_table');
-    await LocalDatabaseService().debugTable('user_role');
-    //await LocalDatabaseService().debugTable('role_privilege');
+    if (kDebugMode) {
+      //await LocalDatabaseService().resetDatabase();
+      //await getIt<LicenseService>().clearLicense();
+      // await LocalDatabaseService().debugTable('branch_table');
+      // Debug database tables (optional - remove in production)
+      // await LocalDatabaseService().debugTable('items_in_branch');
+      // await LocalDatabaseService().debugTable('item_cost');
+      //await LocalDatabaseService().debugTable('item_location');
+      //  await LocalDatabaseService().debugTable('location_master');
+      // await LocalDatabaseService().debugTable('item_master');
+      //await LocalDatabaseService().debugTable('items_table');
+      // await LocalDatabaseService().debugTable('sales_order_header');
+      //await LocalDatabaseService().debugTable('credit_receipt_table');
+      // await LocalDatabaseService().debugTable('sales_order_details');
+      // await LocalDatabaseService().debugTable('sales_return_header');
+      //await LocalDatabaseService().debugTable('sales_return_details');
+      // await LocalDatabaseService().debugTable('invoice_history_header');
+      // await LocalDatabaseService().debugTable('invoice_history_detail');
+      //await LocalDatabaseService().debugTable('item_transactions');
+      // await LocalDatabaseService().debugTable('quote_order_header');
+      // await LocalDatabaseService().debugTable('quote_order_detail');
+      // await LocalDatabaseService().debugTable('supplier_table');
+      //await LocalDatabaseService().debugTable('purchase_order_header');
+      //await LocalDatabaseService().debugTable('purchase_order_detail');
+      //await LocalDatabaseService().debugTable('purchase_order_receiver');
+      //await LocalDatabaseService().debugTable('credit_payment_table');
+      //await LocalDatabaseService().debugTable('company_table');
+      //await LocalDatabaseService().debugTable('udc_details');
+      await LocalDatabaseService().debugTable('user_table');
+      await LocalDatabaseService().debugTable('user_role');
+      //await LocalDatabaseService().debugTable('role_privilege');
+    }
   } catch (error, stackTrace) {
-    developer.log('Initialization error: $error');
-    developer.log('Stack trace: $stackTrace');
+    if (kDebugMode) {
+      developer.log('Initialization error: $error');
+      developer.log('Stack trace: $stackTrace');
+    }
   }
   runApp(const SavvyStock());
 }

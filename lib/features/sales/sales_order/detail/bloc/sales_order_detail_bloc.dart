@@ -1,6 +1,8 @@
 // features/sales/sales_order_details/blocs/sales_order_details_bloc.dart
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_bloc.dart';
@@ -243,7 +245,9 @@ class SalesOrderDetailBloc
           errorMessage: 'Failed to create sales order details: $e',
         ),
       );
-      print(e);
+      if (kDebugMode) {
+        developer.log(e.toString());
+      }
     }
   }
 
@@ -534,9 +538,11 @@ class SalesOrderDetailBloc
     );
 
     final updatedCreateItems = [...state.createItems, newItem];
-    print(
-      '🎯 DEBUG: Added item to create - Lot: ${newItem.lotNumber}, Taxable: ${newItem.taxable}',
-    );
+    if (kDebugMode) {
+      developer.log(
+        '🎯 DEBUG: Added item to create - Lot: ${newItem.lotNumber}, Taxable: ${newItem.taxable}',
+      );
+    }
 
     emit(state.copyWith(createItems: updatedCreateItems, selected1: newItem));
   }
@@ -549,9 +555,11 @@ class SalesOrderDetailBloc
     if (event.index < updatedCreateItems.length) {
       updatedCreateItems[event.index] = event.item;
     }
-    print(
-      '🎯 DEBUG: Updated item in create - Lot: ${event.item.lotNumber}, Taxable: ${event.item.taxable}',
-    );
+    if (kDebugMode) {
+      developer.log(
+        '🎯 DEBUG: Updated item in create - Lot: ${event.item.lotNumber}, Taxable: ${event.item.taxable}',
+      );
+    }
 
     emit(state.copyWith(createItems: updatedCreateItems));
   }
@@ -563,6 +571,11 @@ class SalesOrderDetailBloc
     final updatedEditItems = List<SalesOrderDetail>.from(state.editItems);
     if (event.index < updatedEditItems.length) {
       updatedEditItems[event.index] = event.item;
+    }
+    if (kDebugMode) {
+      developer.log(
+        '🎯 DEBUG: Updated item in edit - Lot: ${event.item.lotNumber}, Taxable: ${event.item.taxable}',
+      );
     }
 
     emit(state.copyWith(editItems: updatedEditItems));
@@ -824,9 +837,11 @@ class SalesOrderDetailBloc
             ),
           );
 
-          print(
-            '🎯 DEBUG: Auto-assigned lot number ${firstAvailableLot.id} for item ${soD.itemsTableId}',
-          );
+          if (kDebugMode) {
+            developer.log(
+              '🎯 DEBUG: Auto-assigned lot number ${firstAvailableLot.id} for item ${soD.itemsTableId}',
+            );
+          }
         }
       } else if (applyLocationMgmt && !applyLotMgmt) {
         // 🎯 Get actual available quantity from ItemsInBranch
@@ -1093,7 +1108,9 @@ class SalesOrderDetailBloc
         );
       }
     } catch (e) {
-      print('Failed to calculate item cost: $e');
+      if (kDebugMode) {
+        developer.log('Failed to calculate item cost: $e');
+      }
     }
   }
 
@@ -1231,7 +1248,11 @@ class SalesOrderDetailBloc
               enrichedSOD = enrichedSOD.copyWith(orderHeader: header);
             }
           } catch (e) {
-            print('WARNING: Could not enrich SalesOrderDetail with header: $e');
+            if (kDebugMode) {
+              developer.log(
+                'WARNING: Could not enrich SalesOrderDetail with header: $e',
+              );
+            }
           }
         }
 
@@ -1332,9 +1353,11 @@ class SalesOrderDetailBloc
                 enrichedSOD = enrichedSOD.copyWith(orderHeader: header);
               }
             } catch (e) {
-              print(
-                'WARNING: Could not enrich SalesOrderDetail with header: $e',
-              );
+              if (kDebugMode) {
+                developer.log(
+                  'WARNING: Could not enrich SalesOrderDetail with header: $e',
+                );
+              }
             }
           }
 
@@ -1440,9 +1463,11 @@ class SalesOrderDetailBloc
       }
 
       if (!allValid) {
-        print(
-          'Quantity beyond available (Beyond quantity is ${beyondQuantity.abs()})!',
-        );
+        if (kDebugMode) {
+          developer.log(
+            'Quantity beyond available (Beyond quantity is ${beyondQuantity.abs()})!',
+          );
+        }
         throw Exception(
           'Quantity beyond available (Beyond quantity is ${beyondQuantity.abs()})!',
         );
@@ -1472,11 +1497,17 @@ class SalesOrderDetailBloc
       }
 
       // 🎯 DEBUG: PRINT DETAILS BEFORE SAVING
-      print('🎯 DEBUG: Saving ${enrichedItems.length} sales order details');
-      for (final detail in enrichedItems) {
-        print(
-          '🎯 DEBUG: Detail - Lot: ${detail.lotNumber}, Taxable: ${detail.taxable}, Item: ${detail.itemsTableId}, Branch: ${detail.itemInBranch}, Cost: ${detail.unitCost}',
+      if (kDebugMode) {
+        developer.log(
+          '🎯 DEBUG: Saving ${enrichedItems.length} sales order details',
         );
+      }
+      for (final detail in enrichedItems) {
+        if (kDebugMode) {
+          developer.log(
+            '🎯 DEBUG: Detail - Lot: ${detail.lotNumber}, Taxable: ${detail.taxable}, Item: ${detail.itemsTableId}, Branch: ${detail.itemInBranch}, Cost: ${detail.unitCost}',
+          );
+        }
       }
       // 🎯 SAVE DETAILS
       await repository.createSalesOrderDetailBatch(enrichedItems);
@@ -1499,7 +1530,9 @@ class SalesOrderDetailBloc
           // errorMessage: 'Failed to save sales order details: $e',
         ),
       );
-      print('Failed to save sales order details: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save sales order details: $e');
+      }
     }
   }
 
@@ -1534,7 +1567,9 @@ class SalesOrderDetailBloc
           //errorMessage: 'Failed to save sales order details: $e',
         ),
       );
-      print('Failed to save sales order details: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save sales order details: $e');
+      }
     }
   }
 
@@ -1566,7 +1601,9 @@ class SalesOrderDetailBloc
           //errorMessage: 'Failed to save row: $e',
         ),
       );
-      print('Failed to save row: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save row: $e');
+      }
     }
   }
 

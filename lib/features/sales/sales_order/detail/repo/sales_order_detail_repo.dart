@@ -1,6 +1,9 @@
 /// features/sales/sales_order_details/repositories/sales_order_details_repository.dart
 library;
 
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -51,9 +54,11 @@ class SalesOrderDetailRepository {
         details.toMap(),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
-      print(
-        '🎯 DEBUG: Inserting detail - Lot: ${details.lotNumber}, Taxable: ${details.taxable}',
-      );
+      if (kDebugMode) {
+        developer.log(
+          '🎯 DEBUG: Inserting detail - Lot: ${details.lotNumber}, Taxable: ${details.taxable}',
+        );
+      }
     }
 
     await batch.commit(noResult: true);

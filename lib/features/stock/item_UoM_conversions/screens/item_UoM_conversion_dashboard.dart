@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -156,7 +159,9 @@ class _ItemUomConversionListScreenState
 
   void _exportConversion(ItemUomConversion conversion) {
     // Implement export functionality
-    print('Exporting conversion: ${conversion.id}');
+    if (kDebugMode) {
+      developer.log('Exporting conversion: ${conversion.id}');
+    }
   }
 
   void _navigateToCreateScreen() {

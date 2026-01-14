@@ -1,4 +1,7 @@
 // features/sales/sales_item_entry/widgets/sales_item_entry_form.dart
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -169,7 +172,9 @@ class _QuoteItemEntryFormState extends State<QuoteItemEntryForm> {
         _selectedItem = existingItem;
       } catch (e) {
         // Item not found, continue without pre-selection
-        print('Item not found: ${detail.itemsTableId}');
+        if (kDebugMode) {
+          developer.log('Item not found: ${detail.itemsTableId}');
+        }
       }
     }
 
@@ -197,7 +202,9 @@ class _QuoteItemEntryFormState extends State<QuoteItemEntryForm> {
         }
       } catch (e) {
         // Item in branch not found
-        print('Item in branch not found: ${detail.itemInBranch}');
+        if (kDebugMode) {
+          developer.log('Item in branch not found: ${detail.itemInBranch}');
+        }
       }
     }
   }
@@ -335,7 +342,9 @@ class _QuoteItemEntryFormState extends State<QuoteItemEntryForm> {
 
   List<ItemInBranchModel> _getAvailableBranchesForItem() {
     if (_selectedItem == null) return [];
-    print('selectedItem: ${_selectedItem!.id}');
+    if (kDebugMode) {
+      developer.log('selectedItem: ${_selectedItem!.id}');
+    }
     final itemsInBranchBloc = context.read<StockItemInBranchBloc>();
     return itemsInBranchBloc.state.items
         .where((itemInBranch) => itemInBranch.itemNumber == _selectedItem!.id)
@@ -355,18 +364,34 @@ class _QuoteItemEntryFormState extends State<QuoteItemEntryForm> {
 
   @override
   Widget build(BuildContext context) {
-    print('🟡 FORM: build() called, _isInitializing=$_isInitializing');
+    if (kDebugMode) {
+      developer.log(
+        '🟡 FORM: build() called, _isInitializing=$_isInitializing',
+      );
+    }
 
-    print('🟡 FORM: Getting available branches');
+    if (kDebugMode) {
+      developer.log('🟡 FORM: Getting available branches');
+    }
     final availableBranches = _getAvailableBranchesForItem();
-    print('🟡 FORM: Available branches count: ${availableBranches.length}');
+    if (kDebugMode) {
+      developer.log(
+        '🟡 FORM: Available branches count: ${availableBranches.length}',
+      );
+    }
 
     if (_isInitializing) {
-      print('🟡 FORM: Still initializing, showing progress indicator');
+      if (kDebugMode) {
+        developer.log(
+          '🟡 FORM: Still initializing, showing progress indicator',
+        );
+      }
       return const Center(child: CircularProgressIndicator());
     }
 
-    print('🟡 FORM: Building form widget');
+    if (kDebugMode) {
+      developer.log('🟡 FORM: Building form widget');
+    }
     return Form(
       key: widget.formKey,
       child: BlocListener<QuotationOrderBloc, QuotationOrderState>(
@@ -403,9 +428,11 @@ class _QuoteItemEntryFormState extends State<QuoteItemEntryForm> {
             // Item Selection
             BlocBuilder<StockItemsEntryBloc, ItemEntryState>(
               builder: (context, itemsState) {
-                print(
-                  '🔴 DROPDOWN: Building item dropdown with ${itemsState.items.length} items',
-                );
+                if (kDebugMode) {
+                  developer.log(
+                    '🔴 DROPDOWN: Building item dropdown with ${itemsState.items.length} items',
+                  );
+                }
                 return CustomTableDropdown<ItemEntryModel>(
                   title: 'Select Item *',
                   items: itemsState.items,

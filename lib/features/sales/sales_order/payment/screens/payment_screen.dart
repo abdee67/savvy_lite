@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -59,13 +62,19 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
 
     // Initialize payment calculations
-    print('DEBUG: PaymentScreen initializing data');
-    print(
-      'DEBUG: Coordinator state has header: ${coordinatorBloc.state.currentHeader != null}',
-    );
-    print(
-      'DEBUG: Coordinator state has details: ${coordinatorBloc.state.currentDetails.length}',
-    );
+    if (kDebugMode) {
+      developer.log('DEBUG: PaymentScreen initializing data');
+    }
+    if (kDebugMode) {
+      developer.log(
+        'DEBUG: Coordinator state has header: ${coordinatorBloc.state.currentHeader != null}',
+      );
+    }
+    if (kDebugMode) {
+      developer.log(
+        'DEBUG: Coordinator state has details: ${coordinatorBloc.state.currentDetails.length}',
+      );
+    }
 
     coordinatorBloc.add(const CalculateCompleteOrderTotals());
     coordinatorBloc.add(const LoadFeeSystemConstants());

@@ -129,12 +129,10 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
 
   void _callItem(String itemId) {
     // Implement phone call functionality
-    print('Calling: $itemId');
   }
 
   void _emailItem(String itemId) {
     // Implement email functionality
-    print('Emailing: $itemId');
   }
 
   void _exportItem(ItemEntryModel item) {

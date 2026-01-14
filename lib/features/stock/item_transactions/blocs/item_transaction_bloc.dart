@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
@@ -106,7 +108,9 @@ class ItemTransactionsBloc
       );
       emit(state.copyWith(purchaseAmountOnDate: amount));
     } catch (e) {
-      print('Error in _onGetPOonthisdates: $e');
+      if (kDebugMode) {
+        developer.log('Error in _onGetPOonthisdates: $e');
+      }
     }
   }
 
@@ -123,7 +127,9 @@ class ItemTransactionsBloc
       );
       emit(state.copyWith(salesAmountOnDate: amount));
     } catch (e) {
-      print('Error in _onGetSalesOnThisDate: $e');
+      if (kDebugMode) {
+        developer.log('Error in _onGetSalesOnThisDate: $e');
+      }
     }
   }
 
@@ -140,7 +146,9 @@ class ItemTransactionsBloc
       );
       emit(state.copyWith(salesAmountOnThisDateCOS: amount));
     } catch (e) {
-      print('Error in _onGetSalesOnThisDateCOS: $e');
+      if (kDebugMode) {
+        developer.log('Error in _onGetSalesOnThisDateCOS: $e');
+      }
     }
   }
 
@@ -157,7 +165,9 @@ class ItemTransactionsBloc
       );
       emit(state.copyWith(grossProfitOnThisDate: amount));
     } catch (e) {
-      print('Error in _onGetGrossProfitOnThisDate: $e');
+      if (kDebugMode) {
+        developer.log('Error in _onGetGrossProfitOnThisDate: $e');
+      }
     }
   }
 
@@ -174,7 +184,9 @@ class ItemTransactionsBloc
       );
       emit(state.copyWith(amountEnding: amount));
     } catch (e) {
-      print('Error in _onGetAmountEnding: $e');
+      if (kDebugMode) {
+        developer.log('Error in _onGetAmountEnding: $e');
+      }
     }
   }
 
@@ -190,7 +202,9 @@ class ItemTransactionsBloc
       );
       emit(state.copyWith(openingAmountBefore: amount));
     } catch (e) {
-      print('Error in _onGetOpeningAmountBefore: $e');
+      if (kDebugMode) {
+        developer.log('Error in _onGetOpeningAmountBefore: $e');
+      }
     }
   }
 
@@ -207,7 +221,9 @@ class ItemTransactionsBloc
       );
       emit(state.copyWith(openingAmountInitial: amount));
     } catch (e) {
-      print('Error in _onGetOpeningAmountInitial: $e');
+      if (kDebugMode) {
+        developer.log('Error in _onGetOpeningAmountInitial: $e');
+      }
     }
   }
 
@@ -269,7 +285,9 @@ class ItemTransactionsBloc
           //error: 'Failed to save transactions: $e',
         ),
       );
-      print('Failed to save transactions: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save transactions: $e');
+      }
     }
   }
 
@@ -302,7 +320,9 @@ class ItemTransactionsBloc
           //error: 'Failed to save row: $e',
         ),
       );
-      print('Failed to save row: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save row: $e');
+      }
     }
   }
 

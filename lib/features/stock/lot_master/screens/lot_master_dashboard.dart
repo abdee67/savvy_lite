@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -174,7 +177,9 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
 
   void _exportLot(LotMaster lot) {
     // Implement export functionality
-    print('Exporting lot: ${lot.lotNumber}');
+    if (kDebugMode) {
+      developer.log('Exporting lot: ${lot.lotNumber}');
+    }
   }
 
   void _navigateToCreateScreen() {
@@ -348,7 +353,9 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     final code = (color.colorTypeCode ?? '').trim().toUpperCase();
     final name = (color.colorTypeName ?? '').trim().toLowerCase();
 
-    print('🎨 Color Mapping - Code: $code, Name: $name');
+    if (kDebugMode) {
+      developer.log('🎨 Color Mapping - Code: $code, Name: $name');
+    }
 
     // Map based on your UDC data
     switch (code) {
@@ -411,7 +418,8 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
           lotType,
         );
 
-    print('''
+    if (kDebugMode) {
+      developer.log('''
 🎯 DEBUG LOT COLOR CALCULATION:
   Lot: ${lot.lotNumber}
   Lot Type: $lotType (${lotTypeUdcDetail?.description1})
@@ -423,12 +431,14 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
   Calculated Color: ${color?.colorTypeName} (${color?.colorTypeCode})
   Days Difference: $daysDifference
 ''');
+    }
   }
 
   void _debugSystemConstants() async {
     try {
       final systemConstant = context.read<SystemConstantBloc>().state.selected;
-      print('''
+      if (kDebugMode) {
+        developer.log('''
 🔧 SYSTEM CONSTANT DEBUG:
   Company ID: ${widget.authBloc.state.companyId}
   System Constant ID: ${systemConstant?.id}
@@ -436,28 +446,37 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
   Apply Lot Mgmt: ${systemConstant?.applyLotMgm}
   Is Synced: ${systemConstant?.isSynced}
 ''');
+      }
 
       if (systemConstant?.lotType != null) {
         final lotTypeUdc = await _udcRepository.getUdcDetailById(
           systemConstant?.lotType,
         );
-        print(
-          '  Lot Type UDC: ${lotTypeUdc?.detailCode} - ${lotTypeUdc?.description1}',
-        );
+        if (kDebugMode) {
+          developer.log(
+            '  Lot Type UDC: ${lotTypeUdc?.detailCode} - ${lotTypeUdc?.description1}',
+          );
+        }
       } else {
-        print('  ❌ Lot Type is NULL in system constant');
+        if (kDebugMode) {
+          developer.log('  ❌ Lot Type is NULL in system constant');
+        }
 
         // Check if system constant is loaded at all
         final systemConstantState = context.read<SystemConstantBloc>().state;
-        print(
-          '  System Constant State: ${systemConstantState.systemConstants.length} constants loaded',
-        );
-        print(
-          '  Selected System Constant: ${systemConstantState.selected?.toJson()}',
-        );
+        if (kDebugMode) {
+          developer.log(
+            '  System Constant State: ${systemConstantState.systemConstants.length} constants loaded',
+          );
+          developer.log(
+            '  Selected System Constant: ${systemConstantState.selected?.toJson()}',
+          );
+        }
       }
     } catch (e) {
-      print('❌ Error debugging system constants: $e');
+      if (kDebugMode) {
+        developer.log('❌ Error debugging system constants: $e');
+      }
     }
   }
 
@@ -467,7 +486,8 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     final systemConstantState = context.read<SystemConstantBloc>().state;
     final systemConstant = systemConstantState.selected;
 
-    print('''
+    if (kDebugMode) {
+      developer.log('''
 🔍 SYSTEM CONSTANT BLOC STATE DEBUG:
   Status: ${systemConstantState.status}
   Constants Loaded: ${systemConstantState.systemConstants.length}
@@ -476,6 +496,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
   Has Selected: ${systemConstantState.selected != null}
   State: ${systemConstantState.toString()}
 ''');
+    }
   }
 
   // Call this in your build method

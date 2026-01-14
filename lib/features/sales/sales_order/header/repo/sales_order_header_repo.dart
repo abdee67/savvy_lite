@@ -1,5 +1,7 @@
 // repositories/sales_order_header_repository.dart
 import 'dart:async';
+import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/credit_receipt_model.dart';
@@ -22,7 +24,11 @@ class SalesOrderHeaderRepository {
       final headerMap = header.toMap();
 
       // Log the data being inserted for debugging
-      print('DEBUG: Creating sales order header with data: $headerMap');
+      if (kDebugMode) {
+        developer.log(
+          'DEBUG: Creating sales order header with data: $headerMap',
+        );
+      }
 
       final id = await db.insert(
         'sales_order_header',
@@ -30,12 +36,18 @@ class SalesOrderHeaderRepository {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
 
-      print('DEBUG: Sales order header created successfully with ID: $id');
+      if (kDebugMode) {
+        developer.log(
+          'DEBUG: Sales order header created successfully with ID: $id',
+        );
+      }
       return id;
     } catch (e, stackTrace) {
-      print('ERROR: Failed to create sales order header: $e');
-      print('ERROR: Stack trace: $stackTrace');
-      print('ERROR: Header data: ${header.toMap()}');
+      if (kDebugMode) {
+        developer.log('ERROR: Failed to create sales order header: $e');
+        developer.log('ERROR: Stack trace: $stackTrace');
+        developer.log('ERROR: Header data: ${header.toMap()}');
+      }
       throw Exception('Failed to create sales order header: $e');
     }
   }

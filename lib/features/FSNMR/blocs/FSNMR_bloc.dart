@@ -1,7 +1,9 @@
 // features/stock/rules_table/blocs/rules_table_bloc.dart
 
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/features/FSNMR/blocs/FSNMR_event.dart';
 import 'package:savvy_stock/features/FSNMR/blocs/FSNMR_state.dart';
 import 'package:savvy_stock/features/FSNMR/models/fast_slow_nonmoving_rule.dart';
@@ -220,7 +222,9 @@ class FSNMRBloc extends Bloc<FSNMREvent, FSNMRState> {
           //message: 'Failed to save row: $e',
         ),
       );
-      print('Failed to save row: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save row: $e');
+      }
     }
   }
 
@@ -279,7 +283,9 @@ class FSNMRBloc extends Bloc<FSNMREvent, FSNMRState> {
           //message: 'Failed to save row: $e',
         ),
       );
-      print('Failed to save row: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save row: $e');
+      }
     }
   }
 
@@ -333,7 +339,9 @@ class FSNMRBloc extends Bloc<FSNMREvent, FSNMRState> {
           message: 'Error occurred: $e',
         ),
       );
-      print('Failed to save in edit: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save in edit: $e');
+      }
     }
   }
 

@@ -294,7 +294,7 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Colors.grey,
       appBar: AppBar(
         title: const Text('Credit Sales Order'),
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
@@ -562,7 +562,7 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
     return Container(
       width: screenWidth,
       height: screenHeight,
-      decoration: BoxDecoration(color: Colors.grey[100]),
+      decoration: BoxDecoration(color: Colors.grey),
       child: ListView.separated(
         controller: _scrollController,
         padding: const EdgeInsets.all(16),

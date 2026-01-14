@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -435,7 +438,9 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
                     itemDescription: value,
                   );
                 });
-                print('Selected: $value');
+                if (kDebugMode) {
+                  developer.log('Selected: $value');
+                }
               },
               validator: (value) {
                 if (value == null || value.isEmpty) {

@@ -80,12 +80,10 @@ class _ItemLocationDashboardState extends State<ItemLocationDashboard> {
 
   void _callItem(String itemId) {
     // Implement phone call functionality
-    print('Calling: $itemId');
   }
 
   void _emailItem(String itemId) {
     // Implement email functionality
-    print('Emailing: $itemId');
   }
 
   void _exportItem(ItemLocation item) {

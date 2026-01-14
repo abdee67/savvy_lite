@@ -1,4 +1,7 @@
 // features/sales/sales_item_entry/screens/sales_item_entry_screen.dart
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
@@ -194,17 +197,27 @@ class _ItemEntryScreenContentState extends State<ItemEntryScreenContent> {
   }
 
   void _confirmItem() {
-    print('=== CONFIRM ITEM STARTED ===');
-    print('Form valid: ${_formKey.currentState?.validate()}');
-    print('Current detail: ${_currentFormDetail?.toString()}');
+    if (kDebugMode) {
+      developer.log('=== CONFIRM ITEM STARTED ===');
+    }
+    if (kDebugMode) {
+      developer.log('Form valid: ${_formKey.currentState?.validate()}');
+    }
+    if (kDebugMode) {
+      developer.log('Current detail: ${_currentFormDetail?.toString()}');
+    }
 
     if (_formKey.currentState?.validate() ?? false) {
       if (_currentFormDetail != null) {
         final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
-        print('Dispatching AddDetailToOrder event');
+        if (kDebugMode) {
+          developer.log('Dispatching AddDetailToOrder event');
+        }
         // Add or update the item in coordinator
         coordinatorBloc.add(AddDetailToOrder(detail: _currentFormDetail!));
-        print('AddDetailToOrder event dispatched');
+        if (kDebugMode) {
+          developer.log('AddDetailToOrder event dispatched');
+        }
         _resetForm();
 
         /*  ScaffoldMessenger.of(context).showSnackBar(

@@ -145,7 +145,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         );
         return;
       }
-      print(licenseResult);
+      if (kDebugMode) {
+        developer.log('License validation successful: $licenseResult');
+      }
 
       // Create mock JWT token
       final token = _createToken(
@@ -382,7 +384,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           );
           return;
         }
-        print(licenseResult);
+        if (kDebugMode) {
+          developer.log('License validation successful: $licenseResult');
+        }
 
         // Reconstruct user and privileges from token data
         final user = UserModel.fromMap(tokenData['user']);
