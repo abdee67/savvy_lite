@@ -166,7 +166,7 @@ class _BranchFormPageState extends State<BranchFormPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.branch == null ? 'Create Branch' : 'Edit Branch'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: Color(0xFF145888),
         elevation: 0,
       ),
       body: SafeArea(
@@ -241,25 +241,15 @@ class _BranchFormPageState extends State<BranchFormPage> {
   }
 
   Widget _buildBottomNavigation() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            offset: const Offset(0, -2),
-            blurRadius: 4,
-            color: Colors.black.withOpacity(0.1),
-          ),
-        ],
-      ),
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
       child: Row(
         children: [
           Expanded(
             child: ElevatedButton(
               onPressed: _saveBranch,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
+                backgroundColor: Color(0xFF145888),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
