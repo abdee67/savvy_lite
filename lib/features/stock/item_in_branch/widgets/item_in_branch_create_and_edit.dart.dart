@@ -291,12 +291,11 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
             }
           },
           child: SafeArea(
-            child: SingleChildScrollView(
-              child: Expanded(
-                child: Column(
-                  children: [_buildForm(), _buildBottomNavigation()],
-                ),
-              ),
+            child: Column(
+              children: [
+                Expanded(child: _buildForm()),
+                _buildBottomNavigation(),
+              ],
             ),
           ),
         ),
