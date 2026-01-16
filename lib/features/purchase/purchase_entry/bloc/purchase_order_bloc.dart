@@ -1569,7 +1569,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
             // Fallback: load detail and derive order number from its header
             final detail = await repository.getDetailById(receiver.poDetail!);
             orderNumber ??= detail?.poHeaderRef?.orderNumber;
-            companyId ??= detail?.company;
+            companyId ??= detail?.company ?? authBloc.state.companyId;
           }
 
           if (kDebugMode) {
@@ -1659,18 +1659,25 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         );
 
         // Refresh data
-        if (state.selectedHeader != null) {
-          add(
-            LoadPurchaseOrderDetails(
-              headerId: state.selectedHeader!.id!,
-              companyId:
-                  state.selectedHeader!.company ?? authBloc.state.companyId!,
-            ),
-          );
+        if (state.selectedHeader?.id != null) {
+          final headerId = state.selectedHeader!.id!;
+          final companyId =
+              state.selectedHeader!.company ?? authBloc.state.companyId;
+
+          if (companyId != null) {
+            add(
+              LoadPurchaseOrderDetails(
+                headerId: headerId,
+                companyId: companyId,
+              ),
+            );
+          } else if (kDebugMode) {
+            developer.log('⚠️ Cannot refresh details: Missing companyId');
+          }
         }
       }
     } catch (e) {
-      //emit(state.errorState('Failed to save receipt and update stock: $e'));
+      emit(state.errorState('Failed to save receipt and update stock: $e'));
       if (kDebugMode) {
         developer.log('Failed to save receipt and update stock: $e');
       }
