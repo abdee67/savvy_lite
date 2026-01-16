@@ -4,19 +4,21 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/widget/dialogs/error_and_retry_dialog.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/widget/dialogs/order_confirmation_dialog.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/widget/dialogs/order_processing_dialog.dart';
-// import 'package:savvy_stock/features/sales/sales_order/invoice/widget/dialogs/order_success_dialog.dart';
+// features/sales/invoice/widgets/invoice_action.dart
+import 'package:go_router/go_router.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/widget/dialogs/order_success_dialog.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
 
-// features/sales/invoice/widgets/invoice_action.dart
-import 'package:go_router/go_router.dart';
-
 class InvoiceAction extends StatefulWidget {
-  const InvoiceAction({super.key});
+  final AuthBloc authBloc;
+  const InvoiceAction({super.key, required this.authBloc});
 
   @override
   State<InvoiceAction> createState() => _InvoiceActionState();
@@ -168,7 +170,7 @@ class _InvoiceActionState extends State<InvoiceAction> {
               // ✅ Only close dialog and show result when order is complete OR there's an error
               if (state.isOrderComplete && state.invoiceGenerated) {
                 Navigator.of(context).pop(); // Close processing dialog
-                _navigateToHome();
+                _showSuccessDialog(context, state);
               } else if (state.status == SalesOrderCoordinatorStatus.error &&
                   state.error != null) {
                 Navigator.of(context).pop(); // Close processing dialog
@@ -182,31 +184,58 @@ class _InvoiceActionState extends State<InvoiceAction> {
     );
   }
 
+  void _showSuccessDialog(
+    BuildContext context,
+    SalesOrderCoordinatorState state,
+  ) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => OrderSuccessDialog(
+        orderNumber: state.currentHeader?.fsNumber,
+        invoiceNumber: state.invoiceFsNumber,
+        totalAmount: state.lastTotalAmount,
+        onDone: () => _navigateToHome(context),
+      ),
+    );
+  }
+
   void _showErrorDialog(BuildContext context, String error) {
     showDialog(
       context: context,
       builder: (context) => ErrorDialog(
         error: error,
         onRetry: () => _processFinalization(context),
-        onCancel: () => _navigateToHome(),
+        onCancel: () => _navigateToHome(context),
       ),
     );
   }
 
-  void _navigateToHome() {
-    if (!mounted) return;
-
-    // 🎯 Capture bloc reference before navigation to avoid context issues
+  void _navigateToHome(BuildContext context) {
+    // 🎯 Capture ALL references BEFORE any navigation or state changes
     final bloc = context.read<SalesOrderCoordinatorBloc>();
+    final companyId = widget.authBloc.state.companyId;
+    final userId = widget.authBloc.state.userId?.id;
+    final branchId = widget.authBloc.state.userId?.branch;
 
-    // 🎯 Use GoRouter for proper navigation stack management
-    context.push(AppRoutes.homePage);
+    // 🎯 Clear state synchronously to ensure clean state for next entry
+    bloc.add(ClearOrderDetails());
+    bloc.add(ResetCoordinatorState());
 
-    // 🎯 Clear state using captured bloc reference
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      bloc.add(ClearOrderDetails());
-      bloc.add(ResetCoordinatorState());
-    });
+    // 🎯 Prepare new sales order for the next entry (using captured bloc reference)
+    if (companyId != null && userId != null && branchId != null) {
+      bloc.add(
+        PrepareNewSalesOrder(
+          companyId: companyId,
+          employeeId: userId,
+          branchId: branchId,
+        ),
+      );
+    }
+
+    // 🎯 Navigate to sales customer info screen LAST
+    // Using GoRouter.of(context).go() which works even from dialog context
+    context.go(AppRoutes.homePage);
   }
 }
 
