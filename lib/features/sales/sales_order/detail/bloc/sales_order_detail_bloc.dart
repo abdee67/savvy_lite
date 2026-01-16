@@ -804,7 +804,10 @@ class SalesOrderDetailBloc
       if (applyLocationMgmt && applyLotMgmt) {
         // Case 1: Both location and lot management
         final lotAvailability = await validateStockAvailabilityService
-            .validateLotLevelAvailability(soD, state.companyId!);
+            .validateLotLevelAvailability(
+              soD,
+              state.companyId ?? authBloc.state.companyId!,
+            );
         availableQuantity = lotAvailability.availableQty;
         validationMessage = lotAvailability.message;
         isValid = lotAvailability.isValid;
@@ -846,13 +849,19 @@ class SalesOrderDetailBloc
       } else if (applyLocationMgmt && !applyLotMgmt) {
         // 🎯 Get actual available quantity from ItemsInBranch
         final locationAvailability = await validateStockAvailabilityService
-            .validateLocationLevelAvailability(soD, state.companyId!);
+            .validateLocationLevelAvailability(
+              soD,
+              state.companyId ?? authBloc.state.companyId!,
+            );
         availableQuantity = locationAvailability.availableQty;
         validationMessage = locationAvailability.message;
         isValid = locationAvailability.isValid;
       } else {
         final branchAvailability = await validateStockAvailabilityService
-            .validateBranchLevelAvailability(soD, state.companyId!);
+            .validateBranchLevelAvailability(
+              soD,
+              state.companyId ?? authBloc.state.companyId!,
+            );
         availableQuantity = branchAvailability.availableQty;
         validationMessage = branchAvailability.message;
         isValid = branchAvailability.isValid;
