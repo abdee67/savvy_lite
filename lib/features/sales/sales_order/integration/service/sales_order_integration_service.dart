@@ -88,8 +88,12 @@ class SalesOrderIntegrationService {
       // Step 8: Calculate final totals (like JSF's calQtyWithAmt)
       await _calculateFinalTotals(createdHeader, details);
     } catch (e) {
+      if (kDebugMode) {
+        developer.log('Failed to create sales order: $e');
+      }
       // Comprehensive rollback on failure
       throw Exception('Something goes south $e');
+
       // await _rollbackCreateOperation(header, details);
       // rethrow;
     }

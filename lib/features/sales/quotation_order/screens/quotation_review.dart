@@ -729,32 +729,6 @@ class _QuotationReviewPageState extends State<QuotationReviewPage>
                                       fontWeight: FontWeight.w800,
                                     ),
                                   ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: _getquotationOrderTypeColor(
-                                        quotationOrder.salesType,
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color:
-                                            _getquotationOrderTypeBorderColor(
-                                              quotationOrder.salesType,
-                                            ),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      quotationOrder.salesType ?? 'Unknown',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
                                 ],
                               ),
 

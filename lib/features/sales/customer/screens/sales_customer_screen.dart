@@ -136,10 +136,6 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
     }
   }
 
-  void _prefillCustomerData(Salesperson salesPerson) {
-    _salesPersonController.text = salesPerson.fullName;
-  }
-
   @override
   void dispose() {
     _salesRefController.dispose();

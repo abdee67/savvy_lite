@@ -1,7 +1,5 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:equatable/equatable.dart';
-import 'package:argon2/argon2.dart';
 import 'package:pointycastle/digests/sha256.dart';
 import 'package:savvy_stock/features/company/models/company_model.dart';
 

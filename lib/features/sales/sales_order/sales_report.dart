@@ -268,7 +268,7 @@ class _SalesReviewPageState extends State<SalesReviewPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Colors.grey,
       appBar: AppBar(
         title: const Text('Sales Order Report'),
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
@@ -525,7 +525,7 @@ class _SalesReviewPageState extends State<SalesReviewPage>
             const Icon(Iconsax.receipt, size: 64, color: Colors.white),
             const SizedBox(height: 16),
             Text(
-              !hasQuery ? 'No salesOrders found' : 'No results for "$query"',
+              !hasQuery ? 'No Sales Orders found' : 'No results for "$query"',
               style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
           ],

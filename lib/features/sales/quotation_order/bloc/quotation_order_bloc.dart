@@ -233,7 +233,11 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to load quotation orders: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to load quotation orders: $e'));
+      } else {
+        emit(state.errorState('Failed to load quotation orders'));
+      }
     }
   }
 
@@ -278,7 +282,11 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to create quotation order: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to create quotation order: $e'));
+      } else {
+        emit(state.errorState('Failed to create quotation order'));
+      }
     }
   }
 
@@ -333,7 +341,11 @@ class QuotationOrderBloc
             ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to update quotation order: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to update quotation order: $e'));
+      } else {
+        emit(state.errorState('Failed to update quotation order'));
+      }
     }
   }
 
@@ -371,7 +383,11 @@ class QuotationOrderBloc
             ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to delete quotation order: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to delete quotation order: $e'));
+      } else {
+        emit(state.errorState('Failed to delete quotation order'));
+      }
     }
   }
 
@@ -412,7 +428,11 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to delete quotation orders: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to delete quotation orders: $e'));
+      } else {
+        emit(state.errorState('Failed to delete quotation orders'));
+      }
     }
   }
 
@@ -514,7 +534,11 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to cancel quotation order: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to cancel quotation order: $e'));
+      } else {
+        emit(state.errorState('Failed to cancel quotation order'));
+      }
     }
   }
 
@@ -541,7 +565,11 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to load quotation order details: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to load quotation order details: $e'));
+      } else {
+        emit(state.errorState('Failed to load quotation order details'));
+      }
     }
   }
 
@@ -616,12 +644,21 @@ class QuotationOrderBloc
         );
       }
     } catch (e) {
-      emit(
-        state.errorState(
-          'Failed to add quotation order detail: $e',
-          operation: 'add_quotation_order_detail',
-        ),
-      );
+      if (kDebugMode) {
+        emit(
+          state.errorState(
+            'Failed to add quotation order detail: $e',
+            operation: 'add_quotation_order_detail',
+          ),
+        );
+      } else {
+        emit(
+          state.errorState(
+            'Failed to add quotation order detail',
+            operation: 'add_quotation_order_detail',
+          ),
+        );
+      }
     }
   }
 
@@ -678,12 +715,21 @@ class QuotationOrderBloc
         );
       }
     } catch (e) {
-      emit(
-        state.errorState(
-          'Failed to remove quotation order detail: $e',
-          operation: 'remove_quotation_order_detail',
-        ),
-      );
+      if (kDebugMode) {
+        emit(
+          state.errorState(
+            'Failed to remove quotation order detail: $e',
+            operation: 'remove_quotation_order_detail',
+          ),
+        );
+      } else {
+        emit(
+          state.errorState(
+            'Failed to remove quotation order detail',
+            operation: 'remove_quotation_order_detail',
+          ),
+        );
+      }
     }
   }
 
@@ -710,7 +756,11 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to delete quotation details: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to delete quotation details: $e'));
+      } else {
+        emit(state.errorState('Failed to delete quotation details'));
+      }
     }
   }
 
@@ -827,7 +877,11 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to calculate totals: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to calculate totals: $e'));
+      } else {
+        emit(state.errorState('Failed to calculate totals'));
+      }
     }
   }
 
@@ -913,7 +967,11 @@ class QuotationOrderBloc
         );
       }
     } catch (e) {
-      emit(state.errorState('Failed to update tax and fees: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to update tax and fees: $e'));
+      } else {
+        emit(state.errorState('Failed to update tax and fees'));
+      }
     }
   }
 
@@ -1015,7 +1073,11 @@ class QuotationOrderBloc
         emit(updatedState);
       }
     } catch (e) {
-      emit(state.errorState('Failed to update customer info: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to update customer info: $e'));
+      } else {
+        emit(state.errorState('Failed to update customer info'));
+      }
     }
   }
 
@@ -1045,7 +1107,11 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to set customer: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to set customer: $e'));
+      } else {
+        emit(state.errorState('Failed to set customer'));
+      }
     }
   }
 
@@ -1129,7 +1195,11 @@ class QuotationOrderBloc
 
       emit(state.copyWith(barCode: '', status: QuotationOrderStatus.loaded));
     } catch (e) {
-      emit(state.errorState('Error scanning barcode: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Error scanning barcode: $e'));
+      } else {
+        emit(state.errorState('Error scanning barcode'));
+      }
     }
   }
 
@@ -1215,7 +1285,11 @@ class QuotationOrderBloc
         }
       }
     } catch (e) {
-      emit(state.copyWith(error: 'Failed to update unit price: $e'));
+      if (kDebugMode) {
+        emit(state.copyWith(error: 'Failed to update unit price: $e'));
+      } else {
+        emit(state.copyWith(error: 'Failed to update unit price'));
+      }
     }
   }
 
@@ -1274,7 +1348,11 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to filter quotation orders: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to filter quotation orders: $e'));
+      } else {
+        emit(state.errorState('Failed to filter quotation orders'));
+      }
     }
   }
 
@@ -1408,7 +1486,11 @@ class QuotationOrderBloc
         );
       }
     } catch (e) {
-      emit(state.errorState('Failed to prepare create: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to prepare create: $e'));
+      } else {
+        emit(state.errorState('Failed to prepare create'));
+      }
     }
   }
 
@@ -1783,7 +1865,11 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to get next order number: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to get next order number: $e'));
+      } else {
+        emit(state.errorState('Failed to get next order number'));
+      }
     }
   }
 
@@ -1811,7 +1897,11 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to generate FS number: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to generate FS number: $e'));
+      } else {
+        emit(state.errorState('Failed to generate FS number'));
+      }
     }
   }
 
