@@ -10,6 +10,8 @@ import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_event.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 
 class SalesItemEntryConfirmedItem extends StatefulWidget {
@@ -43,6 +45,10 @@ class _SalesItemEntryConfirmedItemState
         .state
         .selected
         ?.decimalPlaces;
+    final authBloc = context.read<AuthBloc>();
+    context.read<StockItemInBranchBloc>().add(
+      LoadItemsFromBranch(authBloc.state.companyId!),
+    );
   }
 
   void _safeDeleteItem(BuildContext context, int index) {
