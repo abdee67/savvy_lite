@@ -106,7 +106,8 @@ class SystemConstantRepository {
       // Fallback to default constants
       final defaultMaps = await db.query(
         'system_constant',
-        where: 'company IS NULL',
+        where:
+            'company IS NULL OR company = 1', // Checking default company 1 as inserted by DB service
       );
 
       developer.log('Found ${defaultMaps.length} default constants');
@@ -117,38 +118,15 @@ class SystemConstantRepository {
         return constant;
       }
 
-      // If no constants found, create a default one
-      developer.log('No constants found, creating default');
-      return _createDefaultSystemConstant(companyId);
+      // If no constants found, throwing logic or return empty/default empty object?
+      // Since DB service inserts it, this should rarely happen unless DB is fresh and not migrated properly
+      throw Exception(
+        "System Constants not found and default creation is handled by DatabaseService.",
+      );
     } catch (e) {
       developer.log('Error loading system constants: $e');
       rethrow;
     }
-  }
-
-  Future<SystemConstant> _createDefaultSystemConstant(int? companyId) async {
-    developer.log('Creating default system constants for company: $companyId');
-    final lotType = await udcRepository.getUdcDetailIdByHeaderCode('X');
-    return SystemConstant(
-      applyLotMgm: 'Y',
-      lotType: lotType!,
-      applyLocationMgm: 'Y',
-      decimalPlaces: 2,
-      generateBarcodeForItem: 'N',
-      company: companyId,
-      rateVatPercentage: 15.0,
-      rateWithholdingPercentage: 2.0,
-      withHoldInitials: 1000.0,
-      autoSalesPrice: 'N',
-      lotQtyAutoForSales: 'Y',
-      discountDisplay: 'Y',
-      taxInfoDisplay: 'Y',
-      daysLeft: 180,
-      currencyCode: 'ETB',
-      reorderPointUomType: 'I',
-      locationCategoryLevel: 1,
-      isSynced: false, // Mark as not synced since it's local
-    );
   }
 
   Future<List<SystemConstant>> getLocalSystemConstants() async {
@@ -204,13 +182,10 @@ class SystemConstantRepository {
         return SystemConstant.fromDatabaseMap(defaultMaps.first);
       }
 
-      // If no constants found, create a default one
-      developer.log('No system constants found, creating default');
-      return _createDefaultSystemConstant(companyId);
+      throw Exception("Local System Constants not found.");
     } catch (e) {
       developer.log('Error getting local company system constants: $e');
-      // Return a hardcoded default as last resort
-      return _createDefaultSystemConstant(companyId);
+      rethrow;
     }
   }
 

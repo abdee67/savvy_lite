@@ -67,32 +67,13 @@ class SystemConstantsService with ChangeNotifier {
         'Loaded system constants from database: ${_currentSystemConstant?.toJson()}',
       );
 
-      // If still null, create a default and save it
-      if (_currentSystemConstant == null) {
-        developer.log('No system constants found, creating default...');
-        final companyId = await _repository.getCurrentCompanySystemConstants();
-        _currentSystemConstant = SystemConstant(
-          company: companyId.id,
-          applyLotMgm: 'N',
-          applyLocationMgm: 'Y',
-          decimalPlaces: 2,
-          rateVatPercentage: 15.0,
-          rateWithholdingPercentage: 2.0,
-          withHoldInitials: 1000.0,
-          autoSalesPrice: 'N',
-          generateBarcodeForItem: 'N',
-          lotQtyAutoForSales: 'Y',
-          discountDisplay: 'N',
-          taxInfoDisplay: 'N',
-          daysLeft: 180,
-          currencyCode: 'ETB',
-          reorderPointUomType: 'I',
-          locationCategoryLevel: 1,
-          isSynced: false,
-        );
+      developer.log(
+        'Loaded system constants from database: ${_currentSystemConstant?.toJson()}',
+      );
 
-        // Save to database
-        await _repository.createSystemConstant(_currentSystemConstant!);
+      // Verify if loaded
+      if (_currentSystemConstant == null) {
+        throw Exception("System constants not found in database.");
       }
 
       developer.log(
@@ -141,34 +122,9 @@ class SystemConstantsService with ChangeNotifier {
     } catch (e) {
       // Return a default if everything fails
       // Return a default if everything fails
-      final defaultConstant = SystemConstant(
-        applyLotMgm: 'N',
-        applyLocationMgm: 'Y',
-        decimalPlaces: 2,
-        rateVatPercentage: 15.0,
-        rateWithholdingPercentage: 2.0,
-        withHoldInitials: 1000.0,
-        autoSalesPrice: 'N',
-        generateBarcodeForItem: 'N',
-        lotQtyAutoForSales: 'Y',
-        discountDisplay: 'N',
-        taxInfoDisplay: 'N',
-        daysLeft: 180,
-        currencyCode: 'ETB',
-        reorderPointUomType: 'I',
-        locationCategoryLevel: 1,
-        // Ensure company ID is set if possible, or handle it upstream
-        company: 1, // Default company ID or fetch from auth if possible
+      throw Exception(
+        'Failed to load system constants and no local fallback available: $e',
       );
-
-      // Try to persist this default so we don't keep creating it
-      try {
-        await _repository.createSystemConstant(defaultConstant);
-      } catch (e) {
-        developer.log('Failed to persist default constants: $e');
-      }
-
-      return defaultConstant;
     }
   }
 

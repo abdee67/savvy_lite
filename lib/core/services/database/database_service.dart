@@ -1549,6 +1549,55 @@ ON fs_table (branch);
 
     // Insert default data for LOT types
     await _insertDefaultData(db);
+
+    // Insert default system constant
+    await _insertDefaultSystemConstant(db);
+  }
+
+  Future<void> _insertDefaultSystemConstant(Database db) async {
+    developer.log('Inserting default system constant...');
+
+    try {
+      // Get Lot Type 'X' (Expiration Date)
+      final List<Map<String, dynamic>> lotTypes = await db.query(
+        'udc_details',
+        columns: ['id'],
+        where: "detail_code = ? AND udc_group = ?",
+        whereArgs: ['X', 'LT'],
+      );
+
+      int? lotTypeId;
+      if (lotTypes.isNotEmpty) {
+        lotTypeId = lotTypes.first['id'] as int;
+      }
+
+      await db.insert('system_constant', {
+        'apply_lot_mgm': 'Y',
+        'apply_location_mgm': 'Y',
+        'decimal_places': 2,
+        'generate_barcode_for_item': 'N',
+        'company': 1, // Default company
+        'rate_vat_percentage': 15.0,
+        'rate_with_percentage': 2.0,
+        'with_hold_initials': 1000.0,
+        'auto_sales_price': 'N',
+        'lot_qty_auto_for_sales': 'Y',
+        'discount_display': 'Y',
+        'tax_info_display': 'Y',
+        'days_left': 180,
+        'currency_code': 'ETB',
+        'reorder_point_uom_type': 'I',
+        'location_category_level': 1,
+        'is_synced': 0,
+        'lot_type': lotTypeId,
+        'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        'updated_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      });
+
+      developer.log('Default system constant inserted');
+    } catch (e) {
+      developer.log('Error inserting default system constant: $e');
+    }
   }
 
   Future<void> _insertDefaultData(Database db) async {
