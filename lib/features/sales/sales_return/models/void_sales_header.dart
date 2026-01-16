@@ -3,6 +3,7 @@
 // =============================
 
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
+import 'package:savvy_stock/features/company/models/company_model.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
@@ -68,6 +69,7 @@ class SalesReturnHeader {
   final UdcDetails? paymentStatusRef;
   final UdcDetails? paymentInstrumentRef;
   final UdcDetails? returnStatusRef;
+  final Company? companyRef;
 
   // ================
   // Constructor
@@ -119,6 +121,7 @@ class SalesReturnHeader {
     this.paymentStatusRef,
     this.returnStatusRef,
     this.paymentInstrumentRef,
+    this.companyRef,
   });
 
   // ============================
@@ -216,6 +219,9 @@ class SalesReturnHeader {
               description1: map['return_status_ref'],
             )
           : null,
+      companyRef: map['company_name']
+          ? Company(id: map['company'], companyName: map['company_name'])
+          : null,
     );
   }
 
@@ -312,6 +318,7 @@ class SalesReturnHeader {
     UdcDetails? paymentStatusRef,
     UdcDetails? paymentInstrumentRef,
     UdcDetails? returnStatusRef,
+    Company? companyRef,
   }) {
     return SalesReturnHeader(
       id: id ?? this.id,
@@ -360,6 +367,7 @@ class SalesReturnHeader {
       paymentStatusRef: paymentStatusRef ?? this.paymentStatusRef,
       paymentInstrumentRef: paymentInstrumentRef ?? this.paymentInstrumentRef,
       returnStatusRef: returnStatusRef ?? this.returnStatusRef,
+      companyRef: companyRef ?? this.companyRef,
     );
   }
 }

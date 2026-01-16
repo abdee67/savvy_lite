@@ -1,5 +1,6 @@
 // features/sales/sales_return/repo/sales_return_repository.dart
 import 'package:savvy_stock/core/services/database/database_service.dart';
+import 'package:savvy_stock/features/company/models/company_model.dart';
 import 'package:savvy_stock/features/sales/sales_return/models/void_sales_details.dart';
 import 'package:savvy_stock/features/sales/sales_return/models/void_sales_header.dart';
 import 'package:sqflite/sqflite.dart';
@@ -52,6 +53,7 @@ class SalesReturnRepository {
    SELECT srh.*,
       cu.customer_name as customer_name_ref,
       cu.customer_name as customer_ship_to_ref,
+      com.company_name as company_name,
       emp.employee_name as first_name,
       ud.description_1 as payment_term_ref,
       ud.description_1 as payment_status_ref,
@@ -61,6 +63,7 @@ class SalesReturnRepository {
       INNER JOIN customer cu ON srh.customer_table_id = cu.id
       INNER JOIN customer cu ON srh.customer_bill_to = cu.id
       INNER JOIN employee emp ON srh.employee_id = emp.id
+      INNER JOIN company com ON srh.company = com.id
       INNER JOIN udc_details ud ON srh.payment_term_id = ud.id
       INNER JOIN udc_details ud ON srh.payment_status_id = ud.id
       INNER JOIN udc_details ud ON srh.payment_instrument_id = ud.id
@@ -80,6 +83,7 @@ class SalesReturnRepository {
       SELECT srh.*,
       cu.customer_name as customer_name_ref,
       cu.customer_name as customer_ship_to_ref,
+      com.company_name as company_name,
       emp.employee_name as first_name,
       ud.description_1 as payment_term_ref,
       ud.description_1 as payment_status_ref,
@@ -88,6 +92,7 @@ class SalesReturnRepository {
       FROM sales_return_header srh
       INNER JOIN customer cu ON srh.customer_table_id = cu.id
       INNER JOIN customer cu ON srh.customer_bill_to = cu.id
+      INNER JOIN company com ON srh.company = com.id
       INNER JOIN employee emp ON srh.employee_id = emp.id
       INNER JOIN udc_details ud ON srh.payment_term_id = ud.id
       INNER JOIN udc_details ud ON srh.payment_status_id = ud.id

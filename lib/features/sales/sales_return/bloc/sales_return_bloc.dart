@@ -525,13 +525,15 @@ class SalesReturnBloc extends Bloc<SalesReturnEvent, SalesReturnState> {
       }
       // Generate reference note (like Java's generateReferenceNote3)
       final newRefNote3 = await repository.generateReferenceNote3(
-        'TechEquations',
+        event.header.companyRef?.companyName ?? '',
       );
+      final commentsSales = event.header.commentsSales ?? '';
 
       // Set return date if not set
       final returnHeaderWithRef = event.header.copyWith(
         referenceNote3: newRefNote3,
         returnDate: event.header.returnDate ?? DateTime.now(),
+        commentsSales: commentsSales,
       );
       // Create return header
       final headerId = await repository.createSalesReturnHeader(
