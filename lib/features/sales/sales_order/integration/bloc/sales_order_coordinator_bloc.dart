@@ -270,6 +270,9 @@ class SalesOrderCoordinatorBloc
           operation: 'create_order',
         ),
       );
+      if (kDebugMode) {
+        developer.log('Failed to create sales order: $e');
+      }
     }
   }
 
@@ -743,10 +746,12 @@ class SalesOrderCoordinatorBloc
   ) {
     integrationService.updateCustomerInfo(event.customer);
 
+    // 🎯 Also store customer in coordinator state for invoice review access
     emit(
       state.copyWith(
         lastSyncTime: DateTime.now(),
         lastOperation: 'Customer data synced to order',
+        defaultCustomer: event.customer,
       ),
     );
   }
