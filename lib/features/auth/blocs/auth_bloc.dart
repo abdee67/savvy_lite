@@ -349,7 +349,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         final licenseResult = await licenseService
             .loadAndValidateLicense()
             .timeout(
-              const Duration(seconds: 5),
+              const Duration(seconds: 50),
               onTimeout: () {
                 return LicenseValidationResult.invalid('Validation timed out');
               },
