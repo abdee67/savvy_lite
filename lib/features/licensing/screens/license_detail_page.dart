@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/licensing/bloc/license_bloc.dart';
 import 'package:savvy_stock/features/licensing/bloc/license_state.dart';
 import 'package:savvy_stock/features/licensing/model/license_payload_model.dart';
@@ -56,6 +57,7 @@ class LicenseDetailsPage extends StatelessWidget {
   }
 
   Widget _buildLicenseDetails(BuildContext context, LicensePayload payload) {
+    final authbloc = context.read<AuthBloc>().state;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(10.0),
       child: Container(
@@ -83,27 +85,28 @@ class LicenseDetailsPage extends StatelessWidget {
               const SizedBox(height: 16),
               _buildLimits(payload),
               const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => context.go(AppRoutes.login),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF145888),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+              if (authbloc.isAuthenticated == false)
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => context.go(AppRoutes.login),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFF145888),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
-                  ),
-                  child: const Text(
-                    'Continue to Login',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+                    child: const Text(
+                      'Continue to Login',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
