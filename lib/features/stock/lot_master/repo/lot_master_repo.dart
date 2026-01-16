@@ -22,9 +22,11 @@ class LotMasterRepository extends BaseRepository {
     required this.systemConstantBloc,
   });
 
-  // Get all lot masters for a company
+  // Get all lot masters for a company with pagination
   Future<List<LotMaster>> getLotMasters(
     int companyId, {
+    int limit = 20,
+    int offset = 0,
     Transaction? txn,
   }) async {
     final db = txn ?? await databaseService.database;
@@ -49,8 +51,9 @@ class LotMasterRepository extends BaseRepository {
       LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.company = ?
       ORDER BY it.item_description, lm.lot_number
+      LIMIT ? OFFSET ?
     ''',
-      [companyId],
+      [companyId, limit, offset],
     );
 
     return lots.map((p) => LotMaster.fromMap(p)).toList();

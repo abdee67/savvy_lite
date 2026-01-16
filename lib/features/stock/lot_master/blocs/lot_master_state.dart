@@ -73,6 +73,10 @@ class LotMasterState {
   final bool hasMoreUpcomingExpiry;
   final int upcomingExpiryDaysThreshold;
 
+  // Pagination for Dashboard
+  final bool hasReachedMax;
+  final int currentPage;
+
   const LotMasterState({
     this.status = LotMasterStatus.initial,
     this.items = const [],
@@ -114,6 +118,10 @@ class LotMasterState {
     this.upcomingExpiryTotalCost = 0.0,
     this.hasMoreUpcomingExpiry = false,
     this.upcomingExpiryDaysThreshold = 30,
+
+    // Pagination for Dashboard
+    this.hasReachedMax = false,
+    this.currentPage = 0,
   });
 
   bool get isLoading => status == LotMasterStatus.loading;
@@ -178,6 +186,8 @@ class LotMasterState {
     double? upcomingExpiryTotalCost,
     bool? hasMoreUpcomingExpiry,
     int? upcomingExpiryDaysThreshold,
+    bool? hasReachedMax,
+    int? currentPage,
   }) {
     return LotMasterState(
       status: status ?? this.status,
@@ -230,6 +240,9 @@ class LotMasterState {
           hasMoreUpcomingExpiry ?? this.hasMoreUpcomingExpiry,
       upcomingExpiryDaysThreshold:
           upcomingExpiryDaysThreshold ?? this.upcomingExpiryDaysThreshold,
+
+      hasReachedMax: hasReachedMax ?? this.hasReachedMax,
+      currentPage: currentPage ?? this.currentPage,
     );
   }
 
@@ -273,5 +286,7 @@ class LotMasterState {
     upcomingExpiryTotalCost,
     hasMoreUpcomingExpiry,
     upcomingExpiryDaysThreshold,
+    hasReachedMax,
+    currentPage,
   ];
 }

@@ -82,6 +82,8 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
     on<ClearUpcomingExpiryReportFilters>(_onClearUpcomingExpiryReportFilters);
     // on<ExportUpcomingExpiryReportToExcel>(_onExportUpcomingExpiryToExcel);
     //  on<ExportUpcomingExpiryReportToPDF>(_onExportUpcomingExpiryToPDF);
+
+    on<RefreshLotMasters>(_onRefreshLots);
   }
 
   @override
@@ -95,19 +97,54 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
     LoadLotMasters event,
     Emitter<LotMasterState> emit,
   ) async {
-    emit(state.copyWith(status: LotMasterStatus.loading));
-    try {
-      final items = await repository.getLotMasters(event.companyId);
-      final itemsWithColors = await _calculateColorsForLots(items);
+    if (state.hasReachedMax && event.page != 1) return;
 
-      emit(
-        state.copyWith(
-          status: LotMasterStatus.loaded,
-          items: itemsWithColors,
-          filteredItems: itemsWithColors,
-          companyId: event.companyId,
-        ),
+    try {
+      if (event.page == 1) {
+        emit(
+          state.copyWith(
+            status: LotMasterStatus.loading,
+            items: [],
+            filteredItems: [],
+            hasReachedMax: false,
+            currentPage: 1,
+            companyId: event.companyId,
+          ),
+        );
+      }
+
+      final offset = (event.page - 1) * event.pageSize;
+      final items = await repository.getLotMasters(
+        event.companyId,
+        limit: event.pageSize,
+        offset: offset,
       );
+
+      final itemsWithColors = await _calculateColorsForLots(items);
+      final hasReachedMax = items.length < event.pageSize;
+
+      if (event.page == 1) {
+        emit(
+          state.copyWith(
+            status: LotMasterStatus.loaded,
+            items: itemsWithColors,
+            filteredItems: itemsWithColors,
+            hasReachedMax: hasReachedMax,
+            currentPage: event.page,
+          ),
+        );
+      } else {
+        emit(
+          state.copyWith(
+            status: LotMasterStatus.loaded,
+            items: List.of(state.items)..addAll(itemsWithColors),
+            filteredItems: List.of(state.filteredItems)
+              ..addAll(itemsWithColors),
+            hasReachedMax: hasReachedMax,
+            currentPage: event.page,
+          ),
+        );
+      }
     } catch (e) {
       emit(
         state.copyWith(
@@ -116,6 +153,13 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
         ),
       );
     }
+  }
+
+  Future<void> _onRefreshLots(
+    RefreshLotMasters event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    add(LoadLotMasters(event.companyId, page: 1));
   }
 
   Future<void> _onFilterLots(

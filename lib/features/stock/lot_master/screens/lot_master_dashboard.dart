@@ -71,6 +71,8 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     //   Set up animations
     _setupAnimations();
 
+    _scrollController.addListener(_onScroll);
+
     // Load system constants
     context.read<SystemConstantBloc>().add(
       LoadSystemConstants(widget.authBloc.state.companyId!),
@@ -89,15 +91,28 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     context.read<LocationMasterBloc>().add(
       LoadLocationMasters(widget.authBloc.state.companyId!),
     );
-    /*   WidgetsBinding.instance.addPostFrameCallback((_) {
-      _debugSystemConstants();
-      _debugSystemConstantBloc();
-      if (context.read<LotMasterBloc>().state.items.isNotEmpty) {
-        _debugLotColorCalculation(
-          context.read<LotMasterBloc>().state.items.first,
+  }
+
+  void _onScroll() {
+    if (_isBottom) {
+      final bloc = context.read<LotMasterBloc>();
+      if (!bloc.state.hasReachedMax && !bloc.state.isLoading) {
+        bloc.add(
+          LoadLotMasters(
+            widget.authBloc.state.companyId!,
+            page: bloc.state.currentPage + 1,
+            pageSize: 20, // Keep consistent with bloc default or implementation
+          ),
         );
       }
-    });*/
+    }
+  }
+
+  bool get _isBottom {
+    if (!_scrollController.hasClients) return false;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.offset;
+    return currentScroll >= (maxScroll * 0.9);
   }
 
   void _setupAnimations() {
@@ -186,7 +201,12 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     final companyId = context.read<AuthBloc>().state.companyId;
     if (companyId != null) {
       context.read<LotMasterBloc>().add(PrepareCreateLot(companyId));
-      context.push(AppRoutes.lotCreation);
+      context.push(AppRoutes.lotCreation).then((_) {
+        // Refresh on return
+        context.read<LotMasterBloc>().add(
+          RefreshLotMasters(widget.authBloc.state.companyId!),
+        );
+      });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -199,7 +219,12 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
 
   void _navigateToEditScreen(LotMaster lot) {
     context.read<LotMasterBloc>().add(PrepareEditLot(lot));
-    context.push(AppRoutes.lotEdit, extra: lot);
+    context.push(AppRoutes.lotEdit, extra: lot).then((_) {
+      // Refresh on return
+      context.read<LotMasterBloc>().add(
+        RefreshLotMasters(widget.authBloc.state.companyId!),
+      );
+    });
   }
 
   String _getBranchName(int branchId) {
@@ -722,24 +747,34 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
       width: screenWidth,
       height: screenHeight,
       decoration: const BoxDecoration(color: Colors.grey),
-      child: ListView.separated(
-        controller: _scrollController,
-        separatorBuilder: (context, index) => SizedBox(height: cardSpacing),
-        padding: const EdgeInsets.all(16),
-        itemCount: state.filteredItems.length,
-        itemBuilder: (context, index) {
-          final lot = state.filteredItems[index];
-          final isSelected = state.selectedItems.contains(lot);
-
-          return _buildLotListItem(
-            lot,
-            isSelected,
-            state,
-            index,
-            isSmallScreen,
-            cardWidth,
+      child: RefreshIndicator(
+        onRefresh: () async {
+          context.read<LotMasterBloc>().add(
+            RefreshLotMasters(widget.authBloc.state.companyId!),
           );
         },
+        child: ListView.separated(
+          controller: _scrollController,
+          separatorBuilder: (context, index) => SizedBox(height: cardSpacing),
+          padding: const EdgeInsets.all(16),
+          itemCount: state.filteredItems.length + (state.hasReachedMax ? 0 : 1),
+          itemBuilder: (context, index) {
+            if (index >= state.filteredItems.length) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final lot = state.filteredItems[index];
+            final isSelected = state.selectedItems.contains(lot);
+
+            return _buildLotListItem(
+              lot,
+              isSelected,
+              state,
+              index,
+              isSmallScreen,
+              cardWidth,
+            );
+          },
+        ),
       ),
     );
   }
