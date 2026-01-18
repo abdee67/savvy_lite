@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer' as developer;
+import 'package:device_preview/device_preview.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -135,7 +136,12 @@ Future<void> _initializeAndRunApp() async {
       developer.log('Stack trace: $stackTrace');
     }
   }
-  runApp(const SavvyStock());
+  runApp(
+    DevicePreview(
+      enabled: !kReleaseMode,
+      builder: (context) => const SavvyStock(),
+    ),
+  );
 }
 
 Future<void> clearAllSharedPreferences() async {
@@ -211,6 +217,9 @@ class _SavvyStockState extends State<SavvyStock> {
   Widget build(BuildContext context) {
     if (isLoading) {
       return MaterialApp(
+        useInheritedMediaQuery: true,
+        locale: DevicePreview.locale(context),
+        builder: DevicePreview.appBuilder,
         home: Scaffold(
           body: SafeArea(
             child: Center(
