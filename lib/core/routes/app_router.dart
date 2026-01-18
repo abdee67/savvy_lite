@@ -78,6 +78,7 @@ import 'package:savvy_stock/features/sales/sales_order/invoice/screens/invoice_r
 import 'package:savvy_stock/features/sales/sales_order/payment/screens/payment_screen.dart';
 import 'package:savvy_stock/features/sales/sales_order/sales_item_entry/screens/sales_item_entry.dart';
 import 'package:savvy_stock/features/sales/sales_order/sales_report.dart';
+import 'package:savvy_stock/features/sales/sales_return/screens/sales_return_dashboard.dart';
 import 'package:savvy_stock/features/sales/sales_return/screens/sales_return_screen.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/models/item_uom_conversions_model.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/screens/item_uom_conversion_dashboard.dart';
@@ -267,10 +268,19 @@ class AppRouter {
         redirect: _protectedRouteRedirect,
       ),
       GoRoute(
-        path: AppRoutes.salesReturn,
+        path: AppRoutes.salesReturnDashboard,
         builder: (context, state) => PrivilegeRouteGuard(
-          requiredPrivilege: AppRoutes.salesReturn,
+          requiredPrivilege: AppRoutes.salesReturnDashboard,
           parentPrivilege: AppRoutes.salesDashboard,
+          child: SalesReturnDashBoardPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.salesReturnFilter,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.salesReturnFilter,
+          parentPrivilege: AppRoutes.salesReturnDashboard,
           child: SalesReturnScreen(authBloc: authBloc),
         ),
         redirect: _protectedRouteRedirect,

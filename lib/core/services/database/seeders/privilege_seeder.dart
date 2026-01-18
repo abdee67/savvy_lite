@@ -250,8 +250,14 @@ class PrivilegeSeeder {
       _createPrivilege(
         'Sales Return',
         'link',
-        AppRoutes.salesReturn,
-        'sales_return',
+        AppRoutes.salesReturnDashboard,
+        'sales_return_dashboard',
+      ),
+      _createPrivilege(
+        'Sales Return Filter',
+        'link',
+        AppRoutes.salesReturnFilter,
+        'sales_return_filter',
       ),
       _createPrivilege(
         'Quotation Order',

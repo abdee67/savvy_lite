@@ -55,7 +55,8 @@ class PrivilegeHierarchy {
     AppRoutes.salesCreditReceiptReview: AppRoutes.salesDashboard,
 
     //Sales Return (child of Sales Dashboard)
-    AppRoutes.salesReturn: AppRoutes.salesDashboard,
+    AppRoutes.salesReturnDashboard: AppRoutes.salesDashboard,
+    AppRoutes.salesReturnFilter: AppRoutes.salesReturnDashboard,
 
     //Quotation Order (child of Sales Dashboard)
     AppRoutes.quotationOrder: AppRoutes.salesDashboard,

@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
-import 'package:savvy_stock/core/utils/ui_helper.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_return/bloc/sales_return_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_return/bloc/sales_return_event.dart';
@@ -186,59 +185,67 @@ class _SalesReturnDashBoardPageState extends State<SalesReturnDashBoardPage>
     return Scaffold(
       backgroundColor: Colors.grey,
       appBar: AppBar(
-        title: const Text('Sales Order Report'),
+        title: const Text('Sales Order Returns'),
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: const Icon(Iconsax.home),
-            onPressed: () => {}, //context.push(AppRoutes.reportsHome),
+            icon: const Icon(Iconsax.filter),
+            onPressed: () => context.push(AppRoutes.salesReturnFilter),
             tooltip: 'Reports Home',
           ),
         ],
       ),
-      body: SafeArea(
-        child: BlocConsumer<SalesReturnBloc, SalesReturnState>(
-          listener: (context, state) {
-            if (state.status == SalesReturnStatus.success) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    state.successMessage ?? 'Operation completed successfully',
+      body: RefreshIndicator(
+        onRefresh: () async {
+          context.read<SalesReturnBloc>().add(
+            LoadSalesReturns(companyId: widget.authBloc.state.companyId!),
+          );
+        },
+        child: SafeArea(
+          child: BlocConsumer<SalesReturnBloc, SalesReturnState>(
+            listener: (context, state) {
+              if (state.status == SalesReturnStatus.success) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      state.successMessage ??
+                          'Operation completed successfully',
+                    ),
+                    backgroundColor: Colors.green,
                   ),
-                  backgroundColor: Colors.green,
-                ),
+                );
+              }
+
+              if (state.status == SalesReturnStatus.failure) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(state.errorMessage ?? 'An error occurred'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            builder: (context, state) {
+              return Stack(
+                children: [
+                  Column(
+                    children: [
+                      // Toolbar
+                      // _buildToolbar(),
+
+                      // Search Bar
+                      _buildSearchBar(),
+                      //  _buildActionButtons(state),
+
+                      // salesOrders List
+                      Expanded(child: _buildsalesOrdersList(state)),
+                    ],
+                  ),
+                ],
               );
-            }
-
-            if (state.status == SalesReturnStatus.failure) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.errorMessage ?? 'An error occurred'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          },
-          builder: (context, state) {
-            return Stack(
-              children: [
-                Column(
-                  children: [
-                    // Toolbar
-                    // _buildToolbar(),
-
-                    // Search Bar
-                    _buildSearchBar(),
-                    //  _buildActionButtons(state),
-
-                    // salesOrders List
-                    Expanded(child: _buildsalesOrdersList(state)),
-                  ],
-                ),
-              ],
-            );
-          },
+            },
+          ),
         ),
       ),
     );
@@ -473,7 +480,7 @@ class _SalesReturnDashBoardPageState extends State<SalesReturnDashBoardPage>
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'FS - ${salesOrder.fsNumber ?? 'N/A'}',
+                                  salesOrder.referenceNote3 ?? 'N/A',
                                   style: TextStyle(
                                     color: const Color(0xFF373737),
                                     fontSize: isCompact ? 20 : 24,
@@ -597,7 +604,7 @@ class _SalesReturnDashBoardPageState extends State<SalesReturnDashBoardPage>
       physics: const BouncingScrollPhysics(),
       child: Column(
         children: [
-          if (salesOrder.customerBillToRef != null)
+          if (salesOrder.customerBillTo != null)
             _buildsalesOrderInfoItem(
               'Customer : ',
               salesOrder.customerBillToRef!.customerName?.toString() ?? 'N/A',
@@ -620,8 +627,15 @@ class _SalesReturnDashBoardPageState extends State<SalesReturnDashBoardPage>
             ),
           if (salesOrder.commentForReturn != null)
             _buildsalesOrderInfoItem(
-              'Reason : ',
+              'Comment : ',
               salesOrder.commentForReturn.toString() ?? 'N/A',
+              Iconsax.receipt_edit,
+              isCompact,
+            ),
+          if (salesOrder.returnStatus != null)
+            _buildsalesOrderInfoItem(
+              'Return Reason : ',
+              salesOrder.returnStatusRef?.description1.toString() ?? 'N/A',
               Iconsax.receipt_edit,
               isCompact,
             ),

@@ -76,7 +76,10 @@ class AppRoutes {
   static const String salesCreditReceiptReview =
       '$salesDashboard/sales-credit-receipt-review';
 
-  static const String salesReturn = '$salesDashboard/sales-return';
+  static const String salesReturnDashboard =
+      '$salesDashboard/sales-return-dashboard';
+  static const String salesReturnFilter =
+      '$salesReturnDashboard/sales-return-filter';
 
   static const String quotationOrder = '$salesDashboard/quotation-order';
   static const String quotationItemEntry =
