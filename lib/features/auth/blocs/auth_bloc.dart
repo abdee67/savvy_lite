@@ -16,9 +16,9 @@ import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/company/models/company_model.dart';
+import 'package:savvy_stock/features/licensing/model/license_validation_result_model.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:savvy_stock/features/licensing/services/license_service.dart';
-import 'package:savvy_stock/features/licensing/model/license_validation_result_model.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final LocalDatabaseService databaseService;
