@@ -108,6 +108,7 @@ class SalesReturnBloc extends Bloc<SalesReturnEvent, SalesReturnState> {
         ),
       );
     } catch (e) {
+      if (kDebugMode) developer.log('Failed to load sales returns: $e');
       emit(state.errorState('Failed to load sales returns: $e'));
     }
   }
@@ -135,6 +136,16 @@ class SalesReturnBloc extends Bloc<SalesReturnEvent, SalesReturnState> {
           tax: salesOrder.tax,
           withholdAmount: salesOrder.withholdAmount,
           discountAmount: salesOrder.discountAmount,
+          orderNumber: salesOrder.orderNumber,
+          orderType: salesOrder.orderType,
+          paymentMethod: salesOrder.paymentMethod,
+          paymentInstrument: salesOrder.paymentInstrument,
+          amountOpen:
+              salesOrder.amountTotal, // Initialize open amount to total amount
+          unitCost:
+              salesOrder.unitCost, // Map unit cost from header if available
+          amountCost:
+              salesOrder.amountCost, // Map amount cost from header if available
           //commentsSales: salesOrder.commentsSales,
         );
 
@@ -155,7 +166,7 @@ class SalesReturnBloc extends Bloc<SalesReturnEvent, SalesReturnState> {
                 unitPrice: detail.unitPrice,
                 quantity: detail.quantity,
                 extendedPrice: detail.extendedPrice,
-                unitCost: detail.unitCost,
+                unitCost: detail.unitCost ?? 0.0,
                 itemInBranch: detail.itemInBranch,
                 unitOfMeasure: detail.unitOfMeasure,
                 taxable: detail.taxable, // 2
@@ -164,7 +175,9 @@ class SalesReturnBloc extends Bloc<SalesReturnEvent, SalesReturnState> {
                 itemInBranchRef: detail.itemBranch,
                 unitOfMeasureRef: detail.uom,
                 lotNumber: detail.lotNumber,
-                amountCost: detail.amountCost,
+                amountCost:
+                    detail.amountCost ??
+                    ((detail.unitCost ?? 0) * (detail.quantity ?? 0)),
                 returnQuantity: detail.quantity,
               ),
             )
@@ -519,22 +532,32 @@ class SalesReturnBloc extends Bloc<SalesReturnEvent, SalesReturnState> {
           );
 
       if (originalSalesOrder == null) {
-        throw Exception(
-          'Original sales order not found for FS Number: ${event.header.fsNumber}',
-        );
+        emit(state.errorState('Original sales order not found'));
+        return;
       }
+
       // Generate reference note (like Java's generateReferenceNote3)
       final newRefNote3 = await repository.generateReferenceNote3(
-        event.header.companyRef?.companyName ?? '',
+        event.header.company ?? authBloc.state.companyId!,
       );
-      final commentsSales = event.header.commentsSales ?? '';
 
-      // Set return date if not set
+      // Set return date if not set and merge missing original order data
       final returnHeaderWithRef = event.header.copyWith(
         referenceNote3: newRefNote3,
         returnDate: event.header.returnDate ?? DateTime.now(),
-        commentsSales: commentsSales,
+        // Ensure robust data saving from original order if missing in event
+        paymentMethod:
+            event.header.paymentMethod ?? originalSalesOrder.paymentMethod,
+        paymentInstrument:
+            event.header.paymentInstrument ??
+            originalSalesOrder.paymentInstrument,
+        orderNumber: event.header.orderNumber ?? originalSalesOrder.orderNumber,
+        orderType: event.header.orderType ?? originalSalesOrder.orderType,
+        amountOpen: event.header.amountOpen ?? originalSalesOrder.amountOpen,
+        unitCost: event.header.unitCost ?? originalSalesOrder.unitCost,
+        amountCost: event.header.amountCost ?? originalSalesOrder.amountCost,
       );
+
       // Create return header
       final headerId = await repository.createSalesReturnHeader(
         returnHeaderWithRef,
