@@ -31,6 +31,7 @@ import 'package:savvy_stock/features/sales/sales_return/repos/sales_return_repos
 import 'package:savvy_stock/features/sales/sales_return/services/sales_return_stock_service.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/repo/lot_expiration_repo.dart';
+import 'package:savvy_stock/features/stock/pricing/services/pricing_service.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/core/constants/api_constants.dart';
 import 'package:savvy_stock/features/system_constant/repo/system_constant_repository.dart';
@@ -294,6 +295,13 @@ void initDependencies() {
   getIt.registerLazySingleton<LicenseService>(
     () => LicenseService(secureStorage: getIt(), deviceInfoPlugin: getIt()),
   );
+  getIt.registerLazySingleton<PricingService>(
+    () => PricingService(
+      databaseService: getIt(),
+      uomConversionRepository: getIt(),
+      systemConstantService: getIt(),
+    ),
+  );
 
   ///////////// BLoCs///////////////
 
@@ -534,6 +542,7 @@ void initDependencies() {
       itemCostsRepository: getIt(),
       supplierRepository: getIt(),
       purchaseOrderReportRepository: getIt(),
+      pricingService: getIt(),
     ),
   );
 
