@@ -115,7 +115,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final userWithRoles = await _getUserWithRolesAndPrivileges(db, user);
 
       // Validate License
-      final licenseResult = await licenseService.loadAndValidateLicense();
+      /*final licenseResult = await licenseService.loadAndValidateLicense();
       if (!licenseResult.isValid) {
         developer.log(
           'License validation failed: ${licenseResult.errorMessage}',
@@ -147,7 +147,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
       if (kDebugMode) {
         developer.log('License validation successful: $licenseResult');
-      }
+      }*/
 
       // Create mock JWT token
       final token = _createToken(
@@ -346,7 +346,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
         // Validate License on App Start
         // Add timeout to ensure we don't hang indefinitely
-        final licenseResult = await licenseService
+        /*final licenseResult = await licenseService
             .loadAndValidateLicense()
             .timeout(
               const Duration(seconds: 50),
@@ -386,7 +386,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         }
         if (kDebugMode) {
           developer.log('License validation successful: $licenseResult');
-        }
+        }*/
 
         // Reconstruct user and privileges from token data
         final user = UserModel.fromMap(tokenData['user']);
