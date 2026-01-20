@@ -937,7 +937,7 @@ class PurchaseOrderRepository {
 
   // ============ COMPLEX BUSINESS LOGIC OPERATIONS ============
 
-  Future<void> updateHeaderReceiptStatus(int headerId) async {
+  Future<bool> updateHeaderReceiptStatus(int headerId) async {
     final db = await _db;
 
     try {
@@ -956,7 +956,7 @@ class PurchaseOrderRepository {
         [headerId],
       );
 
-      if (details.isEmpty) return;
+      if (details.isEmpty) return false;
 
       // Count statuses
       int totalDetails = details.length;
@@ -976,6 +976,17 @@ class PurchaseOrderRepository {
         }
       }
 
+      // Get current header status to check for changes
+      final currentHeaderResult = await db.query(
+        'purchase_order_header',
+        columns: ['po_receive_status'],
+        where: 'id = ?',
+        whereArgs: [headerId],
+      );
+      final currentStatusId = currentHeaderResult.isNotEmpty
+          ? currentHeaderResult.first['po_receive_status'] as int?
+          : null;
+
       // Determine new header status
       String? newStatusCode;
       if (partiallyReceived > 0) {
@@ -985,6 +996,7 @@ class PurchaseOrderRepository {
       } else if (fullyReceived == 0 && partiallyReceived == 0) {
         newStatusCode = 'N'; // Not received
       }
+
       int? recordHeaderId = await _udcRepository.getRecordHeaderId('PR');
 
       if (newStatusCode != null && recordHeaderId != null) {
@@ -998,17 +1010,22 @@ class PurchaseOrderRepository {
         if (udcResult.isNotEmpty) {
           final udcId = udcResult.first['id'] as int;
 
-          await db.update(
-            'purchase_order_header',
-            {
-              'po_receive_status': udcId,
-              'date_updated': DateTime.now().toIso8601String(),
-            },
-            where: 'id = ?',
-            whereArgs: [headerId],
-          );
+          // Only update if status is different
+          if (udcId != currentStatusId) {
+            await db.update(
+              'purchase_order_header',
+              {
+                'po_receive_status': udcId,
+                'date_updated': DateTime.now().toIso8601String(),
+              },
+              where: 'id = ?',
+              whereArgs: [headerId],
+            );
+            return true;
+          }
         }
       }
+      return false;
     } catch (e) {
       throw Exception('Failed to update header receipt status: $e');
     }

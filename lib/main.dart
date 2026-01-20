@@ -102,17 +102,16 @@ Future<void> _initializeAndRunApp() async {
       //await LocalDatabaseService().resetDatabase();
       //await getIt<LicenseService>().clearLicense();
       // await LocalDatabaseService().debugTable('branch_table');
-      // Debug database tables (optional - remove in production)
-      // await LocalDatabaseService().debugTable('items_in_branch');
-      // await LocalDatabaseService().debugTable('item_cost');
+      //await LocalDatabaseService().debugTable('items_in_branch');
+      await LocalDatabaseService().debugTable('item_cost');
       //await LocalDatabaseService().debugTable('item_location');
-      //  await LocalDatabaseService().debugTable('location_master');
-      // await LocalDatabaseService().debugTable('item_master');
+      //await LocalDatabaseService().debugTable('lot_master');
+      //await LocalDatabaseService().debugTable('item_master');
       //await LocalDatabaseService().debugTable('items_table');
       //await LocalDatabaseService().debugTable('sales_order_header');
       //await LocalDatabaseService().debugTable('credit_receipt_table');
       // await LocalDatabaseService().debugTable('sales_order_details');
-      await LocalDatabaseService().debugTable('sales_return_header');
+      // await LocalDatabaseService().debugTable('sales_return_header');
       //await LocalDatabaseService().debugTable('sales_return_details');
       // await LocalDatabaseService().debugTable('invoice_history_header');
       // await LocalDatabaseService().debugTable('invoice_history_detail');
@@ -120,8 +119,8 @@ Future<void> _initializeAndRunApp() async {
       // await LocalDatabaseService().debugTable('quote_order_header');
       // await LocalDatabaseService().debugTable('quote_order_detail');
       // await LocalDatabaseService().debugTable('supplier_table');
-      //await LocalDatabaseService().debugTable('purchase_order_header');
-      //await LocalDatabaseService().debugTable('purchase_order_detail');
+      await LocalDatabaseService().debugTable('purchase_order_header');
+      await LocalDatabaseService().debugTable('purchase_order_detail');
       //await LocalDatabaseService().debugTable('purchase_order_receiver');
       //await LocalDatabaseService().debugTable('credit_payment_table');
       //await LocalDatabaseService().debugTable('company_table');
