@@ -795,10 +795,16 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
               // Effective Date
               CustomTextField(
                 controller: _effectiveDateController,
-                labelText: 'Effective Date',
+                labelText: 'Effective Date *',
                 readOnly: true,
                 prefixIcon: const Icon(Icons.calendar_today),
                 onTap: () => _selectDate(context, true),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please select an effective date';
+                  }
+                  return null;
+                },
               ),
 
               const SizedBox(height: 16),
@@ -806,10 +812,16 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
               // Expiration Date
               CustomTextField(
                 controller: _expirationDateController,
-                labelText: 'Expiration Date',
+                labelText: 'Expiration Date *',
                 readOnly: true,
                 prefixIcon: const Icon(Icons.event_busy),
                 onTap: () => _selectDate(context, false),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please select an expiration date';
+                  }
+                  return null;
+                },
               ),
 
               const SizedBox(height: 16),

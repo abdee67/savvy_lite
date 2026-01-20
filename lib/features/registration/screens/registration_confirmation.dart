@@ -355,39 +355,41 @@ class _ConfirmationPageState extends State<ConfirmationPage> {
                             filter: agreeTerms
                                 ? ImageFilter.blur(sigmaX: 0, sigmaY: 0)
                                 : ImageFilter.blur(sigmaX: 2.5, sigmaY: 2.5),
-                            child: ElevatedButton(
-                              onPressed: agreeTerms && !_isSubmitting
-                                  ? onSubscribe
-                                  : null,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.amber,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 50,
-                                  vertical: 16,
+                            child: Expanded(
+                              child: ElevatedButton(
+                                onPressed: agreeTerms && !_isSubmitting
+                                    ? onSubscribe
+                                    : null,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.amber,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 40,
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
+                                  elevation: agreeTerms ? 6 : 0,
                                 ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30),
+                                child: Center(
+                                  child: _isSubmitting
+                                      ? const SizedBox(
+                                          height: 20,
+                                          width: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.black,
+                                          ),
+                                        )
+                                      : const Text(
+                                          "Subscribe and Create Account",
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black,
+                                          ),
+                                        ),
                                 ),
-                                elevation: agreeTerms ? 6 : 0,
-                              ),
-                              child: Center(
-                                child: _isSubmitting
-                                    ? const SizedBox(
-                                        height: 20,
-                                        width: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Colors.black,
-                                        ),
-                                      )
-                                    : const Text(
-                                        "Subscribe and Create Account",
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black,
-                                        ),
-                                      ),
                               ),
                             ),
                           ),

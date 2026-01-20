@@ -135,48 +135,49 @@ class _AddressFormPageState extends State<AddressFormPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        ElevatedButton.icon(
-                          onPressed: _goBack,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white.withValues(
-                              alpha: 0.2,
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _goBack,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white.withValues(
+                                alpha: 0.2,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 40,
+                                vertical: 16,
+                              ),
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(25),
+                            child: const Text(
+                              "Back",
+                              style: TextStyle(color: Colors.white),
                             ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 60,
-                              vertical: 16,
-                            ),
-                          ),
-                          icon: const Icon(
-                            Icons.arrow_back,
-                            color: Colors.white,
-                          ),
-                          label: const Text(
-                            "Back",
-                            style: TextStyle(color: Colors.white),
                           ),
                         ),
-                        ElevatedButton(
-                          onPressed: _saveAndNavigate,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.amber,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 60,
-                              vertical: 16,
+                        const SizedBox(width: 20),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _saveAndNavigate,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.amber,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 40,
+                                vertical: 16,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              elevation: 4,
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            elevation: 4,
-                          ),
-                          child: const Text(
-                            "Next",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Colors.black,
+                            child: const Text(
+                              "Next",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Colors.black,
+                              ),
                             ),
                           ),
                         ),

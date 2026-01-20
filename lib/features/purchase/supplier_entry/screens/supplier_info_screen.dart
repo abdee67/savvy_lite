@@ -366,7 +366,7 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Purchase Order Information:',
+                  'PO Information:',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: _titleFontSize,
