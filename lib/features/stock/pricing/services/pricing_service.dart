@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/stock/item_cost/models/item_cost_model.dart';
+import 'package:savvy_stock/features/stock/item_cost/models/item_cost_model.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
+import 'package:savvy_stock/features/stock/lot_master/repo/lot_master_repo.dart';
 import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 import 'package:savvy_stock/features/system_constant/repo/system_constant_service.dart';
 
@@ -14,11 +16,13 @@ class PricingService {
   final LocalDatabaseService databaseService;
   final ItemUomConversionsRepository uomConversionRepository;
   final SystemConstantsService systemConstantService;
+  final LotMasterRepository lotMasterRepository;
 
   PricingService({
     required this.databaseService,
     required this.uomConversionRepository,
     required this.systemConstantService,
+    required this.lotMasterRepository,
   });
 
   /// Updates unit prices based on item cost and margin plans
@@ -118,6 +122,8 @@ class PricingService {
             itemBranchId: itemBranch['id'] as int,
             unitPrice: calculatedPrice,
             companyId: companyId,
+            itemNumber: itemCost.itemNumber!,
+            branchId: receiver.branchRecieved ?? 0,
           );
         }
       }
@@ -291,13 +297,18 @@ class PricingService {
     }
   }
 
-  /// Calculate price based on margin type (Flat or Percentage)
   double? _calculatePrice({
     required double baseCost,
     required String marginType,
     required double marginRate,
   }) {
     double price;
+
+    if (kDebugMode) {
+      developer.log(
+        '💰 Calculating price: baseCost=$baseCost, marginType=$marginType, marginRate=$marginRate',
+      );
+    }
 
     switch (marginType) {
       case 'F': // Flat
@@ -307,6 +318,11 @@ class PricingService {
         price = baseCost * (1 + marginRate / 100.0);
         break;
       default:
+        if (kDebugMode) {
+          developer.log(
+            '❌ Unknown margin type: "$marginType" (expected "P" or "F")',
+          );
+        }
         return null;
     }
 
@@ -423,6 +439,8 @@ class PricingService {
     required int itemBranchId,
     required double unitPrice,
     required int companyId,
+    required int itemNumber,
+    required int branchId,
   }) async {
     final db = await databaseService.database;
     await db.update(
@@ -431,6 +449,15 @@ class PricingService {
       where: 'id = ? AND company = ?',
       whereArgs: [itemBranchId, companyId],
     );
+
+    // Sync lot prices
+    await lotMasterRepository.updateUnitPriceByItemAndBranch(
+      itemNumber: itemNumber,
+      branch: branchId,
+      unitPrice: unitPrice,
+      companyId: companyId,
+    );
+
     if (kDebugMode) {
       developer.log('✅ Item branch price updated successfully');
     }
@@ -458,6 +485,13 @@ class PricingService {
       where: 'item_number = ? AND company = ?',
       whereArgs: [itemNumber, companyId],
     );
+
+    // Sync lot prices
+    await lotMasterRepository.updateUnitPriceByItem(
+      itemNumber: itemNumber,
+      unitPrice: unitPrice,
+      companyId: companyId,
+    );
   }
 
   Future<void> _updateItemBranchesByBranch({
@@ -472,6 +506,14 @@ class PricingService {
       {'unit_price': unitPrice},
       where: 'item_number = ? AND branch = ? AND company = ?',
       whereArgs: [itemNumber, branchId, companyId],
+    );
+
+    // Sync lot prices
+    await lotMasterRepository.updateUnitPriceByItemAndBranch(
+      itemNumber: itemNumber,
+      branch: branchId,
+      unitPrice: unitPrice,
+      companyId: companyId,
     );
   }
 }

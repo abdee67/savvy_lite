@@ -276,6 +276,37 @@ class LotMasterRepository extends BaseRepository {
     );
   }
 
+  // Update unit price for all lots matching item and branch
+  Future<int> updateUnitPriceByItemAndBranch({
+    required int itemNumber,
+    required int branch,
+    required double unitPrice,
+    required int companyId,
+  }) async {
+    final db = await databaseService.database;
+    return await db.update(
+      'lot_master',
+      {'unit_price': unitPrice},
+      where: 'item_number = ? AND branch = ? AND company = ?',
+      whereArgs: [itemNumber, branch, companyId],
+    );
+  }
+
+  // Update unit price for all lots of an item (all branches)
+  Future<int> updateUnitPriceByItem({
+    required int itemNumber,
+    required double unitPrice,
+    required int companyId,
+  }) async {
+    final db = await databaseService.database;
+    return await db.update(
+      'lot_master',
+      {'unit_price': unitPrice},
+      where: 'item_number = ? AND company = ?',
+      whereArgs: [itemNumber, companyId],
+    );
+  }
+
   // Delete lot master
   Future<int> deleteLotMaster(int id, int companyId, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
