@@ -604,13 +604,12 @@ class _SalesReturnDashBoardPageState extends State<SalesReturnDashBoardPage>
       physics: const BouncingScrollPhysics(),
       child: Column(
         children: [
-          if (salesOrder.customerBillTo != null)
-            _buildsalesOrderInfoItem(
-              'Customer : ',
-              salesOrder.customerBillToRef!.customerName?.toString() ?? 'N/A',
-              Iconsax.box,
-              isCompact,
-            ),
+          _buildsalesOrderInfoItem(
+            'Customer : ',
+            salesOrder.customerBillToRef!.customerName?.toString() ?? 'N/A',
+            Iconsax.box,
+            isCompact,
+          ),
           if (salesOrder.orderNumber != null)
             _buildsalesOrderInfoItem(
               'Order No : ',

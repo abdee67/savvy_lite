@@ -4,10 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/stock/item_cost/models/item_cost_model.dart';
-import 'package:savvy_stock/features/stock/item_cost/models/item_cost_model.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/stock/lot_master/repo/lot_master_repo.dart';
-import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 import 'package:savvy_stock/features/system_constant/repo/system_constant_service.dart';
 
 /// Service for automatic pricing based on margin plans

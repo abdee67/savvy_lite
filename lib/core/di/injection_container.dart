@@ -300,9 +300,9 @@ void initDependencies() {
       databaseService: getIt(),
       uomConversionRepository: getIt(),
       systemConstantService: getIt(),
+      lotMasterRepository: getIt(),
     ),
   );
-
   ///////////// BLoCs///////////////
 
   getIt.registerLazySingleton<AuthBloc>(

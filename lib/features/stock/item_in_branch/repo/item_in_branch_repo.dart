@@ -25,10 +25,7 @@ class StockItemInBranchRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
 
     // Sync lot prices if unit price is present
-    if (item.unitPrice != null &&
-        item.itemNumber != null &&
-        item.branch != null &&
-        item.company != null) {
+    if (item.unitPrice != null && item.company != null) {
       await db.update(
         'lot_master',
         {'unit_price': item.unitPrice},

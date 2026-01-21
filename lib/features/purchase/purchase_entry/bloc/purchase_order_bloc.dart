@@ -1073,7 +1073,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         // JAVA LOGIC: Only update costs if status changed
         int companyId = state.companyId ?? authBloc.state.companyId!;
         int userId = state.userId ?? authBloc.state.userId!.id;
-        if (changed && companyId != null && userId != null) {
+        if (changed) {
           await itemCostsRepository.updatingItemCosts(
             headerId: event.detail.poHeader!,
             companyId: companyId,

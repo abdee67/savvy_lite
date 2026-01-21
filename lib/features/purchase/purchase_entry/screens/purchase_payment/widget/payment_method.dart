@@ -43,7 +43,6 @@ class _PurchasePaymentMethodState extends State<PurchasePaymentMethod> {
 
   void _initializeFromState() {
     final header = widget.purchaseState.selectedHeader;
-
     // Set payment term from header
     if (header?.paymentTerm != null) {
       _paymentTermController.text = header!.paymentTerm.toString();
