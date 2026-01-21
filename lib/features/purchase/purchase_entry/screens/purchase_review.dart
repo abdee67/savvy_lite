@@ -139,7 +139,7 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
     ).showSnackBar(const SnackBar(content: Text('Purchase Orders refreshed')));
   }
 
-  void _receiveItem(PurchaseOrderDetail purchaseOrderDetail) {
+  void _receiveItem(PurchaseOrderDetail purchaseOrderDetail) async {
     if (purchaseOrderDetail.quantityOpen! <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('All Orders is already Received')),
@@ -152,7 +152,7 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
     );
 
     // Open receiving dialog for this detail
-    showDialog(
+    final result = await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
@@ -166,6 +166,12 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
         );
       },
     );
+
+    if (result == true && mounted) {
+      context.read<PurchaseOrderBloc>().add(
+        LoadPurchaseOrders(companyId: widget.authBloc.state.companyId!),
+      );
+    }
   }
 
   void _exportToExcel() {

@@ -291,6 +291,16 @@ class _PurchaseReceivingScreenState extends State<PurchaseReceivingScreen> {
     );
   }
 
+  bool _isSaving = false;
+
+  void _showLoadingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+  }
+
   void _saveReceivers() async {
     if (_formKey.currentState?.validate() ?? false) {
       // Validate all receivers
@@ -342,16 +352,21 @@ class _PurchaseReceivingScreenState extends State<PurchaseReceivingScreen> {
         );
       }
 
+      // Show loading dialog
+      setState(() {
+        _isSaving = true;
+      });
+      _showLoadingDialog();
+
       // Save receipt with stock update
       purchaseBloc.add(const SavePurchaseOrderReceipt());
-      purchaseBloc.add(
-        LoadPurchaseOrders(companyId: widget.authBloc.state.companyId!),
-      );
     }
   }
 
   void _closeDialog() {
-    context.pop();
+    if (mounted) {
+      context.pop(true);
+    }
   }
 
   PurchaseOrderReceiver? _getCurrentReceiver() {
@@ -374,28 +389,39 @@ class _PurchaseReceivingScreenState extends State<PurchaseReceivingScreen> {
         }
 
         // Handle errors
-        if (state.error != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.error!), backgroundColor: Colors.red),
-          );
+        if (state.status == PurchaseOrderStatus.error ||
+            state.status == PurchaseOrderStatus.failure) {
+          if (_isSaving) {
+            Navigator.of(context).pop(); // Close loading dialog
+            setState(() {
+              _isSaving = false;
+            });
+          }
+          if (state.error != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.error!),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
         }
 
         // Handle successful save
         if (state.status == PurchaseOrderStatus.success &&
             state.successMessage != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.successMessage!),
-              backgroundColor: Colors.green,
-            ),
-          );
+          if (_isSaving) {
+            Navigator.of(context).pop(); // Close loading dialog
 
-          // Close dialog after successful save
-          Future.delayed(const Duration(milliseconds: 1500), () {
-            if (mounted) {
-              _closeDialog();
-            }
-          });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.successMessage!),
+                backgroundColor: Colors.green,
+              ),
+            );
+
+            _closeDialog(); // Pop screen with result
+          }
         }
       },
       builder: (context, state) {
