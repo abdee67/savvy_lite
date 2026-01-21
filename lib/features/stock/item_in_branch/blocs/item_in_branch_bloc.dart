@@ -741,11 +741,13 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     } catch (e) {
       // Fallback to local search if repository search fails
       final filtered = state.items.where((item) {
-        return item.item?.itemDescription?.toLowerCase().contains(
+        return item.itemRef?.itemDescription?.toLowerCase().contains(
                   query.toLowerCase(),
                 ) ==
                 true ||
-            item.item?.barcode!.toLowerCase().contains(query.toLowerCase()) ==
+            item.itemRef?.barcode!.toLowerCase().contains(
+                  query.toLowerCase(),
+                ) ==
                 true ||
             item.branchRef?.description?.toLowerCase().contains(
                   query.toLowerCase(),
