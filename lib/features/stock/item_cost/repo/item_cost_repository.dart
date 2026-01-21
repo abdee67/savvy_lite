@@ -374,6 +374,43 @@ class ItemCostRepository extends BaseRepository {
     return PaginatedItemCostResult(items: items, totalCount: totalCount);
   }
 
+  /// Get total quantity available across all branches in primary UOM
+  /// This is used for weighted average cost calculation
+  Future<double> getTotalAvailabilityInPrimaryUom(
+    int itemNumber,
+    int companyId,
+  ) async {
+    final db = await databaseService.database;
+
+    // Get all items_in_branch records for this item
+    final branchesResult = await db.query(
+      'items_in_branch',
+      columns: ['quantity_available', 'unit_of_measure'],
+      where: 'item_number = ? AND company = ?',
+      whereArgs: [itemNumber, companyId],
+    );
+
+    double totalQtyInPrimary = 0.0;
+
+    for (final branch in branchesResult) {
+      final qtyAvailable =
+          (branch['quantity_available'] as num?)?.toDouble() ?? 0.0;
+      final uomId = branch['unit_of_measure'] as int?;
+
+      if (uomId != null && qtyAvailable > 0) {
+        // Convert this branch's quantity to primary UOM
+        final factor = await uomConversionRepository.fromOtherToPrimary(
+          itemNumber,
+          uomId,
+          companyId,
+        );
+        totalQtyInPrimary += qtyAvailable * factor;
+      }
+    }
+
+    return totalQtyInPrimary;
+  }
+
   /// Updates item costs for all details in a purchase order header.
   /// This should be called BEFORE updating stock quantities.
   ///
@@ -493,10 +530,51 @@ class ItemCostRepository extends BaseRepository {
         if (existingCostResult.isNotEmpty) {
           // Only update if no receivers exist (first time receiving)
           if (receiverCount == 0) {
+            // Get existing cost
+            final existingCost =
+                (existingCostResult.first['amount_unit_cost'] as num?)
+                    ?.toDouble() ??
+                0.0;
+
+            // Get total quantity available in primary UOM across all branches
+            final qtyOld = await getTotalAvailabilityInPrimaryUom(
+              itemNumber,
+              companyId,
+            );
+
+            // Calculate new quantity in primary UOM
+            final qtyTrn = factor * qty;
+
+            // Calculate total quantity
+            final qtyTotal = qtyOld + qtyTrn;
+
+            // Calculate weighted average cost
+            double finalCost;
+            if (qtyTotal > 0) {
+              final amountOld = existingCost * qtyOld;
+              final amountNew = unitCostAvg * qtyTrn;
+              finalCost = (amountOld + amountNew) / qtyTotal;
+              // Round to 2 decimal places
+              finalCost = (finalCost * 100).roundToDouble() / 100;
+            } else {
+              // No inventory, use new cost
+              finalCost = unitCostAvg;
+            }
+
+            if (kDebugMode) {
+              developer.log(
+                '💰 Weighted Average Calculation:\n'
+                '   Old Cost: \$${existingCost.toStringAsFixed(2)}, Old Qty: ${qtyOld.toStringAsFixed(2)}\n'
+                '   New Cost: \$${unitCostAvg.toStringAsFixed(2)}, New Qty: ${qtyTrn.toStringAsFixed(2)}\n'
+                '   Total Qty: ${qtyTotal.toStringAsFixed(2)}\n'
+                '   Average Cost: \$${finalCost.toStringAsFixed(2)}',
+              );
+            }
+
             await db.update(
               'item_cost',
               {
-                'amount_unit_cost': unitCostAvg,
+                'amount_unit_cost': finalCost,
                 'date_updated': DateTime.now().toIso8601String(),
                 'user_id': userId,
               },
