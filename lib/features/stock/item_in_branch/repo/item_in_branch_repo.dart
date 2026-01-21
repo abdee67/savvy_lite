@@ -23,6 +23,20 @@ class StockItemInBranchRepository extends BaseRepository {
   // Update existing item in branch
   Future<int> update(ItemInBranchModel item, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
+
+    // Sync lot prices if unit price is present
+    if (item.unitPrice != null &&
+        item.itemNumber != null &&
+        item.branch != null &&
+        item.company != null) {
+      await db.update(
+        'lot_master',
+        {'unit_price': item.unitPrice},
+        where: 'item_number = ? AND branch = ? AND company = ?',
+        whereArgs: [item.itemNumber, item.branch, item.company],
+      );
+    }
+
     return await db.update(
       'items_in_branch',
       item.toMap(),
@@ -268,6 +282,28 @@ class StockItemInBranchRepository extends BaseRepository {
   // Update unit price for item in branch
   Future<int> updateUnitPrice(int id, double unitPrice, int companyId) async {
     final db = await databaseService.database;
+
+    // Get item and branch for this record
+    final itemBranch = await db.query(
+      'items_in_branch',
+      columns: ['item_number', 'branch'],
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    if (itemBranch.isNotEmpty) {
+      final itemNumber = itemBranch.first['item_number'] as int;
+      final branch = itemBranch.first['branch'] as int;
+
+      // Update lots for this item+branch
+      await db.update(
+        'lot_master',
+        {'unit_price': unitPrice},
+        where: 'item_number = ? AND branch = ? AND company = ?',
+        whereArgs: [itemNumber, branch, companyId],
+      );
+    }
+
     return await db.update(
       'items_in_branch',
       {'unit_price': unitPrice},

@@ -904,7 +904,11 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
           if (location.marginType != null)
             _buildLocationInfoItem(
               'Margin Type : ',
-              location.marginType == 'F' ? 'Flat' : 'Percentage',
+              location.marginType == 'F'
+                  ? 'Flat'
+                  : location.marginType == 'P'
+                  ? 'Percentage'
+                  : 'N/A',
               Iconsax.chart,
               isCompact,
             ),

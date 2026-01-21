@@ -51,7 +51,10 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
   String? _selectedUom;
   String? _selectedTaxable;
 
-  final List<String> _marginTypes = ['%', 'N']; // Flat or Percentage
+  final List<String> _marginTypes = [
+    'Flat',
+    'Percentage',
+  ]; // Flat or Percentage
   final List<String> _taxable = ['YES', 'NO'];
 
   @override
@@ -87,7 +90,11 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
     _reorderPointController.text = item.reorderPoint?.toString() ?? '';
     _marginRateController.text = item.marginRate?.toString() ?? '';
 
-    _selectedMarginType = item.marginType;
+    _selectedMarginType = item.marginType == 'F'
+        ? 'Flat'
+        : item.marginType == 'P'
+        ? 'Percentage'
+        : null;
     _selectedUom = item.unitOfMeasure;
     _selectedTaxable = item.taxable == 'Y'
         ? 'YES'
@@ -148,7 +155,7 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
             : _parseDouble(_marginRateController.text),
         unitOfMeasure: _selectedUom,
         taxable: _selectedTaxable == 'YES' ? 'Y' : 'N',
-        marginType: _selectedMarginType,
+        marginType: _selectedMarginType == 'Flat' ? 'F' : 'P',
         company: widget.authBloc.state.companyId,
       );
 
@@ -615,7 +622,7 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
                   .map(
                     (marginType) => DropdownMenuItem(
                       value: marginType,
-                      child: Text(marginType == '%' ? 'Percentage' : 'Flat'),
+                      child: Text(marginType == 'F' ? 'Flat' : 'Percentage'),
                     ),
                   )
                   .toList(),
@@ -636,9 +643,9 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
               onChanged: (value) {
                 _marginRateController.text = value;
               },
-              prefixIcon: _selectedMarginType == '%'
-                  ? const Icon(Icons.percent)
-                  : const Icon(Icons.attach_money),
+              prefixIcon: _selectedMarginType == 'Flat'
+                  ? const Icon(Icons.attach_money)
+                  : const Icon(Icons.percent),
             ),
             const SizedBox(height: 16),
           ],

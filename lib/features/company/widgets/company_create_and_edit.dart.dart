@@ -45,7 +45,10 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
   late TextEditingController _logoCompanyController;
 
   String? _selectedMarginType;
-  final List<String> _marginTypes = ['%', 'N']; // Flat or Percentage
+  final List<String> _marginTypes = [
+    'Flat',
+    'Percentage',
+  ]; // Flat or Percentage
   String? _logoPath;
 
   @override
@@ -177,7 +180,7 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
         marginRate: _marginRateController.text.isEmpty
             ? null
             : double.parse(_marginRateController.text),
-        marginType: _selectedMarginType,
+        marginType: _selectedMarginType == 'Flat' ? 'F' : 'P',
         country: _countryController.text.isEmpty
             ? null
             : _countryController.text,
@@ -401,7 +404,7 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
                 .map(
                   (marginType) => DropdownMenuItem(
                     value: marginType,
-                    child: Text(marginType == '%' ? 'Percentage' : 'Flat'),
+                    child: Text(marginType),
                   ),
                 )
                 .toList(),
@@ -416,7 +419,7 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
           _buildTextField(
             _marginRateController,
             'Margin Rate',
-            _selectedMarginType == '%' ? Icons.percent : Icons.attach_money,
+            _selectedMarginType == 'Flat' ? Icons.attach_money : Icons.percent,
             TextInputType.number,
             false,
           ),

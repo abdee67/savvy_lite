@@ -65,7 +65,11 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
     _reorderPointController.text = item.reorderPoint?.toString() ?? '';
     _marginRateController.text = item.marginRate?.toString() ?? '';
 
-    _selectedMarginType = item.marginType;
+    _selectedMarginType = item.marginType == 'F'
+        ? 'Flat'
+        : item.marginType == 'P'
+        ? 'Percentage'
+        : null;
     _selectedUom = item.unitOfMeasure;
     _selectedTaxable = item.taxable == 'Y'
         ? 'YES'
@@ -151,7 +155,7 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
             : _parseDouble(_marginRateController.text),
         unitOfMeasure: _selectedUom,
         taxable: _selectedTaxable == 'YES' ? 'Y' : 'N',
-        marginType: _selectedMarginType,
+        marginType: _selectedMarginType == 'Flat' ? 'F' : 'P',
         company: widget.authBloc.state.companyId,
       );
 

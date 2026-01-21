@@ -825,7 +825,11 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
           ),
           _buildItemInfoItem(
             'Margin Type : ',
-            item.marginType ?? 'N/A',
+            item.marginType == 'F'
+                ? 'Flat'
+                : item.marginType == 'P'
+                ? 'Percentage'
+                : 'N/A',
             Iconsax.chart,
             screenWidth,
           ),
