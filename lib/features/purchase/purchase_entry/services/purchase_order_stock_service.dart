@@ -195,7 +195,7 @@ class PurchaseOrderStockService {
         ib: itemsInBranchList,
         loc: null,
         lm: null,
-        transactionType: 'C', // 'C' for Receipt/Purchase//C IS COMPLETE
+        transactionType: 'R', // 'C' for Receipt/Purchase//C IS COMPLETE
         trNo: orderNumber,
         remark: 'Purchase',
         qty: roundedReceivedQuantity, // Positive quantity for purchase
@@ -388,7 +388,7 @@ class PurchaseOrderStockService {
       // Update item location quantity (same as Java's updatingItemLocationQuantity)
       await _updateItemLocationQuantity(
         lot: persistedLot,
-        transactionType: 'A',
+        transactionType: 'R',
         trNo: orderNumber,
         remark: 'Purchase',
         qtyTr: qty,
