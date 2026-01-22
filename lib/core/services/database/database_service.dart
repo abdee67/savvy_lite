@@ -1942,6 +1942,20 @@ ON fs_table (branch);
         'record_header': 8,
         'udc_group': 'TT',
       },
+      {
+        'detail_code': 'R',
+        'description_1': 'Inventory Receive',
+        'description_2': null,
+        'record_header': 8,
+        'udc_group': 'TT',
+      },
+      {
+        'detail_code': 'M',
+        'description_1': 'Migration',
+        'description_2': null,
+        'record_header': 8,
+        'udc_group': 'TT',
+      },
 
       // --- Order Type (OT) ---
       {
