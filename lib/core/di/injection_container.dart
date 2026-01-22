@@ -179,6 +179,8 @@ void initDependencies() {
       nextNumberRepository: getIt(),
       systemConstantBloc: getIt(),
       databaseService: getIt(),
+      itemUomConversionsRepository: getIt(),
+      itemTransactionRepository: getIt(),
     ),
   );
   getIt.registerLazySingleton<LocationMasterRepository>(

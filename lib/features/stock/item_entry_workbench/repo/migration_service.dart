@@ -15,6 +15,8 @@ import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_
 import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_repo.dart';
 import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
 import 'package:savvy_stock/features/stock/item_locations/repo/item_location_repo.dart';
+import 'package:savvy_stock/features/stock/item_transactions/repo/item_transaction_repo.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/stock/location_entry/models/location_master_model.dart';
 import 'package:savvy_stock/features/stock/location_entry/repo/location_master_repository.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
@@ -35,6 +37,8 @@ class MigrationService {
   final NextNumberRepository nextNumberRepository;
   final SystemConstantBloc systemConstantBloc;
   final LocalDatabaseService databaseService;
+  final ItemUomConversionsRepository itemUomConversionsRepository;
+  final ItemTransactionRepository itemTransactionRepository;
 
   MigrationService({
     required this.authBloc,
@@ -49,6 +53,8 @@ class MigrationService {
     required this.nextNumberRepository,
     required this.systemConstantBloc,
     required this.databaseService,
+    required this.itemUomConversionsRepository,
+    required this.itemTransactionRepository,
   });
 
   /// Main migration method with proper error handling
@@ -134,8 +140,9 @@ class MigrationService {
           }
 
           // Step 6: Create/Update LotMaster if applicable
+          LotMaster? lotMaster;
           if (_shouldCreateLotMaster(item)) {
-            final lotMaster = await _processLotMaster(
+            lotMaster = await _processLotMaster(
               item,
               itemsTable.id,
               itemLocations.id!,
@@ -147,6 +154,18 @@ class MigrationService {
               throw Exception('Failed to process LotMaster');
             }
           }
+          // Create stock card transaction (same as Java's stockCARDCreation)
+          await itemTransactionRepository.stockCardCreation(
+            ib: itemsInBranch,
+            loc: itemLocations,
+            lm: lotMaster,
+            transactionType: 'M',
+            trNo: null,
+            remark: "Import",
+            qty: itemsInBranch.quantityAvailable!,
+            por: null,
+            soD: null,
+          );
 
           if (kDebugMode) {
             developer.log(
@@ -256,7 +275,7 @@ class MigrationService {
     return itemsTable.copyWith(id: id);
   }
 
-  /// Step 2: Update Item Costs with proper error handling
+  /// Step 2: Update Item Costs with proper error handling and weighted average logic
   Future<void> _updateItemCosts(
     ItemMaster item,
     ItemEntryModel itemsTable,
@@ -266,28 +285,97 @@ class MigrationService {
       final companyId = authBloc.state.companyId;
       if (companyId == null) throw Exception('Company ID not available');
 
-      final existingItemCost = await itemCostRepository
+      // Validations based on Java condition
+      if (item.unitCost == null ||
+          item.unitCost == 0.0 ||
+          item.quantity == null ||
+          item.quantity == 0.0) {
+        // Skip if cost or quantity is invalid/zero, similar to Java implementation check
+        if (kDebugMode) {
+          developer.log(
+            'ℹ️ Skipping cost update: invalid UnitCost or Quantity.',
+          );
+        }
+        return;
+      }
+
+      // Calculate conversion factor from item UOM to primary UOM
+      // Assuming item.defualtUom is the UOM for the Migration item quantity
+      double factor = 1.0;
+      if (item.defualtUom != null) {
+        factor = await itemUomConversionsRepository.fromOtherToPrimary(
+          itemsTable.id,
+          item.defualtUom!,
+          companyId,
+          txn: txn,
+        );
+      }
+
+      final existingItemCostList = await itemCostRepository
           .findByItemNumberAndCompany(itemsTable.id, companyId, txn: txn);
 
-      final itemCost = ItemCost(
-        itemNumber: itemsTable.id,
-        amountUnitCost: item.unitCost ?? 0.0,
-        company: companyId,
-        dateUpdated: DateTime.now(),
-      );
+      final currentItemCost = existingItemCostList.isNotEmpty
+          ? existingItemCostList.first
+          : null;
 
-      if (existingItemCost.isNotEmpty) {
-        final updatedCost = existingItemCost.first.copyWith(
-          amountUnitCost: item.unitCost ?? 0.0,
+      if (currentItemCost != null) {
+        // Java: double qtyNew = factor * im.getQuantity();
+        final qtyNew = factor * item.quantity!;
+
+        // Java: double amtNew = qtyNew * im.getUnitCost();
+        final amtNew = qtyNew * item.unitCost!;
+
+        // Java: double qtyOld = itemsInBranchController.totalAvailabilityOfAnItemInSpecificPrimary(it);
+        final qtyOld = await itemCostRepository
+            .getTotalAvailabilityInPrimaryUom(
+              itemsTable.id,
+              companyId,
+              txn: txn,
+            );
+
+        // Java: double amtOld = qtyOld * item.getAmountUnitCost();
+        final amtOld =
+            qtyOld * (currentItemCost.amountUnitCost ?? item.unitCost!);
+
+        // Java: double qtyTotal = qtyOld + qtyNew;
+        final qtyTotal = qtyOld + qtyNew;
+
+        // Java: BigDecimal unitCostAvg = BigDecimal.valueOf((amtOld + amtNew) / qtyTotal).setScale(2, RoundingMode.HALF_UP);
+        double unitCostAvg = 0.0;
+        if (qtyTotal > 0) {
+          final rawAvg = (amtOld + amtNew) / qtyTotal;
+          unitCostAvg = (rawAvg * 100).roundToDouble() / 100;
+        } else {
+          // Fallback if total quantity is 0 (should imply no stock), use new unit cost
+          unitCostAvg = item.unitCost!;
+        }
+
+        final updatedCost = currentItemCost.copyWith(
+          amountUnitCost: unitCostAvg,
+          dateUpdated: DateTime.now(),
         );
         await itemCostRepository.update(updatedCost, txn: txn);
         if (kDebugMode) {
-          developer.log('💰 Updated item costs for: ${item.itemDescription}');
+          developer.log(
+            '💰 Updated item costs for: ${item.itemDescription} to $unitCostAvg',
+          );
         }
       } else {
+        // Java: ItemCostTable item = new ItemCostTable(); ... item.setAmountUnitCost(im.getUnitCost())...
+        // Rounding to 2 decimal places
+        final unitCostAvg = (item.unitCost! * 100).roundToDouble() / 100;
+
+        final itemCost = ItemCost(
+          itemNumber: itemsTable.id,
+          amountUnitCost: unitCostAvg,
+          company: companyId,
+          dateUpdated: DateTime.now(),
+        );
         await itemCostRepository.create(itemCost, txn: txn);
         if (kDebugMode) {
-          developer.log('💰 Created item costs for: ${item.itemDescription}');
+          developer.log(
+            '💰 Created item costs for: ${item.itemDescription} with cost $unitCostAvg',
+          );
         }
       }
     } catch (e) {
@@ -612,7 +700,8 @@ class MigrationService {
   /// Check if LotMaster should be created
   bool _shouldCreateLotMaster(ItemMaster item) {
     final systemConstant = systemConstantBloc.state.selected;
-    return systemConstant?.applyLotMgmBoolean == true;
+    return systemConstant?.applyLotMgmBoolean == true &&
+        item.dateExpired != null;
   }
 
   /// Generate location description from codes
