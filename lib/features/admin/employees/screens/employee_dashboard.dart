@@ -1134,12 +1134,6 @@ class _EmployeeListPageState extends State<EmployeeListPage>
                       () => _emailEmployee(employee.email ?? ''),
                       isCompact,
                     ),
-                    _buildActionButton(
-                      Iconsax.export,
-                      'Export',
-                      () => _exportEmployee(employee),
-                      isCompact,
-                    ),
                   ],
                 ),
               ),

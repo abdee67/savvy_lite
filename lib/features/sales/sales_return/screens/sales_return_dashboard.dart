@@ -710,31 +710,6 @@ class _SalesReturnDashBoardPageState extends State<SalesReturnDashBoardPage>
               Iconsax.dollar_circle,
               isCompact,
             ),
-
-          // Action buttons row
-          Padding(
-            padding: const EdgeInsets.only(top: 16, bottom: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildActionButton(
-                  Iconsax.eye,
-                  'View Details',
-                  () => _showsalesOrderDetail(
-                    salesOrder,
-                  ), // This would show even more details
-                  isCompact,
-                ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportToExcel(), // Export this single salesOrder
-                  isCompact,
-                ),
-                _buildActionButton(Iconsax.repeat, 'Print', () {}, isCompact),
-              ],
-            ),
-          ),
         ],
       ),
     );

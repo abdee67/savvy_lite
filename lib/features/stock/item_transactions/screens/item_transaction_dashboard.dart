@@ -189,10 +189,6 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
     context.push(AppRoutes.inventoryTransactionCreate);
   }
 
-  void _navigateToEditScreen(ItemTransactionModel transaction) {
-    context.push(AppRoutes.inventoryTransactionEdit, extra: transaction);
-  }
-
   void _safeDelete(BuildContext context, {int? index}) {
     final bloc = context.read<ItemTransactionsBloc>();
     final state = bloc.state;
@@ -414,17 +410,7 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
                   onPressed: () => _safeDelete(context),
                   tooltip: 'Delete selected',
                 ),
-                IconButton(
-                  icon: const Icon(
-                    Iconsax.edit,
-                    color: Color.fromARGB(255, 28, 66, 146),
-                  ),
-                  onPressed: () {
-                    final transaction = state.selectedItems.first;
-                    _navigateToEditScreen(transaction);
-                  },
-                  tooltip: 'Edit transaction',
-                ),
+
                 IconButton(
                   icon: const Icon(Iconsax.close_circle),
                   onPressed: () => _clearSelection(),
@@ -441,14 +427,8 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
       builder: (context, state) {
         return ElevatedButton(
           onPressed: () {
-            if (state.selectedItems.isNotEmpty) {
-              // Navigate to edit screen with selected transaction
-              final transaction = state.selectedItems.first;
-              _navigateToEditScreen(transaction);
-            } else {
-              // Navigate to create screen
-              _navigateToCreateScreen();
-            }
+            // Navigate to create screen
+            _navigateToCreateScreen();
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color.fromARGB(255, 28, 66, 146),
@@ -955,12 +935,7 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
                   ), // This would show even more details
                   isCompact,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportToExcel(), // Export this single transaction
-                  isCompact,
-                ),
+
                 _buildActionButton(
                   Iconsax.repeat,
                   'Duplicate',

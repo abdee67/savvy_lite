@@ -811,12 +811,6 @@ class _SupplierListPageState extends State<SupplierListPage>
                   () => _emailCustomer(supplier.email?.toString()),
                   isCompact,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportCustomer(supplier),
-                  isCompact,
-                ),
               ],
             ),
           ),

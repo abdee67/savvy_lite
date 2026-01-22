@@ -717,12 +717,6 @@ class _CompanyDashboardState extends State<CompanyDashboard>
                   () => _navigateToEditScreen(company),
                   isCompact,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportCompany(company),
-                  isCompact,
-                ),
               ],
             ),
           ),

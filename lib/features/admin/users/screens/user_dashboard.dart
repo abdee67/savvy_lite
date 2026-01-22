@@ -807,12 +807,6 @@ class _UserDashboardState extends State<UserDashboard>
                   () => _emailUser(user.userEmail ?? ''),
                   isCompact,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportUser(user),
-                  isCompact,
-                ),
               ],
             ),
           ),

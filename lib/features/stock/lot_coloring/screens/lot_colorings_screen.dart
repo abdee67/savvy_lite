@@ -1120,12 +1120,6 @@ class _LotExpirationColorsDashboardState
                   () => _navigateToEditScreen(color),
                   isCompact,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportLot(color),
-                  isCompact,
-                ),
               ],
             ),
           ),

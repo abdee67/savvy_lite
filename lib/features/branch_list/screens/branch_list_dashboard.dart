@@ -715,12 +715,6 @@ class _BranchDashboardState extends State<BranchDashboard>
                   () => _navigateToEditScreen(branch),
                   isCompact,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportBranch(branch),
-                  isCompact,
-                ),
               ],
             ),
           ),

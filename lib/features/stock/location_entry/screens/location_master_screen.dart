@@ -932,12 +932,7 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
                   () => _navigateToEditScreen(location),
                   isCompact,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportLocation(location),
-                  isCompact,
-                ),
+
                 _buildActionButton(
                   Iconsax.trash,
                   'Delete',

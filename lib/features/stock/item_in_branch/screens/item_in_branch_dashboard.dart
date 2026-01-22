@@ -858,12 +858,7 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
                   () => _navigateToEditScreen(item),
                   screenWidth,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportItem(item),
-                  screenWidth,
-                ),
+
                 _buildActionButton(
                   Iconsax.trash,
                   'Delete',

@@ -837,12 +837,6 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
                   isCompact,
                 ),
                 _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportItem(item),
-                  isCompact,
-                ),
-                _buildActionButton(
                   Iconsax.add,
                   'Add to Branch',
                   () => context.push(

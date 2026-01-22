@@ -1200,12 +1200,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                   () => _navigateToEditScreen(lot),
                   isCompact,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportLot(lot),
-                  isCompact,
-                ),
+
                 _buildActionButton(
                   Iconsax.calculator,
                   'Status',

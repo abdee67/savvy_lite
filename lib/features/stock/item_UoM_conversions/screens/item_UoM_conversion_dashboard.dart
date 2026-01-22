@@ -992,12 +992,7 @@ class _ItemUomConversionListScreenState
                   () => _navigateToEditScreen(conversion),
                   isCompact,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportConversion(conversion),
-                  isCompact,
-                ),
+
                 _buildActionButton(
                   Iconsax.trash,
                   'Delete',

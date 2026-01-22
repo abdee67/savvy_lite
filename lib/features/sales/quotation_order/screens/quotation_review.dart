@@ -1000,13 +1000,6 @@ class _QuotationReviewPageState extends State<QuotationReviewPage>
                       () => _safeVoid(context, header: quotationOrder),
                       isCompact,
                     ),
-                  _buildActionButton(
-                    Iconsax.export,
-                    'Export',
-                    () => _exportToExcel(),
-                    isCompact,
-                  ),
-                  _buildActionButton(Iconsax.repeat, 'Print', () {}, isCompact),
                 ],
               ),
             ),

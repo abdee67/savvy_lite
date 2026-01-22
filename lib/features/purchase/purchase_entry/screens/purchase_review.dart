@@ -928,12 +928,7 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
                   () => _safeVoid(context, detail: purchaseOrder),
                   isCompact,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportToExcel(),
-                  isCompact,
-                ),
+
                 _buildActionButton(Iconsax.repeat, 'Print', () {}, isCompact),
               ],
             ),

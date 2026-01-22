@@ -948,13 +948,6 @@ class _SalesReviewPageState extends State<SalesReviewPage>
                   ), // This would show even more details
                   isCompact,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportToExcel(), // Export this single salesOrder
-                  isCompact,
-                ),
-                _buildActionButton(Iconsax.repeat, 'Print', () {}, isCompact),
               ],
             ),
           ),

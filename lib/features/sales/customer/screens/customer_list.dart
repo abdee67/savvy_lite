@@ -830,12 +830,6 @@ class _CustomerListPageState extends State<CustomerListPage>
                   () => _emailCustomer(customer.customerId?.toString()),
                   isCompact,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportCustomer(customer),
-                  isCompact,
-                ),
               ],
             ),
           ),
