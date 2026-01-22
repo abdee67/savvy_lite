@@ -378,9 +378,10 @@ class ItemCostRepository extends BaseRepository {
   /// This is used for weighted average cost calculation
   Future<double> getTotalAvailabilityInPrimaryUom(
     int itemNumber,
-    int companyId,
-  ) async {
-    final db = await databaseService.database;
+    int companyId, {
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
 
     // Get all items_in_branch records for this item
     final branchesResult = await db.query(
@@ -403,6 +404,7 @@ class ItemCostRepository extends BaseRepository {
           itemNumber,
           uomId,
           companyId,
+          txn: txn,
         );
         totalQtyInPrimary += qtyAvailable * factor;
       }

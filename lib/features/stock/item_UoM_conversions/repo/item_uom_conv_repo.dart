@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/models/item_uom_conversions_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
+import 'package:sqflite/sqflite.dart';
 
 class ItemUomConversionsRepository {
   final LocalDatabaseService databaseService;
@@ -312,9 +313,10 @@ class ItemUomConversionsRepository {
     int itemId,
     int uomId,
     String fromTo,
-    int companyId,
-  ) async {
-    final db = await databaseService.database;
+    int companyId, {
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
     final column = fromTo.toLowerCase() == 'to' ? 'to_uom' : 'from_uom';
 
     final result = await db.rawQuery(
@@ -436,20 +438,22 @@ class ItemUomConversionsRepository {
   Future<double> fromOtherToPrimary(
     int itemId,
     int fromUomId,
-    int companyId,
-  ) async {
+    int companyId, {
+    Transaction? txn,
+  }) async {
     try {
       final str = await getItemUomStructureCode(
         itemId,
         fromUomId,
         'from',
         companyId,
+        txn: txn,
       );
 
       if (str == null) return 1.0;
 
       // Get all conversions from this level upward to primary
-      final db = await databaseService.database;
+      final db = txn ?? await databaseService.database;
       final conversions = await db.rawQuery(
         '''
         SELECT conversion_factor 
