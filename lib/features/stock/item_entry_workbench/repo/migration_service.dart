@@ -165,6 +165,7 @@ class MigrationService {
             qty: itemsInBranch.quantityAvailable!,
             por: null,
             soD: null,
+            txn: txn,
           );
 
           if (kDebugMode) {

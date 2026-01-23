@@ -108,8 +108,12 @@ class ItemCostRepository extends BaseRepository {
   }
 
   // Find item cost by item
-  Future<ItemCost?> findByItem(int itemNumber, int companyId) async {
-    final db = await databaseService.database;
+  Future<ItemCost?> findByItem(
+    int itemNumber,
+    int companyId, {
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
     final maps = await db.rawQuery(
       '''SELECT ic.*,
       i.item_description,

@@ -2,6 +2,7 @@
 import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
+import 'package:savvy_stock/features/next_number/repo/next_number_repo.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/item_transactions/model/paginated_item_transaction_result.dart';
@@ -13,7 +14,6 @@ import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.d
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
-import 'package:savvy_stock/features/next_number/bloc/next_number_bloc.dart';
 import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_repo.dart';
@@ -21,12 +21,12 @@ import 'package:savvy_stock/features/stock/item_locations/models/item_locations_
 import 'package:savvy_stock/features/stock/item_locations/repo/item_location_repo.dart';
 import 'package:savvy_stock/features/stock/item_transactions/model/item_transaction_model.dart';
 import 'package:savvy_stock/features/stock/location_entry/repo/location_master_repository.dart';
+import 'package:sqflite/sqflite.dart';
 
 class ItemTransactionRepository {
   final LocalDatabaseService databaseService;
   final AuthBloc authBloc;
   final SystemConstantBloc systemConstantBloc;
-  final NextNumberBloc nextNumberBloc;
   final UdcRepository udcDetailsController;
   final ItemUomConversionBloc itemUomConversionBloc;
 
@@ -35,6 +35,7 @@ class ItemTransactionRepository {
   final ItemLocationsRepository itemLocationsRepository;
   final LotMasterRepository lotMasterRepository;
   final LocationMasterRepository locationMasterRepository;
+  final NextNumberRepository nextNumberRepository;
 
   final ItemUomConversionsRepository itemUomConversionRepository;
   final ItemCostRepository itemCostRepository;
@@ -43,13 +44,13 @@ class ItemTransactionRepository {
     required this.databaseService,
     required this.authBloc,
     required this.systemConstantBloc,
-    required this.nextNumberBloc,
     required this.udcDetailsController,
     required this.itemUomConversionBloc,
     required this.itemInBranchRepository,
     required this.itemLocationsRepository,
     required this.lotMasterRepository,
     required this.locationMasterRepository,
+    required this.nextNumberRepository,
     required this.itemUomConversionRepository,
     required this.itemCostRepository,
   });
@@ -68,6 +69,7 @@ class ItemTransactionRepository {
     int? supplier,
     int? orderType,
     int? customer,
+    Transaction? txn,
   }) async {
     try {
       if (kDebugMode) {
@@ -104,6 +106,7 @@ class ItemTransactionRepository {
             customer: customer,
             user: user.id,
             companyId: companyId,
+            txn: txn,
           );
         } else if (loc != null &&
             applyLocationMgmt &&
@@ -125,6 +128,7 @@ class ItemTransactionRepository {
             customer: customer,
             user: user.id,
             companyId: companyId,
+            txn: txn,
           );
         } else if (lm != null &&
             applyLocationMgmt &&
@@ -146,6 +150,7 @@ class ItemTransactionRepository {
             customer: customer,
             user: user.id,
             companyId: companyId,
+            txn: txn,
           );
         }
       }
@@ -171,13 +176,15 @@ class ItemTransactionRepository {
     int? customer,
     required int user,
     required int companyId,
+    Transaction? txn,
   }) async {
-    final db = await databaseService.database;
+    final db = txn ?? await databaseService.database;
 
     // Get transaction type UDC
     final udcList = await udcDetailsController.getLocalUdcDetailsByCode(
       transactionType,
       'TT',
+      txn: txn,
     );
     if (udcList.isEmpty) {
       throw Exception(
@@ -192,7 +199,11 @@ class ItemTransactionRepository {
         soD?.orderHeader?.orderNumber ??
         trNo;
 
-    trNumber ??= await nextNumberBloc.generateFormattedNumber('TN');
+    trNumber ??= await nextNumberRepository.generateNextNumber(
+      'TN',
+      companyId,
+      txn: txn,
+    );
 
     // Calculate quantities and costs
     if (ib.itemNumber == 0 || ib.branch == 0) {
@@ -203,18 +214,10 @@ class ItemTransactionRepository {
       throw Exception('Unit of measure is missing for item branch: ${ib.id}');
     }
 
-    final factor = await itemUomConversionRepository.fromOtherToAnother(
-      ib.itemNumber,
-      ib.unitOfMeasure!,
-      ib.unitOfMeasure!, // Same UoM for item branch
-      companyId,
-    );
-
-    final qtyAvInStore = (ib.quantityAvailable ?? 0.0) + (factor * qty);
-
     final itemCost = await itemCostRepository.findByItem(
       ib.itemNumber,
       companyId,
+      txn: txn,
     );
     final unitCost = itemCost?.amountUnitCost ?? 0.0;
 
@@ -222,6 +225,7 @@ class ItemTransactionRepository {
       ib.itemNumber,
       ib.unitOfMeasure!,
       companyId,
+      txn: txn,
     );
 
     final qTrn = factorP * qty;
@@ -233,8 +237,8 @@ class ItemTransactionRepository {
     // Create transaction
     final transaction = ItemTransactionModel(
       dateCreated: DateTime.now(),
-      quantityTransaction: qty,
-      beforeStoreQuantityAvailable: ib.quantityAvailable ?? 0.0,
+      quantityTransaction: qTrn,
+      beforeStoreQuantityAvailable: qBfrTrn,
       unitCost: unitCost,
       amountCost: amountCost,
       beforeAmountCost: beforeAmountCost,
@@ -275,13 +279,15 @@ class ItemTransactionRepository {
     int? customer,
     required int user,
     required int companyId,
+    Transaction? txn,
   }) async {
-    final db = await databaseService.database;
+    final db = txn ?? await databaseService.database;
 
     // Get transaction type UDC
     final udcList = await udcDetailsController.getLocalUdcDetailsByCode(
       transactionType,
       'TT',
+      txn: txn,
     );
     if (udcList.isEmpty) {
       throw Exception(
@@ -299,6 +305,7 @@ class ItemTransactionRepository {
       loc.itemNumber!,
       loc.branch!,
       companyId,
+      txn: txn,
     );
 
     if (ib == null) {
@@ -313,7 +320,11 @@ class ItemTransactionRepository {
         soD?.orderHeader?.orderNumber ??
         trNo;
 
-    trNumber ??= await nextNumberBloc.generateFormattedNumber('TN');
+    trNumber ??= await nextNumberRepository.generateNextNumber(
+      'TN',
+      companyId,
+      txn: txn,
+    );
 
     // Checks moved to top of function
 
@@ -321,6 +332,7 @@ class ItemTransactionRepository {
       loc.itemNumber!,
       loc.branch!,
       companyId,
+      txn: txn,
     );
 
     if (ib.unitOfMeasure == null && uom == null) {
@@ -333,6 +345,7 @@ class ItemTransactionRepository {
       loc.itemNumber!,
       effectiveUom!,
       companyId,
+      txn: txn,
     );
 
     final qtyAvInStore = ib.quantityAvailable ?? 0.0;
@@ -340,6 +353,7 @@ class ItemTransactionRepository {
     final itemCost = await itemCostRepository.findByItem(
       loc.itemNumber!,
       companyId,
+      txn: txn,
     );
     final unitCost = itemCost?.amountUnitCost ?? 0.0;
 
@@ -351,8 +365,8 @@ class ItemTransactionRepository {
     // Create transaction
     final transaction = ItemTransactionModel(
       dateCreated: DateTime.now(),
-      quantityTransaction: qty,
-      beforeStoreQuantityAvailable: qtyAvInStore,
+      quantityTransaction: qTrn,
+      beforeStoreQuantityAvailable: qBfrTrn,
       unitCost: unitCost,
       amountCost: amountCost,
       beforeAmountCost: beforeAmountCost,
@@ -402,18 +416,20 @@ class ItemTransactionRepository {
     int? customer,
     required int user,
     required int companyId,
+    Transaction? txn,
   }) async {
     if (kDebugMode) {
       developer.log(
         'DEBUG: _createLotTransaction started. lm: ${lm.id}, item: ${lm.itemNumber}, branch: ${lm.branch}',
       );
     }
-    final db = await databaseService.database;
+    final db = txn ?? await databaseService.database;
 
     // Get transaction type UDC
     final udcList = await udcDetailsController.getLocalUdcDetailsByCode(
       transactionType,
       'TT',
+      txn: txn,
     );
     if (udcList.isEmpty) {
       throw Exception(
@@ -436,6 +452,7 @@ class ItemTransactionRepository {
       lm.itemNumber!,
       lm.branch!,
       companyId,
+      txn: txn,
     );
 
     if (ib == null) {
@@ -450,7 +467,11 @@ class ItemTransactionRepository {
         soD?.orderHeader?.orderNumber ??
         trNo;
 
-    trNumber ??= await nextNumberBloc.generateFormattedNumber('TN');
+    trNumber ??= await nextNumberRepository.generateNextNumber(
+      'TN',
+      companyId,
+      txn: txn,
+    );
 
     // Calculate quantities and costs
     final qtyAvInStore = ib.quantityAvailable ?? 0.0;
@@ -461,6 +482,7 @@ class ItemTransactionRepository {
     final itemCost = await itemCostRepository.findByItem(
       lm.itemNumber!,
       companyId,
+      txn: txn,
     );
     final unitCost = itemCost?.amountUnitCost ?? 0.0;
 
@@ -471,7 +493,12 @@ class ItemTransactionRepository {
         'DEBUG: Getting UoM for item: ${lm.itemNumber}, branch: ${lm.branch}',
       );
     }
-    final uom = await _getItemBranchUoM(lm.itemNumber!, lm.branch!, companyId);
+    final uom = await _getItemBranchUoM(
+      lm.itemNumber!,
+      lm.branch!,
+      companyId,
+      txn: txn,
+    );
     if (kDebugMode) {
       developer.log('DEBUG: uom: $uom, ib.unitOfMeasure: ${ib.unitOfMeasure}');
     }
@@ -496,6 +523,7 @@ class ItemTransactionRepository {
       lm.itemNumber!,
       effectiveUom,
       companyId,
+      txn: txn,
     );
     if (kDebugMode) {
       developer.log('DEBUG: factorP: $factorP');
@@ -509,8 +537,8 @@ class ItemTransactionRepository {
     // Create transaction
     final transaction = ItemTransactionModel(
       dateCreated: DateTime.now(),
-      quantityTransaction: qty,
-      beforeStoreQuantityAvailable: qtyAvInStore,
+      quantityTransaction: qTrn,
+      beforeStoreQuantityAvailable: qBfrTrn,
       unitCost: unitCost,
       amountCost: amountCost,
       beforeAmountCost: beforeAmountCost,
@@ -1596,9 +1624,10 @@ class ItemTransactionRepository {
   Future<int?> _getItemBranchUoM(
     int itemNumber,
     int branch,
-    int companyId,
-  ) async {
-    final db = await databaseService.database;
+    int companyId, {
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
     final result = await db.rawQuery(
       'SELECT unit_of_measure FROM items_in_branch WHERE item_number = ? AND branch = ? AND company = ?',
       [itemNumber, branch, companyId],

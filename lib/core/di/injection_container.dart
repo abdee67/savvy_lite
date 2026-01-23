@@ -160,7 +160,7 @@ void initDependencies() {
       itemCostRepository: getIt(),
       udcDetailsController: getIt(),
       systemConstantBloc: getIt(),
-      nextNumberBloc: getIt(),
+      nextNumberRepository: getIt(),
       databaseService: getIt(),
     ),
   );

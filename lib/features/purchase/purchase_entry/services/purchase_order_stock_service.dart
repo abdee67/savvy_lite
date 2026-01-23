@@ -236,6 +236,19 @@ class PurchaseOrderStockService {
           branchUom,
           companyId,
         );
+        if (kDebugMode &&
+            factor == 1.0 &&
+            receiver.unitOfMeasure != branchUom) {
+          developer.log(
+            '⚠️ Warning: UOM conversion factor is 1.0 but UOMs differ',
+          );
+          developer.log(
+            '  From UOM: ${receiver.unitOfMeasure}, To UOM: $branchUom',
+          );
+        }
+        if (kDebugMode) {
+          developer.log('Factor: $factor');
+        }
 
         // Calculate new quantity on hand
         final currentQuantity = itemLocation.quantityOnHand ?? 0.0;
@@ -247,8 +260,13 @@ class PurchaseOrderStockService {
 
         final newQuantity = currentQuantity + roundedReceivedQuantity;
 
-        // Update ItemLocations (same as Java's saveRow)
-        await itemLocationsRepository.createItemLocation(
+        if (kDebugMode) {
+          developer.log('New Quantity for location: $newQuantity');
+          developer.log('Rounded Received Quantity: $roundedReceivedQuantity');
+        }
+
+        // Update ItemLocations (use updateItemLocation for existing locations)
+        await itemLocationsRepository.updateItemLocation(
           itemLocation.copyWith(quantityOnHand: newQuantity),
         );
 
@@ -258,7 +276,29 @@ class PurchaseOrderStockService {
           branchId: receiver.branchRecieved!,
           quantity: roundedReceivedQuantity,
           companyId: companyId,
-          isAddition: true,
+        );
+
+        // Get ItemsInBranch for stock card transaction
+        final itemsInBranch = await stockItemInBranchRepository
+            .findByItemAndBranch(
+              receiver.itemNumber!,
+              receiver.branchRecieved!,
+              companyId,
+            );
+
+        // Create stock card transaction (same as Java's stockCARDCreation)
+        await itemTransactionsRepository.stockCardCreation(
+          ib: itemsInBranch,
+          loc: itemLocation.copyWith(quantityOnHand: newQuantity),
+          lm: null,
+          transactionType: 'R', // Receipt/Purchase
+          trNo: orderNumber,
+          remark: 'Purchase',
+          qty: roundedReceivedQuantity,
+          por: receiver,
+          soD: null,
+          supplier: receiver.poDetailRef?.poHeaderRef?.supplierId,
+          orderType: receiver.poDetailRef?.poHeaderRef?.orderType,
         );
       }
     }
@@ -543,7 +583,6 @@ class PurchaseOrderStockService {
     required int branchId,
     required double quantity,
     required int companyId,
-    required bool isAddition,
   }) async {
     try {
       final itemsInBranch = await stockItemInBranchRepository
@@ -551,9 +590,10 @@ class PurchaseOrderStockService {
 
       if (itemsInBranch != null) {
         final currentQuantity = itemsInBranch.quantityAvailable ?? 0.0;
-        final newQuantity = isAddition
-            ? currentQuantity + quantity
-            : currentQuantity - quantity;
+        final newQuantity = currentQuantity + quantity;
+        if (kDebugMode) {
+          developer.log('New Quantityyy for ib: $newQuantity');
+        }
 
         await stockItemInBranchRepository.updateQuantity(
           itemsInBranch.id,

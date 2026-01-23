@@ -106,7 +106,7 @@ Future<void> _initializeAndRunApp() async {
       //await LocalDatabaseService().debugTable('item_cost');
       //await LocalDatabaseService().debugTable('item_location');
       //await LocalDatabaseService().debugTable('lot_master');
-      await LocalDatabaseService().debugTable('item_master');
+      //await LocalDatabaseService().debugTable('item_master');
       //await LocalDatabaseService().debugTable('items_table');
       //await LocalDatabaseService().debugTable('sales_order_header');
       //await LocalDatabaseService().debugTable('credit_receipt_table');
@@ -115,7 +115,8 @@ Future<void> _initializeAndRunApp() async {
       //await LocalDatabaseService().debugTable('sales_return_details');
       // await LocalDatabaseService().debugTable('invoice_history_header');
       // await LocalDatabaseService().debugTable('invoice_history_detail');
-      //await LocalDatabaseService().debugTable('item_transactions');
+      await LocalDatabaseService().debugTable('item_transactions');
+      await LocalDatabaseService().debugTable('item_uom_conversions');
       // await LocalDatabaseService().debugTable('quote_order_header');
       // await LocalDatabaseService().debugTable('quote_order_detail');
       // await LocalDatabaseService().debugTable('supplier_table');
