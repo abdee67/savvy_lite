@@ -89,7 +89,7 @@ class LicenseDetailsPage extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => context.go(AppRoutes.login),
+                    onPressed: () => context.push(AppRoutes.login),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Color(0xFF145888),
                       padding: const EdgeInsets.symmetric(vertical: 16),

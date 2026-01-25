@@ -6,6 +6,8 @@ import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/features/licensing/bloc/license_bloc.dart';
 import 'package:savvy_stock/features/licensing/bloc/license_event.dart';
 import 'package:savvy_stock/features/licensing/bloc/license_state.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_event.dart';
 
 class LicenseActivationPage extends StatefulWidget {
   final bool isFromRegistration;
@@ -98,6 +100,8 @@ class _LicenseActivationPageState extends State<LicenseActivationPage> {
               context.read<LicenseBloc>().add(
                 SaveLicense(_licenseKeyController.text),
               );
+              // Refresh auth status to update from licenseActivationRequired -> unauthenticated
+              context.read<AuthBloc>().add(const CheckAuthStatus());
             } else if (state.machineId != null && _machineId == null) {
               setState(() {
                 _machineId = state.machineId;
