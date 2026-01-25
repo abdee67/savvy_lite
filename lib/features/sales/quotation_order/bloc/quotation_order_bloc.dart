@@ -1058,6 +1058,8 @@ class QuotationOrderBloc
         final updatedHeader = event.currentHeader!.copyWith(
           customerTableId: customer.id!,
           customerBillTo: customer.id!,
+          customerBillToRef: customer,
+          customerTableRef: customer,
         );
 
         emit(updatedState.copyWith(selectedHeader: updatedHeader));
@@ -1066,6 +1068,8 @@ class QuotationOrderBloc
         final updatedHeader = state.selectedHeader!.copyWith(
           customerTableId: customer.id!,
           customerBillTo: customer.id!,
+          customerBillToRef: customer,
+          customerTableRef: customer,
         );
 
         emit(updatedState.copyWith(selectedHeader: updatedHeader));
@@ -1091,10 +1095,20 @@ class QuotationOrderBloc
         event.companyId,
       );
 
+      //if default customer is not null, update customer info
       if (defaultCustomer != null) {
         add(
           UpdateCustomerInfo(
             customer: defaultCustomer,
+            currentHeader: state.selectedHeader,
+          ),
+        );
+      }
+      //if default customer is null, just grab the customer from the state
+      else if (state.defaultCustomer != null) {
+        add(
+          UpdateCustomerInfo(
+            customer: state.defaultCustomer!,
             currentHeader: state.selectedHeader,
           ),
         );
