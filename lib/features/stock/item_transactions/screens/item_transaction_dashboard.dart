@@ -434,10 +434,7 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
             backgroundColor: const Color.fromARGB(255, 28, 66, 146),
             shape: const CircleBorder(),
           ),
-          child: Icon(
-            state.selectedItems.isNotEmpty ? Icons.edit : Icons.add,
-            color: Colors.white,
-          ),
+          child: Icon(Iconsax.add, color: Colors.white),
         );
       },
     );
