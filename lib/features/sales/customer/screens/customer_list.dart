@@ -466,20 +466,8 @@ class _CustomerListPageState extends State<CustomerListPage>
     double cardWidth,
   ) {
     final offset = _dragOffset[index] ?? 0.0;
+    // Check expansion state
     final isExpanded = _customerDetail == true && _selectedCustomer == customer;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-
-    // For responsiveness:
-    final collapsedHeight = isCompact
-        ? screenHeight *
-              0.24 // phones
-        : screenHeight * 0.14; // tablets / wide screens
-
-    final expandedHeight = isCompact
-        ? screenHeight * 0.55
-        : screenHeight * 0.45;
-    final collapsedWidth = isCompact ? screenWidth * 0.92 : screenWidth * 0.8;
 
     return GestureDetector(
       onTap: () {
@@ -489,36 +477,37 @@ class _CustomerListPageState extends State<CustomerListPage>
       },
       onLongPress: () {
         if (!_isSelectionMode) {
-          setState(() {
-            _isSelectionMode = true;
-          });
+          setState(() => _isSelectionMode = true);
         }
         _toggleCustomerSelection(customer, !isSelected);
       },
-      onHorizontalDragUpdate: (details) =>
-          _onHorizontalDragUpdate(index, details),
-      onHorizontalDragEnd: (details) =>
-          _onHorizontalDragEnd(context, index, details),
-      onDoubleTap: () => _showCustomerDetail(customer),
+      onHorizontalDragUpdate: (d) => _onHorizontalDragUpdate(index, d),
+      onHorizontalDragEnd: (d) => _onHorizontalDragEnd(context, index, d),
+      onDoubleTap: () =>
+          isExpanded ? _hideCustomerDetail() : _showCustomerDetail(customer),
+
       child: AnimatedBuilder(
         animation: _scrollController,
-        builder: (context, child) => Container(
-          transform: Matrix4.translationValues(offset, 0, 0),
-          width: collapsedWidth,
-          height: isExpanded ? expandedHeight : collapsedHeight,
-          child: Stack(
-            children: [
-              // 1. DELETE INDICATOR - Should be FIRST in Stack
-              if (!isExpanded) // Only show delete indicator when not expanded
+        builder: (context, child) {
+          // WRAPPER: Ensures both background and foreground obey 'cardWidth'
+          return SizedBox(
+            width: cardWidth,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // --- LAYER 1: DELETE INDICATOR (Background) ---
+                // This uses Positioned.fill to match the Height of the foreground automatically
                 Positioned.fill(
                   child: Container(
                     alignment: Alignment.centerRight,
+                    margin: const EdgeInsets.only(
+                      bottom: 12,
+                    ), // Same margin as card
                     decoration: BoxDecoration(
                       color: Colors.amber,
                       borderRadius: BorderRadius.circular(30),
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 20),
-                    margin: const EdgeInsets.only(bottom: 2),
                     child: const Icon(
                       Icons.delete,
                       color: Colors.white,
@@ -527,221 +516,199 @@ class _CustomerListPageState extends State<CustomerListPage>
                   ),
                 ),
 
-              // 2. BACKGROUND LAYERS (only when expanded)
-              if (isExpanded) ...[
-                // Yellow background
-                Positioned.fill(
-                  top: 47,
+                // --- LAYER 2: FOREGROUND CARD (Content) ---
+                Transform.translate(
+                  offset: Offset(offset, 0),
                   child: Container(
-                    width: collapsedWidth,
-                    height: expandedHeight,
-                    decoration: ShapeDecoration(
-                      color: const Color(0xFFFDD105), // Fixed yellow color
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    // DECORATION: Handles the Yellow/White transition
+                    decoration: BoxDecoration(
+                      // If expanded, the base becomes yellow. If collapsed, white.
+                      color: isExpanded
+                          ? const Color(0xFFFDD105)
+                          : (isSelected ? Colors.blue[50] : Colors.white),
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                      border: Border.all(
+                        color: isSelected
+                            ? const Color.fromARGB(255, 28, 66, 146)
+                            : Colors.transparent,
+                        width: 2,
+                      ),
+                    ),
+
+                    // ANIMATED SIZE: This is the key to efficient height
+                    child: AnimatedSize(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      alignment: Alignment.topCenter,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min, // Shrink to fit content
+                        children: [
+                          // --- PART A: HEADER (Name, Phone, Button) ---
+                          Container(
+                            padding: const EdgeInsets.fromLTRB(15, 15, 15, 10),
+                            decoration: BoxDecoration(
+                              // The header stays white (or blue-ish) even when expanded
+                              color: isSelected
+                                  ? Colors.blue[50]
+                                  : Colors.white,
+                              borderRadius: isExpanded
+                                  ? const BorderRadius.vertical(
+                                      top: Radius.circular(30),
+                                      bottom: Radius.circular(
+                                        20,
+                                      ), // Slight curve when open
+                                    )
+                                  : BorderRadius.circular(30),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildAvatar(
+                                      customer,
+                                      isSelected,
+                                      isCompact,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          _buildNameAndBadge(
+                                            customer,
+                                            isCompact,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            customer.phoneNumber ?? 'No Phone',
+                                            style: TextStyle(
+                                              color: const Color(0xFF684B4B),
+                                              fontSize: isCompact ? 14 : 16,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                // --- SEE MORE / SEE LESS BUTTON ---
+                                const SizedBox(height: 8),
+                                InkWell(
+                                  onTap: () => isExpanded
+                                      ? _hideCustomerDetail()
+                                      : _showCustomerDetail(customer),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 4,
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          isExpanded ? "See Less" : "See More",
+                                          style: TextStyle(
+                                            color: Colors.grey[600],
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Icon(
+                                          isExpanded
+                                              ? Icons.keyboard_arrow_up
+                                              : Icons.keyboard_arrow_down,
+                                          color: Colors.grey[600],
+                                          size: 16,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // --- PART B: DETAILS SECTION (Yellow Background) ---
+                          if (isExpanded)
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(20),
+                              child: _buildCustomerDetailContent(
+                                customer,
+                                isCompact,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ),
                 ),
               ],
+            ),
+          );
+        },
+      ),
+    );
+  }
 
-              // 3. CUSTOMER CARD - Should come AFTER delete indicator
-              AnimatedContainer(
-                padding: const EdgeInsets.only(top: 10, left: 10, right: 10),
-                width: collapsedWidth,
-                height: collapsedHeight,
-                duration: const Duration(milliseconds: 400),
-                transform: Matrix4.translationValues(offset, 0, 0),
-                curve: Curves.easeInOut,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.blue[50] : Colors.white,
-                  borderRadius: BorderRadius.circular(30),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                  border: Border.all(
-                    color: isSelected
-                        ? const Color.fromARGB(255, 28, 66, 146)
-                        : Colors.transparent,
-                    width: 2,
-                  ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Customer Avatar
-                        Container(
-                          margin: const EdgeInsets.only(top: 20),
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? const Color.fromARGB(255, 28, 66, 146)
-                                : Colors.grey[200],
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Iconsax.profile_circle,
-                            color: isSelected ? Colors.white : Colors.grey[600],
-                            size: isCompact ? 20 : 24,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    customer.customerName ?? 'Unknown Customer',
-                                    style: TextStyle(
-                                      color: const Color(0xFF373737),
-                                      fontSize: isCompact ? 20 : 24,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                  if (customer.defaultsValue == 'Y')
-                                    Container(
-                                      margin: const EdgeInsets.only(top: 4),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.green[50],
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: Colors.green),
-                                      ),
-                                      child: Text(
-                                        customer.defaultsValue == 'Y'
-                                            ? 'Default Customer'
-                                            : '',
-                                        style: TextStyle(
-                                          color: Colors.black,
-                                          fontSize: isCompact ? 12 : 14,
-                                          fontStyle: FontStyle.italic,
-                                          fontFamily: 'Inter',
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              Text(
-                                customer.phoneNumber ?? 'No Phone',
-                                style: TextStyle(
-                                  color: const Color.fromARGB(255, 104, 75, 75),
-                                  fontSize: isCompact ? 12 : 14,
-                                  fontStyle: FontStyle.italic,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              // Customer contact info
-                              if (customer.contactName != null)
-                                Text(
-                                  'Contact: ${customer.contactName}',
-                                  style: TextStyle(
-                                    color: const Color.fromARGB(
-                                      255,
-                                      104,
-                                      75,
-                                      75,
-                                    ),
-                                    fontSize: isCompact ? 12 : 14,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                              // Customer ID
-                              Text(
-                                'ID: ${customer.customerId.toString()}',
-                                style: TextStyle(
-                                  color: const Color.fromARGB(255, 104, 75, 75),
-                                  fontSize: isCompact ? 12 : 14,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        // See More / See Less button
-                        ElevatedButton(
-                          onPressed: () => isExpanded
-                              ? _hideCustomerDetail()
-                              : _showCustomerDetail(customer),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF145888),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                          ),
-                          child: Text(
-                            isExpanded ? 'See Less' : 'See More',
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: isCompact ? 10 : 12,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+  // --- HELPER WIDGETS ---
 
-              // 4. ANIMATED EXPANDED CONTENT
-              if (isExpanded)
-                Positioned(
-                  top: collapsedHeight + 10,
-                  left: 20,
-                  right: 20,
-                  child: AnimatedBuilder(
-                    animation: _detailAnimationController,
-                    builder: (context, child) {
-                      final currentHeight =
-                          _heightAnimation.value *
-                          (expandedHeight - collapsedHeight - 20);
-                      final currentOpacity = _opacityAnimation.value;
+  Widget _buildAvatar(Customer customer, bool isSelected, bool isCompact) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: isSelected
+            ? const Color.fromARGB(255, 28, 66, 146)
+            : Colors.grey[200],
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        Iconsax.profile_circle,
+        color: isSelected ? Colors.white : Colors.grey[600],
+        size: isCompact ? 20 : 24,
+      ),
+    );
+  }
 
-                      return SlideTransition(
-                        position: _slideAnimation,
-                        child: Container(
-                          height: currentHeight > 0 ? currentHeight : 0,
-                          decoration: BoxDecoration(color: Colors.transparent),
-                          child: Opacity(opacity: currentOpacity, child: child),
-                        ),
-                      );
-                    },
-                    child: _buildCustomerDetailContent(customer, isCompact),
-                  ),
-                ),
-            ],
+  Widget _buildNameAndBadge(Customer customer, bool isCompact) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Flexible(
+          child: Text(
+            customer.customerName ?? 'Unknown',
+            style: TextStyle(
+              color: const Color(0xFF373737),
+              fontSize: isCompact ? 18 : 22, // Slightly smaller safer fonts
+              fontWeight: FontWeight.w800,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
-      ),
+        if (customer.defaultsValue == 'Y')
+          Container(
+            margin: const EdgeInsets.only(left: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.green[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.green),
+            ),
+            child: const Text('Default', style: TextStyle(fontSize: 10)),
+          ),
+      ],
     );
   }
 

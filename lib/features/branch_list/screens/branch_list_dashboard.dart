@@ -425,18 +425,18 @@ class _BranchDashboardState extends State<BranchDashboard>
   ) {
     final offset = _dragOffset[index] ?? 0.0;
     final isExpanded = _branchDetail == true && _selectedBranch == branch;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final screenHeight = MediaQuery.sizeOf(context).height;
 
     // For responsiveness:
     final collapsedHeight = isCompact
-        ? screenHeight * 0.20
+        ? screenHeight * 0.22
         : screenHeight * 0.14;
 
     final expandedHeight = isCompact
         ? screenHeight * 0.55
         : screenHeight * 0.45;
-    final collapsedWidth = isCompact ? screenWidth * 0.92 : screenWidth * 0.8;
+    final collapsedWidth = screenWidth * 1;
 
     return GestureDetector(
       onTap: () {
