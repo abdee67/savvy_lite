@@ -207,66 +207,70 @@ class _CreditPaymentReportState extends State<CreditPaymentReport>
           ),
         ],
       ),
-      body: MultiBlocListener(
-        listeners: [
-          BlocListener<PurchaseOrderBloc, PurchaseOrderState>(
+      body: SafeArea(
+        child: MultiBlocListener(
+          listeners: [
+            BlocListener<PurchaseOrderBloc, PurchaseOrderState>(
+              listener: (context, state) {
+                if (state.status == PurchaseOrderStatus.error &&
+                    state.error != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.error!),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+                if (state.exportPendingPurchaseMessage != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.exportPendingPurchaseMessage!),
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+          child: BlocConsumer<PurchaseOrderBloc, PurchaseOrderState>(
             listener: (context, state) {
-              if (state.status == PurchaseOrderStatus.error &&
-                  state.error != null) {
+              if (state.status ==
+                  PurchaseOrderStatus.exportCreditPaymentReportSuccess) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(state.error!),
-                    backgroundColor: Colors.red,
+                    content: Text(state.successMessage!),
+                    backgroundColor: Colors.green,
                   ),
-                );
-              }
-              if (state.exportPendingPurchaseMessage != null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(state.exportPendingPurchaseMessage!)),
                 );
               }
             },
-          ),
-        ],
-        child: BlocConsumer<PurchaseOrderBloc, PurchaseOrderState>(
-          listener: (context, state) {
-            if (state.status ==
-                PurchaseOrderStatus.exportCreditPaymentReportSuccess) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.successMessage!),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            }
-          },
 
-          builder: (context, state) {
-            return Stack(
-              children: [
-                Column(
-                  children: [
-                    // Summary Card
-                    _buildSummaryCard(state),
+            builder: (context, state) {
+              return Stack(
+                children: [
+                  Column(
+                    children: [
+                      // Summary Card
+                      _buildSummaryCard(state),
 
-                    // Active Filters Indicator
-                    if (state.creditPaymentFilters.hasFilters)
-                      _buildActiveFiltersIndicator(state),
+                      // Active Filters Indicator
+                      if (state.creditPaymentFilters.hasFilters)
+                        _buildActiveFiltersIndicator(state),
 
-                    // Lot List
-                    Expanded(child: _buildLotList(state)),
-                  ],
-                ),
-                // Loading Overlay
-                if (state.status ==
-                    PurchaseOrderStatus.loadingCreditPaymentReport)
-                  Container(
-                    color: Colors.black.withOpacity(0.5),
-                    child: const Center(child: CircularProgressIndicator()),
+                      // Lot List
+                      Expanded(child: _buildLotList(state)),
+                    ],
                   ),
-              ],
-            );
-          },
+                  // Loading Overlay
+                  if (state.status ==
+                      PurchaseOrderStatus.loadingCreditPaymentReport)
+                    Container(
+                      color: Colors.black.withOpacity(0.5),
+                      child: const Center(child: CircularProgressIndicator()),
+                    ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -299,7 +303,7 @@ class _CreditPaymentReportState extends State<CreditPaymentReport>
                   'Total Payment Amount',
                   NumberFormat.currency(
                     decimalDigits: decimalPlace,
-                    symbol: 'Birr ',
+                    symbol: 'ETB ',
                   ).format(totalAmount),
                   Iconsax.trontron_trx,
                   Colors.orange,
@@ -747,7 +751,7 @@ class _CreditPaymentReportState extends State<CreditPaymentReport>
             'Purchase Amount: ',
             NumberFormat.currency(
                   decimalDigits: decimalPlace,
-                  symbol: 'Birr ',
+                  symbol: 'ETB ',
                 ).format(item.poHeaderRef?.amountGross) ??
                 'N/A',
             Iconsax.wallet,
@@ -757,7 +761,7 @@ class _CreditPaymentReportState extends State<CreditPaymentReport>
             'Paid Amount: ',
             NumberFormat.currency(
                   decimalDigits: decimalPlace,
-                  symbol: 'Birr ',
+                  symbol: 'ETB ',
                 ).format(item.paymentAmount) ??
                 'N/A',
             Iconsax.wallet,
@@ -767,7 +771,7 @@ class _CreditPaymentReportState extends State<CreditPaymentReport>
             'Remaining Amount: ',
             NumberFormat.currency(
                   decimalDigits: decimalPlace,
-                  symbol: 'Birr ',
+                  symbol: 'ETB ',
                 ).format(item.remaining) ??
                 'N/A',
             Iconsax.wallet,

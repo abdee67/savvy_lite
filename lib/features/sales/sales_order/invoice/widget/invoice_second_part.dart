@@ -92,7 +92,7 @@ class InvoiceSecondPart extends StatelessWidget {
                   '${item.quantity!.toStringAsFixed(2)} ${item.uom?.description1}',
                 ),
                 Text(
-                  '${unitPrice.toStringAsFixed(2)} Birr/${item.uom?.description1}',
+                  '${unitPrice.toStringAsFixed(2)} ETB/${item.uom?.description1}',
                 ),
               ],
             ),
@@ -264,6 +264,6 @@ class InvoiceSecondPart extends StatelessWidget {
   }
 
   String _formatCurrency(double amount) {
-    return '${amount.toStringAsFixed(2)} Birr';
+    return '${amount.toStringAsFixed(2)} ETB';
   }
 }

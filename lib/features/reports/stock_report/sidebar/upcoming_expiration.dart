@@ -229,43 +229,45 @@ class _UpcomingExpiryPageState extends State<UpcomingExpiryPage>
           ),
         ],
       ),
-      body: BlocConsumer<LotMasterBloc, LotMasterState>(
-        listener: (context, state) {
-          if (state.status == LotMasterStatus.exportReportSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.exportReportMessage),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        },
-
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Summary Card
-                  _buildSummaryCard(state),
-
-                  // Active Filters Indicator
-                  if (state.upcomingExpiryFilters.hasFilters)
-                    _buildActiveFiltersIndicator(state),
-
-                  // Lot List
-                  Expanded(child: _buildLotList(state)),
-                ],
-              ),
-              // Loading Overlay
-              if (state.status == LotMasterStatus.loadingUpcomingExpiryReport)
-                Container(
-                  color: Colors.black.withOpacity(0.5),
-                  child: const Center(child: CircularProgressIndicator()),
+      body: SafeArea(
+        child: BlocConsumer<LotMasterBloc, LotMasterState>(
+          listener: (context, state) {
+            if (state.status == LotMasterStatus.exportReportSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.exportReportMessage),
+                  backgroundColor: Colors.green,
                 ),
-            ],
-          );
-        },
+              );
+            }
+          },
+
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Summary Card
+                    _buildSummaryCard(state),
+
+                    // Active Filters Indicator
+                    if (state.upcomingExpiryFilters.hasFilters)
+                      _buildActiveFiltersIndicator(state),
+
+                    // Lot List
+                    Expanded(child: _buildLotList(state)),
+                  ],
+                ),
+                // Loading Overlay
+                if (state.status == LotMasterStatus.loadingUpcomingExpiryReport)
+                  Container(
+                    color: Colors.black.withOpacity(0.5),
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -314,7 +316,7 @@ class _UpcomingExpiryPageState extends State<UpcomingExpiryPage>
                 ),
                 _buildSummaryItem(
                   'Total Value',
-                  '${state.upcomingExpiryTotalCost.toStringAsFixed(2)} Birr',
+                  '${state.upcomingExpiryTotalCost.toStringAsFixed(2)} ETB',
                   Iconsax.dollar_circle,
                   Colors.green,
                 ),
@@ -779,7 +781,7 @@ class _UpcomingExpiryPageState extends State<UpcomingExpiryPage>
           _buildDetailItem(
             'Unit Price: ',
             lot.unitPrice != null
-                ? '${lot.unitPrice!.toStringAsFixed(2)} Birr'
+                ? '${lot.unitPrice!.toStringAsFixed(2)} ETB'
                 : 'N/A',
             Iconsax.dollar_circle,
             isCompact,
@@ -829,7 +831,7 @@ class _UpcomingExpiryPageState extends State<UpcomingExpiryPage>
               return _buildDetailItem(
                 'Total Cost: ',
                 snapshot.hasData
-                    ? '${snapshot.data!.toStringAsFixed(2)} Birr'
+                    ? '${snapshot.data!.toStringAsFixed(2)} ETB'
                     : 'Calculating...',
                 Iconsax.dollar_square,
                 isCompact,

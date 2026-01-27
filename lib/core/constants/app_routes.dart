@@ -6,7 +6,16 @@ class AppRoutes {
   static const String signup = '/signup';
   static const String homePage = '/homePage';
   static const String unauthorized = '/unauthorized';
+  static const String licenseDetails = '/license-details';
+  static const String licenseActivation = '/license-activation';
   static const String systemConstants = '/system-constants';
+
+  static const String fsnmr = '/fsnmr';
+  static const String fsnmrDashboard = '$fsnmr/dashboard';
+  static const String fsnmrManagement = '$fsnmrDashboard/management';
+  static const String fsnmrCreate = '$fsnmrManagement/create';
+  static const String fsnmrEdit = '$fsnmrManagement/edit';
+  static const String fsnmrDelete = '$fsnmrManagement/delete';
 
   // Dashboard Base Paths
   static const String admin = '/admin';
@@ -67,7 +76,10 @@ class AppRoutes {
   static const String salesCreditReceiptReview =
       '$salesDashboard/sales-credit-receipt-review';
 
-  static const String salesReturn = '$salesDashboard/sales-return';
+  static const String salesReturnDashboard =
+      '$salesDashboard/sales-return-dashboard';
+  static const String salesReturnFilter =
+      '$salesReturnDashboard/sales-return-filter';
 
   static const String quotationOrder = '$salesDashboard/quotation-order';
   static const String quotationItemEntry =
@@ -99,6 +111,8 @@ class AppRoutes {
   static const String importItemInBranch = '$itemInBranch/import-item';
 
   static const String uomManagement = '$stock/uom-management';
+  static const String uomCreation = '$uomManagement/add-uom';
+  static const String uomEdit = '$uomManagement/edit-uom';
 
   //item workbench
   static const String itemWorkbench = '$stock/item-workbench';

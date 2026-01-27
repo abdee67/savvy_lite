@@ -106,12 +106,10 @@ class SalesOrderDetail extends Equatable {
       tempId: (map['temp_id'] as num?)?.toInt(),
 
       // 👇 Joined objects (optional)
-      item: (map['items_table_id'] != null || map['item_number_string'] != null)
+      item: (map['items_table_id'] != null)
           ? ItemEntryModel(
               id: map['items_table_id'] ?? 0,
-              itemsId:
-                  map['items_id']?.toString() ??
-                  map['item_number_string']?.toString(),
+              itemsId: map['items_id']?.toString(),
               itemDescription: map['item_description']?.toString(),
               unitOfMeasure: map['unit_of_measure']?.toString(),
               unitPrice: (map['unit_price'] as num?)?.toDouble(),
@@ -129,7 +127,7 @@ class SalesOrderDetail extends Equatable {
                   ? UdcDetails(
                       id: map['unit_of_measure'],
                       description1: map['unit_of_measure_description'],
-                      detailCode: map['unit_of_measure_code'],
+                      detailCode: map['unit_of_measure_code'] ?? '',
                     )
                   : null,
             )
@@ -167,7 +165,7 @@ class SalesOrderDetail extends Equatable {
           ? UdcDetails(
               id: map['unit_of_measure'],
               description1: map['unit_of_measure_description'],
-              detailCode: map['unit_of_measure_code'],
+              detailCode: map['unit_of_measure_code'] ?? '',
             )
           : null,
       orderHeader: map['order_type'] != null

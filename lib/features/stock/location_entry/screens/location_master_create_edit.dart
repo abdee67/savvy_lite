@@ -12,7 +12,6 @@ import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_
 import 'package:savvy_stock/features/stock/location_entry/widget/branch_dropdown.dart';
 import 'package:savvy_stock/features/stock/location_entry/widget/item_pick_list.dart';
 import 'package:savvy_stock/features/stock/location_entry/widget/location_code.dart';
-import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import '../blocs/location_master_bloc.dart';
 import '../models/location_master_model.dart';
 
@@ -101,88 +100,90 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
           ),
         ],
       ),
-      body: BlocConsumer<LocationMasterBloc, LocationMasterState>(
-        listener: (context, state) {
-          // Show success/error messages
-          if (state.status == LocationMasterStatus.success &&
-              state.message.isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.green,
-              ),
-            );
-          } else if (state.status == LocationMasterStatus.failure &&
-              state.message.isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
-            );
-          } else if (state.status == LocationMasterStatus.duplication) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.orange,
-              ),
-            );
-          }
+      body: SafeArea(
+        child: BlocConsumer<LocationMasterBloc, LocationMasterState>(
+          listener: (context, state) {
+            // Show success/error messages
+            if (state.status == LocationMasterStatus.success &&
+                state.message.isNotEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            } else if (state.status == LocationMasterStatus.failure &&
+                state.message.isNotEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            } else if (state.status == LocationMasterStatus.duplication) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+            }
 
-          // Update controllers when selected location changes
-          if (state.selected != null) {
-            _updateControllers(state.selected!);
-          }
-        },
-        builder: (context, state) {
-          return Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                // Removed LocationToolbar widget
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 600),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Store and Margin Section
-                            _buildStoreAndMarginSection(
-                              context,
-                              state,
-                              widget.isEditMode,
-                            ),
-                            const SizedBox(height: 16),
-                            // Location Codes Section
-                            LocationCodeForm(
-                              controllers: _codeControllers,
-                              onCodeChanged: (index, value) =>
-                                  _onCodeChanged(context, index, value),
-                              isFieldEnabled: _getFieldEnabledState(
-                                state.selected,
+            // Update controllers when selected location changes
+            if (state.selected != null) {
+              _updateControllers(state.selected!);
+            }
+          },
+          builder: (context, state) {
+            return Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  // Removed LocationToolbar widget
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 600),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Store and Margin Section
+                              _buildStoreAndMarginSection(
+                                context,
+                                state,
+                                widget.isEditMode,
                               ),
-                            ),
-                            const SizedBox(height: 16),
+                              const SizedBox(height: 16),
+                              // Location Codes Section
+                              LocationCodeForm(
+                                controllers: _codeControllers,
+                                onCodeChanged: (index, value) =>
+                                    _onCodeChanged(context, index, value),
+                                isFieldEnabled: _getFieldEnabledState(
+                                  state.selected,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
 
-                            // Items Pick List Section
-                            _buildItemsPickListSection(
-                              context,
-                              state,
-                              widget.isEditMode,
-                            ),
-                          ],
+                              // Items Pick List Section
+                              _buildItemsPickListSection(
+                                context,
+                                state,
+                                widget.isEditMode,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          );
-        },
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

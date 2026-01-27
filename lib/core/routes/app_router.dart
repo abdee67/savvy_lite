@@ -5,12 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/errors/unauthorized_screen.dart';
 import 'package:savvy_stock/core/widgets/route_guard.dart';
+import 'package:savvy_stock/features/FSNMR/blocs/FSNMR_bloc.dart';
+import 'package:savvy_stock/features/FSNMR/models/fast_slow_nonmoving_rule.dart';
+import 'package:savvy_stock/features/FSNMR/screens/FSNMR_dashboard.dart';
+import 'package:savvy_stock/features/FSNMR/widgets/FSNMR_create_and_edit.dart.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
 import 'package:savvy_stock/features/admin/employees/screens/employee_dashboard.dart';
 import 'package:savvy_stock/features/admin/employees/widgets/emloyee_create_and_edit.dart.dart';
-import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart';
-import 'package:savvy_stock/features/admin/privilege/screens/privilege_dahsboard.dart';
-import 'package:savvy_stock/features/admin/privilege/widgets/privilege_form.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 import 'package:savvy_stock/features/admin/role/screens/role_dashboard.dart';
 import 'package:savvy_stock/features/admin/role/widgets/role_form.dart';
@@ -21,7 +22,8 @@ import 'package:savvy_stock/features/admin/users/screens/user_dashboard.dart';
 import 'package:savvy_stock/features/admin/users/widgets/user_creat_edit.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
-import 'package:savvy_stock/features/auth/screens/login_screen.dart';
+import 'package:savvy_stock/features/auth/screens/sign_in/login_screen.dart';
+import 'package:savvy_stock/features/registration/screens/free_trial_page.dart';
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 import 'package:savvy_stock/features/branch_list/screens/branch_list_dashboard.dart';
 import 'package:savvy_stock/features/branch_list/widgets/branch_list_create_and_edit.dart.dart';
@@ -31,7 +33,6 @@ import 'package:savvy_stock/features/company/screens/company_dashboard.dart';
 import 'package:savvy_stock/features/company/widgets/company_create_and_edit.dart.dart';
 import 'package:savvy_stock/features/dashboards/screens/home_page.dart';
 import 'package:savvy_stock/features/onboarding/screens/welcome_screen.dart';
-import 'package:savvy_stock/features/onboarding/widgets/getStarted.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/screens/credit_purchase/credit_purchase_review.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/screens/purchase_item_entry/screens/purchase_item_entry.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/screens/purchase_payment/screens/payment_screen.dart';
@@ -77,6 +78,7 @@ import 'package:savvy_stock/features/sales/sales_order/invoice/screens/invoice_r
 import 'package:savvy_stock/features/sales/sales_order/payment/screens/payment_screen.dart';
 import 'package:savvy_stock/features/sales/sales_order/sales_item_entry/screens/sales_item_entry.dart';
 import 'package:savvy_stock/features/sales/sales_order/sales_report.dart';
+import 'package:savvy_stock/features/sales/sales_return/screens/sales_return_dashboard.dart';
 import 'package:savvy_stock/features/sales/sales_return/screens/sales_return_screen.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/models/item_uom_conversions_model.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/screens/item_uom_conversion_dashboard.dart';
@@ -106,6 +108,11 @@ import 'package:savvy_stock/features/system_constant/screen/system_constants_scr
 
 import 'package:savvy_stock/core/di/injection_container.dart';
 import 'package:savvy_stock/features/reports/cash_flow/bloc/cash_flow_bloc.dart';
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
+import 'package:savvy_stock/features/udc_detail/screens/uom_dashboard.dart';
+import 'package:savvy_stock/features/udc_detail/widgets/uom_create_and_edit.dart.dart';
+import 'package:savvy_stock/features/licensing/screens/license_detail_page.dart';
+import 'package:savvy_stock/features/licensing/screens/license_activation_page.dart';
 
 // Import your screen files for missing routes
 // import 'package:savvy_stock/features/sales/sales_entry/screens/sales_entry_screen.dart';
@@ -146,7 +153,15 @@ class AppRouter {
       ),
       GoRoute(
         path: AppRoutes.signup,
-        builder: (context, state) => const GetStart(),
+        builder: (context, state) => const TrialOptionScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.licenseDetails,
+        builder: (context, state) => const LicenseDetailsPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.licenseActivation,
+        builder: (context, state) => const LicenseActivationPage(),
       ),
 
       // Main Dashboard
@@ -253,10 +268,19 @@ class AppRouter {
         redirect: _protectedRouteRedirect,
       ),
       GoRoute(
-        path: AppRoutes.salesReturn,
+        path: AppRoutes.salesReturnDashboard,
         builder: (context, state) => PrivilegeRouteGuard(
-          requiredPrivilege: AppRoutes.salesReturn,
+          requiredPrivilege: AppRoutes.salesReturnDashboard,
           parentPrivilege: AppRoutes.salesDashboard,
+          child: SalesReturnDashBoardPage(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.salesReturnFilter,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.salesReturnFilter,
+          parentPrivilege: AppRoutes.salesReturnDashboard,
           child: SalesReturnScreen(authBloc: authBloc),
         ),
         redirect: _protectedRouteRedirect,
@@ -574,6 +598,41 @@ class AppRouter {
         },
         redirect: _protectedRouteRedirect,
       ),
+      //UOM Management
+      GoRoute(
+        path: AppRoutes.uomManagement,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.uomManagement,
+          parentPrivilege: AppRoutes.stockDashboard,
+          child: UomDashboard(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.uomCreation,
+        builder: (context, state) {
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.uomCreation,
+            parentPrivilege: AppRoutes.uomManagement,
+            child: UomCreateAndEdit(authBloc: authBloc),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.uomEdit,
+        builder: (context, state) {
+          final extra = state.extra;
+          final item = extra != null ? extra as UdcDetails? : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.uomEdit,
+            parentPrivilege: AppRoutes.uomManagement,
+            child: UomCreateAndEdit(item: item, authBloc: authBloc),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+
       // UOM Conversion
       GoRoute(
         path: AppRoutes.itemUomConversions,
@@ -1182,12 +1241,51 @@ class AppRouter {
         ),
         redirect: _protectedRouteRedirect,
       ),
+
+      GoRoute(
+        path: AppRoutes.fsnmrManagement,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.fsnmrManagement,
+          parentPrivilege: AppRoutes.fsnmr,
+          child: BlocProvider(
+            create: (context) => getIt<FSNMRBloc>(),
+            child: FSNMRDashboard(authBloc: authBloc),
+          ),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.fsnmrCreate,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.fsnmrCreate,
+          parentPrivilege: AppRoutes.fsnmrManagement,
+          child: BlocProvider(
+            create: (context) => getIt<FSNMRBloc>(),
+            child: FSNMRCreateAndEditPage(authBloc: authBloc),
+          ),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+
+      GoRoute(
+        path: AppRoutes.fsnmrEdit,
+        builder: (context, state) {
+          final extra = state.extra;
+          final item = extra != null ? extra as FastSlowNonMovingRule? : null;
+          return PrivilegeRouteGuard(
+            requiredPrivilege: AppRoutes.fsnmrEdit,
+            parentPrivilege: AppRoutes.fsnmrManagement,
+            child: FSNMRCreateAndEditPage(authBloc: authBloc, rule: item),
+          );
+        },
+        redirect: _protectedRouteRedirect,
+      ),
+
       // System Constants
       GoRoute(
         path: AppRoutes.systemConstants,
         builder: (context, state) => SystemConstantsScreen(authBloc: authBloc),
       ),
-
       // Unauthorized
       GoRoute(
         path: AppRoutes.unauthorized,
@@ -1222,12 +1320,18 @@ class AppRouter {
       final intended = state.uri.queryParameters['redirect'];
       return intended ?? AppRoutes.homePage;
     }
+    if (authState.status == AuthStatus.licenseActivationRequired) {
+      return AppRoutes.licenseActivation;
+    }
     return AppRoutes.login;
   }
 
   String? _loginRedirect(BuildContext context, GoRouterState state) {
     if (authBloc.state.status == AuthStatus.authenticated) {
       return AppRoutes.homePage;
+    }
+    if (authBloc.state.status == AuthStatus.licenseActivationRequired) {
+      return AppRoutes.licenseActivation;
     }
     return null;
   }

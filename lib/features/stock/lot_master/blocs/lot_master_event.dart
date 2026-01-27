@@ -17,7 +17,18 @@ abstract class LotMasterEvent extends Equatable {
 
 class LoadLotMasters extends LotMasterEvent {
   final int companyId;
-  const LoadLotMasters(this.companyId);
+  final int page;
+  final int pageSize;
+
+  const LoadLotMasters(this.companyId, {this.page = 1, this.pageSize = 20});
+
+  @override
+  List<Object> get props => [companyId, page, pageSize];
+}
+
+class RefreshLotMasters extends LotMasterEvent {
+  final int companyId;
+  const RefreshLotMasters(this.companyId);
 
   @override
   List<Object> get props => [companyId];

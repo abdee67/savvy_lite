@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -39,7 +42,11 @@ class _CashOutFlowReportPageState extends State<CashOutFlowReportPage> {
 
   void _loadInitialData() {
     final companyId = widget.authBloc.state.companyId;
-    print('CashOutFlowPage: Loading initial data. CompanyID: $companyId');
+    if (kDebugMode) {
+      developer.log(
+        'CashOutFlowPage: Loading initial data. CompanyID: $companyId',
+      );
+    }
     if (companyId != null) {
       context.read<CashFlowBloc>().add(
         LoadCashOutFlowReport(
@@ -49,7 +56,9 @@ class _CashOutFlowReportPageState extends State<CashOutFlowReportPage> {
         ),
       );
     } else {
-      print('CashOutFlowPage: CompanyID is null!');
+      if (kDebugMode) {
+        developer.log('CashOutFlowPage: CompanyID is null!');
+      }
     }
   }
 
@@ -113,89 +122,95 @@ class _CashOutFlowReportPageState extends State<CashOutFlowReportPage> {
           ),
         ],
       ),
-      body: BlocConsumer<CashFlowBloc, CashFlowState>(
-        listener: (context, state) {
-          if (state.exportCashOutFlowReportMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.exportCashOutFlowReportMessage!)),
-            );
-          }
-          if (state.status == CashFlowStatus.error && state.error != null) {
-            print('CashOutFlowPage: Error state: ${state.error}');
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Error: ${state.error}'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          print(
-            'CashOutFlowPage: Rebuild. Status: ${state.status}, Totals: ${state.cashOutFlowReportTotals?.totalCount}, ListSize: ${state.cashOutFlowReport.length}',
-          );
-          return BlocBuilder<SystemConstantBloc, SystemConstantState>(
-            builder: (context, systemState) {
-              final systemConstant = systemState.systemConstants.isNotEmpty
-                  ? systemState.systemConstants.first
-                  : null;
-              final currencySymbol = systemConstant?.currencyCode ?? '\$';
-
-              if (state.status == CashFlowStatus.loadingCashOutFlowReport &&
-                  state.cashOutFlowReport.isEmpty) {
-                return const Center(child: CircularProgressIndicator());
+      body: SafeArea(
+        child: BlocConsumer<CashFlowBloc, CashFlowState>(
+          listener: (context, state) {
+            if (state.exportCashOutFlowReportMessage != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(state.exportCashOutFlowReportMessage!)),
+              );
+            }
+            if (state.status == CashFlowStatus.error && state.error != null) {
+              if (kDebugMode) {
+                developer.log('CashOutFlowPage: Error state: ${state.error}');
               }
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error: ${state.error}'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            if (kDebugMode) {
+              developer.log(
+                'CashOutFlowPage: Rebuild. Status: ${state.status}, Totals: ${state.cashOutFlowReportTotals?.totalCount}, ListSize: ${state.cashOutFlowReport.length}',
+              );
+            }
+            return BlocBuilder<SystemConstantBloc, SystemConstantState>(
+              builder: (context, systemState) {
+                final systemConstant = systemState.systemConstants.isNotEmpty
+                    ? systemState.systemConstants.first
+                    : null;
+                final currencySymbol = systemConstant?.currencyCode ?? '\$';
 
-              return Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    // Summary Cards
-                    _buildSummaryCards(state, currencySymbol),
-                    const SizedBox(height: 16),
-                    if (state.status == CashFlowStatus.error)
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text(
-                          state.error ?? 'Unknown Error',
-                          style: const TextStyle(color: Colors.red),
+                if (state.status == CashFlowStatus.loadingCashOutFlowReport &&
+                    state.cashOutFlowReport.isEmpty) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      // Summary Cards
+                      _buildSummaryCards(state, currencySymbol),
+                      const SizedBox(height: 16),
+                      if (state.status == CashFlowStatus.error)
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            state.error ?? 'Unknown Error',
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        ),
+
+                      // Main Content (Responsive)
+                      Expanded(
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            if (constraints.maxWidth > 600) {
+                              return _buildDesktopTable(
+                                state,
+                                currencySymbol,
+                                constraints,
+                              );
+                            } else {
+                              return _buildMobileList(
+                                state,
+                                currencySymbol,
+                                constraints,
+                              );
+                            }
+                          },
                         ),
                       ),
 
-                    // Main Content (Responsive)
-                    Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          if (constraints.maxWidth > 600) {
-                            return _buildDesktopTable(
-                              state,
-                              currencySymbol,
-                              constraints,
-                            );
-                          } else {
-                            return _buildMobileList(
-                              state,
-                              currencySymbol,
-                              constraints,
-                            );
-                          }
-                        },
-                      ),
-                    ),
-
-                    // Loading More Indicator
-                    if (state.status ==
-                        CashFlowStatus.loadingMoreCashOutFlowReport)
-                      const Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: CircularProgressIndicator(),
-                      ),
-                  ],
-                ),
-              );
-            },
-          );
-        },
+                      // Loading More Indicator
+                      if (state.status ==
+                          CashFlowStatus.loadingMoreCashOutFlowReport)
+                        const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: CircularProgressIndicator(),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

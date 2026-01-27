@@ -83,7 +83,11 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
       _marginRateController.text = item.marginRate?.toString() ?? '';
       final marginType = item.marginType;
       if (marginType != null) {
-        _selectedMarginType = marginType;
+        _selectedMarginType = marginType == 'F'
+            ? 'Flat'
+            : marginType == 'P'
+            ? 'Percentage'
+            : null;
       } else {
         _selectedMarginType = null;
       }
@@ -103,7 +107,11 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
       if (marginType != null &&
           marginType.isNotEmpty &&
           _marginTypes.contains(marginType)) {
-        _selectedMarginType = marginType;
+        _selectedMarginType = marginType == 'F'
+            ? 'Flat'
+            : marginType == 'P'
+            ? 'Percentage'
+            : null;
       } else {
         _selectedMarginType = null;
       }
@@ -216,7 +224,7 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
         marginRate: _parseDouble(_marginRateController.text.trim()),
         unitOfMeasure: _selectedUom,
         branch: _branch!,
-        marginType: _selectedMarginType,
+        marginType: _selectedMarginType == 'Flat' ? 'F' : 'P',
         company: widget.authBloc.state.companyId,
       );
 
@@ -268,31 +276,34 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
         backgroundColor: const Color(0xFF155888),
         elevation: 0,
       ),
-      body: BlocListener<StockItemInBranchBloc, ItemInBranchState>(
-        listener: (context, state) {
-          if (state.status == ItemInBranchStatus.duplication) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message!),
-                backgroundColor: Colors.red,
-              ),
-            );
-            return;
-          } else if (state.status == ItemInBranchStatus.success) {
-            _showSuccessDialog();
-          } else if (state.status == ItemInBranchStatus.failure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message ?? 'An error occurred'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        child: SafeArea(
-          child: SingleChildScrollView(
-            child: Expanded(
-              child: Column(children: [_buildForm(), _buildBottomNavigation()]),
+      body: SafeArea(
+        child: BlocListener<StockItemInBranchBloc, ItemInBranchState>(
+          listener: (context, state) {
+            if (state.status == ItemInBranchStatus.duplication) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message!),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              return;
+            } else if (state.status == ItemInBranchStatus.success) {
+              _showSuccessDialog();
+            } else if (state.status == ItemInBranchStatus.failure) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message ?? 'An error occurred'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          child: SafeArea(
+            child: Column(
+              children: [
+                Expanded(child: _buildForm()),
+                _buildBottomNavigation(),
+              ],
             ),
           ),
         ),
@@ -500,9 +511,9 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
               onChanged: (value) {
                 _marginRateController.text = value;
               },
-              prefixIcon: _selectedMarginType == 'Percentage'
-                  ? const Icon(Icons.percent)
-                  : const Icon(Icons.attach_money),
+              prefixIcon: _selectedMarginType == 'Flat'
+                  ? const Icon(Icons.attach_money)
+                  : const Icon(Icons.percent),
             ),
           ],
         ),

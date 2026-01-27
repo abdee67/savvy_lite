@@ -122,41 +122,43 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
       ),
-      body: MultiBlocListener(
-        listeners: [
-          BlocListener<UserBloc, UserState>(
-            listener: (context, state) {
-              if (state.status == UserStatus.failure) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(state.message ?? 'Operation failed'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              } else if (state.status == UserStatus.success &&
-                  state.message?.isNotEmpty == true) {
-                _showSuccessDialog();
-              }
-            },
-          ),
-        ],
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Form(
-            key: _formKey,
-            child: ListView(
-              children: [
-                // User Information Section
-                _buildUserInfoSection(),
-                const SizedBox(height: 24),
+      body: SafeArea(
+        child: MultiBlocListener(
+          listeners: [
+            BlocListener<UserBloc, UserState>(
+              listener: (context, state) {
+                if (state.status == UserStatus.failure) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message ?? 'Operation failed'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                } else if (state.status == UserStatus.success &&
+                    state.message?.isNotEmpty == true) {
+                  _showSuccessDialog();
+                }
+              },
+            ),
+          ],
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                children: [
+                  // User Information Section
+                  _buildUserInfoSection(),
+                  const SizedBox(height: 24),
 
-                // Role Management Section
-                _buildRoleManagementSection(),
-                const SizedBox(height: 24),
+                  // Role Management Section
+                  _buildRoleManagementSection(),
+                  const SizedBox(height: 24),
 
-                // Action Buttons
-                _buildActionButtons(),
-              ],
+                  // Action Buttons
+                  _buildActionButtons(),
+                ],
+              ),
             ),
           ),
         ),

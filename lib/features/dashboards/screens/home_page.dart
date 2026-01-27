@@ -110,8 +110,8 @@ class _HomePageState extends State<HomePage> {
           builder: (context, scState) {
             return Scaffold(
               body: SafeArea(
-                bottom: false,
                 top: false,
+                bottom: false,
                 child: LiquidPullToRefresh(
                   color: Color(0xFF155888),
                   backgroundColor: Colors.amber,
@@ -175,9 +175,8 @@ class _HomePageState extends State<HomePage> {
                                       authState,
                                     ),
                                     _buildFeaturesSection(context, authState),
-                                    const SizedBox(
-                                      height: 40,
-                                    ), // Added space for footer visibility
+                                    // Added space for footer visibility
+                                    const SizedBox(height: 40),
                                   ],
                                 ),
                               ],
@@ -199,7 +198,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildHeaderSection(BuildContext context, AuthState authState) {
     return Padding(
-      padding: const EdgeInsets.only(top: 20, left: 16, right: 16),
+      padding: const EdgeInsets.only(top: 30, left: 16, right: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -267,6 +266,10 @@ class _HomePageState extends State<HomePage> {
                 onSelected: (value) {
                   if (value == 'System Constants') {
                     context.push(AppRoutes.systemConstants);
+                  } else if (value == 'FSNMR') {
+                    context.push(AppRoutes.fsnmrManagement);
+                  } else if (value == 'License Detail') {
+                    context.push(AppRoutes.licenseDetails);
                   } else if (value == 'Logout') {
                     context.read<AuthBloc>().add(LogoutRequested(context));
                   }
@@ -276,6 +279,15 @@ class _HomePageState extends State<HomePage> {
                     value: 'System Constants',
                     child: Text('System Constants'),
                   ),
+                  const PopupMenuItem<String>(
+                    value: 'FSNMR',
+                    child: Text('FSNMR'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'License Detail',
+                    child: Text('License Detail'),
+                  ),
+
                   const PopupMenuItem<String>(
                     value: 'Logout',
                     child: Text('Logout'),

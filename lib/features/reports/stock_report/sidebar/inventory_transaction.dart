@@ -166,41 +166,43 @@ class _InventoryTransactionReportPageState
           ),
         ],
       ),
-      body: BlocConsumer<ItemTransactionsBloc, ItemTransactionsState>(
-        listener: (context, state) {
-          if (state.status ==
-              ItemTransactionsStatus.exportItemTransactionReportSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.successmessage!),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        },
-
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Summary Card
-                  _buildSummaryCard(state),
-
-                  // Lot List
-                  Expanded(child: _buildLotList(state)),
-                ],
-              ),
-              // Loading Overlay
-              if (state.status ==
-                  ItemTransactionsStatus.loadingItemTransactionReport)
-                Container(
-                  color: Colors.black.withOpacity(0.5),
-                  child: const Center(child: CircularProgressIndicator()),
+      body: SafeArea(
+        child: BlocConsumer<ItemTransactionsBloc, ItemTransactionsState>(
+          listener: (context, state) {
+            if (state.status ==
+                ItemTransactionsStatus.exportItemTransactionReportSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.successmessage!),
+                  backgroundColor: Colors.green,
                 ),
-            ],
-          );
-        },
+              );
+            }
+          },
+
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Summary Card
+                    _buildSummaryCard(state),
+
+                    // Lot List
+                    Expanded(child: _buildLotList(state)),
+                  ],
+                ),
+                // Loading Overlay
+                if (state.status ==
+                    ItemTransactionsStatus.loadingItemTransactionReport)
+                  Container(
+                    color: Colors.black.withOpacity(0.5),
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

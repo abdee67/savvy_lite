@@ -268,7 +268,7 @@ class _SalesReviewPageState extends State<SalesReviewPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Colors.grey,
       appBar: AppBar(
         title: const Text('Sales Order Report'),
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
@@ -281,47 +281,49 @@ class _SalesReviewPageState extends State<SalesReviewPage>
           ),
         ],
       ),
-      body: BlocConsumer<SalesOrderHeaderBloc, SalesOrderHeaderState>(
-        listener: (context, state) {
-          if (state.status == SalesOrderHeaderStatus.success) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  state.successmessage ?? 'Operation completed successfully',
+      body: SafeArea(
+        child: BlocConsumer<SalesOrderHeaderBloc, SalesOrderHeaderState>(
+          listener: (context, state) {
+            if (state.status == SalesOrderHeaderStatus.success) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    state.successmessage ?? 'Operation completed successfully',
+                  ),
+                  backgroundColor: Colors.green,
                 ),
-                backgroundColor: Colors.green,
-              ),
+              );
+            }
+
+            if (state.status == SalesOrderHeaderStatus.error) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.error ?? 'An error occurred'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Toolbar
+                    // _buildToolbar(),
+
+                    // Search Bar
+                    _buildSearchBar(),
+                    //  _buildActionButtons(state),
+
+                    // salesOrders List
+                    Expanded(child: _buildsalesOrdersList(state)),
+                  ],
+                ),
+              ],
             );
-          }
-
-          if (state.status == SalesOrderHeaderStatus.error) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.error ?? 'An error occurred'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Toolbar
-                  // _buildToolbar(),
-
-                  // Search Bar
-                  _buildSearchBar(),
-                  //  _buildActionButtons(state),
-
-                  // salesOrders List
-                  Expanded(child: _buildsalesOrdersList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+          },
+        ),
       ),
     );
   }
@@ -523,7 +525,7 @@ class _SalesReviewPageState extends State<SalesReviewPage>
             const Icon(Iconsax.receipt, size: 64, color: Colors.white),
             const SizedBox(height: 16),
             Text(
-              !hasQuery ? 'No salesOrders found' : 'No results for "$query"',
+              !hasQuery ? 'No Sales Orders found' : 'No results for "$query"',
               style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
           ],
@@ -885,7 +887,7 @@ class _SalesReviewPageState extends State<SalesReviewPage>
               'Withhold Amount : ',
               NumberFormat.currency(
                     decimalDigits: _decimalPlace,
-                    symbol: 'Birr ',
+                    symbol: 'ETB ',
                   ).format(salesOrder.withholdAmount!) ??
                   'N/A',
               Iconsax.barcode,
@@ -896,7 +898,7 @@ class _SalesReviewPageState extends State<SalesReviewPage>
               'Tax : ',
               NumberFormat.currency(
                     decimalDigits: _decimalPlace,
-                    symbol: 'Birr ',
+                    symbol: 'ETB ',
                   ).format(salesOrder.tax!) ??
                   'N/A',
               Iconsax.profile_2user,
@@ -907,7 +909,7 @@ class _SalesReviewPageState extends State<SalesReviewPage>
               'Discount : ',
               NumberFormat.currency(
                     decimalDigits: _decimalPlace,
-                    symbol: 'Birr ',
+                    symbol: 'ETB ',
                   ).format(salesOrder.discountAmount!) ??
                   'N/A',
               Iconsax.profile_circle,
@@ -925,7 +927,7 @@ class _SalesReviewPageState extends State<SalesReviewPage>
               'Amount Cost : ',
               NumberFormat.currency(
                     decimalDigits: _decimalPlace,
-                    symbol: 'Birr ',
+                    symbol: 'ETB ',
                   ).format(salesOrder.amountCost!) ??
                   'N/A',
               Iconsax.dollar_circle,
@@ -946,13 +948,6 @@ class _SalesReviewPageState extends State<SalesReviewPage>
                   ), // This would show even more details
                   isCompact,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportToExcel(), // Export this single salesOrder
-                  isCompact,
-                ),
-                _buildActionButton(Iconsax.repeat, 'Print', () {}, isCompact),
               ],
             ),
           ),

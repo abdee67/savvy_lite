@@ -83,118 +83,121 @@ class _SystemConstantsFormState extends State<SystemConstantsForm> {
               ),
             ],
           ),
-          body: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Form(
-              key: _formKey,
-              child: ListView(
-                children: [
-                  _buildBooleanField(
-                    'Apply LOT Management',
-                    systemConstants.first.applyLotMgm == 'Y',
-                    (value) {
-                      // Update all system constants
-                      final updatedSystemConstants = systemConstants
-                          .map(
-                            (sc) => sc.copyWith(applyLotMgm: value ? 'Y' : 'N'),
-                          )
-                          .toList();
-                      _updateSystemConstants(context, updatedSystemConstants);
-                    },
-                  ),
-                  _buildBooleanField(
-                    'Apply Location Management',
-                    systemConstants.first.applyLocationMgm == 'Y',
-                    (value) {
-                      final updatedSystemConstants = systemConstants
-                          .map(
-                            (sc) => sc.copyWith(
-                              applyLocationMgm: value ? 'Y' : 'N',
-                            ),
-                          )
-                          .toList();
-                      _updateSystemConstants(context, updatedSystemConstants);
-                    },
-                  ),
-                  _buildNumberField(
-                    'Decimal Places',
-                    systemConstants.first.decimalPlaces?.toString() ?? '2',
-                    (value) {
-                      final decimalPlaces = int.tryParse(value) ?? 2;
-                      final updatedSystemConstants = systemConstants
-                          .map(
-                            (sc) => sc.copyWith(decimalPlaces: decimalPlaces),
-                          )
-                          .toList();
-                      _updateSystemConstants(context, updatedSystemConstants);
-                    },
-                  ),
-                  _buildNumberField(
-                    'VAT Percentage',
-                    systemConstants.first.rateVatPercentage?.toString() ?? '',
-                    (value) {
-                      final vatPercentage = double.tryParse(value);
-                      final updatedSystemConstants = systemConstants
-                          .map(
-                            (sc) =>
-                                sc.copyWith(rateVatPercentage: vatPercentage),
-                          )
-                          .toList();
-                      _updateSystemConstants(context, updatedSystemConstants);
-                    },
-                  ),
-                  _buildNumberField(
-                    'Withholding Percentage',
-                    systemConstants.first.rateWithholdingPercentage
-                            ?.toString() ??
-                        '',
-                    (value) {
-                      final withPercentage = double.tryParse(value);
-                      final updatedSystemConstants = systemConstants
-                          .map(
-                            (sc) => sc.copyWith(
-                              rateWithholdingPercentage: withPercentage,
-                            ),
-                          )
-                          .toList();
-                      _updateSystemConstants(context, updatedSystemConstants);
-                    },
-                  ),
-                  _buildBooleanField(
-                    'Auto Generate Barcode',
-                    systemConstants.first.generateBarcodeForItem == 'Y',
-                    (value) {
-                      final updatedSystemConstants = systemConstants
-                          .map(
-                            (sc) => sc.copyWith(
-                              generateBarcodeForItem: value ? 'Y' : 'N',
-                            ),
-                          )
-                          .toList();
-                      _updateSystemConstants(context, updatedSystemConstants);
-                    },
-                  ),
-                  _buildBooleanField(
-                    'Auto Issue LOT Quantity at Sales',
-                    systemConstants.first.lotQtyAutoForSales == 'Y',
-                    (value) {
-                      final updatedSystemConstants = systemConstants
-                          .map(
-                            (sc) => sc.copyWith(
-                              lotQtyAutoForSales: value ? 'Y' : 'N',
-                            ),
-                          )
-                          .toList();
-                      _updateSystemConstants(context, updatedSystemConstants);
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () =>
-                        _saveSystemConstants(context, systemConstants),
-                    child: const Text('Save Configuration'),
-                  ),
-                ],
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: _formKey,
+                child: ListView(
+                  children: [
+                    _buildBooleanField(
+                      'Apply LOT Management',
+                      systemConstants.first.applyLotMgm == 'Y',
+                      (value) {
+                        // Update all system constants
+                        final updatedSystemConstants = systemConstants
+                            .map(
+                              (sc) =>
+                                  sc.copyWith(applyLotMgm: value ? 'Y' : 'N'),
+                            )
+                            .toList();
+                        _updateSystemConstants(context, updatedSystemConstants);
+                      },
+                    ),
+                    _buildBooleanField(
+                      'Apply Location Management',
+                      systemConstants.first.applyLocationMgm == 'Y',
+                      (value) {
+                        final updatedSystemConstants = systemConstants
+                            .map(
+                              (sc) => sc.copyWith(
+                                applyLocationMgm: value ? 'Y' : 'N',
+                              ),
+                            )
+                            .toList();
+                        _updateSystemConstants(context, updatedSystemConstants);
+                      },
+                    ),
+                    _buildNumberField(
+                      'Decimal Places',
+                      systemConstants.first.decimalPlaces?.toString() ?? '2',
+                      (value) {
+                        final decimalPlaces = int.tryParse(value) ?? 2;
+                        final updatedSystemConstants = systemConstants
+                            .map(
+                              (sc) => sc.copyWith(decimalPlaces: decimalPlaces),
+                            )
+                            .toList();
+                        _updateSystemConstants(context, updatedSystemConstants);
+                      },
+                    ),
+                    _buildNumberField(
+                      'VAT Percentage',
+                      systemConstants.first.rateVatPercentage?.toString() ?? '',
+                      (value) {
+                        final vatPercentage = double.tryParse(value);
+                        final updatedSystemConstants = systemConstants
+                            .map(
+                              (sc) =>
+                                  sc.copyWith(rateVatPercentage: vatPercentage),
+                            )
+                            .toList();
+                        _updateSystemConstants(context, updatedSystemConstants);
+                      },
+                    ),
+                    _buildNumberField(
+                      'Withholding Percentage',
+                      systemConstants.first.rateWithholdingPercentage
+                              ?.toString() ??
+                          '',
+                      (value) {
+                        final withPercentage = double.tryParse(value);
+                        final updatedSystemConstants = systemConstants
+                            .map(
+                              (sc) => sc.copyWith(
+                                rateWithholdingPercentage: withPercentage,
+                              ),
+                            )
+                            .toList();
+                        _updateSystemConstants(context, updatedSystemConstants);
+                      },
+                    ),
+                    _buildBooleanField(
+                      'Auto Generate Barcode',
+                      systemConstants.first.generateBarcodeForItem == 'Y',
+                      (value) {
+                        final updatedSystemConstants = systemConstants
+                            .map(
+                              (sc) => sc.copyWith(
+                                generateBarcodeForItem: value ? 'Y' : 'N',
+                              ),
+                            )
+                            .toList();
+                        _updateSystemConstants(context, updatedSystemConstants);
+                      },
+                    ),
+                    _buildBooleanField(
+                      'Auto Issue LOT Quantity at Sales',
+                      systemConstants.first.lotQtyAutoForSales == 'Y',
+                      (value) {
+                        final updatedSystemConstants = systemConstants
+                            .map(
+                              (sc) => sc.copyWith(
+                                lotQtyAutoForSales: value ? 'Y' : 'N',
+                              ),
+                            )
+                            .toList();
+                        _updateSystemConstants(context, updatedSystemConstants);
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: () =>
+                          _saveSystemConstants(context, systemConstants),
+                      child: const Text('Save Configuration'),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

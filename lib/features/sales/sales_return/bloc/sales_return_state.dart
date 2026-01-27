@@ -23,6 +23,7 @@ class SalesReturnState {
   final List<SalesReturnHeader> filteredHeaders;
   final List<SalesReturnHeader> createItems;
   final List<SalesReturnDetails> createDetails;
+  final List<SalesReturnHeader> selectedItems;
   final SalesReturnHeader? selectedHeader;
   final SalesReturnDetails? selectedDetail;
   final int? companyId;
@@ -50,6 +51,7 @@ class SalesReturnState {
     this.filteredHeaders = const [],
     this.createItems = const [],
     this.createDetails = const [],
+    this.selectedItems = const [],
     this.selectedHeader,
     this.selectedDetail,
     this.companyId,
@@ -74,6 +76,7 @@ class SalesReturnState {
     List<SalesReturnHeader>? filteredHeaders,
     List<SalesReturnHeader>? createItems,
     List<SalesReturnDetails>? createDetails,
+    List<SalesReturnHeader>? selectedItems,
     SalesReturnHeader? selectedHeader,
     SalesReturnDetails? selectedDetail,
     int? companyId,
@@ -97,6 +100,7 @@ class SalesReturnState {
       filteredHeaders: filteredHeaders ?? this.filteredHeaders,
       createItems: createItems ?? this.createItems,
       createDetails: createDetails ?? this.createDetails,
+      selectedItems: selectedItems ?? this.selectedItems,
       selectedHeader: selectedHeader ?? this.selectedHeader,
       selectedDetail: selectedDetail ?? this.selectedDetail,
       companyId: companyId ?? this.companyId,

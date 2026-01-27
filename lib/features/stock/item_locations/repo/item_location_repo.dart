@@ -1,4 +1,7 @@
 // features/stock/item_locations/repositories/item_locations_repository.dart
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
@@ -38,7 +41,7 @@ class ItemLocationsRepository extends BaseRepository {
              lm.location_description,
              it.item_description,
              it.unit_of_measure,
-             b.description as branch_name
+             b.description as branch_description
       FROM item_location il
       LEFT JOIN location_master lm ON il.location = lm.id
       LEFT JOIN items_table it ON il.item_number = it.id
@@ -62,9 +65,11 @@ class ItemLocationsRepository extends BaseRepository {
       '''
       SELECT 
         il.*,
-        lm.location_description as location_description
+        lm.location_description as location_description,
+        b.description as branch_description
       FROM item_location il
       LEFT JOIN location_master lm ON il.location = lm.id
+      LEFT JOIN branch_table b ON il.branch = b.id
       WHERE il.company = ? AND il.branch = ?
       ''',
       [companyId, branchId],
@@ -168,7 +173,7 @@ class ItemLocationsRepository extends BaseRepository {
       SELECT il.*,
              lm.location_description,
              it.item_description,
-             b.description as branch_name
+             b.description as branch_description
       FROM item_location il
       LEFT JOIN location_master lm ON il.location = lm.id
       LEFT JOIN items_table it ON il.item_number = it.id
@@ -209,7 +214,7 @@ class ItemLocationsRepository extends BaseRepository {
              lm.location_description,
              it.item_description,
              it.unit_of_measure,
-             b.description as branch_name
+             b.description as branch_description
       FROM item_location il
       LEFT JOIN location_master lm ON il.location = lm.id
       LEFT JOIN items_table it ON il.item_number = it.id
@@ -281,7 +286,9 @@ class ItemLocationsRepository extends BaseRepository {
       qtyChange = newQty - oldQty;
 
       await updateItemLocation(location);
-      print('Quantity on hand updated: ${location.quantityOnHand}');
+      if (kDebugMode) {
+        developer.log('Quantity on hand updated: ${location.quantityOnHand}');
+      }
     }
 
     // Only cascade if quantity changed

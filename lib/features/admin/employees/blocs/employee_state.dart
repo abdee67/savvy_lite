@@ -9,8 +9,17 @@ enum EmployeeStatus {
   success,
   failure,
   creating,
+  created,
+  creatingFailed,
+  creatingSuccess,
   updating,
+  updated,
+  updatingFailed,
+  updatingSuccess,
   deleting,
+  deleted,
+  deletingFailed,
+  deletingSuccess,
   exporting,
 }
 

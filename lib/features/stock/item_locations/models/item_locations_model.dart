@@ -1,3 +1,4 @@
+import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/location_entry/models/location_master_model.dart';
 
@@ -21,6 +22,7 @@ class ItemLocation {
   //joins
   final LocationMaster? locationDescription;
   final ItemEntryModel? itemRef;
+  final Branch? branchRef;
 
   ItemLocation({
     this.id,
@@ -35,6 +37,7 @@ class ItemLocation {
     this.createdBy,
     this.locationDescription,
     this.itemRef,
+    this.branchRef,
   });
 
   factory ItemLocation.empty() {
@@ -50,6 +53,7 @@ class ItemLocation {
       dateUpdated: null,
       company: null,
       locationDescription: null,
+      branchRef: null,
     );
   }
 
@@ -116,6 +120,13 @@ class ItemLocation {
               reorderPoint: asDouble(map['item_reorder_point']),
             )
           : null,
+      branchRef: map['branch'] != null
+          ? Branch(
+              id: asInt(map['branch']) ?? 0,
+              description: map['branch_description']?.toString(),
+              company: asInt(map['company']) ?? asInt(map['company']),
+            )
+          : null,
     );
   }
 
@@ -150,6 +161,7 @@ class ItemLocation {
     bool? validCell,
     LocationMaster? locationDescription,
     ItemEntryModel? itemRef,
+    Branch? branchRef,
   }) {
     return ItemLocation(
       id: id ?? this.id,
@@ -164,6 +176,7 @@ class ItemLocation {
       company: company ?? this.company,
       locationDescription: locationDescription ?? this.locationDescription,
       itemRef: itemRef ?? this.itemRef,
+      branchRef: branchRef ?? this.branchRef,
     );
   }
 

@@ -1,4 +1,7 @@
 // features/sales/sales_item_entry/screens/sales_item_entry_screen.dart
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
@@ -23,19 +26,27 @@ class QuotationItemEntryScreen extends StatefulWidget {
 class _QuotationItemEntryScreenState extends State<QuotationItemEntryScreen> {
   @override
   void initState() {
-    print('🟢 ITEM ENTRY: initState called');
+    if (kDebugMode) {
+      developer.log('🟢 ITEM ENTRY: initState called');
+    }
     super.initState();
     // Initialize coordinator with customer data from previous screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      print('🟢 ITEM ENTRY: PostFrameCallback executing');
+      if (kDebugMode) {
+        developer.log('🟢 ITEM ENTRY: PostFrameCallback executing');
+      }
       _initializeCoordinator(context);
-      print('🟢 ITEM ENTRY: initializeCoordinator complete');
+      if (kDebugMode) {
+        developer.log('🟢 ITEM ENTRY: initializeCoordinator complete');
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    print('🟢 ITEM ENTRY: build() called');
+    if (kDebugMode) {
+      developer.log('🟢 ITEM ENTRY: build() called');
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text('Quotation Item Entry'),
@@ -43,7 +54,7 @@ class _QuotationItemEntryScreenState extends State<QuotationItemEntryScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: const QuotationItemEntryScreenContent(),
+      body: SafeArea(child: const QuotationItemEntryScreenContent()),
     );
   }
 
@@ -236,9 +247,15 @@ class _QuotationItemEntryScreenContentState
   }
 
   void _confirmItem() {
-    print('=== CONFIRM ITEM STARTED ===');
-    print('Form valid: ${_formKey.currentState?.validate()}');
-    print('Current detail: ${_currentFormDetail?.toString()}');
+    if (kDebugMode) {
+      developer.log('=== CONFIRM ITEM STARTED ===');
+    }
+    if (kDebugMode) {
+      developer.log('Form valid: ${_formKey.currentState?.validate()}');
+    }
+    if (kDebugMode) {
+      developer.log('Current detail: ${_currentFormDetail?.toString()}');
+    }
 
     if (_formKey.currentState?.validate() ?? false) {
       if (_currentFormDetail != null) {
@@ -251,19 +268,27 @@ class _QuotationItemEntryScreenContentState
             coordinatorState.selectedDetail!.tempId ==
                 _currentFormDetail!.tempId) {
           detailToAdd = coordinatorState.selectedDetail!;
-          print(
-            'Using calculated detail from state with extendedPrice: ${detailToAdd.extendedPrice}',
-          );
+          if (kDebugMode) {
+            developer.log(
+              'Using calculated detail from state with extendedPrice: ${detailToAdd.extendedPrice}',
+            );
+          }
         } else {
-          print(
-            'Using form detail with extendedPrice: ${detailToAdd.extendedPrice}',
-          );
+          if (kDebugMode) {
+            developer.log(
+              'Using form detail with extendedPrice: ${detailToAdd.extendedPrice}',
+            );
+          }
         }
 
-        print('Dispatching AddDetailToOrder event');
+        if (kDebugMode) {
+          developer.log('Dispatching AddDetailToOrder event');
+        }
         // Add or update the item in coordinator
         coordinatorBloc.add(AddQuotationOrderDetail(detail: detailToAdd));
-        print('AddDetailToOrder event dispatched');
+        if (kDebugMode) {
+          developer.log('AddDetailToOrder event dispatched');
+        }
         _resetForm();
       }
     } else {
@@ -318,7 +343,7 @@ class _QuotationItemEntryScreenContentState
             // Form Section - Always visible
             if (_currentFormDetail != null) // ✅ Fixed: was == null
               Expanded(
-                flex: 3,
+                flex: 2,
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: QuoteItemEntryForm(

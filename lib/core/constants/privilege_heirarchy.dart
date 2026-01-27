@@ -19,6 +19,10 @@ class PrivilegeHierarchy {
     AppRoutes.createPrivilege: AppRoutes.privilegeManagement,
     AppRoutes.editPrivilege: AppRoutes.privilegeManagement,
     AppRoutes.deletePrivilege: AppRoutes.privilegeManagement,*/
+    AppRoutes.fsnmrManagement: AppRoutes.fsnmrDashboard,
+    AppRoutes.fsnmrCreate: AppRoutes.fsnmrManagement,
+    AppRoutes.fsnmrEdit: AppRoutes.fsnmrManagement,
+    AppRoutes.fsnmrDelete: AppRoutes.fsnmrManagement,
 
     // Role Management (child of Admin Dashboard)
     AppRoutes.roleManagement: AppRoutes.adminDashboard,
@@ -51,7 +55,8 @@ class PrivilegeHierarchy {
     AppRoutes.salesCreditReceiptReview: AppRoutes.salesDashboard,
 
     //Sales Return (child of Sales Dashboard)
-    AppRoutes.salesReturn: AppRoutes.salesDashboard,
+    AppRoutes.salesReturnDashboard: AppRoutes.salesDashboard,
+    AppRoutes.salesReturnFilter: AppRoutes.salesReturnDashboard,
 
     //Quotation Order (child of Sales Dashboard)
     AppRoutes.quotationOrder: AppRoutes.salesDashboard,
@@ -85,6 +90,8 @@ class PrivilegeHierarchy {
 
     // UOM Management (child of Stock Dashboard)
     AppRoutes.uomManagement: AppRoutes.stockDashboard,
+    AppRoutes.uomCreation: AppRoutes.uomManagement,
+    AppRoutes.uomEdit: AppRoutes.uomManagement,
 
     // Item Workbench (child of Stock Dashboard)
     AppRoutes.itemWorkbench: AppRoutes.stockDashboard,

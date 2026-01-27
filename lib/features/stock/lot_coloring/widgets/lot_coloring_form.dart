@@ -304,34 +304,36 @@ class _LotExpirationColorsFormPageState
           ),
         ],
       ),
-      body: BlocListener<LotExpirationColorsBloc, LotExpirationColorsState>(
-        listener: (context, state) {
-          if (state.status == LotExpirationColorsStatus.failure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message ?? 'Error saving record'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _buildLevelSelectors(),
-              const SizedBox(height: 16),
-              const Divider(thickness: 1),
-              const SizedBox(height: 8),
-              const Text(
-                'Color Ranges',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              ..._colorRanges.map(_buildRangeCard),
-              const SizedBox(height: 12),
-            ],
+      body: SafeArea(
+        child: BlocListener<LotExpirationColorsBloc, LotExpirationColorsState>(
+          listener: (context, state) {
+            if (state.status == LotExpirationColorsStatus.failure) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message ?? 'Error saving record'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _buildLevelSelectors(),
+                const SizedBox(height: 16),
+                const Divider(thickness: 1),
+                const SizedBox(height: 8),
+                const Text(
+                  'Color Ranges',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                ..._colorRanges.map(_buildRangeCard),
+                const SizedBox(height: 12),
+              ],
+            ),
           ),
         ),
       ),
@@ -514,17 +516,19 @@ class _LotExpirationColorsFormPageState
   }
 
   Widget _buildBottomBar() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      color: Colors.white,
-      child: ElevatedButton.icon(
-        onPressed: _saveColors,
-        icon: const Icon(Iconsax.tick_circle),
-        label: const Text('Save Configuration'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF155888),
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 14),
+    return SafeArea(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        color: Colors.white,
+        child: ElevatedButton.icon(
+          onPressed: _saveColors,
+          icon: const Icon(Iconsax.tick_circle),
+          label: const Text('Save Configuration'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF155888),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
         ),
       ),
     );

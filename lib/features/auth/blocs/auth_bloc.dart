@@ -5,8 +5,8 @@ import 'dart:math';
 import 'package:bloc/bloc.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:argon2/argon2.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pointycastle/export.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/admin/users/models/user_with_role.dart';
@@ -16,11 +16,14 @@ import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/company/models/company_model.dart';
+import 'package:savvy_stock/features/licensing/model/license_validation_result_model.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:savvy_stock/features/licensing/services/license_service.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final LocalDatabaseService databaseService;
   final FlutterSecureStorage secureStorage;
+  final LicenseService licenseService;
 
   static const _tokenKey = 'jwt_token';
   static const _companyKey = 'company';
@@ -34,8 +37,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Company? get currentCompany => _currentCompany;
   Future<String?> get authToken => secureStorage.read(key: _tokenKey);
 
-  AuthBloc({required this.databaseService, required this.secureStorage})
-    : super(AuthState(status: AuthStatus.initial)) {
+  AuthBloc({
+    required this.databaseService,
+    required this.secureStorage,
+    required this.licenseService,
+  }) : super(AuthState(status: AuthStatus.initial)) {
     on<CheckAuthStatus>(_onCheckAuthStatus);
     on<LoginRequested>(_onLoginRequested);
     on<LogoutRequested>(_onLogoutRequested);
@@ -108,6 +114,41 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       // Get user roles with their privileges through proper joins
       final userWithRoles = await _getUserWithRolesAndPrivileges(db, user);
 
+      // Validate License
+      final licenseResult = await licenseService.loadAndValidateLicense();
+      if (!licenseResult.isValid) {
+        developer.log(
+          'License validation failed: ${licenseResult.errorMessage}',
+        );
+
+        // If it's a tampering error, show it as a login failure (stay on page)
+        // instead of redirecting to activation
+        if (licenseResult.errorMessage?.contains('System clock rollback') ==
+            true) {
+          emit(
+            AuthState(
+              status: AuthStatus.failure,
+              message: licenseResult.errorMessage,
+              errorType: AuthErrorType.unknown,
+              occuredAt: DateTime.now(),
+            ),
+          );
+          return;
+        }
+
+        emit(
+          AuthState(
+            status: AuthStatus.licenseActivationRequired,
+            message:
+                licenseResult.errorMessage ?? 'License activation required',
+          ),
+        );
+        return;
+      }
+      if (kDebugMode) {
+        developer.log('License validation successful: $licenseResult');
+      }
+
       // Create mock JWT token
       final token = _createToken(
         userWithRoles,
@@ -132,6 +173,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           branchId: user.branch,
           roles: userWithRoles.roles,
           privileges: userWithRoles.allPrivileges,
+          hasExistingCompany: true,
         ),
       );
     } catch (e) {
@@ -149,11 +191,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   // Helper function to run Argon2 in isolate
   Future<String> _hashPasswordInIsolate(String password) async {
-    return await compute(_performArgon2Hashing, password);
+    return await compute(_sha256Hash, password);
   }
 
   // Static function that can be called in isolate
-  static String _performArgon2Hashing(String password) {
+  /*static String _performArgon2Hashing(String password) {
     final salt = 'somesalt'.toBytesLatin1();
     final parameters = Argon2Parameters(
       Argon2Parameters.ARGON2_i,
@@ -171,6 +213,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     argon2.generateBytes(passwordBytes, result, 0, result.length);
 
     return result.toHexString();
+  }*/
+  static Future<String> _sha256Hash(String password) async {
+    final bytes = utf8.encode(password);
+    final digest = SHA256Digest();
+    final hash = digest.process(bytes);
+    return hash.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
   }
 
   Future<UserWithRole> _getUserWithRolesAndPrivileges(
@@ -237,15 +285,38 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         message: 'Checking authentication status...',
       ),
     );
-    final token = await secureStorage.read(key: 'jwt_token');
-    if (token != null) {
-      try {
+
+    try {
+      // Check if any company exists on the device
+      // Add timeout to prevent hanging on DB lock
+      final hasCompany = await databaseService.hasAnyCompany().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          developer.log('CheckAuthStatus: hasAnyCompany timed out');
+          return false;
+        },
+      );
+
+      final token = await secureStorage
+          .read(key: 'jwt_token')
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              developer.log('CheckAuthStatus: secureStorage read timed out');
+              return null;
+            },
+          );
+      if (token != null) {
         // Decode the mock JWT token
         final tokenData = _decodeToken(token);
         if (tokenData == null) {
           await _clearStorage();
           emit(
-            AuthState(status: AuthStatus.initial, message: 'Token is invalid'),
+            AuthState(
+              status: AuthStatus.initial,
+              message: 'Token is invalid',
+              hasExistingCompany: hasCompany,
+            ),
           );
           return;
         }
@@ -267,9 +338,54 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
                 tokenData['privileges'].map((p) => Privilege.fromMap(p)),
               ),
               tokenExpiryTime: expiry,
+              hasExistingCompany: hasCompany,
             ),
           );
           return;
+        }
+
+        // Validate License on App Start
+        // Add timeout to ensure we don't hang indefinitely
+        final licenseResult = await licenseService
+            .loadAndValidateLicense()
+            .timeout(
+              const Duration(seconds: 50),
+              onTimeout: () {
+                return LicenseValidationResult.invalid('Validation timed out');
+              },
+            );
+
+        if (!licenseResult.isValid) {
+          developer.log(
+            'License validation failed on startup: ${licenseResult.errorMessage}',
+          );
+
+          // If it's a tampering error, show it as a login failure (stay on page)
+          if (licenseResult.errorMessage?.contains('System clock rollback') ==
+              true) {
+            // Clear partial session to force re-login
+            await _clearStorage();
+            emit(
+              AuthState(
+                status: AuthStatus.unauthenticated, // Show login form
+                message: licenseResult.errorMessage,
+                hasExistingCompany: hasCompany,
+              ),
+            );
+            return;
+          }
+
+          emit(
+            AuthState(
+              status: AuthStatus.licenseActivationRequired,
+              message:
+                  licenseResult.errorMessage ?? 'License activation required',
+            ),
+          );
+          return;
+        }
+        if (kDebugMode) {
+          developer.log('License validation successful: $licenseResult');
         }
 
         // Reconstruct user and privileges from token data
@@ -294,20 +410,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
               tokenData['auth_time'] as int,
             ),
             tokenExpiryTime: expiry,
+            hasExistingCompany: hasCompany,
           ),
         );
-      } catch (e) {
-        developer.log('Auth Check Failed: $e');
-        await _clearStorage();
-        emit(AuthState.unauthenticated(message: 'Session expired or invalid'));
+      } else {
+        //No token stored:clear state
+        emit(
+          AuthState(
+            status: AuthStatus.unauthenticated,
+            message: 'No token stored',
+            hasExistingCompany: hasCompany,
+          ),
+        );
       }
-    } else {
-      //No token stored:clear state
+    } catch (e) {
+      developer.log('Auth Check Failed: $e');
+      // Ensure we clear loading state even on catastrophic error
+      await _clearStorage();
       emit(
-        AuthState(
-          status: AuthStatus.unauthenticated,
-          message: 'No token stored',
-        ),
+        AuthState.unauthenticated(
+          message: 'Session check failed: $e',
+        ).copyWith(hasExistingCompany: false), // Safest default
       );
     }
   }

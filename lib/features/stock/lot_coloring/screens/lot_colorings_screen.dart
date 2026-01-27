@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -184,7 +187,9 @@ class _LotExpirationColorsDashboardState
 
   void _exportLot(LotExpirationColor color) {
     // Implement export functionality
-    print('Exporting lot: ${color.colorType}');
+    if (kDebugMode) {
+      developer.log('Exporting lot: ${color.colorType}');
+    }
   }
 
   void _navigateToCreateScreen() {
@@ -405,41 +410,51 @@ class _LotExpirationColorsDashboardState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Colors.grey,
       appBar: AppBar(
         title: const Text('Lot Expiration Colors'),
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
       ),
-      body: BlocConsumer<LotExpirationColorsBloc, LotExpirationColorsState>(
-        listener: (context, state) {
-          if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
-            setState(() {
-              _isSelectionMode = true;
-            });
-          } else if (state.selectedItems.isEmpty && _isSelectionMode) {
-            setState(() {
-              _isSelectionMode = false;
-            });
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  _buildSearchBar(),
-                  // Filter Section
-                  _buildFilterSection(),
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            context.read<LotExpirationColorsBloc>().add(
+              LoadLotExpirationColors(widget.authBloc.state.companyId!),
+            );
+          },
+          child:
+              BlocConsumer<LotExpirationColorsBloc, LotExpirationColorsState>(
+                listener: (context, state) {
+                  if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
+                    setState(() {
+                      _isSelectionMode = true;
+                    });
+                  } else if (state.selectedItems.isEmpty && _isSelectionMode) {
+                    setState(() {
+                      _isSelectionMode = false;
+                    });
+                  }
+                },
+                builder: (context, state) {
+                  return Stack(
+                    children: [
+                      Column(
+                        children: [
+                          _buildSearchBar(),
+                          // Filter Section
+                          _buildFilterSection(),
 
-                  _buildActionButtons(state),
-                  // Color List
-                  Expanded(child: _buildColorList(state)),
-                ],
+                          _buildActionButtons(state),
+                          // Color List
+                          Expanded(child: _buildColorList(state)),
+                        ],
+                      ),
+                    ],
+                  );
+                },
               ),
-            ],
-          );
-        },
+        ),
       ),
     );
   }
@@ -466,7 +481,7 @@ class _LotExpirationColorsDashboardState
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: Colors.grey[100],
+                fillColor: Colors.white,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 12,
@@ -555,7 +570,7 @@ class _LotExpirationColorsDashboardState
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.grey,
         border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
       ),
       child: Column(
@@ -1103,12 +1118,6 @@ class _LotExpirationColorsDashboardState
                   Iconsax.edit,
                   'Edit',
                   () => _navigateToEditScreen(color),
-                  isCompact,
-                ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportLot(color),
                   isCompact,
                 ),
               ],

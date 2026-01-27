@@ -1,8 +1,5 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
-import 'package:argon2/argon2.dart';
-import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/services/database/seeders/privilege_seeder.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 import 'package:sqflite/sqflite.dart';
@@ -30,7 +27,7 @@ class LocalDatabaseService {
     String path = join(await getDatabasesPath(), 'savvy_stock.db');
     return await openDatabase(
       path,
-      version: 2, // Incremented for proforma fields migration
+      version: 1, // Incremented for proforma fields migration
       onCreate: _onCreate,
       onUpgrade: _onUpgrade, // Add upgrade handler
       onOpen: (db) async {
@@ -42,11 +39,10 @@ class LocalDatabaseService {
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     developer.log('Upgrading database from $oldVersion to $newVersion');
 
-    if (oldVersion < 2) {
-      await db.execute('''
-
-      
-      ''');
+    if (oldVersion < 1) {
+      // Version 1 migration: Add any new columns or tables here
+      // Currently no schema changes needed for version 1
+      developer.log('Database upgraded to version 1');
     }
   }
 
@@ -378,7 +374,7 @@ CREATE INDEX idx_items_in_branch_uom ON items_in_branch(unit_of_measure);
         discount_display TEXT DEFAULT 'N',
         tax_info_display TEXT DEFAULT 'N',
         days_left INTEGER,
-        currency_code TEXT DEFAULT 'Birr',
+        currency_code TEXT DEFAULT 'ETB',
         reorder_point_uom_type TEXT DEFAULT 'I',
         is_synced INTEGER DEFAULT 1,
         last_sync_time INTEGER,
@@ -1358,6 +1354,145 @@ ON other_income_table (user_id);
 ''');
     developer.log('Created table: other_income_table');
 
+    //create fast_slow_nonmoving_rule table
+    await db.execute('''
+CREATE TABLE fast_slow_nonmoving_rule (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  report_frequency INTEGER,
+  period_in_days INTEGER,
+  fast_movement_rule_unit REAL,
+  slow_movement_rule_unit REAL,
+  non_movement_rule_unit REAL,
+  created_date TEXT,
+  updated_date TEXT,
+  company INTEGER,
+  unit_of_measure_default INTEGER,
+
+    FOREIGN KEY (user_id)
+    REFERENCES user_table(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE,
+
+  FOREIGN KEY (company)
+    REFERENCES company_table(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE,
+
+  FOREIGN KEY (unit_of_measure_default)
+    REFERENCES udc_details(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE,
+
+  FOREIGN KEY (report_frequency)
+    REFERENCES udc_details(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE
+);
+
+CREATE INDEX idx_fsnr_user_id
+ON fast_slow_nonmoving_rule (user_id);
+
+CREATE INDEX idx_fsnr_company
+ON fast_slow_nonmoving_rule (company);
+
+CREATE INDEX idx_fsnr_unit_of_measure_default
+ON fast_slow_nonmoving_rule (unit_of_measure_default);
+
+CREATE INDEX idx_fsnr_report_frequency
+ON fast_slow_nonmoving_rule (report_frequency);
+''');
+    developer.log('Created table: fast_slow_nonmoving_rule');
+
+    //subscription management table
+    await db.execute('''
+CREATE TABLE subscription_management (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  initial_subscription_branches INTEGER,
+  initial_subscription_users INTEGER,
+  initial_payment REAL,
+  initial_subscription_days INTEGER,
+  updated_by INTEGER,
+  date_updated TEXT,
+  status TEXT,
+  name TEXT,
+  description TEXT,
+  max_storage INTEGER,
+  features TEXT,
+
+  FOREIGN KEY (updated_by)
+    REFERENCES user_table(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE
+);
+
+CREATE INDEX idx_sm_updated_by
+ON subscription_management (updated_by);
+
+''');
+    developer.log('Created table: subscription_management');
+
+    //company subscription table
+    await db.execute('''
+CREATE TABLE company_subscription (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  company_id INTEGER,
+  subscription_id INTEGER,
+  date_subscribed TEXT,
+  date_effective TEXT,
+  date_expire TEXT,
+  status TEXT,
+
+  FOREIGN KEY (company_id)
+    REFERENCES company_table(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE,
+
+  FOREIGN KEY (subscription_id)
+    REFERENCES subscription_management(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE
+);
+
+CREATE INDEX idx_cs_company
+ON company_subscription (company_id);
+
+CREATE INDEX idx_cs_subscription_management
+ON company_subscription (subscription_id);
+''');
+    developer.log('Created table: company_subscription');
+
+    //fs tabe
+    await db.execute('''
+  CREATE TABLE fs_table (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fs_number INTEGER,
+    prefix_up_to_three TEXT,
+    postfix_up_to_four TEXT, 
+    branch INTEGER,
+    mrc_number TEXT,
+    company INTEGER,
+
+    FOREIGN KEY (company)
+      REFERENCES company_table(id)
+      ON DELETE SET NULL
+      ON UPDATE CASCADE,
+
+    FOREIGN KEY (branch)
+      REFERENCES branch_table(id)
+      ON DELETE SET NULL
+      ON UPDATE CASCADE
+
+);
+
+CREATE INDEX idx_fs_company
+ON fs_table (company);
+
+CREATE INDEX idx_fs_branch
+ON fs_table (branch);
+''');
+    developer.log('Created table: fs_table');
+
     //. Create sync_queue table
     await db.execute('''
       CREATE TABLE sync_queue (
@@ -1414,6 +1549,55 @@ ON other_income_table (user_id);
 
     // Insert default data for LOT types
     await _insertDefaultData(db);
+
+    // Insert default system constant
+    await _insertDefaultSystemConstant(db);
+  }
+
+  Future<void> _insertDefaultSystemConstant(Database db) async {
+    developer.log('Inserting default system constant...');
+
+    try {
+      // Get Lot Type 'X' (Expiration Date)
+      final List<Map<String, dynamic>> lotTypes = await db.query(
+        'udc_details',
+        columns: ['id'],
+        where: "detail_code = ? AND udc_group = ?",
+        whereArgs: ['X', 'LT'],
+      );
+
+      int? lotTypeId;
+      if (lotTypes.isNotEmpty) {
+        lotTypeId = lotTypes.first['id'] as int;
+      }
+
+      await db.insert('system_constant', {
+        'apply_lot_mgm': 'Y',
+        'apply_location_mgm': 'Y',
+        'decimal_places': 2,
+        'generate_barcode_for_item': 'N',
+        'company': 1, // Default company
+        'rate_vat_percentage': 15.0,
+        'rate_with_percentage': 2.0,
+        'with_hold_initials': 1000.0,
+        'auto_sales_price': 'N',
+        'lot_qty_auto_for_sales': 'Y',
+        'discount_display': 'Y',
+        'tax_info_display': 'Y',
+        'days_left': 180,
+        'currency_code': 'ETB',
+        'reorder_point_uom_type': 'I',
+        'location_category_level': 1,
+        'is_synced': 0,
+        'lot_type': lotTypeId,
+        'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        'updated_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      });
+
+      developer.log('Default system constant inserted');
+    } catch (e) {
+      developer.log('Error inserting default system constant: $e');
+    }
   }
 
   Future<void> _insertDefaultData(Database db) async {
@@ -1445,7 +1629,8 @@ ON other_income_table (user_id);
       {'id': 19, 'header_code': 'C9', 'udc_description': 'Item Category 9'},
       {'id': 20, 'header_code': 'C10', 'udc_description': 'Item Category 10'},
       {'id': 21, 'header_code': 'LT', 'udc_description': 'Lot Type'},
-      {'id': 22, 'header_code': 'SR', 'udc_description': 'Sales Return Status'},
+      {'id': 22, 'header_code': 'FQ', 'udc_description': 'Report Frequency'},
+      {'id': 23, 'header_code': 'SR', 'udc_description': 'Sales Return Status'},
     ];
 
     for (final udcHeader in udcHeaderSeedData) {
@@ -1456,7 +1641,6 @@ ON other_income_table (user_id);
     final List<Map<String, dynamic>> udcDetailsSeedData = [
       // --- Unit of Measure (UM) ---
       {
-        'id': 1,
         'detail_code': 'PCS',
         'description_1': 'Pieces',
         'description_2': null,
@@ -1464,7 +1648,6 @@ ON other_income_table (user_id);
         'udc_group': 'UM',
       },
       {
-        'id': 2,
         'detail_code': 'KG',
         'description_1': 'Kilogram',
         'description_2': null,
@@ -1472,7 +1655,6 @@ ON other_income_table (user_id);
         'udc_group': 'UM',
       },
       {
-        'id': 3,
         'detail_code': 'L',
         'description_1': 'Litre',
         'description_2': null,
@@ -1480,7 +1662,6 @@ ON other_income_table (user_id);
         'udc_group': 'UM',
       },
       {
-        'id': 4,
         'detail_code': 'BOX',
         'description_1': 'Box',
         'description_2': null,
@@ -1488,7 +1669,6 @@ ON other_income_table (user_id);
         'udc_group': 'UM',
       },
       {
-        'id': 5,
         'detail_code': 'M',
         'description_1': 'Meter',
         'description_2': null,
@@ -1498,7 +1678,6 @@ ON other_income_table (user_id);
 
       // --- Payment Instrument (PI) ---
       {
-        'id': 6,
         'detail_code': 'CASH',
         'description_1': 'Cash',
         'description_2': null,
@@ -1506,7 +1685,6 @@ ON other_income_table (user_id);
         'udc_group': 'PI',
       },
       {
-        'id': 7,
         'detail_code': 'CARD',
         'description_1': 'Card Payment',
         'description_2': null,
@@ -1514,7 +1692,6 @@ ON other_income_table (user_id);
         'udc_group': 'PI',
       },
       {
-        'id': 8,
         'detail_code': 'BANK',
         'description_1': 'Bank Transfer',
         'description_2': null,
@@ -1522,7 +1699,6 @@ ON other_income_table (user_id);
         'udc_group': 'PI',
       },
       {
-        'id': 9,
         'detail_code': 'MOBILE',
         'description_1': 'Mobile Payment',
         'description_2': null,
@@ -1532,7 +1708,6 @@ ON other_income_table (user_id);
 
       // --- Purchased Receive Status (PR) ---
       {
-        'id': 10,
         'detail_code': 'N',
         'description_1': 'New',
         'description_2': null,
@@ -1540,7 +1715,6 @@ ON other_income_table (user_id);
         'udc_group': 'PR',
       },
       {
-        'id': 11,
         'detail_code': 'P',
         'description_1': 'Partially Received',
         'description_2': null,
@@ -1548,7 +1722,6 @@ ON other_income_table (user_id);
         'udc_group': 'PR',
       },
       {
-        'id': 12,
         'detail_code': 'C',
         'description_1': 'Completely Received',
         'description_2': null,
@@ -1558,7 +1731,6 @@ ON other_income_table (user_id);
 
       // --- Countries (CN) ---
       {
-        'id': 13,
         'detail_code': 'ET',
         'description_1': 'Ethiopia',
         'description_2': null,
@@ -1566,7 +1738,6 @@ ON other_income_table (user_id);
         'udc_group': 'CN',
       },
       {
-        'id': 14,
         'detail_code': 'KE',
         'description_1': 'Kenya',
         'description_2': null,
@@ -1574,7 +1745,6 @@ ON other_income_table (user_id);
         'udc_group': 'CN',
       },
       {
-        'id': 15,
         'detail_code': 'US',
         'description_1': 'United States',
         'description_2': null,
@@ -1582,7 +1752,6 @@ ON other_income_table (user_id);
         'udc_group': 'CN',
       },
       {
-        'id': 16,
         'detail_code': 'IN',
         'description_1': 'India',
         'description_2': null,
@@ -1592,7 +1761,6 @@ ON other_income_table (user_id);
 
       // --- Payment Status (PS) ---
       {
-        'id': 17,
         'detail_code': 'N',
         'description_1': 'Not paid',
         'description_2': null,
@@ -1600,7 +1768,6 @@ ON other_income_table (user_id);
         'udc_group': 'PS',
       },
       {
-        'id': 18,
         'detail_code': 'P',
         'description_1': 'Paid',
         'description_2': null,
@@ -1608,7 +1775,6 @@ ON other_income_table (user_id);
         'udc_group': 'PS',
       },
       {
-        'id': 19,
         'detail_code': 'S',
         'description_1': 'Partially paid',
         'description_2': null,
@@ -1618,7 +1784,6 @@ ON other_income_table (user_id);
 
       // --- Color Types (CT) ---
       {
-        'id': 20,
         'detail_code': 'RED',
         'description_1': 'Red',
         'description_2': null,
@@ -1626,7 +1791,6 @@ ON other_income_table (user_id);
         'udc_group': 'CT',
       },
       {
-        'id': 21,
         'detail_code': 'BLU',
         'description_1': 'Blue',
         'description_2': null,
@@ -1634,7 +1798,6 @@ ON other_income_table (user_id);
         'udc_group': 'CT',
       },
       {
-        'id': 22,
         'detail_code': 'GRN',
         'description_1': 'Green',
         'description_2': null,
@@ -1642,7 +1805,6 @@ ON other_income_table (user_id);
         'udc_group': 'CT',
       },
       {
-        'id': 23,
         'detail_code': 'BLK',
         'description_1': 'Black',
         'description_2': null,
@@ -1650,7 +1812,6 @@ ON other_income_table (user_id);
         'udc_group': 'CT',
       },
       {
-        'id': 371,
         'detail_code': 'ORG',
         'description_1': 'Orange',
         'description_2': null,
@@ -1658,7 +1819,6 @@ ON other_income_table (user_id);
         'udc_group': 'CT',
       },
       {
-        'id': 372,
         'detail_code': 'GRY',
         'description_1': 'Gray',
         'description_2': null,
@@ -1666,7 +1826,6 @@ ON other_income_table (user_id);
         'udc_group': 'CT',
       },
       {
-        'id': 374,
         'detail_code': 'LM',
         'description_1': 'Lime',
         'description_2': null,
@@ -1674,7 +1833,6 @@ ON other_income_table (user_id);
         'udc_group': 'CT',
       },
       {
-        'id': 375,
         'detail_code': 'OV',
         'description_1': 'Olive',
         'description_2': null,
@@ -1682,7 +1840,6 @@ ON other_income_table (user_id);
         'udc_group': 'CT',
       },
       {
-        'id': 376,
         'detail_code': 'YL',
         'description_1': 'Yellow',
         'description_2': null,
@@ -1690,7 +1847,6 @@ ON other_income_table (user_id);
         'udc_group': 'CT',
       },
       {
-        'id': 377,
         'detail_code': 'PRPL',
         'description_1': 'Purple',
         'description_2': null,
@@ -1698,7 +1854,6 @@ ON other_income_table (user_id);
         'udc_group': 'CT',
       },
       {
-        'id': 378,
         'detail_code': 'FC',
         'description_1': 'Fuchsia',
         'description_2': null,
@@ -1706,7 +1861,6 @@ ON other_income_table (user_id);
         'udc_group': 'CT',
       },
       {
-        'id': 379,
         'detail_code': 'NV',
         'description_1': 'Navy',
         'description_2': null,
@@ -1714,7 +1868,6 @@ ON other_income_table (user_id);
         'udc_group': 'CT',
       },
       {
-        'id': 381,
         'detail_code': 'TL',
         'description_1': 'Teal',
         'description_2': null,
@@ -1722,7 +1875,6 @@ ON other_income_table (user_id);
         'udc_group': 'CT',
       },
       {
-        'id': 382,
         'detail_code': 'AQUA',
         'description_1': 'Aqua',
         'description_2': null,
@@ -1730,7 +1882,6 @@ ON other_income_table (user_id);
         'udc_group': 'CT',
       },
       {
-        'id': 383,
         'detail_code': 'BRW',
         'description_1': 'Brown',
         'description_2': null,
@@ -1738,7 +1889,6 @@ ON other_income_table (user_id);
         'udc_group': 'CT',
       },
       {
-        'id': 384,
         'detail_code': 'CH',
         'description_1': 'Chartreuse',
         'description_2': null,
@@ -1748,7 +1898,6 @@ ON other_income_table (user_id);
 
       // --- Lot Status (LS) ---
       {
-        'id': 24,
         'detail_code': 'A',
         'description_1': 'Active Lot',
         'description_2': null,
@@ -1756,7 +1905,6 @@ ON other_income_table (user_id);
         'udc_group': 'LS',
       },
       {
-        'id': 25,
         'detail_code': 'D',
         'description_1': 'Damaged Lot',
         'description_2': null,
@@ -1765,7 +1913,6 @@ ON other_income_table (user_id);
       },
 
       {
-        'id': 26,
         'detail_code': 'E',
         'description_1': 'Expired Lot',
         'description_2': null,
@@ -1775,7 +1922,6 @@ ON other_income_table (user_id);
 
       // --- Transaction Type (TT) ---
       {
-        'id': 27,
         'detail_code': 'T',
         'description_1': ' Inventory transfer',
         'description_2': null,
@@ -1783,7 +1929,6 @@ ON other_income_table (user_id);
         'udc_group': 'TT',
       },
       {
-        'id': 28,
         'detail_code': 'I',
         'description_1': 'Inventory issue',
         'description_2': null,
@@ -1791,9 +1936,22 @@ ON other_income_table (user_id);
         'udc_group': 'TT',
       },
       {
-        'id': 29,
         'detail_code': 'A',
         'description_1': 'Inventory adjustment',
+        'description_2': null,
+        'record_header': 8,
+        'udc_group': 'TT',
+      },
+      {
+        'detail_code': 'R',
+        'description_1': 'Inventory Receive',
+        'description_2': null,
+        'record_header': 8,
+        'udc_group': 'TT',
+      },
+      {
+        'detail_code': 'M',
+        'description_1': 'Migration',
         'description_2': null,
         'record_header': 8,
         'udc_group': 'TT',
@@ -1801,7 +1959,6 @@ ON other_income_table (user_id);
 
       // --- Order Type (OT) ---
       {
-        'id': 30,
         'detail_code': 'SO',
         'description_1': 'Sales Order',
         'description_2': null,
@@ -1809,7 +1966,6 @@ ON other_income_table (user_id);
         'udc_group': 'OT',
       },
       {
-        'id': 31,
         'detail_code': 'PO',
         'description_1': 'Purchase Order',
         'description_2': null,
@@ -1819,7 +1975,6 @@ ON other_income_table (user_id);
 
       // --- Company Category (CC) ---
       {
-        'id': 32,
         'detail_code': 'SUP',
         'description_1': 'Supplier',
         'description_2': null,
@@ -1827,7 +1982,6 @@ ON other_income_table (user_id);
         'udc_group': 'CC',
       },
       {
-        'id': 33,
         'detail_code': 'CUS',
         'description_1': 'Customer',
         'description_2': null,
@@ -1835,7 +1989,6 @@ ON other_income_table (user_id);
         'udc_group': 'CC',
       },
       {
-        'id': 34,
         'detail_code': 'EMP',
         'description_1': 'Employee',
         'description_2': null,
@@ -1845,7 +1998,6 @@ ON other_income_table (user_id);
 
       //---- Category 1 (CT1) ----
       {
-        'id': 35,
         'detail_code': 'CT1',
         'description_1': 'Category 1',
         'description_2': null,
@@ -1853,7 +2005,6 @@ ON other_income_table (user_id);
         'udc_group': 'CT1',
       },
       {
-        'id': 36,
         'detail_code': 'CT1pro',
         'description_1': 'Category 1 pro ',
         'description_2': null,
@@ -1863,7 +2014,6 @@ ON other_income_table (user_id);
 
       //---Category 2 (CT2)---
       {
-        'id': 37,
         'detail_code': 'CT2',
         'description_1': 'Category 2',
         'description_2': null,
@@ -1871,7 +2021,6 @@ ON other_income_table (user_id);
         'udc_group': 'CT2',
       },
       {
-        'id': 38,
         'detail_code': 'CT2pro',
         'description_1': 'Category 2 pro',
         'description_2': null,
@@ -1881,7 +2030,6 @@ ON other_income_table (user_id);
 
       //---Category 3 (CT3)---
       {
-        'id': 39,
         'detail_code': 'CT3',
         'description_1': 'Category 3',
         'description_2': null,
@@ -1889,7 +2037,6 @@ ON other_income_table (user_id);
         'udc_group': 'CT3',
       },
       {
-        'id': 40,
         'detail_code': 'CT3pro',
         'description_1': 'Category 3 pro',
         'description_2': null,
@@ -1899,7 +2046,6 @@ ON other_income_table (user_id);
 
       // --- Lot Type (LT) ---
       {
-        'id': 41,
         'detail_code': 'X',
         'description_1': 'Expiration Date',
         'description_2': 'Select items by expiration date',
@@ -1907,7 +2053,6 @@ ON other_income_table (user_id);
         'udc_group': 'LT',
       },
       {
-        'id': 42,
         'detail_code': 'F',
         'description_1': 'Effective Date',
         'description_2': 'Select items by effective date',
@@ -1915,7 +2060,6 @@ ON other_income_table (user_id);
         'udc_group': 'LT',
       },
       {
-        'id': 43,
         'detail_code': 'R',
         'description_1': 'Receipt Date',
         'description_2': 'Select items by receipt date',
@@ -1923,7 +2067,6 @@ ON other_income_table (user_id);
         'udc_group': 'LT',
       },
       {
-        'id': 44,
         'detail_code': 'DG',
         'description_1': 'Damaged Goods',
         'description_2': 'Product arrived broken or defective',
@@ -1931,7 +2074,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 45,
         'detail_code': 'EG',
         'description_1': 'Expired Goods',
         'description_2': 'Expired items (pharmacy, food, etc.)',
@@ -1939,7 +2081,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 46,
         'detail_code': 'WI',
         'description_1': 'Wrong Item Supplied',
         'description_2': 'Item mismatch compared to customer order',
@@ -1947,7 +2088,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 47,
         'detail_code': 'WQ',
         'description_1': 'Wrong Quantity Supplied',
         'description_2': 'More or fewer units supplied than ordered',
@@ -1955,7 +2095,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 48,
         'detail_code': 'QI',
         'description_1': 'Quality Issues',
         'description_2': 'Customer not satisfied with product quality',
@@ -1963,7 +2102,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 49,
         'detail_code': 'PR',
         'description_1': 'Product Recall',
         'description_2': 'Manufacturer recall due to safety/defect issues',
@@ -1971,7 +2109,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 50,
         'detail_code': 'CM',
         'description_1': 'Customer Changed Mind',
         'description_2': 'Return allowed within grace period',
@@ -1979,7 +2116,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 51,
         'detail_code': 'OC',
         'description_1': 'Order Cancellation',
         'description_2': 'Customer canceled after invoicing but before usage',
@@ -1987,7 +2123,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 52,
         'detail_code': 'LD',
         'description_1': 'Late Delivery',
         'description_2': 'Goods delivered outside agreed time',
@@ -1995,7 +2130,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 53,
         'detail_code': 'PI',
         'description_1': 'Packaging Issues',
         'description_2': 'Leaking, tampered, or opened package',
@@ -2003,7 +2137,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 54,
         'detail_code': 'WC',
         'description_1': 'Warranty / Guarantee Claim',
         'description_2': 'Returned within warranty terms',
@@ -2011,7 +2144,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 55,
         'detail_code': 'ND',
         'description_1': 'Not as Described',
         'description_2': 'Product specs don’t match description',
@@ -2019,7 +2151,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 56,
         'detail_code': 'DS',
         'description_1': 'Duplicate Sale',
         'description_2': 'Mistaken duplicate invoice/order',
@@ -2027,7 +2158,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 57,
         'detail_code': 'W1',
         'description_1': 'Wrong Customer Selected',
         'description_2': 'Sale recorded under wrong customer',
@@ -2035,7 +2165,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 58,
         'detail_code': 'W2',
         'description_1': 'Wrong Item Selected',
         'description_2': 'Wrong product/service chosen before finalizing sale',
@@ -2043,7 +2172,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 59,
         'detail_code': 'W3',
         'description_1': 'Wrong Price Applied',
         'description_2': 'Pricing error discovered immediately',
@@ -2051,7 +2179,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 60,
         'detail_code': 'D1',
         'description_1': 'Discount Mistake',
         'description_2': 'Wrong discount percentage applied',
@@ -2059,7 +2186,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 61,
         'detail_code': 'P2',
         'description_1': 'Payment Error',
         'description_2':
@@ -2068,7 +2194,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 62,
         'detail_code': 'C3',
         'description_1': 'Cashier Mistake',
         'description_2': 'Accidental entry (e.g., double billing)',
@@ -2076,7 +2201,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 63,
         'detail_code': 'T4',
         'description_1': 'Training/Test Transaction',
         'description_2': 'Dummy transactions during training/testing',
@@ -2084,7 +2208,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 64,
         'detail_code': 'S5',
         'description_1': 'System Error / Power Failure',
         'description_2': 'Technical issue during transaction',
@@ -2092,7 +2215,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 65,
         'detail_code': 'C6',
         'description_1': 'Customer Walked Away / No Payment',
         'description_2': 'Customer didn’t complete purchase',
@@ -2100,7 +2222,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 66,
         'detail_code': 'FP',
         'description_1': 'Fraud Prevention',
         'description_2': 'Suspicious sale identified and canceled',
@@ -2108,7 +2229,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 67,
         'detail_code': 'DI',
         'description_1': 'Duplicate Invoice',
         'description_2': 'Accidentally issued two invoices for same order',
@@ -2116,7 +2236,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 68,
         'detail_code': 'O7',
         'description_1': 'Order Cancelled Before Fulfillment',
         'description_2': 'Sale voided before goods delivered',
@@ -2124,7 +2243,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 69,
         'detail_code': 'S1',
         'description_1': 'Incorrect Size/Variant',
         'description_2':
@@ -2133,7 +2251,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 70,
         'detail_code': 'S2',
         'description_1': 'Late Defect Discovery',
         'description_2': 'Customer discovers a defect after initial inspection',
@@ -2141,7 +2258,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 71,
         'detail_code': 'S3',
         'description_1': 'Allergic Reaction / Health Issue',
         'description_2':
@@ -2150,7 +2266,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 72,
         'detail_code': 'S4',
         'description_1': 'Price/Offer Mismatch',
         'description_2':
@@ -2159,7 +2274,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 73,
         'detail_code': 'S8',
         'description_1': 'Gift Return',
         'description_2':
@@ -2168,7 +2282,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 74,
         'detail_code': 'S6',
         'description_1': 'Shipping Damage (Carrier Fault)',
         'description_2':
@@ -2177,7 +2290,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 75,
         'detail_code': 'S7',
         'description_1': 'Seasonal / Promotional Return',
         'description_2': 'Customer returns a promotional or seasonal item',
@@ -2185,7 +2297,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 76,
         'detail_code': 'V1',
         'description_1': 'Customer Changed Mind Before Payment',
         'description_2': 'Sale canceled before payment attempt',
@@ -2193,7 +2304,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 77,
         'detail_code': 'V2',
         'description_1': 'System Timeout / Session Expiry',
         'description_2': 'Transaction aborted due to system timeout',
@@ -2201,7 +2311,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 78,
         'detail_code': 'V3',
         'description_1': 'Inventory Not Available',
         'description_2': 'Sale voided because stock was not actually available',
@@ -2209,7 +2318,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 79,
         'detail_code': 'V4',
         'description_1': 'Duplicate Entry Detected Before Invoice',
         'description_2': 'Mistaken entry detected before invoicing',
@@ -2217,7 +2325,6 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 80,
         'detail_code': 'V5',
         'description_1': 'Promotional / Discount Override Error',
         'description_2':
@@ -2226,12 +2333,96 @@ ON other_income_table (user_id);
         'udc_group': 'SR',
       },
       {
-        'id': 81,
         'detail_code': 'OT',
         'description_1': 'Others',
         'description_2': 'Other Reason',
         'record_header': 23,
         'udc_group': 'SR',
+      },
+      // --- Report Frequency (FQ) ---
+      {
+        'detail_code': 'M',
+        'description_1': 'Monthly',
+        'description_2': '30',
+        'record_header': 22,
+        'udc_group': 'FQ',
+      },
+      {
+        'detail_code': '2M',
+        'description_1': '2 Months',
+        'description_2': '60',
+        'record_header': 22,
+        'udc_group': 'FQ',
+      },
+      {
+        'detail_code': 'Q',
+        'description_1': 'Quarterly',
+        'description_2': '90',
+        'record_header': 22,
+        'udc_group': 'FQ',
+      },
+      {
+        'detail_code': '4M',
+        'description_1': '4 Months',
+        'description_2': '120',
+        'record_header': 22,
+        'udc_group': 'FQ',
+      },
+      {
+        'detail_code': '5M',
+        'description_1': '5 Months',
+        'description_2': '150',
+        'record_header': 22,
+        'udc_group': 'FQ',
+      },
+      {
+        'detail_code': 'H',
+        'description_1': 'Half-Yearly',
+        'description_2': '180',
+        'record_header': 21,
+        'udc_group': 'FQ',
+      },
+      {
+        'detail_code': '7M',
+        'description_1': '7 Months',
+        'description_2': '210',
+        'record_header': 22,
+        'udc_group': 'FQ',
+      },
+      {
+        'detail_code': '8M',
+        'description_1': '8 Months',
+        'description_2': '240',
+        'record_header': 22,
+        'udc_group': 'FQ',
+      },
+      {
+        'detail_code': '9M',
+        'description_1': '9 Months',
+        'description_2': '270',
+        'record_header': 22,
+        'udc_group': 'FQ',
+      },
+      {
+        'detail_code': 'MM',
+        'description_1': '10 Months',
+        'description_2': '300',
+        'record_header': 22,
+        'udc_group': 'FQ',
+      },
+      {
+        'detail_code': 'EM',
+        'description_1': '11 Months',
+        'description_2': '330',
+        'record_header': 22,
+        'udc_group': 'FQ',
+      },
+      {
+        'detail_code': 'Y',
+        'description_1': 'Yearly',
+        'description_2': '365',
+        'record_header': 22,
+        'udc_group': 'FQ',
       },
     ];
 
@@ -2240,437 +2431,31 @@ ON other_income_table (user_id);
     }
     developer.log('Inserted default udc headers and details');
 
-    // Insert Company
-    final companies = [
-      {
-        'id': 1,
-        'company_name': 'Savvy Corp',
-        'tin_number': 'TIN123456',
-        'phone_number_1': '+251911223344',
-        'email_address_1': 'info@savvy.com',
-        'city': 'Addis Ababa',
-        'country': 'Ethiopia',
-        'address_line': 'Bole Street, 5th Floor',
-        'subscription_fee': 999.99,
-        'user_limmit': 50,
-        'branch_limmit': 10,
-        'days_left': 30,
-        'margin_rate': 10.0,
-        'margin_type': 'Percentage',
-        'inventory_planner': 1,
-        'category_code': 1,
-        'reorder_point': 20,
-        'logo_company': 'assets/images/onboarding_background.png',
-        'date_created': DateTime.now().millisecondsSinceEpoch,
-        'date_updated': DateTime.now().millisecondsSinceEpoch,
-      },
-      /*{
-        'id': 2,
-        'company_name': 'ABCD Corp',
-        'tin_number': 'TIN77777',
-        'phone_number_1': '+251911223344',
-        'email_address_1': 'info@abcd.com',
-        'city': 'Addis Ababa',
-        'country': 'Ethiopia',
-        'address_line': 'Sar bet, 5th Floor',
-        'subscription_fee': 888.88,
-        'user_limmit': 20,
-        'branch_limmit': 5,
-        'days_left': 10,
-        'margin_rate': 15.0,
-        'margin_type': 'number',
-        'inventory_planner': 1,
-        'category_code': 2,
-        'date_created': DateTime.now().millisecondsSinceEpoch,
-        'date_updated': DateTime.now().millisecondsSinceEpoch,
-      }, */
-    ];
-
-    for (final company in companies) {
-      await db.insert('company_table', company);
-    }
-    developer.log('Inserted companies');
-
-    // Insert Branch
-    final branches = [
-      {
-        'id': 1,
-        'reference_id': 'M1001',
-        'description': 'Savvy Main Branch',
-        'city': 'Addis Ababa',
-        'region': 'Addis',
-        'country': 'Ethiopia',
-        'address_line': 'Kera road',
-        'company': 1,
-        'margin_rate': 10.0,
-        'margin_type': 'Percentage',
-        'branch_phone': '+2519111111',
-      },
-      /* {
-        'id': 2,
-        'reference_id': 'M1002',
-        'description': 'Sar bet Branch',
-        'city': 'Addis Ababa',
-        'region': 'Addis',
-        'country': 'Ethiopia',
-        'address_line': 'Kera Road',
-        'company': 1,
-        'margin_rate': 10.0,
-        'margin_type': 'Percentage',
-        'branch_phone': '+251911223355',
-      },
-      {
-        'id': 3,
-        'reference_id': 2001,
-        'description': 'ABCD Main Branch',
-        'city': 'Addis Ababa',
-        'region': 'Addis',
-        'country': 'Ethiopia',
-        'address_line': 'Bole Road',
-        'company': 2,
-        'margin_rate': 15.0,
-        'margin_type': 'number',
-        'branch_phone': '+2519222222',
-      },
-      {
-        'id': 4,
-        'reference_id': 2002,
-        'description': 'Bole Branch',
-        'city': 'Addis Ababa',
-        'region': 'Addis',
-        'country': 'Ethiopia',
-        'address_line': 'Bole Road',
-        'company': 2,
-        'margin_rate': 15.0,
-        'margin_type': 'number',
-        'branch_phone': '+251922222',
-      },*/
-    ];
-    for (final branch in branches) {
-      await db.insert('branch_table', branch);
-    }
-    developer.log('Inserted companies');
-
-    // Insert Employee
-    final employees = [
-      {
-        'employee_id': 'EMP001',
-        'name_first': 'Abdi(admin)',
-        'name_last': 'G',
-        'gender': 'M',
-        'hire_date': '2022-01-01',
-        'city': 'Addis Ababa',
-        'country': 'Ethiopia',
-        'company': 1,
-        'branch': 1,
-        'name_middle': 'M',
-        'title': 'Admin',
-        'birth_date': '2022-01-01',
-        'address': 'Addis Ababa',
-        'region': 'Addis',
-        'phone': '+2519111111',
-        'email': 'admin@gmail.com',
-      },
-      {
-        'employee_id': 'EMP002',
-        'name_first': 'Chalatu(salesManager)',
-        'name_last': 'C',
-        'gender': 'F',
-        'hire_date': '2000-01-01',
-        'city': 'Addis Ababa',
-        'country': 'Ethiopia',
-        'company': 1,
-        'branch': 1,
-        'name_middle': 'M',
-        'title': 'Sales Manager',
-        'birth_date': '2022-01-01',
-        'address': 'Addis Ababa',
-        'region': 'Addis',
-        'phone': '+2519111111',
-        'email': 'salesManager@gmail.com',
-      },
-      {
-        'employee_id': 'EMP003',
-        'name_first': 'pimp',
-        'name_last': 'slickback',
-        'gender': 'M',
-        'hire_date': '2000-01-01',
-        'city': 'Addis Ababa',
-        'country': 'Ethiopia',
-        'company': 1,
-        'branch': 1,
-        'name_middle': 'M',
-        'title': 'Sales Manager',
-        'birth_date': '2022-01-01',
-        'address': 'Addis Ababa',
-        'region': 'Addis',
-        'phone': '+2519111111',
-        'email': 'stockManager@gmail.com',
-      },
-      {
-        'employee_id': 'EMP003',
-        'name_first': 'baby',
-        'name_last': 'slickback',
-        'gender': 'F',
-        'hire_date': '2000-01-01',
-        'city': 'Addis Ababa',
-        'country': 'Ethiopia',
-        'company': 1,
-        'branch': 1,
-        'name_middle': 'M',
-        'title': 'Sales Manager',
-        'birth_date': '2022-01-01',
-        'address': 'Addis Ababa',
-        'region': 'Addis',
-        'phone': '+2519111111',
-        'email': 'babyManager@gmail.com',
-      },
-    ];
-    for (final employee in employees) {
-      await db.insert('employees', employee);
-    }
-    developer.log('employee inewelsdfghbnvcxsdf');
-
-    // 1. Seed privileges
+    // Seed privileges (system-wide definitions - not company specific)
     await PrivilegeSeeder.seedPrivileges(db);
+    developer.log('Seeded privileges');
 
-    // 2. Fetch privileges back (with their IDs)
-    final privileges = await db.query('privilege_table');
+    // Seed default Admin role with all privileges (template for new companies)
+    final adminRoleId = await db.insert('role_table', {
+      'name': 'Admin',
+      'description': 'Default Administrator Role',
+      'created_by': 1,
+      'date_created': DateTime.now().toIso8601String(),
+      'company': null,
+    });
 
-    // 3. Use map for quick lookup
-    final privilegeByUri = {
-      for (var p in privileges) p['link'] as String: p['id'] as int,
-    };
-
-    final roles = [
-      {
-        'name': 'Administrator',
-        'description': 'Full system access with all privileges',
-      },
-      {
-        'name': 'Sales Manager',
-        'description': 'Sales operations with customer management',
-      },
-      {
-        'name': 'Stock Manager',
-        'description': 'Inventory and stock management',
-      },
-    ];
-
-    final roleIds = <String, int>{};
-
-    for (final role in roles) {
-      role['company'] = '1';
-      role['created_by'] = '1';
-      role['date_created'] = DateTime.now().toIso8601String();
-      role['updated_by'] = '1';
-      role['date_updated'] = DateTime.now().toIso8601String();
-      final id = await db.insert('role_table', role);
-      roleIds[role['name']!] = id;
-    }
-
-    // Example: assign all to Admin
-    for (final privilege in privileges) {
+    final allPrivileges = await db.query('privilege_table');
+    for (final privilege in allPrivileges) {
       await db.insert('role_privilege', {
-        'role_table_id': roleIds['Administrator'],
+        'role_table_id': adminRoleId,
         'privilege_table_id': privilege['id'],
         'created_by': 1,
         'date_created': DateTime.now().toIso8601String(),
       });
     }
+    developer.log('Seeded default Admin role with all privileges');
 
-    developer.log('Inserted admin role privileges');
-
-    // Example: Sales Manager subset
-    final salesPrivileges = [
-      AppRoutes.salesDashboard,
-      AppRoutes.customerEntry,
-      AppRoutes.salesCustomerInfo,
-      AppRoutes.salesItemEntry,
-      AppRoutes.salesReview,
-      AppRoutes.salesReturn,
-      AppRoutes.quotationOrder,
-      AppRoutes.quotationItemEntry,
-      AppRoutes.quotationOrderPayment,
-      AppRoutes.quotationInvoiceReview,
-      AppRoutes.quotationOrderReview,
-    ];
-
-    for (final uri in salesPrivileges) {
-      final pid = privilegeByUri[uri];
-      if (pid != null) {
-        await db.insert('role_privilege', {
-          'role_table_id': roleIds['Sales Manager'],
-          'privilege_table_id': pid,
-          'created_by': 1,
-          'date_created': DateTime.now().toIso8601String(),
-        });
-      }
-    }
-    developer.log('Inserted sales manager role privileges');
-
-    // Example: Stock Manager subset
-    final stockPrivileges = [
-      AppRoutes.stockDashboard,
-      AppRoutes.itemEntry,
-      AppRoutes.uomManagement,
-      AppRoutes.itemWorkbench,
-      AppRoutes.itemUomConversions,
-      AppRoutes.locationEntry,
-      AppRoutes.lotEntry,
-      AppRoutes.lotColorings,
-      AppRoutes.inventoryTransaction,
-    ];
-
-    for (final uri in stockPrivileges) {
-      final pid = privilegeByUri[uri];
-      if (pid != null) {
-        await db.insert('role_privilege', {
-          'role_table_id': roleIds['Stock Manager'],
-          'privilege_table_id': pid,
-          'created_by': 1,
-          'date_created': DateTime.now().toIso8601String(),
-        });
-      }
-    }
-    developer.log('Inserted stock manager role privileges');
-
-    // Helper function to generate Argon2 hash
-    Future<String> generateArgon2Hash(password) async {
-      final salt = 'somesalt'.toBytesLatin1();
-      final parameters = Argon2Parameters(
-        Argon2Parameters.ARGON2_i,
-        salt,
-        version: Argon2Parameters.ARGON2_VERSION_10,
-        iterations: 2,
-        memoryPowerOf2: 16,
-      );
-
-      final argon2 = Argon2BytesGenerator();
-      argon2.init(parameters);
-      final passwordBytes = parameters.converter.convert(password);
-      final result = Uint8List(32);
-      argon2.generateBytes(passwordBytes, result, 0, result.length);
-      return result.toHexString();
-    }
-
-    // Insert User (password = "password123", argon-hashed)
-    // Generate Argon2 hash for "admin123"
-    final argon2Hash = await generateArgon2Hash('a');
-    final users = [
-      {
-        'password': argon2Hash,
-        'employees_id': 1,
-        'created_by': 1,
-        'branch': 1,
-        'company': 1,
-        'user_name': 'a',
-        'status': 'active',
-        'password_last_updated': DateTime.now().millisecondsSinceEpoch,
-        'usercol': 'admin',
-        'user_email': 'admin@gmail.com',
-        'confirmation_code': '123456',
-        'confirmations_expire_time': DateTime.now().millisecondsSinceEpoch,
-        'type': 'Company',
-        'salesperson': 1,
-        'date_created': DateTime.now().millisecondsSinceEpoch,
-        'date_updated': DateTime.now().millisecondsSinceEpoch,
-      },
-
-      {
-        'password': argon2Hash,
-        'employees_id': 2,
-        'created_by': 1,
-        'branch': 1,
-        'company': 1,
-        'user_name': 'salesManager',
-        'status': 'active',
-        'date_created': DateTime.now().millisecondsSinceEpoch,
-        'password_last_updated': DateTime.now().millisecondsSinceEpoch,
-        'user_email': 'salesManager@gmail.com',
-        'confirmation_code': '123456',
-        'confirmations_expire_time': DateTime.now().millisecondsSinceEpoch,
-        'type': 'Company',
-        'salesperson': 1,
-        'date_updated': DateTime.now().millisecondsSinceEpoch,
-      },
-      {
-        'password': argon2Hash,
-        'employees_id': 3,
-        'created_by': 1,
-        'branch': 1,
-        'company': 1,
-        'user_name': 'StockManager',
-        'status': 'active',
-        'date_created': DateTime.now().millisecondsSinceEpoch,
-        'password_last_updated': DateTime.now().millisecondsSinceEpoch,
-        'user_email': 'stockManager@gmail.com',
-        'confirmation_code': '123456',
-        'confirmations_expire_time': DateTime.now().millisecondsSinceEpoch,
-        'type': 'Company',
-        'salesperson': 1,
-        'date_updated': DateTime.now().millisecondsSinceEpoch,
-      },
-    ];
-
-    for (final user in users) {
-      await db.insert('user_table', user);
-    }
-    developer.log('Inserted users');
-
-    final userRoles = [
-      {
-        'user_id': 1, // admin user
-        'role_table_id': roleIds['Administrator'],
-        'created_by': 1,
-        'date_created': DateTime.now().toIso8601String(),
-      },
-
-      {
-        'user_id': 2, // stock manager
-        'role_table_id': roleIds['Stock Manager'],
-        'created_by': 1,
-        'date_created': DateTime.now().toIso8601String(),
-      },
-    ];
-
-    for (final userRole in userRoles) {
-      await db.insert('user_role', userRole);
-    }
-    developer.log('Inserted user roles');
-    //insert sales persons
-    final salesPersons = [
-      {
-        'full_name': 'Sales1',
-        'uuid': '1',
-        'email': 'john.doe@gmail.com',
-        'phone_number': '12345678900',
-        'password_hash': argon2Hash,
-        'referral_code': 'ref001',
-        'parent_salesperson_id': 1,
-        'status': 'ACTIVE',
-        'created_at': DateTime.now().toIso8601String(),
-        'updated_at': DateTime.now().toIso8601String(),
-      },
-      {
-        'full_name': 'Sales2',
-        'uuid': '2',
-        'email': 'jane.doe@gmail.com',
-        'phone_number': '12345678901',
-        'password_hash': argon2Hash,
-        'referral_code': 'ref002',
-        'parent_salesperson_id': 1,
-        'status': 'ACTIVE',
-        'created_at': DateTime.now().toIso8601String(),
-        'updated_at': DateTime.now().toIso8601String(),
-      },
-    ];
-
-    for (final salesPerson in salesPersons) {
-      await db.insert('salespersons', salesPerson);
-    }
-    developer.log('Inserted sales persons');
-
+    // Create customer table
     await db.execute('''
   CREATE TABLE customer_table (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2696,9 +2481,11 @@ ON other_income_table (user_id);
     FOREIGN KEY (company) REFERENCES company_table (id) ON DELETE NO ACTION ON UPDATE NO ACTION
   )
 ''');
-    developer.log('created customer table');
+    developer.log('Created customer table');
 
-    developer.log('✅ Sample user and related data inserted successfully.');
+    developer.log(
+      '✅ Database initialized. User registration will create company data.',
+    );
   }
 
   Future<void> _debugPrintTablesAndData(Database db) async {
@@ -2823,6 +2610,23 @@ ON other_income_table (user_id);
       _database = null;
     }
   }
+
+  Future<bool> hasAnyCompany() async {
+    final db = await database;
+    try {
+      final results = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM company_table',
+      );
+      if (results.isNotEmpty) {
+        final count = results.first['count'] as int;
+        return count > 0;
+      }
+      return false;
+    } catch (e) {
+      developer.log('Error checking if company exists: $e');
+      return false;
+    }
+  }
 }
 
 // Example usage and testing
@@ -2861,7 +2665,6 @@ void testDatabase() async {
   await dbService.debugTable('system_constant');
 }
 
-// Add this method to your LocalDatabaseService class
 Future<List<Map<String, dynamic>>> getUdcDetailsByCode(
   String detailCode,
 ) async {

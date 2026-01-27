@@ -85,93 +85,97 @@ class _PrivilegeFormState extends State<PrivilegeForm> {
           IconButton(onPressed: _saveForm, icon: const Icon(Icons.save)),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              // Name
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Privilege Name'),
-                validator: (value) => value!.isEmpty ? 'Required' : null,
-              ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                // Name
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Privilege Name',
+                  ),
+                  validator: (value) => value!.isEmpty ? 'Required' : null,
+                ),
 
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
 
-              // Description
-              TextFormField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Description'),
-                validator: (value) => value!.isEmpty ? 'Required' : null,
-              ),
+                // Description
+                TextFormField(
+                  controller: _descriptionController,
+                  decoration: const InputDecoration(labelText: 'Description'),
+                  validator: (value) => value!.isEmpty ? 'Required' : null,
+                ),
 
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
 
-              // Type
-              DropdownButtonFormField<String>(
-                initialValue: _type,
-                items: const [
-                  DropdownMenuItem(value: 'link', child: Text('Link')),
-                  DropdownMenuItem(value: 'button', child: Text('Button')),
+                // Type
+                DropdownButtonFormField<String>(
+                  initialValue: _type,
+                  items: const [
+                    DropdownMenuItem(value: 'link', child: Text('Link')),
+                    DropdownMenuItem(value: 'button', child: Text('Button')),
+                  ],
+                  onChanged: (value) {
+                    setState(() => _type = value ?? 'link');
+                  },
+                  decoration: const InputDecoration(labelText: 'Type'),
+                ),
+
+                const SizedBox(height: 12),
+
+                // Link (only if type is link or button)
+                TextFormField(
+                  controller: _uriController,
+                  decoration: const InputDecoration(
+                    labelText: 'Link URL (optional)',
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                if (_type == 'link') ...[
+                  TextFormField(
+                    controller: _linkLabelController,
+                    decoration: const InputDecoration(
+                      labelText: 'Link Label (unique)',
+                    ),
+                    validator: (value) =>
+                        value!.isEmpty ? 'Required for link type' : null,
+                  ),
+                ] else if (_type == 'button') ...[
+                  TextFormField(
+                    controller: _buttonLabelController,
+                    decoration: const InputDecoration(
+                      labelText: 'Button Label (optional)',
+                    ),
+                  ),
                 ],
-                onChanged: (value) {
-                  setState(() => _type = value ?? 'link');
-                },
-                decoration: const InputDecoration(labelText: 'Type'),
-              ),
 
-              const SizedBox(height: 12),
+                const SizedBox(height: 20),
 
-              // Link (only if type is link or button)
-              TextFormField(
-                controller: _uriController,
-                decoration: const InputDecoration(
-                  labelText: 'Link URL (optional)',
+                // Vendor Only
+                CheckboxListTile(
+                  title: const Text('Vendor Only'),
+                  value: _vendorOnly,
+                  onChanged: (value) {
+                    setState(() => _vendorOnly = value ?? false);
+                  },
                 ),
-              ),
 
-              const SizedBox(height: 12),
+                const SizedBox(height: 20),
 
-              if (_type == 'link') ...[
-                TextFormField(
-                  controller: _linkLabelController,
-                  decoration: const InputDecoration(
-                    labelText: 'Link Label (unique)',
-                  ),
-                  validator: (value) =>
-                      value!.isEmpty ? 'Required for link type' : null,
-                ),
-              ] else if (_type == 'button') ...[
-                TextFormField(
-                  controller: _buttonLabelController,
-                  decoration: const InputDecoration(
-                    labelText: 'Button Label (optional)',
-                  ),
+                // Submit
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.check),
+                  label: Text(isEdit ? 'Update Privilege' : 'Add Privilege'),
+                  onPressed: _saveForm,
                 ),
               ],
-
-              const SizedBox(height: 20),
-
-              // Vendor Only
-              CheckboxListTile(
-                title: const Text('Vendor Only'),
-                value: _vendorOnly,
-                onChanged: (value) {
-                  setState(() => _vendorOnly = value ?? false);
-                },
-              ),
-
-              const SizedBox(height: 20),
-
-              // Submit
-              ElevatedButton.icon(
-                icon: const Icon(Icons.check),
-                label: Text(isEdit ? 'Update Privilege' : 'Add Privilege'),
-                onPressed: _saveForm,
-              ),
-            ],
+            ),
           ),
         ),
       ),

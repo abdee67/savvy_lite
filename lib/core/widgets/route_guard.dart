@@ -78,14 +78,16 @@ class PrivilegeRouteGuard extends StatelessWidget {
 
   Widget _buildLoadingScreen(String message) {
     return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            Text(message),
-          ],
+      body: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(message),
+            ],
+          ),
         ),
       ),
     );
@@ -96,32 +98,41 @@ class PrivilegeRouteGuard extends StatelessWidget {
     AccessCheckResult result,
   ) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Access Denied')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.lock_outline, size: 64, color: Colors.redAccent),
-              const SizedBox(height: 16),
-              const Text(
-                'You do not have permission to access this page.',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              if (result.missingPrivileges.isNotEmpty)
-                Text(
-                  'Missing: ${result.missingPrivileges.join(', ')}',
+      appBar: AppBar(
+        title: const Text('Access Denied'),
+        backgroundColor: Colors.orange[700],
+      ),
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.lock_outline,
+                  size: 64,
+                  color: Colors.redAccent,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'You do not have permission to access this page.',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => context.go('/homePage'),
-                child: const Text('Go to Dashboard'),
-              ),
-            ],
+                const SizedBox(height: 12),
+                if (result.missingPrivileges.isNotEmpty)
+                  Text(
+                    'Missing: ${result.missingPrivileges.join(', ')}',
+                    textAlign: TextAlign.center,
+                  ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () => context.go('/homePage'),
+                  child: const Text('Go to Dashboard'),
+                ),
+              ],
+            ),
           ),
         ),
       ),

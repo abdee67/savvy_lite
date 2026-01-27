@@ -1,5 +1,7 @@
 // repositories/sales_order_header_repository.dart
 import 'dart:async';
+import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/credit_payment_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
@@ -331,9 +333,13 @@ class PurchaseOrderReportRepository {
     } catch (e) {
       if (e is DatabaseException) {
         // Log the specific database error
-        print('Database Exception: ${e.toString()}');
+        if (kDebugMode) {
+          developer.log('Database Exception: ${e.toString()}');
+        }
       }
-      print('Stack Trace: ${StackTrace.current}');
+      if (kDebugMode) {
+        developer.log('Stack Trace: ${StackTrace.current}');
+      }
       throw Exception('Failed to get purchase order receiver report: $e');
     }
   }
@@ -540,9 +546,13 @@ class PurchaseOrderReportRepository {
       };
     } catch (e) {
       if (e is DatabaseException) {
-        print('Database Exception: ${e.toString()}');
+        if (kDebugMode) {
+          developer.log('Database Exception: ${e.toString()}');
+        }
       }
-      print('Stack Trace: ${StackTrace.current}');
+      if (kDebugMode) {
+        developer.log('Stack Trace: ${StackTrace.current}');
+      }
       throw Exception('Failed to get pending purchase order report: $e');
     }
   }

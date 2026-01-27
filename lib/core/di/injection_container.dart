@@ -1,13 +1,20 @@
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
+import 'package:savvy_stock/features/FSNMR/blocs/FSNMR_bloc.dart';
+import 'package:savvy_stock/features/FSNMR/repo/FSNMR_repository.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
 import 'package:savvy_stock/features/company/blocs/company_bloc.dart';
+import 'package:savvy_stock/features/licensing/bloc/license_bloc.dart';
+import 'package:savvy_stock/features/licensing/services/license_service.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_report_repo.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_repository.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/services/purchase_order_stock_service.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/blocs/supplier_bloc.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/repo/supplier_repo.dart';
+import 'package:savvy_stock/features/registration/blocs/registration_bloc.dart';
+import 'package:savvy_stock/features/registration/services/registration_service.dart';
 import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
 import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_bloc.dart';
 import 'package:savvy_stock/features/sales/quotation_order/repo/quotation_order_repo.dart';
@@ -24,6 +31,7 @@ import 'package:savvy_stock/features/sales/sales_return/repos/sales_return_repos
 import 'package:savvy_stock/features/sales/sales_return/services/sales_return_stock_service.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/repo/lot_expiration_repo.dart';
+import 'package:savvy_stock/features/stock/pricing/services/pricing_service.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/core/constants/api_constants.dart';
 import 'package:savvy_stock/features/system_constant/repo/system_constant_repository.dart';
@@ -74,6 +82,7 @@ void initDependencies() {
   getIt.registerLazySingleton<FlutterSecureStorage>(
     () => FlutterSecureStorage(),
   );
+  getIt.registerLazySingleton<DeviceInfoPlugin>(() => DeviceInfoPlugin());
 
   // HTTP Client
   getIt.registerLazySingleton<http.Client>(() => http.Client());
@@ -151,7 +160,7 @@ void initDependencies() {
       itemCostRepository: getIt(),
       udcDetailsController: getIt(),
       systemConstantBloc: getIt(),
-      nextNumberBloc: getIt(),
+      nextNumberRepository: getIt(),
       databaseService: getIt(),
     ),
   );
@@ -170,6 +179,8 @@ void initDependencies() {
       nextNumberRepository: getIt(),
       systemConstantBloc: getIt(),
       databaseService: getIt(),
+      itemUomConversionsRepository: getIt(),
+      itemTransactionRepository: getIt(),
     ),
   );
   getIt.registerLazySingleton<LocationMasterRepository>(
@@ -277,13 +288,38 @@ void initDependencies() {
   );
   getIt.registerLazySingleton<CashFlowRepository>(() => CashFlowRepository());
 
+  getIt.registerLazySingleton<FSNMRRepository>(
+    () => FSNMRRepository(databaseService: getIt()),
+  );
+  getIt.registerLazySingleton<RegistrationService>(
+    () => RegistrationService(databaseService: getIt()),
+  );
+  getIt.registerLazySingleton<LicenseService>(
+    () => LicenseService(secureStorage: getIt(), deviceInfoPlugin: getIt()),
+  );
+  getIt.registerLazySingleton<PricingService>(
+    () => PricingService(
+      databaseService: getIt(),
+      uomConversionRepository: getIt(),
+      systemConstantService: getIt(),
+      lotMasterRepository: getIt(),
+    ),
+  );
   ///////////// BLoCs///////////////
 
   getIt.registerLazySingleton<AuthBloc>(
-    () => AuthBloc(databaseService: getIt(), secureStorage: getIt()),
+    () => AuthBloc(
+      databaseService: getIt(),
+      secureStorage: getIt(),
+      licenseService: getIt(),
+    ),
   );
   getIt.registerLazySingleton<UserBloc>(
-    () => UserBloc(databaseService: getIt(), authBloc: getIt()),
+    () => UserBloc(
+      databaseService: getIt(),
+      authBloc: getIt(),
+      licenseService: getIt(),
+    ),
   );
   getIt.registerLazySingleton<EmployeeBloc>(
     () => EmployeeBloc(repository: getIt(), authBloc: getIt()),
@@ -306,7 +342,11 @@ void initDependencies() {
   );
 
   getIt.registerFactory<BranchBloc>(
-    () => BranchBloc(databaseService: getIt(), authBloc: getIt()),
+    () => BranchBloc(
+      databaseService: getIt(),
+      authBloc: getIt(),
+      licenseService: getIt(),
+    ),
   );
 
   getIt.registerFactory<StockItemsEntryBloc>(
@@ -334,7 +374,11 @@ void initDependencies() {
     () => ItemUomConversionBloc(repository: getIt(), authBloc: getIt()),
   );
   getIt.registerFactory<UdcDetailsBloc>(
-    () => UdcDetailsBloc(databaseService: getIt(), authBloc: getIt()),
+    () => UdcDetailsBloc(
+      databaseService: getIt(),
+      authBloc: getIt(),
+      udcRepository: getIt(),
+    ),
   );
   getIt.registerFactory<LocationMasterBloc>(
     () => LocationMasterBloc(
@@ -500,6 +544,7 @@ void initDependencies() {
       itemCostsRepository: getIt(),
       supplierRepository: getIt(),
       purchaseOrderReportRepository: getIt(),
+      pricingService: getIt(),
     ),
   );
 
@@ -509,5 +554,16 @@ void initDependencies() {
   );
   getIt.registerFactory<CompanyBloc>(
     () => CompanyBloc(authBloc: getIt(), databaseService: getIt()),
+  );
+
+  // FSNMR
+  getIt.registerFactory<FSNMRBloc>(
+    () => FSNMRBloc(authBloc: getIt(), repository: getIt()),
+  );
+  getIt.registerLazySingleton<RegistrationBloc>(
+    () => RegistrationBloc(registrationService: getIt()),
+  );
+  getIt.registerLazySingleton<LicenseBloc>(
+    () => LicenseBloc(licenseService: getIt()),
   );
 }

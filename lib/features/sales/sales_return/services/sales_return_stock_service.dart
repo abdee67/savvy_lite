@@ -1,4 +1,7 @@
 // features/sales/sales_return/integration/service/sales_return_stock_service.dart
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/repo/sales_order_detail_repo.dart';
@@ -146,18 +149,22 @@ class SalesReturnStockService {
 
     // Fallback: if not found by ID, find by Item ID
     if (itemsInBranch == null) {
-      print(
-        '⚠️ ItemInBranch ${soD.itemInBranch} not found. Falling back to Item ID search.',
-      );
+      if (kDebugMode) {
+        developer.log(
+          '⚠️ ItemInBranch ${soD.itemInBranch} not found. Falling back to Item ID search.',
+        );
+      }
       final matches = await itemsInBranchRepository.findByItem(
         soD.itemsTableId!,
         companyId,
       );
       if (matches.isNotEmpty) {
         itemsInBranch = matches.first;
-        print(
-          '✅ Fallback succeeded: Using ItemInBranch ID ${itemsInBranch.id}',
-        );
+        if (kDebugMode) {
+          developer.log(
+            '✅ Fallback succeeded: Using ItemInBranch ID ${itemsInBranch.id}',
+          );
+        }
       }
     }
 

@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/core/widgets/custom_searchable_dropdown.dart';
@@ -48,7 +51,10 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
   String? _selectedUom;
   String? _selectedTaxable;
 
-  final List<String> _marginTypes = ['%', 'N']; // Flat or Percentage
+  final List<String> _marginTypes = [
+    'Flat',
+    'Percentage',
+  ]; // Flat or Percentage
   final List<String> _taxable = ['YES', 'NO'];
 
   @override
@@ -84,7 +90,11 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
     _reorderPointController.text = item.reorderPoint?.toString() ?? '';
     _marginRateController.text = item.marginRate?.toString() ?? '';
 
-    _selectedMarginType = item.marginType;
+    _selectedMarginType = item.marginType == 'F'
+        ? 'Flat'
+        : item.marginType == 'P'
+        ? 'Percentage'
+        : null;
     _selectedUom = item.unitOfMeasure;
     _selectedTaxable = item.taxable == 'Y'
         ? 'YES'
@@ -145,7 +155,7 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
             : _parseDouble(_marginRateController.text),
         unitOfMeasure: _selectedUom,
         taxable: _selectedTaxable == 'YES' ? 'Y' : 'N',
-        marginType: _selectedMarginType,
+        marginType: _selectedMarginType == 'Flat' ? 'F' : 'P',
         company: widget.authBloc.state.companyId,
       );
 
@@ -236,45 +246,47 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
               ]
             : null,
       ),
-      body: MultiBlocListener(
-        listeners: [
-          BlocListener<StockItemsEntryBloc, ItemEntryState>(
-            listener: (context, state) {
-              if (state.status == ItemEntryStatus.success &&
-                  state.message?.contains('Saved') == true) {
-                // Success is handled in the dialog
-              } else if (state.status == ItemEntryStatus.failure) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(state.message ?? 'An error occurred'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-          ),
-          BlocListener<SystemConstantBloc, SystemConstantState>(
-            listener: (context, state) {
-              if (state.status == SystemConstantStatus.failure) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      state.errorMessage ?? 'System constant error',
+      body: SafeArea(
+        child: MultiBlocListener(
+          listeners: [
+            BlocListener<StockItemsEntryBloc, ItemEntryState>(
+              listener: (context, state) {
+                if (state.status == ItemEntryStatus.success &&
+                    state.message?.contains('Saved') == true) {
+                  // Success is handled in the dialog
+                } else if (state.status == ItemEntryStatus.failure) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message ?? 'An error occurred'),
+                      backgroundColor: Colors.red,
                     ),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-          ),
-        ],
-        child: Column(
-          children: [
-            _buildBarcodeInfo(),
-            Expanded(child: _buildForm()),
-            _buildBottomNavigation(),
-            const SizedBox(height: 16),
+                  );
+                }
+              },
+            ),
+            BlocListener<SystemConstantBloc, SystemConstantState>(
+              listener: (context, state) {
+                if (state.status == SystemConstantStatus.failure) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        state.errorMessage ?? 'System constant error',
+                      ),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+            ),
           ],
+          child: Column(
+            children: [
+              _buildBarcodeInfo(),
+              Expanded(child: _buildForm()),
+              _buildBottomNavigation(),
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );
@@ -318,7 +330,9 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
       builder: (context, state) {
         final isAutoGenerateEnabled =
             state.selected?.generateBarcodeForItem == 'Y';
-        print(isAutoGenerateEnabled);
+        if (kDebugMode) {
+          developer.log(isAutoGenerateEnabled.toString());
+        }
 
         if (isAutoGenerateEnabled) {
           return Container(
@@ -608,7 +622,7 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
                   .map(
                     (marginType) => DropdownMenuItem(
                       value: marginType,
-                      child: Text(marginType == '%' ? 'Percentage' : 'Flat'),
+                      child: Text(marginType == 'F' ? 'Flat' : 'Percentage'),
                     ),
                   )
                   .toList(),
@@ -629,9 +643,9 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
               onChanged: (value) {
                 _marginRateController.text = value;
               },
-              prefixIcon: _selectedMarginType == '%'
-                  ? const Icon(Icons.percent)
-                  : const Icon(Icons.attach_money),
+              prefixIcon: _selectedMarginType == 'Flat'
+                  ? const Icon(Icons.attach_money)
+                  : const Icon(Icons.percent),
             ),
             const SizedBox(height: 16),
           ],

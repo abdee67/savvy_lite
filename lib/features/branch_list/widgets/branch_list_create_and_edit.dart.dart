@@ -116,7 +116,17 @@ class _BranchFormPageState extends State<BranchFormPage> {
       } else {
         context.read<BranchBloc>().add(UpdateBranch(branch));
       }
-
+      //if there is an error creating or updating
+      final state = context.read<BranchBloc>().state;
+      if (state.status == BranchStatus.failure) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(state.message ?? 'An error occurred'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
       _showSuccessDialog();
     }
   }
@@ -156,26 +166,28 @@ class _BranchFormPageState extends State<BranchFormPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.branch == null ? 'Create Branch' : 'Edit Branch'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: Color(0xFF145888),
         elevation: 0,
       ),
-      body: BlocListener<BranchBloc, BranchState>(
-        listener: (context, state) {
-          if (state.status == BranchStatus.failure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message ?? 'An error occurred'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        child: Column(
-          children: [
-            Expanded(child: _buildForm()),
-            _buildBottomNavigation(),
-            const SizedBox(height: 16),
-          ],
+      body: SafeArea(
+        child: BlocListener<BranchBloc, BranchState>(
+          listener: (context, state) {
+            if (state.status == BranchStatus.failure) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message ?? 'An error occurred'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          child: Column(
+            children: [
+              Expanded(child: _buildForm()),
+              _buildBottomNavigation(),
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );
@@ -229,25 +241,15 @@ class _BranchFormPageState extends State<BranchFormPage> {
   }
 
   Widget _buildBottomNavigation() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            offset: const Offset(0, -2),
-            blurRadius: 4,
-            color: Colors.black.withOpacity(0.1),
-          ),
-        ],
-      ),
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
       child: Row(
         children: [
           Expanded(
             child: ElevatedButton(
               onPressed: _saveBranch,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
+                backgroundColor: Color(0xFF145888),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),

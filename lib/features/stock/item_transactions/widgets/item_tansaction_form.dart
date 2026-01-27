@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -155,7 +157,9 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
         });
       }
     });
-    print('Transaction number: $_transactionNumber');
+    if (kDebugMode) {
+      developer.log('Transaction number: $_transactionNumber');
+    }
   }
 
   void _onTransactionTypeChanged(UdcDetails? transactionType) {
@@ -175,6 +179,10 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
   void _onFromBranchChanged(int? branchId) {
     setState(() {
       _selectedFromBranch = branchId;
+      // Reset To Branch if it matches From Branch to prevent Dropdown error
+      if (_selectedToBranch == branchId) {
+        _selectedToBranch = null;
+      }
       _transactionItems.clear();
       _addNewTransactionItem();
     });
@@ -193,6 +201,10 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
   void _onToBranchChanged(int? branchId) {
     setState(() {
       _selectedToBranch = branchId;
+      // Reset From Branch if it matches To Branch to prevent Dropdown error
+      if (_selectedFromBranch == branchId) {
+        _selectedFromBranch = null;
+      }
       _transactionItems.clear();
       _addNewTransactionItem();
     });
@@ -438,48 +450,50 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
         ),
         backgroundColor: const Color(0xFF155888),
       ),
-      body: BlocListener<ItemTransactionsBloc, ItemTransactionsState>(
-        listener: (context, state) {
-          if (state.status == ItemTransactionsStatus.success) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  state.successmessage ?? 'Transaction successfully created!',
+      body: SafeArea(
+        child: BlocListener<ItemTransactionsBloc, ItemTransactionsState>(
+          listener: (context, state) {
+            if (state.status == ItemTransactionsStatus.success) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    state.successmessage ?? 'Transaction successfully created!',
+                  ),
+                  backgroundColor: Colors.green,
                 ),
-                backgroundColor: Colors.green,
-              ),
-            );
-            Navigator.pop(context); // Go back to list
-          }
+              );
+              Navigator.pop(context); // Go back to list
+            }
 
-          if (state.status == ItemTransactionsStatus.error) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  state.error ?? 'Error occurred, please contact vendor!',
+            if (state.status == ItemTransactionsStatus.error) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    state.error ?? 'Error occurred, please contact vendor!',
+                  ),
+                  backgroundColor: Colors.red,
                 ),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(8),
-            children: [
-              _buildMasterTransactionCard(),
-              const SizedBox(height: 16),
-              const Divider(thickness: 1),
-              const SizedBox(height: 8),
-              const Text(
-                'Transaction Items',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              ..._transactionItems.map(_buildTransactionItemCard),
-              const SizedBox(height: 12),
-            ],
+              );
+            }
+          },
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(8),
+              children: [
+                _buildMasterTransactionCard(),
+                const SizedBox(height: 16),
+                const Divider(thickness: 1),
+                const SizedBox(height: 8),
+                const Text(
+                  'Transaction Items',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                ..._transactionItems.map(_buildTransactionItemCard),
+                const SizedBox(height: 12),
+              ],
+            ),
           ),
         ),
       ),
@@ -554,12 +568,20 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
                 ),
               ),
               if (_selectedTransactionType?.detailCode == 'T') ...[
-                const SizedBox(width: 16),
+                const SizedBox(width: 8),
                 Expanded(
                   child: BlocBuilder<BranchBloc, BranchState>(
                     builder: (context, state) => CustomDropdown<int>(
                       labelText: 'To Store *',
-                      value: _selectedToBranch,
+                      // Ensure value exists in items to avoid "There should be exactly one item with DropdownButton's value" error
+                      value:
+                          state.branchs.any(
+                            (b) =>
+                                b.id == _selectedToBranch &&
+                                b.id != _selectedFromBranch,
+                          )
+                          ? _selectedToBranch
+                          : null,
                       items: state.branchs
                           .where(
                             (b) => b.id != _selectedFromBranch,
@@ -1117,35 +1139,37 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
   }
 
   Widget _buildBottomBar() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      color: Colors.white,
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: _cancelCreate,
-              icon: const Icon(Iconsax.close_circle),
-              label: const Text('Cancel'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
+    return SafeArea(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        color: Colors.white,
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _cancelCreate,
+                icon: const Icon(Iconsax.close_circle),
+                label: const Text('Cancel'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: _applyTransactions,
-              icon: const Icon(Iconsax.tick_circle),
-              label: const Text('Apply'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF155888),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _applyTransactions,
+                icon: const Icon(Iconsax.tick_circle),
+                label: const Text('Apply'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF155888),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1162,26 +1186,36 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
 
     const double opacity = 0.8;
 
-    if (code == 'RED' || name.contains('red'))
+    if (code == 'RED' || name.contains('red')) {
       return Colors.red.withOpacity(opacity);
-    if (code == 'BLU' || name.contains('blue'))
+    }
+    if (code == 'BLU' || name.contains('blue')) {
       return Colors.blue.withOpacity(opacity);
-    if (code == 'GRN' || name.contains('green'))
+    }
+    if (code == 'GRN' || name.contains('green')) {
       return Colors.green.withOpacity(opacity);
-    if (code == 'YL' || name.contains('yellow'))
+    }
+    if (code == 'YL' || name.contains('yellow')) {
       return Colors.yellow.withOpacity(opacity);
-    if (code == 'ORG' || name.contains('orange'))
+    }
+    if (code == 'ORG' || name.contains('orange')) {
       return Colors.orange.withOpacity(opacity);
-    if (code == 'BLK' || name.contains('black'))
+    }
+    if (code == 'BLK' || name.contains('black')) {
       return Colors.black.withOpacity(opacity);
-    if (code == 'GRY' || name.contains('grey'))
+    }
+    if (code == 'GRY' || name.contains('grey')) {
       return Colors.grey.withOpacity(opacity);
-    if (code == 'PRPL' || name.contains('purple'))
+    }
+    if (code == 'PRPL' || name.contains('purple')) {
       return Colors.purple.withOpacity(opacity);
-    if (code == 'OV' || name.contains('over'))
+    }
+    if (code == 'OV' || name.contains('over')) {
       return const Color.fromARGB(255, 14, 90, 4).withOpacity(opacity);
-    if (code == 'LM' || name.contains('lime'))
+    }
+    if (code == 'LM' || name.contains('lime')) {
       return Colors.lime.withOpacity(opacity);
+    }
 
     return Colors.transparent;
   }

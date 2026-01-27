@@ -53,6 +53,26 @@ class PrivilegeSeeder {
         AppRoutes.reportDashboard,
         'report_dashboard',
       ),
+      _createPrivilege(
+        'FSNMR Dashboard',
+        'link',
+        AppRoutes.fsnmrDashboard,
+        'fsnmr_dashboard',
+      ),
+      _createPrivilege(
+        'FSNMR Management',
+        'link',
+        AppRoutes.fsnmrManagement,
+        'fsnmr_management',
+      ),
+      _createPrivilege('FSNMR', 'link', AppRoutes.fsnmr, 'fsnmr'),
+      _createPrivilege(
+        'FSNMR Create',
+        'link',
+        AppRoutes.fsnmrCreate,
+        'fsnmr_create',
+      ),
+      _createPrivilege('FSNMR Edit', 'link', AppRoutes.fsnmrEdit, 'fsnmr_edit'),
 
       // ==================== ADMIN MANAGEMENT ====================
       /* // Privilege Management
@@ -163,10 +183,10 @@ class PrivilegeSeeder {
       // ==================== SALES MODULE ====================
       // Sales Entry & Sub-features
       _createPrivilege(
-        'Sales Customer Info',
+        'Sales Entry',
         'link',
         AppRoutes.salesCustomerInfo,
-        'sales_customer_info',
+        'sales_entry',
       ),
       _createPrivilege(
         'Sales Item Entry',
@@ -230,8 +250,14 @@ class PrivilegeSeeder {
       _createPrivilege(
         'Sales Return',
         'link',
-        AppRoutes.salesReturn,
-        'sales_return',
+        AppRoutes.salesReturnDashboard,
+        'sales_return_dashboard',
+      ),
+      _createPrivilege(
+        'Sales Return Filter',
+        'link',
+        AppRoutes.salesReturnFilter,
+        'sales_return_filter',
       ),
       _createPrivilege(
         'Quotation Order',
@@ -315,6 +341,8 @@ class PrivilegeSeeder {
         AppRoutes.uomManagement,
         'uom_management',
       ),
+      _createPrivilege('Add UoM', 'button', AppRoutes.uomCreation, 'add_uom'),
+      _createPrivilege('Edit UoM', 'button', AppRoutes.uomEdit, 'edit_uom'),
 
       //item uom conversions
       _createPrivilege(
@@ -723,6 +751,12 @@ class PrivilegeSeeder {
         'link',
         AppRoutes.cashOutFlowReport,
         'cash_out_flow_report',
+      ),
+      _createPrivilege(
+        'License',
+        'link',
+        AppRoutes.licenseDetails,
+        'license_details',
       ),
     ];
 

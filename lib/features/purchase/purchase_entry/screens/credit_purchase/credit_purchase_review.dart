@@ -299,13 +299,14 @@ class _PurchaseReviewPageState extends State<CreditPurchaseReviewPage>
           ),
         ],
       ),
-      body: BlocConsumer<PurchaseOrderBloc, PurchaseOrderState>(
-        listener: (context, state) {
-          if (state.status == PurchaseOrderStatus.success) {
-            if (state.lastOperation == 'receive_items' &&
-                state.selectedReceiver != null) {
-              // Navigate to Sales Customer Info with extra data
-              /*  context
+      body: SafeArea(
+        child: BlocConsumer<PurchaseOrderBloc, PurchaseOrderState>(
+          listener: (context, state) {
+            if (state.status == PurchaseOrderStatus.success) {
+              if (state.lastOperation == 'receive_items' &&
+                  state.selectedReceiver != null) {
+                // Navigate to Sales Customer Info with extra data
+                /*  context
                   .push(
                     AppRoutes.receiveItem,
                     extra: {'details': state.selectedReceiver},
@@ -317,37 +318,38 @@ class _PurchaseReviewPageState extends State<CreditPurchaseReviewPage>
                     );
                   });
 */
-              // Also reset immediately to prevent double push if rebuild happens
-              context.read<PurchaseOrderBloc>().add(
-                ResetPurchaseOrderSettings(),
+                // Also reset immediately to prevent double push if rebuild happens
+                context.read<PurchaseOrderBloc>().add(
+                  ResetPurchaseOrderSettings(),
+                );
+              }
+            }
+
+            if (state.status == PurchaseOrderStatus.error) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.error ?? 'An error occurred'),
+                  backgroundColor: Colors.red,
+                ),
               );
             }
-          }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Search Bar
+                    _buildSearchBar(),
 
-          if (state.status == PurchaseOrderStatus.error) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.error ?? 'An error occurred'),
-                backgroundColor: Colors.red,
-              ),
+                    // purchaseOrders List
+                    Expanded(child: _buildPurchaseOrdersList(state)),
+                  ],
+                ),
+              ],
             );
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Search Bar
-                  _buildSearchBar(),
-
-                  // purchaseOrders List
-                  Expanded(child: _buildPurchaseOrdersList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+          },
+        ),
       ),
     );
   }
@@ -819,7 +821,7 @@ class _PurchaseReviewPageState extends State<CreditPurchaseReviewPage>
               ' Discount : ',
               NumberFormat.currency(
                     decimalDigits: decimalPlace,
-                    symbol: 'Birr',
+                    symbol: 'ETB',
                   ).format(purchaseOrder.amountDiscount!) ??
                   'N/A',
               Iconsax.rulerpen,
@@ -830,7 +832,7 @@ class _PurchaseReviewPageState extends State<CreditPurchaseReviewPage>
               ' Grand Total : ',
               NumberFormat.currency(
                     decimalDigits: decimalPlace,
-                    symbol: 'Birr',
+                    symbol: 'ETB',
                   ).format(purchaseOrder.amountGrandTotalCost!) ??
                   'N/A',
               Iconsax.rulerpen,
@@ -841,7 +843,7 @@ class _PurchaseReviewPageState extends State<CreditPurchaseReviewPage>
               'Unreceived Credit : ',
               NumberFormat.currency(
                     decimalDigits: decimalPlace,
-                    symbol: 'Birr',
+                    symbol: 'ETB',
                   ).format(purchaseOrder.amountOpenCredit!) ??
                   'N/A',
               Iconsax.receipt_edit,
@@ -906,7 +908,7 @@ class _PurchaseReviewPageState extends State<CreditPurchaseReviewPage>
               children: [
                 _buildActionButton(
                   Iconsax.convert_3d_cube,
-                  'Receive Item',
+                  'Pay Credit',
                   () => _payCredit(purchaseOrder),
                   isCompact,
                 ),
@@ -916,12 +918,7 @@ class _PurchaseReviewPageState extends State<CreditPurchaseReviewPage>
                   () => _safeVoid(context, header: purchaseOrder),
                   isCompact,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportToExcel(),
-                  isCompact,
-                ),
+
                 _buildActionButton(Iconsax.repeat, 'Print', () {}, isCompact),
               ],
             ),

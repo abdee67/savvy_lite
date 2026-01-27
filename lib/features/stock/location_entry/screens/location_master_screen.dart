@@ -305,33 +305,35 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
           ),
         ],
       ),
-      body: BlocConsumer<LocationMasterBloc, LocationMasterState>(
-        listener: (context, state) {
-          if (state.status == LocationMasterStatus.failure &&
-              state.message.isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
+      body: SafeArea(
+        child: BlocConsumer<LocationMasterBloc, LocationMasterState>(
+          listener: (context, state) {
+            if (state.status == LocationMasterStatus.failure &&
+                state.message.isNotEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Search Bar
+                    _buildSearchBar(),
+                    _buildActionButtons(state),
+                    // Location List
+                    Expanded(child: _buildLocationList(state)),
+                  ],
+                ),
+              ],
             );
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Search Bar
-                  _buildSearchBar(),
-                  _buildActionButtons(state),
-                  // Location List
-                  Expanded(child: _buildLocationList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+          },
+        ),
       ),
     );
   }
@@ -543,7 +545,7 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
 
     // For responsiveness:
     final collapsedHeight = isCompact
-        ? screenHeight * 0.18
+        ? screenHeight * 0.22
         : screenHeight * 0.14;
 
     final expandedHeight = isCompact
@@ -688,7 +690,7 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 4),
                               // Location codes count badge
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -902,7 +904,11 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
           if (location.marginType != null)
             _buildLocationInfoItem(
               'Margin Type : ',
-              location.marginType == 'F' ? 'Flat' : 'Percentage',
+              location.marginType == 'F'
+                  ? 'Flat'
+                  : location.marginType == 'P'
+                  ? 'Percentage'
+                  : 'N/A',
               Iconsax.chart,
               isCompact,
             ),
@@ -926,12 +932,7 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
                   () => _navigateToEditScreen(location),
                   isCompact,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportLocation(location),
-                  isCompact,
-                ),
+
                 _buildActionButton(
                   Iconsax.trash,
                   'Delete',

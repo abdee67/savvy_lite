@@ -65,11 +65,11 @@ class RoleBloc extends Bloc<RoleEvent, RoleState> {
         'name': event.name,
         'description': event.description,
         'company': authBloc.state.companyId,
-        'created_by': authBloc.state.userId,
+        'created_by': authBloc.state.userId?.id,
         'date_created': DateTime.now().toIso8601String(),
       });
       developer.log(
-        'Creating role for company: ${authBloc.state.companyId}, by user: ${authBloc.state.userId}',
+        'Creating role for company: ${authBloc.state.companyId}, by user: ${authBloc.state.userId?.id}',
       );
       emit(
         RoleState(
@@ -83,7 +83,7 @@ class RoleBloc extends Bloc<RoleEvent, RoleState> {
           await db.insert('role_privilege', {
             'role_table_id': roleId,
             'privilege_table_id': privilegeId,
-            'created_by': authBloc.state.userId,
+            'created_by': authBloc.state.userId?.id,
             'date_created': DateTime.now().toIso8601String(),
           });
         }
@@ -120,7 +120,7 @@ class RoleBloc extends Bloc<RoleEvent, RoleState> {
           'role_table_id': event.role.id,
           'privilege_table_id': privilege,
           'company': authBloc.state.companyId,
-          'created_by': authBloc.state.userId,
+          'created_by': authBloc.state.userId?.id,
           'date_created': DateTime.now().toIso8601String(),
         });
       }

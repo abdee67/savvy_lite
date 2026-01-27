@@ -1,5 +1,7 @@
 // repositories/sales_order_header_repository.dart
 import 'dart:async';
+import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/credit_receipt_model.dart';
@@ -22,7 +24,11 @@ class SalesOrderHeaderRepository {
       final headerMap = header.toMap();
 
       // Log the data being inserted for debugging
-      print('DEBUG: Creating sales order header with data: $headerMap');
+      if (kDebugMode) {
+        developer.log(
+          'DEBUG: Creating sales order header with data: $headerMap',
+        );
+      }
 
       final id = await db.insert(
         'sales_order_header',
@@ -30,12 +36,18 @@ class SalesOrderHeaderRepository {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
 
-      print('DEBUG: Sales order header created successfully with ID: $id');
+      if (kDebugMode) {
+        developer.log(
+          'DEBUG: Sales order header created successfully with ID: $id',
+        );
+      }
       return id;
     } catch (e, stackTrace) {
-      print('ERROR: Failed to create sales order header: $e');
-      print('ERROR: Stack trace: $stackTrace');
-      print('ERROR: Header data: ${header.toMap()}');
+      if (kDebugMode) {
+        developer.log('ERROR: Failed to create sales order header: $e');
+        developer.log('ERROR: Stack trace: $stackTrace');
+        developer.log('ERROR: Header data: ${header.toMap()}');
+      }
       throw Exception('Failed to create sales order header: $e');
     }
   }
@@ -47,6 +59,7 @@ class SalesOrderHeaderRepository {
         SELECT 
           soh.*,
           cu.customer_name as customer_bill_to_name,
+          ct.customer_name as customer_table_name,
           udc.description_1 as payment_status_description,
           udc.detail_code as payment_status_code ,
           pi.description_1 as payment_instrument_description,
@@ -55,6 +68,7 @@ class SalesOrderHeaderRepository {
           ot.detail_code as order_type_code
         FROM sales_order_header soh
         LEFT JOIN customer_table cu ON soh.customer_bill_to = cu.id
+        LEFT JOIN customer_table ct ON soh.customer_table_id = ct.id
         LEFT JOIN udc_details pi ON soh.payment_instrument = pi.id
         LEFT JOIN udc_details udc ON soh.payment_status = udc.id
         LEFT JOIN udc_details ot ON soh.order_type = ot.id
@@ -147,6 +161,7 @@ class SalesOrderHeaderRepository {
         SELECT 
           soh.*,
           cu.customer_name as customer_bill_to_name,
+          ct.customer_name as customer_table_name,
           udc.detail_code as payment_status_code ,
           udc.description_1 as payment_instrument_description,
           pi.detail_code as payment_instrument_code,
@@ -155,6 +170,7 @@ class SalesOrderHeaderRepository {
           ot.description_1 as order_type_description
         FROM sales_order_header soh
         LEFT JOIN customer_table cu ON soh.customer_bill_to = cu.id
+        LEFT JOIN customer_table ct ON soh.customer_table_id = ct.id
         LEFT JOIN udc_details pi ON soh.payment_instrument = pi.id
         LEFT JOIN udc_details udc ON soh.payment_status = udc.id
         LEFT JOIN udc_details ot ON soh.order_type = ot.id
@@ -186,6 +202,7 @@ class SalesOrderHeaderRepository {
         SELECT 
           soh.*,
           cu.customer_name as customer_bill_to_name,
+          ct.customer_name as customer_table_name,
           ps.detail_code as payment_status_code ,
           ps.description_1 as payment_status_description,
           ot.detail_code as order_type_code,
@@ -194,6 +211,7 @@ class SalesOrderHeaderRepository {
           pi.detail_code as payment_instrument_code
         FROM sales_order_header soh
         LEFT JOIN customer_table cu ON soh.customer_bill_to = cu.id
+        LEFT JOIN customer_table ct ON soh.customer_table_id = ct.id
         LEFT JOIN udc_details pi ON soh.payment_instrument = pi.id
         LEFT JOIN udc_details ot ON soh.order_type = ot.id
         LEFT JOIN udc_details ps ON soh.payment_status = ps.id
@@ -648,10 +666,18 @@ class SalesOrderHeaderRepository {
     int companyId,
   ) async {
     final db = await _db;
-    final maps = await db.query(
-      'sales_order_header',
-      where: 'fs_number = ? AND void_indicator IS NULL AND company = ?',
-      whereArgs: [fsNumber, companyId],
+    final maps = await db.rawQuery(
+      '''
+      SELECT 
+        soh.*,
+        cu.customer_name as customer_bill_to_name,
+        ct.customer_name as customer_table_name
+        FROM sales_order_header soh
+        INNER JOIN customer_table cu ON soh.customer_bill_to = cu.id
+        INNER JOIN customer_table ct ON soh.customer_table_id = ct.id
+      WHERE soh.fs_number = ? AND soh.void_indicator IS NULL AND soh.company = ?
+      ''',
+      [fsNumber, companyId],
     );
     return maps.isNotEmpty ? SalesOrderHeader.fromMap(maps.first) : null;
   }
@@ -689,9 +715,13 @@ class SalesOrderHeaderRepository {
         SELECT 
           crt.*,
           soh.fs_number as fs_number ,
+          cb.customer_name as customer_bill_to_name,
+          ct.customer_name as customer_table_name,
           pi.description_1 as payment_instrument_description
         FROM credit_receipt_table crt
         LEFT JOIN sales_order_header soh ON crt.so_header = soh.id
+        LEFT JOIN customer_table ct ON soh.customer_table_id = ct.id
+        LEFT JOIN customer_table cb ON soh.customer_bill_to = cb.id
         LEFT JOIN udc_details pi ON crt.payment_instrument = pi.id
         WHERE $where
         ORDER BY crt.date_receipt DESC
@@ -766,10 +796,14 @@ class SalesOrderHeaderRepository {
         SELECT 
           crt.*,
            soh.order_number as order_number,
+           cb.customer_name as customer_bill_to_name,
+           ct.customer_name as customer_table_name,
           soh.fs_number as fs_number ,
           pi.description_1 as payment_instrument_description
         FROM credit_receipt_table crt
         LEFT JOIN sales_order_header soh ON crt.so_header = soh.id
+        LEFT JOIN customer_table ct ON soh.customer_table_id = ct.id
+        LEFT JOIN customer_table cb ON soh.customer_bill_to = cb.id
         LEFT JOIN udc_details pi ON crt.payment_instrument = pi.id
         WHERE $where
         ORDER BY crt.date_receipt DESC

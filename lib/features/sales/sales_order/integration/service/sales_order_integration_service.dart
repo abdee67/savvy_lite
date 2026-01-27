@@ -1,5 +1,7 @@
 // features/sales/sales_order/integration/service/sales_order_integration_service.dart
 import 'dart:async';
+import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/detail/bloc/invoice_detail.event.dart';
@@ -86,8 +88,12 @@ class SalesOrderIntegrationService {
       // Step 8: Calculate final totals (like JSF's calQtyWithAmt)
       await _calculateFinalTotals(createdHeader, details);
     } catch (e) {
+      if (kDebugMode) {
+        developer.log('Failed to create sales order: $e');
+      }
       // Comprehensive rollback on failure
       throw Exception('Something goes south $e');
+
       // await _rollbackCreateOperation(header, details);
       // rethrow;
     }
@@ -279,7 +285,9 @@ class SalesOrderIntegrationService {
         } else {
           throw Exception('Item branch is null for detail: $detail');
         }
-        print('Stock validation completed for detail: $detail');
+        if (kDebugMode) {
+          developer.log('Stock validation completed for detail: $detail');
+        }
       }
 
       // Wait for all validations to complete
@@ -973,7 +981,9 @@ class SalesOrderIntegrationService {
           DeleteSalesOrderHeader(id: headerBloc.state.selected!.id!),
         );
       } catch (e) {
-        print('Warning: Failed to rollback header creation: $e');
+        if (kDebugMode) {
+          developer.log('Warning: Failed to rollback header creation: $e');
+        }
       }
     }
 
@@ -981,7 +991,9 @@ class SalesOrderIntegrationService {
     try {
       await _reverseStockForAllDetails(details);
     } catch (e) {
-      print('Warning: Failed to rollback stock updates: $e');
+      if (kDebugMode) {
+        developer.log('Warning: Failed to rollback stock updates: $e');
+      }
     }
 
     // Clear any created details
@@ -994,7 +1006,9 @@ class SalesOrderIntegrationService {
   ) async {
     // This would restore the original state
     // Implementation depends on your specific rollback requirements
-    print('Rolling back update operation for order: ${header.id}');
+    if (kDebugMode) {
+      developer.log('Rolling back update operation for order: ${header.id}');
+    }
   }
 
   Future<void> _rollbackVoidOperation(SalesOrderHeader header) async {
@@ -1002,7 +1016,9 @@ class SalesOrderIntegrationService {
     try {
       headerBloc.add(UnvoidSalesOrder(id: header.id!));
     } catch (e) {
-      print('Warning: Failed to rollback void operation: $e');
+      if (kDebugMode) {
+        developer.log('Warning: Failed to rollback void operation: $e');
+      }
     }
   }
 

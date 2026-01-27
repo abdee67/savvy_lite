@@ -1,6 +1,8 @@
 // bloc/location_master_bloc.dart
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_event.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_state.dart';
@@ -69,7 +71,11 @@ class LocationMasterBloc
     // Prevent duplicate loads
     if (state.status == LocationMasterStatus.loading) return;
 
-    print('🔄 BLoC: Loading locations for company ${event.companyId}');
+    if (kDebugMode) {
+      developer.log(
+        '🔄 BLoC: Loading locations for company ${event.companyId}',
+      );
+    }
     emit(state.copyWith(status: LocationMasterStatus.loading));
     try {
       final location = await locationMasterRepository.getLocationMasters(
@@ -86,10 +92,13 @@ class LocationMasterBloc
         ),
       );
     } catch (e) {
+      if (kDebugMode) {
+        developer.log('Failed to load locations: $e');
+      }
       emit(
         state.copyWith(
           status: LocationMasterStatus.failure,
-          message: 'Failed to load locations: $e',
+          message: 'Failed to load locations',
         ),
       );
     }
@@ -156,10 +165,13 @@ class LocationMasterBloc
         ),
       );
     } catch (e) {
+      if (kDebugMode) {
+        developer.log('Failed to create location: $e');
+      }
       emit(
         state.copyWith(
           status: LocationMasterStatus.failure,
-          message: 'Failed to create location: $e',
+          message: 'Failed to create location',
         ),
       );
     }
@@ -176,7 +188,10 @@ class LocationMasterBloc
       );
       emit(state.copyWith(dualListSource: items, dualListTarget: const []));
     } catch (e) {
-      emit(state.copyWith(message: 'Failed to load items for branch: $e'));
+      if (kDebugMode) {
+        developer.log('Failed to load items for branch: $e');
+      }
+      emit(state.copyWith(message: 'Failed to load items for branch'));
     }
   }
 
@@ -252,10 +267,13 @@ class LocationMasterBloc
         ),
       );
     } catch (e) {
+      if (kDebugMode) {
+        developer.log('Failed to update location: $e');
+      }
       emit(
         state.copyWith(
           status: LocationMasterStatus.failure,
-          message: 'Failed to update location: $e',
+          message: 'Failed to update location',
         ),
       );
     }
@@ -302,10 +320,13 @@ class LocationMasterBloc
         ),
       );
     } catch (e) {
+      if (kDebugMode) {
+        developer.log('Failed to prepare edit: $e');
+      }
       emit(
         state.copyWith(
           status: LocationMasterStatus.failure,
-          message: 'Failed to prepare edit: $e',
+          message: 'Failed to prepare edit',
         ),
       );
     }
@@ -353,10 +374,13 @@ class LocationMasterBloc
         ),
       );
     } catch (e) {
+      if (kDebugMode) {
+        developer.log('Failed to load locations by branch: $e');
+      }
       emit(
         state.copyWith(
           status: LocationMasterStatus.failure,
-          message: 'Failed to load locations by branch: $e',
+          message: 'Failed to load locations by branch',
         ),
       );
     }
@@ -384,10 +408,13 @@ class LocationMasterBloc
         ),
       );
     } catch (e) {
+      if (kDebugMode) {
+        developer.log('Failed to filter locations by branch: $e');
+      }
       emit(
         state.copyWith(
           status: LocationMasterStatus.failure,
-          message: 'Failed to filter locations by branch: $e',
+          message: 'Failed to filter locations by branch',
         ),
       );
     }
@@ -504,10 +531,13 @@ class LocationMasterBloc
 
       add(LoadLocationMasters(companyId));
     } catch (e) {
+      if (kDebugMode) {
+        developer.log('Failed to delete location: $e');
+      }
       emit(
         state.copyWith(
           status: LocationMasterStatus.failure,
-          message: 'Failed to delete location: $e',
+          message: 'Failed to delete location',
         ),
       );
     }

@@ -166,14 +166,12 @@ class SearchSalesReturns extends SalesReturnEvent {
 
 class FilterSalesReturns extends SalesReturnEvent {
   final String fsNumber;
-  final String invoiceNumber;
   final DateTime? startDate;
   final DateTime? endDate;
   final int companyId;
 
   FilterSalesReturns({
     required this.fsNumber,
-    required this.invoiceNumber,
     this.startDate,
     this.endDate,
     required this.companyId,

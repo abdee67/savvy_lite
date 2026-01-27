@@ -88,15 +88,15 @@ class QuotationOrderRepository {
         e.phone as employee_phone,
         e.address as employee_address,
         e.city as employee_city,
-        pi.description_1 as payment_instrument_description1,
+        pi.description_1 as payment_instrument_description,
         pi.detail_code as payment_instrument_detail_code,
-        pt.description_1 as payment_term_description1,
+        pt.description_1 as payment_term_description,
         pt.detail_code as payment_term_detail_code,
-        ps.description_1 as payment_status_description1,
+        ps.description_1 as payment_status_description,
         ps.detail_code as payment_status_detail_code,
-        pm.description_1 as payment_method_description1,
+        pm.description_1 as payment_method_description,
         pm.detail_code as payment_method_detail_code,
-        ot.description_1 as order_type_description1,
+        ot.description_1 as order_type_description,
         ot.detail_code as order_type_detail_code,
         b.description as branch_name
       FROM quote_order_header qoh
@@ -633,6 +633,7 @@ class QuotationOrderRepository {
       SELECT qod.*,
              it.item_description as item_description,
              it.barcode as barcode,
+             uom.detail_code as unit_of_measure_detail_code,
              uom.description_1 as unit_of_measure_description
       FROM quote_order_detail qod
       LEFT JOIN items_table it ON qod.items_table_id = it.id

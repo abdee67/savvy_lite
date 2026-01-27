@@ -25,6 +25,7 @@ class _QuotePaymentDetailsState extends State<QuotePaymentDetails> {
   final TextEditingController _discountController = TextEditingController();
   bool _discountEnabled = false;
   bool _systemConstantsLoaded = false;
+  int _decimalPlace = 2;
 
   @override
   void initState() {
@@ -45,6 +46,8 @@ class _QuotePaymentDetailsState extends State<QuotePaymentDetails> {
         }
       }
     });
+    _decimalPlace =
+        context.read<SystemConstantBloc>().state.selected?.decimalPlaces ?? 2;
   }
 
   void _onDiscountChanged() {
@@ -237,8 +240,11 @@ class _QuotePaymentDetailsState extends State<QuotePaymentDetails> {
     final taxAmount = state.tax ?? 0.0;
     return _buildReadOnlyField(
       context,
-      'Tax (${vatRate.toStringAsFixed(1)}%)',
-      _currencyFormat.format(taxAmount),
+      'Tax (${vatRate.toStringAsFixed(_decimalPlace)}%)',
+      NumberFormat.currency(
+        decimalDigits: _decimalPlace,
+        symbol: 'ETB ',
+      ).format(taxAmount),
       icon: Icons.receipt,
       subtitle: 'VAT rate from system configuration',
     );
@@ -340,7 +346,7 @@ class _QuotePaymentDetailsState extends State<QuotePaymentDetails> {
 
     final withholdingRate = state.withholdingRate ?? 0.0;
     final withholdingDisplayText = isWithholdingApplied
-        ? '$withholdingAmountText (${withholdingRate.toStringAsFixed(1)}%)'
+        ? '$withholdingAmountText (${withholdingRate.toStringAsFixed(_decimalPlace)}%)'
         : isWithholdingEnabled && !canApplyWithholding
         ? 'Not applicable'
         : 'Withholding(----)';
@@ -412,7 +418,7 @@ class _QuotePaymentDetailsState extends State<QuotePaymentDetails> {
           isWithholdingApplied
               ? 'Withholding tax is applied to this transaction'
               : isWithholdingEnabled && !canApplyWithholding
-              ? 'Subtotal must exceed \$${(state.withholdingInitial ?? 0.0).toStringAsFixed(2)} to apply withholding'
+              ? 'Subtotal must exceed ${NumberFormat.currency(decimalDigits: _decimalPlace, symbol: 'ETB ').format(state.withholdingInitial)} to apply withholding'
               : 'Withholding tax is disabled',
           style: TextStyle(
             fontSize: 12,
@@ -431,7 +437,7 @@ class _QuotePaymentDetailsState extends State<QuotePaymentDetails> {
           Padding(
             padding: const EdgeInsets.only(top: 4.0),
             child: Text(
-              '${withholdingRate.toStringAsFixed(1)}% of subtotal',
+              '${withholdingRate.toStringAsFixed(_decimalPlace)}% of subtotal',
               style: TextStyle(fontSize: 12, color: Colors.grey[700]),
             ),
           ),
@@ -487,7 +493,7 @@ class _QuotePaymentDetailsState extends State<QuotePaymentDetails> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Withholding is enabled but cannot be applied because subtotal is below \$${_currencyFormat.format(state.withholdingInitial)}',
+              'Withholding is enabled but cannot be applied because subtotal is below ${NumberFormat.currency(decimalDigits: _decimalPlace, symbol: 'ETB ').format(state.withholdingInitial)}',
               style: TextStyle(fontSize: 12, color: Colors.amber),
             ),
           ),
@@ -553,7 +559,10 @@ class _QuotePaymentDetailsState extends State<QuotePaymentDetails> {
             ),
           ),
           Text(
-            '\$${_currencyFormat.format(value)}',
+            NumberFormat.currency(
+              decimalDigits: _decimalPlace,
+              symbol: 'ETB ',
+            ).format(value),
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,

@@ -3,6 +3,7 @@
 // =============================
 
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
+import 'package:savvy_stock/features/company/models/company_model.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
@@ -68,6 +69,7 @@ class SalesReturnHeader {
   final UdcDetails? paymentStatusRef;
   final UdcDetails? paymentInstrumentRef;
   final UdcDetails? returnStatusRef;
+  final Company? companyRef;
 
   // ================
   // Constructor
@@ -119,6 +121,7 @@ class SalesReturnHeader {
     this.paymentStatusRef,
     this.returnStatusRef,
     this.paymentInstrumentRef,
+    this.companyRef,
   });
 
   // ============================
@@ -165,55 +168,61 @@ class SalesReturnHeader {
       salesRepresent: map['sales_represent']?.toString(),
       commentForReturn: map['comment_for_return']?.toString(),
       tempId: map['temp_id'],
-      customerBillToRef: map['customer_bill_to']
+      customerBillToRef: map['customer_bill_to_ref'] != null
           ? Customer(
               id: map['customer_bill_to'],
-              contactName: map['customer_bill_to_ref'],
+              contactName: map['customer_bill_to_ref']?.toString(),
             )
           : null,
-      employeeRef: map['employees_id']
+      employeeRef: map['employees_id'] != null
           ? Employee(
               id: map['employees_id'],
-              nameFirst: map['first_name'],
-              nameLast: map['last_name'],
-              nameMiddle: map['middle_name'],
-              email: map['email'],
-              phone: map['phone'],
-              address: map['address'],
+              nameFirst: map['first_name']?.toString() ?? '',
+              nameLast: map['last_name']?.toString() ?? '',
+              nameMiddle: map['middle_name']?.toString() ?? '',
+              email: map['email']?.toString() ?? '',
+              phone: map['phone']?.toString() ?? '',
+              address: map['address']?.toString(),
             )
           : null,
-      customerTableIdRef: map['customer_table_id']
+      customerTableIdRef: map['customer_table_id'] != null
           ? Customer(
               id: map['customer_table_id'],
-              contactName: map['customer_name_ref'],
+              contactName: map['customer_name_ref']?.toString(),
             )
           : null,
-      paymentTermRef: map['payment_term']
+      paymentTermRef: map['payment_term'] != null
           ? UdcDetails(
               id: map['payment_term'],
-              detailCode: map['payment_term_code'],
-              description1: map['payment_term_ref'],
+              detailCode: map['payment_term_code']?.toString() ?? '',
+              description1: map['payment_term_ref']?.toString() ?? '',
             )
           : null,
-      paymentStatusRef: map['payment_status']
+      paymentStatusRef: map['payment_status'] != null
           ? UdcDetails(
               id: map['payment_status'],
-              detailCode: map['payment_status_code'],
-              description1: map['payment_status_ref'],
+              detailCode: map['payment_status_code']?.toString() ?? '',
+              description1: map['payment_status_ref']?.toString() ?? '',
             )
           : null,
-      paymentInstrumentRef: map['payment_instrument']
+      paymentInstrumentRef: map['payment_instrument'] != null
           ? UdcDetails(
               id: map['payment_instrument'],
-              detailCode: map['payment_instrument_code'],
-              description1: map['payment_instrument_ref'],
+              detailCode: map['payment_instrument_code']?.toString() ?? '',
+              description1: map['payment_instrument_ref']?.toString() ?? '',
             )
           : null,
-      returnStatusRef: map['return_status']
+      returnStatusRef: map['return_status'] != null
           ? UdcDetails(
               id: map['return_status'],
-              detailCode: map['return_status_code'],
-              description1: map['return_status_ref'],
+              detailCode: map['return_status_code']?.toString() ?? '',
+              description1: map['return_status_ref']?.toString() ?? '',
+            )
+          : null,
+      companyRef: map['company'] != null
+          ? Company(
+              id: map['company'],
+              companyName: map['company_name']?.toString() ?? '',
             )
           : null,
     );
@@ -312,6 +321,7 @@ class SalesReturnHeader {
     UdcDetails? paymentStatusRef,
     UdcDetails? paymentInstrumentRef,
     UdcDetails? returnStatusRef,
+    Company? companyRef,
   }) {
     return SalesReturnHeader(
       id: id ?? this.id,
@@ -360,6 +370,7 @@ class SalesReturnHeader {
       paymentStatusRef: paymentStatusRef ?? this.paymentStatusRef,
       paymentInstrumentRef: paymentInstrumentRef ?? this.paymentInstrumentRef,
       returnStatusRef: returnStatusRef ?? this.returnStatusRef,
+      companyRef: companyRef ?? this.companyRef,
     );
   }
 }

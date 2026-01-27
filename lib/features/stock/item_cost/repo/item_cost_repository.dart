@@ -1,4 +1,7 @@
 // features/stock/item_cost/repositories/item_cost_repository.dart
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
@@ -105,8 +108,12 @@ class ItemCostRepository extends BaseRepository {
   }
 
   // Find item cost by item
-  Future<ItemCost?> findByItem(int itemNumber, int companyId) async {
-    final db = await databaseService.database;
+  Future<ItemCost?> findByItem(
+    int itemNumber,
+    int companyId, {
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
     final maps = await db.rawQuery(
       '''SELECT ic.*,
       i.item_description,
@@ -369,5 +376,250 @@ class ItemCostRepository extends BaseRepository {
     }).toList();
 
     return PaginatedItemCostResult(items: items, totalCount: totalCount);
+  }
+
+  /// Get total quantity available across all branches in primary UOM
+  /// This is used for weighted average cost calculation
+  Future<double> getTotalAvailabilityInPrimaryUom(
+    int itemNumber,
+    int companyId, {
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
+
+    // Get all items_in_branch records for this item
+    final branchesResult = await db.query(
+      'items_in_branch',
+      columns: ['quantity_available', 'unit_of_measure'],
+      where: 'item_number = ? AND company = ?',
+      whereArgs: [itemNumber, companyId],
+    );
+
+    double totalQtyInPrimary = 0.0;
+
+    for (final branch in branchesResult) {
+      final qtyAvailable =
+          (branch['quantity_available'] as num?)?.toDouble() ?? 0.0;
+      final uomId = branch['unit_of_measure'] as int?;
+
+      if (uomId != null && qtyAvailable > 0) {
+        // Convert this branch's quantity to primary UOM
+        final factor = await uomConversionRepository.fromOtherToPrimary(
+          itemNumber,
+          uomId,
+          companyId,
+          txn: txn,
+        );
+        totalQtyInPrimary += qtyAvailable * factor;
+      }
+    }
+
+    return totalQtyInPrimary;
+  }
+
+  /// Updates item costs for all details in a purchase order header.
+  /// This should be called BEFORE updating stock quantities.
+  ///
+  /// The cost calculation follows the Java formula:
+  /// cost = (w * otherCost / qty + unitCost) / factor
+  /// where:
+  ///   - w = extendedCost / grossCost (weight of this item in total)
+  ///   - otherCost = header's other costs to distribute
+  ///   - qty = transaction quantity
+  ///   - unitCost = detail's unit cost
+  ///   - factor = UOM conversion factor (other to primary)
+  Future<void> updatingItemCosts({
+    required int headerId,
+    required int companyId,
+    required int userId,
+  }) async {
+    try {
+      final db = await databaseService.database;
+
+      if (kDebugMode) {
+        developer.log('🔄 updatingItemCosts called for header: $headerId');
+      }
+
+      // Get header info for other costs and gross cost
+      final headerResult = await db.query(
+        'purchase_order_header',
+        columns: ['amount_other_costs', 'amount_gross'],
+        where: 'id = ?',
+        whereArgs: [headerId],
+      );
+
+      if (headerResult.isEmpty) return;
+
+      final header = headerResult.first;
+      final otherCost =
+          (header['amount_other_costs'] as num?)?.toDouble() ?? 0.0;
+      final grossCost = (header['amount_gross'] as num?)?.toDouble() ?? 1.0;
+
+      // Get all purchase order details for this header
+      final detailsResult = await db.rawQuery(
+        '''
+        SELECT 
+          pod.id,
+          pod.item_number,
+          pod.unit_of_measure,
+          pod.unit_cost,
+          pod.quantity_transaction,
+          pod.amount_extended_cost
+        FROM purchase_order_detail pod
+        WHERE pod.po_header = ?
+        ''',
+        [headerId],
+      );
+
+      if (kDebugMode) {
+        developer.log(
+          'found ${detailsResult.length} details for header $headerId',
+        );
+      }
+
+      for (final detail in detailsResult) {
+        final detailId = detail['id'] as int?;
+        final itemNumber = detail['item_number'] as int?;
+        final unitOfMeasure = detail['unit_of_measure'] as int?;
+        final unitCost = (detail['unit_cost'] as num?)?.toDouble() ?? 0.0;
+        final qty = (detail['quantity_transaction'] as num?)?.toDouble() ?? 1.0;
+        final extendedCost =
+            (detail['amount_extended_cost'] as num?)?.toDouble() ?? 0.0;
+
+        if (itemNumber == null || detailId == null) {
+          if (kDebugMode) {
+            developer.log('⚠️ Skipping detail due to null ID or Item Number');
+          }
+          continue;
+        }
+
+        // Get UOM conversion factor (from transaction UOM to primary UOM)
+        double factor = 1.0;
+        if (unitOfMeasure != null) {
+          factor = await uomConversionRepository.fromOtherToPrimary(
+            itemNumber,
+            unitOfMeasure,
+            companyId,
+          );
+        }
+
+        // Calculate weighted cost including distributed other costs
+        // Java formula: cost = (w * otherCost / qty + unitCost) / factor
+        final w = grossCost != 0 ? extendedCost / grossCost : 0.0;
+        final cost = qty != 0 ? (w * otherCost / qty + unitCost) / factor : 0.0;
+
+        // Check if any receivers exist for this detail (only update if no receivers yet)
+        final receiversResult = await db.rawQuery(
+          '''
+          SELECT COUNT(*) as count FROM purchase_order_receiver 
+          WHERE po_detail = ?
+          ''',
+          [detailId],
+        );
+
+        final receiverCount = (receiversResult.first['count'] as int?) ?? 0;
+
+        // Find existing item cost record
+        final existingCostResult = await db.query(
+          'item_cost',
+          where: 'item_number = ? AND company = ?',
+          whereArgs: [itemNumber, companyId],
+        );
+
+        // Calculate final unit cost (handle NaN/Infinite)
+        double unitCostAvg = 0.0;
+        if (!cost.isNaN && !cost.isInfinite) {
+          // Round to 2 decimal places
+          unitCostAvg = (cost * 100).roundToDouble() / 100;
+        }
+
+        if (existingCostResult.isNotEmpty) {
+          // Only update if no receivers exist (first time receiving)
+          if (receiverCount == 0) {
+            // Get existing cost
+            final existingCost =
+                (existingCostResult.first['amount_unit_cost'] as num?)
+                    ?.toDouble() ??
+                0.0;
+
+            // Get total quantity available in primary UOM across all branches
+            final qtyOld = await getTotalAvailabilityInPrimaryUom(
+              itemNumber,
+              companyId,
+            );
+
+            // Calculate new quantity in primary UOM
+            final qtyTrn = factor * qty;
+
+            // Calculate total quantity
+            final qtyTotal = qtyOld + qtyTrn;
+
+            // Calculate weighted average cost
+            double finalCost;
+            if (qtyTotal > 0) {
+              final amountOld = existingCost * qtyOld;
+              final amountNew = unitCostAvg * qtyTrn;
+              finalCost = (amountOld + amountNew) / qtyTotal;
+              // Round to 2 decimal places
+              finalCost = (finalCost * 100).roundToDouble() / 100;
+            } else {
+              // No inventory, use new cost
+              finalCost = unitCostAvg;
+            }
+
+            if (kDebugMode) {
+              developer.log(
+                '💰 Weighted Average Calculation:\n'
+                '   Old Cost: \$${existingCost.toStringAsFixed(2)}, Old Qty: ${qtyOld.toStringAsFixed(2)}\n'
+                '   New Cost: \$${unitCostAvg.toStringAsFixed(2)}, New Qty: ${qtyTrn.toStringAsFixed(2)}\n'
+                '   Total Qty: ${qtyTotal.toStringAsFixed(2)}\n'
+                '   Average Cost: \$${finalCost.toStringAsFixed(2)}',
+              );
+            }
+
+            await db.update(
+              'item_cost',
+              {
+                'amount_unit_cost': finalCost,
+                'date_updated': DateTime.now().toIso8601String(),
+                'user_id': userId,
+              },
+              where: 'item_number = ? AND company = ?',
+              whereArgs: [itemNumber, companyId],
+            );
+            if (kDebugMode) {
+              developer.log(
+                '✅ Updated item cost for item $itemNumber to $unitCostAvg',
+              );
+            }
+          } else {
+            if (kDebugMode) {
+              developer.log(
+                'ℹ️ Skipped item cost update for item $itemNumber. Receivers exist: $receiverCount',
+              );
+            }
+          }
+        } else {
+          // Create new item cost record
+          await db.insert('item_cost', {
+            'item_number': itemNumber,
+            'amount_unit_cost': unitCostAvg,
+            'company': companyId,
+            'user_id': userId,
+            'date_updated': DateTime.now().toIso8601String(),
+          });
+          if (kDebugMode) {
+            developer.log(
+              '✅ Created new item cost for item $itemNumber: $unitCostAvg',
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        developer.log('❌ Error updating item costs: $e');
+      }
+      rethrow;
+    }
   }
 }

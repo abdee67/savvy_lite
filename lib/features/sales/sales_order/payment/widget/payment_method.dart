@@ -301,7 +301,7 @@ class _PaymentMethodState extends State<PaymentMethod> {
                   items: paymentInstruments.map((udc) {
                     return DropdownMenuItem<int>(
                       value: udc.id,
-                      child: Text(udc.description1 ?? udc.detailCode ?? ''),
+                      child: Text(udc.description1),
                     );
                   }).toList(),
                   onChanged: _onPaymentInstrumentSelected,

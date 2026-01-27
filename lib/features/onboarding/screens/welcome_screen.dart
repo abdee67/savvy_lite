@@ -108,79 +108,83 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final isSmallScreen = screenSize.height < 700;
 
     return Scaffold(
-      body: Stack(
-        children: [
-          // 🔹 Animated background
-          AnimatedBuilder(
-            animation: _centerGlowAnimation,
-            builder: (context, _) {
-              return Container(
-                width: double.infinity,
-                height: double.infinity,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color.fromARGB(255, 0, 81, 255), // Bright blue top-left
-                      Color.fromARGB(255, 80, 147, 247), // Light blue-white
-                      Color.fromARGB(255, 88, 248, 195), // Light blue-white
-                      Color.fromARGB(
-                        255,
-                        0,
-                        81,
-                        255,
-                      ), // Bright blue bottom-right
-                    ],
-                    stops: [0.0, 0.33, 0.66, 1.0],
+      body: SafeArea(
+        child: Stack(
+          children: [
+            // 🔹 Animated background
+            AnimatedBuilder(
+              animation: _centerGlowAnimation,
+              builder: (context, _) {
+                return Container(
+                  width: double.infinity,
+                  height: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color.fromARGB(255, 0, 81, 255), // Bright blue top-left
+                        Color.fromARGB(255, 80, 147, 247), // Light blue-white
+                        Color.fromARGB(255, 88, 248, 195), // Light blue-white
+                        Color.fromARGB(
+                          255,
+                          0,
+                          81,
+                          255,
+                        ), // Bright blue bottom-right
+                      ],
+                      stops: [0.0, 0.33, 0.66, 1.0],
+                    ),
                   ),
-                ),
-                child: Center(
-                  child: Container(
-                    width: screenSize.width * 0.8,
-                    height: screenSize.width * 0.8,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          Colors.white.withOpacity(_centerGlowAnimation.value),
-                          Colors.transparent,
-                        ],
-                        stops: const [0.0, 1.0],
+                  child: Center(
+                    child: Container(
+                      width: screenSize.width * 0.8,
+                      height: screenSize.width * 0.8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            Colors.white.withOpacity(
+                              _centerGlowAnimation.value,
+                            ),
+                            Colors.transparent,
+                          ],
+                          stops: const [0.0, 1.0],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              );
-            },
-          ),
+                );
+              },
+            ),
 
-          // 🪂 Image drops + bounce
-          Center(
-            child: SlideTransition(
-              position: _imageDropAnimation,
-              child: ScaleTransition(
-                scale: _bounceAnimation,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: Image.asset(
-                    'assets/images/onboarding_background.png',
-                    fit: BoxFit.contain,
-                    width: isSmallScreen ? 100 : 150,
+            // 🪂 Image drops + bounce
+            Center(
+              child: SlideTransition(
+                position: _imageDropAnimation,
+                child: ScaleTransition(
+                  scale: _bounceAnimation,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.asset(
+                      'assets/images/onboarding_background.png',
+                      fit: BoxFit.contain,
+                      width: isSmallScreen ? 100 : 150,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
 
-          // 📄 Footer text — no background, but shadowed for readability
-          Positioned(
-            bottom: isSmallScreen ? 16.0 : 32.0,
-            left: 0,
-            right: 0,
-            child: _buildFooter(context, isSmallScreen),
-          ),
-        ],
+            // 📄 Footer text — no background, but shadowed for readability
+            Positioned(
+              bottom: isSmallScreen ? 16.0 : 32.0,
+              left: 0,
+              right: 0,
+              child: _buildFooter(context, isSmallScreen),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -37,36 +37,38 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         backgroundColor: const Color(0xFF155888),
         foregroundColor: Colors.white,
       ),
-      body: Column(
-        children: <Widget>[
-          Expanded(flex: 4, child: _buildQrView()),
-          Expanded(
-            flex: 1,
-            child: Container(
-              color: Colors.black,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: <Widget>[
-                  _buildControlButton(
-                    'Flash',
-                    Icons.flash_on,
-                    () => controller?.toggleFlash(),
-                  ),
-                  _buildControlButton(
-                    'Flip Camera',
-                    Icons.flip_camera_android,
-                    () => controller?.flipCamera(),
-                  ),
-                  _buildControlButton(
-                    'Close',
-                    Icons.close,
-                    () => Navigator.pop(context),
-                  ),
-                ],
+      body: SafeArea(
+        child: Column(
+          children: <Widget>[
+            Expanded(flex: 4, child: _buildQrView()),
+            Expanded(
+              flex: 1,
+              child: Container(
+                color: Colors.black,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: <Widget>[
+                    _buildControlButton(
+                      'Flash',
+                      Icons.flash_on,
+                      () => controller?.toggleFlash(),
+                    ),
+                    _buildControlButton(
+                      'Flip Camera',
+                      Icons.flip_camera_android,
+                      () => controller?.flipCamera(),
+                    ),
+                    _buildControlButton(
+                      'Close',
+                      Icons.close,
+                      () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

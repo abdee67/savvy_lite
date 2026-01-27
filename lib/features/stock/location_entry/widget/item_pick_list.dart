@@ -95,6 +95,7 @@ class _ItemsPickListState extends State<ItemsPickList> {
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Colors.grey.shade700,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 const Spacer(),
@@ -150,9 +151,7 @@ class _ItemsPickListState extends State<ItemsPickList> {
     required ThemeData theme,
     required ColorScheme colors,
   }) {
-    final description = item.item?.itemDescription ?? 'No Description';
-    final itemNumber = item.itemNumber.toString() ?? 'N/A';
-    final itemCode = item.item;
+    final description = item.itemRef?.itemDescription ?? 'No Description';
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -165,7 +164,7 @@ class _ItemsPickListState extends State<ItemsPickList> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         leading: Container(
           width: 40,
-          height: 40,
+          height: 20,
           decoration: BoxDecoration(
             color: Colors.grey.shade300,
             shape: BoxShape.circle,
@@ -183,24 +182,7 @@ class _ItemsPickListState extends State<ItemsPickList> {
             color: Colors.grey.shade600,
           ),
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Item #$itemNumber',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: Colors.grey.shade500,
-              ),
-            ),
-            if (itemCode != null)
-              Text(
-                'Code: $itemCode',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: Colors.grey.shade400,
-                ),
-              ),
-          ],
-        ),
+
         trailing: Icon(Icons.lock, color: Colors.grey.shade500, size: 20),
       ),
     );
@@ -313,9 +295,7 @@ class _ItemsPickListState extends State<ItemsPickList> {
               ),
               const SizedBox(width: 8),
               Text(
-                widget.isEditMode
-                    ? 'Select Additional Items'
-                    : 'Select Items for Assignment',
+                widget.isEditMode ? 'Select Additional Items' : 'Select Items',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -391,7 +371,7 @@ class _ItemsPickListState extends State<ItemsPickList> {
   }) {
     final description = _getItemDescription(item.itemNumber);
     final itemNumber = item.itemNumber.toString();
-    final itemCode = item.item;
+    final itemCode = item.itemRef;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -447,14 +427,6 @@ class _ItemsPickListState extends State<ItemsPickList> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              hasSearchQuery
-                  ? Icons.search_off_outlined
-                  : Icons.inventory_2_outlined,
-              size: 30,
-              color: colors.onSurface.withOpacity(0.3),
-            ),
-            const SizedBox(height: 16),
             Text(
               hasSearchQuery ? 'No items found' : 'No available items',
               style: theme.textTheme.titleMedium?.copyWith(
@@ -472,6 +444,7 @@ class _ItemsPickListState extends State<ItemsPickList> {
                 color: colors.onSurface.withOpacity(0.4),
               ),
               textAlign: TextAlign.center,
+              overflow: TextOverflow.fade,
             ),
             if (widget.isEditMode && widget.targetItems.isNotEmpty) ...[
               const SizedBox(height: 16),

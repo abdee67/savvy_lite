@@ -139,7 +139,7 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
     ).showSnackBar(const SnackBar(content: Text('Purchase Orders refreshed')));
   }
 
-  void _receiveItem(PurchaseOrderDetail purchaseOrderDetail) {
+  void _receiveItem(PurchaseOrderDetail purchaseOrderDetail) async {
     if (purchaseOrderDetail.quantityOpen! <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('All Orders is already Received')),
@@ -152,7 +152,7 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
     );
 
     // Open receiving dialog for this detail
-    showDialog(
+    final result = await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
@@ -166,6 +166,12 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
         );
       },
     );
+
+    if (result == true && mounted) {
+      context.read<PurchaseOrderBloc>().add(
+        LoadPurchaseOrders(companyId: widget.authBloc.state.companyId!),
+      );
+    }
   }
 
   void _exportToExcel() {
@@ -298,13 +304,14 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
           ),
         ],
       ),
-      body: BlocConsumer<PurchaseOrderBloc, PurchaseOrderState>(
-        listener: (context, state) {
-          if (state.status == PurchaseOrderStatus.success) {
-            if (state.lastOperation == 'receive_items' &&
-                state.selectedReceiver != null) {
-              // Navigate to Sales Customer Info with extra data
-              /*  context
+      body: SafeArea(
+        child: BlocConsumer<PurchaseOrderBloc, PurchaseOrderState>(
+          listener: (context, state) {
+            if (state.status == PurchaseOrderStatus.success) {
+              if (state.lastOperation == 'receive_items' &&
+                  state.selectedReceiver != null) {
+                // Navigate to Sales Customer Info with extra data
+                /*  context
                   .push(
                     AppRoutes.receiveItem,
                     extra: {'details': state.selectedReceiver},
@@ -316,37 +323,38 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
                     );
                   });
 */
-              // Also reset immediately to prevent double push if rebuild happens
-              context.read<PurchaseOrderBloc>().add(
-                ResetPurchaseOrderSettings(),
+                // Also reset immediately to prevent double push if rebuild happens
+                context.read<PurchaseOrderBloc>().add(
+                  ResetPurchaseOrderSettings(),
+                );
+              }
+            }
+
+            if (state.status == PurchaseOrderStatus.error) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.error ?? 'An error occurred'),
+                  backgroundColor: Colors.red,
+                ),
               );
             }
-          }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Search Bar
+                    _buildSearchBar(),
 
-          if (state.status == PurchaseOrderStatus.error) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.error ?? 'An error occurred'),
-                backgroundColor: Colors.red,
-              ),
+                    // purchaseOrders List
+                    Expanded(child: _buildPurchaseOrdersList(state)),
+                  ],
+                ),
+              ],
             );
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Search Bar
-                  _buildSearchBar(),
-
-                  // purchaseOrders List
-                  Expanded(child: _buildPurchaseOrdersList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+          },
+        ),
       ),
     );
   }
@@ -659,7 +667,7 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
                               ),
 
                               Text(
-                                'Received Amount - ${NumberFormat.currency(symbol: 'Birr ', decimalDigits: 2).format(purchaseOrder.amountReceived ?? 0)}',
+                                'Received Amount - ${NumberFormat.currency(symbol: 'ETB ', decimalDigits: 2).format(purchaseOrder.amountReceived ?? 0)}',
                                 style: TextStyle(
                                   color: const Color(0xFF887F7F),
                                   fontSize: isCompact ? 12 : 14,
@@ -920,12 +928,7 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
                   () => _safeVoid(context, detail: purchaseOrder),
                   isCompact,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportToExcel(),
-                  isCompact,
-                ),
+
                 _buildActionButton(Iconsax.repeat, 'Print', () {}, isCompact),
               ],
             ),

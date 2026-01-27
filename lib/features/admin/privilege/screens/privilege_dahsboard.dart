@@ -1,8 +1,6 @@
 // features/privilege/screens/privilege_management_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
-import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_bloc.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_event.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_state.dart';
@@ -40,18 +38,20 @@ class _PrivilegeManagementScreenState extends State<PrivilegeManagementScreen> {
           ),
         ],*/
       ),
-      body: BlocBuilder<PrivilegeBloc, PrivilegeState>(
-        builder: (context, state) {
-          if (state.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (state.isSuccess) {
-            return _buildPrivilegeList(state.privileges, context);
-          } else if (state.isFailure) {
-            return Center(child: Text('Error: ${state.message}'));
-          } else {
-            return const Center(child: Text('No privileges found'));
-          }
-        },
+      body: SafeArea(
+        child: BlocBuilder<PrivilegeBloc, PrivilegeState>(
+          builder: (context, state) {
+            if (state.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (state.isSuccess) {
+              return _buildPrivilegeList(state.privileges, context);
+            } else if (state.isFailure) {
+              return Center(child: Text('Error: ${state.message}'));
+            } else {
+              return const Center(child: Text('No privileges found'));
+            }
+          },
+        ),
       ),
     );
   }

@@ -162,7 +162,7 @@ class _BranchDashboardState extends State<BranchDashboard>
       });
 
       Future.delayed(const Duration(milliseconds: 300), () {
-        // _safeDelete(context, index: index);
+        _safeDeleteBranch(context, index: index);
         setState(() {
           _dragOffset.remove(index);
         });
@@ -184,40 +184,42 @@ class _BranchDashboardState extends State<BranchDashboard>
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
       ),
-      body: BlocConsumer<BranchBloc, BranchState>(
-        listener: (context, state) {
-          if (state.status == BranchStatus.failure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message ?? 'Operation failed'),
-                backgroundColor: Colors.red,
-              ),
+      body: SafeArea(
+        child: BlocConsumer<BranchBloc, BranchState>(
+          listener: (context, state) {
+            if (state.status == BranchStatus.failure) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message ?? 'Operation failed'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            } else if (state.status == BranchStatus.success &&
+                state.message != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message!),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Search Bar
+                    _buildSearchBar(),
+                    _buildActionButtons(state),
+                    // Branch List
+                    Expanded(child: _buildBranchList(state)),
+                  ],
+                ),
+              ],
             );
-          } else if (state.status == BranchStatus.success &&
-              state.message != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message!),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Search Bar
-                  _buildSearchBar(),
-                  _buildActionButtons(state),
-                  // Branch List
-                  Expanded(child: _buildBranchList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+          },
+        ),
       ),
     );
   }
@@ -351,11 +353,11 @@ class _BranchDashboardState extends State<BranchDashboard>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+            const Icon(Icons.error_outline, size: 64, color: Colors.white),
             const SizedBox(height: 16),
             Text(
               state.message ?? 'Failed to load branches',
-              style: const TextStyle(color: Colors.grey),
+              style: const TextStyle(color: Colors.white),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -374,13 +376,13 @@ class _BranchDashboardState extends State<BranchDashboard>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Iconsax.building, size: 64, color: Colors.grey),
+            const Icon(Iconsax.building, size: 64, color: Colors.white),
             const SizedBox(height: 16),
             Text(
               state.searchQuery.isEmpty
                   ? 'No branches found'
                   : 'No results for "${state.searchQuery}"',
-              style: const TextStyle(color: Colors.grey, fontSize: 16),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
           ],
         ),
@@ -428,7 +430,7 @@ class _BranchDashboardState extends State<BranchDashboard>
 
     // For responsiveness:
     final collapsedHeight = isCompact
-        ? screenHeight * 0.15
+        ? screenHeight * 0.20
         : screenHeight * 0.14;
 
     final expandedHeight = isCompact
@@ -713,12 +715,6 @@ class _BranchDashboardState extends State<BranchDashboard>
                   () => _navigateToEditScreen(branch),
                   isCompact,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportBranch(branch),
-                  isCompact,
-                ),
               ],
             ),
           ),
@@ -858,17 +854,59 @@ class _BranchDashboardState extends State<BranchDashboard>
     ).showSnackBar(const SnackBar(content: Text('Branch data exported')));
   }
 
-  void _safeDelete(Branch branch) {
-    // Implement safe delete functionality
+  void _safeDeleteBranch(BuildContext context, {int? index}) {
+    final bloc = context.read<BranchBloc>();
+    final state = bloc.state;
+
+    // CASE 1: Multiple branchs
+    if (state.selectedBranchs.isNotEmpty) {
+      final branchsToDelete = state.selectedBranchs;
+
+      showDeleteDialog(
+        context,
+        title: 'Delete selected Branchs?',
+        content:
+            'Are you sure you want to delete ${branchsToDelete.length} Branchs?',
+        onConfirm: () {
+          final ids = branchsToDelete.map((e) => e.id).toList();
+          final deletedIndexes = branchsToDelete
+              .map((emp) => state.branchs.indexOf(emp))
+              .toList();
+          bloc.add(
+            DeleteSelectedBranchs(
+              selectedBranchs: ids,
+              deletedBranchs: branchsToDelete,
+              deletedIndexes: deletedIndexes,
+            ),
+          );
+        },
+      );
+      return;
+    }
+
+    // CASE 2: Single branch by index
+    if (index == null || index < 0 || index >= state.filteredBranchs.length) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot delete item. Invalid index.')),
+      );
+      return;
+    }
+
+    final branchToDelete = state.filteredBranchs[index];
+
     showDeleteDialog(
       context,
-      title: 'Delete "${branch.description}"?',
-      content: 'Are you sure you want to delete "${branch.description}"?',
+      title: 'Delete "${branchToDelete.description}"?',
+      content:
+          'Are you sure you want to delete "${branchToDelete.description}"?',
       onConfirm: () {
-        // context.read<BranchBloc>().add(DeleteBranch(branch));
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Branch deleted')));
+        bloc.add(
+          DeleteBranch(
+            deletedBranch: branchToDelete,
+            deletedIndex: index,
+            branchId: branchToDelete.id,
+          ),
+        );
       },
     );
   }

@@ -157,39 +157,41 @@ class _ItemCostReportPageState extends State<ItemCostReportPage>
           ),
         ],
       ),
-      body: BlocConsumer<ItemCostBloc, ItemCostState>(
-        listener: (context, state) {
-          if (state.status == ItemCostStatus.exportItemCostReportSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.successMessage!),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        },
-
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Summary Card
-                  _buildSummaryCard(state),
-
-                  // Lot List
-                  Expanded(child: _buildLotList(state)),
-                ],
-              ),
-              // Loading Overlay
-              if (state.status == ItemCostStatus.loadingItemCostReport)
-                Container(
-                  color: Colors.black.withOpacity(0.5),
-                  child: const Center(child: CircularProgressIndicator()),
+      body: SafeArea(
+        child: BlocConsumer<ItemCostBloc, ItemCostState>(
+          listener: (context, state) {
+            if (state.status == ItemCostStatus.exportItemCostReportSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.successMessage!),
+                  backgroundColor: Colors.green,
                 ),
-            ],
-          );
-        },
+              );
+            }
+          },
+
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Summary Card
+                    _buildSummaryCard(state),
+
+                    // Lot List
+                    Expanded(child: _buildLotList(state)),
+                  ],
+                ),
+                // Loading Overlay
+                if (state.status == ItemCostStatus.loadingItemCostReport)
+                  Container(
+                    color: Colors.black.withOpacity(0.5),
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -583,7 +585,7 @@ class _ItemCostReportPageState extends State<ItemCostReportPage>
           _buildDetailItem(
             'Unit Cost: ',
             itemCost.amountUnitCost != null
-                ? '${itemCost.amountUnitCost!.toStringAsFixed(2)} Birr'
+                ? '${itemCost.amountUnitCost!.toStringAsFixed(2)} ETB'
                 : 'N/A',
             Iconsax.dollar_circle,
             isCompact,
@@ -741,7 +743,7 @@ class _ItemCostReportPageState extends State<ItemCostReportPage>
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            '${itemCost.amountUnitCost.toString()} Birr/ ${itemCost.itemRef?.unitOfMeasureDescription?.description1}',
+            '${itemCost.amountUnitCost.toString()} ETB/ ${itemCost.itemRef?.unitOfMeasureDescription?.description1}',
             style: TextStyle(
               fontSize: 10,
               color: Colors.blue,

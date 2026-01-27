@@ -140,12 +140,10 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
 
   void _callItem(String itemId) {
     // Implement phone call functionality
-    print('Calling: $itemId');
   }
 
   void _emailItem(String itemId) {
     // Implement email functionality
-    print('Emailing: $itemId');
   }
 
   void _exportItem(ItemInBranchModel item) {
@@ -303,34 +301,36 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
       ),
-      body: BlocConsumer<StockItemInBranchBloc, ItemInBranchState>(
-        listener: (context, state) {
-          if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
-            setState(() {
-              _isSelectionMode = true;
-            });
-          } else if (state.selectedItems.isEmpty && _isSelectionMode) {
-            setState(() {
-              _isSelectionMode = false;
-            });
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Search Bar
-                  _buildSearchBar(),
-                  _buildActionButtons(state),
+      body: SafeArea(
+        child: BlocConsumer<StockItemInBranchBloc, ItemInBranchState>(
+          listener: (context, state) {
+            if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
+              setState(() {
+                _isSelectionMode = true;
+              });
+            } else if (state.selectedItems.isEmpty && _isSelectionMode) {
+              setState(() {
+                _isSelectionMode = false;
+              });
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Search Bar
+                    _buildSearchBar(),
+                    _buildActionButtons(state),
 
-                  // Item List
-                  Expanded(child: _buildItemList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+                    // Item List
+                    Expanded(child: _buildItemList(state)),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -454,11 +454,11 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+            const Icon(Icons.error_outline, size: 64, color: Colors.white),
             const SizedBox(height: 16),
             Text(
               state.message ?? 'Failed to load Items',
-              style: const TextStyle(color: Colors.grey),
+              style: const TextStyle(color: Colors.white),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -477,13 +477,13 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Iconsax.box, size: 64, color: Colors.grey),
+            const Icon(Iconsax.box, size: 64, color: Colors.white),
             const SizedBox(height: 16),
             Text(
               state.searchQuery.isEmpty
                   ? 'No items found'
                   : 'No results for "${state.searchQuery}"',
-              style: const TextStyle(color: Colors.grey, fontSize: 16),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
           ],
         ),
@@ -825,7 +825,11 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
           ),
           _buildItemInfoItem(
             'Margin Type : ',
-            item.marginType ?? 'N/A',
+            item.marginType == 'F'
+                ? 'Flat'
+                : item.marginType == 'P'
+                ? 'Percentage'
+                : 'N/A',
             Iconsax.chart,
             screenWidth,
           ),
@@ -854,12 +858,7 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
                   () => _navigateToEditScreen(item),
                   screenWidth,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportItem(item),
-                  screenWidth,
-                ),
+
                 _buildActionButton(
                   Iconsax.trash,
                   'Delete',

@@ -22,9 +22,11 @@ class LotMasterRepository extends BaseRepository {
     required this.systemConstantBloc,
   });
 
-  // Get all lot masters for a company
+  // Get all lot masters for a company with pagination
   Future<List<LotMaster>> getLotMasters(
     int companyId, {
+    int limit = 20,
+    int offset = 0,
     Transaction? txn,
   }) async {
     final db = txn ?? await databaseService.database;
@@ -49,8 +51,9 @@ class LotMasterRepository extends BaseRepository {
       LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.company = ?
       ORDER BY it.item_description, lm.lot_number
+      LIMIT ? OFFSET ?
     ''',
-      [companyId],
+      [companyId, limit, offset],
     );
 
     return lots.map((p) => LotMaster.fromMap(p)).toList();
@@ -270,6 +273,37 @@ class LotMasterRepository extends BaseRepository {
       lot.toMap(),
       where: 'id = ? AND company = ?',
       whereArgs: [lot.id, lot.company],
+    );
+  }
+
+  // Update unit price for all lots matching item and branch
+  Future<int> updateUnitPriceByItemAndBranch({
+    required int itemNumber,
+    required int branch,
+    required double unitPrice,
+    required int companyId,
+  }) async {
+    final db = await databaseService.database;
+    return await db.update(
+      'lot_master',
+      {'unit_price': unitPrice},
+      where: 'item_number = ? AND branch = ? AND company = ?',
+      whereArgs: [itemNumber, branch, companyId],
+    );
+  }
+
+  // Update unit price for all lots of an item (all branches)
+  Future<int> updateUnitPriceByItem({
+    required int itemNumber,
+    required double unitPrice,
+    required int companyId,
+  }) async {
+    final db = await databaseService.database;
+    return await db.update(
+      'lot_master',
+      {'unit_price': unitPrice},
+      where: 'item_number = ? AND company = ?',
+      whereArgs: [itemNumber, companyId],
     );
   }
 
@@ -608,22 +642,22 @@ class LotMasterRepository extends BaseRepository {
           if (days <= 0) {
             // Expired or past effective date
             lotStatus = await udcRepository.getSingleUdcDetailsByCode(
-              'LS',
               'E',
+              'LS',
             );
           } else {
             // Active - preserve existing status unless it's expired
             if (item.lotStatus == null || item.statusCode == 'E') {
               lotStatus = await udcRepository.getSingleUdcDetailsByCode(
-                'LS',
                 'A',
+                'LS',
               );
             } else {
               // Preserve existing status
               if (item.statusCode != null) {
                 lotStatus = await udcRepository.getSingleUdcDetailsByCode(
-                  'LS',
                   item.statusCode!,
+                  'LS',
                 );
               }
             }
@@ -631,7 +665,7 @@ class LotMasterRepository extends BaseRepository {
         } else {
           // For 'R' (Received) type, always set to Active if null
           lotStatus = item.statusCode != null
-              ? await udcRepository.getSingleUdcDetailsByCode('LS', 'A')
+              ? await udcRepository.getSingleUdcDetailsByCode('A', 'LS')
               : null;
         }
       }

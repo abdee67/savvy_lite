@@ -133,16 +133,6 @@ class _InvoiceReviewContent extends StatelessWidget {
       );
     }
 
-    if (effectiveDetails.isEmpty) {
-      return _buildErrorScreen(
-        title: 'No Items in Order',
-        message:
-            'There are no items in the order. Please add items before generating invoice.',
-        icon: Icons.shopping_cart_outlined,
-        context: context,
-      );
-    }
-
     if (state.totalAmount == null || state.totalAmount! <= 0) {
       return _buildErrorScreen(
         title: 'Calculation Required',

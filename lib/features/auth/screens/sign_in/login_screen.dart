@@ -60,6 +60,12 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  void _handleSignUp() {
+    if (mounted) {
+      context.push(AppRoutes.signup);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<AuthBloc, AuthState>(
@@ -230,7 +236,9 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 16),
             _buildForgotPasswordButton(isLoading),
             const SizedBox(height: 32),
-            _buildSignUpButton(isLoading),
+
+            //if there is company in the device dont render sign up button
+            if (!state.hasExistingCompany) _buildSignUpButton(isLoading),
           ],
         ),
       ),
@@ -277,11 +285,7 @@ class _LoginScreenState extends State<LoginScreen> {
       width: double.infinity,
       height: 50,
       child: ElevatedButton(
-        onPressed: isLoading
-            ? null
-            : () {
-                Navigator.pushNamed(context, '/register');
-              },
+        onPressed: isLoading ? null : _handleSignUp,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color.fromARGB(255, 12, 71, 114),
           foregroundColor: Colors.white,

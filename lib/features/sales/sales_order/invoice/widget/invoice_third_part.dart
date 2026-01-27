@@ -146,13 +146,13 @@ class InvoiceThirdPart extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _buildAmountRow('Subtotal', subtotal),
+          _buildAmountRow('ST', subtotal),
           if (hasDiscount)
-            _buildAmountRow('Discount', -discountAmount, isDiscount: true),
-          if (hasWithholding) _buildAmountRow('Withholding', withholdingAmount),
+            _buildAmountRow('Disc', -discountAmount, isDiscount: true),
+          if (hasWithholding) _buildAmountRow('WH', withholdingAmount),
           _buildAmountRow('Tax', taxAmount),
           const Divider(height: 16),
-          _buildAmountRow('TOTAL', totalAmount, isTotal: true),
+          _buildAmountRow('TOT', totalAmount, isTotal: true),
         ],
       ),
     );
@@ -208,7 +208,7 @@ class InvoiceThirdPart extends StatelessWidget {
     final wholeWords = _convertNumberToWords(wholePart);
     final decimalWords = _convertNumberToWords(decimalPart);
 
-    return '${wholeWords.isEmpty ? 'Zero' : wholeWords} Birr${decimalPart > 0 ? ' and $decimalWords Cents' : ''} Only';
+    return '${wholeWords.isEmpty ? 'Zero' : wholeWords} ${decimalPart > 0 ? 'and $decimalWords Cents' : ''} Only';
   }
 
   String _convertNumberToWords(int number) {
@@ -219,7 +219,7 @@ class InvoiceThirdPart extends StatelessWidget {
     final wholeWords = _convertNumberToWordsHelper(wholePart);
     final decimalWords = _convertNumberToWordsHelper(decimalPart);
 
-    return '${wholeWords.isEmpty ? 'Zero' : wholeWords} Birr${decimalPart > 0 ? ' and $decimalWords Cents' : ''}';
+    return '${wholeWords.isEmpty ? 'Zero' : wholeWords} ${decimalPart > 0 ? 'and $decimalWords Cents' : ''}';
   }
 
   String _convertNumberToWordsHelper(int number) {

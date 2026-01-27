@@ -61,7 +61,7 @@ class PrivilegeBloc extends Bloc<PrivilegeEvent, PrivilegeState> {
         'link_lable': event.linkLabel,
         'button_lable': event.buttonLabel,
         'vendor_only': event.vendorOnly ? 'Y' : 'N',
-        'created_by': authBloc.state.userId,
+        'created_by': authBloc.state.userId?.id,
         'date_created': DateTime.now().toIso8601String(),
       });
 

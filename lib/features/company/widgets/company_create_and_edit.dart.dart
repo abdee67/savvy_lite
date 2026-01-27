@@ -45,7 +45,10 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
   late TextEditingController _logoCompanyController;
 
   String? _selectedMarginType;
-  final List<String> _marginTypes = ['%', 'N']; // Flat or Percentage
+  final List<String> _marginTypes = [
+    'Flat',
+    'Percentage',
+  ]; // Flat or Percentage
   String? _logoPath;
 
   @override
@@ -177,7 +180,7 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
         marginRate: _marginRateController.text.isEmpty
             ? null
             : double.parse(_marginRateController.text),
-        marginType: _selectedMarginType,
+        marginType: _selectedMarginType == 'Flat' ? 'F' : 'P',
         country: _countryController.text.isEmpty
             ? null
             : _countryController.text,
@@ -291,37 +294,40 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
             ),
           ],
         ),
-        body: Column(
-          children: [
-            // Progress Indicator
-            Container(
-              padding: const EdgeInsets.all(8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildProgressStep(1, 'Company Info', _currentPage >= 0),
-                  _buildProgressStep(2, 'Contact Info', _currentPage >= 1),
-                  _buildProgressStep(3, 'Location', _currentPage >= 2),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: PageView(
-                  controller: _pageController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  onPageChanged: (page) => setState(() => _currentPage = page),
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Progress Indicator
+              Container(
+                padding: const EdgeInsets.all(8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildCompanyInfoSlide(),
-                    _buildContactInfoSlide(),
-                    _buildLocationSlide(),
+                    _buildProgressStep(1, 'Company Info', _currentPage >= 0),
+                    _buildProgressStep(2, 'Contact Info', _currentPage >= 1),
+                    _buildProgressStep(3, 'Location', _currentPage >= 2),
                   ],
                 ),
               ),
-            ),
-            _buildBottomNavigation(),
-          ],
+              Expanded(
+                child: Form(
+                  key: _formKey,
+                  child: PageView(
+                    controller: _pageController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    onPageChanged: (page) =>
+                        setState(() => _currentPage = page),
+                    children: [
+                      _buildCompanyInfoSlide(),
+                      _buildContactInfoSlide(),
+                      _buildLocationSlide(),
+                    ],
+                  ),
+                ),
+              ),
+              _buildBottomNavigation(),
+            ],
+          ),
         ),
       ),
     );
@@ -398,7 +404,7 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
                 .map(
                   (marginType) => DropdownMenuItem(
                     value: marginType,
-                    child: Text(marginType == '%' ? 'Percentage' : 'Flat'),
+                    child: Text(marginType),
                   ),
                 )
                 .toList(),
@@ -413,7 +419,7 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
           _buildTextField(
             _marginRateController,
             'Margin Rate',
-            _selectedMarginType == '%' ? Icons.percent : Icons.attach_money,
+            _selectedMarginType == 'Flat' ? Icons.attach_money : Icons.percent,
             TextInputType.number,
             false,
           ),

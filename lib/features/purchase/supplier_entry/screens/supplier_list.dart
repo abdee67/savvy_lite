@@ -178,13 +178,11 @@ class _SupplierListPageState extends State<SupplierListPage>
 
   void _callCustomer(String phone) {
     // Implement phone call functionality
-    print('Calling: $phone');
   }
 
   void _emailCustomer(String? email) {
     if (email != null) {
       // Implement email functionality
-      print('Emailing: $email');
     }
   }
 
@@ -238,34 +236,36 @@ class _SupplierListPageState extends State<SupplierListPage>
     return Scaffold(
       backgroundColor: Colors.grey,
       appBar: AppBar(title: const Text('SupplierModel List')),
-      body: BlocConsumer<SupplierBloc, SupplierState>(
-        listener: (context, state) {
-          // Update selection mode based on state
-          if (state.selectedSuppliers.isNotEmpty && !_isSelectionMode) {
-            setState(() {
-              _isSelectionMode = true;
-            });
-          } else if (state.selectedSuppliers.isEmpty && _isSelectionMode) {
-            setState(() {
-              _isSelectionMode = false;
-            });
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Header with Search and Actions
-                  _buildSearchBar(),
-                  _buildActionButtons(state),
-                  // SupplierModel List
-                  Expanded(child: _buildCustomerList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+      body: SafeArea(
+        child: BlocConsumer<SupplierBloc, SupplierState>(
+          listener: (context, state) {
+            // Update selection mode based on state
+            if (state.selectedSuppliers.isNotEmpty && !_isSelectionMode) {
+              setState(() {
+                _isSelectionMode = true;
+              });
+            } else if (state.selectedSuppliers.isEmpty && _isSelectionMode) {
+              setState(() {
+                _isSelectionMode = false;
+              });
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Header with Search and Actions
+                    _buildSearchBar(),
+                    _buildActionButtons(state),
+                    // SupplierModel List
+                    Expanded(child: _buildCustomerList(state)),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -809,12 +809,6 @@ class _SupplierListPageState extends State<SupplierListPage>
                   Iconsax.sms,
                   'Email',
                   () => _emailCustomer(supplier.email?.toString()),
-                  isCompact,
-                ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportCustomer(supplier),
                   isCompact,
                 ),
               ],

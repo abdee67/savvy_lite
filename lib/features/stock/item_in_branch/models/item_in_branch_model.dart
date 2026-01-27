@@ -5,7 +5,7 @@ import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 class ItemInBranchModel {
   final int id;
   final int itemNumber;
-  final ItemEntryModel? item;
+  //final ItemEntryModel? item;
   final int branch;
   final double? unitPrice;
   double? quantityAvailable;
@@ -24,7 +24,7 @@ class ItemInBranchModel {
   ItemInBranchModel({
     required this.id,
     required this.itemNumber,
-    this.item,
+    // this.item,
     required this.branch,
     this.unitPrice,
     this.quantityAvailable,

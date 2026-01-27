@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -144,13 +147,17 @@ class _UserDashboardState extends State<UserDashboard>
 
   void _callUser(String phone) {
     // Implement phone call functionality
-    print('Calling: $phone');
+    if (kDebugMode) {
+      developer.log('Calling: $phone');
+    }
   }
 
   void _emailUser(String? email) {
     if (email != null) {
       // Implement email functionality
-      print('Emailing: $email');
+      if (kDebugMode) {
+        developer.log('Emailing: $email');
+      }
     }
   }
 
@@ -286,33 +293,35 @@ class _UserDashboardState extends State<UserDashboard>
     return Scaffold(
       backgroundColor: Colors.grey,
       appBar: AppBar(title: const Text('User List')),
-      body: BlocConsumer<UserBloc, UserState>(
-        listener: (context, state) {
-          if (state.usersWithRole.isNotEmpty && !_isSelectionMode) {
-            setState(() {
-              _isSelectionMode = true;
-            });
-          } else if (state.usersWithRole.isEmpty && _isSelectionMode) {
-            setState(() {
-              _isSelectionMode = false;
-            });
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Header with Search and Actions
-                  _buildSearchBar(),
-                  _buildActionButtons(state),
-                  // user List
-                  Expanded(child: _buildUserList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+      body: SafeArea(
+        child: BlocConsumer<UserBloc, UserState>(
+          listener: (context, state) {
+            if (state.usersWithRole.isNotEmpty && !_isSelectionMode) {
+              setState(() {
+                _isSelectionMode = true;
+              });
+            } else if (state.usersWithRole.isEmpty && _isSelectionMode) {
+              setState(() {
+                _isSelectionMode = false;
+              });
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Header with Search and Actions
+                    _buildSearchBar(),
+                    _buildActionButtons(state),
+                    // user List
+                    Expanded(child: _buildUserList(state)),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -444,11 +453,11 @@ class _UserDashboardState extends State<UserDashboard>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+            const Icon(Icons.error_outline, size: 64, color: Colors.white),
             const SizedBox(height: 16),
             Text(
               state.message ?? 'Failed to load users',
-              style: const TextStyle(color: Colors.grey),
+              style: const TextStyle(color: Colors.white),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -467,13 +476,13 @@ class _UserDashboardState extends State<UserDashboard>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Iconsax.people, size: 64, color: Colors.grey),
+            const Icon(Iconsax.people, size: 64, color: Colors.white),
             const SizedBox(height: 16),
             Text(
               state.searchQuery.isEmpty
                   ? 'No users found'
                   : 'No results for "${state.searchQuery}"',
-              style: const TextStyle(color: Colors.grey, fontSize: 16),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
           ],
         ),
@@ -796,12 +805,6 @@ class _UserDashboardState extends State<UserDashboard>
                   Iconsax.sms,
                   'Email',
                   () => _emailUser(user.userEmail ?? ''),
-                  isCompact,
-                ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportUser(user),
                   isCompact,
                 ),
               ],

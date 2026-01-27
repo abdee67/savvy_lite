@@ -294,7 +294,7 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Colors.grey,
       appBar: AppBar(
         title: const Text('Credit Sales Order'),
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
@@ -307,47 +307,49 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
           ),
         ],
       ),
-      body: BlocConsumer<SalesOrderHeaderBloc, SalesOrderHeaderState>(
-        listener: (context, state) {
-          if (state.status == SalesOrderHeaderStatus.success) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  state.successmessage ?? 'Operation completed successfully',
+      body: SafeArea(
+        child: BlocConsumer<SalesOrderHeaderBloc, SalesOrderHeaderState>(
+          listener: (context, state) {
+            if (state.status == SalesOrderHeaderStatus.success) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    state.successmessage ?? 'Operation completed successfully',
+                  ),
+                  backgroundColor: Colors.green,
                 ),
-                backgroundColor: Colors.green,
-              ),
+              );
+            }
+
+            if (state.status == SalesOrderHeaderStatus.error) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.error ?? 'An error occurred'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Toolbar
+                    // _buildToolbar(),
+
+                    // Search Bar
+                    _buildSearchBar(),
+                    //  _buildActionButtons(state),
+
+                    // salesOrders List
+                    Expanded(child: _buildsalesOrdersList(state)),
+                  ],
+                ),
+              ],
             );
-          }
-
-          if (state.status == SalesOrderHeaderStatus.error) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.error ?? 'An error occurred'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Toolbar
-                  // _buildToolbar(),
-
-                  // Search Bar
-                  _buildSearchBar(),
-                  //  _buildActionButtons(state),
-
-                  // salesOrders List
-                  Expanded(child: _buildsalesOrdersList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+          },
+        ),
       ),
     );
   }
@@ -560,7 +562,7 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
     return Container(
       width: screenWidth,
       height: screenHeight,
-      decoration: BoxDecoration(color: Colors.grey[100]),
+      decoration: BoxDecoration(color: Colors.grey),
       child: ListView.separated(
         controller: _scrollController,
         padding: const EdgeInsets.all(16),
@@ -706,7 +708,7 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'FS Number - ${salesOrder.fsNumber ?? 'N/A'}',
+                                    'FS - ${salesOrder.fsNumber ?? 'N/A'}',
                                     style: TextStyle(
                                       color: const Color(0xFF373737),
                                       fontSize: isCompact ? 20 : 24,
@@ -902,7 +904,7 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
               'Total Amount : ',
               NumberFormat.currency(
                     decimalDigits: decimalPlace,
-                    symbol: 'Birr',
+                    symbol: 'ETB',
                   ).format(salesOrder.amountTotal!) ??
                   'N/A',
               Iconsax.receipt,
@@ -913,7 +915,7 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
               'Unreceived Amount : ',
               NumberFormat.currency(
                     decimalDigits: decimalPlace,
-                    symbol: 'Birr',
+                    symbol: 'ETB',
                   ).format(salesOrder.amountOpen!) ??
                   'N/A',
               Iconsax.receipt,
@@ -959,7 +961,7 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
               'Withhold Amount : ',
               NumberFormat.currency(
                     decimalDigits: decimalPlace,
-                    symbol: 'Birr ',
+                    symbol: 'ETB ',
                   ).format(salesOrder.withholdAmount!) ??
                   'N/A',
               Iconsax.barcode,
@@ -970,7 +972,7 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
               'Tax : ',
               NumberFormat.currency(
                     decimalDigits: decimalPlace,
-                    symbol: 'Birr ',
+                    symbol: 'ETB ',
                   ).format(salesOrder.tax!) ??
                   'N/A',
               Iconsax.profile_2user,
@@ -981,7 +983,7 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
               'Discount : ',
               NumberFormat.currency(
                     decimalDigits: decimalPlace,
-                    symbol: 'Birr ',
+                    symbol: 'ETB ',
                   ).format(salesOrder.discountAmount!) ??
                   'N/A',
               Iconsax.profile_circle,
@@ -999,7 +1001,7 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
               'Amount Cost : ',
               NumberFormat.currency(
                     decimalDigits: decimalPlace,
-                    symbol: 'Birr ',
+                    symbol: 'ETB ',
                   ).format(salesOrder.amountCost!) ??
                   'N/A',
               Iconsax.dollar_circle,
@@ -1020,13 +1022,6 @@ class _CreditSalesReviewPageState extends State<CreditSalesReviewPage>
                   ), // This would show even more details
                   isCompact,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportToExcel(), // Export this single salesOrder
-                  isCompact,
-                ),
-                _buildActionButton(Iconsax.repeat, 'Print', () {}, isCompact),
               ],
             ),
           ),

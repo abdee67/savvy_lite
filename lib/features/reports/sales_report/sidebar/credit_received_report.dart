@@ -210,45 +210,47 @@ class _CreditReceivedReportState extends State<CreditReceivedReport>
           ),
         ],
       ),
-      body: BlocConsumer<SalesOrderHeaderBloc, SalesOrderHeaderState>(
-        listener: (context, state) {
-          if (state.status ==
-              SalesOrderHeaderStatus.exportCreditReceiptReportSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.successmessage!),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        },
-
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Summary Card
-                  _buildSummaryCard(state),
-
-                  // Active Filters Indicator
-                  if (state.creditReceiptReportFilters.hasFilters)
-                    _buildActiveFiltersIndicator(state),
-
-                  // Lot List
-                  Expanded(child: _buildLotList(state)),
-                ],
-              ),
-              // Loading Overlay
-              if (state.status ==
-                  SalesOrderHeaderStatus.loadingCreditReceiptReport)
-                Container(
-                  color: Colors.black.withOpacity(0.5),
-                  child: const Center(child: CircularProgressIndicator()),
+      body: SafeArea(
+        child: BlocConsumer<SalesOrderHeaderBloc, SalesOrderHeaderState>(
+          listener: (context, state) {
+            if (state.status ==
+                SalesOrderHeaderStatus.exportCreditReceiptReportSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.successmessage!),
+                  backgroundColor: Colors.green,
                 ),
-            ],
-          );
-        },
+              );
+            }
+          },
+
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Summary Card
+                    _buildSummaryCard(state),
+
+                    // Active Filters Indicator
+                    if (state.creditReceiptReportFilters.hasFilters)
+                      _buildActiveFiltersIndicator(state),
+
+                    // Lot List
+                    Expanded(child: _buildLotList(state)),
+                  ],
+                ),
+                // Loading Overlay
+                if (state.status ==
+                    SalesOrderHeaderStatus.loadingCreditReceiptReport)
+                  Container(
+                    color: Colors.black.withOpacity(0.5),
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -280,7 +282,7 @@ class _CreditReceivedReportState extends State<CreditReceivedReport>
                   'Total Receipt Amount',
                   NumberFormat.currency(
                     decimalDigits: decimalPlace,
-                    symbol: 'Birr ',
+                    symbol: 'ETB ',
                   ).format(totalAmount),
                   Iconsax.trontron_trx,
                   Colors.orange,
@@ -733,7 +735,7 @@ class _CreditReceivedReportState extends State<CreditReceivedReport>
             'Remaining Amount: ',
             NumberFormat.currency(
                   decimalDigits: decimalPlace,
-                  symbol: 'Birr ',
+                  symbol: 'ETB ',
                 ).format(item.remainingValues) ??
                 'N/A',
             Iconsax.wallet,

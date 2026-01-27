@@ -1,6 +1,9 @@
 /// features/sales/sales_order_details/repositories/sales_order_details_repository.dart
 library;
 
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -51,9 +54,11 @@ class SalesOrderDetailRepository {
         details.toMap(),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
-      print(
-        '🎯 DEBUG: Inserting detail - Lot: ${details.lotNumber}, Taxable: ${details.taxable}',
-      );
+      if (kDebugMode) {
+        developer.log(
+          '🎯 DEBUG: Inserting detail - Lot: ${details.lotNumber}, Taxable: ${details.taxable}',
+        );
+      }
     }
 
     await batch.commit(noResult: true);
@@ -66,9 +71,11 @@ class SalesOrderDetailRepository {
     final query = '''
       SELECT sod.*, 
              soh.order_type as order_type,
+             it.item_description as item_description,
              soh.customer_bill_to as customer_bill_to
       FROM sales_order_details sod
       LEFT JOIN sales_order_header soh ON sod.sales_order_header_id = soh.id
+      LEFT JOIN items_table it ON sod.items_table_id = it.id
       WHERE sod.id = ?
     ''';
     final maps = await db.rawQuery(query, [id]);
@@ -93,6 +100,7 @@ class SalesOrderDetailRepository {
            lm.quantity_available as lot_quantity_available,
            lm.date_expiration as lot_expiration,
            u.description_1 as unit_of_measure_description,
+           u.detail_code as unit_of_measure_code,
            soh.order_type as order_type,
            soh.customer_bill_to as customer_bill_to
     FROM sales_order_details sod
@@ -454,7 +462,8 @@ class SalesOrderDetailRepository {
            lm.date_expiration as lot_expiration,
            soh.order_type as order_type,
            soh.customer_bill_to as customer_bill_to,
-           u.description_1 as unit_of_measure_description
+           u.description_1 as unit_of_measure_description,
+           u.detail_code as unit_of_measure_code
     FROM sales_order_details sod
     LEFT JOIN items_table it ON sod.items_table_id = it.id
     LEFT JOIN items_in_branch ib ON sod.item_in_branch = ib.id

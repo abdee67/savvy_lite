@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:open_file/open_file.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
@@ -480,7 +482,9 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
           //message: 'Failed to save row: $e',
         ),
       );
-      print('Failed to save row: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save row: $e');
+      }
     }
   }
 
@@ -536,7 +540,9 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
           //message: 'Failed to save in edit: $e',
         ),
       );
-      print('Failed to save in edit: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save in edit: $e');
+      }
     }
   }
 
@@ -992,7 +998,9 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
       }
     } catch (e) {
       // Handle error silently as this is a convenience feature
-      print('Error setting defaults: $e');
+      if (kDebugMode) {
+        developer.log('Error setting defaults: $e');
+      }
     }
   }
 
@@ -1039,7 +1047,9 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
       // The result would be stored in appropriate state or used directly in UI
     } catch (e) {
       // Handle error
-      print('Error getting items for select many: $e');
+      if (kDebugMode) {
+        developer.log('Error getting items for select many: $e');
+      }
     }
   }
 
@@ -1052,7 +1062,9 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
       // This would typically be used for dropdown components
     } catch (e) {
       // Handle error
-      print('Error getting items for select one: $e');
+      if (kDebugMode) {
+        developer.log('Error getting items for select one: $e');
+      }
     }
   }
 
@@ -1067,7 +1079,9 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
       // This would be used for autocomplete or search suggestions
     } catch (e) {
       // Handle error
-      print('Error getting item descriptions: $e');
+      if (kDebugMode) {
+        developer.log('Error getting item descriptions: $e');
+      }
     }
   }
 
@@ -1080,7 +1094,9 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
       // For now, we'll leave it as a placeholder
     } catch (e) {
       // Handle error
-      print('Error getting location categories: $e');
+      if (kDebugMode) {
+        developer.log('Error getting location categories: $e');
+      }
     }
   }
 

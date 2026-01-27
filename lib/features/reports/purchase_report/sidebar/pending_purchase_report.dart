@@ -210,87 +210,93 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
           ),
         ],
       ),
-      body: MultiBlocListener(
-        listeners: [
-          BlocListener<PurchaseOrderBloc, PurchaseOrderState>(
-            listener: (context, state) {
-              if (state.status == PurchaseOrderStatus.error &&
-                  state.error != null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(state.error!),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-              if (state.exportPendingPurchaseMessage != null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(state.exportPendingPurchaseMessage!)),
-                );
-              }
+      body: SafeArea(
+        child: MultiBlocListener(
+          listeners: [
+            BlocListener<PurchaseOrderBloc, PurchaseOrderState>(
+              listener: (context, state) {
+                if (state.status == PurchaseOrderStatus.error &&
+                    state.error != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.error!),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+                if (state.exportPendingPurchaseMessage != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.exportPendingPurchaseMessage!),
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+          child: BlocBuilder<SystemConstantBloc, SystemConstantState>(
+            builder: (context, systemState) {
+              final systemConstant = systemState.systemConstants.isNotEmpty
+                  ? systemState.systemConstants.first
+                  : null;
+
+              return BlocBuilder<PurchaseOrderBloc, PurchaseOrderState>(
+                builder: (context, state) {
+                  return Stack(
+                    children: [
+                      Column(
+                        children: [
+                          // Summary Cards
+                          _buildSummaryCards(state, systemConstant),
+
+                          // Active Filters Indicator
+                          if (state.pendingPurchaseFilters.hasFilters)
+                            _buildActiveFiltersIndicator(state),
+
+                          // List Header
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 8,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Total Items: ${state.pendingPurchaseTotalCount}',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors
+                                        .white, // Changed to white as per bg
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Transaction List
+                          Expanded(
+                            child: _buildTransactionList(state, systemConstant),
+                          ),
+                        ],
+                      ),
+
+                      // Loading Overlay
+                      if (state.status ==
+                          PurchaseOrderStatus.loadingPendingPurchaseReport)
+                        Container(
+                          color: Colors.black.withOpacity(0.5),
+                          child: const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              );
             },
           ),
-        ],
-        child: BlocBuilder<SystemConstantBloc, SystemConstantState>(
-          builder: (context, systemState) {
-            final systemConstant = systemState.systemConstants.isNotEmpty
-                ? systemState.systemConstants.first
-                : null;
-
-            return BlocBuilder<PurchaseOrderBloc, PurchaseOrderState>(
-              builder: (context, state) {
-                return Stack(
-                  children: [
-                    Column(
-                      children: [
-                        // Summary Cards
-                        _buildSummaryCards(state, systemConstant),
-
-                        // Active Filters Indicator
-                        if (state.pendingPurchaseFilters.hasFilters)
-                          _buildActiveFiltersIndicator(state),
-
-                        // List Header
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 8,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Total Items: ${state.pendingPurchaseTotalCount}',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Colors
-                                      .white, // Changed to white as per bg
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Transaction List
-                        Expanded(
-                          child: _buildTransactionList(state, systemConstant),
-                        ),
-                      ],
-                    ),
-
-                    // Loading Overlay
-                    if (state.status ==
-                        PurchaseOrderStatus.loadingPendingPurchaseReport)
-                      Container(
-                        color: Colors.black.withOpacity(0.5),
-                        child: const Center(child: CircularProgressIndicator()),
-                      ),
-                  ],
-                );
-              },
-            );
-          },
         ),
       ),
     );

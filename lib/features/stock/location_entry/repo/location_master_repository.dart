@@ -194,8 +194,8 @@ class LocationMasterRepository {
       SELECT ib.*,
              it.item_description,
              it.items_id,
-             uom.detail_code as uom_code,
-             uom.description_1 as uom_name
+             uom.detail_code as unit_of_measure_code,
+             uom.description_1 as unit_of_measure_description
       FROM items_in_branch ib
       LEFT JOIN items_table it ON ib.item_number = it.id
       LEFT JOIN udc_details uom ON ib.unit_of_measure = uom.id
@@ -220,8 +220,8 @@ class LocationMasterRepository {
       SELECT ib.*,
              it.item_description,
              it.items_id,
-             uom.detail_code as uom_code,
-             uom.description_1 as uom_name,
+             uom.detail_code as unit_of_measure_code,
+             uom.description_1 as unit_of_measure_description,
              il.quantity_on_hand
       FROM item_location il
       JOIN items_in_branch ib ON il.item_number = ib.item_number AND il.branch = ib.branch

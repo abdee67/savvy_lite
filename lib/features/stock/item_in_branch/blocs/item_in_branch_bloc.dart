@@ -1,7 +1,9 @@
 // features/stock/item_in_branch/blocs/item_in_branch_bloc.dart
 
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -415,7 +417,9 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
           //message: 'Failed to save row: $e',
         ),
       );
-      print('Failed to save row: $e');
+      if (kDebugMode) {
+        developer.log('Failed to save row: $e');
+      }
     }
   }
 
@@ -737,11 +741,13 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     } catch (e) {
       // Fallback to local search if repository search fails
       final filtered = state.items.where((item) {
-        return item.item?.itemDescription?.toLowerCase().contains(
+        return item.itemRef?.itemDescription?.toLowerCase().contains(
                   query.toLowerCase(),
                 ) ==
                 true ||
-            item.item?.barcode!.toLowerCase().contains(query.toLowerCase()) ==
+            item.itemRef?.barcode!.toLowerCase().contains(
+                  query.toLowerCase(),
+                ) ==
                 true ||
             item.branchRef?.description?.toLowerCase().contains(
                   query.toLowerCase(),
@@ -1345,7 +1351,9 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     // - excel: ^2.0.0-null-safety-3
     // - csv: ^5.0.0
     await Future.delayed(const Duration(seconds: 1));
-    print('Exporting ${data.length} rows to Excel');
+    if (kDebugMode) {
+      developer.log('Exporting ${data.length} rows to Excel');
+    }
   }
 
   Future<void> _simulatePDFExport(List<ItemInBranchModel> items) async {
@@ -1353,7 +1361,9 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     // - pdf: ^3.10.6
     // - printing: ^5.11.2
     await Future.delayed(const Duration(seconds: 2));
-    print('Generating PDF for ${items.length} Items');
+    if (kDebugMode) {
+      developer.log('Generating PDF for ${items.length} Items');
+    }
   }
 
   // Public methods for pagination
@@ -1478,9 +1488,11 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
   // Send notification (placeholder implementation)
   void sendNotification(ItemInBranchModel itemBranch) {
     // Implement notification logic here
-    print(
-      'Notification: Item branch ${itemBranch.id} updated with new unit price',
-    );
+    if (kDebugMode) {
+      developer.log(
+        'Notification: Item branch ${itemBranch.id} updated with new unit price',
+      );
+    }
 
     // In a real app, you might want to:
     // - Show a snackbar
