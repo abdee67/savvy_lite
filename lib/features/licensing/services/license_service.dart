@@ -188,14 +188,18 @@ class LicenseService {
     try {
       final licenseKey = await _secureStorage.read(key: _licenseStorageKey);
       if (licenseKey == null || licenseKey.isEmpty) {
+        // Check for Free Trial
+        final trialActive = await _secureStorage.read(key: 'trial_active');
+        if (trialActive == 'true') {
+          return await _validateTrial();
+        }
         return LicenseValidationResult.invalid('No license found');
       }
 
       return await validateLicense(licenseKey);
     } catch (e) {
-      return LicenseValidationResult.invalid(
-        'Failed to load license: ${e.toString()}',
-      );
+      developer.log('Failed to load license: ${e.toString()}');
+      return LicenseValidationResult.invalid('Failed to load license}');
     }
   }
 
@@ -215,11 +219,9 @@ class LicenseService {
   /// Check if license is about to expire (within 15 days)
   Future<bool> isLicenseAboutToExpire() async {
     try {
-      final payloadJson = await _secureStorage.read(key: _licensePayloadKey);
-      if (payloadJson == null) return false;
+      final payload = await getLicensePayload();
+      if (payload == null) return false;
 
-      final payloadMap = json.decode(payloadJson);
-      final payload = LicensePayload.fromJson(payloadMap);
       final now = await _getCurrentTime();
       final daysRemaining = payload.validTo.toUtc().difference(now).inDays;
 
@@ -232,11 +234,9 @@ class LicenseService {
   /// Get days remaining for license
   Future<int> getDaysRemaining() async {
     try {
-      final payloadJson = await _secureStorage.read(key: _licensePayloadKey);
-      if (payloadJson == null) return 0;
+      final payload = await getLicensePayload();
+      if (payload == null) return 0;
 
-      final payloadMap = json.decode(payloadJson);
-      final payload = LicensePayload.fromJson(payloadMap);
       final now = await _getCurrentTime();
       final daysRemaining = payload.validTo.toUtc().difference(now).inDays;
 
@@ -249,11 +249,43 @@ class LicenseService {
   /// Get license payload from storage
   Future<LicensePayload?> getLicensePayload() async {
     try {
+      // 1. Try to load paid license payload
       final payloadJson = await _secureStorage.read(key: _licensePayloadKey);
-      if (payloadJson == null) return null;
+      if (payloadJson != null) {
+        final payloadMap = json.decode(payloadJson);
+        return LicensePayload.fromJson(payloadMap);
+      }
 
-      final payloadMap = json.decode(payloadJson);
-      return LicensePayload.fromJson(payloadMap);
+      // 2. Fallback to Trial Payload if active
+      final trialActive = await _secureStorage.read(key: 'trial_active');
+      if (trialActive == 'true') {
+        final startDateStr = await _secureStorage.read(key: 'trial_start_date');
+        final daysStr = await _secureStorage.read(key: 'trial_days');
+
+        if (startDateStr != null) {
+          final startDate = DateTime.parse(startDateStr);
+          final durationDays = int.tryParse(daysStr ?? '5') ?? 5;
+          final validTo = startDate.add(Duration(days: durationDays));
+
+          final machineId = await generateMachineId();
+          final usersStr = await _secureStorage.read(key: 'trial_users');
+          final branchesStr = await _secureStorage.read(key: 'trial_branches');
+
+          return LicensePayload(
+            licenseId: 'TRIAL',
+            issuedTo: 'Trial User',
+            machineId: machineId,
+            issueDate: startDateStr,
+            validFrom: startDate,
+            validTo: validTo,
+            userLimit: int.tryParse(usersStr ?? '3') ?? 3,
+            branchLimit: int.tryParse(branchesStr ?? '2') ?? 2,
+            features: 'TRIAL',
+          );
+        }
+      }
+
+      return null;
     } catch (e) {
       return null;
     }
@@ -287,18 +319,20 @@ class LicenseService {
       final publicKeyInfo = cert.tbsCertificate.subjectPublicKeyInfo;
 
       if (publicKeyInfo.algorithm.algorithm.name != 'rsaEncryption') {
-        throw Exception(
+        developer.log(
           'Unsupported public key algorithm: ${publicKeyInfo.algorithm.algorithm.name}',
         );
+        throw Exception('Unsupported public key algorithm');
       }
 
       // The subjectPublicKey is already parsed by x509_plus
       final subjectPublicKey = publicKeyInfo.subjectPublicKey;
 
       if (subjectPublicKey is! x509.RsaPublicKey) {
-        throw Exception(
-          'Expected RSA public key, but got ${subjectPublicKey.runtimeType}',
+        developer.log(
+          'Expected RSA public key, but got different ${subjectPublicKey.runtimeType}',
         );
+        throw Exception('Expected RSA public key, but got different');
       }
 
       // x509.RsaPublicKey provides modulus and exponent directly
@@ -382,5 +416,47 @@ class LicenseService {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final randomPart = random.nextInt(1000000);
     return 'fallback_${timestamp}_$randomPart';
+  }
+
+  Future<LicenseValidationResult> _validateTrial() async {
+    try {
+      final startDateStr = await _secureStorage.read(key: 'trial_start_date');
+      final daysStr = await _secureStorage.read(key: 'trial_days');
+      if (startDateStr == null) {
+        return LicenseValidationResult.invalid('Invalid trial data');
+      }
+
+      final startDate = DateTime.parse(startDateStr);
+      final durationDays = int.tryParse(daysStr ?? '5') ?? 5;
+      final now = await _getCurrentTime();
+      final validTo = startDate.add(Duration(days: durationDays));
+
+      if (now.isAfter(validTo)) {
+        return LicenseValidationResult.invalid('Free trial expired');
+      }
+
+      final daysRemaining = validTo.difference(now).inDays;
+
+      // Create synthetic payload for trial
+      final machineId = await generateMachineId();
+      final usersStr = await _secureStorage.read(key: 'trial_users');
+      final branchesStr = await _secureStorage.read(key: 'trial_branches');
+
+      final payload = LicensePayload(
+        licenseId: 'TRIAL',
+        issuedTo: 'Trial User',
+        machineId: machineId,
+        issueDate: startDateStr,
+        validFrom: startDate,
+        validTo: validTo,
+        userLimit: int.tryParse(usersStr ?? '3') ?? 3,
+        branchLimit: int.tryParse(branchesStr ?? '2') ?? 2,
+        features: 'TRIAL',
+      );
+
+      return LicenseValidationResult.valid(payload, daysRemaining);
+    } catch (e) {
+      return LicenseValidationResult.invalid('Trial validation error: $e');
+    }
   }
 }

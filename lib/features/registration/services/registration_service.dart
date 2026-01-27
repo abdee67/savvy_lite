@@ -330,11 +330,11 @@ class RegistrationService {
     // If no subscription exists, create a default free trial
     final defaultId = await db.insert('subscription_management', {
       'name': 'Free Trial',
-      'description': '7-day free trial with 1 branch and 5 users',
-      'initial_subscription_branches': 1,
-      'initial_subscription_users': 5,
+      'description': 'Free trial with 2 branches and 3 users',
+      'initial_subscription_branches': 2,
+      'initial_subscription_users': 3,
       'initial_payment': 0.0,
-      'initial_subscription_days': 7,
+      'initial_subscription_days': 5,
       'status': 'active',
     });
 

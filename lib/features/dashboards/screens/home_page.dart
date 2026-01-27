@@ -12,6 +12,8 @@ import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.d
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_event.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
+import 'package:savvy_stock/features/licensing/bloc/license_bloc.dart';
+import 'package:savvy_stock/features/licensing/bloc/license_state.dart';
 import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
 
 class HomePage extends StatefulWidget {
@@ -260,6 +262,54 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ],
                 ),
+              ),
+              // Trial Counter
+              BlocBuilder<LicenseBloc, LicenseState>(
+                builder: (context, state) {
+                  if (state.licensePayload?.licenseId == 'TRIAL') {
+                    // Ensure daysRemaining is never negative
+                    final days = state.daysRemaining < 0
+                        ? 0
+                        : state.daysRemaining;
+                    return Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: state.daysRemaining < 2
+                            ? Colors.red
+                            : Colors.green,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.amber),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Free Trial Ends in ',
+                            style: const TextStyle(
+                              color: Colors.amber,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$days Days',
+                            style: const TextStyle(
+                              color: Colors.amber,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
               ),
               PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert, color: Colors.white),

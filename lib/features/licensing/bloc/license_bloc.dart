@@ -41,9 +41,9 @@ class LicenseBloc extends Bloc<LicenseEvent, LicenseState> {
       final result = await licenseService.loadAndValidateLicense();
 
       if (result.isValid) {
-        final payload = await licenseService.getLicensePayload();
-        final daysRemaining = await licenseService.getDaysRemaining();
-        final isAboutToExpire = await licenseService.isLicenseAboutToExpire();
+        final payload = result.payload;
+        final daysRemaining = result.daysRemaining;
+        final isAboutToExpire = daysRemaining >= 0 && daysRemaining <= 15;
 
         emit(
           state.copyWith(

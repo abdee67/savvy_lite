@@ -110,12 +110,6 @@ class _BranchFormPageState extends State<BranchFormPage> {
         country: 'Ethiopia',
         company: widget.authBloc.state.companyId,
       );
-
-      if (widget.branch == null) {
-        context.read<BranchBloc>().add(CreateBranch(branch));
-      } else {
-        context.read<BranchBloc>().add(UpdateBranch(branch));
-      }
       //if there is an error creating or updating
       final state = context.read<BranchBloc>().state;
       if (state.status == BranchStatus.failure) {
@@ -126,6 +120,12 @@ class _BranchFormPageState extends State<BranchFormPage> {
           ),
         );
         return;
+      }
+
+      if (widget.branch == null) {
+        context.read<BranchBloc>().add(CreateBranch(branch));
+      } else {
+        context.read<BranchBloc>().add(UpdateBranch(branch));
       }
       _showSuccessDialog();
     }

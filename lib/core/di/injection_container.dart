@@ -561,7 +561,8 @@ void initDependencies() {
     () => FSNMRBloc(authBloc: getIt(), repository: getIt()),
   );
   getIt.registerLazySingleton<RegistrationBloc>(
-    () => RegistrationBloc(registrationService: getIt()),
+    () =>
+        RegistrationBloc(registrationService: getIt(), secureStorage: getIt()),
   );
   getIt.registerLazySingleton<LicenseBloc>(
     () => LicenseBloc(licenseService: getIt()),

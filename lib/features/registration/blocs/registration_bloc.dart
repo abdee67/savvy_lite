@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
 import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/auth/model/subscription_management_model.dart';
@@ -11,15 +12,21 @@ import 'package:savvy_stock/features/company/models/company_model.dart';
 import 'package:savvy_stock/features/registration/model/signup_data_model.dart';
 import 'package:savvy_stock/features/registration/services/registration_service.dart';
 
+// Import secure storage
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 part 'registration_event.dart';
 part 'registration_state.dart';
 
 /// BLoC for handling user registration
 class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
   final RegistrationService registrationService;
+  final FlutterSecureStorage secureStorage;
 
-  RegistrationBloc({required this.registrationService})
-    : super(RegistrationState.initial()) {
+  RegistrationBloc({
+    required this.registrationService,
+    required this.secureStorage,
+  }) : super(RegistrationState.initial()) {
     on<InitializeRegistration>(_onInitializeRegistration);
     on<UpdateCompanyData>(_onUpdateCompanyData);
     on<UpdateBranchData>(_onUpdateBranchData);
@@ -263,6 +270,32 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
           ),
         );
         developer.log('Registration successful: User ID ${result.userId}');
+
+        // Start Free Trial
+        await secureStorage.write(key: 'trial_active', value: 'true');
+        await secureStorage.write(
+          key: 'trial_start_date',
+          value: DateTime.now().toIso8601String(),
+        );
+        // We use the configured settings for the trial limits
+        await secureStorage.write(
+          key: 'trial_users',
+          value: (state.subscriptionSettings?.initialSubscriptionUsers ?? 3)
+              .toString(),
+        );
+        await secureStorage.write(
+          key: 'trial_branches',
+          value: (state.subscriptionSettings?.initialSubscriptionBranches ?? 2)
+              .toString(),
+        );
+        await secureStorage.write(
+          key: 'trial_days',
+          value: (state.subscriptionSettings?.initialSubscriptionDays ?? 5)
+              .toString(),
+        );
+        if (kDebugMode) {
+          developer.log('Registration successful: User ID ${result.userId}');
+        }
       } else {
         emit(
           state.copyWith(
@@ -270,7 +303,9 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
             message: result.message,
           ),
         );
-        developer.log('Registration failed: ${result.message}');
+        if (kDebugMode) {
+          developer.log('Registration failed: ${result.message}');
+        }
       }
     } catch (e) {
       emit(
@@ -279,7 +314,9 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
           message: 'Registration failed: ${e.toString()}',
         ),
       );
-      developer.log('Registration error: $e');
+      if (kDebugMode) {
+        developer.log('Registration error: $e');
+      }
     }
   }
 
