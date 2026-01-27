@@ -174,7 +174,7 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
               // 🔹 Scrollable Form
               SingleChildScrollView(
                 padding: EdgeInsets.symmetric(
-                  horizontal: isTablet ? 80 : 20,
+                  horizontal: isTablet ? 30 : 18,
                   vertical: isTablet ? 100 : 40,
                 ),
                 child: Column(
