@@ -522,7 +522,7 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
     final expandedHeight = isCompact
         ? screenHeight * 0.55
         : screenHeight * 0.45;
-    final collapsedWidth = isCompact ? screenWidth * 0.92 : screenWidth * 0.8;
+    final collapsedWidth = screenWidth * 1;
 
     return GestureDetector(
       onDoubleTap: () => _showPurchaseOrderDetail(purchaseOrder),

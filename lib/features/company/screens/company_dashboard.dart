@@ -430,11 +430,11 @@ class _CompanyDashboardState extends State<CompanyDashboard>
 
     // For responsiveness:
     final collapsedHeight = isCompact
-        ? screenHeight * 0.20
+        ? screenHeight * 0.22
         : screenHeight * 0.14;
 
     final expandedHeight = isCompact ? screenHeight * 0.55 : screenHeight * 0.5;
-    final collapsedWidth = isCompact ? screenWidth * 0.92 : screenWidth * 0.8;
+    final collapsedWidth = screenWidth * 1;
 
     return GestureDetector(
       onTap: () {

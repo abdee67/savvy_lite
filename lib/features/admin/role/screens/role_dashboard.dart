@@ -468,13 +468,13 @@ class _RoleDashboardState extends State<RoleDashboard>
     // For responsiveness:
     final collapsedHeight = isCompact
         ? screenHeight *
-              0.18 // phones
+              0.2 // phones
         : screenHeight * 0.14; // tablets / wide screens
 
     final expandedHeight = isCompact
         ? screenHeight * 0.45
         : screenHeight * 0.35;
-    final collapsedWidth = isCompact ? screenWidth * 0.92 : screenWidth * 0.8;
+    final collapsedWidth = screenWidth * 1;
 
     return GestureDetector(
       onTap: () {
