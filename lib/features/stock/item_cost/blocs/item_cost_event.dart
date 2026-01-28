@@ -102,6 +102,13 @@ class UpdateItemCosts extends ItemCostEvent {
   UpdateItemCosts(this.purchaseOrderHeader);
 }
 
+/// Event to update all item costs by adding overhead cost per unit
+/// Used by OtherExpensesBloc to distribute monthly expenses to item costs
+class UpdateItemCostsByOverhead extends ItemCostEvent {
+  final double overheadCostPerUnit;
+  UpdateItemCostsByOverhead(this.overheadCostPerUnit);
+}
+
 /*class UpdateItemCostsForItemMaster extends ItemCostEvent {
   final ItemMaster itemMaster;
   final ItemEntryModel item;

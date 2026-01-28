@@ -9,6 +9,7 @@ class AppRoutes {
   static const String licenseDetails = '/license-details';
   static const String licenseActivation = '/license-activation';
   static const String systemConstants = '/system-constants';
+  static const String otherExpenses = '/other-expenses';
 
   static const String fsnmr = '/fsnmr';
   static const String fsnmrDashboard = '$fsnmr/dashboard';

@@ -355,6 +355,7 @@ CREATE INDEX idx_items_in_branch_uom ON items_in_branch(unit_of_measure);
       CREATE TABLE system_constant (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         apply_lot_mgm TEXT,
+        apply_overhead_cost TEXT,
         apply_location_mgm TEXT,
         interface_customer TEXT,
         interface_employee TEXT,
@@ -1573,6 +1574,7 @@ ON fs_table (branch);
 
       await db.insert('system_constant', {
         'apply_lot_mgm': 'Y',
+        'apply_overhead_cost': 'N',
         'apply_location_mgm': 'Y',
         'decimal_places': 2,
         'generate_barcode_for_item': 'N',
@@ -2646,6 +2648,7 @@ void testDatabase() async {
   // Example: Insert a test system constant
   final testSystemConstant = {
     'apply_lot_mgm': 'N',
+    'apply_overhead_cost': 'N',
     'apply_location_mgm': 'Y',
     'decimal_places': 2,
     'generate_barcode_for_item': 'N',

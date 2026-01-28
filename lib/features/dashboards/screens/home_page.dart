@@ -320,6 +320,8 @@ class _HomePageState extends State<HomePage> {
                     context.push(AppRoutes.fsnmrManagement);
                   } else if (value == 'License Detail') {
                     context.push(AppRoutes.licenseDetails);
+                  } else if (value == 'Other Expenses') {
+                    context.push(AppRoutes.otherExpenses);
                   } else if (value == 'Logout') {
                     context.read<AuthBloc>().add(LogoutRequested(context));
                   }
@@ -337,7 +339,10 @@ class _HomePageState extends State<HomePage> {
                     value: 'License Detail',
                     child: Text('License Detail'),
                   ),
-
+                  const PopupMenuItem<String>(
+                    value: 'Other Expenses',
+                    child: Text('Other Expenses'),
+                  ),
                   const PopupMenuItem<String>(
                     value: 'Logout',
                     child: Text('Logout'),

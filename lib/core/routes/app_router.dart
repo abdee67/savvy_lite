@@ -23,6 +23,7 @@ import 'package:savvy_stock/features/admin/users/widgets/user_creat_edit.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
 import 'package:savvy_stock/features/auth/screens/sign_in/login_screen.dart';
+import 'package:savvy_stock/features/purchase/other_expenses/screens/other_expenses_dashboard.dart';
 import 'package:savvy_stock/features/registration/screens/free_trial_page.dart';
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 import 'package:savvy_stock/features/branch_list/screens/branch_list_dashboard.dart';
@@ -159,6 +160,11 @@ class AppRouter {
         path: AppRoutes.licenseDetails,
         builder: (context, state) => const LicenseDetailsPage(),
       ),
+      GoRoute(
+        path: AppRoutes.otherExpenses,
+        builder: (context, state) => OtherExpensesDashboard(authBloc: authBloc),
+      ),
+
       GoRoute(
         path: AppRoutes.licenseActivation,
         builder: (context, state) => const LicenseActivationPage(),

@@ -12,6 +12,7 @@ import 'package:savvy_stock/features/FSNMR/blocs/FSNMR_bloc.dart';
 import 'package:savvy_stock/features/company/blocs/company_bloc.dart';
 import 'package:savvy_stock/features/licensing/bloc/license_bloc.dart';
 import 'package:savvy_stock/features/licensing/services/license_service.dart';
+import 'package:savvy_stock/features/purchase/other_expenses/bloc/other_expenses_bloc.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
 
 import 'package:savvy_stock/features/purchase/supplier_entry/blocs/supplier_bloc.dart';
@@ -99,7 +100,7 @@ Future<void> _initializeAndRunApp() async {
       developer.log('💾 Using local database only');
     }
     if (kDebugMode) {
-      //await LocalDatabaseService().resetDatabase();
+      // await LocalDatabaseService().resetDatabase();
       //await getIt<LicenseService>().clearLicense();
       // await LocalDatabaseService().debugTable('branch_table');
       // await LocalDatabaseService().debugTable('items_in_branch');
@@ -374,6 +375,9 @@ class _SavvyStockState extends State<SavvyStock> {
             create: (context) => getIt<RegistrationBloc>(),
           ),
           BlocProvider<LicenseBloc>(create: (context) => getIt<LicenseBloc>()),
+          BlocProvider<OtherExpensesBloc>(
+            create: (context) => getIt<OtherExpensesBloc>(),
+          ),
         ],
         child: MaterialApp.router(
           debugShowCheckedModeBanner: false,
