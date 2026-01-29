@@ -194,8 +194,9 @@ class LotMasterRepository extends BaseRepository {
     required int itemNumber,
     int? location,
     required int branch,
+    Transaction? txn,
   }) async {
-    final db = await databaseService.database;
+    final db = txn ?? await databaseService.database;
     final lots = await db.rawQuery(
       '''
       SELECT lm.*,

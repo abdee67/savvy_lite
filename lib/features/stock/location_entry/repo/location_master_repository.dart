@@ -55,8 +55,12 @@ class LocationMasterRepository {
   }
 
   /// Get a single location master by ID
-  Future<LocationMaster?> getLocationMasterById(int id, int companyId) async {
-    final db = await databaseService.database;
+  Future<LocationMaster?> getLocationMasterById(
+    int id,
+    int companyId, {
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
     final locations = await db.rawQuery(
       '''
       SELECT lm.*,

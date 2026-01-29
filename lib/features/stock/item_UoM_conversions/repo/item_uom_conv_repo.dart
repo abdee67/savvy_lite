@@ -291,8 +291,9 @@ class ItemUomConversionsRepository {
     int fromUomId,
     int toUomId,
     int companyId,
+    Transaction? txn,
   ) async {
-    final db = await databaseService.database;
+    final db = txn ?? await databaseService.database;
     final result = await db.rawQuery(
       '''
       SELECT conversion_factor 
@@ -424,12 +425,17 @@ class ItemUomConversionsRepository {
           if (kDebugMode) {
             developer.log('  → fromUom is primary, calling fromPrimaryToOther');
           }
-          return await fromPrimaryToOther(itemId, toUomId, companyId);
+          return await fromPrimaryToOther(itemId, toUomId, companyId, txn: txn);
         } else if (primaryUomId == toUomId) {
           if (kDebugMode) {
             developer.log('  → toUom is primary, calling fromOtherToPrimary');
           }
-          return await fromOtherToPrimary(itemId, fromUomId, companyId);
+          return await fromOtherToPrimary(
+            itemId,
+            fromUomId,
+            companyId,
+            txn: txn,
+          );
         }
       }
 
@@ -453,7 +459,13 @@ class ItemUomConversionsRepository {
 
       if (strFrom != null && strTo != null) {
         // Use structured conversion like Java
-        return await _structuredConversion(itemId, strFrom, strTo, companyId);
+        return await _structuredConversion(
+          itemId,
+          strFrom,
+          strTo,
+          companyId,
+          txn: txn,
+        );
       }
 
       // Fallback to unstructured conversion
@@ -465,6 +477,7 @@ class ItemUomConversionsRepository {
         fromUomId,
         toUomId,
         companyId,
+        txn,
       );
     } catch (e) {
       if (kDebugMode) {
@@ -477,9 +490,15 @@ class ItemUomConversionsRepository {
   Future<double> fromPrimaryToOther(
     int itemId,
     int toUomId,
-    int companyId,
-  ) async {
-    final factor = await fromOtherToPrimary(itemId, toUomId, companyId);
+    int companyId, {
+    Transaction? txn,
+  }) async {
+    final factor = await fromOtherToPrimary(
+      itemId,
+      toUomId,
+      companyId,
+      txn: txn,
+    );
     return factor != 0.0 ? 1.0 / factor : 1.0;
   }
 
@@ -597,9 +616,10 @@ class ItemUomConversionsRepository {
     int itemId,
     int fromLevel,
     int toLevel,
-    int companyId,
-  ) async {
-    final db = await databaseService.database;
+    int companyId, {
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
 
     // Determine the conversion direction and levels
     final isAscending = fromLevel <= toLevel;
