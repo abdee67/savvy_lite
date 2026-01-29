@@ -501,7 +501,7 @@ class _CustomerListPageState extends State<CustomerListPage>
                   child: Container(
                     alignment: Alignment.centerRight,
                     margin: const EdgeInsets.only(
-                      bottom: 12,
+                      bottom: 2,
                     ), // Same margin as card
                     decoration: BoxDecoration(
                       color: Colors.amber,
@@ -525,7 +525,7 @@ class _CustomerListPageState extends State<CustomerListPage>
                     decoration: BoxDecoration(
                       // If expanded, the base becomes yellow. If collapsed, white.
                       color: isExpanded
-                          ? const Color(0xFFFDD105)
+                          ? Colors.amber
                           : (isSelected ? Colors.blue[50] : Colors.white),
                       borderRadius: BorderRadius.circular(30),
                       boxShadow: [
