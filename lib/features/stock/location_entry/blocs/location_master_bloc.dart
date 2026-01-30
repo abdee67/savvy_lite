@@ -86,7 +86,8 @@ class LocationMasterBloc
         state.copyWith(
           status: LocationMasterStatus.loaded,
           items: location,
-          filteredItems: location,
+          locations: location,
+          filteredLocations: location,
           companyId: authBloc.state.companyId,
           message: location.isEmpty ? 'No locations found' : null,
         ),
@@ -366,7 +367,7 @@ class LocationMasterBloc
       emit(
         state.copyWith(
           status: LocationMasterStatus.loaded,
-          filteredItems: locations,
+          locations: locations,
           items: locations,
           message: locations.isEmpty
               ? 'No locations found for this branch'
@@ -400,7 +401,7 @@ class LocationMasterBloc
       emit(
         state.copyWith(
           status: LocationMasterStatus.loaded,
-          filteredItems: locations,
+          locations: locations,
           items: locations,
           message: locations.isEmpty
               ? 'No locations found for this branch'
@@ -555,16 +556,12 @@ class LocationMasterBloc
     SearchLocations event,
     Emitter<LocationMasterState> emit,
   ) async {
-    final results = await locationMasterRepository.searchLocations(
-      event.query,
-      authBloc.state.companyId!,
-    );
+    final query = event.query.toLowerCase();
 
-    if (event.query.isEmpty) {
+    if (query.isEmpty) {
       emit(
         state.copyWith(
-          filteredLocations: results,
-          selectedLocations: [],
+          filteredLocations: state.locations,
           searchQuery: event.query,
           status: LocationMasterStatus.success,
         ),
@@ -572,20 +569,23 @@ class LocationMasterBloc
       return;
     }
 
+    final filtered = state.locations.where((location) {
+      final description = (location.locationDescription ?? '').toLowerCase();
+      final branch = (location.branchName ?? '').toLowerCase();
+      final code01 = (location.code01 ?? '').toLowerCase();
+      final code02 = (location.code02 ?? '').toLowerCase();
+      final code03 = (location.code03 ?? '').toLowerCase();
+
+      return description.contains(query) ||
+          branch.contains(query) ||
+          code01.contains(query) ||
+          code02.contains(query) ||
+          code03.contains(query);
+    }).toList();
+
     emit(
       state.copyWith(
-        filteredLocations: state.locations.where((location) {
-          return location.locationDescription?.toLowerCase().contains(
-                    event.query,
-                  ) ==
-                  true ||
-              location.branchName?.toLowerCase().contains(event.query) ==
-                  true ||
-              location.code01?.toLowerCase().contains(event.query) == true ||
-              location.code02?.toLowerCase().contains(event.query) == true ||
-              location.code03?.toLowerCase().contains(event.query) == true;
-        }).toList(),
-        selectedLocations: [],
+        filteredLocations: filtered,
         searchQuery: event.query,
         status: LocationMasterStatus.success,
       ),
