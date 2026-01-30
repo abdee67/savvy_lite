@@ -267,42 +267,76 @@ class _HomePageState extends State<HomePage> {
               BlocBuilder<LicenseBloc, LicenseState>(
                 builder: (context, state) {
                   if (state.licensePayload?.licenseId == 'TRIAL') {
-                    // Ensure daysRemaining is never negative
                     final days = state.daysRemaining < 0
                         ? 0
                         : state.daysRemaining;
-                    return Container(
+                    final isLow = state.daysRemaining <= 2;
+
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 500),
                       margin: const EdgeInsets.only(right: 8),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
+                        horizontal: 12,
+                        vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: state.daysRemaining < 2
-                            ? Colors.red
-                            : Colors.green,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.amber),
+                        gradient: LinearGradient(
+                          colors: isLow
+                              ? [Colors.red.shade900, Colors.red.shade700]
+                              : [
+                                  const Color(0xFF1C4292),
+                                  const Color(0xFF0D2A6B),
+                                ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isLow ? Colors.redAccent : Colors.white24,
+                          width: 1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: isLow
+                                ? Colors.red.withOpacity(0.3)
+                                : Colors.black.withOpacity(0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                      child: Column(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            'Free Trial Ends in ',
-                            style: const TextStyle(
-                              color: Colors.amber,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
+                          Icon(
+                            isLow ? Iconsax.timer_1 : Iconsax.clock,
+                            color: Colors.amber,
+                            size: 20,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '$days Days',
-                            style: const TextStyle(
-                              color: Colors.amber,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
+                          const SizedBox(width: 8),
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Free Trial',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.9),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              Text(
+                                '$days Days Left',
+                                style: const TextStyle(
+                                  color: Colors.amber,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 13,
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
