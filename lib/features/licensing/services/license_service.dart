@@ -154,8 +154,9 @@ class LicenseService {
         );
       }
 
-      // 9. Calculate days remaining
-      final daysRemaining = payload.validTo.toUtc().difference(now).inDays;
+      // 9. Calculate days remaining (round up to include current partial day)
+      final difference = payload.validTo.toUtc().difference(now);
+      final daysRemaining = (difference.inSeconds / 86400).ceil();
 
       return LicenseValidationResult.valid(payload, daysRemaining);
     } catch (e) {
@@ -223,7 +224,8 @@ class LicenseService {
       if (payload == null) return false;
 
       final now = await _getCurrentTime();
-      final daysRemaining = payload.validTo.toUtc().difference(now).inDays;
+      final difference = payload.validTo.toUtc().difference(now);
+      final daysRemaining = (difference.inSeconds / 86400).ceil();
 
       return daysRemaining >= 0 && daysRemaining <= 15;
     } catch (e) {
@@ -238,7 +240,8 @@ class LicenseService {
       if (payload == null) return 0;
 
       final now = await _getCurrentTime();
-      final daysRemaining = payload.validTo.toUtc().difference(now).inDays;
+      final difference = payload.validTo.toUtc().difference(now);
+      final daysRemaining = (difference.inSeconds / 86400).ceil();
 
       return daysRemaining > 0 ? daysRemaining : 0;
     } catch (e) {
@@ -435,7 +438,8 @@ class LicenseService {
         return LicenseValidationResult.invalid('Free trial expired');
       }
 
-      final daysRemaining = validTo.difference(now).inDays;
+      final difference = validTo.difference(now);
+      final daysRemaining = (difference.inSeconds / 86400).ceil();
 
       // Create synthetic payload for trial
       final machineId = await generateMachineId();
