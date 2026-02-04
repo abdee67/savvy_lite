@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/features/FSNMR/blocs/FSNMR_bloc.dart';
+import 'package:savvy_stock/features/auth/blocs/password_reset/password_reset_bloc.dart';
 
 import 'package:savvy_stock/features/company/blocs/company_bloc.dart';
 import 'package:savvy_stock/features/licensing/bloc/license_bloc.dart';
@@ -42,6 +43,7 @@ import 'package:savvy_stock/core/di/injection_container.dart';
 import 'package:savvy_stock/core/routes/app_router.dart';
 import 'package:savvy_stock/core/services/conectitvity_service.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
+import 'package:savvy_stock/core/services/supabase/supabase_service.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_bloc.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_bloc.dart';
 import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
@@ -92,6 +94,7 @@ Future<void> _initializeAndRunApp() async {
   try {
     await ConnectivityService().initConnectivity();
     initDependencies();
+    await SupabaseService.initialize();
     await getIt<LicenseService>().initialize();
 
     if (AppConfig.isTestMode) {
@@ -378,6 +381,9 @@ class _SavvyStockState extends State<SavvyStock> {
           BlocProvider<LicenseBloc>(create: (context) => getIt<LicenseBloc>()),
           BlocProvider<OtherExpensesBloc>(
             create: (context) => getIt<OtherExpensesBloc>(),
+          ),
+          BlocProvider<PasswordResetBloc>(
+            create: (context) => getIt<PasswordResetBloc>(),
           ),
         ],
         child: MaterialApp.router(

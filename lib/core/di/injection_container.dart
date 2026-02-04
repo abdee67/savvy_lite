@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:savvy_stock/features/FSNMR/blocs/FSNMR_bloc.dart';
 import 'package:savvy_stock/features/FSNMR/repo/FSNMR_repository.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
+import 'package:savvy_stock/features/auth/blocs/password_reset/password_reset_bloc.dart';
 import 'package:savvy_stock/features/company/blocs/company_bloc.dart';
 import 'package:savvy_stock/features/licensing/bloc/license_bloc.dart';
 import 'package:savvy_stock/features/licensing/services/license_service.dart';
@@ -76,6 +77,7 @@ import 'package:savvy_stock/features/reports/cash_flow/bloc/cash_flow_bloc.dart'
 import 'package:savvy_stock/features/reports/cash_flow/repo/cash_flow_repo.dart';
 import 'package:savvy_stock/features/purchase/other_expenses/bloc/other_expenses_bloc.dart';
 import 'package:savvy_stock/features/purchase/other_expenses/repo/other_expense_repository.dart';
+import 'package:savvy_stock/features/auth/services/password_reset_service.dart';
 
 final getIt = GetIt.instance;
 
@@ -298,6 +300,9 @@ void initDependencies() {
   );
   getIt.registerLazySingleton<LicenseService>(
     () => LicenseService(secureStorage: getIt(), deviceInfoPlugin: getIt()),
+  );
+  getIt.registerLazySingleton<PasswordResetService>(
+    () => PasswordResetService(databaseService: getIt()),
   );
   getIt.registerLazySingleton<PricingService>(
     () => PricingService(
@@ -583,5 +588,11 @@ void initDependencies() {
       systemConstantBloc: getIt(),
       itemEntryBloc: getIt(),
     ),
+  );
+
+  // Password Reset
+
+  getIt.registerFactory<PasswordResetBloc>(
+    () => PasswordResetBloc(passwordResetService: getIt()),
   );
 }

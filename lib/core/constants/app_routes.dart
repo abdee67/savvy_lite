@@ -8,6 +8,9 @@ class AppRoutes {
   static const String unauthorized = '/unauthorized';
   static const String licenseDetails = '/license-details';
   static const String licenseActivation = '/license-activation';
+  static const String forgotPassword = '/forgot-password';
+  static const String resetEmailSent = '/reset-email-sent';
+  static const String newPassword = '/new-password';
   static const String systemConstants = '/system-constants';
   static const String otherExpenses = '/other-expenses';
 

@@ -250,7 +250,7 @@ class _LoginScreenState extends State<LoginScreen> {
       onPressed: isLoading
           ? null
           : () {
-              Navigator.pushNamed(context, '/forgot-password');
+              context.push(AppRoutes.forgotPassword);
             },
       style: TextButton.styleFrom(
         foregroundColor: const Color.fromARGB(255, 12, 71, 114),

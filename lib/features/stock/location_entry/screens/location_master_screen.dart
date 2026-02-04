@@ -755,12 +755,14 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
 
                         // 4. ANIMATED EXPANDED CONTENT
                         if (isExpanded)
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(20),
-                            child: _buildLocationDetailContent(
-                              location,
-                              isCompact,
+                          SizedBox(
+                            height: 300,
+                            child: Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: _buildLocationDetailContent(
+                                location,
+                                isCompact,
+                              ),
                             ),
                           ),
                       ],
