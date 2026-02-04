@@ -10,16 +10,11 @@ import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_event.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_state.dart';
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
-import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_event.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_state.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
-
-import '../../item_entry/blocs/item_entry_bloc.dart';
-import '../../item_entry/blocs/item_entry_event.dart';
-import '../../item_entry/blocs/item_entry_state.dart';
 
 class ItemInBranchDashboard extends StatefulWidget {
   final AuthBloc authBloc;
