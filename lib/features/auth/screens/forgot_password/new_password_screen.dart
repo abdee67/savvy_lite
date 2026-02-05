@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
 import 'package:savvy_stock/features/auth/blocs/password_reset/password_reset_bloc.dart';
+import 'package:savvy_stock/features/auth/services/password_reset_service.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 
 /// Screen for entering new password after clicking reset link
@@ -54,6 +55,7 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
     if (!value.contains(RegExp(r'[A-Za-z]'))) {
       return 'Password must contain at least one letter';
     }
+
     return null;
   }
 
@@ -74,9 +76,13 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
         if (state.status == PasswordResetStatus.success) {
           // Show success message and navigate to login
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Password reset successfully!'),
-              backgroundColor: Colors.green,
+            SnackBar(
+              content: Text(state.message ?? 'Password reseted successfully!'),
+              backgroundColor: Colors.blue,
+              clipBehavior: Clip.antiAlias,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -95,11 +101,24 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
             ),
           );
         }
+        if (state.status == PasswordResetStatus.passwordUsedBefore) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message ?? 'Password used before'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       },
       builder: (context, state) {
         final isLoading = state.status == PasswordResetStatus.loading;
         final isVerified = state.status == PasswordResetStatus.tokenVerified;
         final isFailure = state.status == PasswordResetStatus.failure;
+
+        // Don't show error page for validation errors (like password used before)
+        final isRetryableError =
+            state.errorType == PasswordResetErrorType.passwordUsedBefore;
 
         // Show loading while verifying token
         if (isLoading && !isVerified) {
@@ -123,8 +142,8 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
           );
         }
 
-        // Show error if token verification failed
-        if (isFailure && !isVerified) {
+        // Show error if token verification failed (and NOT a retryable error)
+        if (isFailure && !isVerified && !isRetryableError) {
           return Scaffold(
             body: Center(
               child: Padding(
@@ -436,7 +455,7 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          _buildRequirementItem('At least 8 characters'),
+          _buildRequirementItem('At least 6 characters'),
           _buildRequirementItem('At least one number'),
           _buildRequirementItem('At least one letter'),
         ],
@@ -468,7 +487,7 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
     final password = _passwordController.text;
     int strength = 0;
 
-    if (password.length >= 8) strength++;
+    if (password.length >= 6) strength++;
     if (password.contains(RegExp(r'[0-9]'))) strength++;
     if (password.contains(RegExp(r'[A-Za-z]'))) strength++;
     if (password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) strength++;

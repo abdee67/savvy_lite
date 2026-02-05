@@ -334,7 +334,7 @@ class RegistrationService {
       'initial_subscription_branches': 2,
       'initial_subscription_users': 3,
       'initial_payment': 0.0,
-      'initial_subscription_days': 1,
+      'initial_subscription_days': 5,
       'status': 'active',
     });
 

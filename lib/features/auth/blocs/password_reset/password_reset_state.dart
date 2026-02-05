@@ -7,6 +7,7 @@ enum PasswordResetStatus {
   emailSent,
   tokenVerified,
   success,
+  passwordUsedBefore,
   failure,
 }
 
@@ -85,6 +86,19 @@ class PasswordResetState extends Equatable {
       status: PasswordResetStatus.failure,
       message: message,
       errorType: errorType,
+      email: email,
+    );
+  }
+
+  /// Password used before
+  factory PasswordResetState.passwordUsedBefore({
+    required String message,
+    PasswordResetErrorType? errorType,
+    String? email,
+  }) {
+    return PasswordResetState(
+      status: PasswordResetStatus.passwordUsedBefore,
+      message: message,
       email: email,
     );
   }

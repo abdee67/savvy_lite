@@ -41,6 +41,8 @@ class PasswordResetBloc extends Bloc<PasswordResetEvent, PasswordResetState> {
     );
 
     try {
+      //first check if there is data connection
+
       final result = await passwordResetService.sendPasswordResetCode(
         event.email.trim().toLowerCase(),
       );
@@ -60,6 +62,7 @@ class PasswordResetBloc extends Bloc<PasswordResetEvent, PasswordResetState> {
           PasswordResetState.failure(
             message: result.message,
             errorType: result.errorType,
+            email: event.email.trim().toLowerCase(), // Preserve email
           ),
         );
       }
@@ -69,6 +72,7 @@ class PasswordResetBloc extends Bloc<PasswordResetEvent, PasswordResetState> {
         PasswordResetState.failure(
           message: 'An unexpected error occurred. Please try again.',
           errorType: PasswordResetErrorType.unknown,
+          email: event.email.trim().toLowerCase(), // Preserve email
         ),
       );
     }
@@ -86,7 +90,9 @@ class PasswordResetBloc extends Bloc<PasswordResetEvent, PasswordResetState> {
       return;
     }
 
-    final email = state.email;
+    // Use email from state or event
+    final email = state.email ?? event.email;
+
     if (email == null || email.isEmpty) {
       emit(
         PasswordResetState.failure(
@@ -164,12 +170,26 @@ class PasswordResetBloc extends Bloc<PasswordResetEvent, PasswordResetState> {
     }
 
     // Validate password strength
-    final passwordValidation = _validatePassword(event.newPassword);
+    final passwordValidation = await _validatePassword(event.newPassword);
     if (!passwordValidation.isValid) {
       emit(
         PasswordResetState.failure(
           message: passwordValidation.message,
           errorType: PasswordResetErrorType.unknown,
+          email: state.email,
+        ),
+      );
+      return;
+    }
+    //check is the password used before
+    final passwordUsedBefore = await passwordResetService.isPasswordUsedBefore(
+      event.newPassword,
+    );
+    if (passwordUsedBefore) {
+      emit(
+        PasswordResetState.passwordUsedBefore(
+          message: 'Password used before',
+          errorType: PasswordResetErrorType.passwordUsedBefore,
           email: state.email,
         ),
       );
@@ -238,7 +258,7 @@ class PasswordResetBloc extends Bloc<PasswordResetEvent, PasswordResetState> {
   }
 
   /// Validate password strength
-  _PasswordValidation _validatePassword(String password) {
+  Future<_PasswordValidation> _validatePassword(String password) async {
     if (password.isEmpty) {
       return _PasswordValidation(
         isValid: false,

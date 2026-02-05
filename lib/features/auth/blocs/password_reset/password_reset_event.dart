@@ -17,10 +17,12 @@ class SendPasswordResetCode extends PasswordResetEvent {
 
 /// Event to resend password reset code
 class ResendPasswordResetCode extends PasswordResetEvent {
-  const ResendPasswordResetCode();
+  final String? email;
+
+  const ResendPasswordResetCode({this.email});
 
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [email];
 }
 
 /// Event to verify OTP code

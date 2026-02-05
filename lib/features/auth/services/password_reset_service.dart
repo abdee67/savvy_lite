@@ -42,10 +42,11 @@ class PasswordResetService {
         }
       }
 
-      // Send OTP code via email
-      await SupabaseService.instance.auth.signInWithOtp(
-        email: email,
-        shouldCreateUser: false, // We handled creation above
+      // Send password reset code (email)
+      // We use resetPasswordForEmail effectively triggering the recovery flow
+      await SupabaseService.instance.auth.resetPasswordForEmail(
+        email,
+        redirectTo: redirectUrl, // Optional redirect URL
       );
 
       developer.log('Password reset code sent to: $email');
@@ -71,7 +72,7 @@ class PasswordResetService {
     }
   }
 
-  /// Verify the 6-digit OTP code
+  /// Verify the 8-digit OTP code
   Future<PasswordResetResult> verifyOTP({
     required String email,
     required String code,
@@ -79,7 +80,7 @@ class PasswordResetService {
     try {
       final response = await SupabaseService.instance.auth.verifyOTP(
         token: code,
-        type: OtpType.email,
+        type: OtpType.recovery, // Use recovery for password reset flow
         email: email,
       );
 
@@ -116,9 +117,7 @@ class PasswordResetService {
   }
 
   String _generateRandomPassword() {
-    return DateTime.now().millisecondsSinceEpoch.toString() +
-        'SavvyStock' +
-        (1000 + (DateTime.now().microsecond % 8999)).toString();
+    return '${DateTime.now().millisecondsSinceEpoch}SavvyLite${1000 + (DateTime.now().microsecond % 8999)}';
   }
 
   /// Check if email exists in local database
@@ -200,6 +199,17 @@ class PasswordResetService {
         errorType: PasswordResetErrorType.databaseError,
       );
     }
+  }
+
+  Future<bool> isPasswordUsedBefore(String password) async {
+    final db = await databaseService.database;
+    final hashedPassword = await UserModel.sha256Hash(password);
+    final result = await db.query(
+      'user_table',
+      where: 'password = ?',
+      whereArgs: [hashedPassword],
+    );
+    return result.isNotEmpty;
   }
 
   /// Verify the access token from Supabase deep link
@@ -323,5 +333,6 @@ enum PasswordResetErrorType {
   supabaseError,
   databaseError,
   networkError,
+  passwordUsedBefore,
   unknown,
 }
