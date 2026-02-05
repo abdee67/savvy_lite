@@ -6,6 +6,7 @@ import 'package:savvy_stock/features/licensing/bloc/license_state.dart';
 import 'package:savvy_stock/features/licensing/model/license_payload_model.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
+import 'package:intl/intl.dart';
 
 class LicenseDetailsPage extends StatelessWidget {
   const LicenseDetailsPage({super.key});
@@ -177,12 +178,12 @@ class LicenseDetailsPage extends StatelessWidget {
         const SizedBox(height: 16),
         _buildInfoRow(
           isTrial ? 'Trial Started:' : 'License Valid From:',
-          '${payload.validFrom.toLocal()}',
+          DateFormat('yyyy-MM-dd hh:mm a').format(payload.validFrom.toLocal()),
         ),
         const SizedBox(height: 16),
         _buildInfoRow(
           isTrial ? 'Trial Ends:' : 'License Valid Until:',
-          '${payload.validTo.toLocal()}',
+          DateFormat('yyyy-MM-dd hh:mm a').format(payload.validTo.toLocal()),
         ),
         const SizedBox(height: 16),
         if (!isTrial) ...[

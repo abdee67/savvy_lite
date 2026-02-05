@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:intl/intl.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -15,6 +16,7 @@ import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
 import 'package:savvy_stock/features/licensing/bloc/license_bloc.dart';
 import 'package:savvy_stock/features/licensing/bloc/license_state.dart';
 import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
+import 'package:savvy_stock/features/dashboards/widgets/modern_trial_counter.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -270,76 +272,10 @@ class _HomePageState extends State<HomePage> {
                     final days = state.daysRemaining < 0
                         ? 0
                         : state.daysRemaining;
-                    final isLow = state.daysRemaining <= 2;
 
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 500),
-                      margin: const EdgeInsets.only(right: 8),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: isLow
-                              ? [Colors.red.shade900, Colors.red.shade700]
-                              : [
-                                  const Color(0xFF1C4292),
-                                  const Color(0xFF0D2A6B),
-                                ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isLow ? Colors.redAccent : Colors.white24,
-                          width: 1,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: isLow
-                                ? Colors.red.withOpacity(0.3)
-                                : Colors.black.withOpacity(0.2),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            isLow ? Iconsax.timer_1 : Iconsax.clock,
-                            color: Colors.amber,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Free Trial',
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.9),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w500,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                              Text(
-                                '$days Days Left',
-                                style: const TextStyle(
-                                  color: Colors.amber,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 13,
-                                  letterSpacing: -0.2,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                    return ModernTrialCounter(
+                      daysRemaining: state.daysRemaining,
+                      validTo: state.licensePayload!.validTo,
                     );
                   }
                   return const SizedBox.shrink();
