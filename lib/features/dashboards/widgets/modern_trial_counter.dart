@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:intl/intl.dart';
 
 class ModernTrialCounter extends StatelessWidget {
   final int daysRemaining;
@@ -55,7 +54,7 @@ class ModernTrialCounter extends StatelessWidget {
               ), // Placeholder for glass if needed later
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
+                  horizontal: 10,
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
@@ -95,7 +94,7 @@ class ModernTrialCounter extends StatelessWidget {
                           duration: 2000.ms,
                         ),
 
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 15),
 
                     // Text Column
                     Column(
@@ -116,9 +115,9 @@ class ModernTrialCounter extends StatelessWidget {
                         Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            if (daysRemaining < 1) ...[
+                            if (daysRemaining <= 1) ...[
                               Text(
-                                'Ends',
+                                'Ends in ',
                                 style: TextStyle(
                                   color: accentColor,
                                   fontSize: 15,
@@ -129,8 +128,9 @@ class ModernTrialCounter extends StatelessWidget {
                                 duration: 2000.ms,
                                 color: Colors.white.withOpacity(0.5),
                               ),
+                              const SizedBox(height: 4),
                               Text(
-                                DateFormat('hh:mm a').format(validTo),
+                                '${validTo.difference(DateTime.now()).inHours}h ${validTo.difference(DateTime.now()).inMinutes.remainder(60)}m',
                                 style: TextStyle(
                                   color: accentColor,
                                   fontSize: 15,
@@ -142,9 +142,9 @@ class ModernTrialCounter extends StatelessWidget {
                                 color: Colors.white.withOpacity(0.5),
                               ),
                             ],
-                            if (daysRemaining > 0) ...[
+                            if (daysRemaining > 1) ...[
                               Text(
-                                '$daysRemaining',
+                                '$daysRemaining ',
                                 style: TextStyle(
                                   color: accentColor,
                                   fontSize: 15,
@@ -155,9 +155,8 @@ class ModernTrialCounter extends StatelessWidget {
                                 duration: 2000.ms,
                                 color: Colors.white.withOpacity(0.5),
                               ),
-                              const SizedBox(width: 4),
                               Text(
-                                '${daysRemaining == 1 ? 'Day' : 'Days'} Left',
+                                'Days Left',
                                 style: TextStyle(
                                   color: accentColor,
                                   fontSize: 15,

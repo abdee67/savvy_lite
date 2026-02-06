@@ -21,7 +21,7 @@ class _ResetEmailSentScreenState extends State<ResetEmailSentScreen> {
   final TextEditingController _otpController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   final int otpLength = 8; // Example: Set your required length
-  String _otp = '';
+  final String _otp = '';
 
   @override
   void dispose() {
