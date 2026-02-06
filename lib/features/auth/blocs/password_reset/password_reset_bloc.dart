@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:developer' as developer;
+import 'dart:io';
 
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:http/http.dart' as http;
 import 'package:savvy_stock/features/auth/services/password_reset_service.dart';
 
 part 'password_reset_event.dart';
@@ -41,8 +43,6 @@ class PasswordResetBloc extends Bloc<PasswordResetEvent, PasswordResetState> {
     );
 
     try {
-      //first check if there is data connection
-
       final result = await passwordResetService.sendPasswordResetCode(
         event.email.trim().toLowerCase(),
       );
@@ -66,15 +66,52 @@ class PasswordResetBloc extends Bloc<PasswordResetEvent, PasswordResetState> {
           ),
         );
       }
-    } catch (e) {
-      developer.log('Error sending password reset code: $e');
+    } on SocketException {
+      developer.log('Network error (SocketException) in BLoC');
       emit(
         PasswordResetState.failure(
-          message: 'An unexpected error occurred. Please try again.',
-          errorType: PasswordResetErrorType.unknown,
-          email: event.email.trim().toLowerCase(), // Preserve email
+          message:
+              'No internet connection. Please check your network and try again.',
+          errorType: PasswordResetErrorType.networkError,
+          email: event.email.trim().toLowerCase(),
         ),
       );
+    } on http.ClientException catch (e) {
+      developer.log('Network error (ClientException) in BLoC: $e');
+      emit(
+        PasswordResetState.failure(
+          message:
+              'No internet connection. Please check your network and try again.',
+          errorType: PasswordResetErrorType.networkError,
+          email: event.email.trim().toLowerCase(),
+        ),
+      );
+    } catch (e) {
+      developer.log('Error sending password reset code: $e');
+      // Check if it's a network-related error
+      final errorMessage = e.toString().toLowerCase();
+      if (errorMessage.contains('socket') ||
+          errorMessage.contains('network') ||
+          errorMessage.contains('connection') ||
+          errorMessage.contains('clientexception') ||
+          errorMessage.contains('failed host lookup')) {
+        emit(
+          PasswordResetState.failure(
+            message:
+                'No internet connection. Please check your network and try again.',
+            errorType: PasswordResetErrorType.networkError,
+            email: event.email.trim().toLowerCase(),
+          ),
+        );
+      } else {
+        emit(
+          PasswordResetState.failure(
+            message: 'An unexpected error occurred. Please try again.',
+            errorType: PasswordResetErrorType.unknown,
+            email: event.email.trim().toLowerCase(),
+          ),
+        );
+      }
     }
   }
 

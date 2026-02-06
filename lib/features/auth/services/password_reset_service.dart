@@ -1,4 +1,6 @@
 import 'dart:developer' as developer;
+import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/core/services/supabase/supabase_service.dart';
 import 'package:savvy_stock/features/admin/users/models/user_model.dart';
@@ -40,6 +42,20 @@ class PasswordResetService {
             !e.message.contains('User already exists')) {
           developer.log('Supabase sign up warning: ${e.message}');
         }
+      } on SocketException {
+        return PasswordResetResult(
+          success: false,
+          message:
+              'No internet connection. Please check your network and try again.',
+          errorType: PasswordResetErrorType.networkError,
+        );
+      } on http.ClientException {
+        return PasswordResetResult(
+          success: false,
+          message:
+              'No internet connection. Please check your network and try again.',
+          errorType: PasswordResetErrorType.networkError,
+        );
       }
 
       // Send password reset code (email)
@@ -62,8 +78,38 @@ class PasswordResetService {
         message: e.message,
         errorType: PasswordResetErrorType.supabaseError,
       );
+    } on SocketException {
+      developer.log('Network error: No internet connection');
+      return PasswordResetResult(
+        success: false,
+        message:
+            'No internet connection. Please check your network and try again.',
+        errorType: PasswordResetErrorType.networkError,
+      );
+    } on http.ClientException catch (e) {
+      developer.log('Network error (ClientException): $e');
+      return PasswordResetResult(
+        success: false,
+        message:
+            'No internet connection. Please check your network and try again.',
+        errorType: PasswordResetErrorType.networkError,
+      );
     } catch (e) {
       developer.log('Failed to send password reset code: $e');
+      // Check if it's a network-related error in the message
+      final errorMessage = e.toString().toLowerCase();
+      if (errorMessage.contains('socket') ||
+          errorMessage.contains('network') ||
+          errorMessage.contains('connection') ||
+          errorMessage.contains('clientexception') ||
+          errorMessage.contains('failed host lookup')) {
+        return PasswordResetResult(
+          success: false,
+          message:
+              'No internet connection. Please check your network and try again.',
+          errorType: PasswordResetErrorType.networkError,
+        );
+      }
       return PasswordResetResult(
         success: false,
         message: 'Failed to send reset code. Please try again.',
@@ -268,15 +314,7 @@ class PasswordResetService {
       final response = await SupabaseService.instance.auth
           .exchangeCodeForSession(code);
 
-      if (response.session.user == null) {
-        return PasswordResetResult(
-          success: false,
-          message: 'Invalid or expired reset code',
-          errorType: PasswordResetErrorType.invalidToken,
-        );
-      }
-
-      final email = response.session!.user!.email;
+      final email = response.session.user.email;
       if (email == null || email.isEmpty) {
         return PasswordResetResult(
           success: false,

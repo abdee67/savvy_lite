@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
 import 'package:savvy_stock/features/auth/blocs/password_reset/password_reset_bloc.dart';
@@ -24,12 +25,33 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     super.dispose();
   }
 
-  void _handleSendResetEmail() {
+  Future<void> _handleSendResetEmail() async {
     if (_formKey.currentState?.validate() ?? false) {
       FocusScope.of(context).unfocus();
-      context.read<PasswordResetBloc>().add(
-        SendPasswordResetCode(email: _emailController.text.trim()),
-      );
+
+      // Check for network connectivity
+      final connectivityResult = await Connectivity().checkConnectivity();
+      if (connectivityResult.contains(ConnectivityResult.none)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'No internet connection. Please check your network and try again.',
+              ),
+              backgroundColor: Colors.orange,
+              behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+        return;
+      }
+
+      if (mounted) {
+        context.read<PasswordResetBloc>().add(
+          SendPasswordResetCode(email: _emailController.text.trim()),
+        );
+      }
     }
   }
 
