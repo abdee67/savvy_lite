@@ -73,9 +73,35 @@ class PasswordResetService {
       );
     } on AuthException catch (e) {
       developer.log('Supabase auth error: ${e.message}');
+
+      // Parse the error message for user-friendly responses
+      final errorMessage = e.message.toLowerCase();
+      String userFriendlyMessage;
+
+      if (errorMessage.contains('error sending') ||
+          errorMessage.contains('unexpected_failure') ||
+          errorMessage.contains('recovery email')) {
+        // Email service issue - likely rate limit or SMTP config
+        userFriendlyMessage =
+            'Unable to send reset email at this time. Please wait a few minutes and try again, or contact support if the issue persists.';
+      } else if (errorMessage.contains('rate limit') ||
+          errorMessage.contains('too many requests')) {
+        userFriendlyMessage =
+            'Too many reset attempts. Please wait a few minutes before trying again.';
+      } else if (errorMessage.contains('invalid email') ||
+          errorMessage.contains('email not found')) {
+        userFriendlyMessage = 'Please check your email address and try again.';
+      } else if (errorMessage.contains('user not found')) {
+        userFriendlyMessage = 'No account found with this email address.';
+      } else {
+        // Generic fallback with the original message
+        userFriendlyMessage =
+            'Unable to send reset email. Please try again later.';
+      }
+
       return PasswordResetResult(
         success: false,
-        message: e.message,
+        message: userFriendlyMessage,
         errorType: PasswordResetErrorType.supabaseError,
       );
     } on SocketException {
