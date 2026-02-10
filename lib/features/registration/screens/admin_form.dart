@@ -127,6 +127,37 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
       password: passwordController.text,
     );
 
+    // Check if email is verified
+    // Check if email is verified
+    final state = context.read<RegistrationBloc>().state;
+    if (state.verifiedEmail != emailController.text.trim()) {
+      _showOtpDialog(context, emailController.text.trim());
+      return;
+    }
+
+    // Check for validation errors
+    if (state.validationErrors.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Please fix errors: ${state.validationErrors.values.join(', ')}',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (state.isValidating) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Validating... please wait'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     // Update BLoC with employee and user data
     final bloc = context.read<RegistrationBloc>();
     bloc.add(UpdateEmployeeData(employee));
@@ -144,6 +175,119 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
         builder: (_) =>
             BlocProvider.value(value: bloc, child: const ConfirmationPage()),
       ),
+    );
+  }
+
+  void _showOtpDialog(BuildContext context, String email) {
+    final bloc = context.read<RegistrationBloc>();
+    final otpController = TextEditingController();
+
+    // Send OTP immediately
+    bloc.add(SendEmailVerificationCode(email));
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return BlocProvider.value(
+          value: bloc,
+          child: BlocConsumer<RegistrationBloc, RegistrationState>(
+            listenWhen: (previous, current) {
+              return previous.isValidating != current.isValidating ||
+                  previous.verifiedEmail != current.verifiedEmail ||
+                  previous.message != current.message ||
+                  previous.resendCountdown != current.resendCountdown;
+            },
+            listener: (context, state) {
+              if (state.verifiedEmail == email && !state.isValidating) {
+                Navigator.pop(dialogContext); // Close dialog
+                _goToConfirmation(); // Proceed to confirmation
+              }
+              if (state.message != null &&
+                  state.verifiedEmail != email &&
+                  !state.isValidating) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(state.message!),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            builder: (context, state) {
+              return AlertDialog(
+                title: const Text('Verify Email'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Enter the code sent to $email'),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: otpController,
+                      keyboardType: TextInputType.number,
+                      autofocus: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Verification Code',
+                        border: OutlineInputBorder(),
+                        hintText: 'Enter 8-digit code',
+                      ),
+                      onSubmitted: (value) {
+                        if (!state.isValidating && value.isNotEmpty) {
+                          bloc.add(
+                            VerifyEmailVerificationCode(email, value.trim()),
+                          );
+                        }
+                      },
+                    ),
+                    if (state.isValidating)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 16.0),
+                        child: CircularProgressIndicator(),
+                      ),
+                  ],
+                ),
+                actions: [
+                  if (state.resendCountdown > 0)
+                    TextButton(
+                      onPressed: null,
+                      child: Text('Resend in ${state.resendCountdown}s'),
+                    )
+                  else
+                    TextButton(
+                      onPressed: state.isValidating
+                          ? null
+                          : () {
+                              bloc.add(SendEmailVerificationCode(email));
+                            },
+                      child: const Text('Resend Code'),
+                    ),
+                  TextButton(
+                    onPressed: state.isValidating
+                        ? null
+                        : () => Navigator.pop(dialogContext),
+                    child: const Text('Cancel'),
+                  ),
+                  ElevatedButton(
+                    onPressed: state.isValidating
+                        ? null
+                        : () {
+                            if (otpController.text.isNotEmpty) {
+                              bloc.add(
+                                VerifyEmailVerificationCode(
+                                  email,
+                                  otpController.text.trim(),
+                                ),
+                              );
+                            }
+                          },
+                    child: const Text('Verify'),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -172,119 +316,150 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
           child: Stack(
             children: [
               // 🔹 Scrollable Form
-              SingleChildScrollView(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isTablet ? 30 : 18,
-                  vertical: isTablet ? 100 : 40,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(child: _buildStepDots()),
-
-                    const SizedBox(height: 25),
-
-                    _buildTextField(
-                      "Full Name (First Middle Last)",
-                      controller: fullNameController,
-                      required: true,
+              BlocBuilder<RegistrationBloc, RegistrationState>(
+                builder: (context, state) {
+                  return SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isTablet ? 30 : 18,
+                      vertical: isTablet ? 100 : 40,
                     ),
-                    _buildTextField(
-                      "Admin Email",
-                      controller: emailController,
-                      required: true,
-                      isEmail: true,
-                    ),
-                    _buildTextField(
-                      "Admin Phone",
-                      controller: phoneController,
-                      required: true,
-                      isPhone: true,
-                    ),
-                    _buildTextField(
-                      "Username",
-                      controller: usernameController,
-                      required: true,
-                    ),
-                    _buildTextField(
-                      "Password",
-                      controller: passwordController,
-                      obscure: true,
-                      required: true,
-                      isPassword: true,
-                      showPassword: _showPassword,
-                      toggleVisibility: () {
-                        setState(() => _showPassword = !_showPassword);
-                      },
-                    ),
-                    _buildTextField(
-                      "Confirm Password",
-                      controller: confirmPasswordController,
-                      obscure: true,
-                      required: true,
-                      isPassword: true,
-                      showPassword: _showConfirmPassword,
-                      toggleVisibility: () {
-                        setState(
-                          () => _showConfirmPassword = !_showConfirmPassword,
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 30),
-
-                    // 🔹 Buttons Row (Responsive)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ElevatedButton.icon(
-                          onPressed: _goBack,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white.withValues(
-                              alpha: 0.2,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(25),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 40,
-                              vertical: 18,
-                            ),
-                          ),
+                        Center(child: _buildStepDots()),
 
-                          label: const Text(
-                            "Back",
-                            style: TextStyle(color: Colors.white),
-                          ),
+                        const SizedBox(height: 25),
+
+                        _buildTextField(
+                          "Full Name (First Middle Last)",
+                          controller: fullNameController,
+                          required: true,
                         ),
-                        ElevatedButton(
-                          onPressed: _goToConfirmation,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.amber,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 40,
-                              vertical: 16,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            elevation: 4,
-                          ),
-                          child: const Text(
-                            "Next",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Colors.black,
-                            ),
-                          ),
+                        _buildTextField(
+                          "Admin Email",
+                          controller: emailController,
+                          required: true,
+                          isEmail: true,
+                          errorText: state.validationErrors['email'],
+                          onChanged: (value) {
+                            context.read<RegistrationBloc>().add(
+                              CheckEmailAvailability(value),
+                            );
+                          },
                         ),
+                        _buildTextField(
+                          "Admin Phone",
+                          controller: phoneController,
+                          required: true,
+                          isPhone: true,
+                        ),
+                        _buildTextField(
+                          "Username",
+                          controller: usernameController,
+                          required: true,
+                          errorText: state.validationErrors['username'],
+                          onChanged: (value) {
+                            context.read<RegistrationBloc>().add(
+                              CheckUsernameAvailability(value),
+                            );
+                          },
+                        ),
+                        _buildTextField(
+                          "Password",
+                          controller: passwordController,
+                          obscure: true,
+                          required: true,
+                          isPassword: true,
+                          showPassword: _showPassword,
+                          toggleVisibility: () {
+                            setState(() => _showPassword = !_showPassword);
+                          },
+                        ),
+                        _buildTextField(
+                          "Confirm Password",
+                          controller: confirmPasswordController,
+                          obscure: true,
+                          required: true,
+                          isPassword: true,
+                          showPassword: _showConfirmPassword,
+                          toggleVisibility: () {
+                            setState(
+                              () =>
+                                  _showConfirmPassword = !_showConfirmPassword,
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 30),
+
+                        // 🔹 Buttons Row (Responsive)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: _goBack,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white.withOpacity(0.2),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(25),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 40,
+                                  vertical: 18,
+                                ),
+                              ),
+
+                              label: const Text(
+                                "Back",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                            ElevatedButton(
+                              onPressed:
+                                  state.isValidating ||
+                                      state.validationErrors.isNotEmpty
+                                  ? null
+                                  : _goToConfirmation,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.amber,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 40,
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                elevation: 4,
+                              ),
+                              child: state.isValidating
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Colors.black,
+                                            ),
+                                      ),
+                                    )
+                                  : const Text(
+                                      "Next",
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 100),
                       ],
                     ),
-
-                    const SizedBox(height: 100),
-                  ],
-                ),
+                  );
+                },
               ),
 
               // 🔹 Bottom Progress Dots under Back Button
@@ -352,6 +527,8 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
     bool showPassword = false,
     VoidCallback? toggleVisibility,
     TextEditingController? controller,
+    String? errorText,
+    ValueChanged<String>? onChanged,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
@@ -391,9 +568,10 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
           ),
           errorText: required && controller!.text.isEmpty
               ? 'This field is required'
-              : null,
+              : errorText,
           errorMaxLines: 3,
         ),
+        onChanged: onChanged,
       ),
     );
   }

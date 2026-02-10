@@ -40,7 +40,13 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
     on<NextStep>(_onNextStep);
     on<PreviousStep>(_onPreviousStep);
     on<GoToStep>(_onGoToStep);
+    on<SendEmailVerificationCode>(_onSendEmailVerificationCode);
+    on<VerifyEmailVerificationCode>(_onVerifyEmailVerificationCode);
+    on<StartResendTimer>(_onStartResendTimer);
+    on<TickResendTimer>(_onTickResendTimer);
   }
+
+  Timer? _resendTimer;
 
   /// Initialize registration with default subscription
   Future<void> _onInitializeRegistration(
@@ -235,11 +241,37 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
     Emitter<RegistrationState> emit,
   ) async {
     // Validate all fields first
+    // Validate all fields first
     if (!state.isReadyToSubmit) {
+      final List<String> missingFields = [];
+      if (state.company.companyName.isEmpty) missingFields.add('Company Name');
+      if (state.branch.description?.isEmpty ?? true) {
+        missingFields.add('Branch Name');
+      }
+      if (state.employee.nameFirst.isEmpty) missingFields.add('First Name');
+      if (state.adminUser.userName?.isEmpty ?? true) {
+        missingFields.add('Username');
+      }
+      if (state.adminUser.userEmail?.isEmpty ?? true) {
+        missingFields.add('Email');
+      }
+      if (state.verifiedEmail != state.adminUser.userEmail) {
+        missingFields.add('Verified Email Mismatch');
+      }
+      if (state.adminUser.password?.isEmpty ?? true) {
+        missingFields.add('Password');
+      }
+      if (state.confirmPassword != state.adminUser.password) {
+        missingFields.add('Passwords do not match');
+      }
+      if (state.subscriptionSettings == null) {
+        missingFields.add('Subscription Settings (Internal Error)');
+      }
+
       emit(
         state.copyWith(
           status: RegistrationStatus.failure,
-          message: 'Please fill all required fields correctly',
+          message: 'Please check: ${missingFields.join(', ')}',
         ),
       );
       return;
@@ -351,5 +383,111 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
     if (event.step >= 0 && event.step < state.totalSteps) {
       emit(state.copyWith(currentStep: event.step));
     }
+  }
+
+  /// Send email verification code
+  Future<void> _onSendEmailVerificationCode(
+    SendEmailVerificationCode event,
+    Emitter<RegistrationState> emit,
+  ) async {
+    emit(state.copyWith(isValidating: true));
+
+    try {
+      final success = await registrationService.sendEmailVerificationCode(
+        event.email,
+      );
+
+      if (success) {
+        emit(
+          state.copyWith(
+            isValidating: false,
+            isOtpSent: true,
+            message: 'Verification code sent',
+          ),
+        );
+        add(const StartResendTimer());
+      } else {
+        emit(
+          state.copyWith(
+            isValidating: false,
+            message: 'Failed to send verification code',
+          ),
+        );
+      }
+    } catch (e) {
+      emit(
+        state.copyWith(
+          isValidating: false,
+          message: 'Error sending verification code: $e',
+        ),
+      );
+    }
+  }
+
+  /// Verify email verification code
+  Future<void> _onVerifyEmailVerificationCode(
+    VerifyEmailVerificationCode event,
+    Emitter<RegistrationState> emit,
+  ) async {
+    emit(state.copyWith(isValidating: true));
+
+    try {
+      final success = await registrationService.verifyEmailVerificationCode(
+        event.email,
+        event.code,
+      );
+
+      if (success) {
+        emit(
+          state.copyWith(
+            isValidating: false,
+            verifiedEmail: event.email,
+            message: 'Email verified successfully',
+          ),
+        );
+      } else {
+        emit(
+          state.copyWith(
+            isValidating: false,
+            message: 'Invalid verification code',
+          ),
+        );
+      }
+    } catch (e) {
+      emit(
+        state.copyWith(
+          isValidating: false,
+          message: 'Error verifying code: $e',
+        ),
+      );
+    }
+  }
+
+  void _onStartResendTimer(
+    StartResendTimer event,
+    Emitter<RegistrationState> emit,
+  ) {
+    emit(state.copyWith(resendCountdown: 60));
+    _resendTimer?.cancel();
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (state.resendCountdown > 0) {
+        add(TickResendTimer(state.resendCountdown - 1));
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  void _onTickResendTimer(
+    TickResendTimer event,
+    Emitter<RegistrationState> emit,
+  ) {
+    emit(state.copyWith(resendCountdown: event.tick));
+  }
+
+  @override
+  Future<void> close() {
+    _resendTimer?.cancel();
+    return super.close();
   }
 }

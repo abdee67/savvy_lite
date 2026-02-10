@@ -6,6 +6,8 @@ import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/auth/model/subscription_management_model.dart';
 import 'package:savvy_stock/features/registration/model/signup_data_model.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:savvy_stock/core/services/supabase/supabase_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Result of registration operation
 class RegistrationResult {
@@ -395,5 +397,31 @@ class RegistrationService {
     }
 
     return code.toString().substring(0, 4);
+  }
+
+  /// Send email verification code
+  Future<bool> sendEmailVerificationCode(String email) async {
+    try {
+      await SupabaseService.instance.auth.signInWithOtp(email: email);
+      return true;
+    } catch (e) {
+      developer.log('Error sending verification code: $e');
+      return false;
+    }
+  }
+
+  /// Verify email verification code
+  Future<bool> verifyEmailVerificationCode(String email, String code) async {
+    try {
+      final response = await SupabaseService.instance.auth.verifyOTP(
+        token: code,
+        type: OtpType.email,
+        email: email,
+      );
+      return response.session != null;
+    } catch (e) {
+      developer.log('Error verifying code: $e');
+      return false;
+    }
   }
 }
