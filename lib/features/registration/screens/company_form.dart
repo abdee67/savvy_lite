@@ -99,7 +99,7 @@ class _CompanyFormState extends State<CompanyForm> {
               // 🔹 Scrollable Main Form
               SingleChildScrollView(
                 padding: EdgeInsets.symmetric(
-                  horizontal: isTablet ? 80 : 20,
+                  horizontal: isTablet ? 30 : 18,
                   vertical: isTablet ? 60 : 40,
                 ),
                 child: Column(

@@ -3,6 +3,7 @@ import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 class SystemConstant {
   final int? id;
   late final String? applyLotMgm;
+  late final String? applyOverheadCost;
   late final String? applyLocationMgm;
   final String? interfaceCustomer;
   final String? interfaceEmployee;
@@ -35,6 +36,7 @@ class SystemConstant {
   SystemConstant({
     this.id,
     this.applyLotMgm,
+    this.applyOverheadCost,
     this.applyLocationMgm,
     this.interfaceCustomer,
     this.interfaceEmployee,
@@ -68,6 +70,7 @@ class SystemConstant {
     return SystemConstant(
       id: json['id'],
       applyLotMgm: json['apply_lot_mgm'],
+      applyOverheadCost: json['apply_overhead_cost'],
       applyLocationMgm: json['apply_location_mgm'],
       interfaceCustomer: json['interface_customer'],
       interfaceEmployee: json['interface_employee'],
@@ -113,6 +116,7 @@ class SystemConstant {
     return {
       'id': id,
       'apply_lot_mgm': applyLotMgm,
+      'apply_overhead_cost': applyOverheadCost,
       'apply_location_mgm': applyLocationMgm,
       'interface_customer': interfaceCustomer,
       'interface_employee': interfaceEmployee,
@@ -146,6 +150,7 @@ class SystemConstant {
     return {
       'id': id,
       'apply_lot_mgm': applyLotMgm,
+      'apply_overhead_cost': applyOverheadCost,
       'apply_location_mgm': applyLocationMgm,
       'interface_customer': interfaceCustomer,
       'interface_employee': interfaceEmployee,
@@ -176,6 +181,7 @@ class SystemConstant {
     return SystemConstant(
       id: map['id'],
       applyLotMgm: map['apply_lot_mgm'],
+      applyOverheadCost: map['apply_overhead_cost'],
       applyLocationMgm: map['apply_location_mgm'],
       interfaceCustomer: map['interface_customer'],
       interfaceEmployee: map['interface_employee'],
@@ -223,6 +229,7 @@ class SystemConstant {
   SystemConstant copyWith({
     int? id,
     String? applyLotMgm,
+    String? applyOverheadCost,
     String? applyLocationMgm,
     String? interfaceCustomer,
     String? interfaceEmployee,
@@ -252,6 +259,7 @@ class SystemConstant {
     return SystemConstant(
       id: id ?? this.id,
       applyLotMgm: applyLotMgm ?? this.applyLotMgm,
+      applyOverheadCost: applyOverheadCost ?? this.applyOverheadCost,
       applyLocationMgm: applyLocationMgm ?? this.applyLocationMgm,
       interfaceCustomer: interfaceCustomer ?? this.interfaceCustomer,
       interfaceEmployee: interfaceEmployee ?? this.interfaceEmployee,
@@ -285,6 +293,7 @@ class SystemConstant {
 
   // Helper methods for boolean conversions
   bool get applyLotMgmBoolean => applyLotMgm == 'Y';
+  bool get applyOverheadCostBoolean => applyOverheadCost == 'Y';
   bool get applyLocationMgmBoolean => applyLocationMgm == 'Y';
   bool get lotQtyAutoForSalesBoolean => lotQtyAutoForSales == 'Y';
   bool get autoSalesPriceBoolean => autoSalesPrice == 'Y';
@@ -294,6 +303,8 @@ class SystemConstant {
   bool get reorderPointUomTypeBoolean => reorderPointUomType == 'I';
 
   set applyLotMgmBoolean(bool value) => applyLotMgm = value ? 'Y' : 'N';
+  set applyOverheadCostBoolean(bool value) =>
+      applyOverheadCost = value ? 'Y' : 'N';
   set applyLocationMgmBoolean(bool value) =>
       applyLocationMgm = value ? 'Y' : 'N';
   set lotQtyAutoForSalesBoolean(bool value) =>

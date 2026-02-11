@@ -60,7 +60,7 @@ class TrialHeader extends StatelessWidget {
                     text: 'FREE ',
                     style: TextStyle(color: Colors.amber),
                   ),
-                  TextSpan(text: '7 - DAYS TRIAL'),
+                  TextSpan(text: '5 - DAYS TRIAL'),
                 ],
               ),
             ),

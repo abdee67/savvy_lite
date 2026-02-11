@@ -8,10 +8,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/features/FSNMR/blocs/FSNMR_bloc.dart';
+import 'package:savvy_stock/features/auth/blocs/password_reset/password_reset_bloc.dart';
 
 import 'package:savvy_stock/features/company/blocs/company_bloc.dart';
 import 'package:savvy_stock/features/licensing/bloc/license_bloc.dart';
 import 'package:savvy_stock/features/licensing/services/license_service.dart';
+import 'package:savvy_stock/features/purchase/other_expenses/bloc/other_expenses_bloc.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
 
 import 'package:savvy_stock/features/purchase/supplier_entry/blocs/supplier_bloc.dart';
@@ -41,6 +43,7 @@ import 'package:savvy_stock/core/di/injection_container.dart';
 import 'package:savvy_stock/core/routes/app_router.dart';
 import 'package:savvy_stock/core/services/conectitvity_service.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
+import 'package:savvy_stock/core/services/supabase/supabase_service.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_bloc.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_bloc.dart';
 import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
@@ -91,6 +94,7 @@ Future<void> _initializeAndRunApp() async {
   try {
     await ConnectivityService().initConnectivity();
     initDependencies();
+    await SupabaseService.initialize();
     await getIt<LicenseService>().initialize();
 
     if (AppConfig.isTestMode) {
@@ -99,12 +103,12 @@ Future<void> _initializeAndRunApp() async {
       developer.log('💾 Using local database only');
     }
     if (kDebugMode) {
-      // await LocalDatabaseService().resetDatabase();
+      //await LocalDatabaseService().resetDatabase();
       //await getIt<LicenseService>().clearLicense();
-      // await LocalDatabaseService().debugTable('branch_table');
+      //  // await LocalDatabaseService().debugTable('branch_table');
       // await LocalDatabaseService().debugTable('items_in_branch');
       //await LocalDatabaseService().debugTable('item_cost');
-      //await LocalDatabaseService().debugTable('item_location');
+      await LocalDatabaseService().debugTable('item_location');
       //await LocalDatabaseService().debugTable('lot_master');
       //await LocalDatabaseService().debugTable('item_master');
       //await LocalDatabaseService().debugTable('items_table');
@@ -115,8 +119,8 @@ Future<void> _initializeAndRunApp() async {
       //await LocalDatabaseService().debugTable('sales_return_details');
       // await LocalDatabaseService().debugTable('invoice_history_header');
       // await LocalDatabaseService().debugTable('invoice_history_detail');
-      await LocalDatabaseService().debugTable('item_transactions');
-      await LocalDatabaseService().debugTable('item_uom_conversions');
+      // await LocalDatabaseService().debugTable('item_transactions');
+      // await LocalDatabaseService().debugTable('item_uom_conversions');
       // await LocalDatabaseService().debugTable('quote_order_header');
       // await LocalDatabaseService().debugTable('quote_order_detail');
       // await LocalDatabaseService().debugTable('supplier_table');
@@ -129,6 +133,7 @@ Future<void> _initializeAndRunApp() async {
       //await LocalDatabaseService().debugTable('user_table');
       //await LocalDatabaseService().debugTable('user_role');
       //await LocalDatabaseService().debugTable('role_privilege');
+      await LocalDatabaseService().debugTable('other_expense_table');
     }
   } catch (error, stackTrace) {
     if (kDebugMode) {
@@ -374,6 +379,12 @@ class _SavvyStockState extends State<SavvyStock> {
             create: (context) => getIt<RegistrationBloc>(),
           ),
           BlocProvider<LicenseBloc>(create: (context) => getIt<LicenseBloc>()),
+          BlocProvider<OtherExpensesBloc>(
+            create: (context) => getIt<OtherExpensesBloc>(),
+          ),
+          BlocProvider<PasswordResetBloc>(
+            create: (context) => getIt<PasswordResetBloc>(),
+          ),
         ],
         child: MaterialApp.router(
           debugShowCheckedModeBanner: false,

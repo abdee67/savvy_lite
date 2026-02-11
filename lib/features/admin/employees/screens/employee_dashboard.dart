@@ -538,13 +538,13 @@ class _EmployeeListPageState extends State<EmployeeListPage>
     // For responsiveness:
     final collapsedHeight = isCompact
         ? screenHeight *
-              0.2 // phones
+              0.22 // phones
         : screenHeight * 0.12; // tablets / wide screens
 
     final expandedHeight = isCompact
         ? screenHeight * 0.55
         : screenHeight * 0.45;
-    final collapsedWidth = isCompact ? screenWidth * 0.92 : screenWidth * 0.8;
+    final collapsedWidth = screenWidth * 1;
 
     return GestureDetector(
       onTap: () {

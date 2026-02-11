@@ -9,6 +9,7 @@ class OtherExpense {
   final int? company;
   final int? userId;
   final DateTime? dateUpdated;
+  final int? tempId; // For local state management
 
   final UdcDetails? paymentInstrumentRef;
 
@@ -22,7 +23,23 @@ class OtherExpense {
     this.userId,
     this.dateUpdated,
     this.paymentInstrumentRef,
+    this.tempId,
   });
+
+  factory OtherExpense.empty() {
+    return OtherExpense(
+      id: null,
+      paymentAmount: null,
+      datePayment: null,
+      reasonDescription: null,
+      paymentInstrument: null,
+      company: null,
+      userId: null,
+      dateUpdated: null,
+      paymentInstrumentRef: null,
+      tempId: null,
+    );
+  }
 
   factory OtherExpense.fromMap(Map<String, dynamic> map) {
     return OtherExpense(
@@ -38,6 +55,7 @@ class OtherExpense {
       dateUpdated: map['date_updated'] != null
           ? DateTime.tryParse(map['date_updated'])
           : null,
+      tempId: map['temp_id'],
       paymentInstrumentRef: map['payment_instrument_description'] != null
           ? UdcDetails(
               id: map['payment_instrument'],
@@ -71,6 +89,7 @@ class OtherExpense {
     int? userId,
     DateTime? dateUpdated,
     UdcDetails? paymentInstrumentRef,
+    int? tempId,
   }) {
     return OtherExpense(
       id: id ?? this.id,
@@ -82,6 +101,7 @@ class OtherExpense {
       userId: userId ?? this.userId,
       dateUpdated: dateUpdated ?? this.dateUpdated,
       paymentInstrumentRef: paymentInstrumentRef ?? this.paymentInstrumentRef,
+      tempId: tempId ?? this.tempId,
     );
   }
 }

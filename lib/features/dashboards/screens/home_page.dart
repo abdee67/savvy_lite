@@ -12,7 +12,10 @@ import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.d
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_event.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
+import 'package:savvy_stock/features/licensing/bloc/license_bloc.dart';
+import 'package:savvy_stock/features/licensing/bloc/license_state.dart';
 import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
+import 'package:savvy_stock/features/dashboards/widgets/modern_trial_counter.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -261,6 +264,22 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
               ),
+              // Trial Counter
+              BlocBuilder<LicenseBloc, LicenseState>(
+                builder: (context, state) {
+                  if (state.licensePayload?.licenseId == 'TRIAL') {
+                    final days = state.daysRemaining < 0
+                        ? 0
+                        : state.daysRemaining;
+
+                    return ModernTrialCounter(
+                      daysRemaining: state.daysRemaining,
+                      validTo: state.licensePayload!.validTo,
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
               PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert, color: Colors.white),
                 onSelected: (value) {
@@ -270,6 +289,8 @@ class _HomePageState extends State<HomePage> {
                     context.push(AppRoutes.fsnmrManagement);
                   } else if (value == 'License Detail') {
                     context.push(AppRoutes.licenseDetails);
+                  } else if (value == 'Other Expenses') {
+                    context.push(AppRoutes.otherExpenses);
                   } else if (value == 'Logout') {
                     context.read<AuthBloc>().add(LogoutRequested(context));
                   }
@@ -287,7 +308,10 @@ class _HomePageState extends State<HomePage> {
                     value: 'License Detail',
                     child: Text('License Detail'),
                   ),
-
+                  const PopupMenuItem<String>(
+                    value: 'Other Expenses',
+                    child: Text('Other Expenses'),
+                  ),
                   const PopupMenuItem<String>(
                     value: 'Logout',
                     child: Text('Logout'),

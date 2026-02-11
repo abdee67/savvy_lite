@@ -23,6 +23,7 @@ import 'package:savvy_stock/features/admin/users/widgets/user_creat_edit.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
 import 'package:savvy_stock/features/auth/screens/sign_in/login_screen.dart';
+import 'package:savvy_stock/features/purchase/other_expenses/screens/other_expenses_dashboard.dart';
 import 'package:savvy_stock/features/registration/screens/free_trial_page.dart';
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 import 'package:savvy_stock/features/branch_list/screens/branch_list_dashboard.dart';
@@ -113,6 +114,11 @@ import 'package:savvy_stock/features/udc_detail/screens/uom_dashboard.dart';
 import 'package:savvy_stock/features/udc_detail/widgets/uom_create_and_edit.dart.dart';
 import 'package:savvy_stock/features/licensing/screens/license_detail_page.dart';
 import 'package:savvy_stock/features/licensing/screens/license_activation_page.dart';
+import 'package:savvy_stock/features/auth/blocs/password_reset/password_reset_bloc.dart';
+import 'package:savvy_stock/features/auth/services/password_reset_service.dart';
+import 'package:savvy_stock/features/auth/screens/forgot_password/forgot_password_screen.dart';
+import 'package:savvy_stock/features/auth/screens/forgot_password/reset_email_sent_screen.dart';
+import 'package:savvy_stock/features/auth/screens/forgot_password/new_password_screen.dart';
 
 // Import your screen files for missing routes
 // import 'package:savvy_stock/features/sales/sales_entry/screens/sales_entry_screen.dart';
@@ -160,10 +166,56 @@ class AppRouter {
         builder: (context, state) => const LicenseDetailsPage(),
       ),
       GoRoute(
+        path: AppRoutes.otherExpenses,
+        builder: (context, state) => OtherExpensesDashboard(authBloc: authBloc),
+      ),
+
+      GoRoute(
         path: AppRoutes.licenseActivation,
         builder: (context, state) => const LicenseActivationPage(),
       ),
 
+      // Password Reset Routes
+      GoRoute(
+        path: AppRoutes.forgotPassword,
+        builder: (context, state) => BlocProvider(
+          create: (context) => PasswordResetBloc(
+            passwordResetService: getIt<PasswordResetService>(),
+          ),
+          child: const ForgotPasswordScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.resetEmailSent,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final email = extra?['email'] as String?;
+          final bloc = extra?['bloc'] as PasswordResetBloc?;
+
+          if (bloc != null) {
+            return BlocProvider.value(
+              value: bloc,
+              child: ResetEmailSentScreen(email: email),
+            );
+          }
+          return ResetEmailSentScreen(email: email);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.newPassword,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final bloc = extra?['bloc'] as PasswordResetBloc?;
+
+          if (bloc != null) {
+            return BlocProvider.value(
+              value: bloc,
+              child: const NewPasswordScreen(),
+            );
+          }
+          return const NewPasswordScreen();
+        },
+      ),
       // Main Dashboard
       GoRoute(
         path: AppRoutes.homePage,

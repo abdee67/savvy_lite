@@ -133,7 +133,7 @@ class _TrialOptionScreenState extends State<TrialOptionScreen>
                                 ),
                               ),
                               TextSpan(
-                                text: '7-DAYS TRIAL',
+                                text: '5-DAYS TRIAL',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 26,

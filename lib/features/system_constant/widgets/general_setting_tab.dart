@@ -206,6 +206,13 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
               ),
               const SizedBox(height: 16),
               _buildSwitchTile(
+                title: 'Apply Overhead Cost',
+                value: _localSystemConstant.applyOverheadCost == 'Y',
+                onChanged: (value) =>
+                    _updateField(applyOverheadCost: value ? 'Y' : 'N'),
+              ),
+              const SizedBox(height: 16),
+              _buildSwitchTile(
                 title: 'Auto-Issue Lot Quantity at Sales',
                 value: _localSystemConstant.lotQtyAutoForSales == 'Y',
                 onChanged: (value) =>
@@ -468,6 +475,7 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
     double? rateVatPercentage,
     double? rateWithholdingPercentage,
     String? applyLotMgm,
+    String? applyOverheadCost,
     int? lotType,
     String? lotQtyAutoForSales,
     String? autoSalesPrice,
@@ -486,6 +494,7 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
         rateVatPercentage: rateVatPercentage,
         rateWithholdingPercentage: rateWithholdingPercentage,
         applyLotMgm: applyLotMgm,
+        applyOverheadCost: applyOverheadCost,
         lotType: lotType,
         lotQtyAutoForSales: lotQtyAutoForSales,
         autoSalesPrice: autoSalesPrice,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/registration/blocs/registration_bloc.dart';
 import 'package:savvy_stock/features/registration/screens/company_form.dart';
@@ -16,6 +17,7 @@ class RegistrationWrapper extends StatelessWidget {
         registrationService: RegistrationService(
           databaseService: LocalDatabaseService(),
         ),
+        secureStorage: const FlutterSecureStorage(),
       )..add(const InitializeRegistration()),
       child: const CompanyForm(),
     );

@@ -6,6 +6,7 @@ import 'package:savvy_stock/features/licensing/bloc/license_state.dart';
 import 'package:savvy_stock/features/licensing/model/license_payload_model.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
+import 'package:intl/intl.dart';
 
 class LicenseDetailsPage extends StatelessWidget {
   const LicenseDetailsPage({super.key});
@@ -24,7 +25,11 @@ class LicenseDetailsPage extends StatelessWidget {
               return _buildErrorView();
             }
 
-            return _buildLicenseDetails(context, state.licensePayload!);
+            return _buildLicenseDetails(
+              context,
+              state.licensePayload!,
+              state.daysRemaining,
+            );
           },
         ),
       ),
@@ -56,7 +61,11 @@ class LicenseDetailsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildLicenseDetails(BuildContext context, LicensePayload payload) {
+  Widget _buildLicenseDetails(
+    BuildContext context,
+    LicensePayload payload,
+    int daysRemaining,
+  ) {
     final authbloc = context.read<AuthBloc>().state;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(10.0),
@@ -77,13 +86,13 @@ class LicenseDetailsPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildHeader(),
+              _buildHeader(payload),
               const SizedBox(height: 16),
               _buildLicenseInfo(payload),
               const SizedBox(height: 16),
               _buildFeatures(payload),
               const SizedBox(height: 16),
-              _buildLimits(payload),
+              _buildLimits(payload, daysRemaining),
               const SizedBox(height: 16),
               if (authbloc.isAuthenticated == false)
                 SizedBox(
@@ -114,21 +123,47 @@ class LicenseDetailsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(LicensePayload payload) {
+    bool isTrial = payload.licenseId == 'TRIAL';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Current License Information',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF145888),
-          ),
+        Row(
+          children: [
+            Text(
+              isTrial ? 'Free Trial Details' : 'License Information',
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF145888),
+              ),
+            ),
+            if (isTrial) ...[
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.amber),
+                ),
+                child: const Text(
+                  'TRIAL',
+                  style: TextStyle(
+                    color: Colors.amber,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
         const SizedBox(height: 8),
         Text(
-          'This page displays the details of your currently active software license.',
+          isTrial
+              ? 'You are currently using the free trial version of Savvy Stock.'
+              : 'This page displays the details of your currently active software license.',
           style: TextStyle(fontSize: 14, color: Colors.grey[600]),
         ),
       ],
@@ -136,16 +171,25 @@ class LicenseDetailsPage extends StatelessWidget {
   }
 
   Widget _buildLicenseInfo(LicensePayload payload) {
+    bool isTrial = payload.licenseId == 'TRIAL';
     return Column(
       children: [
         _buildInfoRow('Licensed To:', payload.issuedTo),
         const SizedBox(height: 16),
-        _buildInfoRow('License Valid From:', '${payload.validFrom.toLocal()}'),
+        _buildInfoRow(
+          isTrial ? 'Trial Started:' : 'License Valid From:',
+          DateFormat('yyyy-MM-dd hh:mm a').format(payload.validFrom.toLocal()),
+        ),
         const SizedBox(height: 16),
-        _buildInfoRow('License Valid Until:', '${payload.validTo.toLocal()}'),
+        _buildInfoRow(
+          isTrial ? 'Trial Ends:' : 'License Valid Until:',
+          DateFormat('yyyy-MM-dd hh:mm a').format(payload.validTo.toLocal()),
+        ),
         const SizedBox(height: 16),
-        _buildInfoRow('Machine ID:', payload.machineId, isMonospace: true),
-        const SizedBox(height: 16),
+        if (!isTrial) ...[
+          _buildInfoRow('Machine ID:', payload.machineId, isMonospace: true),
+          const SizedBox(height: 16),
+        ],
         _buildInfoRow('License ID:', payload.licenseId, isMonospace: true),
       ],
     );
@@ -205,9 +249,16 @@ class LicenseDetailsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildLimits(LicensePayload payload) {
+  Widget _buildLimits(LicensePayload payload, int daysRemaining) {
+    bool isTrial = payload.licenseId == 'TRIAL';
+
+    // Calculate display status
+    bool isActive = payload.validTo.isAfter(DateTime.now().toUtc());
+    String statusText = isActive ? 'Active' : 'Expired';
+    Color statusColor = isActive ? Colors.green[900]! : Colors.red[900]!;
+
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         _buildLimitCard(
           Icons.people,
@@ -219,18 +270,22 @@ class LicenseDetailsPage extends StatelessWidget {
           Icons.business,
           'Branch Limit',
           '${payload.branchLimit} ',
-          Color(0xFF145888),
+          const Color(0xFF145888),
         ),
-        _buildLimitCard(
-          Icons.calendar_today,
-          'Status',
-          payload.validTo.isAfter(DateTime.now().toUtc())
-              ? 'Active'
-              : 'Expired',
-          payload.validTo.isAfter(DateTime.now().toUtc())
-              ? Colors.green[900]!
-              : Colors.red[900]!,
-        ),
+        if (isTrial)
+          _buildLimitCard(
+            Icons.timer,
+            'Days Left',
+            '$daysRemaining',
+            Colors.orange,
+          )
+        else
+          _buildLimitCard(
+            Icons.calendar_today,
+            'Status',
+            statusText,
+            statusColor,
+          ),
       ],
     );
   }

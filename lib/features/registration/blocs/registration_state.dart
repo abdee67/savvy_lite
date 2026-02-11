@@ -27,6 +27,11 @@ class RegistrationState extends Equatable {
   final bool? companyNameAvailable;
   final bool isValidating;
 
+  // OTP Verification
+  final bool isOtpSent;
+  final String? verifiedEmail;
+  final int resendCountdown;
+
   // Error handling
   final String? message;
   final Map<String, String> validationErrors;
@@ -52,6 +57,9 @@ class RegistrationState extends Equatable {
     this.validationErrors = const {},
     this.registeredUserId,
     this.confirmationCode,
+    this.isOtpSent = false,
+    this.verifiedEmail,
+    this.resendCountdown = 0,
   });
 
   /// Initial state factory
@@ -76,6 +84,7 @@ class RegistrationState extends Equatable {
       case 3: // Admin
         return adminUser.userName?.isNotEmpty == true &&
             adminUser.userEmail?.isNotEmpty == true &&
+            verifiedEmail == adminUser.userEmail &&
             adminUser.password?.isNotEmpty == true &&
             confirmPassword == adminUser.password &&
             (usernameAvailable ?? true) &&
@@ -92,6 +101,7 @@ class RegistrationState extends Equatable {
         employee.nameFirst.isNotEmpty &&
         adminUser.userName?.isNotEmpty == true &&
         adminUser.userEmail?.isNotEmpty == true &&
+        verifiedEmail == adminUser.userEmail &&
         adminUser.password?.isNotEmpty == true &&
         confirmPassword == adminUser.password &&
         (companyNameAvailable ?? true) &&
@@ -129,6 +139,9 @@ class RegistrationState extends Equatable {
     Map<String, String>? validationErrors,
     int? registeredUserId,
     String? confirmationCode,
+    bool? isOtpSent,
+    String? verifiedEmail,
+    int? resendCountdown,
   }) {
     return RegistrationState(
       status: status ?? this.status,
@@ -147,6 +160,9 @@ class RegistrationState extends Equatable {
       validationErrors: validationErrors ?? this.validationErrors,
       registeredUserId: registeredUserId ?? this.registeredUserId,
       confirmationCode: confirmationCode ?? this.confirmationCode,
+      isOtpSent: isOtpSent ?? this.isOtpSent,
+      verifiedEmail: verifiedEmail ?? this.verifiedEmail,
+      resendCountdown: resendCountdown ?? this.resendCountdown,
     );
   }
 
@@ -168,5 +184,8 @@ class RegistrationState extends Equatable {
     validationErrors,
     registeredUserId,
     confirmationCode,
+    isOtpSent,
+    verifiedEmail,
+    resendCountdown,
   ];
 }

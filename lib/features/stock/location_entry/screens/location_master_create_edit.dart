@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/core/widgets/custom_text_form.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
@@ -12,6 +13,7 @@ import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_
 import 'package:savvy_stock/features/stock/location_entry/widget/branch_dropdown.dart';
 import 'package:savvy_stock/features/stock/location_entry/widget/item_pick_list.dart';
 import 'package:savvy_stock/features/stock/location_entry/widget/location_code.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import '../blocs/location_master_bloc.dart';
 import '../models/location_master_model.dart';
 
@@ -68,32 +70,51 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isEditMode ? 'Edit Location ' : 'Create Location'),
-        backgroundColor: const Color(0xFF155888),
+        title: Text(
+          widget.isEditMode ? 'Edit Location' : 'Create Location',
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+        backgroundColor: const Color(0xFF1C4292),
+        foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
-          // Single Save button in AppBar
           BlocBuilder<LocationMasterBloc, LocationMasterState>(
             builder: (context, state) {
-              final isSaveEnabled =
-                  state.dualListTarget.isNotEmpty && state.selected != null;
-              // Determine edit mode from state if not explicitly passed
               final isEditMode =
                   widget.isEditMode || state.selected?.id != null;
-              return ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(20)),
+              final isSaveEnabled =
+                  (state.dualListTarget.isNotEmpty && state.selected != null) ||
+                  isEditMode;
+
+              return Padding(
+                padding: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.amber,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                ),
-                onPressed: isSaveEnabled
-                    ? () => _saveLocation(context, state)
-                    : isEditMode
-                    ? () => _saveLocation(context, state)
-                    : null,
-                child: Text(
-                  isEditMode ? 'Update' : 'Save',
-                  style: TextStyle(color: Colors.white),
+                  onPressed: isSaveEnabled
+                      ? () => _saveLocation(context, state)
+                      : null,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isEditMode
+                            ? Iconsax.document_upload
+                            : Iconsax.document_copy,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        isEditMode ? 'Update' : 'Save',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
@@ -193,20 +214,49 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
     LocationMasterState state,
     bool isEditMode,
   ) {
-    return Padding(
-      padding: const EdgeInsets.all(10.0),
+    return Container(
+      padding: const EdgeInsets.all(20.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.grey[200]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            isEditMode ? 'Store Information(Read Only)' : 'Store Information',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: isEditMode ? Colors.grey : null,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1C4292).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Iconsax.shop,
+                  size: 20,
+                  color: Color(0xFF1C4292),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                isEditMode ? 'Store Information' : 'Select Store',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF333333),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Column(
             children: [
               // Store dropdown - full width
@@ -340,11 +390,11 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
 
   bool _shouldShowMarginFields() {
     // This would come from your system settings
-    // final showMargin = context
-    //   .read<SystemConstantBloc>()
-    // .state
-    //.selected
-    //.au;
+    final showMargin = context
+        .read<SystemConstantBloc>()
+        .state
+        .selected!
+        .taxInfoDisplay!;
     return true;
   }
 

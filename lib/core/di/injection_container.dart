@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:savvy_stock/features/FSNMR/blocs/FSNMR_bloc.dart';
 import 'package:savvy_stock/features/FSNMR/repo/FSNMR_repository.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
+import 'package:savvy_stock/features/auth/blocs/password_reset/password_reset_bloc.dart';
 import 'package:savvy_stock/features/company/blocs/company_bloc.dart';
 import 'package:savvy_stock/features/licensing/bloc/license_bloc.dart';
 import 'package:savvy_stock/features/licensing/services/license_service.dart';
@@ -74,6 +75,9 @@ import 'package:savvy_stock/features/sales/sales_order/header/repo/sales_order_h
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 import 'package:savvy_stock/features/reports/cash_flow/bloc/cash_flow_bloc.dart';
 import 'package:savvy_stock/features/reports/cash_flow/repo/cash_flow_repo.dart';
+import 'package:savvy_stock/features/purchase/other_expenses/bloc/other_expenses_bloc.dart';
+import 'package:savvy_stock/features/purchase/other_expenses/repo/other_expense_repository.dart';
+import 'package:savvy_stock/features/auth/services/password_reset_service.dart';
 
 final getIt = GetIt.instance;
 
@@ -296,6 +300,9 @@ void initDependencies() {
   );
   getIt.registerLazySingleton<LicenseService>(
     () => LicenseService(secureStorage: getIt(), deviceInfoPlugin: getIt()),
+  );
+  getIt.registerLazySingleton<PasswordResetService>(
+    () => PasswordResetService(databaseService: getIt()),
   );
   getIt.registerLazySingleton<PricingService>(
     () => PricingService(
@@ -561,9 +568,31 @@ void initDependencies() {
     () => FSNMRBloc(authBloc: getIt(), repository: getIt()),
   );
   getIt.registerLazySingleton<RegistrationBloc>(
-    () => RegistrationBloc(registrationService: getIt()),
+    () =>
+        RegistrationBloc(registrationService: getIt(), secureStorage: getIt()),
   );
   getIt.registerLazySingleton<LicenseBloc>(
     () => LicenseBloc(licenseService: getIt()),
+  );
+
+  // Other Expenses
+  getIt.registerLazySingleton<OtherExpenseRepository>(
+    () => OtherExpenseRepository(databaseService: getIt()),
+  );
+  getIt.registerFactory<OtherExpensesBloc>(
+    () => OtherExpensesBloc(
+      repository: getIt(),
+      authBloc: getIt(),
+      itemCostBloc: getIt(),
+      itemInBranchBloc: getIt(),
+      systemConstantBloc: getIt(),
+      itemEntryBloc: getIt(),
+    ),
+  );
+
+  // Password Reset
+
+  getIt.registerFactory<PasswordResetBloc>(
+    () => PasswordResetBloc(passwordResetService: getIt()),
   );
 }

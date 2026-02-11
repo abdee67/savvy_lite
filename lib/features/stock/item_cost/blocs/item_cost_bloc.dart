@@ -52,6 +52,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
     on<SaveAndAddNew>(_onSaveAndAddNew);
     on<SaveAndAddContinue>(_onSaveAndAddContinue);
     on<UpdateItemCosts>(_onUpdateItemCosts);
+    on<UpdateItemCostsByOverhead>(_onUpdateItemCostsByOverhead);
     //on<UpdateItemCostsForItemMaster>(_onUpdateItemCostsForItemMaster);
     on<UpdateUnitPrice>(_onUpdateUnitPrice);
     on<FilterItemCosts>(_onFilterItemCosts);
@@ -977,5 +978,55 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
     emit(state.copyWith(selected: null, createItems: null, items: null));
 
     // This would typically show a success message in the UI
+  }
+
+  /// Update all item costs by adding overhead cost per unit
+  /// Used by OtherExpensesBloc to distribute monthly expenses to item costs
+  Future<void> _onUpdateItemCostsByOverhead(
+    UpdateItemCostsByOverhead event,
+    Emitter<ItemCostState> emit,
+  ) async {
+    try {
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) return;
+
+      final items = await repository.findAll(companyId);
+      final updatedItems = <ItemCost>[];
+
+      for (final item in items) {
+        if (item.amountUnitCost != null) {
+          final updatedItem = item.copyWith(
+            amountUnitCost: item.amountUnitCost! + event.overheadCostPerUnit,
+            dateUpdated: DateTime.now(),
+            userId: authBloc.state.userId?.id,
+          );
+          await repository.update(updatedItem);
+          updatedItems.add(updatedItem);
+        }
+      }
+
+      emit(
+        ItemCostState(
+          items: updatedItems,
+          createItems: state.createItems,
+          editItems: state.editItems,
+          multiselectionItems: state.multiselectionItems,
+          filteredValues: state.filteredValues,
+          successMessage:
+              'Item costs updated with overhead: ${event.overheadCostPerUnit}',
+        ),
+      );
+    } catch (e) {
+      emit(
+        ItemCostState(
+          items: state.items,
+          createItems: state.createItems,
+          editItems: state.editItems,
+          multiselectionItems: state.multiselectionItems,
+          filteredValues: state.filteredValues,
+          errorMessage: 'Error updating item costs by overhead: $e',
+        ),
+      );
+    }
   }
 }

@@ -81,7 +81,7 @@ class _TrialPageState extends State<TrialPage> {
                               text: 'FREE ',
                               style: TextStyle(color: Color(0xFF4DE89F)),
                             ),
-                            TextSpan(text: '7 - DAYS TRIAL'),
+                            TextSpan(text: '5 - DAYS TRIAL'),
                           ],
                         ),
                       ),

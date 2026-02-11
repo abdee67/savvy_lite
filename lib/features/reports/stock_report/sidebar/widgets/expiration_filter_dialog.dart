@@ -309,7 +309,7 @@ class _ExpirationFilterDialogState extends State<ExpirationFilterDialog> {
 
   Widget _buildLocationFilter() {
     final locationsState = context.watch<LocationMasterBloc>().state;
-    final locations = locationsState.filteredItems;
+    final locations = locationsState.locations;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

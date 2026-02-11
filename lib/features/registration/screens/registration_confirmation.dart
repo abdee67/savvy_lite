@@ -1,13 +1,9 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/features/registration/blocs/registration_bloc.dart';
-import 'package:savvy_stock/features/licensing/screens/license_activation_page.dart';
-import 'package:savvy_stock/features/licensing/bloc/license_bloc.dart';
-import 'package:savvy_stock/features/licensing/services/license_service.dart';
-import 'package:device_info_plus/device_info_plus.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/gestures.dart';
 import 'package:savvy_stock/features/registration/screens/terms.dart';
 import 'package:savvy_stock/features/registration/screens/privacy.dart';
@@ -30,21 +26,8 @@ class _ConfirmationPageState extends State<ConfirmationPage> {
 
   void _redirectToLicenseActivation() {
     if (mounted) {
-      // Navigate to license activation page with LicenseBloc
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (_) => BlocProvider(
-            create: (context) => LicenseBloc(
-              licenseService: LicenseService(
-                secureStorage: const FlutterSecureStorage(),
-                deviceInfoPlugin: DeviceInfoPlugin(),
-              ),
-            ),
-            child: const LicenseActivationPage(isFromRegistration: true),
-          ),
-        ),
-        (route) => false,
-      );
+      // Navigate to login page
+      context.go(AppRoutes.login);
     }
   }
 
@@ -77,7 +60,7 @@ class _ConfirmationPageState extends State<ConfirmationPage> {
               const Icon(Icons.check_circle, color: Colors.amber, size: 70),
               const SizedBox(height: 15),
               const Text(
-                "Registration Successful!",
+                "Free Trial Activated!",
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
@@ -86,7 +69,7 @@ class _ConfirmationPageState extends State<ConfirmationPage> {
               ),
               const SizedBox(height: 10),
               const Text(
-                "Your account has been created successfully. Now let's activate your software license.",
+                "Your account has been created with a 5-day free trial (3 Users, 2 Branches). Please login to continue.",
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.white70),
               ),
@@ -102,7 +85,7 @@ class _ConfirmationPageState extends State<ConfirmationPage> {
                 child: const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   child: Text(
-                    "Activate License",
+                    "Login",
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.black,
@@ -158,7 +141,7 @@ class _ConfirmationPageState extends State<ConfirmationPage> {
           child: SafeArea(
             child: SingleChildScrollView(
               padding: EdgeInsets.symmetric(
-                horizontal: isTablet ? 80 : 20,
+                horizontal: isTablet ? 30 : 18,
                 vertical: isTablet ? 60 : 40,
               ),
               child: BlocBuilder<RegistrationBloc, RegistrationState>(
@@ -291,8 +274,9 @@ class _ConfirmationPageState extends State<ConfirmationPage> {
                                     text: 'Terms of Service',
                                     style: TextStyle(
                                       color: Colors.amber.shade200,
-                                      fontSize: 13,
+                                      fontSize: 15,
                                       fontWeight: FontWeight.bold,
+                                      decoration: TextDecoration.underline,
                                     ),
                                     recognizer: TapGestureRecognizer()
                                       ..onTap = () {
@@ -316,8 +300,9 @@ class _ConfirmationPageState extends State<ConfirmationPage> {
                                     text: 'Privacy Policy',
                                     style: TextStyle(
                                       color: Colors.amber.shade200,
-                                      fontSize: 13,
+                                      fontSize: 15,
                                       fontWeight: FontWeight.bold,
+                                      decoration: TextDecoration.underline,
                                     ),
                                     recognizer: TapGestureRecognizer()
                                       ..onTap = () {
@@ -355,41 +340,39 @@ class _ConfirmationPageState extends State<ConfirmationPage> {
                             filter: agreeTerms
                                 ? ImageFilter.blur(sigmaX: 0, sigmaY: 0)
                                 : ImageFilter.blur(sigmaX: 2.5, sigmaY: 2.5),
-                            child: Expanded(
-                              child: ElevatedButton(
-                                onPressed: agreeTerms && !_isSubmitting
-                                    ? onSubscribe
-                                    : null,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.amber,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 40,
-                                    vertical: 16,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                  elevation: agreeTerms ? 6 : 0,
+                            child: ElevatedButton(
+                              onPressed: agreeTerms && !_isSubmitting
+                                  ? onSubscribe
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.amber,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 40,
+                                  vertical: 16,
                                 ),
-                                child: Center(
-                                  child: _isSubmitting
-                                      ? const SizedBox(
-                                          height: 20,
-                                          width: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Colors.black,
-                                          ),
-                                        )
-                                      : const Text(
-                                          "Subscribe and Create Account",
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.black,
-                                          ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                elevation: agreeTerms ? 6 : 0,
+                              ),
+                              child: Center(
+                                child: _isSubmitting
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.black,
                                         ),
-                                ),
+                                      )
+                                    : const Text(
+                                        "Subscribe and Create Account",
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black,
+                                        ),
+                                      ),
                               ),
                             ),
                           ),

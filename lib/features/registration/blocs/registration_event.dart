@@ -113,3 +113,39 @@ class GoToStep extends RegistrationEvent {
   @override
   List<Object?> get props => [step];
 }
+
+/// Send email verification code
+class SendEmailVerificationCode extends RegistrationEvent {
+  final String email;
+
+  const SendEmailVerificationCode(this.email);
+
+  @override
+  List<Object?> get props => [email];
+}
+
+/// Verify email verification code
+class VerifyEmailVerificationCode extends RegistrationEvent {
+  final String email;
+  final String code;
+
+  const VerifyEmailVerificationCode(this.email, this.code);
+
+  @override
+  List<Object?> get props => [email, code];
+}
+
+/// Start resend timer
+class StartResendTimer extends RegistrationEvent {
+  const StartResendTimer();
+}
+
+/// Tick resend timer
+class TickResendTimer extends RegistrationEvent {
+  final int tick;
+
+  const TickResendTimer(this.tick);
+
+  @override
+  List<Object?> get props => [tick];
+}

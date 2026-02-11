@@ -6,6 +6,8 @@ import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/auth/model/subscription_management_model.dart';
 import 'package:savvy_stock/features/registration/model/signup_data_model.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:savvy_stock/core/services/supabase/supabase_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Result of registration operation
 class RegistrationResult {
@@ -330,11 +332,11 @@ class RegistrationService {
     // If no subscription exists, create a default free trial
     final defaultId = await db.insert('subscription_management', {
       'name': 'Free Trial',
-      'description': '7-day free trial with 1 branch and 5 users',
-      'initial_subscription_branches': 1,
-      'initial_subscription_users': 5,
+      'description': 'Free trial with 2 branches and 3 users',
+      'initial_subscription_branches': 2,
+      'initial_subscription_users': 3,
       'initial_payment': 0.0,
-      'initial_subscription_days': 7,
+      'initial_subscription_days': 5,
       'status': 'active',
     });
 
@@ -395,5 +397,31 @@ class RegistrationService {
     }
 
     return code.toString().substring(0, 4);
+  }
+
+  /// Send email verification code
+  Future<bool> sendEmailVerificationCode(String email) async {
+    try {
+      await SupabaseService.instance.auth.signInWithOtp(email: email);
+      return true;
+    } catch (e) {
+      developer.log('Error sending verification code: $e');
+      return false;
+    }
+  }
+
+  /// Verify email verification code
+  Future<bool> verifyEmailVerificationCode(String email, String code) async {
+    try {
+      final response = await SupabaseService.instance.auth.verifyOTP(
+        token: code,
+        type: OtpType.email,
+        email: email,
+      );
+      return response.session != null;
+    } catch (e) {
+      developer.log('Error verifying code: $e');
+      return false;
+    }
   }
 }

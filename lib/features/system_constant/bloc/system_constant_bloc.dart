@@ -425,6 +425,7 @@ class SystemConstantBloc
         selectedSystemConstant = SystemConstant(
           company: companyId,
           applyLotMgm: 'N',
+          applyOverheadCost: 'N',
           applyLocationMgm: 'Y',
           decimalPlaces: 2,
           autoSalesPrice: 'N',
