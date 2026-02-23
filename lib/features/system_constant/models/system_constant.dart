@@ -157,7 +157,7 @@ class SystemConstant {
       'decimal_places': decimalPlaces,
       'date_last_updated': dateLastUpdated?.millisecondsSinceEpoch,
       'time_last_updated': timeLastUpdated?.millisecondsSinceEpoch,
-      'updated_by': updatedBy,
+      'ubpdated_by': updatedBy,
       'generate_barcode_for_item': generateBarcodeForItem,
       'company': company,
       'rate_vat_percentage': rateVatPercentage,
@@ -192,7 +192,7 @@ class SystemConstant {
       timeLastUpdated: map['time_last_updated'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['time_last_updated'])
           : null,
-      updatedBy: map['updated_by'],
+      updatedBy: map['ubpdated_by'],
       generateBarcodeForItem: map['generate_barcode_for_item'],
       company: map['company'],
       rateVatPercentage: map['rate_vat_percentage']?.toDouble(),
