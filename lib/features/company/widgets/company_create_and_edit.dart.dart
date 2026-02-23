@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
@@ -176,7 +177,7 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
         emailAddress2: _emailAddress2Controller.text,
         reorderPoint: _reorderPointController.text.isEmpty
             ? null
-            : int.parse(_reorderPointController.text),
+            : double.parse(_reorderPointController.text),
         marginRate: _marginRateController.text.isEmpty
             ? null
             : double.parse(_marginRateController.text),
@@ -380,12 +381,18 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
             _companyNameController,
             'Company Name *',
             Icons.business,
+            null,
+            true,
+            150,
           ),
           const SizedBox(height: 16),
           _buildTextField(
             _tinNumberController,
             'TIN Number *',
             Icons.receipt_long,
+            null,
+            true,
+            10,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -443,6 +450,8 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
             'Phone Number 1 *',
             Icons.phone,
             TextInputType.phone,
+            true,
+            15,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -451,6 +460,7 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
             Icons.phone,
             TextInputType.phone,
             false,
+            15,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -459,6 +469,7 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
             Icons.phone,
             TextInputType.phone,
             false,
+            15,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -467,6 +478,7 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
             Icons.email,
             TextInputType.emailAddress,
             false,
+            255,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -475,6 +487,7 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
             Icons.email,
             TextInputType.emailAddress,
             false,
+            255,
           ),
         ],
       ),
@@ -497,6 +510,7 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
             Icons.public,
             TextInputType.text,
             false,
+            45,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -505,6 +519,7 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
             Icons.map,
             TextInputType.text,
             false,
+            45,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -513,6 +528,7 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
             Icons.location_city,
             TextInputType.text,
             false,
+            45,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -521,6 +537,7 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
             Icons.landscape,
             TextInputType.text,
             false,
+            45,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -529,6 +546,7 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
             Icons.location_on,
             TextInputType.text,
             false,
+            200,
           ),
         ],
       ),
@@ -642,17 +660,24 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
     IconData icon, [
     TextInputType? keyboardType,
     bool isRequired = true,
+    int? maxLength,
   ]) {
     return CustomTextField(
       controller: controller,
       keyboardType: keyboardType,
       labelText: label,
       prefixIcon: Icon(icon),
+      inputFormatters: [
+        if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
+      ],
       validator: (value) {
         if (label.contains('*') &&
             isRequired &&
             (value == null || value.isEmpty)) {
           return 'This field is required';
+        }
+        if (maxLength != null && value != null && value.length > maxLength) {
+          return 'Must be $maxLength characters or less';
         }
         return null;
       },

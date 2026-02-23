@@ -26,7 +26,7 @@ class Company extends Equatable {
   final DateTime? dateUpdated;
   final double? marginRate;
   final String? marginType;
-  final int? reorderPoint;
+  final double? reorderPoint;
   final int? inventoryPlanner;
   //final bool? isActive;
 
@@ -87,7 +87,7 @@ class Company extends Equatable {
       dateUpdated: DateTime.now(),
       marginRate: 0,
       marginType: '',
-      reorderPoint: 0,
+      reorderPoint: 0.0,
       inventoryPlanner: 0,
       // isActive: true,
     );
@@ -136,7 +136,7 @@ class Company extends Equatable {
       dateUpdated: parseDate(map['date_updated']),
       marginRate: map['margin_rate']?.toDouble(),
       marginType: map['margin_type'] as String?,
-      reorderPoint: map['reorder_point'] as int?,
+      reorderPoint: map['reorder_point']?.toDouble(),
       inventoryPlanner: map['inventory_planner'] as int?,
       //  isActive: map['is_active'] == 1,
     );
@@ -201,7 +201,7 @@ class Company extends Equatable {
     DateTime? dateUpdated,
     double? marginRate,
     String? marginType,
-    int? reorderPoint,
+    double? reorderPoint,
     int? inventoryPlanner,
     //bool? isActive,
   }) {
