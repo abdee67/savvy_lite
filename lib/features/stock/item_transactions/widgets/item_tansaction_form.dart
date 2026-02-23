@@ -1186,10 +1186,10 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
 
     const double opacity = 0.8;
 
-    if (code == 'RED' || name.contains('red')) {
+    if (code == '01' || name.contains('red')) {
       return Colors.red.withOpacity(opacity);
     }
-    if (code == 'BLU' || name.contains('blue')) {
+    if (code == '02' || name.contains('blue')) {
       return Colors.blue.withOpacity(opacity);
     }
     if (code == 'GRN' || name.contains('green')) {

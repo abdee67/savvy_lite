@@ -226,7 +226,7 @@ class ExcelService {
       case 'branch':
         return 'MAIN';
       case 'defualtUom':
-        return 'PCS';
+        return 'PC';
       case 'taxableFlag':
         return 'Y';
       case 'unitPrice':

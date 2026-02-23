@@ -330,9 +330,9 @@ class _LotExpirationColorsDashboardState
       return color.colorTypeName!;
     }
     switch (color.colorTypeCode?.toUpperCase()) {
-      case 'RED':
+      case '01':
         return 'Red';
-      case 'BLU':
+      case '02':
         return 'Blue';
       case 'GRN':
         return 'Green';
@@ -350,9 +350,9 @@ class _LotExpirationColorsDashboardState
     final name = (color.colorTypeName ?? '').trim().toLowerCase();
 
     switch (code) {
-      case 'RED':
+      case '01':
         return Colors.red;
-      case 'BLU':
+      case '02':
         return Colors.blue;
       case 'GRN':
         return Colors.green;

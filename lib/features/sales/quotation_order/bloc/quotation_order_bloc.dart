@@ -2093,7 +2093,7 @@ class QuotationOrderBloc
           quantityTransaction: salesDetail.quantity ?? 0.0,
           amountUnitPrice: salesDetail.unitPrice ?? 0.0,
           amountExtendedPrice: salesDetail.extendedPrice ?? 0.0,
-          unitOfMeasure: salesDetail.itemTableRef?.unitOfMeasure ?? 'PCS',
+          unitOfMeasure: salesDetail.itemTableRef?.unitOfMeasure ?? 'PC',
         );
       }).toList();
 

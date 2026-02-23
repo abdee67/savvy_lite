@@ -970,7 +970,7 @@ class PurchaseOrderRepository {
         if (statusCode == 'P') {
           // Partially received
           partiallyReceived++;
-        } else if (statusCode == 'C' || quantityOpen == 0.0) {
+        } else if (statusCode == 'R' || quantityOpen == 0.0) {
           // Fully received
           fullyReceived++;
         }
@@ -992,7 +992,7 @@ class PurchaseOrderRepository {
       if (partiallyReceived > 0) {
         newStatusCode = 'P'; // Partially received
       } else if (fullyReceived == totalDetails) {
-        newStatusCode = 'C'; // Fully received
+        newStatusCode = 'R'; // Fully received
       } else if (fullyReceived == 0 && partiallyReceived == 0) {
         newStatusCode = 'N'; // Not received
       }
@@ -1215,7 +1215,7 @@ class PurchaseOrderRepository {
           COUNT(*) as total_orders,
           SUM(amount_grand_total_cost) as total_amount,
           AVG(amount_grand_total_cost) as average_order,
-          COUNT(CASE WHEN po_receive_status IN (SELECT id FROM udc_details WHERE detail_code = 'C') THEN 1 END) as fully_received,
+          COUNT(CASE WHEN po_receive_status IN (SELECT id FROM udc_details WHERE detail_code = 'R') THEN 1 END) as fully_received,
           COUNT(CASE WHEN po_receive_status IN (SELECT id FROM udc_details WHERE detail_code = 'P') THEN 1 END) as partially_received,
           COUNT(CASE WHEN po_receive_status IN (SELECT id FROM udc_details WHERE detail_code = 'N') THEN 1 END) as not_received,
           COUNT(CASE WHEN payment_term IS NOT NULL THEN 1 END) as credit_orders,

@@ -53,8 +53,10 @@ class LocalDatabaseService {
     await db.execute('''
       CREATE TABLE udc_header (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        header_code TEXT NOT NULL,
-        udc_description TEXT NOT NULL
+        udc_code TEXT CHECK(length(udc_code) <= 2),
+        udc_description TEXT CHECK(length(udc_description) <= 45),
+        UNIQUE (udc_code),
+        UNIQUE (udc_description)
       )
     ''');
     developer.log('Created table: udc_header');
@@ -63,14 +65,17 @@ class LocalDatabaseService {
     await db.execute('''
       CREATE TABLE udc_details (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        detail_code TEXT NOT NULL,
-        description_1 TEXT NOT NULL,
-        description_2 TEXT,
+        detail_code TEXT NOT NULL CHECK(length(detail_code) <= 2),
+        description_1 TEXT NOT NULL CHECK(length(description_1) <= 255),
+        description_2 TEXT CHECK(length(description_2) <= 255),
         record_header INTEGER,
-        udc_group TEXT,
+        udc_group TEXT CHECK(length(udc_group) <= 10),
         FOREIGN KEY (record_header) REFERENCES udc_header (id) ON DELETE NO ACTION ON UPDATE NO ACTION,
         UNIQUE (detail_code, record_header)
       )
+    ''');
+    await db.execute('''
+      CREATE INDEX fk_udc_details_record_header_idx ON udc_details(record_header);
     ''');
     developer.log('Created table: udc_details');
 
@@ -78,55 +83,70 @@ class LocalDatabaseService {
     await db.execute('''
       CREATE TABLE company_table (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        company_name TEXT NOT NULL,
-        tin_number TEXT,
-        phone_number_1 TEXT,
-        phone_number_2 TEXT,
-        phone_number_3 TEXT,
-        email_address_1 TEXT,
-        email_address_2 TEXT,
-        city TEXT,
-        region TEXT,
-        state TEXT,
-        country TEXT,
-        address_line TEXT,
-        logo_company TEXT,
+        company_name TEXT NOT NULL CHECK(length(company_name) <= 150),
+        tin_number TEXT CHECK(length(tin_number) <= 10),
+        phone_number_1 TEXT CHECK(length(phone_number_1) <= 15),
+        phone_number_2 TEXT CHECK(length(phone_number_2) <= 15),
+        phone_number_3 TEXT CHECK(length(phone_number_3) <= 15),
+        email_address_1 TEXT CHECK(length(email_address_1) <= 255),
+        email_address_2 TEXT CHECK(length(email_address_2) <= 255),
+        city TEXT CHECK(length(city) <= 45),
+        region TEXT CHECK(length(region) <= 45),
+        state TEXT CHECK(length(state) <= 45),
+        country TEXT CHECK(length(country) <= 45),
+        address_line TEXT CHECK(length(address_line) <= 200),
+        logo_company TEXT CHECK(length(logo_company) <= 255),
         subscription_fee REAL,
         user_limmit INTEGER,
         branch_limmit INTEGER,
         days_left INTEGER,
-        woreda TEXT,
+        woreda TEXT CHECK(length(woreda) <= 25),
         category_code INTEGER,
         referred_by_salesperson_id INTEGER,
         date_created TEXT,
         date_updated TEXT,
         margin_rate REAL,
-        margin_type TEXT,
-        reorder_point INTEGER,
+        margin_type TEXT CHECK(length(margin_type) <= 1),
+        reorder_point REAL,
         inventory_planner INTEGER,
-        FOREIGN KEY (category_code) REFERENCES udc_details (detail_code) ON DELETE NO ACTION ON UPDATE NO ACTION
+        FOREIGN KEY (category_code) REFERENCES udc_details (id) ON DELETE NO ACTION ON UPDATE NO ACTION,
+        FOREIGN KEY (referred_by_salesperson_id) REFERENCES salespersons (id) ON DELETE NO ACTION ON UPDATE NO ACTION,
+        FOREIGN KEY (inventory_planner) REFERENCES employees (id) ON DELETE NO ACTION ON UPDATE NO ACTION
       )
     ''');
+    await db.execute(
+      'CREATE INDEX fk_company_table_cat_cd_idx ON company_table(category_code)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_company_table_idx ON company_table(referred_by_salesperson_id)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_company_table_inv_plnr_idx ON company_table(inventory_planner)',
+    );
     developer.log('Created table: company_table');
 
     //4. Create branch table
     await db.execute('''
-  CREATE TABLE branch_table (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    reference_id TEXT,
-    description TEXT,
-    city TEXT,
-    region TEXT,
-    state TEXT,
-    country TEXT,
-    address_line TEXT,
-    company INTEGER,
-    branch_phone TEXT,
-    margin_rate REAL,
-    margin_type TEXT,
-    FOREIGN KEY (company) REFERENCES company_table(id)
-  );
-''');
+      CREATE TABLE branch_table (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        reference_id INTEGER,
+        description TEXT CHECK(length(description) <= 45),
+        city TEXT CHECK(length(city) <= 45),
+        region TEXT CHECK(length(region) <= 45),
+        state TEXT CHECK(length(state) <= 45),
+        country TEXT CHECK(length(country) <= 45),
+        address_line TEXT CHECK(length(address_line) <= 200),
+        company INTEGER,
+        branch_phone TEXT CHECK(length(branch_phone) <= 14),
+        margin_rate REAL,
+        margin_type TEXT CHECK(length(margin_type) <= 1),
+        reorder_point REAL,
+        FOREIGN KEY (company) REFERENCES company_table(id) ON DELETE NO ACTION ON UPDATE NO ACTION
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX fk_branch_table_company_idx ON branch_table(company)',
+    );
     developer.log('Created table: branch_table');
     //5. Create employee table
     developer.log('Creating table: employees');
@@ -354,37 +374,46 @@ CREATE INDEX idx_items_in_branch_uom ON items_in_branch(unit_of_measure);
     await db.execute('''
       CREATE TABLE system_constant (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        apply_lot_mgm TEXT,
-        apply_overhead_cost TEXT,
-        apply_location_mgm TEXT,
-        interface_customer TEXT,
-        interface_employee TEXT,
+        apply_lot_mgm TEXT CHECK(length(apply_lot_mgm) <= 1),
+        apply_location_mgm TEXT CHECK(length(apply_location_mgm) <= 1),
+        interface_customer TEXT CHECK(length(interface_customer) <= 1),
+        interface_employee TEXT CHECK(length(interface_employee) <= 1),
         decimal_places INTEGER,
-        date_last_updated INTEGER,
-        time_last_updated INTEGER,
-        updated_by INTEGER,
-        generate_barcode_for_item TEXT,
+        date_last_updated TEXT,
+        time_last_updated TEXT,
+        ubpdated_by INTEGER,
+        generate_barcode_for_item TEXT CHECK(length(generate_barcode_for_item) <= 1),
         company INTEGER,
         rate_vat_percentage REAL,
         rate_with_percentage REAL,
         with_hold_initials REAL,
-        auto_sales_price TEXT DEFAULT 'N',
+        auto_sales_price TEXT DEFAULT 'N' CHECK(length(auto_sales_price) <= 1),
         lot_type INTEGER,
         location_category_level INTEGER DEFAULT 1,
-        lot_qty_auto_for_sales TEXT DEFAULT 'Y',
-        discount_display TEXT DEFAULT 'N',
-        tax_info_display TEXT DEFAULT 'N',
+        lot_qty_auto_for_sales TEXT DEFAULT 'Y' CHECK(length(lot_qty_auto_for_sales) <= 1),
+        discount_display TEXT DEFAULT 'Y' CHECK(length(discount_display) <= 1),
+        tax_info_display TEXT DEFAULT 'Y' CHECK(length(tax_info_display) <= 1),
+        reorder_point_uom_type TEXT DEFAULT 'I' CHECK(length(reorder_point_uom_type) <= 1),
+        expiration_date_left INTEGER,
+        tot_vat TEXT CHECK(length(tot_vat) <= 1),
+        currency_code TEXT DEFAULT 'Birr' CHECK(length(currency_code) <= 10),
+        pos_integrated TEXT DEFAULT 'N' CHECK(length(pos_integrated) <= 1),
+        apply_overhead_cost TEXT DEFAULT 'N' CHECK(length(apply_overhead_cost) <= 1),
+        attached_branch_only TEXT DEFAULT 'N' CHECK(length(attached_branch_only) <= 1),
         days_left INTEGER,
-        currency_code TEXT DEFAULT 'ETB',
-        reorder_point_uom_type TEXT DEFAULT 'I',
         is_synced INTEGER DEFAULT 1,
         last_sync_time INTEGER,
         created_at INTEGER DEFAULT (strftime('%s', 'now')),
         updated_at INTEGER DEFAULT (strftime('%s', 'now')),
         FOREIGN KEY (company) REFERENCES company_table (id) ON DELETE NO ACTION ON UPDATE NO ACTION,
         FOREIGN KEY (lot_type) REFERENCES udc_details (id) ON DELETE NO ACTION ON UPDATE NO ACTION,
-        FOREIGN KEY (updated_by) REFERENCES user_table (id) ON DELETE NO ACTION ON UPDATE NO ACTION
+        FOREIGN KEY (ubpdated_by) REFERENCES user_table (id) ON DELETE NO ACTION ON UPDATE NO ACTION
       )
+    ''');
+    await db.execute('''
+      CREATE INDEX fk_system_constant_ubpdated_by_idx ON system_constant(ubpdated_by);
+      CREATE INDEX fk_system_constant_company_idx ON system_constant(company);
+      CREATE INDEX fk_system_constant_lt_type_idx ON system_constant(lot_type);
     ''');
     developer.log('Created table: system_constant');
 
@@ -1574,7 +1603,6 @@ ON fs_table (branch);
 
       await db.insert('system_constant', {
         'apply_lot_mgm': 'Y',
-        'apply_overhead_cost': 'N',
         'apply_location_mgm': 'Y',
         'decimal_places': 2,
         'generate_barcode_for_item': 'N',
@@ -1586,9 +1614,12 @@ ON fs_table (branch);
         'lot_qty_auto_for_sales': 'Y',
         'discount_display': 'Y',
         'tax_info_display': 'Y',
-        'days_left': 180,
-        'currency_code': 'ETB',
         'reorder_point_uom_type': 'I',
+        'currency_code': 'Birr',
+        'pos_integrated': 'N',
+        'apply_overhead_cost': 'N',
+        'attached_branch_only': 'N',
+        'days_left': 180,
         'location_category_level': 1,
         'is_synced': 0,
         'lot_type': lotTypeId,
@@ -1606,33 +1637,33 @@ ON fs_table (branch);
     developer.log('Inserting default data...');
 
     final List<Map<String, dynamic>> udcHeaderSeedData = [
-      {'id': 1, 'header_code': 'UM', 'udc_description': 'Unit of Measure'},
-      {'id': 2, 'header_code': 'PI', 'udc_description': 'Payment Instrument'},
+      {'id': 1, 'udc_code': 'UM', 'udc_description': 'Unit of Measure'},
+      {'id': 2, 'udc_code': 'PI', 'udc_description': 'Payment Instrument'},
       {
         'id': 3,
-        'header_code': 'PR',
+        'udc_code': 'PR',
         'udc_description': 'Purchased Receive Status',
       },
-      {'id': 4, 'header_code': 'CN', 'udc_description': 'Countries'},
-      {'id': 5, 'header_code': 'PS', 'udc_description': 'Payment Status'},
-      {'id': 6, 'header_code': 'CT', 'udc_description': 'Color Types'},
-      {'id': 7, 'header_code': 'LS', 'udc_description': 'Lot Status'},
-      {'id': 8, 'header_code': 'TT', 'udc_description': 'Transaction Type'},
-      {'id': 9, 'header_code': 'OT', 'udc_description': 'Order Type'},
-      {'id': 10, 'header_code': 'CC', 'udc_description': 'Company Category'},
-      {'id': 11, 'header_code': 'C1', 'udc_description': 'Item Category 1'},
-      {'id': 12, 'header_code': 'C2', 'udc_description': 'Item Category 2'},
-      {'id': 13, 'header_code': 'C3', 'udc_description': 'Item Category 3'},
-      {'id': 14, 'header_code': 'C4', 'udc_description': 'Item Category 4'},
-      {'id': 15, 'header_code': 'C5', 'udc_description': 'Item Category 5'},
-      {'id': 16, 'header_code': 'C6', 'udc_description': 'Item Category 6'},
-      {'id': 17, 'header_code': 'C7', 'udc_description': 'Item Category 7'},
-      {'id': 18, 'header_code': 'C8', 'udc_description': 'Item Category 8'},
-      {'id': 19, 'header_code': 'C9', 'udc_description': 'Item Category 9'},
-      {'id': 20, 'header_code': 'C10', 'udc_description': 'Item Category 10'},
-      {'id': 21, 'header_code': 'LT', 'udc_description': 'Lot Type'},
-      {'id': 22, 'header_code': 'FQ', 'udc_description': 'Report Frequency'},
-      {'id': 23, 'header_code': 'SR', 'udc_description': 'Sales Return Status'},
+      {'id': 4, 'udc_code': 'CN', 'udc_description': 'Countries'},
+      {'id': 5, 'udc_code': 'PS', 'udc_description': 'Payment Status'},
+      {'id': 6, 'udc_code': 'CT', 'udc_description': 'Color Types'},
+      {'id': 7, 'udc_code': 'LS', 'udc_description': 'Lot Status'},
+      {'id': 8, 'udc_code': 'TT', 'udc_description': 'Transaction Type'},
+      {'id': 9, 'udc_code': 'OT', 'udc_description': 'Order Type'},
+      {'id': 10, 'udc_code': 'CC', 'udc_description': 'Company Category'},
+      {'id': 11, 'udc_code': 'C1', 'udc_description': 'Item Category 1'},
+      {'id': 12, 'udc_code': 'C2', 'udc_description': 'Item Category 2'},
+      {'id': 13, 'udc_code': 'C3', 'udc_description': 'Item Category 3'},
+      {'id': 14, 'udc_code': 'C4', 'udc_description': 'Item Category 4'},
+      {'id': 15, 'udc_code': 'C5', 'udc_description': 'Item Category 5'},
+      {'id': 16, 'udc_code': 'C6', 'udc_description': 'Item Category 6'},
+      {'id': 17, 'udc_code': 'C7', 'udc_description': 'Item Category 7'},
+      {'id': 18, 'udc_code': 'C8', 'udc_description': 'Item Category 8'},
+      {'id': 19, 'udc_code': 'C9', 'udc_description': 'Item Category 9'},
+      {'id': 20, 'udc_code': 'C0', 'udc_description': 'Item Category 10'},
+      {'id': 21, 'udc_code': 'LT', 'udc_description': 'Lot Type'},
+      {'id': 22, 'udc_code': 'FQ', 'udc_description': 'Report Frequency'},
+      {'id': 23, 'udc_code': 'SR', 'udc_description': 'Sales Return Status'},
     ];
 
     for (final udcHeader in udcHeaderSeedData) {
@@ -1643,7 +1674,7 @@ ON fs_table (branch);
     final List<Map<String, dynamic>> udcDetailsSeedData = [
       // --- Unit of Measure (UM) ---
       {
-        'detail_code': 'PCS',
+        'detail_code': 'PC',
         'description_1': 'Pieces',
         'description_2': null,
         'record_header': 1,
@@ -1664,7 +1695,7 @@ ON fs_table (branch);
         'udc_group': 'UM',
       },
       {
-        'detail_code': 'BOX',
+        'detail_code': 'BX',
         'description_1': 'Box',
         'description_2': null,
         'record_header': 1,
@@ -1680,29 +1711,22 @@ ON fs_table (branch);
 
       // --- Payment Instrument (PI) ---
       {
-        'detail_code': 'CASH',
+        'detail_code': 'CS',
         'description_1': 'Cash',
         'description_2': null,
         'record_header': 2,
         'udc_group': 'PI',
       },
       {
-        'detail_code': 'CARD',
-        'description_1': 'Card Payment',
+        'detail_code': 'CK',
+        'description_1': 'Check Payment',
         'description_2': null,
         'record_header': 2,
         'udc_group': 'PI',
       },
       {
-        'detail_code': 'BANK',
-        'description_1': 'Bank Transfer',
-        'description_2': null,
-        'record_header': 2,
-        'udc_group': 'PI',
-      },
-      {
-        'detail_code': 'MOBILE',
-        'description_1': 'Mobile Payment',
+        'detail_code': 'TR',
+        'description_1': 'Transfer',
         'description_2': null,
         'record_header': 2,
         'udc_group': 'PI',
@@ -1711,7 +1735,7 @@ ON fs_table (branch);
       // --- Purchased Receive Status (PR) ---
       {
         'detail_code': 'N',
-        'description_1': 'New',
+        'description_1': 'Ordered',
         'description_2': null,
         'record_header': 3,
         'udc_group': 'PR',
@@ -1724,8 +1748,8 @@ ON fs_table (branch);
         'udc_group': 'PR',
       },
       {
-        'detail_code': 'C',
-        'description_1': 'Completely Received',
+        'detail_code': 'R',
+        'description_1': 'Received',
         'description_2': null,
         'record_header': 3,
         'udc_group': 'PR',
@@ -1786,21 +1810,21 @@ ON fs_table (branch);
 
       // --- Color Types (CT) ---
       {
-        'detail_code': 'RED',
+        'detail_code': '01',
         'description_1': 'Red',
         'description_2': null,
         'record_header': 6,
         'udc_group': 'CT',
       },
       {
-        'detail_code': 'BLU',
+        'detail_code': '02',
         'description_1': 'Blue',
         'description_2': null,
         'record_header': 6,
         'udc_group': 'CT',
       },
       {
-        'detail_code': 'GRN',
+        'detail_code': '03',
         'description_1': 'Green',
         'description_2': null,
         'record_header': 6,

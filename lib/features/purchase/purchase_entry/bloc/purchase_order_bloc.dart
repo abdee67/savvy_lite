@@ -1725,7 +1725,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       quantityRecieved: detailQuantityReceived,
       amountReceived: detailAmountReceived,
       poReceiveStatus: quantityOpen == 0
-          ? await _getUdcDetailId('C', 'PR')
+          ? await _getUdcDetailId('R', 'PR')
           : await _getUdcDetailId('P', 'PR'),
       dateUpdated: DateTime.now(),
       userId: state.userId ?? authBloc.state.userId?.id,
@@ -1849,7 +1849,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         quantityRecieved: detailQuantityReceived,
         amountReceived: detailAmountReceived,
         poReceiveStatus: quantityOpen == 0
-            ? await _getUdcDetailId('C', 'PR')
+            ? await _getUdcDetailId('R', 'PR')
             : await _getUdcDetailId('P', 'PR'),
         dateUpdated: DateTime.now(),
         userId: state.userId ?? authBloc.state.userId?.id,

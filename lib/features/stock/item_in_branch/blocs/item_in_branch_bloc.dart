@@ -551,7 +551,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
           // Create stock card entry
           await itemTransactionsRepository.stockCardCreation(
             ib: itemsInBranch,
-            transactionType: 'C', //C IS COMPLETE
+            transactionType: 'R', //R IS COMPLETE
             remark: 'Purchase Order Stock Addition',
             loc: null,
             lm: null,

@@ -391,9 +391,9 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
 
     // Map based on your UDC data
     switch (code) {
-      case 'RED':
+      case '01':
         return Colors.red;
-      case 'BLU':
+      case '02':
         return Colors.blue;
       case 'GRN':
         return Colors.green;
