@@ -19,6 +19,7 @@ class _BranchFormScreenState extends State<BranchFormScreen> {
   final TextEditingController regionController = TextEditingController();
   final TextEditingController cityController = TextEditingController();
   final TextEditingController addressController = TextEditingController();
+  bool _submitted = false;
 
   @override
   void initState() {
@@ -60,6 +61,10 @@ class _BranchFormScreenState extends State<BranchFormScreen> {
   }
 
   void _saveAndNavigate() {
+    setState(() {
+      _submitted = true;
+    });
+
     // Validate required fields
     if (branchNameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -185,24 +190,29 @@ class _BranchFormScreenState extends State<BranchFormScreen> {
                       "Branch Name",
                       controller: branchNameController,
                       required: true,
+                      onChanged: (_) => setState(() {}),
                     ),
                     _buildTextField(
                       "Branch Phone",
                       controller: branchPhoneController,
+                      onChanged: (_) => setState(() {}),
                     ),
                     _buildTextField(
                       "Region",
                       controller: regionController,
                       required: true,
+                      onChanged: (_) => setState(() {}),
                     ),
                     _buildTextField(
                       "City",
                       controller: cityController,
                       required: true,
+                      onChanged: (_) => setState(() {}),
                     ),
                     _buildTextField(
                       "Specific Address / Landmark",
                       controller: addressController,
+                      onChanged: (_) => setState(() {}),
                     ),
 
                     const SizedBox(height: 40),
@@ -324,11 +334,13 @@ class _BranchFormScreenState extends State<BranchFormScreen> {
     String label, {
     bool required = false,
     TextEditingController? controller,
+    ValueChanged<String>? onChanged,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: TextField(
         controller: controller,
+        onChanged: onChanged,
         style: const TextStyle(color: Colors.white, fontSize: 16),
         cursorColor: Colors.amber,
         decoration: InputDecoration(
@@ -347,7 +359,7 @@ class _BranchFormScreenState extends State<BranchFormScreen> {
           ),
 
           //if required true then show red color
-          errorText: required && controller!.text.isEmpty
+          errorText: required && _submitted && controller!.text.isEmpty
               ? 'This field is required'
               : null,
           errorMaxLines: 3,

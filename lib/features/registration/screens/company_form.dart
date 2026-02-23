@@ -14,6 +14,7 @@ class CompanyForm extends StatefulWidget {
 class _CompanyFormState extends State<CompanyForm> {
   String selectedSignupType = "Company";
   String selectedCategory = "Pharmacy";
+  bool _submitted = false;
 
   final TextEditingController companyNameController = TextEditingController();
   final TextEditingController tinController = TextEditingController();
@@ -40,6 +41,10 @@ class _CompanyFormState extends State<CompanyForm> {
   }
 
   void _saveAndNavigate() {
+    setState(() {
+      _submitted = true;
+    });
+
     // Validate required fields
     if (companyNameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -141,11 +146,17 @@ class _CompanyFormState extends State<CompanyForm> {
                       "Company Name",
                       controller: companyNameController,
                       required: true,
+                      onChanged: (_) => setState(() {}),
                     ),
-                    _buildTextField("TIN Number", controller: tinController),
+                    _buildTextField(
+                      "TIN Number",
+                      controller: tinController,
+                      onChanged: (_) => setState(() {}),
+                    ),
                     _buildTextField(
                       "Company Phone",
                       controller: phoneController,
+                      onChanged: (_) => setState(() {}),
                     ),
 
                     // 🔹 Company Category Dropdown
@@ -252,11 +263,13 @@ class _CompanyFormState extends State<CompanyForm> {
     String label, {
     bool required = false,
     TextEditingController? controller,
+    ValueChanged<String>? onChanged,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: TextField(
         controller: controller,
+        onChanged: onChanged,
         style: const TextStyle(color: Colors.white, fontSize: 16),
         cursorColor: Colors.amber,
         decoration: InputDecoration(
@@ -273,7 +286,7 @@ class _CompanyFormState extends State<CompanyForm> {
             borderRadius: BorderRadius.circular(20),
             borderSide: const BorderSide(color: Colors.amber, width: 1.5),
           ),
-          errorText: required && controller!.text.isEmpty
+          errorText: required && _submitted && controller!.text.isEmpty
               ? "This field is required"
               : null,
         ),
