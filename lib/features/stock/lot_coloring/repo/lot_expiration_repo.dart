@@ -259,7 +259,7 @@ class LotExpirationColorsRepository {
       final result = await db.rawQuery(
         '''
         SELECT * FROM udc_details 
-        WHERE id = ? AND record_header = (SELECT id FROM udc_header WHERE header_code = 'LT')
+        WHERE id = ? AND record_header = (SELECT id FROM udc_header WHERE udc_code = 'LT')
         ''',
         [lotTypeId],
       );

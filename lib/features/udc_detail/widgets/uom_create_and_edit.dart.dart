@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
@@ -125,9 +126,13 @@ class _UomCreateAndEditState extends State<UomCreateAndEdit> {
             CustomTextField(
               labelText: 'Detail Code *',
               controller: _detailCodeController,
+              inputFormatters: [LengthLimitingTextInputFormatter(2)],
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Detail Code is required';
+                }
+                if (value.length > 2) {
+                  return 'Detail Code must be 2 characters or less';
                 }
                 return null;
               },
@@ -137,9 +142,13 @@ class _UomCreateAndEditState extends State<UomCreateAndEdit> {
             CustomTextField(
               labelText: 'Description 1 *',
               controller: _description1Controller,
+              inputFormatters: [LengthLimitingTextInputFormatter(255)],
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Description 1 is required';
+                }
+                if (value.length > 255) {
+                  return 'Description 1 must be 255 characters or less';
                 }
                 return null;
               },
@@ -149,6 +158,13 @@ class _UomCreateAndEditState extends State<UomCreateAndEdit> {
             CustomTextField(
               labelText: 'Description 2',
               controller: _description2Controller,
+              inputFormatters: [LengthLimitingTextInputFormatter(255)],
+              validator: (value) {
+                if (value != null && value.length > 255) {
+                  return 'Description 2 must be 255 characters or less';
+                }
+                return null;
+              },
               prefixIcon: const Icon(Icons.info_outline),
             ),
           ],
