@@ -177,7 +177,7 @@ class SalesOrderHeader {
               nameFirst: map['name_first'] ?? map['employee_name'],
               nameMiddle: map['employee_name_middle'] ?? '',
               nameLast: map['employee_name_last'] ?? '',
-              phone: map['employee_phone'] ?? '',
+              phoneHome: map['employee_phone'] ?? '',
               email: map['employee_email'] ?? '',
             )
           : null,

@@ -1,5 +1,6 @@
 // features/role/screens/role_form_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
@@ -102,9 +103,13 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
         CustomTextField(
           controller: _nameController,
           labelText: 'Role Name *',
+          inputFormatters: [LengthLimitingTextInputFormatter(45)],
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'Please enter role name';
+            }
+            if (value.length > 45) {
+              return 'Role name must be 45 characters or less';
             }
             return null;
           },
@@ -123,9 +128,13 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
               borderSide: BorderSide(color: Color(0xFF145888), width: 1),
             ),
           ),
+          inputFormatters: [LengthLimitingTextInputFormatter(100)],
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'Please enter description';
+            }
+            if (value.length > 100) {
+              return 'Description must be 100 characters or less';
             }
             return null;
           },

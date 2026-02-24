@@ -261,7 +261,7 @@ class EmployeeBloc extends Bloc<EmployeeEvent, EmployeeState> {
       final filtered = state.employees.where((employee) {
         return employee.nameFirst.toLowerCase().contains(query) ||
             employee.nameLast.toLowerCase().contains(query) ||
-            employee.phone.toLowerCase().contains(query) ||
+            employee.phoneHome.toLowerCase().contains(query) ||
             employee.email.toLowerCase().contains(query);
       }).toList();
 

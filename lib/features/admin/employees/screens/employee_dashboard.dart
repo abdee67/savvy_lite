@@ -675,7 +675,7 @@ class _EmployeeListPageState extends State<EmployeeListPage>
                                 ),
                               ),
                               Text(
-                                employee.phone,
+                                employee.phoneHome,
                                 style: TextStyle(
                                   color: const Color(0xFF887F7F),
                                   fontSize: isCompact ? 12 : 14,
@@ -1106,7 +1106,7 @@ class _EmployeeListPageState extends State<EmployeeListPage>
               ),
               _buildInfoItem(
                 'Phone : ',
-                employee.phone,
+                employee.phoneHome,
                 Iconsax.call,
                 isCompact,
               ),
@@ -1125,7 +1125,7 @@ class _EmployeeListPageState extends State<EmployeeListPage>
                     _buildActionButton(
                       Iconsax.call,
                       'Call',
-                      () => _callEmployee(employee.phone ?? ''),
+                      () => _callEmployee(employee.phoneHome ?? ''),
                       isCompact,
                     ),
                     _buildActionButton(

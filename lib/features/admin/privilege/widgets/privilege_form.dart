@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_bloc.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_event.dart';
@@ -98,7 +99,13 @@ class _PrivilegeFormState extends State<PrivilegeForm> {
                   decoration: const InputDecoration(
                     labelText: 'Privilege Name',
                   ),
-                  validator: (value) => value!.isEmpty ? 'Required' : null,
+                  inputFormatters: [LengthLimitingTextInputFormatter(45)],
+                  validator: (value) {
+                    if (value == null || value.isEmpty) return 'Required';
+                    if (value.length > 45)
+                      return 'Must be 45 characters or less';
+                    return null;
+                  },
                 ),
 
                 const SizedBox(height: 12),
@@ -107,7 +114,13 @@ class _PrivilegeFormState extends State<PrivilegeForm> {
                 TextFormField(
                   controller: _descriptionController,
                   decoration: const InputDecoration(labelText: 'Description'),
-                  validator: (value) => value!.isEmpty ? 'Required' : null,
+                  inputFormatters: [LengthLimitingTextInputFormatter(100)],
+                  validator: (value) {
+                    if (value == null || value.isEmpty) return 'Required';
+                    if (value.length > 100)
+                      return 'Must be 100 characters or less';
+                    return null;
+                  },
                 ),
 
                 const SizedBox(height: 12),
@@ -133,6 +146,13 @@ class _PrivilegeFormState extends State<PrivilegeForm> {
                   decoration: const InputDecoration(
                     labelText: 'Link URL (optional)',
                   ),
+                  inputFormatters: [LengthLimitingTextInputFormatter(120)],
+                  validator: (value) {
+                    if (value != null && value.length > 120) {
+                      return 'Must be 120 characters or less';
+                    }
+                    return null;
+                  },
                 ),
 
                 const SizedBox(height: 12),
@@ -143,8 +163,16 @@ class _PrivilegeFormState extends State<PrivilegeForm> {
                     decoration: const InputDecoration(
                       labelText: 'Link Label (unique)',
                     ),
-                    validator: (value) =>
-                        value!.isEmpty ? 'Required for link type' : null,
+                    inputFormatters: [LengthLimitingTextInputFormatter(60)],
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Required for link type';
+                      }
+                      if (value.length > 60) {
+                        return 'Must be 60 characters or less';
+                      }
+                      return null;
+                    },
                   ),
                 ] else if (_type == 'button') ...[
                   TextFormField(
@@ -152,6 +180,13 @@ class _PrivilegeFormState extends State<PrivilegeForm> {
                     decoration: const InputDecoration(
                       labelText: 'Button Label (optional)',
                     ),
+                    inputFormatters: [LengthLimitingTextInputFormatter(20)],
+                    validator: (value) {
+                      if (value != null && value.length > 20) {
+                        return 'Must be 20 characters or less';
+                      }
+                      return null;
+                    },
                   ),
                 ],
 

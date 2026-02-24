@@ -221,7 +221,7 @@ class _ConfirmationPageState extends State<ConfirmationPage> {
                               "Admin Email",
                               state.adminUser.userEmail ?? '',
                             ),
-                            _infoRow("Admin Phone", state.employee.phone),
+                            _infoRow("Admin Phone", state.employee.phoneHome),
                             _infoRow(
                               "Username",
                               state.adminUser.userName ?? '',

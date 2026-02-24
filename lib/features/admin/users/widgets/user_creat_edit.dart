@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
@@ -256,9 +257,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               },
               labelText: 'Username *',
               prefixIcon: const Icon(Iconsax.user),
+              inputFormatters: [LengthLimitingTextInputFormatter(45)],
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Please enter username';
+                }
+                if (value.length > 45) {
+                  return 'Username must be 45 characters or less';
                 }
                 return null;
               },
@@ -275,9 +280,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               },
               labelText: 'Refrence id *',
               prefixIcon: const Icon(Iconsax.user_octagon),
+              inputFormatters: [LengthLimitingTextInputFormatter(45)],
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Please enter refrence id';
+                }
+                if (value.length > 45) {
+                  return 'Reference ID must be 45 characters or less';
                 }
                 return null;
               },
@@ -294,9 +303,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               },
               labelText: 'Email *',
               prefixIcon: const Icon(Iconsax.sms),
+              inputFormatters: [LengthLimitingTextInputFormatter(100)],
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Please enter email';
+                }
+                if (value.length > 100) {
+                  return 'Email must be 100 characters or less';
                 }
                 if (!value.contains('@')) {
                   return 'Please enter a valid email';

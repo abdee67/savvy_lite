@@ -153,58 +153,70 @@ class LocalDatabaseService {
     await db.execute('''
   CREATE TABLE employees (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    employee_id TEXT,
-    name_first TEXT,
-    name_last TEXT,
-    name_middle TEXT,
-    title TEXT,
+    employee_id TEXT CHECK(length(employee_id) <= 20),
+    name_first TEXT CHECK(length(name_first) <= 45),
+    name_last TEXT CHECK(length(name_last) <= 45),
+    name_middle TEXT CHECK(length(name_middle) <= 45),
+    title TEXT CHECK(length(title) <= 45),
     birth_date TEXT,
     hire_date TEXT,
-    address TEXT,
-    city TEXT,
-    region TEXT,
-    country TEXT,
-    phone TEXT,
+    address TEXT CHECK(length(address) <= 45),
+    city TEXT CHECK(length(city) <= 45),
+    region TEXT CHECK(length(region) <= 45),
+    country TEXT CHECK(length(country) <= 45),
+    phone_home TEXT CHECK(length(phone_home) <= 45),
     email TEXT,
-    gender TEXT,
+    gender TEXT CHECK(length(gender) <= 7),
     company INTEGER,
     branch INTEGER,
     FOREIGN KEY (company) REFERENCES company_table(id),
     FOREIGN KEY (branch) REFERENCES branch_table(id)
   );
 ''');
+    await db.execute(
+      'CREATE INDEX fk_employees_company_idx ON employees(company)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_employee_branch_idx ON employees(branch)',
+    );
     developer.log('Created table: employees');
 
     //6.create privilege table
     await db.execute('''
   CREATE TABLE privilege_table (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    description TEXT,
+    name TEXT CHECK(length(name) <= 45),
+    description TEXT CHECK(length(description) <= 100),
     created_by INTEGER,
     date_created TEXT,
     updated_by INTEGER,
     date_updated TEXT,
-    type TEXT,
-    link TEXT,
-    button TEXT,
-    link_lable TEXT UNIQUE,
-    button_lable TEXT,
-    vendor_only TEXT DEFAULT 'N',
+    type TEXT CHECK(length(type) <= 12),
+    link TEXT CHECK(length(link) <= 120),
+    button TEXT CHECK(length(button) <= 20),
+    link_lable TEXT UNIQUE CHECK(length(link_lable) <= 60),
+    button_lable TEXT CHECK(length(button_lable) <= 20),
+    vendor_only TEXT DEFAULT 'N' CHECK(length(vendor_only) <= 1),
     FOREIGN KEY (created_by) REFERENCES employees(id),
     FOREIGN KEY (updated_by) REFERENCES employees(id)
   );
 ''');
+    await db.execute(
+      'CREATE INDEX fk_pt_created_by_idx ON privilege_table(created_by)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_pt_updated_by_idx ON privilege_table(updated_by)',
+    );
     developer.log('Created table: privilege_table');
 
     //7.Create role table
     await db.execute('''
   CREATE TABLE role_table (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
+    name TEXT CHECK(length(name) <= 200),
     created_by INTEGER,
     updated_by INTEGER,
-    description TEXT,
+    description TEXT CHECK(length(description) <= 200),
     date_created TEXT,
     date_updated TEXT,
     company INTEGER,
@@ -214,6 +226,15 @@ class LocalDatabaseService {
     FOREIGN KEY (company) REFERENCES company_table(id)
   );
 ''');
+    await db.execute(
+      'CREATE INDEX fk_rt_created_by_idx ON role_table(created_by)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_rt_updated_by_idx ON role_table(updated_by)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_role_table_company_idx ON role_table(company)',
+    );
     developer.log('Created table: role_table');
 
     //8.create role_privilege table
@@ -242,26 +263,45 @@ class LocalDatabaseService {
         employees_id INTEGER,
         created_by INTEGER,
         updated_by INTEGER,
-        date_created INTEGER,
-        date_updated INTEGER,
-        usercol TEXT,
+        date_created TEXT,
+        date_updated TEXT,
+        usercol TEXT CHECK(length(usercol) <= 45),
         branch INTEGER,
-        status TEXT,
-        password_last_updated INTEGER,
+        status TEXT CHECK(length(status) <= 12),
+        super_user TEXT CHECK(length(super_user) <= 1),
+        password_last_updated TEXT,
         company INTEGER,
-        user_email TEXT,
-        confirmation_code TEXT,
-        confirmations_expire_time INTEGER,
-        user_name TEXT,
-        type TEXT DEFAULT 'Company',
+        user_name TEXT CHECK(length(user_name) <= 45),
+        type TEXT DEFAULT 'Company' CHECK(length(type) <= 20),
         salesperson INTEGER,
-          FOREIGN KEY (employees_id) REFERENCES employees(id),
-    FOREIGN KEY (created_by) REFERENCES employees(id),
-    FOREIGN KEY (updated_by) REFERENCES employees(id),
-    FOREIGN KEY (branch) REFERENCES branch_table(id),
-    FOREIGN KEY (company) REFERENCES company_table(id)
-      )
+        confirmation_code TEXT CHECK(length(confirmation_code) <= 10),
+        confirmations_expire_time TEXT,
+        user_email TEXT CHECK(length(user_email) <= 100),
+        table_number TEXT CHECK(length(table_number) <= 45),
+        FOREIGN KEY (employees_id) REFERENCES employees(id),
+        FOREIGN KEY (created_by) REFERENCES employees(id),
+        FOREIGN KEY (updated_by) REFERENCES employees(id),
+        FOREIGN KEY (branch) REFERENCES branch_table(id),
+        FOREIGN KEY (company) REFERENCES company_table(id),
+        FOREIGN KEY (salesperson) REFERENCES salespersons(id)
+      );
     ''');
+    await db.execute(
+      'CREATE INDEX fk_user_employees1_idx ON user_table(employees_id)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_user_employees2_idx ON user_table(created_by)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_user_employees3_idx ON user_table(updated_by)',
+    );
+    await db.execute('CREATE INDEX fk_user_branch_idx ON user_table(branch)');
+    await db.execute(
+      'CREATE INDEX fk_user_table_company_idx ON user_table(company)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_user_table_salesperson_idx ON user_table(salesperson)',
+    );
     developer.log('Created table: user_table');
 
     //10. Create user role table
@@ -1818,110 +1858,109 @@ ON fs_table (branch);
       },
       {
         'detail_code': '02',
-        'description_1': 'Blue',
-        'description_2': null,
-        'record_header': 6,
-        'udc_group': 'CT',
-      },
-      {
-        'detail_code': '03',
-        'description_1': 'Green',
-        'description_2': null,
-        'record_header': 6,
-        'udc_group': 'CT',
-      },
-      {
-        'detail_code': 'BLK',
-        'description_1': 'Black',
-        'description_2': null,
-        'record_header': 6,
-        'udc_group': 'CT',
-      },
-      {
-        'detail_code': 'ORG',
         'description_1': 'Orange',
         'description_2': null,
         'record_header': 6,
         'udc_group': 'CT',
       },
       {
-        'detail_code': 'GRY',
+        'detail_code': '03',
         'description_1': 'Gray',
         'description_2': null,
         'record_header': 6,
         'udc_group': 'CT',
       },
       {
-        'detail_code': 'LM',
+        'detail_code': '04',
+        'description_1': 'Green',
+        'description_2': null,
+        'record_header': 6,
+        'udc_group': 'CT',
+      },
+      {
+        'detail_code': '05',
         'description_1': 'Lime',
         'description_2': null,
         'record_header': 6,
         'udc_group': 'CT',
       },
       {
-        'detail_code': 'OV',
+        'detail_code': '06',
         'description_1': 'Olive',
         'description_2': null,
         'record_header': 6,
         'udc_group': 'CT',
       },
       {
-        'detail_code': 'YL',
+        'detail_code': '07',
         'description_1': 'Yellow',
         'description_2': null,
         'record_header': 6,
         'udc_group': 'CT',
       },
       {
-        'detail_code': 'PRPL',
+        'detail_code': '08',
         'description_1': 'Purple',
         'description_2': null,
         'record_header': 6,
         'udc_group': 'CT',
       },
       {
-        'detail_code': 'FC',
+        'detail_code': '09',
         'description_1': 'Fuchsia',
         'description_2': null,
         'record_header': 6,
         'udc_group': 'CT',
       },
       {
-        'detail_code': 'NV',
+        'detail_code': '10',
         'description_1': 'Navy',
         'description_2': null,
         'record_header': 6,
         'udc_group': 'CT',
       },
       {
-        'detail_code': 'TL',
+        'detail_code': '11',
+        'description_1': 'Blue',
+        'description_2': null,
+        'record_header': 6,
+        'udc_group': 'CT',
+      },
+      {
+        'detail_code': '12',
         'description_1': 'Teal',
         'description_2': null,
         'record_header': 6,
         'udc_group': 'CT',
       },
       {
-        'detail_code': 'AQUA',
+        'detail_code': '13',
         'description_1': 'Aqua',
         'description_2': null,
         'record_header': 6,
         'udc_group': 'CT',
       },
       {
-        'detail_code': 'BRW',
+        'detail_code': '14',
         'description_1': 'Brown',
         'description_2': null,
         'record_header': 6,
         'udc_group': 'CT',
       },
       {
-        'detail_code': 'CH',
+        'detail_code': '15',
         'description_1': 'Chartreuse',
         'description_2': null,
         'record_header': 6,
         'udc_group': 'CT',
       },
-
+      {
+        'detail_code': '16',
+        'description_1': 'Black',
+        'description_2': null,
+        'record_header': 6,
+        'udc_group': 'CT',
+      },
       // --- Lot Status (LS) ---
       {
         'detail_code': 'A',
@@ -1998,8 +2037,7 @@ ON fs_table (branch);
         'record_header': 9,
         'udc_group': 'OT',
       },
-
-      // --- Company Category (CC) ---
+      /* // --- Company Category (CC) ---
       {
         'detail_code': 'SUP',
         'description_1': 'Supplier',
@@ -2068,27 +2106,27 @@ ON fs_table (branch);
         'description_2': null,
         'record_header': 13,
         'udc_group': 'CT3',
-      },
+      },*/
 
       // --- Lot Type (LT) ---
       {
         'detail_code': 'X',
-        'description_1': 'Expiration Date',
-        'description_2': 'Select items by expiration date',
+        'description_1': 'Expiration',
+        'description_2': 'Expiration Date',
         'record_header': 21,
         'udc_group': 'LT',
       },
       {
         'detail_code': 'F',
-        'description_1': 'Effective Date',
-        'description_2': 'Select items by effective date',
+        'description_1': 'Effective',
+        'description_2': 'Effective Date',
         'record_header': 21,
         'udc_group': 'LT',
       },
       {
         'detail_code': 'R',
-        'description_1': 'Receipt Date',
-        'description_2': 'Select items by receipt date',
+        'description_1': 'Receipt',
+        'description_2': 'Receipt Date',
         'record_header': 21,
         'udc_group': 'LT',
       },

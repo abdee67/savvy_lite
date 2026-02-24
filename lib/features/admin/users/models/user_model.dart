@@ -22,6 +22,8 @@ class UserModel extends Equatable {
   final String? userName;
   final String? type;
   final int? salesperson;
+  final String? superUser;
+  final String? tableNumber;
 
   final Company? companyRef;
 
@@ -44,6 +46,8 @@ class UserModel extends Equatable {
     this.userName,
     this.type = 'Company',
     this.salesperson,
+    this.superUser,
+    this.tableNumber,
     this.companyRef,
   });
 
@@ -102,6 +106,8 @@ class UserModel extends Equatable {
       userName: asString(json['user_name']),
       type: asString(json['type']) ?? 'Company',
       salesperson: asInt(json['salesperson']),
+      superUser: asString(json['super_user']),
+      tableNumber: asString(json['table_number']),
       companyRef: json['company'] != null
           ? Company(
               id: json['company'],
@@ -194,6 +200,8 @@ class UserModel extends Equatable {
       'user_name': userName,
       'type': type,
       'salesperson': salesperson,
+      'super_user': superUser,
+      'table_number': tableNumber,
       if (companyRef != null) ...{
         'company_name': companyRef!.companyName,
         'logo_company': companyRef!.logoCompany,
@@ -221,6 +229,7 @@ class UserModel extends Equatable {
     String? userName,
     String? type,
     int? salesperson,
+    String? tableNumber,
     Company? companyRef,
   }) {
     return UserModel(
@@ -243,6 +252,8 @@ class UserModel extends Equatable {
       userName: userName ?? this.userName,
       type: type ?? this.type,
       salesperson: salesperson ?? this.salesperson,
+      superUser: superUser ?? this.superUser,
+      tableNumber: tableNumber ?? this.tableNumber,
       companyRef: companyRef ?? this.companyRef,
     );
   }
@@ -267,10 +278,12 @@ class UserModel extends Equatable {
     userName,
     type,
     salesperson,
+    superUser,
+    tableNumber,
     companyRef,
   ];
   @override
   String toString() {
-    return 'UserModel{id: $id, password: $password, employeesId: $employeesId, createdBy: $createdBy, updatedBy: $updatedBy, dateCreated: $dateCreated, dateUpdated: $dateUpdated, usercol: $usercol, branch: $branch, status: $status, passwordLastUpdated: $passwordLastUpdated, company: $company, userEmail: $userEmail, confirmationCode: $confirmationCode, confirmationsExpireTime: $confirmationsExpireTime, userName: $userName, type: $type, salesperson: $salesperson}';
+    return 'UserModel{id: $id, password: $password, employeesId: $employeesId, createdBy: $createdBy, updatedBy: $updatedBy, dateCreated: $dateCreated, dateUpdated: $dateUpdated, usercol: $usercol, branch: $branch, status: $status, passwordLastUpdated: $passwordLastUpdated, company: $company, userEmail: $userEmail, confirmationCode: $confirmationCode, confirmationsExpireTime: $confirmationsExpireTime, userName: $userName, type: $type, salesperson: $salesperson, superUser: $superUser, tableNumber: $tableNumber}';
   }
 }

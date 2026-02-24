@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
 import 'package:savvy_stock/features/admin/users/models/user_model.dart';
@@ -44,7 +45,7 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
 
       fullNameController.text = nameParts.join(' ');
       emailController.text = state.adminUser.userEmail ?? '';
-      phoneController.text = state.employee.phone;
+      phoneController.text = state.employee.phoneHome;
       usernameController.text = state.adminUser.userName ?? '';
     }
   }
@@ -120,7 +121,7 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
       nameLast: lastName,
       nameMiddle: middleName,
       email: emailController.text.trim(),
-      phone: phoneController.text.trim(),
+      phoneHome: phoneController.text.trim(),
       title: 'Administrator',
     );
 
@@ -356,6 +357,7 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
                           "Full Name (First Middle Last)",
                           controller: fullNameController,
                           required: true,
+                          maxLength: 140, // 45+45+45 + spaces
                           errorText: state.validationErrors['fullName'],
                           onChanged: (_) => setState(() {}),
                         ),
@@ -364,6 +366,7 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
                           controller: emailController,
                           required: true,
                           isEmail: true,
+                          maxLength: 100,
                           errorText: state.validationErrors['email'],
                           onChanged: (value) {
                             setState(() {});
@@ -377,6 +380,7 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
                           controller: phoneController,
                           required: true,
                           isPhone: true,
+                          maxLength: 45,
                           errorText: state.validationErrors['phone'],
                           onChanged: (_) => setState(() {}),
                         ),
@@ -384,6 +388,7 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
                           "Username",
                           controller: usernameController,
                           required: true,
+                          maxLength: 45,
                           errorText: state.validationErrors['username'],
                           onChanged: (value) {
                             setState(() {});
@@ -562,9 +567,18 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
     VoidCallback? toggleVisibility,
     TextEditingController? controller,
     String? errorText,
+    int? maxLength,
     ValueChanged<String>? onChanged,
     String? Function(String?)? validator,
   }) {
+    String? currentError = errorText;
+    if (required && _submitted && (controller?.text.isEmpty ?? true)) {
+      currentError = 'This field is required';
+    } else if (maxLength != null &&
+        (controller?.text.length ?? 0) > maxLength) {
+      currentError = 'Must be $maxLength characters or less';
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: TextFormField(
@@ -573,6 +587,9 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
         style: const TextStyle(color: Colors.white, fontSize: 16),
         cursorColor: Colors.amber,
         validator: validator,
+        inputFormatters: [
+          if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
+        ],
         keyboardType: isEmail
             ? TextInputType.emailAddress
             : isPhone
@@ -602,9 +619,7 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
             borderRadius: BorderRadius.circular(20),
             borderSide: const BorderSide(color: Colors.amber, width: 1.5),
           ),
-          errorText: required && _submitted && controller!.text.isEmpty
-              ? 'This field is required'
-              : errorText,
+          errorText: currentError,
           errorMaxLines: 3,
         ),
         onChanged: onChanged,
