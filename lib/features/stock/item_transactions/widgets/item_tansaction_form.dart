@@ -1189,31 +1189,31 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
     if (code == '01' || name.contains('red')) {
       return Colors.red.withOpacity(opacity);
     }
-    if (code == '02' || name.contains('blue')) {
+    if (code == '11' || name.contains('blue')) {
       return Colors.blue.withOpacity(opacity);
     }
-    if (code == 'GRN' || name.contains('green')) {
+    if (code == '04' || name.contains('green')) {
       return Colors.green.withOpacity(opacity);
     }
-    if (code == 'YL' || name.contains('yellow')) {
+    if (code == '07' || name.contains('yellow')) {
       return Colors.yellow.withOpacity(opacity);
     }
-    if (code == 'ORG' || name.contains('orange')) {
+    if (code == '02' || name.contains('orange')) {
       return Colors.orange.withOpacity(opacity);
     }
-    if (code == 'BLK' || name.contains('black')) {
+    if (code == '16' || name.contains('black')) {
       return Colors.black.withOpacity(opacity);
     }
-    if (code == 'GRY' || name.contains('grey')) {
+    if (code == '03' || name.contains('grey')) {
       return Colors.grey.withOpacity(opacity);
     }
-    if (code == 'PRPL' || name.contains('purple')) {
+    if (code == '08' || name.contains('purple')) {
       return Colors.purple.withOpacity(opacity);
     }
-    if (code == 'OV' || name.contains('over')) {
+    if (code == '06' || name.contains('olive')) {
       return const Color.fromARGB(255, 14, 90, 4).withOpacity(opacity);
     }
-    if (code == 'LM' || name.contains('lime')) {
+    if (code == '05' || name.contains('lime')) {
       return Colors.lime.withOpacity(opacity);
     }
 

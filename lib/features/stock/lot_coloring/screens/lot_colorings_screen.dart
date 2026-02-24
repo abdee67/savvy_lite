@@ -332,11 +332,11 @@ class _LotExpirationColorsDashboardState
     switch (color.colorTypeCode?.toUpperCase()) {
       case '01':
         return 'Red';
-      case '02':
+      case '11':
         return 'Blue';
-      case 'GRN':
+      case '04':
         return 'Green';
-      case 'BLK':
+      case '16':
         return 'Black';
       default:
         return 'Unknown';
@@ -352,23 +352,23 @@ class _LotExpirationColorsDashboardState
     switch (code) {
       case '01':
         return Colors.red;
-      case '02':
+      case '11':
         return Colors.blue;
-      case 'GRN':
+      case '04':
         return Colors.green;
-      case 'BLK':
+      case '16':
         return Colors.black;
-      case 'YL':
+      case '07':
         return Colors.yellow;
-      case 'ORG':
+      case '02':
         return Colors.orange;
-      case 'GRY':
+      case '03':
         return Colors.grey;
-      case 'OV':
+      case '06':
         return const Color.fromARGB(255, 14, 90, 4);
-      case 'PRPL':
+      case '08':
         return Colors.purple;
-      case 'LM':
+      case '05':
         return Colors.lime;
 
       default:
