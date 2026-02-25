@@ -2,6 +2,7 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
@@ -840,6 +841,7 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
               labelText: 'Supplier Batch Number',
               controller: _supplierBatchController,
               prefixIcon: const Icon(Iconsax.barcode),
+              inputFormatters: [LengthLimitingTextInputFormatter(50)],
             ),
           ],
         ),

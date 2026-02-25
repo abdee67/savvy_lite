@@ -79,7 +79,10 @@ class _StockItemQRScannerState extends State<StockItemQRScanner> {
                   ),
 
                   keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(45),
+                  ],
                   onChanged: (value) {
                     // Real-time validation
                     if (value.length == 12 || value.length == 13) {

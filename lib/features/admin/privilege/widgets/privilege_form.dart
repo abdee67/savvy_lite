@@ -102,8 +102,9 @@ class _PrivilegeFormState extends State<PrivilegeForm> {
                   inputFormatters: [LengthLimitingTextInputFormatter(45)],
                   validator: (value) {
                     if (value == null || value.isEmpty) return 'Required';
-                    if (value.length > 45)
+                    if (value.length > 45) {
                       return 'Must be 45 characters or less';
+                    }
                     return null;
                   },
                 ),
@@ -117,8 +118,9 @@ class _PrivilegeFormState extends State<PrivilegeForm> {
                   inputFormatters: [LengthLimitingTextInputFormatter(100)],
                   validator: (value) {
                     if (value == null || value.isEmpty) return 'Required';
-                    if (value.length > 100)
+                    if (value.length > 100) {
                       return 'Must be 100 characters or less';
+                    }
                     return null;
                   },
                 ),

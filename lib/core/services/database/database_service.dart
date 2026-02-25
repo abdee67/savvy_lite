@@ -253,6 +253,18 @@ class LocalDatabaseService {
     FOREIGN KEY (updated_by) REFERENCES employees(id)
   );
 ''');
+    await db.execute(
+      'CREATE INDEX fk_rt_has_pt_rt1_idx ON role_privilege(role_table_id)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_rt_has_pt_pt1_idx ON role_privilege(privilege_table_id)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_role_privilege_employees1_idx ON role_privilege(created_by)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_role_privilege_employees2_idx ON role_privilege(updated_by)',
+    );
     developer.log('Created table: role_privilege');
 
     // 9. Create user_table
@@ -315,41 +327,62 @@ class LocalDatabaseService {
     date_created TEXT,
     date_updated TEXT,
     FOREIGN KEY (role_table_id) REFERENCES role_table(id),
-    FOREIGN KEY (user_id) REFERENCES user_table(id),
+    FOREIGN KEY (user_id) REFERENCES user_table(id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES employees(id),
     FOREIGN KEY (updated_by) REFERENCES employees(id)
   );
 ''');
+    await db.execute(
+      'CREATE INDEX fk_role_table_has_user_user1_idx ON user_role(user_id)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_role_table_has_user_role_table1_idx ON user_role(role_table_id)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_user_role_employees1_idx ON user_role(created_by)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_user_role_employees2_idx ON user_role(updated_by)',
+    );
     developer.log('Created table: user_role');
 
     //11.Create items table
     await db.execute('''
 CREATE TABLE items_table (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  items_id TEXT,
-  item_description TEXT,
+  items_id TEXT CHECK(length(items_id) <= 200),
+  item_description TEXT CHECK(length(item_description) <= 200),
   unit_of_measure INTEGER,
   unit_price REAL,
-  taxable TEXT,               -- store 'Y' or 'N'
-  barcode TEXT,
+  taxable TEXT CHECK(length(taxable) <= 1),
+  tax_rate_area INTEGER,
+  barcode TEXT CHECK(length(barcode) <= 45),
   company INTEGER,
   margin_rate REAL,
-  margin_type TEXT,           -- e.g. '%' or 'N'
+  margin_type TEXT CHECK(length(margin_type) <= 1),
   reorder_point REAL,
+  item_image TEXT CHECK(length(item_image) <= 200),
   reference_id TEXT,
+  UNIQUE (items_id, item_description, company),
   FOREIGN KEY (company) REFERENCES company_table(id) ON DELETE CASCADE,
-  FOREIGN KEY (unit_of_measure) REFERENCES udc_details(id)
+  FOREIGN KEY (unit_of_measure) REFERENCES udc_details(id),
+  FOREIGN KEY (tax_rate_area) REFERENCES tax_rate_area(id)
 );
 ''');
     developer.log('Created table: items_table');
 
     // Indexes for faster lookup
-    await db.execute('''
-CREATE INDEX idx_items_company ON items_table(company);
-CREATE INDEX idx_items_uom ON items_table(unit_of_measure);
-CREATE INDEX idx_items_barcode ON items_table(barcode);
-CREATE INDEX idx_items_id ON items_table(items_id);
-''');
+    await db.execute(
+      'CREATE INDEX fk_items_table_uom_idx ON items_table(unit_of_measure)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_items_table_company_idx ON items_table(company)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_items_table_tax_rate_area_idx ON items_table(tax_rate_area)',
+    );
+    await db.execute('CREATE INDEX idx_items_barcode ON items_table(barcode)');
+    await db.execute('CREATE INDEX idx_items_id ON items_table(items_id)');
     developer.log('Created indexes for items_table');
     //12. Create item unit conversions
     await db.execute('''
@@ -391,23 +424,26 @@ CREATE TABLE items_in_branch (
   company INTEGER,
   unit_of_measure INTEGER,
   margin_rate REAL,
-  margin_type TEXT,
-
-  -- Indexes for performance
+  margin_type TEXT CHECK(length(margin_type) <= 1),
+  reorder_point REAL,
   FOREIGN KEY (item_number) REFERENCES items_table(id),
   FOREIGN KEY (branch) REFERENCES branch_table(id),
   FOREIGN KEY (company) REFERENCES company_table(id),
   FOREIGN KEY (unit_of_measure) REFERENCES udc_details(id)
 );
-
--- Useful indexes
-CREATE INDEX idx_items_in_branch_item_number ON items_in_branch(item_number);
-CREATE INDEX idx_items_in_branch_branch ON items_in_branch(branch);
-CREATE INDEX idx_items_in_branch_company ON items_in_branch(company);
-CREATE INDEX idx_items_in_branch_uom ON items_in_branch(unit_of_measure);
-
-);
 ''');
+    await db.execute(
+      'CREATE INDEX fk_items_in_branch_item_number_idx ON items_in_branch(item_number)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_items_in_branch_branch_idx ON items_in_branch(branch)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_items_in_branch_company_idx ON items_in_branch(company)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_items_in_branch_uom_idx ON items_in_branch(unit_of_measure)',
+    );
     developer.log('Created table: items_in_branch');
 
     // 14. Create system_constant table
@@ -462,62 +498,157 @@ CREATE INDEX idx_items_in_branch_uom ON items_in_branch(unit_of_measure);
 CREATE TABLE location_master (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   branch INTEGER,
-  code_01 TEXT,
-  code_02 TEXT,
-  code_03 TEXT,
-  code_04 TEXT,
-  code_05 TEXT,
-  code_06 TEXT,
-  code_07 TEXT,
-  code_08 TEXT,
-  code_09 TEXT,
-  code_10 TEXT,
-  margin_type TEXT,
-  margin_rate REAL,
+  code_01 TEXT CHECK(length(code_01) <= 30),
+  code_02 TEXT CHECK(length(code_02) <= 30),
+  code_03 TEXT CHECK(length(code_03) <= 30),
+  code_04 TEXT CHECK(length(code_04) <= 30),
+  code_05 TEXT CHECK(length(code_05) <= 30),
+  code_06 TEXT CHECK(length(code_06) <= 30),
+  code_07 TEXT CHECK(length(code_07) <= 30),
+  code_08 TEXT CHECK(length(code_08) <= 30),
+  code_09 TEXT CHECK(length(code_09) <= 30),
+  code_10 TEXT CHECK(length(code_10) <= 30),
   created_by INTEGER,
   date_created TEXT,
   updated_by INTEGER,
   date_updated TEXT,
   company INTEGER,
-  location_description TEXT,
+  location_description TEXT CHECK(length(location_description) <= 300),
+  margin_rate REAL,
+  margin_type TEXT CHECK(length(margin_type) <= 1),
+  reorder_point REAL,
   FOREIGN KEY (branch) REFERENCES branch_table(id),
-  FOREIGN KEY (created_by) REFERENCES user_table(id),
-  FOREIGN KEY (updated_by) REFERENCES user_table(id),
-  FOREIGN KEY (company) REFERENCES company_table(id)
+  FOREIGN KEY (company) REFERENCES company_table(id) ON UPDATE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES user_table(id) ON UPDATE CASCADE,
+  FOREIGN KEY (updated_by) REFERENCES user_table(id) ON UPDATE CASCADE
 );
-
-CREATE INDEX idx_location_master_branch ON location_master(branch);
-CREATE INDEX idx_location_master_company ON location_master(company);
 ''');
+    await db.execute(
+      'CREATE INDEX fk_location_master_branch_idx ON location_master(branch)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_location_master_created_by_idx ON location_master(created_by)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_location_master_updated_by_idx ON location_master(updated_by)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_location_master_company_idx ON location_master(company)',
+    );
     developer.log('Created table: location_master');
 
     //16.create item location
     await db.execute('''
 CREATE TABLE item_location (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  item_number INTEGER,
   branch INTEGER,
+  item_number INTEGER,
   location INTEGER,
-  quantity_on_hand  REAL,
-  date_updated INTEGER,
-  date_created INTEGER,
-  updated_by INTEGER,
   created_by INTEGER,
+  date_created TEXT,
+  updated_by INTEGER,
+  date_updated TEXT,
+  quantity_on_hand REAL,
   company INTEGER,
-  FOREIGN KEY (item_number) REFERENCES items_table(id),
   FOREIGN KEY (branch) REFERENCES branch_table(id),
-  FOREIGN KEY (location) REFERENCES location_master(id),
-  FOREIGN KEY (updated_by) REFERENCES user_table(id),
-  FOREIGN KEY (created_by) REFERENCES user_table(id),
-  FOREIGN KEY (company) REFERENCES company_table(id)
+  FOREIGN KEY (item_number) REFERENCES items_table(id),
+  FOREIGN KEY (location) REFERENCES location_master(id) ON UPDATE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES user_table(id) ON UPDATE CASCADE,
+  FOREIGN KEY (updated_by) REFERENCES user_table(id) ON UPDATE CASCADE,
+  FOREIGN KEY (company) REFERENCES company_table(id) ON UPDATE CASCADE
 );
-
-CREATE INDEX idx_item_location_item_number ON item_location(item_number);
-CREATE INDEX idx_item_location_branch ON item_location(branch);
-CREATE INDEX idx_item_location_location ON item_location(location);
-CREATE INDEX idx_item_location_company ON item_location(company);
 ''');
+    await db.execute(
+      'CREATE INDEX fk_item_locations_branch_idx ON item_location(branch)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_item_locations_itemNumber_idx ON item_location(item_number)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_item_locations_created_by_idx ON item_location(created_by)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_item_locations_updated_by_idx ON item_location(updated_by)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_item_locations_company_idx ON item_location(company)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_item_locations_location_idx ON item_location(location)',
+    );
     developer.log('Created table: item_location');
+
+    //16b. create item_master table
+    await db.execute('''
+CREATE TABLE item_master (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_description TEXT NOT NULL CHECK(length(item_description) <= 200),
+  company_category INTEGER,
+  category_code_01 INTEGER,
+  category_code_02 INTEGER,
+  category_code_03 INTEGER,
+  category_code_04 INTEGER,
+  category_code_05 INTEGER,
+  category_code_06 INTEGER,
+  category_code_07 INTEGER,
+  category_code_08 INTEGER,
+  category_code_09 INTEGER,
+  category_code_10 INTEGER,
+  created_by_flag TEXT DEFAULT 'Y' CHECK(length(created_by_flag) <= 1),
+  defualt_uom INTEGER,
+  taxable_flag TEXT DEFAULT 'Y' CHECK(length(taxable_flag) <= 1),
+  UNIQUE (item_description, company_category),
+  FOREIGN KEY (company_category) REFERENCES udc_details(id),
+  FOREIGN KEY (category_code_01) REFERENCES udc_details(id),
+  FOREIGN KEY (category_code_02) REFERENCES udc_details(id),
+  FOREIGN KEY (category_code_03) REFERENCES udc_details(id),
+  FOREIGN KEY (category_code_04) REFERENCES udc_details(id),
+  FOREIGN KEY (category_code_05) REFERENCES udc_details(id),
+  FOREIGN KEY (category_code_06) REFERENCES udc_details(id),
+  FOREIGN KEY (category_code_07) REFERENCES udc_details(id),
+  FOREIGN KEY (category_code_08) REFERENCES udc_details(id),
+  FOREIGN KEY (category_code_09) REFERENCES udc_details(id),
+  FOREIGN KEY (category_code_10) REFERENCES udc_details(id),
+  FOREIGN KEY (defualt_uom) REFERENCES udc_details(id)
+);
+''');
+    await db.execute(
+      'CREATE INDEX fk_item_master_company_category_idx ON item_master(company_category)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_item_master_category_cd_1_idx ON item_master(category_code_01)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_item_master_category_cd_2_idx ON item_master(category_code_02)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_item_master_category_cd_3_idx ON item_master(category_code_03)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_item_master_category_cd_4_idx ON item_master(category_code_04)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_item_master_category_cd_5_idx ON item_master(category_code_05)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_item_master_category_cd_6_idx ON item_master(category_code_06)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_item_master_category_cd_7_idx ON item_master(category_code_07)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_item_master_category_cd_8_idx ON item_master(category_code_08)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_item_master_category_cd_9_idx ON item_master(category_code_09)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_item_master_category_cd_10_idx ON item_master(category_code_10)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_item_master_defualt_uom_idx ON item_master(defualt_uom)',
+    );
+    developer.log('Created table: item_master');
 
     //17.create lot master
     await db.execute('''
@@ -534,20 +665,29 @@ CREATE TABLE lot_master (
   branch INTEGER,
   location INTEGER,
   lot_status INTEGER,
-  batch_number_supplier TEXT,
+  batch_number_supplier TEXT CHECK(length(batch_number_supplier) <= 50),
   FOREIGN KEY (item_number) REFERENCES items_table(id),
   FOREIGN KEY (branch) REFERENCES branch_table(id),
   FOREIGN KEY (company) REFERENCES company_table(id),
   FOREIGN KEY (location) REFERENCES item_location(id),
   FOREIGN KEY (lot_status) REFERENCES udc_details(id)
 );
-
-CREATE INDEX idx_lot_master_item_number ON lot_master(item_number);
-CREATE INDEX idx_lot_master_branch ON lot_master(branch);
-CREATE INDEX idx_lot_master_company ON lot_master(company);
-CREATE INDEX idx_lot_master_location ON lot_master(location);
-CREATE INDEX idx_lot_master_lot_status ON lot_master(lot_status);
 ''');
+    await db.execute(
+      'CREATE INDEX fk_lot_master_company_idx ON lot_master(company)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_lot_master_item_branch_idx ON lot_master(item_number)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_lot_master_branch_idx ON lot_master(branch)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_lot_master_item_location_idx ON lot_master(location)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_lot_master_lot_status_idx ON lot_master(lot_status)',
+    );
     developer.log('Created table: lot_master');
 
     //18.create item_cost_table
@@ -558,15 +698,23 @@ CREATE TABLE item_cost (
   amount_unit_cost REAL,
   company INTEGER,
   user_id INTEGER,
-  date_updated INTEGER,
+  date_updated TEXT,
+  amount_unit_cost_base REAL,
+  overhead_unit_cost REAL,
+  FOREIGN KEY (company) REFERENCES company_table(id),
   FOREIGN KEY (item_number) REFERENCES items_table(id),
-  FOREIGN KEY (user_id) REFERENCES user_table(id),
-  FOREIGN KEY (company) REFERENCES company_table(id)
+  FOREIGN KEY (user_id) REFERENCES user_table(id)
 );
-
-CREATE INDEX idx_item_cost_item_number ON item_cost(item_number);
-CREATE INDEX idx_item_cost_company ON item_cost(company);
 ''');
+    await db.execute(
+      'CREATE INDEX fk_item_cost_table_company_idx ON item_cost(company)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_item_cost_table_item_number_idx ON item_cost(item_number)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_item_cost_table_user_id_idx ON item_cost(user_id)',
+    );
     developer.log('Created table: item_cost');
 
     //19.create supplier table
@@ -903,54 +1051,6 @@ CREATE INDEX idx_sales_order_header_order_type ON sales_order_header(order_type)
   CREATE INDEX idx_sales_order_details_unit_of_measure ON sales_order_details(unit_of_measure);
 ''');
     developer.log('Created table: sales_order_details');
-
-    //create item master table
-    await db.execute('''
-    CREATE TABLE item_master (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  item_description TEXT NOT NULL,
-  company_category INTEGER,
-  category_code_01 INTEGER,
-  category_code_02 INTEGER,
-  category_code_03 INTEGER,
-  category_code_04 INTEGER,
-  category_code_05 INTEGER,
-  category_code_06 INTEGER,
-  category_code_07 INTEGER,
-  category_code_08 INTEGER,
-  category_code_09 INTEGER,
-  category_code_10 INTEGER,
-  created_by_flag TEXT DEFAULT 'Y',
-  defualt_uom INTEGER,
-  taxable_flag TEXT DEFAULT 'Y',
-  UNIQUE (item_description, company_category),
-  FOREIGN KEY (company_category) REFERENCES udc_details (id),
-  FOREIGN KEY (category_code_01) REFERENCES udc_details (id),
-  FOREIGN KEY (category_code_02) REFERENCES udc_details (id),
-  FOREIGN KEY (category_code_03) REFERENCES udc_details (id),
-  FOREIGN KEY (category_code_04) REFERENCES udc_details (id),
-  FOREIGN KEY (category_code_05) REFERENCES udc_details (id),
-  FOREIGN KEY (category_code_06) REFERENCES udc_details (id),
-  FOREIGN KEY (category_code_07) REFERENCES udc_details (id),
-  FOREIGN KEY (category_code_08) REFERENCES udc_details (id),
-  FOREIGN KEY (category_code_09) REFERENCES udc_details (id),
-  FOREIGN KEY (category_code_10) REFERENCES udc_details (id),
-  FOREIGN KEY (defualt_uom) REFERENCES udc_details (id)
-);
-CREATE INDEX idx_item_master_company ON item_master(company);
-CREATE INDEX idx_item_master_category_code_01 ON item_master(category_code_01);
-CREATE INDEX idx_item_master_category_code_02 ON item_master(category_code_02);
-CREATE INDEX idx_item_master_category_code_03 ON item_master(category_code_03);
-CREATE INDEX idx_item_master_category_code_04 ON item_master(category_code_04);
-CREATE INDEX idx_item_master_category_code_05 ON item_master(category_code_05);
-CREATE INDEX idx_item_master_category_code_06 ON item_master(category_code_06);
-CREATE INDEX idx_item_master_category_code_07 ON item_master(category_code_07);
-CREATE INDEX idx_item_master_category_code_08 ON item_master(category_code_08);
-CREATE INDEX idx_item_master_category_code_09 ON item_master(category_code_09);
-CREATE INDEX idx_item_master_category_code_10 ON item_master(category_code_10);
-CREATE INDEX idx_item_master_defualt_uom ON item_master(defualt_uom);
-''');
-    developer.log('Created table: item_master');
 
     //invoice header table
     await db.execute('''

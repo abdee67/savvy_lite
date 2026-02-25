@@ -103,13 +103,13 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
         CustomTextField(
           controller: _nameController,
           labelText: 'Role Name *',
-          inputFormatters: [LengthLimitingTextInputFormatter(45)],
+          inputFormatters: [LengthLimitingTextInputFormatter(200)],
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'Please enter role name';
             }
-            if (value.length > 45) {
-              return 'Role name must be 45 characters or less';
+            if (value.length > 200) {
+              return 'Role name must be 200 characters or less';
             }
             return null;
           },
@@ -128,13 +128,13 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
               borderSide: BorderSide(color: Color(0xFF145888), width: 1),
             ),
           ),
-          inputFormatters: [LengthLimitingTextInputFormatter(100)],
+          inputFormatters: [LengthLimitingTextInputFormatter(200)],
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'Please enter description';
             }
-            if (value.length > 100) {
-              return 'Description must be 100 characters or less';
+            if (value.length > 200) {
+              return 'Description must be 200 characters or less';
             }
             return null;
           },

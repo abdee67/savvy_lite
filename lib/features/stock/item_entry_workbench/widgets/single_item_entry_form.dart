@@ -446,6 +446,9 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
                 if (value == null || value.isEmpty) {
                   return 'Please select or enter an item description';
                 }
+                if (value.length > 200) {
+                  return 'Description must be 200 characters or less';
+                }
                 return null;
               },
               prefixIcon: Icons.description,

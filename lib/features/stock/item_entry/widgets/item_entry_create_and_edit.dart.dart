@@ -2,6 +2,7 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/core/widgets/custom_searchable_dropdown.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
@@ -455,9 +456,13 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
             CustomTextField(
               labelText: 'Item ID *',
               controller: _itemsIdController,
+              inputFormatters: [LengthLimitingTextInputFormatter(200)],
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Item ID is required';
+                }
+                if (value.length > 200) {
+                  return 'Item ID must be 200 characters or less';
                 }
                 return null;
               },
@@ -471,9 +476,13 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
             CustomTextField(
               labelText: 'Description *',
               controller: _itemDescriptionController,
+              inputFormatters: [LengthLimitingTextInputFormatter(200)],
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Description is required';
+                }
+                if (value.length > 200) {
+                  return 'Description must be 200 characters or less';
                 }
                 return null;
               },
