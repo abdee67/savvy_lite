@@ -385,6 +385,7 @@ CREATE TABLE items_table (
     await db.execute('CREATE INDEX idx_items_id ON items_table(items_id)');
     developer.log('Created indexes for items_table');
     //12. Create item unit conversions
+    //16c. create item_uom_conversions table
     await db.execute('''
 CREATE TABLE item_uom_conversions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -400,17 +401,36 @@ CREATE TABLE item_uom_conversions (
   uom_structure_level INTEGER,
   inverse_conversion REAL,
   company INTEGER,
-  FOREIGN KEY (item_number) REFERENCES items_table(id),
   FOREIGN KEY (branch) REFERENCES branch_table(id),
-  FOREIGN KEY (company) REFERENCES company_table(id),
+  FOREIGN KEY (company) REFERENCES company_table(id) ON UPDATE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES user_table(id) ON UPDATE CASCADE,
   FOREIGN KEY (from_uom) REFERENCES udc_details(id),
-  FOREIGN KEY (to_uom) REFERENCES udc_details(id)
+  FOREIGN KEY (item_number) REFERENCES items_table(id),
+  FOREIGN KEY (to_uom) REFERENCES udc_details(id),
+  FOREIGN KEY (updated_by) REFERENCES user_table(id) ON UPDATE CASCADE
 );
-
-CREATE INDEX idx_item_uom_conversions_branch ON item_uom_conversions(branch);
-CREATE INDEX idx_item_uom_conversions_item_number ON item_uom_conversions(item_number);
-CREATE INDEX idx_item_uom_conversions_company ON item_uom_conversions(company);
 ''');
+    await db.execute(
+      'CREATE INDEX fk_item_uom_conversions_from_uom_idx ON item_uom_conversions(from_uom)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_item_uom_conversions_to_uom_idx ON item_uom_conversions(to_uom)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_item_uom_conversions_branch_idx ON item_uom_conversions(branch)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_item_uom_conversions_itemNumber_idx ON item_uom_conversions(item_number)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_item_uom_conversions_created_by_idx ON item_uom_conversions(created_by)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_item_uom_conversions_updated_by_idx ON item_uom_conversions(updated_by)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_item_uom_conversions_company_idx ON item_uom_conversions(company)',
+    );
     developer.log('Created table: item_uom_conversions');
 
     // 13. Create items in branch table
@@ -2619,33 +2639,37 @@ ON fs_table (branch);
     }
     developer.log('Seeded default Admin role with all privileges');
 
-    // Create customer table
+    // 13. Create customer table
     await db.execute('''
-  CREATE TABLE customer_table (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    customer_id INTEGER,
-    customer_name TEXT,
-    phone_number TEXT,
-    address TEXT,
-    country TEXT,
-    state TEXT,
-    region TEXT,
-    city TEXT,
-    tin_number TEXT,
-    defaults_value TEXT,
-    address1 TEXT,
-    address2 TEXT,
-    address3 TEXT,
-    address4 TEXT,
-    fax TEXT,
-    phone_2 TEXT,
-    contact_name TEXT,
-    contact_title TEXT,
-    company INTEGER,
-    FOREIGN KEY (company) REFERENCES company_table (id) ON DELETE NO ACTION ON UPDATE NO ACTION
-  )
+CREATE TABLE customer_table (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  customer_id INTEGER,
+  customer_name TEXT CHECK(length(customer_name) <= 45),
+  phone_number TEXT CHECK(length(phone_number) <= 45),
+  address TEXT CHECK(length(address) <= 45),
+  country TEXT CHECK(length(country) <= 45),
+  state TEXT CHECK(length(state) <= 45),
+  region TEXT CHECK(length(region) <= 45),
+  city TEXT CHECK(length(city) <= 45),
+  tin_number TEXT CHECK(length(tin_number) <= 45),
+  address1 TEXT CHECK(length(address1) <= 45),
+  address2 TEXT CHECK(length(address2) <= 45),
+  address3 TEXT CHECK(length(address3) <= 45),
+  address4 TEXT CHECK(length(address4) <= 45),
+  fax TEXT CHECK(length(fax) <= 45),
+  phone_2 TEXT CHECK(length(phone_2) <= 45),
+  contact_name TEXT CHECK(length(contact_name) <= 45),
+  contact_title TEXT CHECK(length(contact_title) <= 45),
+  company INTEGER,
+  defaults_value TEXT CHECK(length(defaults_value) <= 1),
+  UNIQUE (id),
+  FOREIGN KEY (company) REFERENCES company_table (id)
+);
 ''');
-    developer.log('Created customer table');
+    await db.execute(
+      'CREATE INDEX fk_customer_table_company_idx ON customer_table (company)',
+    );
+    developer.log('Created table: customer_table');
 
     developer.log(
       '✅ Database initialized. User registration will create company data.',
