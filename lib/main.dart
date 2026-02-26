@@ -103,12 +103,12 @@ Future<void> _initializeAndRunApp() async {
       developer.log('💾 Using local database only');
     }
     if (kDebugMode) {
-      await LocalDatabaseService().resetDatabase();
-      await getIt<LicenseService>().clearLicense();
+      //await LocalDatabaseService().resetDatabase();
+      // await getIt<LicenseService>().clearLicense();
       //  // await LocalDatabaseService().debugTable('branch_table');
-      // await LocalDatabaseService().debugTable('items_in_branch');
+      await LocalDatabaseService().debugTable('items_in_branch');
       //await LocalDatabaseService().debugTable('item_cost');
-      await LocalDatabaseService().debugTable('item_location');
+      //await LocalDatabaseService().debugTable('item_location');
       //await LocalDatabaseService().debugTable('lot_master');
       //await LocalDatabaseService().debugTable('item_master');
       //await LocalDatabaseService().debugTable('items_table');

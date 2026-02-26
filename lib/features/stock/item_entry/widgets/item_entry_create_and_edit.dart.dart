@@ -605,13 +605,15 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
             const SizedBox(height: 16),
 
             // Taxable
-            CustomDropdown(
+            CustomDropdown<String>(
               labelText: 'Taxable',
               prefixIcon: const Icon(Icons.receipt),
               items: _taxable
                   .map(
-                    (taxable) =>
-                        DropdownMenuItem(value: taxable, child: Text(taxable)),
+                    (taxable) => DropdownMenuItem<String>(
+                      value: taxable,
+                      child: Text(taxable),
+                    ),
                   )
                   .toList(),
               value: _selectedTaxable,
@@ -624,14 +626,14 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
             const SizedBox(height: 16),
 
             // Margin Type
-            CustomDropdown(
+            CustomDropdown<String>(
               labelText: 'Margin Type',
               prefixIcon: const Icon(Icons.trending_up),
               items: _marginTypes
                   .map(
-                    (marginType) => DropdownMenuItem(
+                    (marginType) => DropdownMenuItem<String>(
                       value: marginType,
-                      child: Text(marginType == 'F' ? 'Flat' : 'Percentage'),
+                      child: Text(marginType),
                     ),
                   )
                   .toList(),

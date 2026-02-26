@@ -737,12 +737,6 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
       child: Column(
         children: [
           _buildItemInfoItem(
-            'Item ID : ',
-            item.itemsId.toString(),
-            Iconsax.card,
-            isCompact,
-          ),
-          _buildItemInfoItem(
             'Item Description : ',
             item.itemDescription ?? 'No Description',
             Iconsax.box,
