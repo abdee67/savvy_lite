@@ -224,11 +224,18 @@ class SalesOrderHeaderRepository {
   }
 
   // Void sales order
-  Future<int> voidSalesOrder(int id, String voidIndicator) async {
+  Future<int> voidSalesOrder(
+    int id,
+    String voidIndicator, {
+    String? commentIfVoid,
+  }) async {
     final db = await _db;
     return await db.update(
       'sales_order_header',
-      {'void_indicator': voidIndicator},
+      {
+        'void_indicator': voidIndicator,
+        if (commentIfVoid != null) 'comment_ifVoid': commentIfVoid,
+      },
       where: 'id = ?',
       whereArgs: [id],
     );

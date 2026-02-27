@@ -572,12 +572,19 @@ class SalesOrderHeaderBloc
     try {
       emit(state.copyWith(status: SalesOrderHeaderStatus.voiding));
       // Void in repository
-      await repository.voidSalesOrder(event.id, 'V');
+      await repository.voidSalesOrder(
+        event.id,
+        event.voidIndicator,
+        commentIfVoid: event.commentIfVoid,
+      );
 
       // Update local state
       final updatedHeaders = state.headers.map((h) {
         if (h.id == event.id) {
-          return h.copyWith(voidIndicator: 'V');
+          return h.copyWith(
+            voidIndicator: event.voidIndicator,
+            commentIfVoid: event.commentIfVoid,
+          );
         }
         return h;
       }).toList();

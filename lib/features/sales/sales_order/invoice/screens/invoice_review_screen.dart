@@ -239,6 +239,9 @@ class _InvoiceReviewContent extends StatelessWidget {
                       date: header.orderDate ?? DateTime.now(),
                       invoiceNumber: state.invoiceFsNumber ?? 'Pending',
                       salesOrderNumber: header.fsNumber ?? 'N/A',
+                      salesRepresent:
+                          state.salesRepresent ?? header.salesRepresent,
+                      commentsSo: state.commentsSo ?? header.commentsSo,
                     ),
                     const SizedBox(height: 16),
 

@@ -210,16 +210,17 @@ class _SalesReviewPageState extends State<SalesReviewPage>
     final salesOrderToDelete = state.filteredHeaders[index];
     final voidIndicator = 'V';
 
-    showDeleteDialog(
+    showVoidDialog(
       context,
       title: 'Void salesOrder #${salesOrderToDelete.orderNumber}?',
       content:
           'Are you sure you want to void salesOrder #${salesOrderToDelete.orderNumber}?',
-      onConfirm: () {
+      onConfirm: (reason) {
         bloc.add(
           VoidSalesOrder(
             id: salesOrderToDelete.id!,
             voidIndicator: voidIndicator,
+            commentIfVoid: reason,
           ),
         );
       },

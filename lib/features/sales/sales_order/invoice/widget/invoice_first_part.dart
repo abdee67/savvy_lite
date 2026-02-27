@@ -6,6 +6,8 @@ class InvoiceFirstPart extends StatelessWidget {
   final DateTime date;
   final String invoiceNumber;
   final String salesOrderNumber;
+  final String? salesRepresent;
+  final String? commentsSo;
 
   const InvoiceFirstPart({
     super.key,
@@ -13,6 +15,8 @@ class InvoiceFirstPart extends StatelessWidget {
     required this.date,
     required this.invoiceNumber,
     required this.salesOrderNumber,
+    this.salesRepresent,
+    this.commentsSo,
   });
 
   @override
@@ -94,13 +98,29 @@ class InvoiceFirstPart extends StatelessWidget {
                       const SizedBox(height: 8),
                       _buildInfoRow('Invoice No.', invoiceNumber),
                       _buildInfoRow('Date', _formatDate(date)),
+                      if (salesRepresent != null && salesRepresent!.isNotEmpty)
+                        _buildInfoRow('Sales Rep', salesRepresent!),
                       _buildInfoRow('Status', 'Pending'),
-                      _buildInfoRow('Type', 'Sales Invoice'),
                     ],
                   ),
                 ),
               ],
             ),
+            if (commentsSo != null && commentsSo!.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 8),
+              _buildSectionTitle('COMMENTS'),
+              const SizedBox(height: 4),
+              Text(
+                commentsSo!,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
           ],
         ),
       ),

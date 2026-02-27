@@ -741,32 +741,38 @@ CREATE TABLE item_cost (
     await db.execute('''
   CREATE TABLE supplier_table (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    supplier_name TEXT,
-    city TEXT,
-    region TEXT,
-    state TEXT,
-    country TEXT,
-    phone_no_1 TEXT,
-    phone_no_2 TEXT,
-    address_line TEXT,
-    email TEXT,
+    supplier_name TEXT CHECK(length(supplier_name) <= 50),
+    city TEXT CHECK(length(city) <= 45),
+    region TEXT CHECK(length(region) <= 45),
+    state TEXT CHECK(length(state) <= 45),
+    country TEXT CHECK(length(country) <= 45),
+    phone_no_1 TEXT CHECK(length(phone_no_1) <= 45),
+    phone_no_2 TEXT CHECK(length(phone_no_2) <= 45),
+    address_line TEXT CHECK(length(address_line) <= 200),
+    email TEXT CHECK(length(email) <= 200),
     company INTEGER,
     created_by INTEGER,
     date_created TEXT,
     user_id INTEGER,
     date_updated TEXT,
-    tin_number TEXT,
-    contact_person TEXT,
-    contact_title TEXT,
+    tin_number TEXT CHECK(length(tin_number) <= 45),
+    contact_person TEXT CHECK(length(contact_person) <= 50),
+    contact_title TEXT CHECK(length(contact_title) <= 10),
+    defaults_value TEXT DEFAULT 'N' CHECK(length(defaults_value) <= 1),
     FOREIGN KEY (company) REFERENCES company_table (id),
     FOREIGN KEY (created_by) REFERENCES user_table (id),
     FOREIGN KEY (user_id) REFERENCES user_table (id)
   );
-
-CREATE INDEX idx_supplier_table_company ON supplier_table(company);
-CREATE INDEX idx_supplier_table_created_by ON supplier_table(created_by);
-CREATE INDEX idx_supplier_table_user_id ON supplier_table(user_id);
 ''');
+    await db.execute(
+      'CREATE INDEX fk_supplier_table_company_idx ON supplier_table(company)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_supplier_table_created_by_idx ON supplier_table(created_by)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_supplier_table_user_id_idx ON supplier_table(user_id)',
+    );
 
     developer.log('Created table: supplier_table');
 
@@ -898,7 +904,7 @@ CREATE INDEX idx_purchase_order_receiver_unit_of_measure ON purchase_order_recei
     created_by INTEGER,
     date_created TEXT,
     quantity_transaction REAL,
-    remark TEXT,
+    remark TEXT CHECK(length(remark) <= 50),
     company INTEGER,
     lot_number INTEGER,
     transaction_type INTEGER,
@@ -930,19 +936,19 @@ CREATE INDEX idx_purchase_order_receiver_unit_of_measure ON purchase_order_recei
     FOREIGN KEY (unit_of_measure) REFERENCES udc_details (id)
   );
 
-CREATE INDEX idx_item_transactions_item_location ON item_transactions(item_location);
-CREATE INDEX idx_item_transactions_created_by ON item_transactions(created_by);
-CREATE INDEX idx_item_transactions_company ON item_transactions(company);
-CREATE INDEX idx_item_transactions_lot_number ON item_transactions(lot_number);
-CREATE INDEX idx_item_transactions_transaction_type ON item_transactions(transaction_type);
-CREATE INDEX idx_item_transactions_item_branch ON item_transactions(item_branch);
-CREATE INDEX idx_item_transactions_item_number ON item_transactions(item_number);
-CREATE INDEX idx_item_transactions_lot_status ON item_transactions(lot_status);
-CREATE INDEX idx_item_transactions_branch ON item_transactions(branch);
-CREATE INDEX idx_item_transactions_supplier ON item_transactions(supplier);
-CREATE INDEX idx_item_transactions_customer ON item_transactions(customer);
-CREATE INDEX idx_item_transactions_order_type ON item_transactions(order_type);
-CREATE INDEX idx_item_transactions_unit_of_measure ON item_transactions(unit_of_measure);
+CREATE INDEX fk_item_transactions_item_location_idx ON item_transactions(item_location);
+CREATE INDEX fk_item_transactions_created_by_idx ON item_transactions(created_by);
+CREATE INDEX fk_item_transactions_company_idx ON item_transactions(company);
+CREATE INDEX fk_item_transactions_lot_number_idx ON item_transactions(lot_number);
+CREATE INDEX fk_item_transactions_transaction_type_idx ON item_transactions(transaction_type);
+CREATE INDEX fk_item_transactions_item_branch_idx ON item_transactions(item_branch);
+CREATE INDEX fk_item_transactions_item_number_idx ON item_transactions(item_number);
+CREATE INDEX fk_item_transactions_lot_status_idx ON item_transactions(lot_status);
+CREATE INDEX fk_item_transactions_branch_idx ON item_transactions(branch);
+CREATE INDEX fk_item_transactions_supplier_idx ON item_transactions(supplier);
+CREATE INDEX fk_item_transactions_customer_idx ON item_transactions(customer);
+CREATE INDEX fk_item_transactions_order_type_idx ON item_transactions(order_type);
+CREATE INDEX fk_item_transactions_unit_of_measure_idx ON item_transactions(unit_of_measure);
 ''');
     developer.log('Created table: item_transactions');
 
@@ -990,25 +996,25 @@ CREATE INDEX idx_next_number_company ON next_number(company);
   order_date TEXT,
   required_date TEXT,
   shipped_date TEXT,
-  sales_type TEXT,
-  payment_method TEXT,
+  sales_type TEXT CHECK(length(sales_type) <= 45),
+  payment_method TEXT CHECK(length(payment_method) <= 45),
   payment_instrument INTEGER,
-  discount TEXT,
-  add_on TEXT,
+  discount TEXT CHECK(length(discount) <= 1),
+  add_on TEXT CHECK(length(add_on) <= 1),
   tax REAL,
-  with_hold_apply TEXT,
+  with_hold_apply TEXT CHECK(length(with_hold_apply) <= 1),
   withhold_amount REAL,
   discount_amount REAL,
   discount_in_percent REAL,
-  reference_note1 TEXT,
-  reference_note_2 TEXT,
-  reference_note3 TEXT,
-  reference_note4 TEXT,
-  proforma_flag TEXT,
-  proforma_reference TEXT,
+  reference_note1 TEXT CHECK(length(reference_note1) <= 45),
+  reference_note_2 TEXT CHECK(length(reference_note_2) <= 45),
+  reference_note3 TEXT CHECK(length(reference_note3) <= 45),
+  reference_note4 TEXT CHECK(length(reference_note4) <= 45),
+  proforma_flag TEXT CHECK(length(proforma_flag) <= 1),
+  proforma_reference TEXT CHECK(length(proforma_reference) <= 100),
   credit_date_topay TEXT,
-  fs_number TEXT,
-  void_indicator TEXT,
+  fs_number TEXT CHECK(length(fs_number) <= 45),
+  void_indicator TEXT CHECK(length(void_indicator) <= 1),
   customer_bill_to INTEGER NOT NULL,
   customer_table_id INTEGER NOT NULL,
   employees_id INTEGER NOT NULL,
@@ -1021,21 +1027,29 @@ CREATE INDEX idx_next_number_company ON next_number(company);
   order_type INTEGER,
   unit_cost REAL,
   amount_cost REAL,
+  sales_represent TEXT CHECK(length(sales_represent) <= 150),
+  comments_so TEXT,
+  comment_ifVoid TEXT,
+  return_date TEXT,
+  invoice_number TEXT CHECK(length(invoice_number) <= 45),
+  branch_value INTEGER,
   FOREIGN KEY (customer_bill_to) REFERENCES customer_table (id),
   FOREIGN KEY (customer_table_id) REFERENCES customer_table (id),
   FOREIGN KEY (employees_id) REFERENCES employees (id),
   FOREIGN KEY (company) REFERENCES company_table (id),
   FOREIGN KEY (payment_instrument) REFERENCES udc_details (id),
   FOREIGN KEY (payment_status) REFERENCES udc_details (id),
-  FOREIGN KEY (order_type) REFERENCES udc_details (id)
+  FOREIGN KEY (order_type) REFERENCES udc_details (id),
+  FOREIGN KEY (branch_value) REFERENCES branch_table (id)
 );
-CREATE INDEX idx_sales_order_header_customer_bill_to ON sales_order_header(customer_bill_to);
-CREATE INDEX idx_sales_order_header_customer_table_id ON sales_order_header(customer_table_id);
-CREATE INDEX idx_sales_order_header_employees_id ON sales_order_header(employees_id);
-CREATE INDEX idx_sales_order_header_company ON sales_order_header(company);
-CREATE INDEX idx_sales_order_header_payment_instrument ON sales_order_header(payment_instrument);
-CREATE INDEX idx_sales_order_header_payment_status ON sales_order_header(payment_status);
-CREATE INDEX idx_sales_order_header_order_type ON sales_order_header(order_type);
+CREATE INDEX fk_sales_order_header_customer_bill_to_idx ON sales_order_header(customer_bill_to);
+CREATE INDEX fk_sales_order_header_customer_table_id_idx ON sales_order_header(customer_table_id);
+CREATE INDEX fk_sales_order_header_employees_id_idx ON sales_order_header(employees_id);
+CREATE INDEX fk_sales_order_header_company_idx ON sales_order_header(company);
+CREATE INDEX fk_sales_order_header_payment_instrument_idx ON sales_order_header(payment_instrument);
+CREATE INDEX fk_sales_order_header_payment_status_idx ON sales_order_header(payment_status);
+CREATE INDEX fk_soh_order_type_idx ON sales_order_header(order_type);
+CREATE INDEX fk_soh_branchvalue_idx ON sales_order_header(branch_value);
 ''');
     developer.log('Created table: sales_order_header');
     //27. create sales_order_details table
@@ -1045,9 +1059,9 @@ CREATE INDEX idx_sales_order_header_order_type ON sales_order_header(order_type)
     unit_price REAL,
     quantity REAL,
     extended_price REAL,
-    taxable TEXT,
-    reference1 TEXT,
-    reference2 TEXT,
+    taxable TEXT CHECK(length(taxable) <= 1),
+    reference1 TEXT CHECK(length(reference1) <= 45),
+    reference2 TEXT CHECK(length(reference2) <= 45),
     sales_order_header_id INTEGER NOT NULL,
     items_table_id INTEGER NOT NULL,
     item_in_branch INTEGER,
@@ -1056,19 +1070,20 @@ CREATE INDEX idx_sales_order_header_order_type ON sales_order_header(order_type)
     unit_cost REAL,
     amount_cost REAL,
     unit_of_measure INTEGER,
-    FOREIGN KEY (sales_order_header_id) REFERENCES sales_order_header (id) ON DELETE CASCADE,
-    FOREIGN KEY (items_table_id) REFERENCES items_table (id),
-    FOREIGN KEY (item_in_branch) REFERENCES items_in_branch (id),
-    FOREIGN KEY (company) REFERENCES company_table (id),
-    FOREIGN KEY (lot_number) REFERENCES lot_master (id),
-    FOREIGN KEY (unit_of_measure) REFERENCES udc_details (id)
+    UNIQUE (id, items_table_id),
+    CONSTRAINT fk_sales_order_details_soh FOREIGN KEY (sales_order_header_id) REFERENCES sales_order_header (id) ON DELETE CASCADE,
+    CONSTRAINT fk_sales_order_details_items FOREIGN KEY (items_table_id) REFERENCES items_table (id),
+    CONSTRAINT fk_sales_order_details_branch FOREIGN KEY (item_in_branch) REFERENCES items_in_branch (id),
+    CONSTRAINT fk_sales_order_details_company FOREIGN KEY (company) REFERENCES company_table (id),
+    CONSTRAINT fk_sales_order_details_lot FOREIGN KEY (lot_number) REFERENCES lot_master (id),
+    CONSTRAINT fk_sales_order_details_uom FOREIGN KEY (unit_of_measure) REFERENCES udc_details (id)
   );
-  CREATE INDEX idx_sales_order_details_sales_order_header_id ON sales_order_details(sales_order_header_id);
-  CREATE INDEX idx_sales_order_details_items_table_id ON sales_order_details(items_table_id);
-  CREATE INDEX idx_sales_order_details_item_in_branch ON sales_order_details(item_in_branch);
-  CREATE INDEX idx_sales_order_details_company ON sales_order_details(company);
-  CREATE INDEX idx_sales_order_details_lot_number ON sales_order_details(lot_number);
-  CREATE INDEX idx_sales_order_details_unit_of_measure ON sales_order_details(unit_of_measure);
+  CREATE INDEX fk_sales_order_details_soh_idx ON sales_order_details(sales_order_header_id);
+  CREATE INDEX fk_sales_order_details_items_idx ON sales_order_details(items_table_id);
+  CREATE INDEX fk_sales_order_details_branch_idx ON sales_order_details(item_in_branch);
+  CREATE INDEX fk_sales_order_details_company_idx ON sales_order_details(company);
+  CREATE INDEX fk_sales_order_details_lot_idx ON sales_order_details(lot_number);
+  CREATE INDEX fk_sales_order_details_uom_idx ON sales_order_details(unit_of_measure);
 ''');
     developer.log('Created table: sales_order_details');
 

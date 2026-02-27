@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/core/widgets/custom_searchable_dropdown.dart';
@@ -607,6 +608,7 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
             value: _remark ?? '',
             onChanged: (v) => _remark = v,
             maxLines: 4,
+            inputFormatters: [LengthLimitingTextInputFormatter(50)],
           ),
         ],
       ),

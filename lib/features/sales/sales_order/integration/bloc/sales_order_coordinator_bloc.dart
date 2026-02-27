@@ -97,6 +97,7 @@ class SalesOrderCoordinatorBloc
     on<UpdateTaxAndFees>(_onUpdateTaxAndFees);
     on<ProcessPayment>(_onProcessPayment);
     on<UpdatePaymentDetails>(_onUpdatePaymentDetails);
+    on<UpdateExtraHeaderDetails>(_onUpdateExtraHeaderDetails);
     on<LoadFeeSystemConstants>(_onLoadFeeSystemConstants);
 
     // Synchronization
@@ -156,6 +157,11 @@ class SalesOrderCoordinatorBloc
         requiredDate: headerToCreate.requiredDate ?? DateTime.now(),
         shippedDate: headerToCreate.shippedDate ?? DateTime.now(),
         salesType: headerToCreate.salesType ?? 'Unknown',
+        salesRepresent: state.salesRepresent,
+        commentsSo: state.commentsSo,
+        referenceNote1: state.referenceNote1,
+        referenceNote2: state.referenceNote2,
+        referenceNote3: state.referenceNote3,
       );
 
       // Handle payment term if it's a date string (for Credit)
@@ -571,6 +577,11 @@ class SalesOrderCoordinatorBloc
         paymentMethod: event.paymentMethod,
         paymentInstrument: event.paymentInstrument,
         paymentTerm: event.paymentTerm.toString(),
+        salesRepresent: event.salesRepresent ?? state.salesRepresent,
+        commentsSo: event.commentsSo ?? state.commentsSo,
+        referenceNote1: event.referenceNote1 ?? state.referenceNote1,
+        referenceNote2: event.referenceNote2 ?? state.referenceNote2,
+        referenceNote3: event.referenceNote3 ?? state.referenceNote3,
         lastOperation: 'Payment details updated',
         lastSyncTime: DateTime.now(),
       ),
@@ -586,6 +597,23 @@ class SalesOrderCoordinatorBloc
         );
       }
     }
+  }
+
+  void _onUpdateExtraHeaderDetails(
+    UpdateExtraHeaderDetails event,
+    Emitter<SalesOrderCoordinatorState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        salesRepresent: event.salesRepresent ?? state.salesRepresent,
+        commentsSo: event.commentsSo ?? state.commentsSo,
+        referenceNote1: event.referenceNote1 ?? state.referenceNote1,
+        referenceNote2: event.referenceNote2 ?? state.referenceNote2,
+        referenceNote3: event.referenceNote3 ?? state.referenceNote3,
+        lastOperation: 'Extra header details updated',
+        lastSyncTime: DateTime.now(),
+      ),
+    );
   }
 
   Future<void> _onLoadFeeSystemConstants(

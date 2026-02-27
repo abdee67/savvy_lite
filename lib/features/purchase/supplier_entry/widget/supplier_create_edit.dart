@@ -1,6 +1,7 @@
-// lib/features/purchase/supplier/ui/supplier_entry_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_searchable_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -42,6 +43,8 @@ class _SupplierEntryScreenState extends State<SupplierEntryScreen> {
 
   // Country selection
   String? _selectedCountry;
+  String? _selectedDefault;
+  final List<String> _defaultValues = ['YES', 'NO'];
 
   @override
   void initState() {
@@ -81,6 +84,7 @@ class _SupplierEntryScreenState extends State<SupplierEntryScreen> {
     _tinNumberController = TextEditingController(text: supplier.tinNumber);
 
     _selectedCountry = supplier.country;
+    _selectedDefault = supplier.defaultsValue == 'Y' ? 'YES' : 'NO';
   }
 
   @override
@@ -143,6 +147,7 @@ class _SupplierEntryScreenState extends State<SupplierEntryScreen> {
             ? null
             : _tinNumberController.text.trim(),
         company: companyId,
+        defaultsValue: _selectedDefault == 'YES' ? 'Y' : 'N',
         dateCreated: widget.supplier?.dateCreated ?? DateTime.now(),
         dateUpdated: DateTime.now(),
       );
@@ -296,6 +301,7 @@ class _SupplierEntryScreenState extends State<SupplierEntryScreen> {
     IconData icon, [
     TextInputType? keyboardType,
     bool isRequired = false,
+    int? maxLength,
     String? Function(String?)? customValidator,
   ]) {
     return CustomTextField(
@@ -303,12 +309,18 @@ class _SupplierEntryScreenState extends State<SupplierEntryScreen> {
       keyboardType: keyboardType,
       labelText: label,
       prefixIcon: Icon(icon),
+      inputFormatters: [
+        if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
+      ],
       validator: (value) {
         if (customValidator != null) {
           return customValidator(value);
         }
         if (isRequired && (value == null || value.isEmpty)) {
           return 'This field is required';
+        }
+        if (maxLength != null && value != null && value.length > maxLength) {
+          return 'Value exceeds $maxLength characters';
         }
         return null;
       },
@@ -406,6 +418,7 @@ class _SupplierEntryScreenState extends State<SupplierEntryScreen> {
                             Icons.business,
                             TextInputType.text,
                             true,
+                            50,
                           ),
                           const SizedBox(height: 16),
                           _buildTextField(
@@ -414,6 +427,7 @@ class _SupplierEntryScreenState extends State<SupplierEntryScreen> {
                             Icons.person,
                             TextInputType.text,
                             false,
+                            50,
                           ),
                           const SizedBox(height: 16),
                           _buildTextField(
@@ -422,6 +436,7 @@ class _SupplierEntryScreenState extends State<SupplierEntryScreen> {
                             Icons.title,
                             TextInputType.text,
                             false,
+                            10,
                           ),
                           const SizedBox(height: 16),
                           _buildTextField(
@@ -430,6 +445,26 @@ class _SupplierEntryScreenState extends State<SupplierEntryScreen> {
                             Icons.numbers,
                             TextInputType.number,
                             false,
+                            45,
+                          ),
+                          const SizedBox(height: 16),
+                          CustomDropdown(
+                            labelText: 'Default Supplier',
+                            prefixIcon: const Icon(Icons.person),
+                            items: _defaultValues
+                                .map(
+                                  (val) => DropdownMenuItem(
+                                    value: val,
+                                    child: Text(val),
+                                  ),
+                                )
+                                .toList(),
+                            value: _selectedDefault,
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedDefault = value;
+                              });
+                            },
                           ),
                         ],
                       ),
@@ -461,6 +496,7 @@ class _SupplierEntryScreenState extends State<SupplierEntryScreen> {
                             Icons.phone,
                             TextInputType.phone,
                             true,
+                            45,
                             (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Phone number is required';
@@ -478,6 +514,7 @@ class _SupplierEntryScreenState extends State<SupplierEntryScreen> {
                             Icons.phone_android,
                             TextInputType.phone,
                             false,
+                            45,
                             (value) {
                               if (value != null &&
                                   value.isNotEmpty &&
@@ -494,6 +531,7 @@ class _SupplierEntryScreenState extends State<SupplierEntryScreen> {
                             Icons.email,
                             TextInputType.emailAddress,
                             false,
+                            200,
                             (value) {
                               if (value != null &&
                                   value.isNotEmpty &&
@@ -535,6 +573,7 @@ class _SupplierEntryScreenState extends State<SupplierEntryScreen> {
                             Icons.location_on,
                             TextInputType.text,
                             false,
+                            200,
                           ),
                           const SizedBox(height: 16),
                           _buildTextField(
@@ -543,6 +582,7 @@ class _SupplierEntryScreenState extends State<SupplierEntryScreen> {
                             Icons.location_city,
                             TextInputType.text,
                             false,
+                            45,
                           ),
                           const SizedBox(height: 16),
                           Row(
@@ -554,6 +594,7 @@ class _SupplierEntryScreenState extends State<SupplierEntryScreen> {
                                   Icons.map,
                                   TextInputType.text,
                                   false,
+                                  45,
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -564,6 +605,7 @@ class _SupplierEntryScreenState extends State<SupplierEntryScreen> {
                                   Icons.location_pin,
                                   TextInputType.text,
                                   false,
+                                  45,
                                 ),
                               ),
                             ],

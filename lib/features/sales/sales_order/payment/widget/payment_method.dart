@@ -26,6 +26,9 @@ class PaymentMethod extends StatefulWidget {
 
 class _PaymentMethodState extends State<PaymentMethod> {
   final TextEditingController _paymentTermController = TextEditingController();
+  final TextEditingController _salesRepresentController =
+      TextEditingController();
+  final TextEditingController _commentsController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   String? _selectedPaymentType;
   int? _selectedPaymentInstrument;
@@ -36,6 +39,8 @@ class _PaymentMethodState extends State<PaymentMethod> {
     super.initState();
 
     _paymentTermController.addListener(_onPaymentTermChanged);
+    _salesRepresentController.addListener(_onExtraDetailsChanged);
+    _commentsController.addListener(_onExtraDetailsChanged);
 
     // Initialize with existing values from state
     _initializeFromState();
@@ -60,6 +65,11 @@ class _PaymentMethodState extends State<PaymentMethod> {
     if (header?.creditDateToPay != null) {
       _creditDateToPay = header!.creditDateToPay;
     }
+
+    _salesRepresentController.text =
+        widget.salesState.salesRepresent ?? header?.salesRepresent ?? '';
+    _commentsController.text =
+        widget.salesState.commentsSo ?? header?.commentsSo ?? '';
   }
 
   void _onPaymentTermChanged() {
@@ -72,6 +82,10 @@ class _PaymentMethodState extends State<PaymentMethod> {
     if (int.tryParse(text) != null) {
       _updatePaymentDetails(paymentTerm: text);
     }
+  }
+
+  void _onExtraDetailsChanged() {
+    _updatePaymentDetails();
   }
 
   void _updatePaymentDetails({
@@ -92,6 +106,8 @@ class _PaymentMethodState extends State<PaymentMethod> {
         paymentMethod: newPaymentMethod,
         paymentInstrument: newPaymentInstrument,
         paymentTerm: newPaymentTerm,
+        salesRepresent: _salesRepresentController.text,
+        commentsSo: _commentsController.text,
       ),
     );
   }
@@ -156,6 +172,8 @@ class _PaymentMethodState extends State<PaymentMethod> {
   @override
   void dispose() {
     _paymentTermController.dispose();
+    _salesRepresentController.dispose();
+    _commentsController.dispose();
     super.dispose();
   }
 
@@ -314,6 +332,27 @@ class _PaymentMethodState extends State<PaymentMethod> {
                   prefixIcon: const Icon(Icons.credit_card),
                 );
               },
+            ),
+            const SizedBox(height: 16),
+
+            // Sales Representative
+            CustomTextField(
+              controller: _salesRepresentController,
+              labelText: 'Sales Representative',
+              hintText: 'Enter sales representative name',
+              prefixIcon: const Icon(Icons.person_outline),
+              maxLength: 45,
+            ),
+            const SizedBox(height: 16),
+
+            // Comments
+            CustomTextField(
+              controller: _commentsController,
+              labelText: 'Comments',
+              hintText: 'Enter additional comments',
+              prefixIcon: const Icon(Icons.comment_outlined),
+              maxLines: 3,
+              maxLength: 500,
             ),
             const SizedBox(height: 16),
 
