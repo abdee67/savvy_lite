@@ -85,7 +85,7 @@ class QuotationOrderRepository {
         e.name_middle as employee_middle_name,
         e.name_last as employee_last_name,
         e.email as employee_email,
-        e.phone as employee_phone,
+        e.phone_home as employee_phone,
         e.address as employee_address,
         e.city as employee_city,
         pi.description_1 as payment_instrument_description,

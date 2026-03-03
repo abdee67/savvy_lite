@@ -440,6 +440,61 @@ class SalesOrderHeaderRepository {
     return nextFs.toString().padLeft(8, '0');
   }
 
+  /// Generate invoice number using the Java generateReference pattern.
+  /// Format: PREFIX-00000001-POSTFIX
+  /// Queries fs_table for prefix/postfix by branch + company,
+  /// then finds MAX(invoice_number) matching the pattern in the given [tableName].
+  Future<String> generateInvoiceNumber(
+    int companyId,
+    int branchId,
+    String tableName,
+  ) async {
+    final db = await _db;
+
+    // Step 1: Query fs_table for prefix/postfix
+    final fsResult = await db.query(
+      'fs_table',
+      where: 'company = ? AND branch = ?',
+      whereArgs: [companyId, branchId],
+      limit: 1,
+    );
+
+    if (fsResult.isEmpty) {
+      // User requested no fallback checking, but if fs_table is empty, we must return something.
+      // We'll return an empty string or a generic error-like string.
+      // However, usually prefix/postfix are mandatory for this logic.
+      return "";
+    }
+
+    final fsRow = fsResult.first;
+    final prefix = fsRow['prefix_up_to_three'] as String? ?? "";
+    final postfix = fsRow['postfix_up_to_four'] as String? ?? "";
+
+    // Step 2: Query MAX(invoice_number) matching pattern PREFIX-%-POSTFIX
+    final pattern = '$prefix-%-$postfix';
+    final maxResult = await db.rawQuery(
+      '''
+      SELECT MAX(invoice_number) as last_invoice
+      FROM $tableName
+      WHERE invoice_number LIKE ? AND company = ?
+    ''',
+      [pattern, companyId],
+    );
+
+    int nextNumber = 1;
+    final lastInvoice = maxResult.first['last_invoice'] as String?;
+    if (lastInvoice != null && lastInvoice.isNotEmpty) {
+      final parts = lastInvoice.split('-');
+      if (parts.length >= 2) {
+        // parts[1] is the sequential number part
+        nextNumber = (int.tryParse(parts[1]) ?? 0) + 1;
+      }
+    }
+
+    // Step 3: Format as PREFIX-00000001-POSTFIX
+    return '$prefix-${nextNumber.toString().padLeft(8, '0')}-$postfix';
+  }
+
   // Sales Order Details for Void Processing
   Future<List<SalesOrderDetail>> getSalesOrderDetailsByHeaderId(
     int headerId,

@@ -956,14 +956,15 @@ CREATE INDEX fk_item_transactions_unit_of_measure_idx ON item_transactions(unit_
     await db.execute('''
   CREATE TABLE next_number (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    next_number_code TEXT NOT NULL,
-    next_number_description TEXT NOT NULL,
+    next_number_code TEXT NOT NULL CHECK(length(next_number_code) <= 2),
+    next_number_description TEXT NOT NULL CHECK(length(next_number_description) <= 30),
     next_number INTEGER NOT NULL DEFAULT 1,
     company INTEGER,
-    FOREIGN KEY (company) REFERENCES company_table (id)
+    CONSTRAINT fk_next_number_company FOREIGN KEY (company) REFERENCES company_table (id)
   );
-
-CREATE INDEX idx_next_number_company ON next_number(company);
+''');
+    await db.execute('''
+CREATE INDEX fk_next_number_company_idx ON next_number(company);
 ''');
     developer.log('Created table: next_number');
 
@@ -976,16 +977,21 @@ CREATE INDEX idx_next_number_company ON next_number(company);
     days_maximum INTEGER,
     color_type INTEGER,
     company INTEGER,
-    description TEXT,
+    description TEXT CHECK(length(description) <= 50),
     days_minimum INTEGER,
-    active_for_sales_flag TEXT DEFAULT 'Y',
-    lot_exp_level TEXT,
-    FOREIGN KEY (item_number) REFERENCES items_table (id),
-    FOREIGN KEY (branch) REFERENCES branch_table (id),
-    FOREIGN KEY (color_type) REFERENCES udc_details (id),
-    FOREIGN KEY (company) REFERENCES company_table (id)
+    active_for_sales_flag TEXT DEFAULT 'Y' CHECK(length(active_for_sales_flag) <= 1),
+    lot_exp_level TEXT CHECK(length(lot_exp_level) <= 1),
+    CONSTRAINT fk_lot_expiration_colors_itm_nmbr FOREIGN KEY (item_number) REFERENCES items_table (id),
+    CONSTRAINT fk_lot_expiration_colors_branch FOREIGN KEY (branch) REFERENCES branch_table (id),
+    CONSTRAINT fk_lot_expiration_colors_clr_typ FOREIGN KEY (color_type) REFERENCES udc_details (id),
+    CONSTRAINT fk_lot_expiration_colors_company FOREIGN KEY (company) REFERENCES company_table (id)
   );
-  CREATE INDEX idx_lot_expiration_colors_company ON lot_expiration_colors(company);
+''');
+    await db.execute('''
+CREATE INDEX fk_lot_expiration_colors_company_idx ON lot_expiration_colors(company);
+CREATE INDEX fk_lot_expiration_colors_itm_nmbr_idx ON lot_expiration_colors(item_number);
+CREATE INDEX fk_lot_expiration_colors_branch_idx ON lot_expiration_colors(branch);
+CREATE INDEX fk_lot_expiration_colors_clr_typ_idx ON lot_expiration_colors(color_type);
 ''');
     developer.log('Created table: lot_expiration_colors');
 
@@ -1091,26 +1097,28 @@ CREATE INDEX fk_soh_branchvalue_idx ON sales_order_header(branch_value);
     await db.execute('''
 CREATE TABLE invoice_history_header (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  fs_number TEXT,
-  customer_name TEXT,
-  tin_number TEXT,
-  phone_number TEXT,
-  country TEXT,
-  city TEXT,
-  region TEXT,
+  fs_number TEXT CHECK(length(fs_number) <= 12),
+  customer_name TEXT CHECK(length(customer_name) <= 45),
+  tin_number TEXT CHECK(length(tin_number) <= 45),
+  phone_number TEXT CHECK(length(phone_number) <= 45),
+  country TEXT CHECK(length(country) <= 45),
+  city TEXT CHECK(length(city) <= 45),
+  region TEXT CHECK(length(region) <= 45),
   tax_amount REAL,
   withhold_amount REAL,
   total_amount REAL,
   date_transaction TEXT, -- store as ISO8601 string (e.g., "2025-11-13")
-  sales_person TEXT,
-  mrc_number TEXT,
+  sales_person TEXT CHECK(length(sales_person) <= 255),
+  mrc_number TEXT CHECK(length(mrc_number) <= 45),
   discount_amount REAL,
   amount_beforeTax REAL,
   company INTEGER,
-  FOREIGN KEY (company) REFERENCES company_table(id)
+  quot_number INTEGER,
+  sales_number INTEGER,
+  invoice_number TEXT CHECK(length(invoice_number) <= 45),
+  CONSTRAINT fk_invoice_history_header_company FOREIGN KEY (company) REFERENCES company_table(id)
 );
-CREATE INDEX idx_invoice_history_header_company ON invoice_history_header(company);
-
+CREATE INDEX fk_invoice_history_header_company_idx ON invoice_history_header(company);
 ''');
     developer.log('Created table: invoice_history_header');
     //invoice for detail
@@ -1118,17 +1126,19 @@ CREATE INDEX idx_invoice_history_header_company ON invoice_history_header(compan
 CREATE TABLE invoice_history_detail (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   invoice_history INTEGER,
-  item TEXT,
-  unit_of_measure TEXT,
+  item TEXT CHECK(length(item) <= 45),
+  unit_of_measure TEXT CHECK(length(unit_of_measure) <= 45),
   quantity_transaction REAL,
   amount_unit_price REAL,
   amount_extended_price REAL,
   company INTEGER,
-  FOREIGN KEY (invoice_history) REFERENCES invoice_history_header(id),
-  FOREIGN KEY (company) REFERENCES company_table(id)
+  date_experied TEXT CHECK(length(date_experied) <= 45),
+  batch_number TEXT CHECK(length(batch_number) <= 50),
+  CONSTRAINT fk_invc_hstry_dtl_invc_hstry FOREIGN KEY (invoice_history) REFERENCES invoice_history_header(id),
+  CONSTRAINT fk_invoice_history_dtl_company FOREIGN KEY (company) REFERENCES company_table(id)
 );
-CREATE INDEX idx_invoice_history_detail_invoice_history ON invoice_history_detail(invoice_history);
-CREATE INDEX idx_invoice_history_detail_company ON invoice_history_detail(company);
+CREATE INDEX fk_invc_hstry_dtl_invc_hstry_idx ON invoice_history_detail(invoice_history);
+CREATE INDEX fk_invoice_history_dtl_company_idx ON invoice_history_detail(company);
 ''');
     developer.log('Created table: invoice_history_detail');
 
@@ -1667,34 +1677,32 @@ ON company_subscription (subscription_id);
 ''');
     developer.log('Created table: company_subscription');
 
-    //fs tabe
+    //fs table
     await db.execute('''
   CREATE TABLE fs_table (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     fs_number INTEGER,
-    prefix_up_to_three TEXT,
-    postfix_up_to_four TEXT, 
     branch INTEGER,
-    mrc_number TEXT,
+    mrc_number TEXT CHECK(length(mrc_number) <= 50),
     company INTEGER,
+    machine_model TEXT CHECK(length(machine_model) <= 100),
+    table_number TEXT CHECK(length(table_number) <= 45),
+    postfix_up_to_four TEXT CHECK(length(postfix_up_to_four) <= 4),
+    prefix_up_to_three TEXT CHECK(length(prefix_up_to_three) <= 3),
 
-    FOREIGN KEY (company)
-      REFERENCES company_table(id)
+    CONSTRAINT fk_fs_table_branch FOREIGN KEY (branch)
+      REFERENCES branch_table(id)
       ON DELETE SET NULL
       ON UPDATE CASCADE,
 
-    FOREIGN KEY (branch)
-      REFERENCES branch_table(id)
+    CONSTRAINT fk_fs_table_company FOREIGN KEY (company)
+      REFERENCES company_table(id)
       ON DELETE SET NULL
       ON UPDATE CASCADE
-
 );
 
-CREATE INDEX idx_fs_company
-ON fs_table (company);
-
-CREATE INDEX idx_fs_branch
-ON fs_table (branch);
+CREATE INDEX fk_fs_table_branch_idx ON fs_table (branch);
+CREATE INDEX fk_fs_table_company_idx ON fs_table (company);
 ''');
     developer.log('Created table: fs_table');
 

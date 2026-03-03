@@ -147,7 +147,9 @@ class SalesOrderCoordinatorBloc
         withholdAmount: state.lastWithholdAmount,
         discountAmount: state.lastDiscountAmount,
         // Ensure defaults if null
-        discount: headerToCreate.discount ?? '0',
+        discount: headerToCreate.discountAmount == 0
+            ? 'N'
+            : 'Y', //IF discountAmount is 0 make it N or Y
         addOn: headerToCreate.addOn ?? '0',
         // Populate payment data
         paymentMethod: state.paymentMethod,
@@ -1367,6 +1369,14 @@ class SalesOrderCoordinatorBloc
         effectiveCompanyId,
       );
 
+      // Generate invoice number for invoice_history_header using fs_table prefix/postfix
+      final branchId = authBloc.state.branchId ?? 1;
+      final invoiceNumber = await headerBloc.repository.generateInvoiceNumber(
+        effectiveCompanyId,
+        branchId,
+        'invoice_history_header',
+      );
+
       // Derive customer info safely
       final customerName =
           currentHeader.customerBillToRef?.customerName ??
@@ -1391,6 +1401,11 @@ class SalesOrderCoordinatorBloc
         withholdAmount: state.lastWithholdAmount ?? 0.0,
         discountAmount: state.lastDiscountAmount ?? 0.0,
         amountBeforeTax: state.subtotal,
+        quotNumber: int.tryParse(
+          currentHeader.proformaReference ?? '',
+        ), //only when proforma converted into sales order
+        salesNumber: currentHeader.id ?? 0,
+        invoiceNumber: invoiceNumber,
       );
 
       // Create invoice header
@@ -1415,6 +1430,8 @@ class SalesOrderCoordinatorBloc
           amountUnitPrice: salesDetail.unitPrice ?? 0.0,
           amountExtendedPrice: salesDetail.extendedPrice ?? 0.0,
           unitOfMeasure: salesDetail.item?.unitOfMeasure ?? 'PC',
+          dateExperied: salesDetail.lot?.dateExpiration,
+          batchNumber: salesDetail.lot?.batchNumberSupplier,
         );
       }).toList();
 

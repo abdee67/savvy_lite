@@ -104,20 +104,21 @@ Future<void> _initializeAndRunApp() async {
     }
     if (kDebugMode) {
       //await LocalDatabaseService().resetDatabase();
-      // await getIt<LicenseService>().clearLicense();
+      //await getIt<LicenseService>().clearLicense();
       //  // await LocalDatabaseService().debugTable('branch_table');
-      await LocalDatabaseService().debugTable('items_in_branch');
+      //await LocalDatabaseService().debugTable('items_in_branch');
       //await LocalDatabaseService().debugTable('item_cost');
       //await LocalDatabaseService().debugTable('item_location');
       //await LocalDatabaseService().debugTable('lot_master');
       //await LocalDatabaseService().debugTable('item_master');
       //await LocalDatabaseService().debugTable('items_table');
-      //await LocalDatabaseService().debugTable('sales_order_header');
+      await LocalDatabaseService().debugTable('sales_order_header');
       //await LocalDatabaseService().debugTable('credit_receipt_table');
-      // await LocalDatabaseService().debugTable('sales_order_details');
+      await LocalDatabaseService().debugTable('sales_order_details');
       // await LocalDatabaseService().debugTable('sales_return_header');
       //await LocalDatabaseService().debugTable('sales_return_details');
-      // await LocalDatabaseService().debugTable('invoice_history_header');
+      await LocalDatabaseService().debugTable('invoice_history_header');
+      await LocalDatabaseService().debugTable('fs_table');
       // await LocalDatabaseService().debugTable('invoice_history_detail');
       // await LocalDatabaseService().debugTable('item_transactions');
       // await LocalDatabaseService().debugTable('item_uom_conversions');
@@ -133,7 +134,7 @@ Future<void> _initializeAndRunApp() async {
       //await LocalDatabaseService().debugTable('user_table');
       //await LocalDatabaseService().debugTable('user_role');
       //await LocalDatabaseService().debugTable('role_privilege');
-      await LocalDatabaseService().debugTable('other_expense_table');
+      //await LocalDatabaseService().debugTable('other_expense_table');
     }
   } catch (error, stackTrace) {
     if (kDebugMode) {

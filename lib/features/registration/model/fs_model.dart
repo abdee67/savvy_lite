@@ -4,8 +4,10 @@ class FSModel {
   final int? branch;
   final String? mrcNumber;
   final int? company;
-  final String? prefixUpToThree;
+  final String? machineModel;
+  final String? tableNumber;
   final String? postfixUpToFour;
+  final String? prefixUpToThree;
 
   const FSModel({
     this.id,
@@ -13,8 +15,10 @@ class FSModel {
     this.branch,
     this.mrcNumber,
     this.company,
-    this.prefixUpToThree,
+    this.machineModel,
+    this.tableNumber,
     this.postfixUpToFour,
+    this.prefixUpToThree,
   });
 
   factory FSModel.fromMap(Map<String, dynamic> json) {
@@ -24,8 +28,10 @@ class FSModel {
       branch: json['branch'] as int?,
       mrcNumber: json['mrc_number'] as String?,
       company: json['company'] as int?,
-      prefixUpToThree: json['prefix_up_to_three'] as String?,
+      machineModel: json['machine_model'] as String?,
+      tableNumber: json['table_number'] as String?,
       postfixUpToFour: json['postfix_up_to_four'] as String?,
+      prefixUpToThree: json['prefix_up_to_three'] as String?,
     );
   }
 
@@ -36,8 +42,10 @@ class FSModel {
       'branch': branch,
       'mrc_number': mrcNumber,
       'company': company,
-      'prefix_up_to_three': prefixUpToThree,
+      'machine_model': machineModel,
+      'table_number': tableNumber,
       'postfix_up_to_four': postfixUpToFour,
+      'prefix_up_to_three': prefixUpToThree,
     };
   }
 
@@ -47,8 +55,10 @@ class FSModel {
     int? branch,
     String? mrcNumber,
     int? company,
-    String? prefixUpToThree,
+    String? machineModel,
+    String? tableNumber,
     String? postfixUpToFour,
+    String? prefixUpToThree,
   }) {
     return FSModel(
       id: id ?? this.id,
@@ -56,8 +66,10 @@ class FSModel {
       branch: branch ?? this.branch,
       mrcNumber: mrcNumber ?? this.mrcNumber,
       company: company ?? this.company,
-      prefixUpToThree: prefixUpToThree ?? this.prefixUpToThree,
+      machineModel: machineModel ?? this.machineModel,
+      tableNumber: tableNumber ?? this.tableNumber,
       postfixUpToFour: postfixUpToFour ?? this.postfixUpToFour,
+      prefixUpToThree: prefixUpToThree ?? this.prefixUpToThree,
     );
   }
 }

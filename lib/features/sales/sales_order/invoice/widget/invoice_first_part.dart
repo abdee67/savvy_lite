@@ -96,7 +96,7 @@ class InvoiceFirstPart extends StatelessWidget {
                     children: [
                       _buildSectionTitle('INVOICE INFO'),
                       const SizedBox(height: 8),
-                      _buildInfoRow('Invoice No.', invoiceNumber),
+                      _buildInfoRow('Sales Order', salesOrderNumber),
                       _buildInfoRow('Date', _formatDate(date)),
                       if (salesRepresent != null && salesRepresent!.isNotEmpty)
                         _buildInfoRow('Sales Rep', salesRepresent!),

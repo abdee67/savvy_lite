@@ -847,6 +847,13 @@ class _SalesReviewPageState extends State<SalesReviewPage>
               Iconsax.receipt,
               isCompact,
             ),
+          if (salesOrder.invoiceNumber != null)
+            _buildsalesOrderInfoItem(
+              'Invoice No : ',
+              salesOrder.invoiceNumber?.toString() ?? 'N/A',
+              Iconsax.receipt,
+              isCompact,
+            ),
           if (salesOrder.fsNumber != null)
             _buildsalesOrderInfoItem(
               'FS Number : ',
