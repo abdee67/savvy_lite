@@ -138,7 +138,7 @@ class ItemUomConversionsRepository {
       final placeholders = List.filled(uomIds.length, '?').join(',');
       final uomDetailsResult = await db.rawQuery('''
       SELECT * FROM udc_details 
-      WHERE id IN ($placeholders) 
+      WHERE id IN ($placeholders) AND udc_group = 'UM'
       ORDER BY description_1
       ''', uomIds);
 

@@ -723,24 +723,39 @@ class SalesOrderHeaderRepository {
   }
 
   //get sales order by fs number which it doesnt have void indicator
-  Future<SalesOrderHeader?> getSalesOrderByFsNumber(
+  Future<SalesOrderHeader?> getSalesOrderByFsNumberAndInvoiceNumber(
     String fsNumber,
-    int companyId,
-  ) async {
+    int companyId, {
+    String? invoiceNumber,
+  }) async {
     final db = await _db;
-    final maps = await db.rawQuery(
-      '''
+
+    String whereClause = 'soh.company = ? AND soh.void_indicator IS NULL';
+    List<dynamic> whereArgs = [companyId];
+
+    if (fsNumber.isNotEmpty) {
+      whereClause += ' AND soh.fs_number = ?';
+      whereArgs.add(fsNumber);
+    }
+
+    if (invoiceNumber != null && invoiceNumber.isNotEmpty) {
+      whereClause += ' AND soh.invoice_number = ?';
+      whereArgs.add(invoiceNumber);
+    }
+
+    final query =
+        '''
       SELECT 
         soh.*,
         cu.customer_name as customer_bill_to_name,
         ct.customer_name as customer_table_name
-        FROM sales_order_header soh
-        INNER JOIN customer_table cu ON soh.customer_bill_to = cu.id
-        INNER JOIN customer_table ct ON soh.customer_table_id = ct.id
-      WHERE soh.fs_number = ? AND soh.void_indicator IS NULL AND soh.company = ?
-      ''',
-      [fsNumber, companyId],
-    );
+      FROM sales_order_header soh
+      INNER JOIN customer_table cu ON soh.customer_bill_to = cu.id
+      INNER JOIN customer_table ct ON soh.customer_table_id = ct.id
+      WHERE $whereClause
+    ''';
+
+    final maps = await db.rawQuery(query, whereArgs);
     return maps.isNotEmpty ? SalesOrderHeader.fromMap(maps.first) : null;
   }
 
