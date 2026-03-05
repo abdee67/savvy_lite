@@ -123,6 +123,7 @@ class _SalesReturnScreen extends State<SalesReturnScreen> {
                   controller: _fsNumberController,
                   prefixIcon: const Icon(Iconsax.document, size: 20),
                   hintText: 'Enter FS Number',
+                  maxLength: 45,
                 ),
                 const SizedBox(height: 16),
                 CustomTextField(
@@ -130,6 +131,7 @@ class _SalesReturnScreen extends State<SalesReturnScreen> {
                   controller: _invoiceNumberController,
                   prefixIcon: const Icon(Iconsax.receipt, size: 20),
                   hintText: 'Enter Invoice Number',
+                  maxLength: 45,
                 ),
                 const SizedBox(height: 24),
                 SizedBox(
@@ -181,6 +183,7 @@ class _SalesReturnScreen extends State<SalesReturnScreen> {
     context.read<SalesReturnBloc>().add(
       LoadSalesReturnByFsNumber(
         fsNumber: fsNumber,
+        invoiceNumber: invoiceNumber,
         companyId: widget.authBloc.state.companyId!,
       ),
     );

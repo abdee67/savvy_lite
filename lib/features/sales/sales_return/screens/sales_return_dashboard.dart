@@ -279,6 +279,7 @@ class _SalesReturnDashBoardPageState extends State<SalesReturnDashBoardPage>
                   vertical: 12,
                 ),
               ),
+              maxLength: 45,
               // onChanged: _handleSearch,
             ),
           ),

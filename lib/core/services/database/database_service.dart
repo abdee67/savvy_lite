@@ -781,7 +781,7 @@ CREATE TABLE item_cost (
   CREATE TABLE purchase_order_header (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     supplier_id INTEGER,
-    date_transaction TEXT,
+    date_transation TEXT,
     date_delivery TEXT,
     po_receive_status INTEGER,
     company INTEGER,
@@ -801,23 +801,25 @@ CREATE TABLE item_cost (
     payment_term INTEGER,
     order_type INTEGER,
     credit_due_date TEXT,
-    invoice_number TEXT,
-    FOREIGN KEY (supplier_id) REFERENCES supplier_table (id),
-    FOREIGN KEY (company) REFERENCES company_table (id),
-    FOREIGN KEY (po_receive_status) REFERENCES udc_details (id),
-    FOREIGN KEY (payment_status) REFERENCES udc_details (id),
-    FOREIGN KEY (payment_instrument) REFERENCES udc_details (id),
-    FOREIGN KEY (order_type) REFERENCES udc_details (id),
-    FOREIGN KEY (user_id) REFERENCES user_table (id)
+    invoice_number TEXT CHECK (length(invoice_number) <= 150),
+
+    -- FOREIGN KEYS
+    CONSTRAINT fk_poh_order_type FOREIGN KEY (order_type) REFERENCES udc_details (id),
+    CONSTRAINT fk_purchase_order_header_company FOREIGN KEY (company) REFERENCES company_table (id),
+    CONSTRAINT fk_purchase_order_header_po_rcv_sts FOREIGN KEY (po_receive_status) REFERENCES udc_details (id),
+    CONSTRAINT fk_purchase_order_header_pymnt_inst FOREIGN KEY (payment_instrument) REFERENCES udc_details (id),
+    CONSTRAINT fk_purchase_order_header_pymnt_sts FOREIGN KEY (payment_status) REFERENCES udc_details (id),
+    CONSTRAINT fk_purchase_order_header_user_id FOREIGN KEY (user_id) REFERENCES user_table (id),
+    CONSTRAINT fk_purchase_order_supplier_id FOREIGN KEY (supplier_id) REFERENCES supplier_table (id)
   );
 
-CREATE INDEX idx_purchase_order_header_supplier_id ON purchase_order_header(supplier_id);
-CREATE INDEX idx_purchase_order_header_company ON purchase_order_header(company);
-CREATE INDEX idx_purchase_order_header_po_receive_status ON purchase_order_header(po_receive_status);
-CREATE INDEX idx_purchase_order_header_payment_status ON purchase_order_header(payment_status);
-CREATE INDEX idx_purchase_order_header_payment_instrument ON purchase_order_header(payment_instrument);
-CREATE INDEX idx_purchase_order_header_order_type ON purchase_order_header(order_type);
-CREATE INDEX idx_purchase_order_header_user_id ON purchase_order_header(user_id);
+CREATE INDEX fk_purchase_order_header_company_idx ON purchase_order_header(company);
+CREATE INDEX fk_purchase_order_header_supplier_id_idx ON purchase_order_header(supplier_id);
+CREATE INDEX fk_purchase_order_header_user_id_idx ON purchase_order_header(user_id);
+CREATE INDEX fk_purchase_order_header_po_rcv_sts_idx ON purchase_order_header(po_receive_status);
+CREATE INDEX fk_purchase_order_header_pymnt_sts_idx ON purchase_order_header(payment_status);
+CREATE INDEX fk_purchase_order_header_pymnt_inst_idx ON purchase_order_header(payment_instrument);
+CREATE INDEX fk_poh_order_type_idx ON purchase_order_header(order_type);
 ''');
 
     developer.log('Created table: purchase_order_header');
@@ -844,21 +846,28 @@ CREATE INDEX idx_purchase_order_header_user_id ON purchase_order_header(user_id)
     date_effective TEXT,
     date_expiration TEXT,
     unit_of_measure INTEGER,
-    batch_number_supplier TEXT,
-    FOREIGN KEY (po_header) REFERENCES purchase_order_header (id),
-    FOREIGN KEY (company) REFERENCES company_table (id),
-    FOREIGN KEY (item_number) REFERENCES items_table (id),
-    FOREIGN KEY (unit_of_measure) REFERENCES udc_details (id)
+    batch_number_supplier TEXT CHECK (length(batch_number_supplier) <= 50),
+
+    -- FOREIGN KEYS
+    CONSTRAINT fk_purchase_order_detail_company FOREIGN KEY (company) REFERENCES company_table (id),
+    CONSTRAINT fk_purchase_order_detail_itm_nmbr FOREIGN KEY (item_number) REFERENCES items_table (id),
+    CONSTRAINT fk_purchase_order_detail_po_rcv_sts FOREIGN KEY (po_receive_status) REFERENCES udc_details (id),
+    CONSTRAINT fk_purchase_order_detail_user_id FOREIGN KEY (user_id) REFERENCES user_table (id),
+    CONSTRAINT fk_purchase_order_po_header FOREIGN KEY (po_header) REFERENCES purchase_order_header (id),
+    CONSTRAINT fk_purchase_order_uom FOREIGN KEY (unit_of_measure) REFERENCES udc_details (id)
   );
 
-CREATE INDEX idx_purchase_order_detail_po_header ON purchase_order_detail(po_header);
-CREATE INDEX idx_purchase_order_detail_item_number ON purchase_order_detail(item_number);
-CREATE INDEX idx_purchase_order_detail_unit_of_measure ON purchase_order_detail(unit_of_measure);
+CREATE INDEX fk_purchase_order_detail_company_idx ON purchase_order_detail(company);
+CREATE INDEX fk_purchase_order_detail_po_header_idx ON purchase_order_detail(po_header);
+CREATE INDEX fk_purchase_order_detail_user_id_idx ON purchase_order_detail(user_id);
+CREATE INDEX fk_purchase_order_detail_po_rcv_sts_idx ON purchase_order_detail(po_receive_status);
+CREATE INDEX fk_purchase_order_detail_itm_nmbr_idx ON purchase_order_detail(item_number);
+CREATE INDEX fk_purchase_order_uom_idx ON purchase_order_detail(unit_of_measure);
 ''');
 
     developer.log('Created table: purchase_order_detail');
 
-    //22.create purchase_order_reciever table
+    //22.create purchase_order_receiver table
     await db.execute('''
   CREATE TABLE purchase_order_receiver (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -880,18 +889,25 @@ CREATE INDEX idx_purchase_order_detail_unit_of_measure ON purchase_order_detail(
     date_expiration TEXT,
     location INTEGER,
     unit_of_measure INTEGER,
-    batch_number_supplier TEXT,
-    FOREIGN KEY (po_detail) REFERENCES purchase_order_detail (id),
-    FOREIGN KEY (branch_recieved) REFERENCES branch_table (id),
-    FOREIGN KEY (company) REFERENCES company_table (id),
-    FOREIGN KEY (item_number) REFERENCES items_table (id),
-    FOREIGN KEY (location) REFERENCES item_location (id),
-    FOREIGN KEY (unit_of_measure) REFERENCES udc_details (id)
+    batch_number_supplier TEXT CHECK (length(batch_number_supplier) <= 50),
+
+    -- FOREIGN KEYS
+    CONSTRAINT fk_purchase_order_po_detail FOREIGN KEY (po_detail) REFERENCES purchase_order_detail (id),
+    CONSTRAINT fk_purchase_order_receiver_brnch_rcvd FOREIGN KEY (branch_recieved) REFERENCES branch_table (id),
+    CONSTRAINT fk_purchase_order_receiver_company FOREIGN KEY (company) REFERENCES company_table (id),
+    CONSTRAINT fk_purchase_order_receiver_itm_nmbr FOREIGN KEY (item_number) REFERENCES items_table (id),
+    CONSTRAINT fk_purchase_order_receiver_location FOREIGN KEY (location) REFERENCES item_location (id),
+    CONSTRAINT fk_purchase_order_receiver_user_id FOREIGN KEY (user_id) REFERENCES user_table (id),
+    CONSTRAINT fk_purchase_order_rsv_uom FOREIGN KEY (unit_of_measure) REFERENCES udc_details (id)
   );
 
-CREATE INDEX idx_purchase_order_receiver_po_detail ON purchase_order_receiver(po_detail);
-CREATE INDEX idx_purchase_order_receiver_item_number ON purchase_order_receiver(item_number);
-CREATE INDEX idx_purchase_order_receiver_unit_of_measure ON purchase_order_receiver(unit_of_measure);
+CREATE INDEX fk_purchase_order_receiver_company_idx ON purchase_order_receiver(company);
+CREATE INDEX fk_purchase_order_receiver_po_detail_idx ON purchase_order_receiver(po_detail);
+CREATE INDEX fk_purchase_order_receiver_user_id_idx ON purchase_order_receiver(user_id);
+CREATE INDEX fk_purchase_order_receiver_brnch_rcvd_idx ON purchase_order_receiver(branch_recieved);
+CREATE INDEX fk_purchase_order_receiver_itm_nmbr_idx ON purchase_order_receiver(item_number);
+CREATE INDEX fk_purchase_order_receiver_location_idx ON purchase_order_receiver(location);
+CREATE INDEX fk_purchase_order_rsv_uom_idx ON purchase_order_receiver(unit_of_measure);
 ''');
 
     developer.log('Created table: purchase_order_receiver');
@@ -1179,26 +1195,26 @@ CREATE INDEX idx_sales_person_company ON salespersons(company);
   shipped_date TEXT,
   return_date TEXT,
 
-  sales_type TEXT,
-  payment_method TEXT,
+  sales_type TEXT CHECK(length(sales_type) <= 45),
+  payment_method TEXT CHECK(length(payment_method) <= 45),
   payment_instrument INTEGER,
-  discount TEXT,
-  add_on TEXT,
+  discount TEXT CHECK(length(discount) <= 1),
+  add_on TEXT CHECK(length(add_on) <= 1),
   tax REAL,
-  with_hold_apply TEXT,
+  with_hold_apply TEXT CHECK(length(with_hold_apply) <= 1),
   withhold_amount REAL,
   discount_amount REAL,
   discount_in_percent REAL,
 
-  reference_note1 TEXT,
-  reference_note_2 TEXT,
-  reference_note3 TEXT,
-  reference_note4 TEXT,
+  reference_note1 TEXT CHECK(length(reference_note1) <= 45),
+  reference_note_2 TEXT CHECK(length(reference_note_2) <= 45),
+  reference_note3 TEXT CHECK(length(reference_note3) <= 45),
+  reference_note4 TEXT CHECK(length(reference_note4) <= 45),
 
   comments_sales TEXT,
   credit_date_topay TEXT,
-  fs_number TEXT,
-  void_indicator TEXT,
+  fs_number TEXT CHECK(length(fs_number) <= 45),
+  void_indicator TEXT CHECK(length(void_indicator) <= 1),
 
   customer_bill_to INTEGER NOT NULL,
   customer_table_id INTEGER NOT NULL,
@@ -1214,44 +1230,44 @@ CREATE INDEX idx_sales_person_company ON salespersons(company);
   unit_cost REAL,
   amount_cost REAL,
   return_status INTEGER,
-  sales_represent TEXT,
+  sales_represent TEXT CHECK(length(sales_represent) <= 150),
   comment_for_return TEXT,
 
   -- FOREIGN KEYS
-  FOREIGN KEY (customer_bill_to) REFERENCES customer_table(id),
-  FOREIGN KEY (customer_table_id) REFERENCES customer_table(id),
-  FOREIGN KEY (employees_id) REFERENCES employees(id),
-  FOREIGN KEY (company) REFERENCES company_table(id),
-  FOREIGN KEY (payment_instrument) REFERENCES udc_details(id),
-  FOREIGN KEY (payment_status) REFERENCES udc_details(id),
-  FOREIGN KEY (order_type) REFERENCES udc_details(id),
-  FOREIGN KEY (return_status) REFERENCES udc_details(id)
+  CONSTRAINT fk_sales_return_header_customer_table FOREIGN KEY (customer_bill_to) REFERENCES customer_table(id),
+  CONSTRAINT fk_sales_return_header_customer_table1 FOREIGN KEY (customer_table_id) REFERENCES customer_table(id),
+  CONSTRAINT fk_sales_return_header_employees1 FOREIGN KEY (employees_id) REFERENCES employees(id),
+  CONSTRAINT fk_sales_return_header_company FOREIGN KEY (company) REFERENCES company_table(id),
+  CONSTRAINT fk_sales_return_header_payment_inst FOREIGN KEY (payment_instrument) REFERENCES udc_details(id),
+  CONSTRAINT fk_sales_return_header_payment_sts FOREIGN KEY (payment_status) REFERENCES udc_details(id),
+  CONSTRAINT fk_soh_return_status FOREIGN KEY (order_type) REFERENCES udc_details(id),
+  CONSTRAINT fk_sales_return_header_payment_return_status FOREIGN KEY (return_status) REFERENCES udc_details(id)
 );
 CREATE UNIQUE INDEX idx_sales_return_header_id_unique
 ON sales_return_header (id);
 
-CREATE INDEX idx_srh_customer_bill_to
+CREATE INDEX fk_sales_return_header_customer_table_idx
 ON sales_return_header (customer_bill_to);
 
-CREATE INDEX idx_srh_customer_table_id
+CREATE INDEX fk_sales_return_header_customer_table1_idx
 ON sales_return_header (customer_table_id);
 
-CREATE INDEX idx_srh_employees_id
+CREATE INDEX fk_sales_return_header_employees1_idx
 ON sales_return_header (employees_id);
 
-CREATE INDEX idx_srh_company
+CREATE INDEX fk_sales_return_header_company_idx
 ON sales_return_header (company);
 
-CREATE INDEX idx_srh_payment_instrument
+CREATE INDEX fk_sales_return_header_payment_inst_idx
 ON sales_return_header (payment_instrument);
 
-CREATE INDEX idx_srh_payment_status
+CREATE INDEX fk_sales_return_header_payment_sts_idx
 ON sales_return_header (payment_status);
 
-CREATE INDEX idx_srh_order_type
+CREATE INDEX fk_soh_order_type_idx
 ON sales_return_header (order_type);
 
-CREATE INDEX idx_srh_return_status
+CREATE INDEX fk_soh_return_status_idx
 ON sales_return_header (return_status);
 
 ''');
@@ -1263,9 +1279,9 @@ CREATE TABLE sales_return_details (
   unit_price REAL,
   quantity REAL,
   extended_price REAL,
-  taxable TEXT,
-  reference1 TEXT,
-  reference2 TEXT,
+  taxable TEXT CHECK(length(taxable) <= 1),
+  reference1 TEXT CHECK(length(reference1) <= 45),
+  reference2 TEXT CHECK(length(reference2) <= 45),
   sales_return_header_id INTEGER NOT NULL,
   items_table_id INTEGER NOT NULL,
   item_in_branch INTEGER,
@@ -1282,22 +1298,42 @@ CREATE TABLE sales_return_details (
   return_reason INTEGER,
 
   -- FOREIGN KEYS
-  FOREIGN KEY (sales_return_header_id) REFERENCES sales_return_header(id),
-  FOREIGN KEY (items_table_id) REFERENCES items_table(id),
-  FOREIGN KEY (item_in_branch) REFERENCES items_in_branch(id),
-  FOREIGN KEY (company) REFERENCES company_table(id),
-  FOREIGN KEY (lot_number) REFERENCES lot_master(id),
-  FOREIGN KEY (unit_of_measure) REFERENCES udc_details(id),
-  FOREIGN KEY (return_status) REFERENCES udc_details(id),
-  FOREIGN KEY (return_reason) REFERENCES udc_details(id)
+  CONSTRAINT fk_sales_return_details_sales_return_header1 FOREIGN KEY (sales_return_header_id) REFERENCES sales_return_header(id),
+  CONSTRAINT fk_sales_return_details_items_table1 FOREIGN KEY (items_table_id) REFERENCES items_table(id),
+  CONSTRAINT fk_sales_return_details_item_in_branch FOREIGN KEY (item_in_branch) REFERENCES items_in_branch(id),
+  CONSTRAINT fk_sales_return_details_company FOREIGN KEY (company) REFERENCES company_table(id),
+  CONSTRAINT fk_sales_return_details_lot_number FOREIGN KEY (lot_number) REFERENCES lot_master(id),
+  CONSTRAINT fk_sales_return_details_UOM FOREIGN KEY (unit_of_measure) REFERENCES udc_details(id),
+  CONSTRAINT fk_sales_return_details_return_status FOREIGN KEY (return_status) REFERENCES udc_details(id),
+  CONSTRAINT fk_sales_return_details_return_reason FOREIGN KEY (return_reason) REFERENCES udc_details(id)
 );
 
+CREATE UNIQUE INDEX id_UNIQUE ON sales_return_details (id);
+CREATE UNIQUE INDEX id_item_UNIQUE ON sales_return_details (id, items_table_id);
 
-CREATE INDEX idx_srd_sales_return_header_id
-ON sales_return_detail (sales_return_header_id);
+CREATE INDEX fk_sales_return_details_items_table1_idx
+ON sales_return_details (items_table_id);
 
-CREATE INDEX idx_srd_item_id
-ON sales_return_detail (item_id);
+CREATE INDEX fk_sales_return_details_sales_return_header1_idx
+ON sales_return_details (sales_return_header_id);
+
+CREATE INDEX fk_sales_return_details_item_in_branch_idx
+ON sales_return_details (item_in_branch);
+
+CREATE INDEX fk_sales_return_details_company_idx
+ON sales_return_details (company);
+
+CREATE INDEX fk_sales_return_details_lot_number_idx
+ON sales_return_details (lot_number);
+
+CREATE INDEX fk_sales_return_details_UOM_idx
+ON sales_return_details (unit_of_measure);
+
+CREATE INDEX fk_sales_return_details_return_status_idx
+ON sales_return_details (return_status);
+
+CREATE INDEX fk_sales_return_details_return_reason_idx
+ON sales_return_details (return_reason);
 
 ''');
     developer.log('Created table: sales_return_detail');
@@ -1311,39 +1347,39 @@ CREATE TABLE quote_order_header (
   conversion_date TEXT,
   required_date TEXT,
   shipped_date TEXT,
-  sales_type TEXT,
+  sales_type TEXT CHECK(length(sales_type) <= 45),
   quotation_validation_in_days INTEGER DEFAULT 30,
-  payment_method TEXT,
+  payment_method TEXT CHECK(length(payment_method) <= 45),
   payment_instrument INTEGER,
   payment_term INTEGER,
   payment_status INTEGER,
   credit_date_topay TEXT,
-  currency_code TEXT DEFAULT 'ETB',
+  currency_code TEXT DEFAULT 'ETB' CHECK(length(currency_code) <= 10),
   exchange_rate REAL DEFAULT 1,
-  discount TEXT,
+  discount TEXT CHECK(length(discount) <= 1),
   discount_amount REAL,
   discount_in_percent REAL,
-  add_on TEXT,
+  add_on TEXT CHECK(length(add_on) <= 1),
   tax REAL,
-  with_hold_apply TEXT,
+  with_hold_apply TEXT CHECK(length(with_hold_apply) <= 1),
   withhold_amount REAL,
   amount_total REAL,
   amount_open REAL,
   unit_cost REAL,
   amount_cost REAL,
   order_type INTEGER,
-  order_status TEXT DEFAULT 'Draft',
-  conversion_status TEXT,
-  prforma_status TEXT,
-  void_indicator TEXT,
-  reference_note1 TEXT,
-  reference_note_2 TEXT,
-  reference_note3 TEXT,
-  reference_note4 TEXT,
-  external_ref_number TEXT,
-  fs_number TEXT,
-  sales_represent TEXT,
-  converted_items TEXT,
+  order_status TEXT DEFAULT 'Draft' CHECK(length(order_status) <= 50),
+  conversion_status TEXT CHECK(length(conversion_status) <= 150),
+  prforma_status TEXT CHECK(length(prforma_status) <= 150),
+  void_indicator TEXT CHECK(length(void_indicator) <= 1),
+  reference_note1 TEXT CHECK(length(reference_note1) <= 45),
+  reference_note_2 TEXT CHECK(length(reference_note_2) <= 45),
+  reference_note3 TEXT CHECK(length(reference_note3) <= 45),
+  reference_note4 TEXT CHECK(length(reference_note4) <= 45),
+  external_ref_number TEXT CHECK(length(external_ref_number) <= 100),
+  fs_number TEXT CHECK(length(fs_number) <= 45),
+  sales_represent TEXT CHECK(length(sales_represent) <= 150),
+  converted_items TEXT CHECK(length(converted_items) <= 150),
   customer_bill_to INTEGER NOT NULL,
   customer_table_id INTEGER NOT NULL,
   employees_id INTEGER NOT NULL,
@@ -1355,50 +1391,51 @@ CREATE TABLE quote_order_header (
   updated_by INTEGER,
   comments_reason TEXT,
 
+  CONSTRAINT id_UNIQUE UNIQUE (id),
+  CONSTRAINT order_number_UNIQUE UNIQUE (order_number),
+
   -- FOREIGN KEYS
-  FOREIGN KEY (customer_bill_to) REFERENCES customer_table(id),
-  FOREIGN KEY (customer_table_id) REFERENCES customer_table(id),
-  FOREIGN KEY (employees_id) REFERENCES employees(id),
-  FOREIGN KEY (company) REFERENCES company_table(id),
-  FOREIGN KEY (branch_id) REFERENCES branch(id),
-  FOREIGN KEY (payment_instrument) REFERENCES udc_details(id),
-  FOREIGN KEY (payment_status) REFERENCES udc_details(id),
-  FOREIGN KEY (order_type) REFERENCES udc_details(id),
-  FOREIGN KEY (prforma_status) REFERENCES udc_details(id)
+  CONSTRAINT fk_quote_order_header_customer_table FOREIGN KEY (customer_bill_to) REFERENCES customer_table(id),
+  CONSTRAINT fk_quote_order_header_customer_table1 FOREIGN KEY (customer_table_id) REFERENCES customer_table(id),
+  CONSTRAINT fk_quote_order_header_employees1 FOREIGN KEY (employees_id) REFERENCES employees(id),
+  CONSTRAINT fk_quote_order_header_company FOREIGN KEY (company) REFERENCES company_table(id),
+  CONSTRAINT fk_quote_order_header_branch FOREIGN KEY (branch_id) REFERENCES branch_table(id),
+  CONSTRAINT fk_quote_order_header_payment_inst FOREIGN KEY (payment_instrument) REFERENCES udc_details(id),
+  CONSTRAINT fk_quote_order_header_payment_sts FOREIGN KEY (payment_status) REFERENCES udc_details(id),
+  CONSTRAINT fk_soh_order_type1 FOREIGN KEY (order_type) REFERENCES udc_details(id),
+  CONSTRAINT fk_quote_order_header_prforma_sts FOREIGN KEY (prforma_status) REFERENCES udc_details(id)
 );
-CREATE UNIQUE INDEX idx_proforma_header_id_unique
-ON proforma_header (id);
 
-CREATE INDEX idx_ph_customer_bill_to
-ON proforma_header (customer_bill_to);
+CREATE INDEX fk_quote_order_header_customer_table_idx
+ON quote_order_header (customer_bill_to);
 
-CREATE INDEX idx_ph_customer_table_id
-ON proforma_header (customer_table_id);
+CREATE INDEX fk_quote_order_header_customer_table1_idx
+ON quote_order_header (customer_table_id);
 
-CREATE INDEX idx_ph_employees_id
-ON proforma_header (employees_id);
+CREATE INDEX fk_quote_order_header_employees1_idx
+ON quote_order_header (employees_id);
 
-CREATE INDEX idx_ph_company
-ON proforma_header (company);
+CREATE INDEX fk_quote_order_header_company_idx
+ON quote_order_header (company);
 
-CREATE INDEX idx_ph_payment_instrument
-ON proforma_header (payment_instrument);
+CREATE INDEX fk_quote_order_header_payment_inst_idx
+ON quote_order_header (payment_instrument);
 
-CREATE INDEX idx_ph_payment_status
-ON proforma_header (payment_status);
+CREATE INDEX fk_quote_order_header_payment_sts_idx
+ON quote_order_header (payment_status);
 
-CREATE INDEX idx_ph_order_type
-ON proforma_header (order_type);
+CREATE INDEX fk_soh_order_type1_idx
+ON quote_order_header (order_type);
 
-CREATE INDEX idx_ph_prforma_status
-ON proforma_header (prforma_status);
+CREATE INDEX fk_quote_order_header_branch_idx
+ON quote_order_header (branch_id);
     ''');
-    developer.log('Created table: proforma_header');
+    developer.log('Created table: quote_order_header');
 
     //create quote order detail table
     await db.execute('''
-CREATE TABLE quote_order_detail (
- id INTEGER PRIMARY KEY AUTOINCREMENT,
+CREATE TABLE quote_order_details (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
   quote_order_header_id INTEGER NOT NULL,
   items_table_id INTEGER NOT NULL,
   item_in_branch INTEGER,
@@ -1408,44 +1445,50 @@ CREATE TABLE quote_order_detail (
   extended_price REAL,
   unit_cost REAL,
   amount_cost REAL,
-  taxable TEXT,
+  taxable TEXT CHECK(length(taxable) <= 1),
   discount_percent REAL,
   discount_amount REAL,
   unit_of_measure INTEGER,
-  line_status TEXT DEFAULT 'Open',
-  reference1 TEXT,
-  reference2 TEXT,
+  line_status TEXT DEFAULT 'Open' CHECK(length(line_status) <= 50),
+  reference1 TEXT CHECK(length(reference1) <= 45),
+  reference2 TEXT CHECK(length(reference2) <= 45),
   prforma_status INTEGER,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
   created_by INTEGER,
   updated_by INTEGER,
 
+  CONSTRAINT id_UNIQUE UNIQUE (id),
+  CONSTRAINT id_item_UNIQUE UNIQUE (id, items_table_id),
+
   -- FOREIGN KEYS
-  FOREIGN KEY (quote_order_header_id) REFERENCES quote_order_header(id),
-  FOREIGN KEY (items_table_id) REFERENCES items_table(id),
-  FOREIGN KEY (item_in_branch) REFERENCES items_in_branch(id),
-  FOREIGN KEY (company) REFERENCES company_table(id),
-  FOREIGN KEY (unit_of_measure) REFERENCES udc_details(id),
-  FOREIGN KEY (prforma_status) REFERENCES udc_details(id)
+  CONSTRAINT fk_quote_order_details_quote_order_header1 FOREIGN KEY (quote_order_header_id) REFERENCES quote_order_header(id),
+  CONSTRAINT fk_quote_order_details_items_table1 FOREIGN KEY (items_table_id) REFERENCES items_table(id),
+  CONSTRAINT fk_quote_order_details_item_in_branch FOREIGN KEY (item_in_branch) REFERENCES items_in_branch(id),
+  CONSTRAINT fk_quote_order_details_company FOREIGN KEY (company) REFERENCES company_table(id),
+  CONSTRAINT fk_quote_order_details_UOM FOREIGN KEY (unit_of_measure) REFERENCES udc_details(id),
+  CONSTRAINT fk_quote_order_details_prforma_status FOREIGN KEY (prforma_status) REFERENCES udc_details(id)
 );
 
-CREATE INDEX idx_qod_quote_order_header_id
-ON quote_order_detail (quote_order_header_id);
+CREATE INDEX fk_quote_order_details_quote_order_header1_idx
+ON quote_order_details (quote_order_header_id);
 
-CREATE INDEX idx_qod_item_id
-ON quote_order_detail (item_in_branch);
+CREATE INDEX fk_quote_order_details_item_in_branch_idx
+ON quote_order_details (item_in_branch);
 
-CREATE INDEX idx_qod_company
-ON quote_order_detail (company);
+CREATE INDEX fk_quote_order_details_company_idx
+ON quote_order_details (company);
 
-CREATE INDEX idx_qod_unit_of_measure
-ON quote_order_detail (unit_of_measure);
+CREATE INDEX fk_quote_order_details_UOM_idx
+ON quote_order_details (unit_of_measure);
 
-CREATE INDEX idx_qod_prforma_status
-ON quote_order_detail (prforma_status);
+CREATE INDEX fk_quote_order_details_prforma_status_idx
+ON quote_order_details (prforma_status);
+
+CREATE INDEX fk_quote_order_details_items_table1_idx
+ON quote_order_details (items_table_id);
     ''');
-    developer.log('Created table: quote_order_detail');
+    developer.log('Created table: quote_order_details');
 
     //create credit payment(on purchase)
     await db.execute('''
@@ -1460,12 +1503,16 @@ CREATE TABLE credit_payment_table (
   date_updated TEXT,
 
   -- FOREIGN KEYS
-  FOREIGN KEY (po_header) REFERENCES purchase_order_header(id),
-  FOREIGN KEY (payment_instrument) REFERENCES udc_details(id),
-  FOREIGN KEY (company) REFERENCES company_table(id),
-  FOREIGN KEY (user_id) REFERENCES user_table(id)
+  CONSTRAINT fk_credit_payment_table_po_header FOREIGN KEY (po_header) REFERENCES purchase_order_header(id),
+  CONSTRAINT fk_credit_payment_table_pymnt_instrmnt FOREIGN KEY (payment_instrument) REFERENCES udc_details(id),
+  CONSTRAINT fk_credit_payment_table_company FOREIGN KEY (company) REFERENCES company_table(id),
+  CONSTRAINT fk_credit_payment_table_user_id FOREIGN KEY (user_id) REFERENCES user_table(id)
 );
 
+CREATE INDEX fk_credit_payment_table_company_idx ON credit_payment_table (company);
+CREATE INDEX fk_credit_payment_table_po_header_idx ON credit_payment_table (po_header);
+CREATE INDEX fk_credit_payment_table_user_id_idx ON credit_payment_table (user_id);
+CREATE INDEX fk_credit_payment_table_pymnt_instrmnt_idx ON credit_payment_table (payment_instrument);
     ''');
     developer.log('Created table: credit_payment_table');
 
@@ -1481,13 +1528,17 @@ CREATE TABLE credit_receipt_table (
   user_id INTEGER,
   date_updated TEXT,
 
-  FOREIGN KEY (company) REFERENCES company_table(id) ON DELETE SET NULL ON UPDATE CASCADE,
-  FOREIGN KEY (payment_instrument) REFERENCES udc_details(id) ON DELETE SET NULL ON UPDATE CASCADE,
-  FOREIGN KEY (so_header) REFERENCES sales_order_header(id) ON DELETE SET NULL ON UPDATE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES user_table(id) ON DELETE SET NULL ON UPDATE CASCADE
+  -- FOREIGN KEYS
+  CONSTRAINT fk_credit_receipt_table_company FOREIGN KEY (company) REFERENCES company_table(id),
+  CONSTRAINT fk_credit_receipt_table_pymnt_instrmnt FOREIGN KEY (payment_instrument) REFERENCES udc_details(id),
+  CONSTRAINT fk_credit_receipt_table_so_header FOREIGN KEY (so_header) REFERENCES sales_order_header(id),
+  CONSTRAINT fk_credit_receipt_table_user_id FOREIGN KEY (user_id) REFERENCES user_table(id)
 );
 
-
+CREATE INDEX fk_credit_receipt_table_company_idx ON credit_receipt_table (company);
+CREATE INDEX fk_credit_receipt_table_so_header_idx ON credit_receipt_table (so_header);
+CREATE INDEX fk_credit_receipt_table_user_id_idx ON credit_receipt_table (user_id);
+CREATE INDEX fk_credit_receipt_table_pymnt_instrmnt_idx ON credit_receipt_table (payment_instrument);
     ''');
     developer.log('Created table: credit_receipt_table');
 
@@ -1497,36 +1548,21 @@ CREATE TABLE other_expense_table (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   payment_amount REAL,
   date_payment TEXT,
-  reason_description TEXT,
+  reason_description TEXT CHECK (length(reason_description) <= 50),
   payment_instrument INTEGER,
   company INTEGER,
   user_id INTEGER,
   date_updated TEXT,
 
-  FOREIGN KEY (company)
-    REFERENCES company_table(id)
-    ON DELETE SET NULL
-    ON UPDATE CASCADE,
-
-  FOREIGN KEY (payment_instrument)
-    REFERENCES udc_details(id)
-    ON DELETE SET NULL
-    ON UPDATE CASCADE,
-
-  FOREIGN KEY (user_id)
-    REFERENCES user_table(id)
-    ON DELETE SET NULL
-    ON UPDATE CASCADE
+  -- FOREIGN KEYS
+  CONSTRAINT fk_other_expense_table_company FOREIGN KEY (company) REFERENCES company_table(id),
+  CONSTRAINT fk_other_expense_table_pymnt_instrmnt FOREIGN KEY (payment_instrument) REFERENCES udc_details(id),
+  CONSTRAINT fk_other_expense_table_user_id FOREIGN KEY (user_id) REFERENCES user_table(id)
 );
 
-CREATE INDEX idx_oet_company
-ON other_expense_table (company);
-
-CREATE INDEX idx_oet_payment_instrument
-ON other_expense_table (payment_instrument);
-
-CREATE INDEX idx_oet_user_id
-ON other_expense_table (user_id);
+CREATE INDEX fk_other_expense_table_company_idx ON other_expense_table (company);
+CREATE INDEX fk_other_expense_table_user_id_idx ON other_expense_table (user_id);
+CREATE INDEX fk_other_expense_table_pymnt_instrmnt_idx ON other_expense_table (payment_instrument);
 ''');
     developer.log('Created table: other_expense_table');
 
@@ -1536,88 +1572,50 @@ CREATE TABLE other_income_table (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   income_amount REAL,
   date_income TEXT,
-  reason_description TEXT,
+  reason_description TEXT CHECK (length(reason_description) <= 50),
   payment_instrument INTEGER,
   company INTEGER,
   user_id INTEGER,
   date_updated TEXT,
 
-  FOREIGN KEY (company)
-    REFERENCES company_table(id)
-    ON DELETE SET NULL
-    ON UPDATE CASCADE,
-
-  FOREIGN KEY (payment_instrument)
-    REFERENCES udc_details(id)
-    ON DELETE SET NULL
-    ON UPDATE CASCADE,
-
-  FOREIGN KEY (user_id)
-    REFERENCES user_table(id)
-    ON DELETE SET NULL
-    ON UPDATE CASCADE
+  -- FOREIGN KEYS
+  CONSTRAINT fk_other_income_table_company FOREIGN KEY (company) REFERENCES company_table(id),
+  CONSTRAINT fk_other_income_table_pymnt_instrmnt FOREIGN KEY (payment_instrument) REFERENCES udc_details(id),
+  CONSTRAINT fk_other_income_table_user_id FOREIGN KEY (user_id) REFERENCES user_table(id)
 );
 
-CREATE INDEX idx_oit_company
-ON other_income_table (company);
-
-CREATE INDEX idx_oit_payment_instrument
-ON other_income_table (payment_instrument);
-
-CREATE INDEX idx_oit_user_id
-ON other_income_table (user_id);
+CREATE INDEX fk_other_income_table_company_idx ON other_income_table (company);
+CREATE INDEX fk_other_income_table_user_id_idx ON other_income_table (user_id);
+CREATE INDEX fk_other_income_table_pymnt_instrmnt_idx ON other_income_table (payment_instrument);
 ''');
     developer.log('Created table: other_income_table');
 
-    //create fast_slow_nonmoving_rule table
+    //create fast_slow_nonmoving_rule_table
     await db.execute('''
-CREATE TABLE fast_slow_nonmoving_rule (
+CREATE TABLE fast_slow_nonmoving_rule_table (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER,
-  report_frequency INTEGER,
+  report_frequency TEXT CHECK (length(report_frequency) <= 100),
   period_in_days INTEGER,
   fast_movement_rule_unit REAL,
   slow_movement_rule_unit REAL,
   non_movement_rule_unit REAL,
-  created_date TEXT,
-  updated_date TEXT,
+  created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   company INTEGER,
-  unit_of_measure_default INTEGER,
+  unit_of_meansure_default INTEGER,
 
-    FOREIGN KEY (user_id)
-    REFERENCES user_table(id)
-    ON DELETE SET NULL
-    ON UPDATE CASCADE,
-
-  FOREIGN KEY (company)
-    REFERENCES company_table(id)
-    ON DELETE SET NULL
-    ON UPDATE CASCADE,
-
-  FOREIGN KEY (unit_of_measure_default)
-    REFERENCES udc_details(id)
-    ON DELETE SET NULL
-    ON UPDATE CASCADE,
-
-  FOREIGN KEY (report_frequency)
-    REFERENCES udc_details(id)
-    ON DELETE SET NULL
-    ON UPDATE CASCADE
+  -- FOREIGN KEYS
+  CONSTRAINT fast_slow_nonmoving_rule_table_ibfk_1 FOREIGN KEY (user_id) REFERENCES user_table(id),
+  CONSTRAINT fk_fast_slow_nonmoving_rule_table_company FOREIGN KEY (company) REFERENCES company_table(id),
+  CONSTRAINT fk_fast_slow_nonmoving_rule_table_unit_of_meansure_default FOREIGN KEY (unit_of_meansure_default) REFERENCES udc_details(id)
 );
 
-CREATE INDEX idx_fsnr_user_id
-ON fast_slow_nonmoving_rule (user_id);
-
-CREATE INDEX idx_fsnr_company
-ON fast_slow_nonmoving_rule (company);
-
-CREATE INDEX idx_fsnr_unit_of_measure_default
-ON fast_slow_nonmoving_rule (unit_of_measure_default);
-
-CREATE INDEX idx_fsnr_report_frequency
-ON fast_slow_nonmoving_rule (report_frequency);
+CREATE INDEX idx_audit_user ON fast_slow_nonmoving_rule_table (user_id);
+CREATE INDEX fk_fast_slow_nonmoving_rule_table_company_idx ON fast_slow_nonmoving_rule_table (company);
+CREATE INDEX fk_fast_slow_nonmoving_rule_table_unit_of_meansure_default_idx ON fast_slow_nonmoving_rule_table (unit_of_meansure_default);
 ''');
-    developer.log('Created table: fast_slow_nonmoving_rule');
+    developer.log('Created table: fast_slow_nonmoving_rule_table');
 
     //subscription management table
     await db.execute('''
@@ -1629,21 +1627,18 @@ CREATE TABLE subscription_management (
   initial_subscription_days INTEGER,
   updated_by INTEGER,
   date_updated TEXT,
-  status TEXT,
-  name TEXT,
-  description TEXT,
+  status TEXT CHECK (length(status) <= 12),
+  name TEXT CHECK (length(name) <= 20),
+  description TEXT CHECK (length(description) <= 60),
   max_storage INTEGER,
-  features TEXT,
+  popular TEXT CHECK (length(popular) <= 1),
+  features TEXT CHECK (length(features) <= 200),
 
-  FOREIGN KEY (updated_by)
-    REFERENCES user_table(id)
-    ON DELETE SET NULL
-    ON UPDATE CASCADE
+  -- FOREIGN KEYS
+  CONSTRAINT fk_sm_updated_by FOREIGN KEY (updated_by) REFERENCES user_table(id)
 );
 
-CREATE INDEX idx_sm_updated_by
-ON subscription_management (updated_by);
-
+CREATE INDEX fk_sm_updated_by_idx ON subscription_management (updated_by);
 ''');
     developer.log('Created table: subscription_management');
 
@@ -1656,24 +1651,15 @@ CREATE TABLE company_subscription (
   date_subscribed TEXT,
   date_effective TEXT,
   date_expire TEXT,
-  status TEXT,
+  status TEXT CHECK (length(status) <= 12),
 
-  FOREIGN KEY (company_id)
-    REFERENCES company_table(id)
-    ON DELETE SET NULL
-    ON UPDATE CASCADE,
-
-  FOREIGN KEY (subscription_id)
-    REFERENCES subscription_management(id)
-    ON DELETE SET NULL
-    ON UPDATE CASCADE
+  -- FOREIGN KEYS
+  CONSTRAINT fk_cs_company_id FOREIGN KEY (company_id) REFERENCES company_table(id),
+  CONSTRAINT fk_cs_subscription_id FOREIGN KEY (subscription_id) REFERENCES subscription_management(id)
 );
 
-CREATE INDEX idx_cs_company
-ON company_subscription (company_id);
-
-CREATE INDEX idx_cs_subscription_management
-ON company_subscription (subscription_id);
+CREATE INDEX fk_cs_company_id_idx ON company_subscription (company_id);
+CREATE INDEX fk_cs_subscription_id_idx ON company_subscription (subscription_id);
 ''');
     developer.log('Created table: company_subscription');
 

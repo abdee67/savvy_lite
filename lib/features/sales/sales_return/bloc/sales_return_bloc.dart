@@ -121,7 +121,11 @@ class SalesReturnBloc extends Bloc<SalesReturnEvent, SalesReturnState> {
 
     try {
       final salesOrder = await salesOrderHeaderRepository
-          .getSalesOrderByFsNumber(event.fsNumber, event.companyId);
+          .getSalesOrderByFsNumberAndInvoiceNumber(
+            event.fsNumber,
+            event.companyId,
+            invoiceNumber: event.invoiceNumber,
+          );
 
       if (salesOrder != null) {
         // Populate return header from sales order
@@ -526,7 +530,7 @@ class SalesReturnBloc extends Bloc<SalesReturnEvent, SalesReturnState> {
       }
       // Find original sales order by FS number (like Java version)
       final originalSalesOrder = await salesOrderHeaderRepository
-          .getSalesOrderByFsNumber(
+          .getSalesOrderByFsNumberAndInvoiceNumber(
             event.header.fsNumber!,
             authBloc.state.companyId!,
           );
