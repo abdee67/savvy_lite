@@ -147,9 +147,16 @@ class SalesOrderCoordinatorBloc
         withholdAmount: state.lastWithholdAmount,
         discountAmount: state.lastDiscountAmount,
         // Ensure defaults if null
-        discount: headerToCreate.discountAmount == 0
+        discount: state.lastDiscountAmount == 0
             ? 'N'
             : 'Y', //IF discountAmount is 0 make it N or Y
+        discountInPercent:
+            (state.lastDiscountAmount == null ||
+                state.lastDiscountAmount == 0 ||
+                state.lastSubTotal == null ||
+                state.lastSubTotal == 0)
+            ? 0
+            : (state.lastDiscountAmount! / state.lastSubTotal!) * 100,
         addOn: headerToCreate.addOn ?? '0',
         // Populate payment data
         paymentMethod: state.paymentMethod,

@@ -533,6 +533,7 @@ void initDependencies() {
       invoiceHeaderBloc: getIt(),
       invoiceHeaderRepository: getIt(),
       udcRepository: getIt(),
+      itemCostRepository: getIt(),
     ),
   );
   // Purchase
