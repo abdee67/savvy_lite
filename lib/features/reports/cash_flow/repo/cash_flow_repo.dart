@@ -151,7 +151,7 @@ class CashFlowRepository {
           CashflowTransactionReportDTO(
             reference: "PO-${po.orderNumber ?? ''}",
             cashCredit: po.paymentTerm != null ? "Credit" : "Cash",
-            date: po.dateTransaction ?? DateTime.now(),
+            date: po.dateTransation ?? DateTime.now(),
             amount: po.amountGrandTotalCost ?? 0.0,
             orderType: "Purchase",
           ),
@@ -220,7 +220,7 @@ class CashFlowRepository {
         59,
         59,
       );
-      where += ' AND date_transaction BETWEEN ? AND ?';
+      where += ' AND date_transation BETWEEN ? AND ?';
       whereArgs.add(start.toIso8601String());
       whereArgs.add(end.toIso8601String());
     }
@@ -238,7 +238,7 @@ class CashFlowRepository {
         '''
       SELECT * FROM purchase_order_header
       WHERE $where
-      ORDER BY date_transaction DESC
+      ORDER BY date_transation DESC
       LIMIT ? OFFSET ?
     ''';
 
@@ -404,7 +404,7 @@ class CashFlowRepository {
           59,
           59,
         );
-        poWhere += ' AND date_transaction BETWEEN ? AND ?';
+        poWhere += ' AND date_transation BETWEEN ? AND ?';
         poArgs.add(start.toIso8601String());
         poArgs.add(end.toIso8601String());
       }
@@ -845,7 +845,7 @@ class CashFlowRepository {
           CashflowTransactionReportDTO(
             reference: "PO-${po.orderNumber ?? ''}",
             cashCredit: po.paymentTerm != null ? "Credit" : "Cash",
-            date: po.dateTransaction ?? DateTime.now(),
+            date: po.dateTransation ?? DateTime.now(),
             amount: po.amountGrandTotalCost ?? 0.0,
             orderType: "Purchase",
           ),
@@ -985,7 +985,7 @@ class CashFlowRepository {
     String where = 'company = ?';
     List<dynamic> args = [companyId];
     if (start != null && end != null) {
-      where += ' AND date_transaction BETWEEN ? AND ?';
+      where += ' AND date_transation BETWEEN ? AND ?';
       args.addAll([start.toIso8601String(), end.toIso8601String()]);
     }
     if (type != null && type.isNotEmpty) {

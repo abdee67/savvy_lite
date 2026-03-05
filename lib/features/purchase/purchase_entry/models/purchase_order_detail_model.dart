@@ -107,9 +107,9 @@ class PurchaseOrderDetail {
                   ? null
                   : _parseDate(map['date_delivery']),
               poReceiveStatus: map['po_receive_status'],
-              dateTransaction: map['date_transaction'] == null
+              dateTransation: map['date_transation'] == null
                   ? null
-                  : _parseDate(map['date_transaction']),
+                  : _parseDate(map['date_transation']),
               invoiceNumber: map['invoice_number'],
               paymentTerm: map['payment_term'],
               orderType: map['order_type'],

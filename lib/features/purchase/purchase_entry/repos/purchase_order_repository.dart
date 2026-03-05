@@ -129,12 +129,12 @@ class PurchaseOrderRepository {
       }
 
       if (startDate != null) {
-        where += ' AND poh.date_transaction >= ?';
+        where += ' AND poh.date_transation >= ?';
         whereArgs.add(startDate.toIso8601String());
       }
 
       if (endDate != null) {
-        where += ' AND poh.date_transaction <= ?';
+        where += ' AND poh.date_transation <= ?';
         whereArgs.add(endDate.toIso8601String());
       }
 
@@ -170,7 +170,7 @@ class PurchaseOrderRepository {
         LEFT JOIN user_table u ON poh.user_id = u.id
         LEFT JOIN company_table ct ON poh.company = ct.id
         WHERE $where
-        ORDER BY poh.date_transaction DESC, poh.order_number DESC
+        ORDER BY poh.date_transation DESC, poh.order_number DESC
       ''';
 
       final maps = await db.rawQuery(query, whereArgs);
@@ -212,7 +212,7 @@ class PurchaseOrderRepository {
            it.taxable as taxable,
           poh.order_number as order_number,
           poh.invoice_number as invoice_number,
-          poh.date_transaction as date_transaction,
+          poh.date_transation as date_transation,
           poh.supplier_id as supplier_id,
           poh.order_type as order_type,
           pr.description_1 as po_receive_status_description,
@@ -226,7 +226,7 @@ class PurchaseOrderRepository {
         LEFT JOIN udc_details pr ON pod.po_receive_status = pr.id
         LEFT JOIN udc_details uom ON pod.unit_of_measure = uom.id
         WHERE $where
-        ORDER BY pod.date_transaction DESC, pod.order_number DESC
+        ORDER BY poh.date_transation DESC, poh.order_number DESC
       ''';
 
       final maps = await db.rawQuery(query, whereArgs);
@@ -261,12 +261,12 @@ class PurchaseOrderRepository {
       }
 
       if (startDate != null) {
-        where += ' AND poh.date_transaction >= ?';
+        where += ' AND poh.date_transation >= ?';
         whereArgs.add(startDate.toIso8601String());
       }
 
       if (endDate != null) {
-        where += ' AND poh.date_transaction <= ?';
+        where += ' AND poh.date_transation <= ?';
         whereArgs.add(endDate.toIso8601String());
       }
 
@@ -472,7 +472,7 @@ class PurchaseOrderRepository {
            it.taxable as taxable,
           poh.order_number as order_number,
           poh.invoice_number as invoice_number,
-          poh.date_transaction as date_transaction,
+          poh.date_transation as date_transation,
           poh.supplier_id as supplier_id,
           poh.order_type as order_type,
           pr.description_1 as po_receive_status_description,
@@ -514,7 +514,7 @@ class PurchaseOrderRepository {
            it.taxable as taxable,
           poh.order_number as order_number,
           poh.invoice_number as invoice_number,
-          poh.date_transaction as date_transaction,
+          poh.date_transation as date_transation,
           poh.supplier_id as supplier_id,
           poh.order_type as order_type,
           pr.description_1 as po_receive_status_description,
@@ -575,12 +575,12 @@ class PurchaseOrderRepository {
       }
 
       if (startDate != null) {
-        where += ' AND poh.date_transaction >= ?';
+        where += ' AND poh.date_transation >= ?';
         whereArgs.add(startDate.toIso8601String());
       }
 
       if (endDate != null) {
-        where += ' AND poh.date_transaction <= ?';
+        where += ' AND poh.date_transation <= ?';
         whereArgs.add(endDate.toIso8601String());
       }
 
@@ -591,7 +591,7 @@ class PurchaseOrderRepository {
           it.item_description as item_description,
           poh.order_number as order_number,
           poh.invoice_number as invoice_number,
-          poh.date_transaction as date_transaction,
+          poh.date_transation as date_transation,
           poh.supplier_id as supplier_id,
           poh.order_type as order_type,
           pr.description_1 as po_receive_status_description,
@@ -654,12 +654,12 @@ class PurchaseOrderRepository {
       }
 
       if (startDate != null) {
-        where += ' AND poh.date_transaction >= ?';
+        where += ' AND poh.date_transation >= ?';
         whereArgs.add(startDate.toIso8601String());
       }
 
       if (endDate != null) {
-        where += ' AND poh.date_transaction <= ?';
+        where += ' AND poh.date_transation <= ?';
         whereArgs.add(endDate.toIso8601String());
       }
 
@@ -669,7 +669,7 @@ class PurchaseOrderRepository {
           pod.*,
           it.item_description as item_description,
           poh.order_number as order_number,
-          poh.date_transaction as date_transaction,
+          poh.date_transation as date_transation,
           poh.supplier_id as supplier_id,
           poh.order_type as order_type,
           pr.description_1 as po_receive_status_description,
@@ -679,7 +679,7 @@ class PurchaseOrderRepository {
         LEFT JOIN items_table it ON pod.item_number = it.id
         LEFT JOIN udc_details pr ON pod.po_receive_status = pr.id
         WHERE $where
-        ORDER BY poh.date_transaction ASC, pod.id
+        ORDER BY poh.date_transation ASC, pod.id
       ''';
 
       final maps = await db.rawQuery(query, whereArgs);
@@ -1222,7 +1222,7 @@ class PurchaseOrderRepository {
           COUNT(CASE WHEN payment_term IS NULL THEN 1 END) as cash_orders
         FROM purchase_order_header 
         WHERE company = ? 
-          AND date_transaction BETWEEN ? AND ?
+          AND date_transation BETWEEN ? AND ?
         ''',
         [companyId, startDate.toIso8601String(), endDate.toIso8601String()],
       );
@@ -1237,7 +1237,7 @@ class PurchaseOrderRepository {
         FROM purchase_order_detail pod
         LEFT JOIN purchase_order_header poh ON pod.po_header = poh.id
         WHERE poh.company = ? 
-          AND poh.date_transaction BETWEEN ? AND ?
+          AND poh.date_transation BETWEEN ? AND ?
         ''',
         [companyId, startDate.toIso8601String(), endDate.toIso8601String()],
       );
@@ -1286,7 +1286,7 @@ class PurchaseOrderRepository {
         '''
         SELECT 
           poh.order_number,
-          poh.date_transaction,
+          poh.date_transation,
           poh.credit_due_date,
           poh.amount_open_credit,
           DATEDAY(?, poh.credit_due_date) as days_overdue,
@@ -1331,7 +1331,7 @@ class PurchaseOrderRepository {
         FROM purchase_order_header poh
         LEFT JOIN supplier_table st ON poh.supplier_id = st.id
         WHERE poh.company = ? 
-          AND poh.date_transaction BETWEEN ? AND ?
+          AND poh.date_transation BETWEEN ? AND ?
         GROUP BY poh.supplier_id
         ORDER BY total_purchases DESC
         ''',
@@ -1879,7 +1879,7 @@ class PurchaseOrderRepository {
       SELECT 
         poh.order_number,
         poh.invoice_number,
-        poh.date_transaction as po_date,
+        poh.date_transation as po_date,
         poh.credit_due_date,
         poh.amount_open_credit as remaining_credit,
         cp.date_payment,

@@ -245,7 +245,7 @@ class QuotationOrderRepository {
   Future<int> createQuotationOrderDetail(QuotationOrderDetail detail) async {
     final db = await _db;
     try {
-      return await db.insert('quote_order_detail', detail.toMap());
+      return await db.insert('quote_order_details', detail.toMap());
     } catch (e) {
       throw Exception('Failed to create quotation order detail: $e');
     }
@@ -267,7 +267,7 @@ class QuotationOrderRepository {
         ps.detail_code as prforma_status_code,
         uom.description_1 as unit_of_measure_description,
         uom.detail_code as unit_of_measure_code
-      FROM quote_order_detail qod
+      FROM quote_order_details qod
       LEFT JOIN items_table it ON qod.items_table_id = it.id
       LEFT JOIN items_in_branch ib ON qod.item_in_branch = ib.id
       LEFT JOIN udc_details ps ON qod.prforma_status = ps.id
@@ -296,7 +296,7 @@ class QuotationOrderRepository {
         ps.detail_code as prforma_status_code,
         uom.description_1 as unit_of_measure_description,
         uom.detail_code as unit_of_measure_code
-      FROM quote_order_detail qod
+      FROM quote_order_details qod
       LEFT JOIN items_table it ON qod.items_table_id = it.id
       LEFT JOIN items_in_branch ib ON qod.item_in_branch = ib.id
       LEFT JOIN udc_details ps ON qod.prforma_status = ps.id
@@ -316,7 +316,7 @@ class QuotationOrderRepository {
     final db = await _db;
     try {
       return await db.update(
-        'quote_order_detail',
+        'quote_order_details',
         detail.toMap(),
         where: 'id = ?',
         whereArgs: [detail.id],
@@ -329,7 +329,7 @@ class QuotationOrderRepository {
   Future<int> deleteQuotationOrderDetail(int id) async {
     final db = await _db;
     return await db.delete(
-      'quote_order_detail',
+      'quote_order_details',
       where: 'id = ?',
       whereArgs: [id],
     );
@@ -344,7 +344,7 @@ class QuotationOrderRepository {
     final batch = db.batch();
 
     for (final detail in details) {
-      batch.insert('quote_order_detail', detail.toMap());
+      batch.insert('quote_order_details', detail.toMap());
     }
 
     await batch.commit(noResult: true);
@@ -359,7 +359,7 @@ class QuotationOrderRepository {
 
     for (final detail in details) {
       batch.update(
-        'quote_order_detail',
+        'quote_order_details',
         detail.toMap(),
         where: 'id = ?',
         whereArgs: [detail.id],
@@ -377,7 +377,7 @@ class QuotationOrderRepository {
     final placeholders = List.generate(ids.length, (_) => '?').join(',');
 
     return await db.delete(
-      'quote_order_detail',
+      'quote_order_details',
       where: 'id IN ($placeholders)',
       whereArgs: ids,
     );
@@ -386,7 +386,7 @@ class QuotationOrderRepository {
   Future<int> deleteQuotationOrderDetailByHeaderId(int headerId) async {
     final db = await _db;
     return await db.delete(
-      'quote_order_detail',
+      'quote_order_details',
       where: 'quote_order_header_id = ?',
       whereArgs: [headerId],
     );
@@ -538,7 +538,7 @@ class QuotationOrderRepository {
   Future<double> getExtendedPriceSumByHeaderId(int headerId) async {
     final db = await _db;
     final result = await db.rawQuery(
-      'SELECT SUM(extended_price) as total FROM quote_order_detail WHERE quote_order_header_id = ?',
+      'SELECT SUM(extended_price) as total FROM quote_order_details WHERE quote_order_header_id = ?',
       [headerId],
     );
 
@@ -593,7 +593,7 @@ class QuotationOrderRepository {
              COUNT(qod.id) as detail_count,
              SUM(qod.extended_price) as total_extended_price
       FROM quote_order_header qoh
-      LEFT JOIN quote_order_detail qod ON qoh.id = qod.quote_order_header_id
+      LEFT JOIN quote_order_details qod ON qoh.id = qod.quote_order_header_id
       WHERE qoh.company = ?
     ''';
 
@@ -635,7 +635,7 @@ class QuotationOrderRepository {
              it.barcode as barcode,
              uom.detail_code as unit_of_measure_detail_code,
              uom.description_1 as unit_of_measure_description
-      FROM quote_order_detail qod
+      FROM quote_order_details qod
       LEFT JOIN items_table it ON qod.items_table_id = it.id
       LEFT JOIN udc_details uom ON qod.unit_of_measure = uom.id
       WHERE qod.quote_order_header_id = ? AND qod.company = ?

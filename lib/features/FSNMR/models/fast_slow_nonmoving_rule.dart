@@ -5,7 +5,7 @@ import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 class FastSlowNonMovingRule extends Equatable {
   final int? id;
   final int? userId;
-  final int? reportFrequency;
+  final String? reportFrequency;
   final int? periodInDays;
   final double? fastMovementRuleUnit;
   final double? slowMovementRuleUnit;
@@ -13,10 +13,10 @@ class FastSlowNonMovingRule extends Equatable {
   final DateTime? createdDate;
   final DateTime? updatedDate;
   final int? company;
-  final int? unitOfMeasureDefault;
+  final int? unitOfMeansureDefault;
 
   final UserModel? userRef;
-  final UdcDetails? unitOfMeasureDefaultRef;
+  final UdcDetails? unitOfMeansureDefaultRef;
   final UdcDetails? reportFrequencyRef;
 
   const FastSlowNonMovingRule({
@@ -30,14 +30,14 @@ class FastSlowNonMovingRule extends Equatable {
     this.createdDate,
     this.updatedDate,
     this.company,
-    this.unitOfMeasureDefault,
+    this.unitOfMeansureDefault,
     this.userRef,
-    this.unitOfMeasureDefaultRef,
+    this.unitOfMeansureDefaultRef,
     this.reportFrequencyRef,
   });
 
   factory FastSlowNonMovingRule.empty() {
-    return FastSlowNonMovingRule(
+    return const FastSlowNonMovingRule(
       id: 0,
       userId: null,
       reportFrequency: null,
@@ -48,14 +48,14 @@ class FastSlowNonMovingRule extends Equatable {
       company: null,
       createdDate: null,
       updatedDate: null,
-      unitOfMeasureDefault: null,
+      unitOfMeansureDefault: null,
     );
   }
   //copwith
   FastSlowNonMovingRule copyWith({
     int? id,
     int? userId,
-    int? reportFrequency,
+    String? reportFrequency,
     int? periodInDays,
     double? fastMovementRuleUnit,
     double? slowMovementRuleUnit,
@@ -63,9 +63,9 @@ class FastSlowNonMovingRule extends Equatable {
     DateTime? createdDate,
     DateTime? updatedDate,
     int? company,
-    int? unitOfMeasureDefault,
+    int? unitOfMeansureDefault,
     UserModel? userRef,
-    UdcDetails? unitOfMeasureDefaultRef,
+    UdcDetails? unitOfMeansureDefaultRef,
     UdcDetails? reportFrequencyRef,
   }) {
     return FastSlowNonMovingRule(
@@ -79,10 +79,11 @@ class FastSlowNonMovingRule extends Equatable {
       createdDate: createdDate ?? this.createdDate,
       updatedDate: updatedDate ?? this.updatedDate,
       company: company ?? this.company,
-      unitOfMeasureDefault: unitOfMeasureDefault ?? this.unitOfMeasureDefault,
+      unitOfMeansureDefault:
+          unitOfMeansureDefault ?? this.unitOfMeansureDefault,
       userRef: userRef ?? this.userRef,
-      unitOfMeasureDefaultRef:
-          unitOfMeasureDefaultRef ?? this.unitOfMeasureDefaultRef,
+      unitOfMeansureDefaultRef:
+          unitOfMeansureDefaultRef ?? this.unitOfMeansureDefaultRef,
       reportFrequencyRef: reportFrequencyRef ?? this.reportFrequencyRef,
     );
   }
@@ -91,7 +92,7 @@ class FastSlowNonMovingRule extends Equatable {
     return FastSlowNonMovingRule(
       id: map['id'],
       userId: map['user_id'],
-      reportFrequency: map['report_frequency'],
+      reportFrequency: map['report_frequency']?.toString(),
       periodInDays: map['period_in_days'],
       fastMovementRuleUnit: (map['fast_movement_rule_unit'] as num?)
           ?.toDouble(),
@@ -105,7 +106,7 @@ class FastSlowNonMovingRule extends Equatable {
           ? DateTime.tryParse(map['updated_date'])
           : null,
       company: map['company'],
-      unitOfMeasureDefault: map['unit_of_measure_default'],
+      unitOfMeansureDefault: map['unit_of_meansure_default'],
       userRef: map['user_id'] != null
           ? UserModel(
               id: map['user_id'],
@@ -113,16 +114,16 @@ class FastSlowNonMovingRule extends Equatable {
               password: map['password'],
             )
           : null,
-      unitOfMeasureDefaultRef: map['unit_of_measure_default'] != null
+      unitOfMeansureDefaultRef: map['unit_of_meansure_default'] != null
           ? UdcDetails(
-              id: map['unit_of_measure_default'],
-              detailCode: map['unit_of_measure_default_code'],
-              description1: map['unit_of_measure_default_description'],
+              id: map['unit_of_meansure_default'],
+              detailCode: map['unit_of_meansure_default_code'],
+              description1: map['unit_of_meansure_default_description'],
             )
           : null,
-      reportFrequencyRef: map['report_frequency'] != null
+      reportFrequencyRef: (map['report_frequency_description'] != null)
           ? UdcDetails(
-              id: map['report_frequency'],
+              id: int.tryParse(map['report_frequency'].toString()) ?? 0,
               detailCode: map['report_frequency_code'],
               description1: map['report_frequency_description'],
             )
@@ -142,7 +143,7 @@ class FastSlowNonMovingRule extends Equatable {
       'created_date': createdDate?.toIso8601String(),
       'updated_date': updatedDate?.toIso8601String(),
       'company': company,
-      'unit_of_measure_default': unitOfMeasureDefault,
+      'unit_of_meansure_default': unitOfMeansureDefault,
     };
   }
 
@@ -158,9 +159,9 @@ class FastSlowNonMovingRule extends Equatable {
     createdDate,
     updatedDate,
     company,
-    unitOfMeasureDefault,
+    unitOfMeansureDefault,
     userRef,
-    unitOfMeasureDefaultRef,
+    unitOfMeansureDefaultRef,
     reportFrequencyRef,
   ];
 }

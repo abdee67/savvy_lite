@@ -588,7 +588,7 @@ class _PurchaseTransactionReportPageState
           ),
           _buildDetailRow(
             'Transaction Date',
-            _dateFormat.format(header.dateTransaction!),
+            _dateFormat.format(header.dateTransation!),
             Iconsax.calendar,
           ),
 

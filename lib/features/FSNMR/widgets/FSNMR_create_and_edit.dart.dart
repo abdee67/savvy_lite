@@ -79,8 +79,8 @@ class _FSNMRCreateAndEditPageState extends State<FSNMRCreateAndEditPage> {
         rule.slowMovementRuleUnit?.toString() ?? '';
     _periodDaysController.text = rule.periodInDays?.toString() ?? '';
 
-    _selectedUom = rule.unitOfMeasureDefault;
-    _selectedFrequency = rule.reportFrequency;
+    _selectedUom = rule.unitOfMeansureDefault;
+    _selectedFrequency = int.tryParse(rule.reportFrequency ?? '');
   }
 
   // Helper method for safe number parsing
@@ -108,7 +108,7 @@ class _FSNMRCreateAndEditPageState extends State<FSNMRCreateAndEditPage> {
       final rule = FastSlowNonMovingRule(
         // Use null for new records, or existing id for updates
         id: widget.rule?.id,
-        reportFrequency: _selectedFrequency,
+        reportFrequency: _selectedFrequency.toString(),
         periodInDays: _periodDaysController.text.trim().isEmpty
             ? null
             : _parseInt(_periodDaysController.text),
@@ -121,7 +121,7 @@ class _FSNMRCreateAndEditPageState extends State<FSNMRCreateAndEditPage> {
         nonMovementRuleUnit: _nonMovingUnitController.text.trim().isEmpty
             ? null
             : _parseDouble(_nonMovingUnitController.text),
-        unitOfMeasureDefault: _selectedUom,
+        unitOfMeansureDefault: _selectedUom,
         company: widget.authBloc.state.companyId,
       );
 

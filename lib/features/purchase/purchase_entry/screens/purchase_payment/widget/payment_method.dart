@@ -75,8 +75,8 @@ class _PurchasePaymentMethodState extends State<PurchasePaymentMethod> {
       );
 
       // Update credit due date if payment term changes
-      if (paymentTerm != null && header.dateTransaction != null) {
-        updatedHeader.creditDueDate = header.dateTransaction!.add(
+      if (paymentTerm != null && header.dateTransation != null) {
+        updatedHeader.creditDueDate = header.dateTransation!.add(
           Duration(days: paymentTerm),
         );
         _creditDueDate = updatedHeader.creditDueDate;
@@ -137,8 +137,8 @@ class _PurchasePaymentMethodState extends State<PurchasePaymentMethod> {
 
       // Calculate payment term in days
       final header = widget.purchaseState.selectedHeader;
-      if (header?.dateTransaction != null) {
-        final term = picked.difference(header!.dateTransaction!).inDays;
+      if (header?.dateTransation != null) {
+        final term = picked.difference(header!.dateTransation!).inDays;
         _paymentTermController.text = term.toString();
         _updatePaymentDetails(paymentTerm: term);
       }

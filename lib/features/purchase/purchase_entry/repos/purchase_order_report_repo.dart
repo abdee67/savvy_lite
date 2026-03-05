@@ -44,7 +44,7 @@ class PurchaseOrderReportRepository {
 
       // Date range filter
       if (startDate != null && endDate != null) {
-        whereClauses.add('poh.date_transaction BETWEEN ? AND ?');
+        whereClauses.add('poh.date_transation BETWEEN ? AND ?');
         whereArgs.add(startDate.toIso8601String());
         whereArgs.add(endDate.toIso8601String());
       }
@@ -95,7 +95,7 @@ class PurchaseOrderReportRepository {
         LEFT JOIN udc_details pi ON poh.payment_instrument = pi.id
         LEFT JOIN udc_details ot ON poh.order_type = ot.id
         WHERE $whereClause
-        ORDER BY poh.date_transaction DESC, poh.id DESC
+        ORDER BY poh.date_transation DESC, poh.id DESC
         LIMIT ? OFFSET ?
       ''';
 
@@ -169,7 +169,7 @@ class PurchaseOrderReportRepository {
           59,
           59,
         );
-        where += ' AND poh.date_transaction BETWEEN ? AND ?';
+        where += ' AND poh.date_transation BETWEEN ? AND ?';
         whereArgs.add(start.toIso8601String());
         whereArgs.add(end.toIso8601String());
       }
@@ -463,7 +463,7 @@ class PurchaseOrderReportRepository {
           59,
           59,
         );
-        whereClauses.add('poh.date_transaction BETWEEN ? AND ?');
+        whereClauses.add('poh.date_transation BETWEEN ? AND ?');
         whereArgs.add(start.toIso8601String());
         whereArgs.add(end.toIso8601String());
       }
@@ -510,7 +510,7 @@ class PurchaseOrderReportRepository {
           pod.*,
           it.item_description as item_description,
           poh.order_number as order_number,
-          poh.date_transaction as date_transaction,
+          poh.date_transation as date_transation,
           poh.invoice_number as invoice_number,
           poh.payment_term as payment_term,
           poh.supplier_id as supplier_id,
@@ -523,7 +523,7 @@ class PurchaseOrderReportRepository {
         LEFT JOIN items_table it ON pod.item_number = it.id
         LEFT JOIN udc_details um ON pod.unit_of_measure = um.id
         WHERE $whereClause
-        ORDER BY poh.date_transaction DESC, pod.id DESC
+        ORDER BY poh.date_transation DESC, pod.id DESC
         LIMIT ? OFFSET ?
       ''';
 
@@ -594,7 +594,7 @@ class PurchaseOrderReportRepository {
           59,
           59,
         );
-        whereClauses.add('poh.date_transaction BETWEEN ? AND ?');
+        whereClauses.add('poh.date_transation BETWEEN ? AND ?');
         whereArgs.add(start.toIso8601String());
         whereArgs.add(end.toIso8601String());
       }
@@ -664,16 +664,16 @@ class PurchaseOrderReportRepository {
 
       // Date Filtering Logic
       if (startDate != null) {
-        where += ' AND poh.date_transaction >= ?';
+        where += ' AND poh.date_transation >= ?';
         whereArgs.add(startDate.toIso8601String());
       }
 
       if (endDate != null) {
-        where += ' AND poh.date_transaction <= ?';
+        where += ' AND poh.date_transation <= ?';
         whereArgs.add(endDate.toIso8601String());
       }
 
-      String orderBy = 'poh.date_transaction DESC';
+      String orderBy = 'poh.date_transation DESC';
       if (sortBy != null && sortBy.isNotEmpty) {
         orderBy = sortBy;
       }
@@ -686,7 +686,7 @@ class PurchaseOrderReportRepository {
           poh.supplier_id as supplier_id,
           poh.order_number as order_number,
           poh.invoice_number as invoice_number,
-          poh.date_transaction as date_transaction,
+          poh.date_transation as date_transation,
           sup.supplier_name as supplier_name,
           pi.description_1 as payment_instrument_description,
           pi.detail_code as payment_instrument_code
@@ -730,12 +730,12 @@ class PurchaseOrderReportRepository {
       }
 
       if (startDate != null) {
-        where += ' AND poh.date_transaction >= ?';
+        where += ' AND poh.date_transation >= ?';
         whereArgs.add(startDate.toIso8601String());
       }
 
       if (endDate != null) {
-        where += ' AND poh.date_transaction <= ?';
+        where += ' AND poh.date_transation <= ?';
         whereArgs.add(endDate.toIso8601String());
       }
 
@@ -777,12 +777,12 @@ class PurchaseOrderReportRepository {
       }
 
       if (startDate != null) {
-        where += ' AND poh.date_transaction >= ?';
+        where += ' AND poh.date_transation >= ?';
         whereArgs.add(startDate.toIso8601String());
       }
 
       if (endDate != null) {
-        where += ' AND poh.date_transaction <= ?';
+        where += ' AND poh.date_transation <= ?';
         whereArgs.add(endDate.toIso8601String());
       }
 
@@ -796,7 +796,7 @@ class PurchaseOrderReportRepository {
       final totalPages = (totalCount / pageSize).ceil();
       final offset = (page - 1) * pageSize;
 
-      String orderBy = 'poh.date_transaction DESC, poh.id DESC';
+      String orderBy = 'poh.date_transation DESC, poh.id DESC';
 
       final query =
           '''
@@ -824,9 +824,9 @@ class PurchaseOrderReportRepository {
 
         // Calculate Aged Credit (Days) as per Java logic
         double calculatedAgedDays = 0.0;
-        if (header.dateTransaction != null) {
+        if (header.dateTransation != null) {
           double paymentTermAmount = (header.paymentTerm ?? 0).toDouble();
-          DateTime dueDate = header.dateTransaction!.add(
+          DateTime dueDate = header.dateTransation!.add(
             Duration(days: paymentTermAmount.toInt()),
           );
           DateTime currentDate = DateTime.now();
@@ -869,12 +869,12 @@ class PurchaseOrderReportRepository {
       }
 
       if (startDate != null) {
-        where += ' AND date_transaction >= ?';
+        where += ' AND date_transation >= ?';
         whereArgs.add(startDate.toIso8601String());
       }
 
       if (endDate != null) {
-        where += ' AND date_transaction <= ?';
+        where += ' AND date_transation <= ?';
         whereArgs.add(endDate.toIso8601String());
       }
 

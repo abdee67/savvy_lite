@@ -885,10 +885,10 @@ class _PurchaseReviewPageState extends State<CreditPurchaseReviewPage>
               Iconsax.shop,
               isCompact,
             ),
-          if (purchaseOrder.dateTransaction != null)
+          if (purchaseOrder.dateTransation != null)
             _buildquotationOrderInfoItem(
               'Transaction Date : ',
-              _formatDateTime(purchaseOrder.dateTransaction!),
+              _formatDateTime(purchaseOrder.dateTransation!),
               Iconsax.shop,
               isCompact,
             ),

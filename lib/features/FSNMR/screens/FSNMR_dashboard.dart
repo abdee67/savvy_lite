@@ -413,7 +413,7 @@ class _FSNMRDashboardState extends State<FSNMRDashboard> {
                     ),
                     DataCell(
                       Text(
-                        item.unitOfMeasureDefaultRef?.description1 ?? '-',
+                        item.unitOfMeansureDefaultRef?.description1 ?? '-',
                         style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                     ),
@@ -559,7 +559,7 @@ class _FSNMRDashboardState extends State<FSNMRDashboard> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'UOM: ${item.unitOfMeasureDefaultRef?.description1 ?? '-'}',
+                              'UOM: ${item.unitOfMeansureDefaultRef?.description1 ?? '-'}',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey[600],
