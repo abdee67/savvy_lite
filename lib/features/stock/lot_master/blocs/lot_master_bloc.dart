@@ -929,7 +929,10 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
   }
 
   Future<int> _generateLotNumber() async {
-    return await nextNumberBloc.generateFormattedNumber('LM');
+    return await nextNumberBloc.generateFormattedNumber(
+      'LM',
+      authBloc.state.companyId!,
+    );
   }
 
   Future<UdcDetails?> _getLotTypeUdcDetail(int? lotType) async {
