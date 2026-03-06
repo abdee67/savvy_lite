@@ -2020,10 +2020,10 @@ class QuotationOrderBloc
     for (final detail in details) {
       // ✅ Calculate unit cost from item cost table
       double unitCost = detail.unitCost ?? 0.0;
-      if (unitCost == 0.0 && detail.itemsTableId != null && companyId != null) {
+      if (unitCost == 0.0 && companyId != null) {
         try {
           final itemCosts = await itemCostRepository.findByItemNumberAndCompany(
-            detail.itemsTableId!,
+            detail.itemsTableId,
             companyId,
           );
           if (itemCosts.isNotEmpty) {

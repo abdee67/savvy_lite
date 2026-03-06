@@ -122,8 +122,8 @@ Future<void> _initializeAndRunApp() async {
       // await LocalDatabaseService().debugTable('invoice_history_detail');
       // await LocalDatabaseService().debugTable('item_transactions');
       // await LocalDatabaseService().debugTable('item_uom_conversions');
-      await LocalDatabaseService().debugTable('quote_order_header');
-      await LocalDatabaseService().debugTable('quote_order_details');
+      // await LocalDatabaseService().debugTable('quote_order_header');
+      //await LocalDatabaseService().debugTable('quote_order_details');
       // await LocalDatabaseService().debugTable('supplier_table');
       //await LocalDatabaseService().debugTable('purchase_order_header');
       // await LocalDatabaseService().debugTable('purchase_order_detail');
@@ -135,6 +135,7 @@ Future<void> _initializeAndRunApp() async {
       //await LocalDatabaseService().debugTable('user_role');
       //await LocalDatabaseService().debugTable('role_privilege');
       //await LocalDatabaseService().debugTable('other_expense_table');
+      await LocalDatabaseService().debugTable('next_number');
     }
   } catch (error, stackTrace) {
     if (kDebugMode) {

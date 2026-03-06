@@ -319,7 +319,7 @@ class CashFlowRepository {
         59,
         59,
       );
-      poWhere += ' AND date_transaction BETWEEN ? AND ?';
+      poWhere += ' AND date_transation BETWEEN ? AND ?';
       poArgs.add(start.toIso8601String());
       poArgs.add(end.toIso8601String());
     }
@@ -1000,7 +1000,7 @@ class CashFlowRepository {
       'purchase_order_header',
       where: where,
       whereArgs: args,
-      orderBy: 'date_transaction DESC',
+      orderBy: 'date_transation DESC',
     );
     return result.map((m) => PurchaseOrderHeader.fromMap(m)).toList();
   }

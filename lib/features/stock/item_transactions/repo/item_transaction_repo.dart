@@ -2158,7 +2158,7 @@ class ItemTransactionRepository {
         JOIN purchase_order_header h ON d.po_header = h.id
         WHERE d.company = ?
         AND d.item_number = ?
-        AND h.date_transaction < ?
+        AND h.date_transation < ?
       ''',
         [companyId, itemId, startOfDay],
       );
@@ -2257,7 +2257,7 @@ class ItemTransactionRepository {
         JOIN purchase_order_header h ON d.po_header = h.id
         WHERE d.company = ?
         AND d.item_number = ?
-        AND h.date_transaction BETWEEN ? AND ?
+        AND h.date_transation BETWEEN ? AND ?
       ''',
         [companyId, itemId, startStr, endStr],
       );
@@ -2550,7 +2550,7 @@ class ItemTransactionRepository {
         JOIN purchase_order_header h ON d.po_header = h.id
         WHERE d.company = ?
         AND d.item_number = ?
-        AND h.date_transaction BETWEEN ? AND ?
+        AND h.date_transation BETWEEN ? AND ?
       ''',
         [companyId, itemId, startOfDay, endOfDay],
       );
