@@ -485,6 +485,24 @@ class PrivilegeSeeder {
         AppRoutes.itemWorkbenchDelete,
         'delete_item',
       ),
+      _createPrivilege(
+        'Availability Item In Branch',
+        'link',
+        AppRoutes.itemInBranchAvailability,
+        'item_in_branch_avl',
+      ),
+      _createPrivilege(
+        'Availability Item In Location',
+        'button',
+        AppRoutes.itemInLocationAvailability,
+        'item_in_loc_avl',
+      ),
+      _createPrivilege(
+        'Available Item in Lot',
+        'button',
+        AppRoutes.itemInLotAvailability,
+        'item_in_lot_avl',
+      ),
 
       // ==================== COMPANY MODULE ====================
       _createPrivilege(

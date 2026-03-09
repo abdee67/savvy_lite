@@ -103,8 +103,8 @@ Future<void> _initializeAndRunApp() async {
       developer.log('💾 Using local database only');
     }
     if (kDebugMode) {
-      //await LocalDatabaseService().resetDatabase();
-      ///await getIt<LicenseService>().clearLicense();
+      // await LocalDatabaseService().resetDatabase();
+      //await getIt<LicenseService>().clearLicense();
       //  // await LocalDatabaseService().debugTable('branch_table');
       //await LocalDatabaseService().debugTable('items_in_branch');
       //await LocalDatabaseService().debugTable('item_cost');
@@ -135,7 +135,7 @@ Future<void> _initializeAndRunApp() async {
       //await LocalDatabaseService().debugTable('user_role');
       //await LocalDatabaseService().debugTable('role_privilege');
       //await LocalDatabaseService().debugTable('other_expense_table');
-      await LocalDatabaseService().debugTable('next_number');
+      // await LocalDatabaseService().debugTable('next_number');
     }
   } catch (error, stackTrace) {
     if (kDebugMode) {

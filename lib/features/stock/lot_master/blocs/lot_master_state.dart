@@ -1,6 +1,7 @@
 // features/stock/lot_master/blocs/lot_master_state.dart
 
 import 'package:savvy_stock/features/stock/lot_master/models/expiration_report_filters.dart';
+import 'package:savvy_stock/features/stock/lot_master/models/lot_availability_filters.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 
 enum LotMasterStatus {
@@ -25,6 +26,9 @@ enum LotMasterStatus {
   loadingUpcomingExpiryReport,
   loadedUpcomingExpiryReport,
   loadingMoreUpcomingExpiryReport,
+  loadingLotAvailability,
+  loadedLotAvailability,
+  loadingMoreLotAvailability,
 }
 
 class LotMasterState {
@@ -77,6 +81,14 @@ class LotMasterState {
   final bool hasReachedMax;
   final int currentPage;
 
+  // Lot Availability fields
+  final List<LotMaster> availabilityLots;
+  final LotAvailabilityFilters availabilityFilters;
+  final int availabilityTotalCount;
+  final int availabilityTotalPages;
+  final int availabilityPage;
+  final bool hasMoreAvailability;
+
   const LotMasterState({
     this.status = LotMasterStatus.initial,
     this.items = const [],
@@ -122,6 +134,14 @@ class LotMasterState {
     // Pagination for Dashboard
     this.hasReachedMax = false,
     this.currentPage = 0,
+
+    // Lot Availability
+    this.availabilityLots = const [],
+    this.availabilityFilters = const LotAvailabilityFilters(),
+    this.availabilityTotalCount = 0,
+    this.availabilityTotalPages = 0,
+    this.availabilityPage = 1,
+    this.hasMoreAvailability = false,
   });
 
   bool get isLoading => status == LotMasterStatus.loading;
@@ -188,6 +208,13 @@ class LotMasterState {
     int? upcomingExpiryDaysThreshold,
     bool? hasReachedMax,
     int? currentPage,
+
+    List<LotMaster>? availabilityLots,
+    LotAvailabilityFilters? availabilityFilters,
+    int? availabilityTotalCount,
+    int? availabilityTotalPages,
+    int? availabilityPage,
+    bool? hasMoreAvailability,
   }) {
     return LotMasterState(
       status: status ?? this.status,
@@ -243,6 +270,15 @@ class LotMasterState {
 
       hasReachedMax: hasReachedMax ?? this.hasReachedMax,
       currentPage: currentPage ?? this.currentPage,
+
+      availabilityLots: availabilityLots ?? this.availabilityLots,
+      availabilityFilters: availabilityFilters ?? this.availabilityFilters,
+      availabilityTotalCount:
+          availabilityTotalCount ?? this.availabilityTotalCount,
+      availabilityPage: availabilityPage ?? this.availabilityPage,
+      availabilityTotalPages:
+          availabilityTotalPages ?? this.availabilityTotalPages,
+      hasMoreAvailability: hasMoreAvailability ?? this.hasMoreAvailability,
     );
   }
 
@@ -288,5 +324,11 @@ class LotMasterState {
     upcomingExpiryDaysThreshold,
     hasReachedMax,
     currentPage,
+    availabilityLots,
+    availabilityFilters,
+    availabilityTotalCount,
+    availabilityTotalPages,
+    availabilityPage,
+    hasMoreAvailability,
   ];
 }

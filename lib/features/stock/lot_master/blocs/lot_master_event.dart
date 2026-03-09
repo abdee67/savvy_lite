@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/expiration_report_filters.dart';
+import 'package:savvy_stock/features/stock/lot_master/models/lot_availability_filters.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
@@ -341,3 +342,33 @@ class ExportUpcomingExpiryReportToPDF extends LotMasterEvent {
 }
 
 class LoadMoreUpcomingExpiryReport extends LotMasterEvent {}
+
+// Lot Master Availability
+
+class LoadLotAvailability extends LotMasterEvent {
+  final int companyId;
+  final int page;
+  final int pageSize;
+
+  const LoadLotAvailability({
+    required this.companyId,
+    this.page = 1,
+    this.pageSize = 20,
+  });
+
+  @override
+  List<Object> get props => [companyId, page, pageSize];
+}
+
+class LoadMoreLotAvailability extends LotMasterEvent {}
+
+class FilterLotAvailability extends LotMasterEvent {
+  final LotAvailabilityFilters filters;
+
+  const FilterLotAvailability(this.filters);
+
+  @override
+  List<Object> get props => [filters];
+}
+
+class ClearLotAvailabilityFilters extends LotMasterEvent {}

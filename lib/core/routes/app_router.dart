@@ -103,6 +103,7 @@ import 'package:savvy_stock/features/stock/lot_coloring/model/lot_coloring_model
 import 'package:savvy_stock/features/stock/lot_coloring/screens/lot_colorings_screen.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/widgets/lot_coloring_form.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
+import 'package:savvy_stock/features/stock/lot_master/screens/lot_availability_screen.dart';
 import 'package:savvy_stock/features/stock/lot_master/screens/lot_master_dashboard.dart';
 import 'package:savvy_stock/features/stock/lot_master/widgets/lot_master_create_and_edit.dart.dart';
 import 'package:savvy_stock/features/system_constant/screen/system_constants_screen.dart';
@@ -905,6 +906,37 @@ class AppRouter {
         },
         redirect: _protectedRouteRedirect,
       ),
+
+      // ========== Item Availability Routes ==========
+      GoRoute(
+        path: AppRoutes.itemInBranchAvailability,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.itemInBranchAvailability,
+          parentPrivilege: AppRoutes.availabilityDashboard,
+          child: Placeholder(),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.itemInLocationAvailability,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.itemInLocationAvailability,
+          parentPrivilege: AppRoutes.availabilityDashboard,
+          child: Placeholder(),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.itemInLotAvailability,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.itemInLotAvailability,
+          parentPrivilege: AppRoutes.availabilityDashboard,
+          child: LotAvailabilityScreen(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+
+      // ========== Company Management Routes ==========
       GoRoute(
         path: AppRoutes.companyManagement,
         builder: (context, state) => PrivilegeRouteGuard(

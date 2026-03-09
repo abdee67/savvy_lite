@@ -4,6 +4,7 @@ import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/expiration_report_filters.dart';
+import 'package:savvy_stock/features/stock/lot_master/models/lot_availability_filters.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/paginated_expiration_result.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
@@ -1412,5 +1413,138 @@ class LotMasterRepository extends BaseRepository {
     final now = DateTime.now();
     final difference = expirationDate.difference(now).inDays;
     return difference > 0 ? difference : 0; // Only positive values
+  }
+
+  Future<({List<LotMaster> items, int count})> getLotAvailabilityPaginated({
+    required int companyId,
+    required LotAvailabilityFilters filters,
+    required int page,
+    required int pageSize,
+    String? lotTypeCode,
+  }) async {
+    final db = await databaseService.database;
+
+    var whereConditions = <String>['lm.company = ?'];
+    var whereArgs = <dynamic>[companyId];
+
+    if (filters.itemNumber != null) {
+      whereConditions.add('lm.item_number = ?');
+      whereArgs.add(filters.itemNumber);
+    }
+    if (filters.branch != null) {
+      whereConditions.add('lm.branch = ?');
+      whereArgs.add(filters.branch);
+    }
+    if (filters.batchNumberSupplier != null &&
+        filters.batchNumberSupplier!.isNotEmpty) {
+      whereConditions.add('lm.batch_number_supplier = ?');
+      whereArgs.add(filters.batchNumberSupplier);
+    }
+    if (filters.locationId != null) {
+      whereConditions.add('lm.location = ?');
+      whereArgs.add(filters.locationId);
+    }
+
+    if (filters.selectFilterDates != null) {
+      String dateColumn = 'lm.date_expiration';
+      if (lotTypeCode == 'F') {
+        dateColumn = 'lm.date_effective';
+      } else if (lotTypeCode == 'R') {
+        dateColumn = 'lm.date_received';
+      }
+
+      final filterType = filters.selectFilterDates!.toUpperCase();
+      if (filterType == 'RANGE' &&
+          filters.startDateForFilter != null &&
+          filters.endDateForFilter != null) {
+        whereConditions.add('$dateColumn BETWEEN ? AND ?');
+        whereArgs.add(filters.startDateForFilter!.toIso8601String());
+        whereArgs.add(filters.endDateForFilter!.toIso8601String());
+      } else if (filterType == 'YEARS' && filters.yearsPut != null) {
+        final startOfYear = DateTime(filters.yearsPut!, 1, 1);
+        final endOfYear = DateTime(filters.yearsPut!, 12, 31, 23, 59, 59);
+        whereConditions.add('$dateColumn BETWEEN ? AND ?');
+        whereArgs.add(startOfYear.toIso8601String());
+        whereArgs.add(endOfYear.toIso8601String());
+      } else if (filterType == 'DAYS' &&
+          filters.minDays != null &&
+          filters.maxDays != null) {
+        final now = DateTime.now();
+        final minDate = now.add(Duration(days: filters.minDays!));
+        final maxDate = now.add(Duration(days: filters.maxDays!));
+        whereConditions.add('$dateColumn BETWEEN ? AND ?');
+        whereArgs.add(minDate.toIso8601String());
+        whereArgs.add(maxDate.toIso8601String());
+      }
+
+      if (filterType == 'EXPIRED') {
+        if (lotTypeCode == null || lotTypeCode == 'X') {
+          final today = DateTime.now();
+          var todayEnd = DateTime(
+            today.year,
+            today.month,
+            today.day,
+            23,
+            59,
+            59,
+          );
+          whereConditions.add('$dateColumn <= ?');
+          whereArgs.add(todayEnd.toIso8601String());
+        }
+      }
+    }
+
+    final whereClause = whereConditions.join(' AND ');
+
+    // 1. COUNT
+    final countResult = await db.rawQuery('''
+      SELECT COUNT(lm.id) as count
+      FROM lot_master lm
+      WHERE $whereClause
+    ''', whereArgs);
+    int totalCount = (countResult.first['count'] as int?) ?? 0;
+
+    // 2. SELECT
+    final dataQuery =
+        '''
+      SELECT lm.*,
+        it.items_id as item_id,
+        it.item_description,
+        it.unit_of_measure,
+        uom.description_1 as unit_of_measure_description,
+        uom.detail_code as unit_of_measure_detail_code,
+        b.description as description,
+        loc.location_description,
+        ls.detail_code as status_code,
+        ls.description_1 as status_description
+      FROM lot_master lm
+      LEFT JOIN items_table it ON lm.item_number = it.id
+      LEFT JOIN branch_table b ON lm.branch = b.id
+      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN udc_details ls ON lm.lot_status = ls.id
+      LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
+      WHERE $whereClause
+      ORDER BY lm.id DESC
+      LIMIT ? OFFSET ?
+    ''';
+
+    final paginatedArgs = List<dynamic>.from(whereArgs)
+      ..add(pageSize)
+      ..add((page - 1) * pageSize);
+
+    final lotsData = await db.rawQuery(dataQuery, paginatedArgs);
+    List<LotMaster> lots = lotsData.map((p) => LotMaster.fromMap(p)).toList();
+
+    // The Java post-query filter for NO AVAILABILITY
+    if (filters.noAvailability) {
+      final noAvailLots = lots
+          .where((lot) => (lot.quantityAvailable ?? 0.0) == 0.0)
+          .toList();
+      if (noAvailLots.isNotEmpty) {
+        lots = noAvailLots;
+      }
+    }
+
+    return (items: lots, count: totalCount);
   }
 }

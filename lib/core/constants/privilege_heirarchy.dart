@@ -129,6 +129,11 @@ class PrivilegeHierarchy {
     AppRoutes.inventoryTransactionEdit: AppRoutes.inventoryTransaction,
     AppRoutes.inventoryTransactionDelete: AppRoutes.inventoryTransaction,
 
+    // ===================item Availability Sub-Routes =============
+    AppRoutes.itemInBranchAvailability: AppRoutes.availabilityDashboard,
+    AppRoutes.itemInLocationAvailability: AppRoutes.availabilityDashboard,
+    AppRoutes.itemInLotAvailability: AppRoutes.availabilityDashboard,
+
     // ==================== COMPANY MODULE ====================
     AppRoutes.companyManagement: AppRoutes.companyDashboard,
     AppRoutes.companyCreation: AppRoutes.companyManagement,

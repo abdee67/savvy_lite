@@ -166,14 +166,22 @@ class AppRoutes {
   //static const String barcodeFunction = '$stock/barcode-function';
   //static const String exportFunction = '$stock/export-function';
 
-  // Company Sub-Routes
+  ////////////////////Availabiltiy Sub-Routes////////////////////////
+  static const String itemInBranchAvailability =
+      '$availability/item-in-branch-availability';
+  static const String itemInLocationAvailability =
+      '$availability/item-in-location-availability';
+  static const String itemInLotAvailability =
+      '$availability/item-in-lot-availability';
+
+  //////////////// Company Sub-Routes  ///////////////////////
   static const String companyManagement = '$company/company-management';
 
   static const String companyCreation = '$companyManagement/company-creation';
   static const String companyEdit = '$companyManagement/edit-company';
   static const String companyDelete = '$companyManagement/delete-company';
 
-  // Branch Sub-Routes
+  ///////////////////// Branch Sub-Routes////////////////////////
   static const String branchManagement = '$branch/branch-management';
 
   static const String branchCreation = '$branchManagement/branch-creation';

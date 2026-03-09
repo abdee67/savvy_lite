@@ -5,6 +5,7 @@ import 'package:bloc/bloc.dart';
 import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/expiration_report_filters.dart';
+import 'package:savvy_stock/features/stock/lot_master/models/lot_availability_filters.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -82,6 +83,11 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
     on<ClearUpcomingExpiryReportFilters>(_onClearUpcomingExpiryReportFilters);
     // on<ExportUpcomingExpiryReportToExcel>(_onExportUpcomingExpiryToExcel);
     //  on<ExportUpcomingExpiryReportToPDF>(_onExportUpcomingExpiryToPDF);
+
+    on<LoadLotAvailability>(_onLoadLotAvailability);
+    on<LoadMoreLotAvailability>(_onLoadMoreLotAvailability);
+    on<FilterLotAvailability>(_onFilterLotAvailability);
+    on<ClearLotAvailabilityFilters>(_onClearLotAvailabilityFilters);
 
     on<RefreshLotMasters>(_onRefreshLots);
   }
@@ -1259,6 +1265,135 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
         page: 1,
         pageSize: defaultPageSize,
         daysThreshold: systemConstantBloc.state.selected!.daysLeft!,
+      ),
+    );
+  }
+
+  // --- Lot Master Availability ---
+  Future<void> _onLoadLotAvailability(
+    LoadLotAvailability event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    emit(state.copyWith(status: LotMasterStatus.loadingLotAvailability));
+
+    try {
+      final systemConstant = systemConstantBloc.state.selected;
+      String? lotTypeCode;
+      if (systemConstant?.lotType != null) {
+        final udcDetail = await udcRepository.getUdcDetailById(
+          systemConstant!.lotType!,
+        );
+        lotTypeCode = udcDetail?.detailCode.toUpperCase();
+      }
+
+      final result = await repository.getLotAvailabilityPaginated(
+        companyId: event.companyId,
+        filters: state.availabilityFilters,
+        page: event.page,
+        pageSize: event.pageSize,
+        lotTypeCode: lotTypeCode,
+      );
+
+      final totalPages = (result.count / event.pageSize).ceil();
+
+      final itemsWithColors = await _calculateColorsForLots(result.items);
+
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.loadedLotAvailability,
+          availabilityLots: itemsWithColors,
+          availabilityTotalCount: result.count,
+          availabilityPage: event.page,
+          availabilityTotalPages: totalPages,
+          hasMoreAvailability: event.page < totalPages,
+        ),
+      );
+    } catch (e) {
+      if (kDebugMode) developer.log('Error loading lot availability: $e');
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.failure,
+          message: 'Failed to load availability: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onLoadMoreLotAvailability(
+    LoadMoreLotAvailability event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    if (!state.hasMoreAvailability) return;
+
+    emit(state.copyWith(status: LotMasterStatus.loadingMoreLotAvailability));
+
+    try {
+      final nextPage = state.availabilityPage + 1;
+      final systemConstant = systemConstantBloc.state.selected;
+      String? lotTypeCode;
+      if (systemConstant?.lotType != null) {
+        final udcDetail = await udcRepository.getUdcDetailById(
+          systemConstant!.lotType!,
+        );
+        lotTypeCode = udcDetail?.detailCode.toUpperCase();
+      }
+
+      final result = await repository.getLotAvailabilityPaginated(
+        companyId: authBloc.state.companyId!,
+        filters: state.availabilityFilters,
+        page: nextPage,
+        pageSize: defaultPageSize,
+        lotTypeCode: lotTypeCode,
+      );
+
+      final totalPages = (result.count / defaultPageSize).ceil();
+
+      final itemsWithColors = await _calculateColorsForLots(result.items);
+
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.loadedLotAvailability,
+          availabilityLots: [...state.availabilityLots, ...itemsWithColors],
+          availabilityPage: nextPage,
+          availabilityTotalPages: totalPages,
+          hasMoreAvailability: nextPage < totalPages,
+        ),
+      );
+    } catch (e) {
+      if (kDebugMode) developer.log('Error loading more lot availability: $e');
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.failure,
+          message: 'Failed to load more availability: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onFilterLotAvailability(
+    FilterLotAvailability event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    emit(state.copyWith(availabilityFilters: event.filters));
+    add(
+      LoadLotAvailability(
+        companyId: authBloc.state.companyId!,
+        page: 1,
+        pageSize: defaultPageSize,
+      ),
+    );
+  }
+
+  Future<void> _onClearLotAvailabilityFilters(
+    ClearLotAvailabilityFilters event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    emit(state.copyWith(availabilityFilters: const LotAvailabilityFilters()));
+    add(
+      LoadLotAvailability(
+        companyId: authBloc.state.companyId!,
+        page: 1,
+        pageSize: defaultPageSize,
       ),
     );
   }
