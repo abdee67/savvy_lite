@@ -3,12 +3,19 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
+import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
+import 'package:savvy_stock/features/branch_list/blocs/branch_list_event.dart';
+import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
+import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
+import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_bloc.dart';
+import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_event.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_event.dart';
 import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_state.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/model/lot_coloring_model.dart';
+import 'package:savvy_stock/features/stock/lot_master/widgets/available_lot_filter.dart';
 
 class LotAvailabilityScreen extends StatefulWidget {
   final AuthBloc authBloc;
@@ -47,6 +54,16 @@ class _LotAvailabilityScreenState extends State<LotAvailabilityScreen> {
           pageSize: 20,
         ),
       );
+      context.read<LotMasterBloc>().add(CalculateMultipleLotStatus());
+      context.read<BranchBloc>().add(
+        LoadBranchs(widget.authBloc.state.companyId!),
+      );
+      context.read<StockItemsEntryBloc>().add(
+        LoadItems(widget.authBloc.state.companyId!),
+      );
+      context.read<LocationMasterBloc>().add(
+        LoadLocationMasters(widget.authBloc.state.companyId!),
+      );
     }
   }
 
@@ -63,7 +80,21 @@ class _LotAvailabilityScreenState extends State<LotAvailabilityScreen> {
   }
 
   void _showFilterDialog() {
-    // Filter dialog implementation can be added here
+    final currentState = context.read<LotMasterBloc>().state;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AvailableLotFilterDialog(
+          currentFilters: currentState.availabilityFilters,
+          onApply: (filters) {
+            context.read<LotMasterBloc>().add(FilterLotAvailability(filters));
+          },
+          onClear: () {
+            context.read<LotMasterBloc>().add(ClearLotAvailabilityFilters());
+          },
+        );
+      },
+    );
   }
 
   void _refreshList() {
@@ -73,6 +104,30 @@ class _LotAvailabilityScreenState extends State<LotAvailabilityScreen> {
         LoadLotAvailability(companyId: companyId, page: 1, pageSize: 20),
       );
     }
+  }
+
+  String _getLocationName(int locationId) {
+    final locationBloc = context.read<LocationMasterBloc>();
+    final locationState = locationBloc.state;
+    final locationName =
+        locationState.locations
+            .where((entry) => entry.id == locationId)
+            .firstOrNull
+            ?.locationDescription ??
+        'Loc $locationId';
+    return locationName;
+  }
+
+  String _getBranchName(int branchId) {
+    final branchBloc = context.read<BranchBloc>();
+    final branchState = branchBloc.state;
+    final branchDescription =
+        branchState.branchs
+            .where((entry) => entry.id == branchId)
+            .firstOrNull
+            ?.description ??
+        'Branch $branchId';
+    return branchDescription;
   }
 
   @override
@@ -103,8 +158,7 @@ class _LotAvailabilityScreenState extends State<LotAvailabilityScreen> {
       body: SafeArea(
         child: BlocConsumer<LotMasterBloc, LotMasterState>(
           listener: (context, state) {
-            if (state.status == LotMasterStatus.failure &&
-                state.message != null) {
+            if (state.status == LotMasterStatus.failure) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('Error: ${state.message}'),
@@ -282,15 +336,13 @@ class _LotAvailabilityScreenState extends State<LotAvailabilityScreen> {
                 return DataRow(
                   color: WidgetStateProperty.all(bgColor.withOpacity(0.1)),
                   cells: [
-                    DataCell(Text(item.lotNumber.toString())),
-                    DataCell(Text(item.branchRef?.description ?? 'N/A')),
+                    DataCell(Text(item.lotNumber?.toString() ?? 'N/A')),
+                    DataCell(Text(_getBranchName(item.branch!) ?? 'N/A')),
                     DataCell(Text(item.itemRef?.itemDescription ?? 'N/A')),
-                    DataCell(
-                      Text(item.locationRef?.locationDescription ?? 'N/A'),
-                    ),
+                    DataCell(Text(_getLocationName(item.location!) ?? 'N/A')),
                     DataCell(
                       Text(
-                        '${item.quantityAvailable} ${item.itemRef?.unitOfMeasureDescription?.description1 ?? ""}',
+                        '${item.quantityAvailable?.toString() ?? '0'} ${item.itemRef?.unitOfMeasureDescription?.description1 ?? ""}',
                       ),
                     ),
                     DataCell(
@@ -349,11 +401,13 @@ class _LotAvailabilityScreenState extends State<LotAvailabilityScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Lot: ${item.lotNumber}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                      Expanded(
+                        child: Text(
+                          'Lot: ${item.lotNumber ?? "N/A"}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
                       Container(
@@ -388,13 +442,13 @@ class _LotAvailabilityScreenState extends State<LotAvailabilityScreen> {
                   _buildMobileInfoRow(
                     Iconsax.buildings,
                     'Branch',
-                    item.branchRef?.description ?? 'N/A',
+                    _getBranchName(item.branch!) ?? 'N/A',
                   ),
                   const SizedBox(height: 8),
                   _buildMobileInfoRow(
                     Iconsax.location,
                     'Location',
-                    item.locationRef?.locationDescription ?? 'N/A',
+                    _getLocationName(item.location!) ?? 'N/A',
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -402,7 +456,7 @@ class _LotAvailabilityScreenState extends State<LotAvailabilityScreen> {
                     children: [
                       _buildMobileStat(
                         'Avl. Qty',
-                        '${item.quantityAvailable} ${item.itemRef?.unitOfMeasureDescription?.description1 ?? ""}',
+                        '${item.quantityAvailable ?? "0"} ${item.itemRef?.unitOfMeasureDescription?.description1 ?? ""}',
                         Iconsax.reserve,
                         Colors.blue,
                       ),

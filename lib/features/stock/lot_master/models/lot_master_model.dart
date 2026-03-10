@@ -1,4 +1,5 @@
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
+import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
 import 'package:savvy_stock/features/stock/location_entry/models/location_master_model.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/model/lot_coloring_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
@@ -24,7 +25,7 @@ class LotMaster {
   LotExpirationColor? tempColorType;
   ItemEntryModel? itemRef;
   Branch? branchRef;
-  LocationMaster? locationRef;
+  ItemLocation? locationRef;
 
   LotMaster({
     this.id,
@@ -131,9 +132,16 @@ class LotMaster {
             )
           : null,
       locationRef: map['location_description'] != null
-          ? LocationMaster(
+          ? ItemLocation(
               id: map['location'],
-              locationDescription: map['location_description']?.toString(),
+              location: map['location_id'],
+              locationDescription: map['location_description'] != null
+                  ? LocationMaster(
+                      id: map['location_id'],
+                      locationDescription: map['location_description']
+                          ?.toString(),
+                    )
+                  : null,
             )
           : null,
     );

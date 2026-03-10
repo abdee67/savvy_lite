@@ -1,4 +1,7 @@
 // features/stock/lot_master/repositories/lot_master_repository.dart
+import 'dart:math' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
@@ -40,6 +43,8 @@ class LotMasterRepository extends BaseRepository {
         uom.description_1 as unit_of_measure_description,
         uom.detail_code as unit_of_measure_detail_code,
         b.description as description,
+        il.location as location,
+        loc.id as location_id,
         loc.location_description,
         ls.detail_code as status_code,
         ls.description_1 as status_description
@@ -47,7 +52,8 @@ class LotMasterRepository extends BaseRepository {
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
-      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN item_location il ON lm.location = il.id
+      LEFT JOIN location_master loc ON il.location = loc.id
       LEFT JOIN udc_details ls ON lm.lot_status = ls.id
       LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.company = ?
@@ -76,6 +82,8 @@ class LotMasterRepository extends BaseRepository {
         uom.description_1 as unit_of_measure_description,
         uom.detail_code as unit_of_measure_detail_code,
         b.description as description,
+        il.location as location,
+        loc.id as location_id,
         loc.location_description,
         ls.detail_code as status_code,
         ls.description_1 as status_description
@@ -83,7 +91,8 @@ class LotMasterRepository extends BaseRepository {
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
-      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN item_location il ON lm.location = il.id
+      LEFT JOIN location_master loc ON il.location = loc.id
       LEFT JOIN udc_details ls ON lm.lot_status = ls.id
       LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.id = ? AND lm.company = ?
@@ -111,6 +120,8 @@ class LotMasterRepository extends BaseRepository {
         uom.description_1 as unit_of_measure_description,
         uom.detail_code as unit_of_measure_detail_code,
         b.description as description,
+        il.location as location,
+        loc.id as location_id,
         loc.location_description,
         ls.detail_code as status_code,
         ls.description_1 as status_description
@@ -118,7 +129,8 @@ class LotMasterRepository extends BaseRepository {
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
-      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN item_location il ON lm.location = il.id
+      LEFT JOIN location_master loc ON il.location = loc.id
       LEFT JOIN udc_details ls ON lm.lot_status = ls.id
       LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.item_number = ? AND lm.location = ? AND lm.company = ?
@@ -172,6 +184,8 @@ class LotMasterRepository extends BaseRepository {
         uom.description_1 as unit_of_measure_description,
         uom.detail_code as unit_of_measure_detail_code,
         b.description as description,
+        il.location as location,
+        loc.id as location_id,
         loc.location_description,
         ls.detail_code as status_code,
         ls.description_1 as status_description
@@ -179,7 +193,8 @@ class LotMasterRepository extends BaseRepository {
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
-      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN item_location il ON lm.location = il.id
+      LEFT JOIN location_master loc ON il.location = loc.id
       LEFT JOIN udc_details ls ON lm.lot_status = ls.id
       LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       $whereClause
@@ -207,6 +222,8 @@ class LotMasterRepository extends BaseRepository {
         uom.description_1 as unit_of_measure_description,
         uom.detail_code as unit_of_measure_detail_code,
         b.description as description,
+        il.location as location,
+        loc.id as location_id,
         loc.location_description,
         ls.detail_code as status_code,
         ls.description_1 as status_description
@@ -214,7 +231,8 @@ class LotMasterRepository extends BaseRepository {
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
-      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN item_location il ON lm.location = il.id
+      LEFT JOIN location_master loc ON il.location = loc.id
       LEFT JOIN udc_details ls ON lm.lot_status = ls.id
       LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.company = ? AND lm.item_number = ? AND lm.branch = ?
@@ -240,6 +258,8 @@ class LotMasterRepository extends BaseRepository {
         uom.description_1 as unit_of_measure_description,
         uom.detail_code as unit_of_measure_detail_code,
         b.description as description,
+        il.location as location,
+        loc.id as location_id,
         loc.location_description,
         ls.detail_code as status_code,
         ls.description_1 as status_description
@@ -247,7 +267,8 @@ class LotMasterRepository extends BaseRepository {
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
-      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN item_location il ON lm.location = il.id
+      LEFT JOIN location_master loc ON il.location = loc.id
       LEFT JOIN udc_details ls ON lm.lot_status = ls.id
       LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.company = ? AND lm.item_number = ?
@@ -486,14 +507,17 @@ class LotMasterRepository extends BaseRepository {
         uom.description_1 as unit_of_measure_description,
         uom.detail_code as unit_of_measure_detail_code,
         b.description as description,
+        il.location as location,
         loc.location_description,
+        loc.id as location_id,
         ls.detail_code as status_code,
         ls.description_1 as status_description
       
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
-      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN item_location il ON lm.location = il.id
+      LEFT JOIN location_master loc ON il.location = loc.id
       LEFT JOIN udc_details ls ON lm.lot_status = ls.id
       LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.company = ? 
@@ -548,6 +572,7 @@ class LotMasterRepository extends BaseRepository {
         uom.description_1 as unit_of_measure_description,
         uom.detail_code as unit_of_measure_detail_code,
         b.description as description,
+        il.
         loc.location_description,
         ls.detail_code as status_code,
         ls.description_1 as status_description
@@ -1514,13 +1539,15 @@ class LotMasterRepository extends BaseRepository {
         uom.description_1 as unit_of_measure_description,
         uom.detail_code as unit_of_measure_detail_code,
         b.description as description,
-        loc.location_description,
+        loc.id as location_id,
+        loc.location_description as location_description,
         ls.detail_code as status_code,
         ls.description_1 as status_description
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
-      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN item_location il ON lm.location = il.id
+      LEFT JOIN location_master loc ON COALESCE(il.location, lm.location) = loc.id
       LEFT JOIN udc_details ls ON lm.lot_status = ls.id
       LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE $whereClause

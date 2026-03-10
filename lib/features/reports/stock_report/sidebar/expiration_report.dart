@@ -723,7 +723,7 @@ class _ExpirationReportPageState extends State<ExpirationReportPage>
           ),
           _buildDetailItem(
             'Location: ',
-            lot.locationRef?.locationDescription ?? 'N/A',
+            lot.locationRef?.locationDescription?.locationDescription ?? 'N/A',
             Iconsax.location,
             isCompact,
           ),
