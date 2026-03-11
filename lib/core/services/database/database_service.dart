@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:savvy_stock/core/services/database/seeders/privilege_seeder.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
 import 'dart:developer' as developer;
 
@@ -24,15 +26,35 @@ class LocalDatabaseService {
   }
 
   Future<Database> _initDatabase() async {
-    String path = join(await getDatabasesPath(), 'savvy_stock.db');
-    return await openDatabase(
+    String path;
+    if (Platform.isWindows || Platform.isLinux) {
+      // For desktop, use the FFI factory and a known writable directory
+      final dbDir = Directory(
+        join(Platform.environment['APPDATA'] ?? '.', 'SavvyStock'),
+      );
+      if (!await dbDir.exists()) {
+        await dbDir.create(recursive: true);
+      }
+      path = join(dbDir.path, 'savvy_stock.db');
+      developer.log('Desktop DB path: $path');
+    } else {
+      path = join(await getDatabasesPath(), 'savvy_stock.db');
+    }
+
+    final DatabaseFactory factory = (Platform.isWindows || Platform.isLinux)
+        ? databaseFactoryFfi
+        : databaseFactory;
+
+    return await factory.openDatabase(
       path,
-      version: 1, // Incremented for proforma fields migration
-      onCreate: _onCreate,
-      onUpgrade: _onUpgrade, // Add upgrade handler
-      onOpen: (db) async {
-        // await _debugPrintTablesAndData(db);
-      },
+      options: OpenDatabaseOptions(
+        version: 1, // Incremented for proforma fields migration
+        onCreate: _onCreate,
+        onUpgrade: _onUpgrade, // Add upgrade handler
+        onOpen: (db) async {
+          // await _debugPrintTablesAndData(db);
+        },
+      ),
     );
   }
 
@@ -506,11 +528,15 @@ CREATE TABLE items_in_branch (
         FOREIGN KEY (ubpdated_by) REFERENCES user_table (id) ON DELETE NO ACTION ON UPDATE NO ACTION
       )
     ''');
-    await db.execute('''
-      CREATE INDEX fk_system_constant_ubpdated_by_idx ON system_constant(ubpdated_by);
-      CREATE INDEX fk_system_constant_company_idx ON system_constant(company);
-      CREATE INDEX fk_system_constant_lt_type_idx ON system_constant(lot_type);
-    ''');
+    await db.execute(
+      'CREATE INDEX fk_system_constant_ubpdated_by_idx ON system_constant(ubpdated_by)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_system_constant_company_idx ON system_constant(company)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_system_constant_lt_type_idx ON system_constant(lot_type)',
+    );
     developer.log('Created table: system_constant');
 
     //15.create location master
@@ -1180,8 +1206,6 @@ CREATE TABLE salespersons (
 
   FOREIGN KEY (parent_salesperson_id) REFERENCES salespersons(id)
 );
-
-CREATE INDEX idx_sales_person_company ON salespersons(company);
 ''');
     developer.log('Created table: salespersons');
 

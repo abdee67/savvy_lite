@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer' as developer;
+import 'dart:io';
 import 'package:device_preview/device_preview.dart';
 
 import 'package:flutter/foundation.dart';
@@ -7,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/FSNMR/blocs/FSNMR_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/password_reset/password_reset_bloc.dart';
 
@@ -76,16 +78,27 @@ import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_h
 
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize sqflite FFI for desktop platforms (Windows/Linux)
+  if (Platform.isWindows || Platform.isLinux) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
+
   _initializeAndRunApp();
   //clearAllSharedPreferences();
 
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+  // Only lock orientation on mobile platforms
+  if (!Platform.isWindows && !Platform.isLinux && !Platform.isMacOS) {
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+  }
 }
 
 // Add error handling wrapper
@@ -102,13 +115,13 @@ Future<void> _initializeAndRunApp() async {
       developer.log('💾 Using local database only');
     }
     if (kDebugMode) {
-      // await LocalDatabaseService().resetDatabase();
+      //await LocalDatabaseService().resetDatabase();
       //await getIt<LicenseService>().clearLicense();
       //  // await LocalDatabaseService().debugTable('branch_table');
       //await LocalDatabaseService().debugTable('items_in_branch');
       //await LocalDatabaseService().debugTable('item_cost');
       //await LocalDatabaseService().debugTable('item_location');
-      //await LocalDatabaseService().debugTable('lot_master');
+      await LocalDatabaseService().debugTable('lot_master');
       //await LocalDatabaseService().debugTable('item_master');
       //await LocalDatabaseService().debugTable('items_table');
       // await LocalDatabaseService().debugTable('sales_order_header');
