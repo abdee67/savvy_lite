@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_state.dart';
-import 'package:savvy_stock/features/stock/item_entry_workbench/blocs/item_master_bloc.dart';
-import 'package:savvy_stock/features/stock/item_entry_workbench/blocs/item_master_state.dart';
+import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
+import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_state.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_bloc.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_state.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_availability_filters.dart';
 import 'package:intl/intl.dart';
+import 'package:savvy_stock/core/widgets/custom_searchable_dropdown.dart';
 
 class AvailableLotFilterDialog extends StatefulWidget {
   final LotAvailabilityFilters currentFilters;
@@ -144,7 +145,7 @@ class _AvailableLotFilterDialogState extends State<AvailableLotFilterDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        BlocBuilder<ItemMasterBloc, ItemMasterState>(
+        BlocBuilder<StockItemsEntryBloc, ItemEntryState>(
           builder: (context, state) {
             return _buildDropdown<int>(
               label: 'Item',
@@ -250,6 +251,7 @@ class _AvailableLotFilterDialogState extends State<AvailableLotFilterDialog> {
                   onSelected: (selected) {
                     if (selected) {
                       String? backendType;
+                      if (option == 'All') backendType = 'ALL';
                       if (option == 'Range') backendType = 'RANGE';
                       if (option == 'Days Left') backendType = 'DAYS';
                       if (option == 'Years') backendType = 'YEARS';
@@ -431,27 +433,44 @@ class _AvailableLotFilterDialogState extends State<AvailableLotFilterDialog> {
     required List<DropdownMenuItem<T>> items,
     required Function(T?) onChanged,
   }) {
-    // Check if the current value actually exists in the items list to prevent assertion errors
-    T? currentValue() {
-      if (value == null) return null;
-      for (var item in items) {
-        if (item.value == value) return value;
+    final Map<String, T> stringToValueMap = {};
+    String? currentValueString;
+    final List<String> options = [];
+
+    for (var item in items) {
+      if (item.value == null) continue;
+
+      String textStr = '';
+      if (item.child is Text) {
+        textStr = (item.child as Text).data ?? '';
       }
-      return null; // Value not in list, fallback to null
+
+      if (textStr.isNotEmpty &&
+          textStr != '--Select One--' &&
+          textStr != '-- Select One --') {
+        if (!options.contains(textStr)) {
+          options.add(textStr);
+        }
+        // We store the mapping so we can retrieve the generic <T> value when the string is selected
+        stringToValueMap[textStr] = item.value as T;
+        if (item.value == value) {
+          currentValueString = textStr;
+        }
+      }
     }
 
-    return DropdownButtonFormField<T>(
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-      ),
-      value: currentValue(),
-      isExpanded: true,
-      items: [
-        DropdownMenuItem<T>(value: null, child: const Text('-- Select One --')),
-        ...items,
-      ],
-      onChanged: onChanged,
+    return CustomSearchableDropdown(
+      labelText: label,
+      options: options,
+      value: currentValueString,
+      allowCustomEntries: false,
+      onChanged: (val) {
+        if (val == null || val.isEmpty) {
+          onChanged(null);
+        } else {
+          onChanged(stringToValueMap[val]);
+        }
+      },
     );
   }
 

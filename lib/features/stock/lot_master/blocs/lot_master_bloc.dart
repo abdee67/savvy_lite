@@ -1286,6 +1286,13 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
         lotTypeCode = udcDetail?.detailCode.toUpperCase();
       }
 
+      if (kDebugMode) {
+        developer.log('Loading Lots with lotTypeCode: $lotTypeCode');
+        developer.log(
+          'Loading Lots with filters: ${state.availabilityFilters}',
+        );
+      }
+
       final result = await repository.getLotAvailabilityPaginated(
         companyId: event.companyId,
         filters: state.availabilityFilters,

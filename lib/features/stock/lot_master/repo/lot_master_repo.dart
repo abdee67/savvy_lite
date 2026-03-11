@@ -1,5 +1,6 @@
 // features/stock/lot_master/repositories/lot_master_repository.dart
-import 'dart:math' as developer;
+
+import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/repositories/base_repo.dart';
@@ -1462,15 +1463,20 @@ class LotMasterRepository extends BaseRepository {
     }
     if (filters.batchNumberSupplier != null &&
         filters.batchNumberSupplier!.isNotEmpty) {
-      whereConditions.add('lm.batch_number_supplier = ?');
-      whereArgs.add(filters.batchNumberSupplier);
+      whereConditions.add('lm.batch_number_supplier LIKE ?');
+      whereArgs.add('%${filters.batchNumberSupplier}%');
     }
     if (filters.locationId != null) {
       whereConditions.add('lm.location = ?');
       whereArgs.add(filters.locationId);
     }
 
-    if (filters.selectFilterDates != null) {
+    if (filters.noAvailability) {
+      whereConditions.add('lm.quantity_available = 0.0');
+    }
+
+    if (filters.selectFilterDates != null &&
+        filters.selectFilterDates != 'ALL') {
       String dateColumn = 'lm.date_expiration';
       if (lotTypeCode == 'F') {
         dateColumn = 'lm.date_effective';
@@ -1494,32 +1500,41 @@ class LotMasterRepository extends BaseRepository {
       } else if (filterType == 'DAYS' &&
           filters.minDays != null &&
           filters.maxDays != null) {
-        final now = DateTime.now();
-        final minDate = now.add(Duration(days: filters.minDays!));
-        final maxDate = now.add(Duration(days: filters.maxDays!));
+        final today = DateTime.now();
+        final minDateOrig = today.add(Duration(days: filters.minDays!));
+        final minDate = DateTime(
+          minDateOrig.year,
+          minDateOrig.month,
+          minDateOrig.day,
+        ); // Start of day
+        final maxDateOrig = today.add(Duration(days: filters.maxDays!));
+        final maxDate = DateTime(
+          maxDateOrig.year,
+          maxDateOrig.month,
+          maxDateOrig.day,
+          23,
+          59,
+          59,
+        ); // End of day
         whereConditions.add('$dateColumn BETWEEN ? AND ?');
         whereArgs.add(minDate.toIso8601String());
         whereArgs.add(maxDate.toIso8601String());
       }
 
       if (filterType == 'EXPIRED') {
-        if (lotTypeCode == null || lotTypeCode == 'X') {
-          final today = DateTime.now();
-          var todayEnd = DateTime(
-            today.year,
-            today.month,
-            today.day,
-            23,
-            59,
-            59,
-          );
-          whereConditions.add('$dateColumn <= ?');
-          whereArgs.add(todayEnd.toIso8601String());
-        }
+        final today = DateTime.now();
+        var todayEnd = DateTime(today.year, today.month, today.day, 23, 59, 59);
+        whereConditions.add('$dateColumn <= ?');
+        whereArgs.add(todayEnd.toIso8601String());
       }
     }
 
     final whereClause = whereConditions.join(' AND ');
+
+    if (kDebugMode) {
+      developer.log('getLotAvailabilityPaginated WHERE: $whereClause');
+      developer.log('getLotAvailabilityPaginated ARGS: $whereArgs');
+    }
 
     // 1. COUNT
     final countResult = await db.rawQuery('''
