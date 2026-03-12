@@ -1,4 +1,6 @@
+import 'package:savvy_stock/features/stock/item_in_branch/models/available_items_in_branch_filter.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/models/paginated_aval_item_in_branch_result.dart';
 
 enum ItemInBranchStatus {
   initial,
@@ -18,6 +20,13 @@ enum ItemInBranchStatus {
   loadingMoreitemInBranchReport,
   exportingReport,
   exportReportSuccess,
+
+  loadAvailableItemInBranch,
+  loadMoreAvailableItemInBranch,
+  loadedAvailableItemInBranch,
+  loadingMoreAvailableItemInBranch,
+  exportingAvailableItemInBranch,
+  exportAvailableItemInBranchSuccess,
 }
 
 enum ItemInBranchDetailStatus { hidden, showing, editing }
@@ -70,6 +79,17 @@ class ItemInBranchState {
   // Financial data
   double totalAmountInETB = 0.0;
 
+  final List<ItemInBranchModel> availableItemInBranchItems;
+  final List<PaginatedItemInBranchResult> availableItemInBranchResults;
+  final AvailableItemsInBranchFilter availableItemInBranchFilters;
+  final int availableItemInBranchPage;
+  final int availableItemInBranchTotalPages;
+  final int availableItemInBranchTotalCount;
+  final bool hasMoreAvailableItemInBranch;
+  final String exportAvailableItemInBranchMessage;
+  final Map<int, double> availableItemsInBranchCost;
+  final Map<int, double> availableItemsExpirationQty;
+
   ItemInBranchState({
     this.status = ItemInBranchStatus.initial,
     this.message,
@@ -108,6 +128,16 @@ class ItemInBranchState {
     this.itemInBranchReportTotalCost = 0,
     this.hasMoreitemInBranchReport = false,
     this.exportReportMessage = '',
+    this.availableItemInBranchItems = const [],
+    this.availableItemInBranchResults = const [],
+    this.availableItemInBranchFilters = const AvailableItemsInBranchFilter(),
+    this.availableItemInBranchPage = 0,
+    this.availableItemInBranchTotalPages = 0,
+    this.availableItemInBranchTotalCount = 0,
+    this.hasMoreAvailableItemInBranch = false,
+    this.exportAvailableItemInBranchMessage = '',
+    this.availableItemsInBranchCost = const {},
+    this.availableItemsExpirationQty = const {},
   });
 
   // --- Helper Getters ---
@@ -179,6 +209,16 @@ class ItemInBranchState {
     double? itemInBranchReportTotalCost,
     bool? hasMoreitemInBranchReport,
     String? exportReportMessage,
+    List<ItemInBranchModel>? availableItemInBranchItems,
+    List<PaginatedItemInBranchResult>? availableItemInBranchResults,
+    AvailableItemsInBranchFilter? availableItemInBranchFilters,
+    int? availableItemInBranchPage,
+    int? availableItemInBranchTotalPages,
+    int? availableItemInBranchTotalCount,
+    bool? hasMoreAvailableItemInBranch,
+    String? exportAvailableItemInBranchMessage,
+    Map<int, double>? availableItemsInBranchCost,
+    Map<int, double>? availableItemsExpirationQty,
   }) {
     return ItemInBranchState(
       status: status ?? this.status,
@@ -224,6 +264,27 @@ class ItemInBranchState {
       hasMoreitemInBranchReport:
           hasMoreitemInBranchReport ?? this.hasMoreitemInBranchReport,
       exportReportMessage: exportReportMessage ?? this.exportReportMessage,
+      availableItemInBranchFilters:
+          availableItemInBranchFilters ?? this.availableItemInBranchFilters,
+      availableItemInBranchItems:
+          availableItemInBranchItems ?? this.availableItemInBranchItems,
+      availableItemInBranchPage:
+          availableItemInBranchPage ?? this.availableItemInBranchPage,
+      availableItemInBranchTotalCount:
+          availableItemInBranchTotalCount ??
+          this.availableItemInBranchTotalCount,
+      availableItemInBranchTotalPages:
+          availableItemInBranchTotalPages ??
+          this.availableItemInBranchTotalPages,
+      hasMoreAvailableItemInBranch:
+          hasMoreAvailableItemInBranch ?? this.hasMoreAvailableItemInBranch,
+      exportAvailableItemInBranchMessage:
+          exportAvailableItemInBranchMessage ??
+          this.exportAvailableItemInBranchMessage,
+      availableItemsInBranchCost:
+          availableItemsInBranchCost ?? this.availableItemsInBranchCost,
+      availableItemsExpirationQty:
+          availableItemsExpirationQty ?? this.availableItemsExpirationQty,
     );
   }
 
@@ -265,5 +326,14 @@ class ItemInBranchState {
     itemInBranchReportTotalCost,
     hasMoreitemInBranchReport,
     exportReportMessage,
+    availableItemInBranchFilters,
+    availableItemInBranchItems,
+    availableItemInBranchPage,
+    availableItemInBranchTotalCount,
+    availableItemInBranchTotalPages,
+    hasMoreAvailableItemInBranch,
+    exportAvailableItemInBranchMessage,
+    availableItemsInBranchCost,
+    availableItemsExpirationQty,
   ];
 }

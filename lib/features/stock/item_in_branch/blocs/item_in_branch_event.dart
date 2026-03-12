@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/models/available_items_in_branch_filter.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 
 @immutable
@@ -276,12 +277,6 @@ class FilterSelectedItems extends ItemInBranchEvent {
 
 class ClearDataForFilter extends ItemInBranchEvent {}
 
-class LoadAvailableItemsInBranch extends ItemInBranchEvent {
-  final int itemNumber;
-
-  const LoadAvailableItemsInBranch(this.itemNumber);
-}
-
 class SendNotification extends ItemInBranchEvent {
   final ItemInBranchModel item;
 
@@ -318,3 +313,34 @@ class ExportItemInBranchReportToPDF extends ItemInBranchEvent {
   @override
   List<Object> get props => [];
 }
+
+class LoadAvailableItemsInBranch extends ItemInBranchEvent {
+  final int companyId;
+  final int page;
+  final int pageSize;
+  final String? sortBy;
+  final bool sortAscending;
+
+  const LoadAvailableItemsInBranch({
+    required this.companyId,
+    this.page = 1,
+    this.pageSize = 10,
+    this.sortBy,
+    this.sortAscending = true,
+  });
+
+  @override
+  List<Object> get props => [companyId, page, pageSize, sortBy!, sortAscending];
+}
+
+class LoadMoreAvailableItemsInBranch extends ItemInBranchEvent {}
+
+class FilterAvailableItemsInBranch extends ItemInBranchEvent {
+  final AvailableItemsInBranchFilter filters;
+  const FilterAvailableItemsInBranch(this.filters);
+
+  @override
+  List<Object> get props => [filters];
+}
+
+class ClearAvailableItemsInBranchFilters extends ItemInBranchEvent {}

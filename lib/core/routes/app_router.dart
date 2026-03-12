@@ -81,6 +81,7 @@ import 'package:savvy_stock/features/sales/sales_order/sales_item_entry/screens/
 import 'package:savvy_stock/features/sales/sales_order/sales_report.dart';
 import 'package:savvy_stock/features/sales/sales_return/screens/sales_return_dashboard.dart';
 import 'package:savvy_stock/features/sales/sales_return/screens/sales_return_screen.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/screens/available_item_in_branch_screen.dart';
 import 'package:savvy_stock/features/stock/item_locations/screens/item_in_location_availability_screen.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/models/item_uom_conversions_model.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/screens/item_uom_conversion_dashboard.dart';
@@ -914,7 +915,7 @@ class AppRouter {
         builder: (context, state) => PrivilegeRouteGuard(
           requiredPrivilege: AppRoutes.itemInBranchAvailability,
           parentPrivilege: AppRoutes.availabilityDashboard,
-          child: Placeholder(),
+          child: ItemInBranchAvailabilityScreen(authBloc: authBloc),
         ),
         redirect: _protectedRouteRedirect,
       ),

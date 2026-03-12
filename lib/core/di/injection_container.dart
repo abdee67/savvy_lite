@@ -370,10 +370,10 @@ void initDependencies() {
       authBloc: getIt(),
       repository: getIt(),
       systemConstantBloc: getIt(),
-      //  itemCostBloc: getIt(),
       itemTransactionsRepository: getIt(),
       lotMasterBloc: getIt(),
-      itemUomConversionsBloc: getIt(),
+      itemUomConversionsRepo: getIt(),
+      itemCostRepository: getIt(),
     ),
   );
 
