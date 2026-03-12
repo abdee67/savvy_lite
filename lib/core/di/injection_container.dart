@@ -394,7 +394,13 @@ void initDependencies() {
     ),
   );
   getIt.registerFactory<StockItemLocationBloc>(
-    () => StockItemLocationBloc(repository: getIt(), authBloc: getIt()),
+    () => StockItemLocationBloc(
+      repository: getIt(),
+      itemCostRepository: getIt(),
+      authBloc: getIt(),
+      uomConversionsRepository: getIt(),
+      itemInBranchRepository: getIt(),
+    ),
   );
   getIt.registerFactory<NextNumberBloc>(
     () => NextNumberBloc(repository: getIt(), authBloc: getIt()),

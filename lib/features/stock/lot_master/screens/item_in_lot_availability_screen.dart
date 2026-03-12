@@ -15,7 +15,7 @@ import 'package:savvy_stock/features/stock/lot_master/blocs/lot_master_state.dar
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/model/lot_coloring_model.dart';
-import 'package:savvy_stock/features/stock/lot_master/widgets/available_lot_filter.dart';
+import 'package:savvy_stock/features/stock/lot_master/widgets/item_in_lot_availability_filter.dart';
 
 class LotAvailabilityScreen extends StatefulWidget {
   final AuthBloc authBloc;

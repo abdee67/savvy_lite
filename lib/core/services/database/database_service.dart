@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:savvy_stock/core/services/database/seeders/privilege_seeder.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
 import 'dart:developer' as developer;
