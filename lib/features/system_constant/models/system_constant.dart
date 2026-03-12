@@ -187,10 +187,18 @@ class SystemConstant {
       interfaceEmployee: map['interface_employee'],
       decimalPlaces: map['decimal_places'],
       dateLastUpdated: map['date_last_updated'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['date_last_updated'])
+          ? DateTime.fromMillisecondsSinceEpoch(
+              map['date_last_updated'] is String
+                  ? int.parse(map['date_last_updated'])
+                  : map['date_last_updated'],
+            )
           : null,
       timeLastUpdated: map['time_last_updated'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['time_last_updated'])
+          ? DateTime.fromMillisecondsSinceEpoch(
+              map['time_last_updated'] is String
+                  ? int.parse(map['time_last_updated'])
+                  : map['time_last_updated'],
+            )
           : null,
       updatedBy: map['ubpdated_by'],
       generateBarcodeForItem: map['generate_barcode_for_item'],
@@ -213,7 +221,11 @@ class SystemConstant {
       totWithHolding: map['tot_withholding'],
       isSynced: map['is_synced'] == 1,
       lastSyncTime: map['last_sync_time'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['last_sync_time'])
+          ? DateTime.fromMillisecondsSinceEpoch(
+              map['last_sync_time'] is String
+                  ? int.parse(map['last_sync_time'])
+                  : map['last_sync_time'],
+            )
           : null,
       lotTypeRef: map['lotType_description'] != null
           ? UdcDetails(
