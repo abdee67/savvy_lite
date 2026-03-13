@@ -97,11 +97,25 @@ class _ItemInBranchAvailabilityScreenState
     );
   }
 
-  void _refreshList() {
+  void _refreshList(bool isRefresh) {
     final companyId = widget.authBloc.state.companyId;
     if (companyId != null) {
       context.read<StockItemInBranchBloc>().add(
         LoadAvailableItemsInBranch(companyId: companyId, page: 1, pageSize: 20),
+      );
+    }
+    if (isRefresh) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('List Refreshed'),
+          backgroundColor: Color(0xFF1C4292),
+          behavior: SnackBarBehavior.floating,
+          dismissDirection: DismissDirection.down,
+          clipBehavior: Clip.antiAliasWithSaveLayer,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(50)),
+          ),
+        ),
       );
     }
   }
@@ -126,7 +140,7 @@ class _ItemInBranchAvailabilityScreenState
           ),
           IconButton(
             icon: const Icon(Iconsax.refresh),
-            onPressed: _refreshList,
+            onPressed: () => _refreshList(true),
             tooltip: 'Refresh',
           ),
         ],
@@ -163,23 +177,28 @@ class _ItemInBranchAvailabilityScreenState
                       _buildSummaryCard(state, currencySymbol, decimalPlaces),
                       const SizedBox(height: 16),
                       Expanded(
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            if (constraints.maxWidth > 600) {
-                              return _buildDesktopTable(
-                                state,
-                                currencySymbol,
-                                decimalPlaces,
-                                constraints,
-                              );
-                            } else {
-                              return _buildMobileList(
-                                state,
-                                currencySymbol,
-                                decimalPlaces,
-                              );
-                            }
-                          },
+                        child: RefreshIndicator(
+                          onRefresh: () async => _refreshList(true),
+                          backgroundColor: Color(0xFF1C4292),
+                          color: Colors.amber,
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              if (constraints.maxWidth > 600) {
+                                return _buildDesktopTable(
+                                  state,
+                                  currencySymbol,
+                                  decimalPlaces,
+                                  constraints,
+                                );
+                              } else {
+                                return _buildMobileList(
+                                  state,
+                                  currencySymbol,
+                                  decimalPlaces,
+                                );
+                              }
+                            },
+                          ),
                         ),
                       ),
                       if (state.status ==
@@ -204,7 +223,7 @@ class _ItemInBranchAvailabilityScreenState
     String currencySymbol,
     int decimalPlaces,
   ) {
-    final totalAmount = state.availableItems.fold<double>(
+    final totalAmount = state.availableItemInBranchItems.fold<double>(
       0,
       (sum, item) => sum + (state.availableItemsInBranchCost[item.id] ?? 0.0),
     );
@@ -281,7 +300,7 @@ class _ItemInBranchAvailabilityScreenState
     int decimalPlaces,
     BoxConstraints constraints,
   ) {
-    if (state.availableItems.isEmpty) {
+    if (state.availableItemInBranchItems.isEmpty) {
       return _buildEmptyState();
     }
 
@@ -308,7 +327,7 @@ class _ItemInBranchAvailabilityScreenState
                 DataColumn(label: Text('Unit Cost')),
                 DataColumn(label: Text('Total Cost')),
               ],
-              rows: state.availableItems.map((item) {
+              rows: state.availableItemInBranchItems.map((item) {
                 return DataRow(
                   cells: [
                     DataCell(Text(item.branchRef?.description ?? 'N/A')),
@@ -326,9 +345,7 @@ class _ItemInBranchAvailabilityScreenState
                         '${state.availableItemsExpirationQty[item.id] ?? "0"}',
                       ),
                     ),
-                    DataCell(
-                      Text('${item.quantityAvailable?.toString() ?? '0'}'),
-                    ),
+                    DataCell(Text(item.quantityAvailable?.toString() ?? '0')),
                     DataCell(
                       Text(
                         item.itemRef?.unitOfMeasureDescription?.description1 ??
@@ -370,16 +387,16 @@ class _ItemInBranchAvailabilityScreenState
     String currencySymbol,
     int decimalPlaces,
   ) {
-    if (state.availableItems.isEmpty) {
+    if (state.availableItemInBranchItems.isEmpty) {
       return _buildEmptyState();
     }
 
     return ListView.separated(
       controller: _scrollController,
-      itemCount: state.availableItems.length,
+      itemCount: state.availableItemInBranchItems.length,
       separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final item = state.availableItems[index];
+        final item = state.availableItemInBranchItems[index];
 
         return Card(
           margin: EdgeInsets.zero,
@@ -416,7 +433,7 @@ class _ItemInBranchAvailabilityScreenState
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.grey.withOpacity(0.2),
+                          color: Color(0xFF1C4292),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -427,9 +444,7 @@ class _ItemInBranchAvailabilityScreenState
                             state.availableItemsInBranchCost[item.id] ?? 0.0,
                           ),
                           style: TextStyle(
-                            color: Colors.grey.computeLuminance() > 0.5
-                                ? Colors.black87
-                                : Colors.grey,
+                            color: Colors.amberAccent,
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
                           ),
@@ -473,24 +488,17 @@ class _ItemInBranchAvailabilityScreenState
                     children: [
                       _buildMobileStat(
                         'Avl. Qty',
-                        '${item.quantityAvailable ?? "0"} ${item.itemRef?.unitOfMeasureDescription?.description1 ?? ""}',
+                        '${(item.quantityAvailable ?? 0) - (state.availableItemsExpirationQty[item.id] ?? 0)} ${item.itemRef?.unitOfMeasureDescription?.description1 ?? ""}',
                         Iconsax.reserve,
                         Colors.blue,
                       ),
                       _buildMobileStat(
-                        'UoM',
-                        item.itemRef?.unitOfMeasureDescription?.description1 ??
-                            'N/A',
-                        Iconsax.message_square,
-                        Colors.orange,
+                        'Exp. Qty',
+                        '${state.availableItemsExpirationQty[item.id] ?? "0"} ${item.itemRef?.unitOfMeasureDescription?.description1 ?? ""}',
+                        Iconsax.reserve,
+                        Colors.blue,
                       ),
                     ],
-                  ),
-                  _buildMobileStat(
-                    'Exp. Qty',
-                    '${state.availableItemsExpirationQty[item.id] ?? "0"} ${item.itemRef?.unitOfMeasureDescription?.description1 ?? ""}',
-                    Iconsax.reserve,
-                    Colors.blue,
                   ),
                 ],
               ),

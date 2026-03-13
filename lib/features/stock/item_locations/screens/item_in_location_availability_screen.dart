@@ -102,11 +102,25 @@ class _ItemInLocationAvailabilityScreenState
     );
   }
 
-  void _refreshList() {
+  void _refreshList(bool isRefresh) {
     final companyId = widget.authBloc.state.companyId;
     if (companyId != null) {
       context.read<StockItemLocationBloc>().add(
         LoadLazyItemLocations(companyId: companyId, page: 1, pageSize: 20),
+      );
+    }
+    if (isRefresh) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('List Refreshed'),
+          backgroundColor: Color(0xFF1C4292),
+          behavior: SnackBarBehavior.floating,
+          dismissDirection: DismissDirection.down,
+          clipBehavior: Clip.antiAliasWithSaveLayer,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(50)),
+          ),
+        ),
       );
     }
   }
@@ -155,7 +169,7 @@ class _ItemInLocationAvailabilityScreenState
           ),
           IconButton(
             icon: const Icon(Iconsax.refresh),
-            onPressed: _refreshList,
+            onPressed: () => _refreshList(true),
             tooltip: 'Refresh',
           ),
         ],
@@ -192,23 +206,29 @@ class _ItemInLocationAvailabilityScreenState
                       _buildSummaryCard(state, currencySymbol, decimalPlaces),
                       const SizedBox(height: 16),
                       Expanded(
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            if (constraints.maxWidth > 600) {
-                              return _buildDesktopTable(
-                                state,
-                                currencySymbol,
-                                decimalPlaces,
-                                constraints,
-                              );
-                            } else {
-                              return _buildMobileList(
-                                state,
-                                currencySymbol,
-                                decimalPlaces,
-                              );
-                            }
-                          },
+                        child: RefreshIndicator(
+                          onRefresh: () async => _refreshList(true),
+                          backgroundColor: Color(0xFF1C4292),
+                          color: Colors.amber,
+                          displacement: 10,
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              if (constraints.maxWidth > 600) {
+                                return _buildDesktopTable(
+                                  state,
+                                  currencySymbol,
+                                  decimalPlaces,
+                                  constraints,
+                                );
+                              } else {
+                                return _buildMobileList(
+                                  state,
+                                  currencySymbol,
+                                  decimalPlaces,
+                                );
+                              }
+                            },
+                          ),
                         ),
                       ),
                       if (state.status ==
@@ -421,7 +441,7 @@ class _ItemInLocationAvailabilityScreenState
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.grey.withOpacity(0.2),
+                          color: Color(0xFF1C4292),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -430,9 +450,7 @@ class _ItemInLocationAvailabilityScreenState
                             decimalDigits: decimalPlaces,
                           ).format(state.locationCosts[item.id] ?? 0.0),
                           style: TextStyle(
-                            color: Colors.grey.computeLuminance() > 0.5
-                                ? Colors.black87
-                                : Colors.grey,
+                            color: Colors.amberAccent,
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
                           ),

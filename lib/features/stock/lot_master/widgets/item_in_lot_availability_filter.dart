@@ -483,7 +483,7 @@ class _AvailableLotFilterDialogState extends State<AvailableLotFilterDialog> {
         border: Border(top: BorderSide(color: Colors.grey[300]!)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           OutlinedButton.icon(
             onPressed: () {
@@ -491,7 +491,7 @@ class _AvailableLotFilterDialogState extends State<AvailableLotFilterDialog> {
               Navigator.of(context).pop();
             },
             icon: const Icon(Icons.refresh),
-            label: const Text('Clear Filters'),
+            label: const Text('Clear'),
             style: OutlinedButton.styleFrom(foregroundColor: Colors.grey[800]),
           ),
           ElevatedButton.icon(

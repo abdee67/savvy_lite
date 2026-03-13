@@ -1489,7 +1489,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
       if (newCosts.containsKey(il.id)) continue;
 
       // Get item cost
-      if (!_itemCostCache.containsKey(il.itemNumber!)) {
+      if (!_itemCostCache.containsKey(il.itemNumber)) {
         final cost = await itemCostRepository.findByItem(
           il.itemNumber,
           companyId,
@@ -1527,7 +1527,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     int companyId,
     Map<int, double> existingQtys,
   ) async {
-    final systemConstant = systemConstantBloc.state.selected1;
+    final systemConstant = systemConstantBloc.state.selected;
     final applyLotMgm = systemConstant?.applyLotMgmBoolean ?? false;
 
     if (!applyLotMgm) return existingQtys;

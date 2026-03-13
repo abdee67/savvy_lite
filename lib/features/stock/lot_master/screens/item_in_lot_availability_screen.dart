@@ -97,11 +97,25 @@ class _LotAvailabilityScreenState extends State<LotAvailabilityScreen> {
     );
   }
 
-  void _refreshList() {
+  void _refreshList(bool isRefresh) {
     final companyId = widget.authBloc.state.companyId;
     if (companyId != null) {
       context.read<LotMasterBloc>().add(
         LoadLotAvailability(companyId: companyId, page: 1, pageSize: 20),
+      );
+    }
+    if (isRefresh) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('List Refreshed'),
+          backgroundColor: Color(0xFF1C4292),
+          behavior: SnackBarBehavior.floating,
+          dismissDirection: DismissDirection.down,
+          clipBehavior: Clip.antiAliasWithSaveLayer,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(50)),
+          ),
+        ),
       );
     }
   }
@@ -150,11 +164,12 @@ class _LotAvailabilityScreenState extends State<LotAvailabilityScreen> {
           ),
           IconButton(
             icon: const Icon(Iconsax.refresh),
-            onPressed: _refreshList,
+            onPressed: () => _refreshList(true),
             tooltip: 'Refresh',
           ),
         ],
-      ),
+      ), //pull down to refresh
+      //pull down to refresh
       body: SafeArea(
         child: BlocConsumer<LotMasterBloc, LotMasterState>(
           listener: (context, state) {
@@ -173,7 +188,7 @@ class _LotAvailabilityScreenState extends State<LotAvailabilityScreen> {
                 final systemConstant = systemState.systemConstants.isNotEmpty
                     ? systemState.systemConstants.first
                     : null;
-                final currencySymbol = systemConstant?.currencyCode ?? 'ETB';
+                final currencySymbol = systemConstant?.currencyCode ?? 'ETB ';
                 final decimalPlaces = systemConstant?.decimalPlaces ?? 2;
 
                 if (state.status == LotMasterStatus.loadingLotAvailability &&
@@ -188,23 +203,28 @@ class _LotAvailabilityScreenState extends State<LotAvailabilityScreen> {
                       _buildSummaryCard(state, currencySymbol, decimalPlaces),
                       const SizedBox(height: 16),
                       Expanded(
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            if (constraints.maxWidth > 600) {
-                              return _buildDesktopTable(
-                                state,
-                                currencySymbol,
-                                decimalPlaces,
-                                constraints,
-                              );
-                            } else {
-                              return _buildMobileList(
-                                state,
-                                currencySymbol,
-                                decimalPlaces,
-                              );
-                            }
-                          },
+                        child: RefreshIndicator(
+                          onRefresh: () async => _refreshList(true),
+                          backgroundColor: Color(0xFF1C4292),
+                          color: Colors.amber,
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              if (constraints.maxWidth > 600) {
+                                return _buildDesktopTable(
+                                  state,
+                                  currencySymbol,
+                                  decimalPlaces,
+                                  constraints,
+                                );
+                              } else {
+                                return _buildMobileList(
+                                  state,
+                                  currencySymbol,
+                                  decimalPlaces,
+                                );
+                              }
+                            },
+                          ),
                         ),
                       ),
                       if (state.status ==
@@ -258,7 +278,10 @@ class _LotAvailabilityScreenState extends State<LotAvailabilityScreen> {
             ),
             _buildSummaryItem(
               'Value',
-              '$currencySymbol ${totalAmount.toStringAsFixed(decimalPlaces)}',
+              NumberFormat.currency(
+                symbol: currencySymbol,
+                decimalDigits: decimalPlaces,
+              ).format(totalAmount),
               Iconsax.money_send,
               Colors.green,
             ),
@@ -322,11 +345,13 @@ class _LotAvailabilityScreenState extends State<LotAvailabilityScreen> {
               headingRowColor: WidgetStateProperty.all(Colors.grey[50]),
               columnSpacing: 20,
               columns: const [
-                DataColumn(label: Text('Lot No')),
+                DataColumn(label: Text('Lot')),
                 DataColumn(label: Text('Branch')),
                 DataColumn(label: Text('Item')),
-                DataColumn(label: Text('Location')),
-                DataColumn(label: Text('Avl. Qty')),
+                DataColumn(label: Text('Loc')),
+                DataColumn(label: Text('Qty')),
+                DataColumn(label: Text('Recei')),
+                DataColumn(label: Text('Effe')),
                 DataColumn(label: Text('Expiry')),
                 DataColumn(label: Text('Batch')),
                 DataColumn(label: Text('Status')),
@@ -347,11 +372,26 @@ class _LotAvailabilityScreenState extends State<LotAvailabilityScreen> {
                     ),
                     DataCell(
                       Text(
+                        item.dateReceived != null
+                            ? _dateFormat.format(item.dateReceived!)
+                            : 'N/A',
+                      ),
+                    ),
+                    DataCell(
+                      Text(
+                        item.dateEffective != null
+                            ? _dateFormat.format(item.dateEffective!)
+                            : 'N/A',
+                      ),
+                    ),
+                    DataCell(
+                      Text(
                         item.dateExpiration != null
                             ? _dateFormat.format(item.dateExpiration!)
                             : 'N/A',
                       ),
                     ),
+
                     DataCell(Text(item.batchNumberSupplier ?? 'N/A')),
                     DataCell(Text(item.statusDescription ?? 'N/A')),
                   ],
@@ -450,24 +490,39 @@ class _LotAvailabilityScreenState extends State<LotAvailabilityScreen> {
                     'Location',
                     _getLocationName(item.location!) ?? 'N/A',
                   ),
+                  const SizedBox(height: 8),
+                  _buildMobileInfoRow(
+                    Iconsax.reserve,
+                    'Avl. Qty',
+                    '${item.quantityAvailable ?? "0"} ${item.itemRef?.unitOfMeasureDescription?.description1 ?? ""}',
+                  ),
+
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildMobileStat(
-                        'Avl. Qty',
-                        '${item.quantityAvailable ?? "0"} ${item.itemRef?.unitOfMeasureDescription?.description1 ?? ""}',
-                        Iconsax.reserve,
-                        Colors.blue,
-                      ),
-                      _buildMobileStat(
-                        'Expiry',
-                        item.dateExpiration != null
-                            ? _dateFormat.format(item.dateExpiration!)
-                            : 'N/A',
-                        Iconsax.calendar_remove,
-                        Colors.orange,
-                      ),
+                      if (item.dateEffective != null)
+                        _buildMobileStat(
+                          'Effective',
+                          _dateFormat.format(item.dateEffective!),
+                          Iconsax.calendar_1,
+                          Colors.green,
+                        ),
+
+                      if (item.dateReceived != null)
+                        _buildMobileStat(
+                          'Received',
+                          _dateFormat.format(item.dateReceived!),
+                          Iconsax.calendar_1,
+                          Colors.amber,
+                        ),
+                      if (item.dateExpiration != null)
+                        _buildMobileStat(
+                          'Expiry',
+                          _dateFormat.format(item.dateExpiration!),
+                          Iconsax.calendar_remove,
+                          Colors.red,
+                        ),
                     ],
                   ),
                 ],

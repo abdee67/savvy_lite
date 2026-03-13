@@ -43,19 +43,20 @@ class _ItemInBranchAvailabilityFilterDialogState
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width * 0.9,
+        maxHeight: MediaQuery.of(context).size.height * 0.5,
+      ),
       child: Column(
         children: [
           _buildHeader(),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [_buildGeneralFilters()],
-              ),
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [_buildGeneralFilters(), _buildActions()],
             ),
           ),
-          _buildActions(),
         ],
       ),
     );
@@ -181,39 +182,31 @@ class _ItemInBranchAvailabilityFilterDialogState
   }
 
   Widget _buildActions() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
-        border: Border(top: BorderSide(color: Colors.grey[300]!)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          OutlinedButton.icon(
-            onPressed: () {
-              widget.onClear();
-              Navigator.of(context).pop();
-            },
-            icon: const Icon(Icons.refresh),
-            label: const Text('Clear Filters'),
-            style: OutlinedButton.styleFrom(foregroundColor: Colors.grey[800]),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        OutlinedButton.icon(
+          onPressed: () {
+            widget.onClear();
+            Navigator.of(context).pop();
+          },
+          icon: const Icon(Icons.refresh),
+          label: const Text('Clear'),
+          style: OutlinedButton.styleFrom(foregroundColor: Colors.grey[800]),
+        ),
+        ElevatedButton.icon(
+          onPressed: () {
+            widget.onApply(_filters);
+            Navigator.of(context).pop();
+          },
+          icon: const Icon(Icons.search),
+          label: const Text('Search'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green,
+            foregroundColor: Colors.white,
           ),
-          ElevatedButton.icon(
-            onPressed: () {
-              widget.onApply(_filters);
-              Navigator.of(context).pop();
-            },
-            icon: const Icon(Icons.search),
-            label: const Text('Search'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
