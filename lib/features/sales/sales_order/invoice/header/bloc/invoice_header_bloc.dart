@@ -457,9 +457,9 @@ class InvoiceHistoryHeaderBloc
     try {
       emit(state.copyWith(status: InvoiceHistoryHeaderStatus.saving));
 
-      for (final item in state.editItems) {
+      for (var item in state.editItems) {
         if (item.id == null) {
-          item.company = authBloc.state.companyId;
+          item = item.copyWith(company: authBloc.state.companyId);
           await repository.createInvoiceHistoryHeader(item);
         } else {
           await repository.updateInvoiceHistoryHeader(item);
@@ -492,9 +492,9 @@ class InvoiceHistoryHeaderBloc
     try {
       emit(state.copyWith(status: InvoiceHistoryHeaderStatus.saving));
 
-      for (final item in state.editItems) {
+      for (var item in state.editItems) {
         if (item.id == null) {
-          item.company = authBloc.state.companyId;
+          item = item.copyWith(company: authBloc.state.companyId);
           await repository.createInvoiceHistoryHeader(item);
         } else {
           await repository.updateInvoiceHistoryHeader(item);

@@ -35,7 +35,7 @@ class UdcDetailsBloc extends Bloc<UdcDetailsEvent, UdcDetailsState> {
         '''
       SELECT d.* FROM udc_details d
       INNER JOIN udc_header h ON d.record_header = h.id
-      WHERE h.header_code = ?
+      WHERE h.udc_code = ?
     ''',
         [event.groupCode],
       );

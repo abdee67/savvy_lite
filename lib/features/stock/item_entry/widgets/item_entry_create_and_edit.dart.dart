@@ -2,6 +2,7 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/core/widgets/custom_searchable_dropdown.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
@@ -455,9 +456,13 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
             CustomTextField(
               labelText: 'Item ID *',
               controller: _itemsIdController,
+              inputFormatters: [LengthLimitingTextInputFormatter(200)],
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Item ID is required';
+                }
+                if (value.length > 200) {
+                  return 'Item ID must be 200 characters or less';
                 }
                 return null;
               },
@@ -471,9 +476,13 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
             CustomTextField(
               labelText: 'Description *',
               controller: _itemDescriptionController,
+              inputFormatters: [LengthLimitingTextInputFormatter(200)],
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Description is required';
+                }
+                if (value.length > 200) {
+                  return 'Description must be 200 characters or less';
                 }
                 return null;
               },
@@ -596,13 +605,15 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
             const SizedBox(height: 16),
 
             // Taxable
-            CustomDropdown(
+            CustomDropdown<String>(
               labelText: 'Taxable',
               prefixIcon: const Icon(Icons.receipt),
               items: _taxable
                   .map(
-                    (taxable) =>
-                        DropdownMenuItem(value: taxable, child: Text(taxable)),
+                    (taxable) => DropdownMenuItem<String>(
+                      value: taxable,
+                      child: Text(taxable),
+                    ),
                   )
                   .toList(),
               value: _selectedTaxable,
@@ -615,14 +626,14 @@ class _ItemEntryFormPageState extends State<ItemEntryFormPage> {
             const SizedBox(height: 16),
 
             // Margin Type
-            CustomDropdown(
+            CustomDropdown<String>(
               labelText: 'Margin Type',
               prefixIcon: const Icon(Icons.trending_up),
               items: _marginTypes
                   .map(
-                    (marginType) => DropdownMenuItem(
+                    (marginType) => DropdownMenuItem<String>(
                       value: marginType,
-                      child: Text(marginType == 'F' ? 'Flat' : 'Percentage'),
+                      child: Text(marginType),
                     ),
                   )
                   .toList(),

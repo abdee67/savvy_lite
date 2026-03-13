@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer' as developer;
+import 'dart:io';
 import 'package:device_preview/device_preview.dart';
 
 import 'package:flutter/foundation.dart';
@@ -7,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/FSNMR/blocs/FSNMR_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/password_reset/password_reset_bloc.dart';
 
@@ -42,7 +44,6 @@ import 'package:savvy_stock/core/di/injection_container.dart';
 
 import 'package:savvy_stock/core/routes/app_router.dart';
 import 'package:savvy_stock/core/services/conectitvity_service.dart';
-import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/core/services/supabase/supabase_service.dart';
 import 'package:savvy_stock/features/admin/employees/blocs/employee_bloc.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_bloc.dart';
@@ -77,16 +78,27 @@ import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_h
 
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize sqflite FFI for desktop platforms (Windows/Linux)
+  if (Platform.isWindows || Platform.isLinux) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
+
   _initializeAndRunApp();
   //clearAllSharedPreferences();
 
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+  // Only lock orientation on mobile platforms
+  if (!Platform.isWindows && !Platform.isLinux && !Platform.isMacOS) {
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+  }
 }
 
 // Add error handling wrapper
@@ -106,25 +118,26 @@ Future<void> _initializeAndRunApp() async {
       //await LocalDatabaseService().resetDatabase();
       //await getIt<LicenseService>().clearLicense();
       //  // await LocalDatabaseService().debugTable('branch_table');
-      // await LocalDatabaseService().debugTable('items_in_branch');
+      //await LocalDatabaseService().debugTable('items_in_branch');
       //await LocalDatabaseService().debugTable('item_cost');
-      await LocalDatabaseService().debugTable('item_location');
-      //await LocalDatabaseService().debugTable('lot_master');
+      //await LocalDatabaseService().debugTable('item_location');
+      await LocalDatabaseService().debugTable('lot_master');
       //await LocalDatabaseService().debugTable('item_master');
       //await LocalDatabaseService().debugTable('items_table');
-      //await LocalDatabaseService().debugTable('sales_order_header');
+      // await LocalDatabaseService().debugTable('sales_order_header');
       //await LocalDatabaseService().debugTable('credit_receipt_table');
-      // await LocalDatabaseService().debugTable('sales_order_details');
-      // await LocalDatabaseService().debugTable('sales_return_header');
+      //await LocalDatabaseService().debugTable('sales_order_details');
+      //await LocalDatabaseService().debugTable('sales_return_header');
       //await LocalDatabaseService().debugTable('sales_return_details');
-      // await LocalDatabaseService().debugTable('invoice_history_header');
+      //await LocalDatabaseService().debugTable('invoice_history_header');
+      //await LocalDatabaseService().debugTable('fs_table');
       // await LocalDatabaseService().debugTable('invoice_history_detail');
       // await LocalDatabaseService().debugTable('item_transactions');
       // await LocalDatabaseService().debugTable('item_uom_conversions');
       // await LocalDatabaseService().debugTable('quote_order_header');
-      // await LocalDatabaseService().debugTable('quote_order_detail');
+      //await LocalDatabaseService().debugTable('quote_order_details');
       // await LocalDatabaseService().debugTable('supplier_table');
-      //  await LocalDatabaseService().debugTable('purchase_order_header');
+      //await LocalDatabaseService().debugTable('purchase_order_header');
       // await LocalDatabaseService().debugTable('purchase_order_detail');
       //await LocalDatabaseService().debugTable('purchase_order_receiver');
       //await LocalDatabaseService().debugTable('credit_payment_table');
@@ -133,7 +146,8 @@ Future<void> _initializeAndRunApp() async {
       //await LocalDatabaseService().debugTable('user_table');
       //await LocalDatabaseService().debugTable('user_role');
       //await LocalDatabaseService().debugTable('role_privilege');
-      await LocalDatabaseService().debugTable('other_expense_table');
+      //await LocalDatabaseService().debugTable('other_expense_table');
+      // await LocalDatabaseService().debugTable('next_number');
     }
   } catch (error, stackTrace) {
     if (kDebugMode) {

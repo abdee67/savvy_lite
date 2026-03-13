@@ -40,6 +40,12 @@ class SalesOrderHeader {
   final double? unitCost;
   final double? amountCost;
   final int? tempId;
+  final String? salesRepresent;
+  final String? commentsSo;
+  final String? commentIfVoid;
+  final DateTime? returnDate;
+  final String? invoiceNumber;
+  final int? branchValue;
 
   // 📊 Report specific fields (populated from JOINs in repository)
   final String? customerBillToName;
@@ -104,6 +110,12 @@ class SalesOrderHeader {
     this.paymentStatusDescription,
     this.itemWiseGrossProfit,
     this.agedDays,
+    this.salesRepresent,
+    this.commentsSo,
+    this.commentIfVoid,
+    this.returnDate,
+    this.invoiceNumber,
+    this.branchValue,
   });
 
   factory SalesOrderHeader.fromMap(Map<String, dynamic> map) {
@@ -153,6 +165,12 @@ class SalesOrderHeader {
       paymentStatusDescription: map['payment_status_description']?.toString(),
       itemWiseGrossProfit: (map['item_wise_gross_profit'] as num?)?.toDouble(),
       agedDays: (map['aged_days'] as num?)?.toDouble(),
+      salesRepresent: map['sales_represent']?.toString(),
+      commentsSo: map['comments_so']?.toString(),
+      commentIfVoid: map['comment_ifVoid']?.toString(),
+      returnDate: parseDate(map['return_date']),
+      invoiceNumber: map['invoice_number']?.toString(),
+      branchValue: (map['branch_value'] as num?)?.toInt(),
 
       // 👇 Handle joined fields (if joined SELECT is used)
       customerBillToRef: map['customer_bill_to_name'] != null
@@ -177,7 +195,7 @@ class SalesOrderHeader {
               nameFirst: map['name_first'] ?? map['employee_name'],
               nameMiddle: map['employee_name_middle'] ?? '',
               nameLast: map['employee_name_last'] ?? '',
-              phone: map['employee_phone'] ?? '',
+              phoneHome: map['employee_phone'] ?? '',
               email: map['employee_email'] ?? '',
             )
           : null,
@@ -242,6 +260,12 @@ class SalesOrderHeader {
       'order_type': orderType,
       'unit_cost': unitCost,
       'amount_cost': amountCost,
+      'sales_represent': salesRepresent,
+      'comments_so': commentsSo,
+      'comment_ifVoid': commentIfVoid,
+      'return_date': returnDate?.toIso8601String(),
+      'invoice_number': invoiceNumber,
+      'branch_value': branchValue,
     };
   }
 
@@ -291,6 +315,12 @@ class SalesOrderHeader {
     int? tempId,
     double? itemWiseGrossProfit,
     double? agedDays,
+    String? salesRepresent,
+    String? commentsSo,
+    String? commentIfVoid,
+    DateTime? returnDate,
+    String? invoiceNumber,
+    int? branchValue,
   }) {
     return SalesOrderHeader(
       id: id ?? this.id,
@@ -338,6 +368,12 @@ class SalesOrderHeader {
       tempId: tempId ?? this.tempId,
       itemWiseGrossProfit: itemWiseGrossProfit ?? this.itemWiseGrossProfit,
       agedDays: agedDays ?? this.agedDays,
+      salesRepresent: salesRepresent ?? this.salesRepresent,
+      commentsSo: commentsSo ?? this.commentsSo,
+      commentIfVoid: commentIfVoid ?? this.commentIfVoid,
+      returnDate: returnDate ?? this.returnDate,
+      invoiceNumber: invoiceNumber ?? this.invoiceNumber,
+      branchValue: branchValue ?? this.branchValue,
     );
   }
 
@@ -396,5 +432,11 @@ class SalesOrderHeader {
     paymentStatusRef,
     orderTypeRef,
     tempId,
+    salesRepresent,
+    commentsSo,
+    commentIfVoid,
+    returnDate,
+    invoiceNumber,
+    branchValue,
   ];
 }

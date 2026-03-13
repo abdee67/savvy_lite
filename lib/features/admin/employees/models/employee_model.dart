@@ -5,7 +5,7 @@ class Employee {
   final String nameLast;
   final String nameMiddle;
   final String email;
-  final String phone;
+  final String phoneHome;
   final String? title;
   final String? birthDate;
   final String? hireDate;
@@ -26,7 +26,7 @@ class Employee {
     required this.nameLast,
     required this.nameMiddle,
     required this.email,
-    required this.phone,
+    required this.phoneHome,
     this.title,
     this.birthDate,
     this.hireDate,
@@ -49,7 +49,7 @@ class Employee {
     String? nameLast,
     String? nameMiddle,
     String? email,
-    String? phone,
+    String? phoneHome,
     String? title,
     String? birthDate,
     String? hireDate,
@@ -68,7 +68,7 @@ class Employee {
       nameLast: nameLast ?? this.nameLast,
       nameMiddle: nameMiddle ?? this.nameMiddle,
       email: email ?? this.email,
-      phone: phone ?? this.phone,
+      phoneHome: phoneHome ?? this.phoneHome,
       title: title ?? this.title,
       birthDate: birthDate ?? this.birthDate,
       hireDate: hireDate ?? this.hireDate,
@@ -89,7 +89,7 @@ class Employee {
       nameLast: '',
       nameMiddle: '',
       email: '',
-      phone: '',
+      phoneHome: '',
     );
   }
 
@@ -104,7 +104,7 @@ class Employee {
     nameLast,
     nameMiddle,
     email,
-    phone,
+    phoneHome,
     title,
     birthDate,
     hireDate,
@@ -124,7 +124,7 @@ class Employee {
     nameLast: map['name_last']?.toString() ?? '',
     nameMiddle: map['name_middle']?.toString() ?? '',
     email: map['email']?.toString() ?? '',
-    phone: map['phone']?.toString() ?? '',
+    phoneHome: map['phone_home']?.toString() ?? '',
     title: map['title']?.toString(),
     birthDate: map['birth_date']?.toString(),
     hireDate: map['hire_date']?.toString(),
@@ -144,7 +144,7 @@ class Employee {
     'name_last': nameLast,
     'name_middle': nameMiddle,
     'email': email,
-    'phone': phone,
+    'phone_home': phoneHome,
     'title': title,
     'birth_date': birthDate,
     'hire_date': hireDate,
@@ -166,8 +166,8 @@ class Employee {
         return copyWith(nameMiddle: value as String);
       case 'employeeId':
         return copyWith(employeeId: value as String);
-      case 'phone':
-        return copyWith(phone: value as String);
+      case 'phoneHome':
+        return copyWith(phoneHome: value as String);
       case 'email':
         return copyWith(email: value as String);
       case 'title':

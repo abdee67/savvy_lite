@@ -237,8 +237,11 @@ class _InvoiceReviewContent extends StatelessWidget {
                     InvoiceFirstPart(
                       customer: customer,
                       date: header.orderDate ?? DateTime.now(),
-                      invoiceNumber: state.invoiceFsNumber ?? 'Pending',
+                      invoiceNumber: header.invoiceNumber ?? '',
                       salesOrderNumber: header.fsNumber ?? 'N/A',
+                      salesRepresent:
+                          state.salesRepresent ?? header.salesRepresent,
+                      commentsSo: state.commentsSo ?? header.commentsSo,
                     ),
                     const SizedBox(height: 16),
 
@@ -288,17 +291,17 @@ class _InvoiceReviewContent extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Sales Order: ${state.currentHeader!.fsNumber ?? 'N/A'}',
+                  'Sales Invoice: ${state.currentHeader!.invoiceNumber ?? 'N/A'}',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
                 ),
-                if (state.invoiceFsNumber != null)
+                /*  if (state.currentHeader!.fsNumber != null)
                   Text(
-                    'Invoice: ${state.invoiceFsNumber}',
+                    'Sales Order: ${state.currentHeader!.fsNumber}',
                     style: const TextStyle(fontSize: 12, color: Colors.green),
-                  ),
+                  ),*/
               ],
             ),
           ),

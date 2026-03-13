@@ -485,6 +485,7 @@ class _LotExpirationColorsFormPageState
           CustomTextField(
             labelText: 'Description',
             value: range.description ?? '',
+            maxLength: 50,
             onChanged: (v) => range.description = v,
           ),
           const SizedBox(height: 8),

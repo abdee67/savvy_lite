@@ -97,6 +97,7 @@ class SalesOrderCoordinatorBloc
     on<UpdateTaxAndFees>(_onUpdateTaxAndFees);
     on<ProcessPayment>(_onProcessPayment);
     on<UpdatePaymentDetails>(_onUpdatePaymentDetails);
+    on<UpdateExtraHeaderDetails>(_onUpdateExtraHeaderDetails);
     on<LoadFeeSystemConstants>(_onLoadFeeSystemConstants);
 
     // Synchronization
@@ -146,7 +147,16 @@ class SalesOrderCoordinatorBloc
         withholdAmount: state.lastWithholdAmount,
         discountAmount: state.lastDiscountAmount,
         // Ensure defaults if null
-        discount: headerToCreate.discount ?? '0',
+        discount: state.lastDiscountAmount == 0
+            ? 'N'
+            : 'Y', //IF discountAmount is 0 make it N or Y
+        discountInPercent:
+            (state.lastDiscountAmount == null ||
+                state.lastDiscountAmount == 0 ||
+                state.lastSubTotal == null ||
+                state.lastSubTotal == 0)
+            ? 0
+            : (state.lastDiscountAmount! / state.lastSubTotal!) * 100,
         addOn: headerToCreate.addOn ?? '0',
         // Populate payment data
         paymentMethod: state.paymentMethod,
@@ -156,6 +166,11 @@ class SalesOrderCoordinatorBloc
         requiredDate: headerToCreate.requiredDate ?? DateTime.now(),
         shippedDate: headerToCreate.shippedDate ?? DateTime.now(),
         salesType: headerToCreate.salesType ?? 'Unknown',
+        salesRepresent: state.salesRepresent,
+        commentsSo: state.commentsSo,
+        referenceNote1: state.referenceNote1,
+        referenceNote2: state.referenceNote2,
+        referenceNote3: state.referenceNote3,
       );
 
       // Handle payment term if it's a date string (for Credit)
@@ -571,6 +586,11 @@ class SalesOrderCoordinatorBloc
         paymentMethod: event.paymentMethod,
         paymentInstrument: event.paymentInstrument,
         paymentTerm: event.paymentTerm.toString(),
+        salesRepresent: event.salesRepresent ?? state.salesRepresent,
+        commentsSo: event.commentsSo ?? state.commentsSo,
+        referenceNote1: event.referenceNote1 ?? state.referenceNote1,
+        referenceNote2: event.referenceNote2 ?? state.referenceNote2,
+        referenceNote3: event.referenceNote3 ?? state.referenceNote3,
         lastOperation: 'Payment details updated',
         lastSyncTime: DateTime.now(),
       ),
@@ -586,6 +606,23 @@ class SalesOrderCoordinatorBloc
         );
       }
     }
+  }
+
+  void _onUpdateExtraHeaderDetails(
+    UpdateExtraHeaderDetails event,
+    Emitter<SalesOrderCoordinatorState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        salesRepresent: event.salesRepresent ?? state.salesRepresent,
+        commentsSo: event.commentsSo ?? state.commentsSo,
+        referenceNote1: event.referenceNote1 ?? state.referenceNote1,
+        referenceNote2: event.referenceNote2 ?? state.referenceNote2,
+        referenceNote3: event.referenceNote3 ?? state.referenceNote3,
+        lastOperation: 'Extra header details updated',
+        lastSyncTime: DateTime.now(),
+      ),
+    );
   }
 
   Future<void> _onLoadFeeSystemConstants(
@@ -1339,6 +1376,14 @@ class SalesOrderCoordinatorBloc
         effectiveCompanyId,
       );
 
+      // Generate invoice number for invoice_history_header using fs_table prefix/postfix
+      final branchId = authBloc.state.branchId ?? 1;
+      final invoiceNumber = await headerBloc.repository.generateInvoiceNumber(
+        effectiveCompanyId,
+        branchId,
+        'invoice_history_header',
+      );
+
       // Derive customer info safely
       final customerName =
           currentHeader.customerBillToRef?.customerName ??
@@ -1363,6 +1408,11 @@ class SalesOrderCoordinatorBloc
         withholdAmount: state.lastWithholdAmount ?? 0.0,
         discountAmount: state.lastDiscountAmount ?? 0.0,
         amountBeforeTax: state.subtotal,
+        quotNumber: int.tryParse(
+          currentHeader.proformaReference ?? '',
+        ), //only when proforma converted into sales order
+        salesNumber: currentHeader.id ?? 0,
+        invoiceNumber: invoiceNumber,
       );
 
       // Create invoice header
@@ -1386,7 +1436,9 @@ class SalesOrderCoordinatorBloc
           quantityTransaction: salesDetail.quantity ?? 0.0,
           amountUnitPrice: salesDetail.unitPrice ?? 0.0,
           amountExtendedPrice: salesDetail.extendedPrice ?? 0.0,
-          unitOfMeasure: salesDetail.item?.unitOfMeasure ?? 'PCS',
+          unitOfMeasure: salesDetail.item?.unitOfMeasure ?? 'PC',
+          dateExperied: salesDetail.lot?.dateExpiration,
+          batchNumber: salesDetail.lot?.batchNumberSupplier,
         );
       }).toList();
 

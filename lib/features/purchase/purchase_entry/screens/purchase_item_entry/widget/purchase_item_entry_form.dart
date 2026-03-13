@@ -826,10 +826,10 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
 
               const SizedBox(height: 16),
 
-              // Supplier Batch Number
               CustomTextField(
                 controller: _batchNumberController,
                 labelText: 'Supplier Batch Number',
+                maxLength: 50,
                 onChanged: (value) {
                   _updateDetail();
                 },

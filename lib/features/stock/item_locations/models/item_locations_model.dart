@@ -1,6 +1,7 @@
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/location_entry/models/location_master_model.dart';
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class ItemLocation {
   // Primary Fields
@@ -118,6 +119,14 @@ class ItemLocation {
               marginRate: asDouble(map['item_margin_rate']),
               marginType: map['item_margin_type']?.toString(),
               reorderPoint: asDouble(map['item_reorder_point']),
+              unitOfMeasureDescription:
+                  map['unit_of_measure_description'] != null
+                  ? UdcDetails(
+                      id: (map['unit_of_measure']),
+                      description1: map['unit_of_measure_description'],
+                      detailCode: map['unit_of_measure_code'] ?? '',
+                    )
+                  : null,
             )
           : null,
       branchRef: map['branch'] != null

@@ -148,6 +148,7 @@ class _OtherExpenseFormDialogState extends State<OtherExpenseFormDialog> {
                 // Reason Field
                 TextFormField(
                   controller: _reasonController,
+                  maxLength: 50,
                   decoration: const InputDecoration(
                     labelText: 'Reason / Description',
                     border: OutlineInputBorder(),
@@ -157,6 +158,9 @@ class _OtherExpenseFormDialogState extends State<OtherExpenseFormDialog> {
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter a reason';
+                    }
+                    if (value.length > 50) {
+                      return 'Reason must be at most 50 characters long';
                     }
                     return null;
                   },

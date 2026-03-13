@@ -15,7 +15,7 @@ class PurchaseOrderHeader {
     }
   }
 
-  final DateTime? dateTransaction;
+  final DateTime? dateTransation;
   final DateTime? dateDelivery;
   final int? poReceiveStatus;
   final int? company;
@@ -52,7 +52,7 @@ class PurchaseOrderHeader {
   PurchaseOrderHeader({
     this.id,
     this.supplierId,
-    this.dateTransaction,
+    this.dateTransation,
     this.dateDelivery,
     this.poReceiveStatus,
     this.company,
@@ -87,7 +87,7 @@ class PurchaseOrderHeader {
     return PurchaseOrderHeader(
       id: map['id'],
       supplierId: map['supplier_id'],
-      dateTransaction: _parseDate(map['date_transaction']),
+      dateTransation: _parseDate(map['date_transation']),
       dateDelivery: _parseDate(map['date_delivery']),
       poReceiveStatus: map['po_receive_status'],
       company: map['company'],
@@ -158,7 +158,7 @@ class PurchaseOrderHeader {
     return {
       'id': id,
       'supplier_id': supplierId,
-      'date_transaction': dateTransaction?.toIso8601String(),
+      'date_transation': dateTransation?.toIso8601String(),
       'date_delivery': dateDelivery?.toIso8601String(),
       'po_receive_status': poReceiveStatus,
       'company': company,
@@ -186,7 +186,7 @@ class PurchaseOrderHeader {
   PurchaseOrderHeader copyWith({
     int? id,
     int? supplierId,
-    DateTime? dateTransaction,
+    DateTime? dateTransation,
     DateTime? dateDelivery,
     int? poReceiveStatus,
     int? company,
@@ -217,7 +217,7 @@ class PurchaseOrderHeader {
     return PurchaseOrderHeader(
       id: id ?? this.id,
       supplierId: supplierId ?? this.supplierId,
-      dateTransaction: dateTransaction ?? this.dateTransaction,
+      dateTransation: dateTransation ?? this.dateTransation,
       dateDelivery: dateDelivery ?? this.dateDelivery,
       poReceiveStatus: poReceiveStatus ?? this.poReceiveStatus,
       company: company ?? this.company,
@@ -251,7 +251,7 @@ class PurchaseOrderHeader {
   List<Object?> get props => [
     id,
     supplierId,
-    dateTransaction,
+    dateTransation,
     dateDelivery,
     poReceiveStatus,
     company,

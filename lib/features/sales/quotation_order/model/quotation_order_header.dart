@@ -221,7 +221,7 @@ class QuotationOrderHeader {
               nameMiddle: map['employee_middle_name'],
               nameLast: map['employee_last_name'],
               email: map['employee_email'],
-              phone: map['employee_phone'],
+              phoneHome: map['employee_phone'],
               address: map['employee_address'],
               city: map['employee_city'],
             )

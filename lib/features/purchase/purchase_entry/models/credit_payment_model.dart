@@ -53,7 +53,7 @@ class CreditPayment {
               id: map['po_header'],
               amountGrandTotalCost: (map['total_amount'] as num?)?.toDouble(),
               amountGross: (map['amount_gross'] as num?)?.toDouble(),
-              dateTransaction: map['date_transaction'] != null
+              dateTransation: map['date_transaction'] != null
                   ? DateTime.tryParse(map['date_transaction'])
                   : null,
               orderType: map['order_type'],

@@ -31,7 +31,7 @@ class PurchaseOrderReportRepository {
 
       // Date range filter
       if (startDate != null && endDate != null) {
-        whereClauses.add('date_transaction BETWEEN ? AND ?');
+        whereClauses.add('date_transation BETWEEN ? AND ?');
         whereArgs.add(startDate.toIso8601String());
         whereArgs.add(endDate.toIso8601String());
       }
@@ -74,7 +74,7 @@ class PurchaseOrderReportRepository {
         'purchase_order_header',
         where: whereClause,
         whereArgs: whereArgs,
-        orderBy: 'date_transaction DESC',
+        orderBy: 'date_transation DESC',
         limit: pageSize,
         offset: offset,
       );
@@ -117,7 +117,7 @@ class PurchaseOrderReportRepository {
       whereArgs.add(companyId);
 
       if (startDate != null && endDate != null) {
-        whereClauses.add('date_transaction BETWEEN ? AND ?');
+        whereClauses.add('date_transation BETWEEN ? AND ?');
         whereArgs.add(startDate.toIso8601String());
         whereArgs.add(endDate.toIso8601String());
       }

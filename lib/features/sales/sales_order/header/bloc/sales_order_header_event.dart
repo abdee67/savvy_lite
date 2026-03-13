@@ -149,10 +149,15 @@ class RefreshSalesOrderHeaders extends SalesOrderHeaderEvent {
 class VoidSalesOrder extends SalesOrderHeaderEvent {
   final int id;
   final String voidIndicator;
+  final String? commentIfVoid;
 
-  const VoidSalesOrder({required this.id, required this.voidIndicator});
+  const VoidSalesOrder({
+    required this.id,
+    required this.voidIndicator,
+    this.commentIfVoid,
+  });
   @override
-  List<Object?> get props => [id, voidIndicator];
+  List<Object?> get props => [id, voidIndicator, commentIfVoid];
 }
 
 class CalculateUomConversion extends SalesOrderHeaderEvent {

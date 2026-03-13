@@ -76,7 +76,8 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
       _itemEntryId = item.itemNumber;
       // Prefer to display the human-friendly itemsId if available
       _itemNumberController.text =
-          item.itemRef?.itemsId?.toString() ?? item.itemNumber.toString();
+          item.itemRef?.itemDescription?.toString() ??
+          item.itemNumber.toString();
       _quantityAvailableController.text =
           item.quantityAvailable?.toString() ?? '';
       _unitPriceController.text = item.unitPrice?.toString() ?? '';
@@ -98,8 +99,7 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
     else if (widget.itemEntry != null) {
       final entry = widget.itemEntry!;
       _itemEntryId = entry.id;
-      _itemNumberController.text =
-          entry.itemsId?.toString() ?? entry.id.toString();
+      _itemNumberController.text = entry.itemDescription.toString();
       _quantityAvailableController.text = '0';
       _unitPriceController.text = entry.unitPrice?.toString() ?? '';
       _marginRateController.text = entry.marginRate?.toString() ?? '';
@@ -321,7 +321,7 @@ class _ItemInBranchFormPageState extends State<ItemInBranchFormPage> {
             CustomTextField(
               labelText: 'Item Number *',
               controller: _itemNumberController,
-              keyboardType: TextInputType.number,
+              keyboardType: TextInputType.text,
               readOnly: widget.itemEntry != null,
               validator: (value) {
                 if (value == null || value.isEmpty) {

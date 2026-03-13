@@ -950,6 +950,7 @@ class _PurchaseReceivingScreenState extends State<PurchaseReceivingScreen> {
         // Batch Number
         CustomTextField(
           labelText: 'Batch Number',
+          maxLength: 50,
           controller: TextEditingController(
             text: receiver.batchNumberSupplier ?? '',
           ),

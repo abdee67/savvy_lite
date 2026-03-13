@@ -81,6 +81,8 @@ import 'package:savvy_stock/features/sales/sales_order/sales_item_entry/screens/
 import 'package:savvy_stock/features/sales/sales_order/sales_report.dart';
 import 'package:savvy_stock/features/sales/sales_return/screens/sales_return_dashboard.dart';
 import 'package:savvy_stock/features/sales/sales_return/screens/sales_return_screen.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/screens/available_item_in_branch_screen.dart';
+import 'package:savvy_stock/features/stock/item_locations/screens/item_in_location_availability_screen.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/models/item_uom_conversions_model.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/screens/item_uom_conversion_dashboard.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/widgets/item_uom_conversion_create_and_edit.dart.dart';
@@ -103,6 +105,7 @@ import 'package:savvy_stock/features/stock/lot_coloring/model/lot_coloring_model
 import 'package:savvy_stock/features/stock/lot_coloring/screens/lot_colorings_screen.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/widgets/lot_coloring_form.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
+import 'package:savvy_stock/features/stock/lot_master/screens/item_in_lot_availability_screen.dart';
 import 'package:savvy_stock/features/stock/lot_master/screens/lot_master_dashboard.dart';
 import 'package:savvy_stock/features/stock/lot_master/widgets/lot_master_create_and_edit.dart.dart';
 import 'package:savvy_stock/features/system_constant/screen/system_constants_screen.dart';
@@ -905,6 +908,37 @@ class AppRouter {
         },
         redirect: _protectedRouteRedirect,
       ),
+
+      // ========== Item Availability Routes ==========
+      GoRoute(
+        path: AppRoutes.itemInBranchAvailability,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.itemInBranchAvailability,
+          parentPrivilege: AppRoutes.availabilityDashboard,
+          child: ItemInBranchAvailabilityScreen(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.itemInLocationAvailability,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.itemInLocationAvailability,
+          parentPrivilege: AppRoutes.availabilityDashboard,
+          child: ItemInLocationAvailabilityScreen(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+      GoRoute(
+        path: AppRoutes.itemInLotAvailability,
+        builder: (context, state) => PrivilegeRouteGuard(
+          requiredPrivilege: AppRoutes.itemInLotAvailability,
+          parentPrivilege: AppRoutes.availabilityDashboard,
+          child: LotAvailabilityScreen(authBloc: authBloc),
+        ),
+        redirect: _protectedRouteRedirect,
+      ),
+
+      // ========== Company Management Routes ==========
       GoRoute(
         path: AppRoutes.companyManagement,
         builder: (context, state) => PrivilegeRouteGuard(

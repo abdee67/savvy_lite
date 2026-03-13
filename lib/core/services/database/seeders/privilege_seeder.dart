@@ -27,7 +27,7 @@ class PrivilegeSeeder {
         'Availability Dashboard',
         'link',
         AppRoutes.availabilityDashboard,
-        'availability_dashboard',
+        'avail_dashboard',
       ),
       _createPrivilege(
         'Purchase Dashboard',
@@ -45,7 +45,7 @@ class PrivilegeSeeder {
         'Branch List Dashboard',
         'link',
         AppRoutes.branchListDashboard,
-        'branch_list_dashboard',
+        'branch_dashboard',
       ),
       _createPrivilege(
         'Report Dashboard',
@@ -156,7 +156,7 @@ class PrivilegeSeeder {
         'Convert Employee to User',
         'button',
         AppRoutes.employeeConversionToUser,
-        'convert_employee_to_user',
+        'convert_emp_to_user',
       ),
 
       // User Management
@@ -251,7 +251,7 @@ class PrivilegeSeeder {
         'Sales Return',
         'link',
         AppRoutes.salesReturnDashboard,
-        'sales_return_dashboard',
+        'sales_return_dash',
       ),
       _createPrivilege(
         'Sales Return Filter',
@@ -275,13 +275,13 @@ class PrivilegeSeeder {
         'Quotation Order Payment',
         'link',
         AppRoutes.quotationOrderPayment,
-        'quotation_order_payment',
+        'quote_order_payment',
       ),
       _createPrivilege(
         'Quotation Invoice Review',
         'link',
         AppRoutes.quotationInvoiceReview,
-        'quotation_invoice_review',
+        'quote_invoice_rev',
       ),
       _createPrivilege(
         'Quotation Order Review',
@@ -331,7 +331,7 @@ class PrivilegeSeeder {
         'Delete Item In Branch',
         'button',
         AppRoutes.deleteItemInBranch,
-        'delete_item_in_branch',
+        'del_item_in_branch',
       ),
 
       //uom management
@@ -355,19 +355,19 @@ class PrivilegeSeeder {
         'Add Item UoM Conversion',
         'button',
         AppRoutes.itemUomConversionsCreate,
-        'add_item_uom_conversion',
+        'add_item_uom_conv',
       ),
       _createPrivilege(
         'Edit Item UoM Conversion',
         'button',
         AppRoutes.itemUomConversionsEdit,
-        'edit_item_uom_conversion',
+        'edit_item_uom_conv',
       ),
       _createPrivilege(
         'Delete Item UoM Conversion',
         'button',
         AppRoutes.itemUomConversionsDelete,
-        'delete_item_uom_conversion',
+        'del_item_uom_conv',
       ),
 
       //location entry
@@ -381,7 +381,7 @@ class PrivilegeSeeder {
         'Location Master Create',
         'button',
         AppRoutes.locationMasterCreate,
-        'location_master_create',
+        'loc_master_create',
       ),
       _createPrivilege(
         'Location Master Edit',
@@ -393,7 +393,7 @@ class PrivilegeSeeder {
         'Location Master Delete',
         'button',
         AppRoutes.locationMasterDelete,
-        'location_master_delete',
+        'loc_master_delete',
       ),
 
       //lot entry
@@ -438,25 +438,25 @@ class PrivilegeSeeder {
         'Inventory Transaction',
         'link',
         AppRoutes.inventoryTransaction,
-        'inventory_transaction',
+        'inv_transaction',
       ),
       _createPrivilege(
         'Create Inventory Transaction',
         'button',
         AppRoutes.inventoryTransactionCreate,
-        'create_inventory_transaction',
+        'create_inv_trans',
       ),
       _createPrivilege(
         'Edit Inventory Transaction',
         'button',
         AppRoutes.inventoryTransactionEdit,
-        'edit_inventory_transaction',
+        'edit_inv_trans',
       ),
       _createPrivilege(
         'Delete Inventory Transaction',
         'button',
         AppRoutes.inventoryTransactionDelete,
-        'delete_inventory_transaction',
+        'delete_inv_trans',
       ),
 
       //item entry workbench
@@ -484,6 +484,24 @@ class PrivilegeSeeder {
         'button',
         AppRoutes.itemWorkbenchDelete,
         'delete_item',
+      ),
+      _createPrivilege(
+        'Availability Item In Branch',
+        'link',
+        AppRoutes.itemInBranchAvailability,
+        'item_in_branch_avl',
+      ),
+      _createPrivilege(
+        'Availability Item In Location',
+        'button',
+        AppRoutes.itemInLocationAvailability,
+        'item_in_loc_avl',
+      ),
+      _createPrivilege(
+        'Available Item in Lot',
+        'button',
+        AppRoutes.itemInLotAvailability,
+        'item_in_lot_avl',
       ),
 
       // ==================== COMPANY MODULE ====================
@@ -573,13 +591,13 @@ class PrivilegeSeeder {
         'Purchase Order',
         'button',
         AppRoutes.purchaseReview,
-        'review_purchase_order',
+        'review_po',
       ),
       _createPrivilege(
         'Supplier Info',
         'button',
         AppRoutes.purchaseSupplierInfo,
-        'purchase_supplier_info',
+        'po_supplier_info',
       ),
       _createPrivilege(
         'Purchase Item Entry',
@@ -591,19 +609,19 @@ class PrivilegeSeeder {
         'Purchase Payment',
         'button',
         AppRoutes.purchaseOrderPayment,
-        'purchase_order_payment',
+        'po_payment',
       ),
       _createPrivilege(
         'Purchase Receive',
         'button',
         AppRoutes.purchaseOrderReceive,
-        'purchase_order_receive',
+        'po_receive',
       ),
       _createPrivilege(
         'Credit Purchase',
         'button',
         AppRoutes.creditPurchaseReview,
-        'review_credit_purchase_order',
+        'review_credit_po',
       ),
 
       //=======================REPORT MODULE===================
@@ -649,19 +667,19 @@ class PrivilegeSeeder {
         'Upcoming Expiration',
         'link',
         AppRoutes.upcomingExpirationReport,
-        'upcoming_expiration_report',
+        'upcom_expire_report',
       ),
       _createPrivilege(
         'Balance of Item Entry',
         'link',
         AppRoutes.balanceOfItemEntryReport,
-        'balance_of_item_entry_report',
+        'bal_item_entry_rep',
       ),
       _createPrivilege(
         'Inventory Movement ',
         'link',
         AppRoutes.inventoryMovementReport,
-        'inventory_movement_report',
+        'inv_movement_report',
       ),
       _createPrivilege(
         'Item Cost ',
@@ -673,7 +691,7 @@ class PrivilegeSeeder {
         'Inventory Transaction ',
         'link',
         AppRoutes.inventoryTransactionReport,
-        'inventory_transaction_report',
+        'inv_trans_report',
       ),
       _createPrivilege(
         'Reorder Point ',
@@ -687,19 +705,19 @@ class PrivilegeSeeder {
         'Sales Transaction',
         'link',
         AppRoutes.salesTransactionReport,
-        'sales_trnasaction_report',
+        'sales_trans_report',
       ),
       _createPrivilege(
         'Aged Credit Sales',
         'link',
         AppRoutes.agedCreditSalesReport,
-        'aged_credit_sales_report',
+        'aged_cr_sales_rep',
       ),
       _createPrivilege(
         'Credit Received',
         'link',
         AppRoutes.creditRecievedReport,
-        'credit_received_report',
+        'cr_received_report',
       ),
 
       //===================PURCHASE REPORT===========================
@@ -707,25 +725,25 @@ class PrivilegeSeeder {
         'Purchase Transaction',
         'link',
         AppRoutes.purchaseTransactionReport,
-        'purchase_trnasaction_report',
+        'po_trans_report',
       ),
       _createPrivilege(
         'Aged Credit Payment',
         'link',
         AppRoutes.agedCreditPaymentReceiptReport,
-        'aged_credit_payment_report',
+        'aged_cr_payment_rep',
       ),
       _createPrivilege(
         'Credit Payment',
         'link',
         AppRoutes.creditPaymentReport,
-        'credit_payment_report',
+        'cr_payment_report',
       ),
       _createPrivilege(
         'Pending Purchase',
         'link',
         AppRoutes.pendingPurcahseReport,
-        'pending_purchase_report',
+        'pending_po_report',
       ),
       _createPrivilege(
         'Goods Recieved Note',
@@ -738,7 +756,7 @@ class PrivilegeSeeder {
         'CashFlow Summary',
         'link',
         AppRoutes.cashFlowSummaryReport,
-        'cash_flow_summary_report',
+        'cash_flow_sum_rep',
       ),
       _createPrivilege(
         'Cash In Flow',

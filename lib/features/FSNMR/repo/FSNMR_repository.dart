@@ -37,12 +37,12 @@ class FSNMRRepository extends BaseRepository {
     final maps = await db.rawQuery(
       '''
       SELECT fsnr.*,
-      ud.description_1 as unit_of_measure_default_description,
-      ud.detail_code as unit_of_measure_default_code,
+      ud.description_1 as unit_of_meansure_default_description,
+      ud.detail_code as unit_of_meansure_default_code,
       rf.description_1 as report_frequency_description,
       rf.detail_code as report_frequency_code
-      FROM fast_slow_nonmoving_rule fsnr
-      LEFT JOIN udc_details ud ON fsnr.unit_of_measure_default = ud.id
+      FROM fast_slow_nonmoving_rule_table fsnr
+      LEFT JOIN udc_details ud ON fsnr.unit_of_meansure_default = ud.id
       LEFT JOIN udc_details rf ON fsnr.report_frequency = rf.id
       WHERE fsnr.company = ?
       ORDER BY fsnr.id DESC
@@ -150,7 +150,7 @@ class FSNMRRepository extends BaseRepository {
   /// Check for duplicate records by report frequency and period in days
   /// (equivalent to Java's duplicateChecker)
   Future<bool> duplicateCheckerByReportFrequencyAndPeriod({
-    required int? reportFrequency,
+    required String? reportFrequency,
     required int? periodInDays,
     required int companyId,
     int? excludeId,
@@ -159,7 +159,7 @@ class FSNMRRepository extends BaseRepository {
       final db = await databaseService.database;
 
       String query = '''
-        SELECT id FROM fast_slow_nonmoving_rule
+        SELECT id FROM fast_slow_nonmoving_rule_table
         WHERE report_frequency = ? 
         AND period_in_days = ? 
         AND company = ?
@@ -202,7 +202,7 @@ class FSNMRRepository extends BaseRepository {
     return newItem.reportFrequency != existing.reportFrequency ||
         newItem.periodInDays != existing.periodInDays ||
         newItem.fastMovementRuleUnit != existing.fastMovementRuleUnit ||
-        newItem.unitOfMeasureDefault != existing.unitOfMeasureDefault ||
+        newItem.unitOfMeansureDefault != existing.unitOfMeansureDefault ||
         newItem.slowMovementRuleUnit != existing.slowMovementRuleUnit ||
         newItem.nonMovementRuleUnit != existing.nonMovementRuleUnit;
   }
@@ -214,14 +214,14 @@ class FSNMRRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final ruleMap = rule.toMap();
     ruleMap.remove('id');
-    return await db.insert('fast_slow_nonmoving_rule', ruleMap);
+    return await db.insert('fast_slow_nonmoving_rule_table', ruleMap);
   }
 
   // Update existing rule
   Future<int> update(FastSlowNonMovingRule rule, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
     return await db.update(
-      'fast_slow_nonmoving_rule',
+      'fast_slow_nonmoving_rule_table',
       rule.toMap(),
       where: 'id = ? AND company = ?',
       whereArgs: [rule.id, rule.company],
@@ -232,7 +232,7 @@ class FSNMRRepository extends BaseRepository {
   Future<int> delete(int id, int companyId, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
     return await db.delete(
-      'fast_slow_nonmoving_rule',
+      'fast_slow_nonmoving_rule_table',
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
@@ -249,7 +249,7 @@ class FSNMRRepository extends BaseRepository {
 
     for (final id in ids) {
       batch.delete(
-        'fast_slow_nonmoving_rule',
+        'fast_slow_nonmoving_rule_table',
         where: 'id = ? AND company = ?',
         whereArgs: [id, companyId],
       );
@@ -264,12 +264,12 @@ class FSNMRRepository extends BaseRepository {
     final maps = await db.rawQuery(
       '''
       SELECT fsnr.*,
-      ud.description_1 as unit_of_measure_default_description,
-      ud.detail_code as unit_of_measure_default_code,
+      ud.description_1 as unit_of_meansure_default_description,
+      ud.detail_code as unit_of_meansure_default_code,
       rf.description_1 as report_frequency_description,
       rf.detail_code as report_frequency_code
-      FROM fast_slow_nonmoving_rule fsnr
-      LEFT JOIN udc_details ud ON fsnr.unit_of_measure_default = ud.id
+      FROM fast_slow_nonmoving_rule_table fsnr
+      LEFT JOIN udc_details ud ON fsnr.unit_of_meansure_default = ud.id
       LEFT JOIN udc_details rf ON fsnr.report_frequency = rf.id
       WHERE fsnr.id = ? AND fsnr.company = ?
     ''',
@@ -288,12 +288,12 @@ class FSNMRRepository extends BaseRepository {
     final maps = await db.rawQuery(
       '''
       SELECT fsnr.*,
-      ud.description_1 as unit_of_measure_default_description,
-      ud.detail_code as unit_of_measure_default_code,
+      ud.description_1 as unit_of_meansure_default_description,
+      ud.detail_code as unit_of_meansure_default_code,
       rf.description_1 as report_frequency_description,
       rf.detail_code as report_frequency_code
-      FROM fast_slow_nonmoving_rule fsnr
-      LEFT JOIN udc_details ud ON fsnr.unit_of_measure_default = ud.id
+      FROM fast_slow_nonmoving_rule_table fsnr
+      LEFT JOIN udc_details ud ON fsnr.unit_of_meansure_default = ud.id
       LEFT JOIN udc_details rf ON fsnr.report_frequency = rf.id
       WHERE fsnr.company = ?
       ORDER BY fsnr.id DESC
@@ -313,12 +313,12 @@ class FSNMRRepository extends BaseRepository {
     final maps = await db.rawQuery(
       '''
       SELECT fsnr.*,
-      ud.description_1 as unit_of_measure_default_description,
-      ud.detail_code as unit_of_measure_default_code,
+      ud.description_1 as unit_of_meansure_default_description,
+      ud.detail_code as unit_of_meansure_default_code,
       rf.description_1 as report_frequency_description,
       rf.detail_code as report_frequency_code
-      FROM fast_slow_nonmoving_rule fsnr
-      LEFT JOIN udc_details ud ON fsnr.unit_of_measure_default = ud.id
+      FROM fast_slow_nonmoving_rule_table fsnr
+      LEFT JOIN udc_details ud ON fsnr.unit_of_meansure_default = ud.id
       LEFT JOIN udc_details rf ON fsnr.report_frequency = rf.id
       WHERE fsnr.rules_id = ? AND fsnr.company = ?
     ''',
@@ -333,7 +333,7 @@ class FSNMRRepository extends BaseRepository {
 
   // Find by report frequency
   Future<FastSlowNonMovingRule?> findByReportFrequency(
-    int reportFrequency,
+    String reportFrequency,
     int companyId, {
     Transaction? txn,
   }) async {
@@ -341,12 +341,12 @@ class FSNMRRepository extends BaseRepository {
     final maps = await db.rawQuery(
       '''
       SELECT fsnr.*,
-      ud.description_1 as unit_of_measure_default_description,
-      ud.detail_code as unit_of_measure_default_code,
+      ud.description_1 as unit_of_meansure_default_description,
+      ud.detail_code as unit_of_meansure_default_code,
       rf.description_1 as report_frequency_description,
       rf.detail_code as report_frequency_code
-      FROM fast_slow_nonmoving_rule fsnr
-      LEFT JOIN udc_details ud ON fsnr.unit_of_measure_default = ud.id
+      FROM fast_slow_nonmoving_rule_table fsnr
+      LEFT JOIN udc_details ud ON fsnr.unit_of_meansure_default = ud.id
       LEFT JOIN udc_details rf ON fsnr.report_frequency = rf.id
       WHERE fsnr.report_frequency = ? AND fsnr.company = ?
     ''',
@@ -362,7 +362,7 @@ class FSNMRRepository extends BaseRepository {
   // Check for duplicate rules
   Future<bool> checkDuplicate({
     required int companyId,
-    int? reportFrequency,
+    String? reportFrequency,
     int? periodInDays,
     int? excludeId,
     Transaction? txn,
@@ -379,7 +379,7 @@ class FSNMRRepository extends BaseRepository {
     }
 
     final maps = await db.query(
-      'fast_slow_nonmoving_rule',
+      'fast_slow_nonmoving_rule_table',
       where: whereClause,
       whereArgs: whereArgs,
       limit: 1,
@@ -397,12 +397,12 @@ class FSNMRRepository extends BaseRepository {
     final maps = await db.rawQuery(
       '''
       SELECT fsnr.*,
-      ud.description_1 as unit_of_measure_default_description,
-      ud.detail_code as unit_of_measure_default_code,
+      ud.description_1 as unit_of_meansure_default_description,
+      ud.detail_code as unit_of_meansure_default_code,
       rf.description_1 as report_frequency_description,
       rf.detail_code as report_frequency_code
-      FROM fast_slow_nonmoving_rule fsnr
-      LEFT JOIN udc_details ud ON fsnr.unit_of_measure_default = ud.id
+      FROM fast_slow_nonmoving_rule_table fsnr
+      LEFT JOIN udc_details ud ON fsnr.unit_of_meansure_default = ud.id
       LEFT JOIN udc_details rf ON fsnr.report_frequency = rf.id
       WHERE fsnr.company = ? AND (
         CAST(fsnr.report_frequency AS TEXT) LIKE ? OR 
@@ -421,7 +421,7 @@ class FSNMRRepository extends BaseRepository {
   // Filter rules by multiple criteria
   Future<List<FastSlowNonMovingRule>> filter({
     required int companyId,
-    int? reportFrequency,
+    String? reportFrequency,
     int? periodInDays,
   }) async {
     final db = await databaseService.database;
@@ -429,7 +429,7 @@ class FSNMRRepository extends BaseRepository {
     String whereClause = 'WHERE fsnr.company = ?';
     List<dynamic> whereArgs = [companyId];
 
-    if (reportFrequency != null && reportFrequency > 0) {
+    if (reportFrequency != null && reportFrequency.isNotEmpty) {
       whereClause += ' AND fsnr.report_frequency = ?';
       whereArgs.add(reportFrequency);
     }
@@ -441,12 +441,12 @@ class FSNMRRepository extends BaseRepository {
 
     final maps = await db.rawQuery('''
       SELECT fsnr.*,
-      ud.description_1 as unit_of_measure_default_description,
-      ud.detail_code as unit_of_measure_default_code,
+      ud.description_1 as unit_of_meansure_default_description,
+      ud.detail_code as unit_of_meansure_default_code,
       rf.description_1 as report_frequency_description,
       rf.detail_code as report_frequency_code
-      FROM fast_slow_nonmoving_rule fsnr
-      LEFT JOIN udc_details ud ON fsnr.unit_of_measure_default = ud.id
+      FROM fast_slow_nonmoving_rule_table fsnr
+      LEFT JOIN udc_details ud ON fsnr.unit_of_meansure_default = ud.id
       LEFT JOIN udc_details rf ON fsnr.report_frequency = rf.id
       $whereClause
       ORDER BY fsnr.id DESC
@@ -462,7 +462,7 @@ class FSNMRRepository extends BaseRepository {
 
     for (final rule in rules) {
       batch.update(
-        'fast_slow_nonmoving_rule',
+        'fast_slow_nonmoving_rule_table',
         rule.toMap(),
         where: 'id = ? AND company = ?',
         whereArgs: [rule.id, rule.company],
@@ -503,7 +503,7 @@ class FSNMRRepository extends BaseRepository {
     }
 
     final maps = await db.query(
-      'fast_slow_nonmoving_rule',
+      'fast_slow_nonmoving_rule_table',
       where: whereClause,
       whereArgs: whereArgs,
       limit: 1,

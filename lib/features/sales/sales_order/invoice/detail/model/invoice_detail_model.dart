@@ -9,6 +9,8 @@ class InvoiceHistoryDetail {
   final double? amountExtendedPrice;
   int? company;
   final int? tempId;
+  final DateTime? dateExperied;
+  final String? batchNumber;
 
   InvoiceHistoryDetail({
     this.id,
@@ -20,6 +22,8 @@ class InvoiceHistoryDetail {
     this.amountExtendedPrice,
     this.company,
     this.tempId,
+    this.dateExperied,
+    this.batchNumber,
   });
 
   // Copy with method
@@ -33,6 +37,8 @@ class InvoiceHistoryDetail {
     double? amountExtendedPrice,
     int? company,
     int? tempId,
+    DateTime? dateExperied,
+    String? batchNumber,
   }) {
     return InvoiceHistoryDetail(
       id: id ?? this.id,
@@ -44,6 +50,8 @@ class InvoiceHistoryDetail {
       amountExtendedPrice: amountExtendedPrice ?? this.amountExtendedPrice,
       company: company ?? this.company,
       tempId: tempId ?? this.tempId,
+      dateExperied: dateExperied ?? this.dateExperied,
+      batchNumber: batchNumber ?? this.batchNumber,
     );
   }
 
@@ -58,6 +66,8 @@ class InvoiceHistoryDetail {
       'amount_unit_price': amountUnitPrice,
       'amount_extended_price': amountExtendedPrice,
       'company': company,
+      'date_experied': dateExperied?.toIso8601String(),
+      'batch_number': batchNumber,
     };
   }
 
@@ -72,6 +82,10 @@ class InvoiceHistoryDetail {
       amountUnitPrice: map['amount_unit_price']?.toDouble(),
       amountExtendedPrice: map['amount_extended_price']?.toDouble(),
       company: map['company'],
+      dateExperied: map['date_experied'] != null
+          ? DateTime.tryParse(map['date_experied'].toString())
+          : null,
+      batchNumber: map['batch_number'],
     );
   }
 
@@ -101,7 +115,9 @@ class InvoiceHistoryDetail {
         other.quantityTransaction == quantityTransaction &&
         other.amountUnitPrice == amountUnitPrice &&
         other.amountExtendedPrice == amountExtendedPrice &&
-        other.company == company;
+        other.company == company &&
+        other.dateExperied == dateExperied &&
+        other.batchNumber == batchNumber;
   }
 
   @override
@@ -115,6 +131,8 @@ class InvoiceHistoryDetail {
       amountUnitPrice,
       amountExtendedPrice,
       company,
+      dateExperied,
+      batchNumber,
     );
   }
 }

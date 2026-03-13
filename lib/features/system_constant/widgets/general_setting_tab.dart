@@ -1,6 +1,7 @@
 import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
@@ -259,8 +260,9 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
             const SizedBox(height: 16),
             _buildTextField(
               label: 'Currency Code',
-              value: _localSystemConstant.currencyCode ?? 'ETB',
+              value: _localSystemConstant.currencyCode ?? 'Birr',
               onChanged: (value) => _updateField(currencyCode: value),
+              maxLength: 10,
             ),
             const SizedBox(height: 16),
 
@@ -376,14 +378,21 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
     required String label,
     required String value,
     required Function(String) onChanged,
+    int? maxLength,
   }) {
     return CustomTextField(
       labelText: label,
       value: value,
       keyboardType: TextInputType.text,
+      inputFormatters: [
+        if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
+      ],
       validator: (value) {
         if (value == null || value.isEmpty) {
           return 'Field is required';
+        }
+        if (maxLength != null && value.length > maxLength) {
+          return 'Must be $maxLength characters or less';
         }
         return null;
       },

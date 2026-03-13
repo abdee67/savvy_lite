@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
@@ -28,7 +29,7 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
   late TextEditingController _lastNameController;
   late TextEditingController _middleNameController;
   late TextEditingController _employeeIdController;
-  late TextEditingController _phoneController;
+  late TextEditingController _phoneHomeController;
   late TextEditingController _emailController;
   late TextEditingController _cityController;
   late TextEditingController _addressController;
@@ -58,7 +59,7 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
     _lastNameController = TextEditingController(text: employee.nameLast);
     _middleNameController = TextEditingController(text: employee.nameMiddle);
     _employeeIdController = TextEditingController(text: employee.employeeId);
-    _phoneController = TextEditingController(text: employee.phone);
+    _phoneHomeController = TextEditingController(text: employee.phoneHome);
     _emailController = TextEditingController(text: employee.email);
     _cityController = TextEditingController(text: employee.city);
     _addressController = TextEditingController(text: employee.address);
@@ -75,7 +76,7 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
     _lastNameController.dispose();
     _middleNameController.dispose();
     _employeeIdController.dispose();
-    _phoneController.dispose();
+    _phoneHomeController.dispose();
     _emailController.dispose();
     _cityController.dispose();
     _addressController.dispose();
@@ -137,7 +138,7 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
             ? ''
             : _middleNameController.text,
         email: _emailController.text,
-        phone: _phoneController.text,
+        phoneHome: _phoneHomeController.text,
         title: _selectedTitle,
         gender: _selectedGender,
         country: _country,
@@ -297,27 +298,44 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
       ),
       child: Column(
         children: [
-          _buildTextField(_firstNameController, 'First Name *', Icons.person),
+          _buildTextField(
+            _firstNameController,
+            'First Name *',
+            Icons.person,
+            TextInputType.text,
+            45,
+          ),
           const SizedBox(height: 16),
           _buildTextField(
             _lastNameController,
             'Last Name *',
             Icons.person_outline,
+            TextInputType.text,
+            45,
           ),
           const SizedBox(height: 16),
           _buildTextField(
             _middleNameController,
             'Middle Name',
             Icons.person_outlined,
+            TextInputType.text,
+            45,
           ),
           const SizedBox(height: 16),
-          _buildTextField(_employeeIdController, 'Employee ID', Icons.badge),
+          _buildTextField(
+            _employeeIdController,
+            'Employee ID',
+            Icons.badge,
+            TextInputType.text,
+            20,
+          ),
           const SizedBox(height: 16),
           _buildTextField(
-            _phoneController,
-            'Phone *',
+            _phoneHomeController,
+            'Home Phone *',
             Icons.phone,
             TextInputType.phone,
+            45,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -325,6 +343,7 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
             'Email *',
             Icons.email,
             TextInputType.emailAddress,
+            255,
           ),
           const SizedBox(height: 16),
           _buildBottomNavigation(),
@@ -361,9 +380,21 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
           const SizedBox(height: 16),
           _buildReadOnlyField('Country', _country, Icons.flag),
           const SizedBox(height: 16),
-          _buildTextField(_cityController, 'City', Icons.location_city),
+          _buildTextField(
+            _cityController,
+            'City',
+            Icons.location_city,
+            TextInputType.text,
+            45,
+          ),
           const SizedBox(height: 16),
-          _buildTextField(_addressController, 'Address', Icons.home),
+          _buildTextField(
+            _addressController,
+            'Address',
+            Icons.home,
+            TextInputType.text,
+            45,
+          ),
           const SizedBox(height: 16),
           _buildDateField(_birthDateController, 'Birth Date'),
           const SizedBox(height: 16),
@@ -380,15 +411,22 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
     String label,
     IconData icon, [
     TextInputType? keyboardType,
+    int? maxLength,
   ]) {
     return CustomTextField(
       controller: controller,
       keyboardType: keyboardType,
       labelText: label,
       prefixIcon: Icon(icon),
+      inputFormatters: [
+        if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
+      ],
       validator: (value) {
         if (label.contains('*') && (value == null || value.isEmpty)) {
           return 'This field is required';
+        }
+        if (maxLength != null && value != null && value.length > maxLength) {
+          return 'Must be $maxLength characters or less';
         }
         if (label.contains('Email') && value!.isNotEmpty) {
           if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {

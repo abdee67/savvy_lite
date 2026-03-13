@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 import 'package:savvy_stock/features/registration/blocs/registration_bloc.dart';
@@ -19,6 +20,7 @@ class _BranchFormScreenState extends State<BranchFormScreen> {
   final TextEditingController regionController = TextEditingController();
   final TextEditingController cityController = TextEditingController();
   final TextEditingController addressController = TextEditingController();
+  bool _submitted = false;
 
   @override
   void initState() {
@@ -60,6 +62,10 @@ class _BranchFormScreenState extends State<BranchFormScreen> {
   }
 
   void _saveAndNavigate() {
+    setState(() {
+      _submitted = true;
+    });
+
     // Validate required fields
     if (branchNameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -185,24 +191,34 @@ class _BranchFormScreenState extends State<BranchFormScreen> {
                       "Branch Name",
                       controller: branchNameController,
                       required: true,
+                      maxLength: 45,
+                      onChanged: (_) => setState(() {}),
                     ),
                     _buildTextField(
                       "Branch Phone",
                       controller: branchPhoneController,
+                      maxLength: 14,
+                      onChanged: (_) => setState(() {}),
                     ),
                     _buildTextField(
                       "Region",
                       controller: regionController,
                       required: true,
+                      maxLength: 45,
+                      onChanged: (_) => setState(() {}),
                     ),
                     _buildTextField(
                       "City",
                       controller: cityController,
                       required: true,
+                      maxLength: 45,
+                      onChanged: (_) => setState(() {}),
                     ),
                     _buildTextField(
                       "Specific Address / Landmark",
                       controller: addressController,
+                      maxLength: 200,
+                      onChanged: (_) => setState(() {}),
                     ),
 
                     const SizedBox(height: 40),
@@ -323,14 +339,28 @@ class _BranchFormScreenState extends State<BranchFormScreen> {
   Widget _buildTextField(
     String label, {
     bool required = false,
+    int? maxLength,
     TextEditingController? controller,
+    ValueChanged<String>? onChanged,
   }) {
+    String? errorText;
+    if (required && _submitted && (controller?.text.isEmpty ?? true)) {
+      errorText = 'This field is required';
+    } else if (maxLength != null &&
+        (controller?.text.length ?? 0) > maxLength) {
+      errorText = 'Must be $maxLength characters or less';
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: TextField(
         controller: controller,
+        onChanged: onChanged,
         style: const TextStyle(color: Colors.white, fontSize: 16),
         cursorColor: Colors.amber,
+        inputFormatters: [
+          if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
+        ],
         decoration: InputDecoration(
           floatingLabelBehavior: FloatingLabelBehavior.auto,
           labelText: required ? "$label *" : label,
@@ -345,11 +375,7 @@ class _BranchFormScreenState extends State<BranchFormScreen> {
             borderRadius: BorderRadius.circular(20),
             borderSide: const BorderSide(color: Colors.amber, width: 1.5),
           ),
-
-          //if required true then show red color
-          errorText: required && controller!.text.isEmpty
-              ? 'This field is required'
-              : null,
+          errorText: errorText,
           errorMaxLines: 3,
         ),
       ),

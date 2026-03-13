@@ -25,6 +25,14 @@ class CustomTextField extends StatefulWidget {
   final String? suffixText;
   final Function()? onTap;
   final int maxLines;
+  final int? maxLength;
+  final Widget? Function(
+    BuildContext, {
+    required int currentLength,
+    required bool isFocused,
+    required int? maxLength,
+  })?
+  buildCounter;
 
   const CustomTextField({
     super.key,
@@ -50,6 +58,8 @@ class CustomTextField extends StatefulWidget {
     this.suffixText,
     this.onTap,
     this.maxLines = 1,
+    this.maxLength,
+    this.buildCounter,
   });
 
   @override
@@ -106,8 +116,8 @@ class _CustomTextFieldState extends State<CustomTextField> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: widget.isTablet ? 60 : 56,
+    return Container(
+      constraints: BoxConstraints(minHeight: widget.isTablet ? 60 : 56),
       child: TextFormField(
         controller: _controller,
         obscureText: widget.obscureText,
@@ -121,6 +131,8 @@ class _CustomTextFieldState extends State<CustomTextField> {
         focusNode: widget.focusNode,
         onTap: widget.onTap,
         maxLines: widget.maxLines,
+        maxLength: widget.maxLength,
+        buildCounter: widget.buildCounter,
         style: TextStyle(
           color: widget.isDarkTheme ? Colors.white : Colors.black,
         ),
@@ -143,6 +155,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
           labelText: widget.labelText,
           hintText: widget.hintText,
           alignLabelWithHint: true,
+          counterText: '', // Hide the default counter to keep design clean
           labelStyle: TextStyle(
             color: widget.isDarkTheme ? Colors.amber : const Color(0xFF145888),
             fontSize: widget.isTablet ? 16 : 14,

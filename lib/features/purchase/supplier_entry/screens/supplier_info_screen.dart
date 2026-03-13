@@ -197,7 +197,7 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
       // Set initial dates from state
       final header = purchaseState.selectedHeader;
       if (header != null) {
-        _transactionDate = header.dateTransaction ?? DateTime.now();
+        _transactionDate = header.dateTransation ?? DateTime.now();
         _deliveryDate = header.dateDelivery ?? _deliveryDate;
         _updateDateControllers();
       }
@@ -543,7 +543,7 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
   Widget _buildInvoiceNumberField(PurchaseOrderState state) {
     return CustomTextField(
       controller: _invoiceNumberController,
-      labelText: 'Supplier Invoice Number',
+      labelText: ' Invoice Number',
       keyboardType: TextInputType.text,
       prefixIcon: Icon(Icons.receipt, color: Colors.blue.shade700),
       onChanged: (value) {
@@ -588,7 +588,7 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
     final header = state.selectedHeader;
     if (header != null) {
       final updatedHeader = header.copyWith(
-        dateTransaction: _transactionDate,
+        dateTransation: _transactionDate,
         dateDelivery: _deliveryDate,
       );
       context.read<PurchaseOrderBloc>().add(

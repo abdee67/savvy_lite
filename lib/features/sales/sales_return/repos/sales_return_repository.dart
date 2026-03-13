@@ -214,7 +214,7 @@ class SalesReturnRepository {
       INNER JOIN udc_details ud ON srd.unit_of_measure = ud.id
       INNER JOIN udc_details rs ON srd.return_status = rs.id
       INNER JOIN udc_details rr ON srd.return_reason = rr.id
-      INNER JOIN item_entry it ON srd.item_table_id = it.id
+      INNER JOIN item_entry it ON srd.items_table_id = it.id
     ''',
       [companyId],
     );

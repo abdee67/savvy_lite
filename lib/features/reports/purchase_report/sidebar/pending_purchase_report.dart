@@ -606,7 +606,7 @@ class _PendingPurchaseReportPageState extends State<PendingPurchaseReportPage>
           _buildDetailRow(
             'Transaction Date',
             _dateFormat.format(
-              detail.poHeaderRef?.dateTransaction ?? DateTime.now(),
+              detail.poHeaderRef?.dateTransation ?? DateTime.now(),
             ),
             Iconsax.calendar,
           ),

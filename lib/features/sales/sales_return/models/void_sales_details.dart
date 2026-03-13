@@ -110,7 +110,7 @@ class SalesReturnDetails {
       returnStatus: map['return_status'],
       returnReason: map['return_reason'],
       tempId: map['temp_id'],
-      salesReturnHeaderRef: map['sales_return_header_id']
+      salesReturnHeaderRef: map['sales_return_header_id'] != null
           ? SalesReturnHeader(
               id: map['sales_return_header_id'],
               customerBillTo: map['customer_bill_to'],
@@ -118,7 +118,7 @@ class SalesReturnDetails {
               employeesId: map['employees_id'],
             )
           : null,
-      itemInBranchRef: map['item_in_branch']
+      itemInBranchRef: map['item_in_branch'] != null
           ? ItemInBranchModel(
               id: map['item_in_branch'],
               itemNumber: map['item_number'],
@@ -126,31 +126,31 @@ class SalesReturnDetails {
               quantityAvailable: map['availbale_quantity'],
             )
           : null,
-      lotNumberRef: map['lot_number']
+      lotNumberRef: map['lot_number'] != null
           ? LotMaster(id: map['lot_number'], lotNumber: map['lot_number'])
           : null,
-      unitOfMeasureRef: map['unit_of_measure']
+      unitOfMeasureRef: map['unit_of_measure'] != null
           ? UdcDetails(
               id: map['unit_of_measure'],
               detailCode: map['detail_code'],
               description1: map['unit_of_measure'],
             )
           : null,
-      returnStatusRef: map['return_status']
+      returnStatusRef: map['return_status'] != null
           ? UdcDetails(
               id: map['return_status'],
               detailCode: map['detail_code'],
               description1: map['return_status'],
             )
           : null,
-      returnReasonRef: map['return_reason']
+      returnReasonRef: map['return_reason'] != null
           ? UdcDetails(
               id: map['return_reason'],
               detailCode: map['detail_code'],
               description1: map['return_reason'],
             )
           : null,
-      itemEntryRef: map['items_table_id']
+      itemEntryRef: map['items_table_id'] != null
           ? ItemEntryModel(
               id: map['items_table_id'],
               itemDescription: map['item_description'],

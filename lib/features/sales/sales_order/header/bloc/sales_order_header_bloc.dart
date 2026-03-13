@@ -426,14 +426,31 @@ class SalesOrderHeaderBloc
       // Process header with business logic
       var headerToCreate = event.header.copyWith(orderNumber: nextOrderNumber);
 
+      // Ensure branchValue is set
+      final branchId =
+          headerToCreate.branchValue ?? authBloc.state.branchId ?? 1;
+      headerToCreate = headerToCreate.copyWith(branchValue: branchId);
+
       // Generate FS Number if missing (e.g. during conversion)
       if (headerToCreate.fsNumber == null || headerToCreate.fsNumber!.isEmpty) {
-        final branchId = authBloc.state.branchId ?? 1;
         final nextFsNumber = await repository.generateNextFsNumber(
           headerToCreate.company!,
           branchId,
         );
         headerToCreate = headerToCreate.copyWith(fsNumber: nextFsNumber);
+      }
+
+      // Generate Invoice Number if missing (e.g. during conversion)
+      if (headerToCreate.invoiceNumber == null ||
+          headerToCreate.invoiceNumber!.isEmpty) {
+        final nextInvoiceNumber = await repository.generateInvoiceNumber(
+          headerToCreate.company!,
+          branchId,
+          'sales_order_header',
+        );
+        headerToCreate = headerToCreate.copyWith(
+          invoiceNumber: nextInvoiceNumber,
+        );
       }
 
       final processedHeader = await _processHeaderBusinessLogic(headerToCreate);
@@ -572,12 +589,19 @@ class SalesOrderHeaderBloc
     try {
       emit(state.copyWith(status: SalesOrderHeaderStatus.voiding));
       // Void in repository
-      await repository.voidSalesOrder(event.id, 'V');
+      await repository.voidSalesOrder(
+        event.id,
+        event.voidIndicator,
+        commentIfVoid: event.commentIfVoid,
+      );
 
       // Update local state
       final updatedHeaders = state.headers.map((h) {
         if (h.id == event.id) {
-          return h.copyWith(voidIndicator: 'V');
+          return h.copyWith(
+            voidIndicator: event.voidIndicator,
+            commentIfVoid: event.commentIfVoid,
+          );
         }
         return h;
       }).toList();
@@ -1007,6 +1031,13 @@ class SalesOrderHeaderBloc
       // Get default order type from UDC
       final defaultOrderType = await _getDefaultOrderType();
 
+      // Generate invoice number using fs_table prefix/postfix
+      final invoiceNumber = await repository.generateInvoiceNumber(
+        event.companyId,
+        event.branchId,
+        'sales_order_header',
+      );
+
       // Create new header with system constant defaults
       final newHeader = SalesOrderHeader(
         orderDate: DateTime.now(),
@@ -1019,6 +1050,8 @@ class SalesOrderHeaderBloc
         paymentMethod: 'Cash',
         orderType: defaultOrderType?.id,
         fsNumber: nextFsNumber,
+        invoiceNumber: invoiceNumber,
+        branchValue: event.branchId,
         // Set default tax settings from system constants
         tax: 0.0,
         withholdAmount: 0.0,

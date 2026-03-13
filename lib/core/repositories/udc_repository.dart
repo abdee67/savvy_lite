@@ -88,7 +88,7 @@ class UdcRepository extends BaseRepository {
         SELECT udc_details.* 
         FROM udc_details 
         INNER JOIN udc_header ON udc_details.record_header = udc_header.id 
-        WHERE udc_details.detail_code = ? AND udc_header.header_code = ?
+        WHERE udc_details.detail_code = ? AND udc_header.udc_code = ?
         ''',
         [detailCode, headerCode],
       );
@@ -113,7 +113,7 @@ class UdcRepository extends BaseRepository {
         SELECT udc_details.* 
         FROM udc_details 
         INNER JOIN udc_header ON udc_details.record_header = udc_header.id 
-        WHERE udc_details.detail_code = ? AND udc_header.header_code = ?
+        WHERE udc_details.detail_code = ? AND udc_header.udc_code = ?
         ''',
         [detailCode, headerCode],
       );
@@ -136,7 +136,7 @@ class UdcRepository extends BaseRepository {
         '''
       SELECT ud.id FROM udc_details ud
       JOIN udc_header uh ON ud.record_header = uh.id
-      WHERE uh.header_code = ? AND ud.detail_code = ?
+      WHERE uh.udc_code = ? AND ud.detail_code = ?
       ''',
         [headerCode, detailCode],
       );
@@ -169,7 +169,7 @@ class UdcRepository extends BaseRepository {
         SELECT udc_details.* 
         FROM udc_details 
         INNER JOIN udc_header ON udc_details.record_header = udc_header.id 
-        WHERE udc_header.header_code = ?
+        WHERE udc_header.udc_code = ?
       ''',
         [headerCode],
       );
@@ -218,7 +218,7 @@ class UdcRepository extends BaseRepository {
       final result = await db.rawQuery(
         '''
       SELECT uh.id FROM udc_header uh
-      WHERE uh.header_code = ?
+      WHERE uh.udc_code = ?
       ''',
         [headerCode],
       );

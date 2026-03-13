@@ -774,7 +774,7 @@ class _UpcomingExpiryPageState extends State<UpcomingExpiryPage>
           ),
           _buildDetailItem(
             'Location: ',
-            lot.locationRef?.locationDescription ?? 'N/A',
+            lot.locationRef?.locationDescription?.locationDescription ?? 'N/A',
             Iconsax.location,
             isCompact,
           ),

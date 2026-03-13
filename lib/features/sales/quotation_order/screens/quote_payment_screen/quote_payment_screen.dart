@@ -50,11 +50,14 @@ class _QuotePaymentScreenState extends State<QuotePaymentScreen> {
 
     // Initialize payment data in coordinator
     final coordinatorBloc = context.read<QuotationOrderBloc>();
+    final coordinatorState = coordinatorBloc.state;
     final customer = widget.orderData?['customer'] as Customer?;
     final orderDetails =
-        widget.orderData?['orderDetails'] as List<QuotationOrderDetail>?;
+        widget.orderData?['orderDetails'] as List<QuotationOrderDetail>? ??
+        coordinatorState.createDetailItems;
     final orderHeader =
-        widget.orderData?['orderHeader'] as QuotationOrderHeader;
+        widget.orderData?['orderHeader'] as QuotationOrderHeader? ??
+        coordinatorState.selectedHeader!;
     final totalAmount = widget.orderData?['totalAmount'] as double?;
 
     if (customer != null) {
@@ -65,7 +68,7 @@ class _QuotePaymentScreenState extends State<QuotePaymentScreen> {
     coordinatorBloc.add(
       CalculateQuotationTotals(
         header: orderHeader,
-        details: orderDetails!,
+        details: orderDetails,
         applyWithholding: orderHeader.withHoldApply == 'N',
         discountAmount: orderHeader.discountAmount!,
       ),

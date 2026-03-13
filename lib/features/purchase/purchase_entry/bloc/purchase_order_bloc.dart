@@ -376,7 +376,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
             : null,
         company: event.companyId,
         tempId: _getNextHeaderTempId(state.createHeaders),
-        dateTransaction: DateTime.now(),
+        dateTransation: DateTime.now(),
         userId: state.userId ?? authBloc.state.userId!.id,
         dateUpdated: DateTime.now(),
         //branchReceive: event.branchId,
@@ -471,7 +471,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         id: null,
         orderNumber: nextOrderNumber,
         tempId: _getNextHeaderTempId(state.createHeaders),
-        dateTransaction: DateTime.now(),
+        dateTransation: DateTime.now(),
         dateUpdated: DateTime.now(),
         poReceiveStatus: await _getUdcDetailId('N', 'PR'),
         paymentStatus: originalHeader.paymentTerm != null
@@ -568,8 +568,8 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
 
     // Calculate credit due date if payment term exists
     DateTime? creditDueDate;
-    if (header.paymentTerm != null && header.dateTransaction != null) {
-      creditDueDate = header.dateTransaction!.add(
+    if (header.paymentTerm != null && header.dateTransation != null) {
+      creditDueDate = header.dateTransation!.add(
         Duration(days: header.paymentTerm!),
       );
     }
@@ -1725,7 +1725,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       quantityRecieved: detailQuantityReceived,
       amountReceived: detailAmountReceived,
       poReceiveStatus: quantityOpen == 0
-          ? await _getUdcDetailId('C', 'PR')
+          ? await _getUdcDetailId('R', 'PR')
           : await _getUdcDetailId('P', 'PR'),
       dateUpdated: DateTime.now(),
       userId: state.userId ?? authBloc.state.userId?.id,
@@ -1849,7 +1849,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         quantityRecieved: detailQuantityReceived,
         amountReceived: detailAmountReceived,
         poReceiveStatus: quantityOpen == 0
-            ? await _getUdcDetailId('C', 'PR')
+            ? await _getUdcDetailId('R', 'PR')
             : await _getUdcDetailId('P', 'PR'),
         dateUpdated: DateTime.now(),
         userId: state.userId ?? authBloc.state.userId?.id,
@@ -2283,7 +2283,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     final newHeader = PurchaseOrderHeader(
       tempId: _getNextHeaderTempId(state.createHeaders),
       company: state.companyId ?? authBloc.state.companyId!,
-      dateTransaction: DateTime.now(),
+      dateTransation: DateTime.now(),
       userId: state.userId ?? authBloc.state.userId?.id,
       dateUpdated: DateTime.now(),
     );
@@ -2304,7 +2304,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     final newHeader = PurchaseOrderHeader(
       tempId: _getNextHeaderTempId(state.editHeaders),
       company: state.companyId ?? authBloc.state.companyId!,
-      dateTransaction: DateTime.now(),
+      dateTransation: DateTime.now(),
       userId: state.userId ?? authBloc.state.userId?.id,
       dateUpdated: DateTime.now(),
     );

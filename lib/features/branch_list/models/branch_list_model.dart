@@ -11,6 +11,7 @@ class Branch {
   final String? branchPhone;
   final double? marginRate;
   final String? marginType;
+  final double? reorderPoint;
 
   const Branch({
     required this.id,
@@ -25,6 +26,7 @@ class Branch {
     this.branchPhone,
     this.marginRate,
     this.marginType,
+    this.reorderPoint,
   });
 
   static Branch empty() {
@@ -40,6 +42,7 @@ class Branch {
       branchPhone: null,
       marginRate: null,
       marginType: null,
+      reorderPoint: null,
     );
   }
 
@@ -60,6 +63,7 @@ class Branch {
       branchPhone: map['branch_phone']?.toString(),
       marginRate: (map['margin_rate'] as num?)?.toDouble(),
       marginType: map['margin_type']?.toString(),
+      reorderPoint: (map['reorder_point'] as num?)?.toDouble(),
     );
   }
 
@@ -77,6 +81,7 @@ class Branch {
       'branch_phone': branchPhone,
       'margin_rate': marginRate,
       'margin_type': marginType,
+      'reorder_point': reorderPoint,
     };
   }
 
@@ -92,6 +97,7 @@ class Branch {
     String? branchPhone,
     double? marginRate,
     String? marginType,
+    double? reorderPoint,
   }) {
     return Branch(
       id: id ?? this.id,
@@ -106,6 +112,7 @@ class Branch {
       branchPhone: branchPhone ?? this.branchPhone,
       marginRate: marginRate ?? this.marginRate,
       marginType: marginType ?? this.marginType,
+      reorderPoint: reorderPoint ?? this.reorderPoint,
     );
   }
 }

@@ -23,6 +23,7 @@ class LocationMaster extends Equatable {
   final int? branch;
   final String? marginType;
   final double? marginRate;
+  final double? reorderPoint;
   final String? branchName;
 
   //transient proprties
@@ -50,6 +51,7 @@ class LocationMaster extends Equatable {
     this.branch,
     this.marginType,
     this.marginRate,
+    this.reorderPoint,
     this.branchName,
     this.tempId,
     this.validCell,
@@ -72,6 +74,7 @@ class LocationMaster extends Equatable {
       branchName: null,
       marginType: null,
       marginRate: null,
+      reorderPoint: null,
       locationDescription: null,
       createdBy: null,
       dateCreated: null,
@@ -100,6 +103,7 @@ class LocationMaster extends Equatable {
       branchName: map['branch_name']?.toString(),
       marginType: map['margin_type']?.toString(),
       marginRate: (map['margin_rate'] as num?)?.toDouble(),
+      reorderPoint: (map['reorder_point'] as num?)?.toDouble(),
       locationDescription: map['location_description']?.toString(),
       createdBy: map['created_by'] as int?,
       dateCreated: map['date_created'] != null
@@ -129,6 +133,7 @@ class LocationMaster extends Equatable {
       'code_10': code10,
       'margin_type': marginType,
       'margin_rate': marginRate,
+      'reorder_point': reorderPoint,
       'location_description': locationDescription,
       'created_by': createdBy,
       'date_created': dateCreated?.toIso8601String(),
@@ -154,6 +159,7 @@ class LocationMaster extends Equatable {
     int? createdBy,
     String? marginType,
     double? marginRate,
+    double? reorderPoint,
     String? branchName,
     String? locationDescription,
     DateTime? dateCreated,
@@ -180,6 +186,7 @@ class LocationMaster extends Equatable {
       branchName: branchName ?? this.branchName,
       marginType: marginType ?? this.marginType,
       marginRate: marginRate ?? this.marginRate,
+      reorderPoint: reorderPoint ?? this.reorderPoint,
       locationDescription: locationDescription ?? this.locationDescription,
       createdBy: createdBy ?? this.createdBy,
       dateCreated: dateCreated ?? this.dateCreated,
@@ -208,6 +215,7 @@ class LocationMaster extends Equatable {
     branchName,
     marginType,
     marginRate,
+    reorderPoint,
     locationDescription,
     createdBy,
     dateCreated,

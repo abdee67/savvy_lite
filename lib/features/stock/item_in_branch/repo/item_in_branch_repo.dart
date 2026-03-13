@@ -2,7 +2,9 @@
 import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/models/available_items_in_branch_filter.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/models/paginated_aval_item_in_branch_result.dart';
 import 'package:savvy_stock/features/stock/item_transactions/model/paginated_item_transaction_result.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -595,6 +597,7 @@ class StockItemInBranchRepository extends BaseRepository {
   }
 
   Future<PaginatedItemTransactionResult> getPaginatedItemsInBranch({
+    ///for reorder point report
     required int companyId,
     required int page,
     required int pageSize,
@@ -656,5 +659,118 @@ class StockItemInBranchRepository extends BaseRepository {
       itemInBranch: items,
       totalCount: totalCount,
     );
+  }
+
+  // Get lazy paginated item locations with filters and sorting
+  Future<PaginatedItemInBranchResult> getLazyItemInBranchPaginated({
+    required int companyId,
+    required AvailableItemsInBranchFilter filters,
+    required int page,
+    required int pageSize,
+    String? sortBy,
+    bool sortAscending = true,
+  }) async {
+    final db = await databaseService.database;
+
+    final whereConditions = <String>['ib.company = ?'];
+    final whereArgs = <dynamic>[companyId];
+
+    if (filters.itemNumber != null) {
+      whereConditions.add('ib.item_number = ?');
+      whereArgs.add(filters.itemNumber);
+    }
+    if (filters.branchId != null) {
+      whereConditions.add('ib.branch = ?');
+      whereArgs.add(filters.branchId);
+    }
+
+    if (filters.noAvailable) {
+      whereConditions.add(
+        '(ib.quantity_available IS NULL OR ib.quantity_available = 0.0)',
+      );
+    }
+
+    final whereClause = whereConditions.join(' AND ');
+
+    // 1. COUNT query
+    final countResult = await db.rawQuery('''
+      SELECT COUNT(ib.id) as count
+      FROM items_in_branch ib
+      WHERE $whereClause
+    ''', whereArgs);
+
+    int totalCount = (countResult.first['count'] as int?) ?? 0;
+
+    // 2. DATA query with LEFT JOIN to emulate java's itemCostCache implicitly
+    String orderByClause;
+    if (sortBy != null && sortBy.isNotEmpty) {
+      // Basic protection against SQL injection on order by
+      final safeSortBy = sortBy.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '');
+      orderByClause = 'ib.$safeSortBy ${sortAscending ? "ASC" : "DESC"}';
+    } else {
+      orderByClause = 'ib.id DESC';
+    }
+
+    final query =
+        '''
+      SELECT ib.*,
+             it.item_description,
+             ib.unit_of_measure,
+             udc.description_1 as unit_of_measure_description,
+             udc.detail_code as unit_of_measure_code,
+             it.unit_price,
+             b.description as branch_description
+      FROM items_in_branch ib
+      LEFT JOIN items_table it ON ib.item_number = it.id
+      LEFT JOIN udc_details udc ON ib.unit_of_measure = udc.id
+      LEFT JOIN branch_table b ON ib.branch = b.id
+      WHERE $whereClause
+      ORDER BY $orderByClause
+      LIMIT ? OFFSET ?
+    ''';
+
+    final dataArgs = [...whereArgs, pageSize, (page - 1) * pageSize];
+    final itemsData = await db.rawQuery(query, dataArgs);
+
+    final items = itemsData
+        .map((map) => ItemInBranchModel.fromMap(map))
+        .toList();
+
+    return PaginatedItemInBranchResult(
+      itemInBranch: items,
+      totalCount: totalCount,
+    );
+  }
+
+  /// Returns the total quantity of expired lots for a given item+branch.
+  /// Mirrors the Java `getExpirationQuantity()` logic:
+  ///   SELECT SUM(quantity_available)
+  ///   FROM lot_master
+  ///   WHERE company = :company AND item_number = :itemNumber
+  ///         AND branch = :branch AND lot_status detail_code = 'E'
+  Future<double> getExpirationQuantity({
+    required int itemNumber,
+    required int branchId,
+    required int companyId,
+  }) async {
+    final db = await databaseService.database;
+    final result = await db.rawQuery(
+      '''
+      SELECT COALESCE(SUM(lm.quantity_available), 0.0) as expiration_qty
+      FROM lot_master lm
+      INNER JOIN udc_details ls ON lm.lot_status = ls.id
+      WHERE lm.company = ?
+        AND lm.item_number = ?
+        AND lm.branch = ?
+        AND ls.detail_code = 'E'
+    ''',
+      [companyId, itemNumber, branchId],
+    );
+
+    if (result.isNotEmpty) {
+      final val = result.first['expiration_qty'];
+      if (val is num) return val.toDouble();
+    }
+    return 0.0;
   }
 }

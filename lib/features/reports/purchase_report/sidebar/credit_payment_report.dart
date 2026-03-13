@@ -731,7 +731,7 @@ class _CreditPaymentReportState extends State<CreditPaymentReport>
           ),
           _buildDetailItem(
             'Order date: ',
-            _formatDate(item.poHeaderRef?.dateTransaction ?? DateTime.now()),
+            _formatDate(item.poHeaderRef?.dateTransation ?? DateTime.now()),
             Iconsax.calendar,
             isCompact,
           ),

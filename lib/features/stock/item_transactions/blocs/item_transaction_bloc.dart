@@ -529,10 +529,12 @@ class ItemTransactionsBloc
       final tempId = 1;
       final transactionNumber = await nextNumberBloc.generateFormattedNumber(
         'TN',
+        authBloc.state.companyId!,
       );
 
       final selected = ItemTransactionModel(
-        transactionNumber: transactionNumber,
+        transactionNumber:
+            transactionNumber, //CAUSE IT SHOULD CREATE WHEN THE TRANSACTION DONE
         dateCreated: DateTime.now(),
         quantityTransaction: 0.0,
         beforeStoreQuantityAvailable: 0.0,

@@ -9,6 +9,8 @@ class ItemCost {
   int? company;
   int? userId;
   DateTime? dateUpdated;
+  double? amountUnitCostBase;
+  double? overheadUnitCost;
   int? tempId;
 
   //from join
@@ -22,6 +24,8 @@ class ItemCost {
     this.company,
     this.userId,
     this.dateUpdated,
+    this.amountUnitCostBase,
+    this.overheadUnitCost,
     this.fromUOM,
     this.tempId,
     this.itemRef,
@@ -34,6 +38,8 @@ class ItemCost {
       company: null,
       userId: null,
       dateUpdated: null,
+      amountUnitCostBase: null,
+      overheadUnitCost: null,
       fromUOM: null,
       tempId: null,
       itemRef: null,
@@ -50,6 +56,8 @@ class ItemCost {
       dateUpdated: map['date_updated'] != null
           ? DateTime.parse(map['date_updated'])
           : null,
+      amountUnitCostBase: (map['amount_unit_cost_base'] as num?)?.toDouble(),
+      overheadUnitCost: (map['overhead_unit_cost'] as num?)?.toDouble(),
       tempId: map['temp_id'],
       fromUOM: map['branch_description'] != null
           ? ItemInBranchModel(
@@ -85,6 +93,8 @@ class ItemCost {
       'company': company,
       'user_id': userId,
       'date_updated': dateUpdated?.toIso8601String(),
+      'amount_unit_cost_base': amountUnitCostBase,
+      'overhead_unit_cost': overheadUnitCost,
     };
   }
 
@@ -95,6 +105,8 @@ class ItemCost {
     int? company,
     int? userId,
     DateTime? dateUpdated,
+    double? amountUnitCostBase,
+    double? overheadUnitCost,
     int? tempId,
   }) {
     return ItemCost(
@@ -104,6 +116,8 @@ class ItemCost {
       company: company ?? this.company,
       userId: userId ?? this.userId,
       dateUpdated: dateUpdated ?? this.dateUpdated,
+      amountUnitCostBase: amountUnitCostBase ?? this.amountUnitCostBase,
+      overheadUnitCost: overheadUnitCost ?? this.overheadUnitCost,
       tempId: tempId ?? this.tempId,
     );
   }

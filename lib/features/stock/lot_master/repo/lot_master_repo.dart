@@ -1,9 +1,14 @@
 // features/stock/lot_master/repositories/lot_master_repository.dart
+
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/expiration_report_filters.dart';
+import 'package:savvy_stock/features/stock/lot_master/models/lot_availability_filters.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/paginated_expiration_result.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
@@ -39,6 +44,8 @@ class LotMasterRepository extends BaseRepository {
         uom.description_1 as unit_of_measure_description,
         uom.detail_code as unit_of_measure_detail_code,
         b.description as description,
+        il.location as location,
+        loc.id as location_id,
         loc.location_description,
         ls.detail_code as status_code,
         ls.description_1 as status_description
@@ -46,7 +53,8 @@ class LotMasterRepository extends BaseRepository {
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
-      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN item_location il ON lm.location = il.id
+      LEFT JOIN location_master loc ON il.location = loc.id
       LEFT JOIN udc_details ls ON lm.lot_status = ls.id
       LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.company = ?
@@ -75,6 +83,8 @@ class LotMasterRepository extends BaseRepository {
         uom.description_1 as unit_of_measure_description,
         uom.detail_code as unit_of_measure_detail_code,
         b.description as description,
+        il.location as location,
+        loc.id as location_id,
         loc.location_description,
         ls.detail_code as status_code,
         ls.description_1 as status_description
@@ -82,7 +92,8 @@ class LotMasterRepository extends BaseRepository {
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
-      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN item_location il ON lm.location = il.id
+      LEFT JOIN location_master loc ON il.location = loc.id
       LEFT JOIN udc_details ls ON lm.lot_status = ls.id
       LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.id = ? AND lm.company = ?
@@ -110,6 +121,8 @@ class LotMasterRepository extends BaseRepository {
         uom.description_1 as unit_of_measure_description,
         uom.detail_code as unit_of_measure_detail_code,
         b.description as description,
+        il.location as location,
+        loc.id as location_id,
         loc.location_description,
         ls.detail_code as status_code,
         ls.description_1 as status_description
@@ -117,7 +130,8 @@ class LotMasterRepository extends BaseRepository {
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
-      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN item_location il ON lm.location = il.id
+      LEFT JOIN location_master loc ON il.location = loc.id
       LEFT JOIN udc_details ls ON lm.lot_status = ls.id
       LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.item_number = ? AND lm.location = ? AND lm.company = ?
@@ -171,6 +185,8 @@ class LotMasterRepository extends BaseRepository {
         uom.description_1 as unit_of_measure_description,
         uom.detail_code as unit_of_measure_detail_code,
         b.description as description,
+        il.location as location,
+        loc.id as location_id,
         loc.location_description,
         ls.detail_code as status_code,
         ls.description_1 as status_description
@@ -178,7 +194,8 @@ class LotMasterRepository extends BaseRepository {
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
-      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN item_location il ON lm.location = il.id
+      LEFT JOIN location_master loc ON il.location = loc.id
       LEFT JOIN udc_details ls ON lm.lot_status = ls.id
       LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       $whereClause
@@ -206,6 +223,8 @@ class LotMasterRepository extends BaseRepository {
         uom.description_1 as unit_of_measure_description,
         uom.detail_code as unit_of_measure_detail_code,
         b.description as description,
+        il.location as location,
+        loc.id as location_id,
         loc.location_description,
         ls.detail_code as status_code,
         ls.description_1 as status_description
@@ -213,7 +232,8 @@ class LotMasterRepository extends BaseRepository {
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
-      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN item_location il ON lm.location = il.id
+      LEFT JOIN location_master loc ON il.location = loc.id
       LEFT JOIN udc_details ls ON lm.lot_status = ls.id
       LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.company = ? AND lm.item_number = ? AND lm.branch = ?
@@ -239,6 +259,8 @@ class LotMasterRepository extends BaseRepository {
         uom.description_1 as unit_of_measure_description,
         uom.detail_code as unit_of_measure_detail_code,
         b.description as description,
+        il.location as location,
+        loc.id as location_id,
         loc.location_description,
         ls.detail_code as status_code,
         ls.description_1 as status_description
@@ -246,7 +268,8 @@ class LotMasterRepository extends BaseRepository {
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
-      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN item_location il ON lm.location = il.id
+      LEFT JOIN location_master loc ON il.location = loc.id
       LEFT JOIN udc_details ls ON lm.lot_status = ls.id
       LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.company = ? AND lm.item_number = ?
@@ -485,14 +508,17 @@ class LotMasterRepository extends BaseRepository {
         uom.description_1 as unit_of_measure_description,
         uom.detail_code as unit_of_measure_detail_code,
         b.description as description,
+        il.location as location,
         loc.location_description,
+        loc.id as location_id,
         ls.detail_code as status_code,
         ls.description_1 as status_description
       
       FROM lot_master lm
       LEFT JOIN items_table it ON lm.item_number = it.id
       LEFT JOIN branch_table b ON lm.branch = b.id
-      LEFT JOIN location_master loc ON lm.location = loc.id
+      LEFT JOIN item_location il ON lm.location = il.id
+      LEFT JOIN location_master loc ON il.location = loc.id
       LEFT JOIN udc_details ls ON lm.lot_status = ls.id
       LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
       WHERE lm.company = ? 
@@ -547,6 +573,7 @@ class LotMasterRepository extends BaseRepository {
         uom.description_1 as unit_of_measure_description,
         uom.detail_code as unit_of_measure_detail_code,
         b.description as description,
+        il.
         loc.location_description,
         ls.detail_code as status_code,
         ls.description_1 as status_description
@@ -1412,5 +1439,154 @@ class LotMasterRepository extends BaseRepository {
     final now = DateTime.now();
     final difference = expirationDate.difference(now).inDays;
     return difference > 0 ? difference : 0; // Only positive values
+  }
+
+  Future<({List<LotMaster> items, int count})> getLotAvailabilityPaginated({
+    required int companyId,
+    required LotAvailabilityFilters filters,
+    required int page,
+    required int pageSize,
+    String? lotTypeCode,
+  }) async {
+    final db = await databaseService.database;
+
+    var whereConditions = <String>['lm.company = ?'];
+    var whereArgs = <dynamic>[companyId];
+
+    if (filters.itemNumber != null) {
+      whereConditions.add('lm.item_number = ?');
+      whereArgs.add(filters.itemNumber);
+    }
+    if (filters.branch != null) {
+      whereConditions.add('lm.branch = ?');
+      whereArgs.add(filters.branch);
+    }
+    if (filters.batchNumberSupplier != null &&
+        filters.batchNumberSupplier!.isNotEmpty) {
+      whereConditions.add('lm.batch_number_supplier LIKE ?');
+      whereArgs.add('%${filters.batchNumberSupplier}%');
+    }
+    if (filters.locationId != null) {
+      whereConditions.add('lm.location = ?');
+      whereArgs.add(filters.locationId);
+    }
+
+    if (filters.noAvailability) {
+      whereConditions.add('lm.quantity_available = 0.0');
+    }
+
+    if (filters.selectFilterDates != null &&
+        filters.selectFilterDates != 'ALL') {
+      String dateColumn = 'lm.date_expiration';
+      if (lotTypeCode == 'F') {
+        dateColumn = 'lm.date_effective';
+      } else if (lotTypeCode == 'R') {
+        dateColumn = 'lm.date_received';
+      }
+
+      final filterType = filters.selectFilterDates!.toUpperCase();
+      if (filterType == 'RANGE' &&
+          filters.startDateForFilter != null &&
+          filters.endDateForFilter != null) {
+        whereConditions.add('$dateColumn BETWEEN ? AND ?');
+        whereArgs.add(filters.startDateForFilter!.toIso8601String());
+        whereArgs.add(filters.endDateForFilter!.toIso8601String());
+      } else if (filterType == 'YEARS' && filters.yearsPut != null) {
+        final startOfYear = DateTime(filters.yearsPut!, 1, 1);
+        final endOfYear = DateTime(filters.yearsPut!, 12, 31, 23, 59, 59);
+        whereConditions.add('$dateColumn BETWEEN ? AND ?');
+        whereArgs.add(startOfYear.toIso8601String());
+        whereArgs.add(endOfYear.toIso8601String());
+      } else if (filterType == 'DAYS' &&
+          filters.minDays != null &&
+          filters.maxDays != null) {
+        final today = DateTime.now();
+        final minDateOrig = today.add(Duration(days: filters.minDays!));
+        final minDate = DateTime(
+          minDateOrig.year,
+          minDateOrig.month,
+          minDateOrig.day,
+        ); // Start of day
+        final maxDateOrig = today.add(Duration(days: filters.maxDays!));
+        final maxDate = DateTime(
+          maxDateOrig.year,
+          maxDateOrig.month,
+          maxDateOrig.day,
+          23,
+          59,
+          59,
+        ); // End of day
+        whereConditions.add('$dateColumn BETWEEN ? AND ?');
+        whereArgs.add(minDate.toIso8601String());
+        whereArgs.add(maxDate.toIso8601String());
+      }
+
+      if (filterType == 'EXPIRED') {
+        final today = DateTime.now();
+        var todayEnd = DateTime(today.year, today.month, today.day, 23, 59, 59);
+        whereConditions.add('$dateColumn <= ?');
+        whereArgs.add(todayEnd.toIso8601String());
+      }
+    }
+
+    final whereClause = whereConditions.join(' AND ');
+
+    if (kDebugMode) {
+      developer.log('getLotAvailabilityPaginated WHERE: $whereClause');
+      developer.log('getLotAvailabilityPaginated ARGS: $whereArgs');
+    }
+
+    // 1. COUNT
+    final countResult = await db.rawQuery('''
+      SELECT COUNT(lm.id) as count
+      FROM lot_master lm
+      WHERE $whereClause
+    ''', whereArgs);
+    int totalCount = (countResult.first['count'] as int?) ?? 0;
+
+    // 2. SELECT
+    final dataQuery =
+        '''
+      SELECT lm.*,
+        it.items_id as item_id,
+        it.item_description,
+        it.unit_of_measure,
+        uom.description_1 as unit_of_measure_description,
+        uom.detail_code as unit_of_measure_detail_code,
+        b.description as description,
+        loc.id as location_id,
+        loc.location_description as location_description,
+        ls.detail_code as status_code,
+        ls.description_1 as status_description
+      FROM lot_master lm
+      LEFT JOIN items_table it ON lm.item_number = it.id
+      LEFT JOIN branch_table b ON lm.branch = b.id
+      LEFT JOIN item_location il ON lm.location = il.id
+      LEFT JOIN location_master loc ON COALESCE(il.location, lm.location) = loc.id
+      LEFT JOIN udc_details ls ON lm.lot_status = ls.id
+      LEFT JOIN udc_details uom ON it.unit_of_measure = uom.id
+      WHERE $whereClause
+      ORDER BY lm.id DESC
+      LIMIT ? OFFSET ?
+    ''';
+
+    final paginatedArgs = List<dynamic>.from(whereArgs)
+      ..add(pageSize)
+      ..add((page - 1) * pageSize);
+
+    final lotsData = await db.rawQuery(dataQuery, paginatedArgs);
+    List<LotMaster> lots = lotsData.map((p) => LotMaster.fromMap(p)).toList();
+
+    // The Java post-query filter for NO AVAILABILITY
+    if (filters.noAvailability) {
+      final noAvailLots = lots
+          .where((lot) => (lot.quantityAvailable ?? 0.0) == 0.0)
+          .toList();
+      if (noAvailLots.isNotEmpty) {
+        lots = noAvailLots;
+      }
+    }
+
+    return (items: lots, count: totalCount);
   }
 }

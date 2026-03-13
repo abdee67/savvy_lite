@@ -114,7 +114,7 @@ class SalesOrderReportRepository {
           emp.name_first as employee_name_first,
           emp.name_middle as employee_name_middle,
           emp.name_last as employee_name_last,
-          emp.phone as employee_phone,
+          emp.phone_home as employee_phone,
           emp.email as employee_email,
           ps.detail_code as payment_status_code,
           ps.description_1 as payment_status_description,

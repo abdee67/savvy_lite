@@ -704,14 +704,8 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
       child: Column(
         children: [
           _buildItemInfoItem(
-            'Item in Branch ID : ',
-            item.id.toString(),
-            Iconsax.card,
-            isCompact,
-          ),
-          _buildItemInfoItem(
             'Item : ',
-            item.itemRef!.itemsId.toString(),
+            item.itemRef!.itemDescription.toString(),
             Iconsax.box,
             isCompact,
           ),

@@ -157,7 +157,7 @@ class SystemConstant {
       'decimal_places': decimalPlaces,
       'date_last_updated': dateLastUpdated?.millisecondsSinceEpoch,
       'time_last_updated': timeLastUpdated?.millisecondsSinceEpoch,
-      'updated_by': updatedBy,
+      'ubpdated_by': updatedBy,
       'generate_barcode_for_item': generateBarcodeForItem,
       'company': company,
       'rate_vat_percentage': rateVatPercentage,
@@ -187,12 +187,20 @@ class SystemConstant {
       interfaceEmployee: map['interface_employee'],
       decimalPlaces: map['decimal_places'],
       dateLastUpdated: map['date_last_updated'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['date_last_updated'])
+          ? DateTime.fromMillisecondsSinceEpoch(
+              map['date_last_updated'] is String
+                  ? int.parse(map['date_last_updated'])
+                  : map['date_last_updated'],
+            )
           : null,
       timeLastUpdated: map['time_last_updated'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['time_last_updated'])
+          ? DateTime.fromMillisecondsSinceEpoch(
+              map['time_last_updated'] is String
+                  ? int.parse(map['time_last_updated'])
+                  : map['time_last_updated'],
+            )
           : null,
-      updatedBy: map['updated_by'],
+      updatedBy: map['ubpdated_by'],
       generateBarcodeForItem: map['generate_barcode_for_item'],
       company: map['company'],
       rateVatPercentage: map['rate_vat_percentage']?.toDouble(),
@@ -213,7 +221,11 @@ class SystemConstant {
       totWithHolding: map['tot_withholding'],
       isSynced: map['is_synced'] == 1,
       lastSyncTime: map['last_sync_time'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['last_sync_time'])
+          ? DateTime.fromMillisecondsSinceEpoch(
+              map['last_sync_time'] is String
+                  ? int.parse(map['last_sync_time'])
+                  : map['last_sync_time'],
+            )
           : null,
       lotTypeRef: map['lotType_description'] != null
           ? UdcDetails(

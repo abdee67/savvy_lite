@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
 import 'package:savvy_stock/features/admin/users/models/user_model.dart';
@@ -15,6 +16,7 @@ class AdminFormScreen extends StatefulWidget {
 class _AdminFormScreenState extends State<AdminFormScreen> {
   bool _showPassword = false;
   bool _showConfirmPassword = false;
+  bool _submitted = false;
 
   final TextEditingController fullNameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
@@ -43,7 +45,7 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
 
       fullNameController.text = nameParts.join(' ');
       emailController.text = state.adminUser.userEmail ?? '';
-      phoneController.text = state.employee.phone;
+      phoneController.text = state.employee.phoneHome;
       usernameController.text = state.adminUser.userName ?? '';
     }
   }
@@ -64,6 +66,10 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
   }
 
   void _goToConfirmation() {
+    setState(() {
+      _submitted = true;
+    });
+
     // Validate required fields
     if (fullNameController.text.trim().isEmpty ||
         emailController.text.trim().isEmpty ||
@@ -115,7 +121,7 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
       nameLast: lastName,
       nameMiddle: middleName,
       email: emailController.text.trim(),
-      phone: phoneController.text.trim(),
+      phoneHome: phoneController.text.trim(),
       title: 'Administrator',
     );
 
@@ -176,6 +182,23 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
             BlocProvider.value(value: bloc, child: const ConfirmationPage()),
       ),
     );
+  }
+
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter a password';
+    }
+    if (value.length < 6) {
+      return 'Password must be at least 6 characters';
+    }
+    if (!value.contains(RegExp(r'[0-9]'))) {
+      return 'Password must contain at least one number';
+    }
+    if (!value.contains(RegExp(r'[A-Za-z]'))) {
+      return 'Password must contain at least one letter';
+    }
+
+    return null;
   }
 
   void _showOtpDialog(BuildContext context, String email) {
@@ -334,14 +357,19 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
                           "Full Name (First Middle Last)",
                           controller: fullNameController,
                           required: true,
+                          maxLength: 140, // 45+45+45 + spaces
+                          errorText: state.validationErrors['fullName'],
+                          onChanged: (_) => setState(() {}),
                         ),
                         _buildTextField(
                           "Admin Email",
                           controller: emailController,
                           required: true,
                           isEmail: true,
+                          maxLength: 100,
                           errorText: state.validationErrors['email'],
                           onChanged: (value) {
+                            setState(() {});
                             context.read<RegistrationBloc>().add(
                               CheckEmailAvailability(value),
                             );
@@ -352,13 +380,18 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
                           controller: phoneController,
                           required: true,
                           isPhone: true,
+                          maxLength: 45,
+                          errorText: state.validationErrors['phone'],
+                          onChanged: (_) => setState(() {}),
                         ),
                         _buildTextField(
                           "Username",
                           controller: usernameController,
                           required: true,
+                          maxLength: 45,
                           errorText: state.validationErrors['username'],
                           onChanged: (value) {
+                            setState(() {});
                             context.read<RegistrationBloc>().add(
                               CheckUsernameAvailability(value),
                             );
@@ -370,17 +403,22 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
                           obscure: true,
                           required: true,
                           isPassword: true,
+                          validator: _validatePassword,
                           showPassword: _showPassword,
                           toggleVisibility: () {
                             setState(() => _showPassword = !_showPassword);
                           },
+                          onChanged: (_) => setState(() {}),
                         ),
+                        _buildPasswordStrengthIndicator(),
+                        const SizedBox(height: 10),
                         _buildTextField(
                           "Confirm Password",
                           controller: confirmPasswordController,
                           obscure: true,
                           required: true,
                           isPassword: true,
+                          validator: _validateConfirmPassword,
                           showPassword: _showConfirmPassword,
                           toggleVisibility: () {
                             setState(
@@ -388,6 +426,7 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
                                   _showConfirmPassword = !_showConfirmPassword,
                             );
                           },
+                          onChanged: (_) => setState(() {}),
                         ),
 
                         const SizedBox(height: 30),
@@ -528,15 +567,29 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
     VoidCallback? toggleVisibility,
     TextEditingController? controller,
     String? errorText,
+    int? maxLength,
     ValueChanged<String>? onChanged,
+    String? Function(String?)? validator,
   }) {
+    String? currentError = errorText;
+    if (required && _submitted && (controller?.text.isEmpty ?? true)) {
+      currentError = 'This field is required';
+    } else if (maxLength != null &&
+        (controller?.text.length ?? 0) > maxLength) {
+      currentError = 'Must be $maxLength characters or less';
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
-      child: TextField(
+      child: TextFormField(
         controller: controller,
         obscureText: obscure && !showPassword,
         style: const TextStyle(color: Colors.white, fontSize: 16),
         cursorColor: Colors.amber,
+        validator: validator,
+        inputFormatters: [
+          if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
+        ],
         keyboardType: isEmail
             ? TextInputType.emailAddress
             : isPhone
@@ -566,9 +619,7 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
             borderRadius: BorderRadius.circular(20),
             borderSide: const BorderSide(color: Colors.amber, width: 1.5),
           ),
-          errorText: required && controller!.text.isEmpty
-              ? 'This field is required'
-              : errorText,
+          errorText: currentError,
           errorMaxLines: 3,
         ),
         onChanged: onChanged,
@@ -586,5 +637,67 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
         shape: BoxShape.circle,
       ),
     );
+  }
+
+  Widget _buildPasswordStrengthIndicator() {
+    final password = passwordController.text;
+    int strength = 0;
+
+    if (password.length >= 6) strength++;
+    if (password.contains(RegExp(r'[0-9]'))) strength++;
+    if (password.contains(RegExp(r'[A-Za-z]'))) strength++;
+    if (password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) strength++;
+
+    Color strengthColor;
+    String strengthText;
+
+    if (password.isEmpty) {
+      return const SizedBox.shrink();
+    } else if (strength <= 1) {
+      strengthColor = Colors.red;
+      strengthText = 'Weak';
+    } else if (strength == 2) {
+      strengthColor = Colors.orange;
+      strengthText = 'Fair';
+    } else if (strength == 3) {
+      strengthColor = Colors.lightGreen;
+      strengthText = 'Good';
+    } else {
+      strengthColor = Colors.green;
+      strengthText = 'Strong';
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: LinearProgressIndicator(
+            value: strength / 4,
+            backgroundColor: Colors.grey.shade200,
+            valueColor: AlwaysStoppedAnimation<Color>(strengthColor),
+            minHeight: 4,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          strengthText,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: strengthColor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String? _validateConfirmPassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please confirm your password';
+    }
+    if (value != passwordController.text) {
+      return 'Passwords do not match';
+    }
+    return null;
   }
 }

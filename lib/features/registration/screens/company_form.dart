@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/features/company/models/company_model.dart';
 import 'package:savvy_stock/features/registration/blocs/registration_bloc.dart';
@@ -14,6 +15,7 @@ class CompanyForm extends StatefulWidget {
 class _CompanyFormState extends State<CompanyForm> {
   String selectedSignupType = "Company";
   String selectedCategory = "Pharmacy";
+  bool _submitted = false;
 
   final TextEditingController companyNameController = TextEditingController();
   final TextEditingController tinController = TextEditingController();
@@ -40,6 +42,10 @@ class _CompanyFormState extends State<CompanyForm> {
   }
 
   void _saveAndNavigate() {
+    setState(() {
+      _submitted = true;
+    });
+
     // Validate required fields
     if (companyNameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -141,11 +147,20 @@ class _CompanyFormState extends State<CompanyForm> {
                       "Company Name",
                       controller: companyNameController,
                       required: true,
+                      maxLength: 150,
+                      onChanged: (_) => setState(() {}),
                     ),
-                    _buildTextField("TIN Number", controller: tinController),
+                    _buildTextField(
+                      "TIN Number",
+                      controller: tinController,
+                      maxLength: 10,
+                      onChanged: (_) => setState(() {}),
+                    ),
                     _buildTextField(
                       "Company Phone",
                       controller: phoneController,
+                      maxLength: 15,
+                      onChanged: (_) => setState(() {}),
                     ),
 
                     // 🔹 Company Category Dropdown
@@ -251,14 +266,28 @@ class _CompanyFormState extends State<CompanyForm> {
   Widget _buildTextField(
     String label, {
     bool required = false,
+    int? maxLength,
     TextEditingController? controller,
+    ValueChanged<String>? onChanged,
   }) {
+    String? errorText;
+    if (required && _submitted && (controller?.text.isEmpty ?? true)) {
+      errorText = "This field is required";
+    } else if (maxLength != null &&
+        (controller?.text.length ?? 0) > maxLength) {
+      errorText = "Must be $maxLength characters or less";
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: TextField(
         controller: controller,
+        onChanged: onChanged,
         style: const TextStyle(color: Colors.white, fontSize: 16),
         cursorColor: Colors.amber,
+        inputFormatters: [
+          if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
+        ],
         decoration: InputDecoration(
           floatingLabelBehavior: FloatingLabelBehavior.auto,
           labelText: required ? "$label *" : label,
@@ -273,9 +302,7 @@ class _CompanyFormState extends State<CompanyForm> {
             borderRadius: BorderRadius.circular(20),
             borderSide: const BorderSide(color: Colors.amber, width: 1.5),
           ),
-          errorText: required && controller!.text.isEmpty
-              ? "This field is required"
-              : null,
+          errorText: errorText,
         ),
       ),
     );

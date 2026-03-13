@@ -608,7 +608,7 @@ class _AgedPurchaseCreditReportPageState
           ),
           _buildDetailRow(
             'Order Date',
-            _dateFormat.format(header.dateTransaction!),
+            _dateFormat.format(header.dateTransation!),
             Iconsax.calendar,
           ),
           _buildDetailRow(

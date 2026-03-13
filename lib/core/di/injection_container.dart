@@ -370,10 +370,10 @@ void initDependencies() {
       authBloc: getIt(),
       repository: getIt(),
       systemConstantBloc: getIt(),
-      //  itemCostBloc: getIt(),
       itemTransactionsRepository: getIt(),
       lotMasterBloc: getIt(),
-      itemUomConversionsBloc: getIt(),
+      itemUomConversionsRepo: getIt(),
+      itemCostRepository: getIt(),
     ),
   );
 
@@ -394,7 +394,13 @@ void initDependencies() {
     ),
   );
   getIt.registerFactory<StockItemLocationBloc>(
-    () => StockItemLocationBloc(repository: getIt(), authBloc: getIt()),
+    () => StockItemLocationBloc(
+      repository: getIt(),
+      itemCostRepository: getIt(),
+      authBloc: getIt(),
+      uomConversionsRepository: getIt(),
+      itemInBranchRepository: getIt(),
+    ),
   );
   getIt.registerFactory<NextNumberBloc>(
     () => NextNumberBloc(repository: getIt(), authBloc: getIt()),
@@ -533,6 +539,7 @@ void initDependencies() {
       invoiceHeaderBloc: getIt(),
       invoiceHeaderRepository: getIt(),
       udcRepository: getIt(),
+      itemCostRepository: getIt(),
     ),
   );
   // Purchase

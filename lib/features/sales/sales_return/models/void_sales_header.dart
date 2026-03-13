@@ -181,7 +181,7 @@ class SalesReturnHeader {
               nameLast: map['last_name']?.toString() ?? '',
               nameMiddle: map['middle_name']?.toString() ?? '',
               email: map['email']?.toString() ?? '',
-              phone: map['phone']?.toString() ?? '',
+              phoneHome: map['phone']?.toString() ?? '',
               address: map['address']?.toString(),
             )
           : null,

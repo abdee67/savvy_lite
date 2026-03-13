@@ -5,7 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/stock/item_locations/models/item_location_filters.dart';
 import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
+import 'package:savvy_stock/features/stock/item_locations/models/paginated_item_locations.dart';
 import 'package:sqflite/sqflite.dart';
 
 class ItemLocationsRepository extends BaseRepository {
@@ -140,6 +142,94 @@ class ItemLocationsRepository extends BaseRepository {
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+  }
+
+  // Get lazy paginated item locations with filters and sorting
+  Future<PaginatedItemLocationsResult> getLazyItemLocationsPaginated({
+    required int companyId,
+    required ItemLocationFilters filters,
+    required int page,
+    required int pageSize,
+    String? sortBy,
+    bool sortAscending = true,
+  }) async {
+    final db = await databaseService.database;
+
+    final whereConditions = <String>['il.company = ?'];
+    final whereArgs = <dynamic>[companyId];
+
+    if (filters.itemNumber != null) {
+      whereConditions.add('il.item_number = ?');
+      whereArgs.add(filters.itemNumber);
+    }
+    if (filters.branchId != null) {
+      whereConditions.add('il.branch = ?');
+      whereArgs.add(filters.branchId);
+    }
+    if (filters.locationId != null) {
+      whereConditions.add('il.location = ?');
+      whereArgs.add(filters.locationId);
+    }
+    if (filters.noAvailable) {
+      whereConditions.add(
+        '(il.quantity_on_hand IS NULL OR il.quantity_on_hand = 0.0)',
+      );
+    }
+
+    final whereClause = whereConditions.join(' AND ');
+
+    // 1. COUNT query
+    final countResult = await db.rawQuery('''
+      SELECT COUNT(il.id) as count
+      FROM item_location il
+      WHERE $whereClause
+    ''', whereArgs);
+
+    int totalCount = (countResult.first['count'] as int?) ?? 0;
+
+    // 2. DATA query with LEFT JOIN to emulate java's itemCostCache implicitly
+    String orderByClause;
+    if (sortBy != null && sortBy.isNotEmpty) {
+      // Basic protection against SQL injection on order by
+      final safeSortBy = sortBy.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '');
+      orderByClause = 'il.$safeSortBy ${sortAscending ? "ASC" : "DESC"}';
+    } else {
+      orderByClause = 'il.id DESC';
+    }
+
+    final query =
+        '''
+      SELECT il.*,
+             lm.location_description,
+             it.item_description,
+             it.items_id,
+             it.unit_of_measure,
+             udc.description_1 as unit_of_measure_description,
+             udc.detail_code as unit_of_measure_code,
+             it.unit_price,
+             it.taxable,
+             it.barcode,
+             it.company as item_company,
+             it.margin_rate as item_margin_rate,
+             it.margin_type as item_margin_type,
+             it.reorder_point as item_reorder_point,
+             b.description as branch_description
+      FROM item_location il
+      LEFT JOIN location_master lm ON il.location = lm.id
+      LEFT JOIN items_table it ON il.item_number = it.id
+      LEFT JOIN udc_details udc ON it.unit_of_measure = udc.id
+      LEFT JOIN branch_table b ON il.branch = b.id
+      WHERE $whereClause
+      ORDER BY $orderByClause
+      LIMIT ? OFFSET ?
+    ''';
+
+    final dataArgs = [...whereArgs, pageSize, (page - 1) * pageSize];
+    final itemsData = await db.rawQuery(query, dataArgs);
+
+    final items = itemsData.map((map) => ItemLocation.fromMap(map)).toList();
+
+    return PaginatedItemLocationsResult(items: items, count: totalCount);
   }
 
   // Batch delete multiple item locations

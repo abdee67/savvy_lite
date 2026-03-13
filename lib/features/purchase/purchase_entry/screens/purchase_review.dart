@@ -1048,7 +1048,7 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
 
   Color _getPurchaseOrderTypeColor(String? status) {
     switch (status) {
-      case 'C':
+      case 'R':
         return Colors.green;
       case 'P':
         return Colors.orange;
@@ -1060,7 +1060,7 @@ class _PurchaseReviewPageState extends State<PurchaseReviewPage>
 
   Color _getPurchaseOrderTypeBorderColor(String? status) {
     switch (status) {
-      case 'C':
+      case 'R':
         return Colors.green[700]!;
       case 'P':
         return Colors.orange[700]!;

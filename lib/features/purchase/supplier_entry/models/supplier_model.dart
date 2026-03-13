@@ -20,6 +20,7 @@ class SupplierModel extends Equatable {
   final String? tinNumber;
   final String? contactPerson;
   final String? contactTitle;
+  final String? defaultsValue;
   final int? tempId; // For temporary records during creation
 
   const SupplierModel({
@@ -41,6 +42,7 @@ class SupplierModel extends Equatable {
     this.tinNumber,
     this.contactPerson,
     this.contactTitle,
+    this.defaultsValue,
     this.tempId,
   });
   // Proper empty checks: consider missing id or no name as empty
@@ -71,6 +73,7 @@ class SupplierModel extends Equatable {
       tinNumber: map['tin_number'],
       contactPerson: map['contact_person'],
       contactTitle: map['contact_title'],
+      defaultsValue: map['defaults_value'],
       tempId: map['temp_id'],
     );
   }
@@ -95,6 +98,7 @@ class SupplierModel extends Equatable {
       'tin_number': tinNumber,
       'contact_person': contactPerson,
       'contact_title': contactTitle,
+      'defaults_value': defaultsValue,
     };
   }
 
@@ -117,6 +121,7 @@ class SupplierModel extends Equatable {
     String? tinNumber,
     String? contactPerson,
     String? contactTitle,
+    String? defaultsValue,
     int? tempId,
   }) {
     return SupplierModel(
@@ -138,6 +143,7 @@ class SupplierModel extends Equatable {
       tinNumber: tinNumber ?? this.tinNumber,
       contactPerson: contactPerson ?? this.contactPerson,
       contactTitle: contactTitle ?? this.contactTitle,
+      defaultsValue: defaultsValue ?? this.defaultsValue,
       tempId: tempId ?? this.tempId,
     );
   }
@@ -164,6 +170,7 @@ class SupplierModel extends Equatable {
     tinNumber,
     contactPerson,
     contactTitle,
+    defaultsValue,
     tempId,
   ];
 }
