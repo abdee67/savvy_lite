@@ -12,8 +12,10 @@ import 'package:savvy_stock/features/stock/item_entry/data/item_repository.dart'
 import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_repo.dart';
 import 'package:savvy_stock/features/stock/lot_master/repo/lot_master_repo.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:savvy_stock/core/repositories/base_repo.dart';
 
-class SalesOrderDetailRepository {
+class SalesOrderDetailRepository  extends BaseRepository{
+  @override
   final LocalDatabaseService databaseService;
   final StockItemsEntryRepository itemEntryRepository;
   final StockItemInBranchRepository itemInBranchRepository;
@@ -37,6 +39,13 @@ class SalesOrderDetailRepository {
       'sales_order_details',
       details.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    captureSync(
+      tableName: 'sales_order_details',
+      entityMap: details.toMap(),
+      entityId: id.toString(),
+      operation: 'INSERT',
+      company: details.company?.toString(),
     );
     return id;
   }

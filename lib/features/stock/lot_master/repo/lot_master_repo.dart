@@ -286,18 +286,35 @@ class LotMasterRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final lotMap = lot.toMap();
     lotMap.remove('id'); // Remove ID for new insertion
-    return await db.insert('lot_master', lotMap);
+    final id = await db.insert('lot_master', lotMap);
+    lotMap['id'] = id;
+    captureSync(
+      tableName: 'lot_master',
+      entityMap: lotMap,
+      entityId: id.toString(),
+      operation: 'INSERT',
+      company: lot.company?.toString(),
+    );
+    return id;
   }
 
   // Update existing lot master
   Future<int> updateLotMaster(LotMaster lot, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
-    return await db.update(
+    final result = await db.update(
       'lot_master',
       lot.toMap(),
       where: 'id = ? AND company = ?',
       whereArgs: [lot.id, lot.company],
     );
+    captureSync(
+      tableName: 'lot_master',
+      entityMap: lot.toMap(),
+      entityId: lot.id.toString(),
+      operation: 'UPDATE',
+      company: lot.company?.toString(),
+    );
+    return result;
   }
 
   // Update unit price for all lots matching item and branch
@@ -334,11 +351,19 @@ class LotMasterRepository extends BaseRepository {
   // Delete lot master
   Future<int> deleteLotMaster(int id, int companyId, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
-    return await db.delete(
+    final result = await db.delete(
       'lot_master',
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+    captureSync(
+      tableName: 'lot_master',
+      entityMap: {'id': id, 'company': companyId},
+      entityId: id.toString(),
+      operation: 'DELETE',
+      company: companyId.toString(),
+    );
+    return result;
   }
 
   // Batch delete multiple lot masters

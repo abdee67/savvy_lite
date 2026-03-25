@@ -47,7 +47,7 @@ class LocalDatabaseService {
     return await factory.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 1, // Incremented for proforma fields migration
+        version: 1, // Keep schema version at 1
         onCreate: _onCreate,
         onUpgrade: _onUpgrade, // Add upgrade handler
         onOpen: (db) async {
@@ -145,6 +145,82 @@ class LocalDatabaseService {
       'CREATE INDEX fk_company_table_inv_plnr_idx ON company_table(inventory_planner)',
     );
     developer.log('Created table: company_table');
+
+    // 3a. Create system_url_config table
+    await db.execute('''
+      CREATE TABLE system_url_config (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        config_key TEXT CHECK(length(config_key) <= 45),
+        config_value TEXT CHECK(length(config_value) <= 500),
+        environment TEXT CHECK(length(environment) <= 45),
+        active TEXT CHECK(length(active) <= 1),
+        company INTEGER,
+        sync_key TEXT CHECK(length(sync_key) <= 36),
+        UNIQUE (config_key),
+        UNIQUE (config_value),
+        FOREIGN KEY (company) REFERENCES company_table (id) ON DELETE NO ACTION ON UPDATE NO ACTION
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX fk_system_url_config_compay_idx ON system_url_config(company)',
+    );
+    developer.log('Created table: system_url_config');
+
+    // 3b. Create sync_event table
+    await db.execute('''
+      CREATE TABLE sync_event (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entity_name TEXT NOT NULL CHECK(length(entity_name) <= 255),
+        entity_id TEXT CHECK(length(entity_id) <= 100),
+        operation TEXT NOT NULL CHECK(length(operation) <= 10),
+        payload TEXT NOT NULL,
+        source_node TEXT CHECK(length(source_node) <= 20),
+        created_at TEXT,
+        company TEXT CHECK(length(company) <= 100),
+        source_key TEXT CHECK(length(source_key) <= 100),
+        source_address TEXT CHECK(length(source_address) <= 100),
+        source_id TEXT CHECK(length(source_id) <= 100),
+        sync_status TEXT DEFAULT 'PENDING' CHECK(length(sync_status) <= 20)
+      )
+    ''');
+    developer.log('Created table: sync_event');
+
+    // 3c. Create sync_device_detail table
+    await db.execute('''
+      CREATE TABLE sync_device_detail (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sync_status TEXT DEFAULT 'PENDING' CHECK(length(sync_status) <= 20),
+        last_attempt TEXT,
+        last_error TEXT CHECK(length(last_error) <= 1000),
+        device_address INTEGER,
+        retry_count INTEGER DEFAULT 0,
+        sync_event INTEGER,
+        company TEXT CHECK(length(company) <= 100),
+        FOREIGN KEY (device_address) REFERENCES system_url_config (id) ON DELETE NO ACTION ON UPDATE NO ACTION,
+        FOREIGN KEY (sync_event) REFERENCES sync_event (id) ON DELETE NO ACTION ON UPDATE NO ACTION
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX fk_sdd_device_sync_event_idx ON sync_device_detail(sync_event)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_sdd_device_address_idx ON sync_device_detail(device_address)',
+    );
+    developer.log('Created table: sync_device_detail');
+
+    // 3d. Create sync_node_status table
+    await db.execute('''
+      CREATE TABLE sync_node_status (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        node_id TEXT CHECK(length(node_id) <= 500),
+        last_seen TEXT,
+        company TEXT NOT NULL CHECK(length(company) <= 100),
+        source_node TEXT CHECK(length(source_node) <= 20),
+        UNIQUE (node_id),
+        UNIQUE (source_node)
+      )
+    ''');
+    developer.log('Created table: sync_node_status');
 
     //4. Create branch table
     await db.execute('''

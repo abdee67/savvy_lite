@@ -2,17 +2,17 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
+import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/credit_receipt_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
 import 'package:sqflite/sqflite.dart';
 
-class SalesOrderHeaderRepository {
-  static final SalesOrderHeaderRepository _instance =
-      SalesOrderHeaderRepository._internal();
-  factory SalesOrderHeaderRepository() => _instance;
-  SalesOrderHeaderRepository._internal();
+class SalesOrderHeaderRepository  extends BaseRepository{
+  @override
+  final LocalDatabaseService databaseService;
+  SalesOrderHeaderRepository({required this.databaseService});
 
   Future<Database> get _db async => LocalDatabaseService().database;
 
@@ -34,6 +34,14 @@ class SalesOrderHeaderRepository {
         'sales_order_header',
         headerMap,
         conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      headerMap['id'] = id;
+      captureSync(
+        tableName: 'sales_order_header',
+        entityMap: headerMap,
+        entityId: id.toString(),
+        operation: 'INSERT',
+        company: header.company?.toString(),
       );
 
       if (kDebugMode) {
@@ -81,16 +89,23 @@ class SalesOrderHeaderRepository {
     return null;
   }
 
-  // Update
   Future<int> updateSalesOrderHeader(SalesOrderHeader header) async {
     final db = await _db;
     try {
-      return await db.update(
+      final result = await db.update(
         'sales_order_header',
         header.toMap(),
         where: 'id = ?',
         whereArgs: [header.id],
       );
+      captureSync(
+        tableName: 'sales_order_header',
+        entityMap: header.toMap(),
+        entityId: header.id.toString(),
+        operation: 'UPDATE',
+        company: header.company?.toString(),
+      );
+      return result;
     } catch (e) {
       throw Exception('Failed to update sales order: $e');
     }
@@ -99,11 +114,18 @@ class SalesOrderHeaderRepository {
   // Delete
   Future<int> deleteSalesOrderHeader(int id) async {
     final db = await _db;
-    return await db.delete(
+    final result = await db.delete(
       'sales_order_header',
       where: 'id = ?',
       whereArgs: [id],
     );
+    captureSync(
+      tableName: 'sales_order_header',
+      entityMap: {'id': id},
+      entityId: id.toString(),
+      operation: 'DELETE',
+    );
+    return result;
   }
 
   // Get all with filters
@@ -230,7 +252,7 @@ class SalesOrderHeaderRepository {
     String? commentIfVoid,
   }) async {
     final db = await _db;
-    return await db.update(
+    final result = await db.update(
       'sales_order_header',
       {
         'void_indicator': voidIndicator,
@@ -239,6 +261,17 @@ class SalesOrderHeaderRepository {
       where: 'id = ?',
       whereArgs: [id],
     );
+    final header = await getById(id);
+    if (header != null) {
+      captureSync(
+        tableName: 'sales_order_header',
+        entityMap: header.toMap(),
+        entityId: id.toString(),
+        operation: 'UPDATE',
+        company: header.company?.toString(),
+      );
+    }
+    return result;
   }
 
   // Get voided sales orders
@@ -691,12 +724,20 @@ class SalesOrderHeaderRepository {
   Future<int> update(SalesOrderHeader header) async {
     final db = await _db;
     try {
-      return await db.update(
+      final result = await db.update(
         'sales_order_header',
         header.toMap(),
         where: 'id = ?',
         whereArgs: [header.id],
       );
+      captureSync(
+        tableName: 'sales_order_header',
+        entityMap: header.toMap(),
+        entityId: header.id.toString(),
+        operation: 'UPDATE',
+        company: header.company?.toString(),
+      );
+      return result;
     } catch (e) {
       throw Exception('Failed to update sales order: $e');
     }

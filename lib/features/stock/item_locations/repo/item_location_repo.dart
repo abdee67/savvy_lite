@@ -116,18 +116,35 @@ class ItemLocationsRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final itemMap = item.toMap();
     itemMap.remove('id'); // Remove ID for new insertion
-    return await db.insert('item_location', itemMap);
+    final id = await db.insert('item_location', itemMap);
+    itemMap['id'] = id;
+    captureSync(
+      tableName: 'item_location',
+      entityMap: itemMap,
+      entityId: id.toString(),
+      operation: 'INSERT',
+      company: item.company?.toString(),
+    );
+    return id;
   }
 
   // Update existing item location
   Future<int> updateItemLocation(ItemLocation item, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
-    return await db.update(
+    final result = await db.update(
       'item_location',
       item.toMap(),
       where: 'id = ? AND company = ?',
       whereArgs: [item.id, item.company],
     );
+    captureSync(
+      tableName: 'item_location',
+      entityMap: item.toMap(),
+      entityId: item.id.toString(),
+      operation: 'UPDATE',
+      company: item.company?.toString(),
+    );
+    return result;
   }
 
   // Delete item location
@@ -137,11 +154,19 @@ class ItemLocationsRepository extends BaseRepository {
     Transaction? txn,
   }) async {
     final db = txn ?? await databaseService.database;
-    return await db.delete(
+    final result = await db.delete(
       'item_location',
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+    captureSync(
+      tableName: 'item_location',
+      entityMap: {'id': id, 'company': companyId},
+      entityId: id.toString(),
+      operation: 'DELETE',
+      company: companyId.toString(),
+    );
+    return result;
   }
 
   // Get lazy paginated item locations with filters and sorting

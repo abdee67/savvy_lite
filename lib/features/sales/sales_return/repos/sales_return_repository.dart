@@ -1,21 +1,29 @@
 // features/sales/sales_return/repo/sales_return_repository.dart
+import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_return/models/void_sales_details.dart';
 import 'package:savvy_stock/features/sales/sales_return/models/void_sales_header.dart';
 import 'package:sqflite/sqflite.dart';
 
-class SalesReturnRepository {
+class SalesReturnRepository  extends BaseRepository{
+  @override
   final LocalDatabaseService databaseService;
-
   SalesReturnRepository({required this.databaseService});
 
   // Header Operations
   Future<int> createSalesReturnHeader(SalesReturnHeader header) async {
     final db = await databaseService.database;
-    final map = db.insert(
+    final map = await db.insert(
       'sales_return_header',
       header.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    captureSync(
+      tableName: 'sales_return_header',
+      entityMap: header.toMap(),
+      entityId: map.toString(),
+      operation: 'INSERT',
+      company: header.company?.toString(),
     );
     return map;
   }
@@ -28,11 +36,24 @@ class SalesReturnRepository {
       where: 'id = ?',
       whereArgs: [header.id],
     );
+    captureSync(
+      tableName: 'sales_return_header',
+      entityMap: header.toMap(),
+      entityId: header.id.toString(),
+      operation: 'UPDATE',
+      company: header.company?.toString(),
+    );
   }
 
   Future<void> deleteSalesReturnHeader(int id) async {
     final db = await databaseService.database;
     await db.delete('sales_return_header', where: 'id = ?', whereArgs: [id]);
+    captureSync(
+      tableName: 'sales_return_header',
+      entityMap: {'id': id},
+      entityId: id.toString(),
+      operation: 'DELETE',
+    );
   }
 
   Future<void> voidSalesReturn(int id, String voidIndicator) async {
@@ -43,6 +64,16 @@ class SalesReturnRepository {
       where: 'id = ?',
       whereArgs: [id],
     );
+    final header = await getSalesReturnHeaderById(id);
+    if (header != null) {
+      captureSync(
+        tableName: 'sales_return_header',
+        entityMap: header.toMap(),
+        entityId: id.toString(),
+        operation: 'UPDATE',
+        company: header.company?.toString(),
+      );
+    }
   }
 
   Future<List<SalesReturnHeader>> getSalesReturnHeaders(int companyId) async {

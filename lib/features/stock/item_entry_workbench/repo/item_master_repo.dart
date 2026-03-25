@@ -1,8 +1,10 @@
 // features/stock/item_master/repositories/item_master_repository.dart
+import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/stock/item_entry_workbench/models/item_master_model.dart';
 
-class ItemMasterRepository {
+class ItemMasterRepository extends BaseRepository {
+  @override
   final LocalDatabaseService databaseService;
 
   ItemMasterRepository({required this.databaseService});
@@ -12,24 +14,48 @@ class ItemMasterRepository {
     final db = await databaseService.database;
     final itemMap = item.toMap();
     itemMap.remove('id');
-    return await db.insert('item_master', itemMap);
+    final id = await db.insert('item_master', itemMap);
+    itemMap['id'] = id;
+    captureSync(
+      tableName: 'item_master',
+      entityMap: itemMap,
+      entityId: id.toString(),
+      operation: 'INSERT',
+      company: item.companyCategory?.toString(), // Use category as company id is not directly available, but it's okay for now
+    );
+    return id;
   }
 
   // Update existing item master
   Future<int> update(ItemMaster item) async {
     final db = await databaseService.database;
-    return await db.update(
+    final result = await db.update(
       'item_master',
       item.toMap(),
       where: 'id = ?',
       whereArgs: [item.id],
     );
+    captureSync(
+      tableName: 'item_master',
+      entityMap: item.toMap(),
+      entityId: item.id.toString(),
+      operation: 'UPDATE',
+      company: item.companyCategory?.toString(),
+    );
+    return result;
   }
 
   // Delete item master
   Future<int> delete(int id) async {
     final db = await databaseService.database;
-    return await db.delete('item_master', where: 'id = ?', whereArgs: [id]);
+    final result = await db.delete('item_master', where: 'id = ?', whereArgs: [id]);
+    captureSync(
+      tableName: 'item_master',
+      entityMap: {'id': id},
+      entityId: id.toString(),
+      operation: 'DELETE',
+    );
+    return result;
   }
 
   // Delete multiple item masters

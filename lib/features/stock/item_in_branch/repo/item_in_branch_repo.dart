@@ -19,7 +19,16 @@ class StockItemInBranchRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final itemMap = item.toMap();
     itemMap.remove('id'); // Remove id for new insertion
-    return await db.insert('items_in_branch', itemMap);
+    final id = await db.insert('items_in_branch', itemMap);
+    itemMap['id'] = id;
+    captureSync(
+      tableName: 'items_in_branch',
+      entityMap: itemMap,
+      entityId: id.toString(),
+      operation: 'INSERT',
+      company: item.company?.toString(),
+    );
+    return id;
   }
 
   // Update existing item in branch
@@ -36,22 +45,38 @@ class StockItemInBranchRepository extends BaseRepository {
       );
     }
 
-    return await db.update(
+    final result = await db.update(
       'items_in_branch',
       item.toMap(),
       where: 'id = ? AND company = ? AND branch = ? ',
       whereArgs: [item.id, item.company, item.branch],
     );
+    captureSync(
+      tableName: 'items_in_branch',
+      entityMap: item.toMap(),
+      entityId: item.id.toString(),
+      operation: 'UPDATE',
+      company: item.company?.toString(),
+    );
+    return result;
   }
 
   // Delete item from branch
   Future<int> delete(int id, int companyId, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
-    return await db.delete(
+    final result = await db.delete(
       'items_in_branch',
       where: 'id = ? AND company = ? AND branch = ?',
       whereArgs: [id, companyId],
     );
+    captureSync(
+      tableName: 'items_in_branch',
+      entityMap: {'id': id, 'company': companyId},
+      entityId: id.toString(),
+      operation: 'DELETE',
+      company: companyId.toString(),
+    );
+    return result;
   }
 
   // Delete multiple items from branch

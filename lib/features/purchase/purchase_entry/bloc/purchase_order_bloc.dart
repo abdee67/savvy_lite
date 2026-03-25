@@ -658,7 +658,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     emit(state.loadingState('delete_purchase_order_header'));
 
     try {
-      await repository.deletePurchaseOrderHeader(event.id);
+      await repository.deletePurchaseOrderHeader(event.id, state.companyId!);
 
       final updatedHeaders = state.headers
           .where((h) => h.id != event.id)
@@ -2541,9 +2541,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
   ) async {
     try {
       if (event.detail?.id != null) {
-        await repository.deletePurchaseOrderDetail(event.detail!.id!);
+        await repository.deletePurchaseOrderDetail(event.detail!.id!, event.detail!.company!);
       } else if (event.receiver?.id != null) {
-        await repository.deletePurchaseOrderReceiver(event.receiver!.id!);
+        await repository.deletePurchaseOrderReceiver(event.receiver!.id!, event.receiver!.company!);
       }
 
       emit(state.copyWith(successMessage: 'Record removed successfully'));

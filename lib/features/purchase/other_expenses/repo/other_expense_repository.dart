@@ -6,7 +6,7 @@ import 'package:savvy_stock/features/purchase/purchase_entry/models/other_expens
 import 'package:sqflite/sqflite.dart';
 
 /// Paginated result for other expenses
-class PaginatedOtherExpenseResult {
+class PaginatedOtherExpenseResult  {
   final List<OtherExpense> items;
   final int totalCount;
 
@@ -26,24 +26,48 @@ class OtherExpenseRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final map = expense.toMap();
     map.remove('id'); // Remove id for new insertion
-    return await db.insert(_tableName, map);
+    final id = await db.insert(_tableName, map);
+    map['id'] = id;
+    captureSync(
+      tableName: _tableName,
+      entityMap: map,
+      entityId: id.toString(),
+      operation: 'INSERT',
+      company: expense.company?.toString(),
+    );
+    return id;
   }
 
   /// Update an existing expense
   Future<int> update(OtherExpense expense, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
-    return await db.update(
+    final result = await db.update(
       _tableName,
       expense.toMap(),
       where: 'id = ?',
       whereArgs: [expense.id],
     );
+    captureSync(
+      tableName: _tableName,
+      entityMap: expense.toMap(),
+      entityId: expense.id.toString(),
+      operation: 'UPDATE',
+      company: expense.company?.toString(),
+    );
+    return result;
   }
 
   /// Delete an expense by ID
   Future<int> delete(int id, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
-    return await db.delete(_tableName, where: 'id = ?', whereArgs: [id]);
+    final result = await db.delete(_tableName, where: 'id = ?', whereArgs: [id]);
+    captureSync(
+      tableName: _tableName,
+      entityMap: {'id': id},
+      entityId: id.toString(),
+      operation: 'DELETE',
+    );
+    return result;
   }
 
   /// Delete multiple expenses

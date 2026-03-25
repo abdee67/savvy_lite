@@ -1,4 +1,5 @@
 // features/purchase_order/repositories/purchase_order_repository.dart
+import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/credit_payment_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
@@ -7,24 +8,35 @@ import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_ord
 import 'package:sqflite/sqflite.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 
-class PurchaseOrderRepository {
-  final LocalDatabaseService _databaseService;
+class PurchaseOrderRepository extends BaseRepository {
+  @override
+  final LocalDatabaseService databaseService;
   final UdcRepository _udcRepository;
 
   PurchaseOrderRepository({
-    required LocalDatabaseService databaseService,
+    required this.databaseService,
     required UdcRepository udcRepository,
-  }) : _databaseService = databaseService,
-       _udcRepository = udcRepository;
+  }) : _udcRepository = udcRepository;
 
-  Future<Database> get _db async => _databaseService.database;
+  Future<Database> get _db async => databaseService.database;
 
   // ============ HEADER CRUD OPERATIONS ============
 
   Future<int> createPurchaseOrderHeader(PurchaseOrderHeader header) async {
     final db = await _db;
     try {
-      return await db.insert('purchase_order_header', header.toMap());
+      final headerMap = header.toMap();
+      headerMap.remove('id');
+      final id = await db.insert('purchase_order_header', headerMap);
+      headerMap['id'] = id;
+      captureSync(
+        tableName: 'purchase_order_header',
+        entityMap: headerMap,
+        entityId: id.toString(),
+        operation: 'INSERT',
+        company: header.company?.toString(),
+      );
+      return id;
     } catch (e) {
       throw Exception('Failed to create purchase order header: $e');
     }
@@ -39,12 +51,19 @@ class PurchaseOrderRepository {
         where: 'id = ?',
         whereArgs: [header.id],
       );
+      captureSync(
+        tableName: 'purchase_order_header',
+        entityMap: header.toMap(),
+        entityId: header.id.toString(),
+        operation: 'UPDATE',
+        company: header.company?.toString(),
+      );
     } catch (e) {
       throw Exception('Failed to update purchase order header: $e');
     }
   }
 
-  Future<void> deletePurchaseOrderHeader(int id) async {
+  Future<void> deletePurchaseOrderHeader(int id, int companyId) async {
     final db = await _db;
     try {
       // First delete all details
@@ -59,6 +78,13 @@ class PurchaseOrderRepository {
         'purchase_order_header',
         where: 'id = ?',
         whereArgs: [id],
+      );
+      captureSync(
+        tableName: 'purchase_order_header',
+        entityMap: {'id': id},
+        entityId: id.toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
       );
     } catch (e) {
       throw Exception('Failed to delete purchase order header: $e');
@@ -388,7 +414,7 @@ class PurchaseOrderRepository {
         final grossAmount = total - discount;
         final grandTotal = grossAmount + otherCosts;
 
-        await db.update(
+      final result =  await db.update(
           'purchase_order_header',
           {
             'amount_gross': grossAmount,
@@ -399,6 +425,20 @@ class PurchaseOrderRepository {
           },
           where: 'id = ?',
           whereArgs: [headerId],
+        );
+        captureSync(
+          tableName: 'purchase_order_header',
+          entityMap: {
+            'id': headerId,
+            'amount_gross': grossAmount,
+            'amount_grand_total_cost': grandTotal,
+            'amount_open_credit': header.paymentTerm != null
+                ? grandTotal
+                : null,
+          },
+          entityId: headerId.toString(),
+          operation: 'UPDATE',
+          company: header.company?.toString(),
         );
       }
     } catch (e) {
@@ -411,7 +451,18 @@ class PurchaseOrderRepository {
   Future<int> createPurchaseOrderDetail(PurchaseOrderDetail detail) async {
     final db = await _db;
     try {
-      return await db.insert('purchase_order_detail', detail.toMap());
+      final map = detail.toMap();
+      map.remove('id');
+      final id = await db.insert('purchase_order_detail', map);
+      map['id'] = id;
+      captureSync(
+        tableName: 'purchase_order_detail',
+        entityMap: map,
+        entityId: id.toString(),
+        operation: 'INSERT',
+        company: detail.company?.toString(),
+      );
+      return id;
     } catch (e) {
       throw Exception('Failed to create purchase order detail: $e');
     }
@@ -426,18 +477,32 @@ class PurchaseOrderRepository {
         where: 'id = ?',
         whereArgs: [detail.id],
       );
+      captureSync(
+        tableName: 'purchase_order_detail',
+        entityMap: detail.toMap(),
+        entityId: detail.id.toString(),
+        operation: 'UPDATE',
+        company: detail.company?.toString(),
+      );
     } catch (e) {
       throw Exception('Failed to update purchase order detail: $e');
     }
   }
 
-  Future<void> deletePurchaseOrderDetail(int id) async {
+  Future<void> deletePurchaseOrderDetail(int id, int companyId) async {
     final db = await _db;
     try {
       await db.delete(
         'purchase_order_detail',
-        where: 'id = ?',
+        where: 'id = ? AND company = ?',
         whereArgs: [id],
+      );
+      captureSync(
+        tableName: 'purchase_order_detail',
+        entityMap: {'id': id},
+        entityId: id.toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
       );
     } catch (e) {
       throw Exception('Failed to delete purchase order detail: $e');
@@ -707,11 +772,17 @@ class PurchaseOrderRepository {
       if (udcResult.isNotEmpty) {
         final udcId = udcResult.first['id'] as int;
 
-        await db.update(
+     final result =   await db.update(
           'purchase_order_detail',
           {'po_receive_status': udcId},
           where: 'id = ?',
           whereArgs: [detailId],
+        );
+        captureSync(
+          tableName: 'purchase_order_detail',
+          entityMap: {'id': detailId, 'po_receive_status': udcId},
+          entityId: detailId.toString(),
+          operation: 'UPDATE',
         );
       }
     } catch (e) {
@@ -726,7 +797,18 @@ class PurchaseOrderRepository {
   ) async {
     final db = await _db;
     try {
-      return await db.insert('purchase_order_receiver', receiver.toMap());
+      final map = receiver.toMap();
+      map.remove('id');
+      final id = await db.insert('purchase_order_receiver', map);
+      map['id'] = id;
+      captureSync(
+        tableName: 'purchase_order_receiver',
+        entityMap: map,
+        entityId: id.toString(),
+        operation: 'INSERT',
+        company: receiver.company?.toString(),
+      );
+      return id;
     } catch (e) {
       throw Exception('Failed to create purchase order receiver: $e');
     }
@@ -743,18 +825,32 @@ class PurchaseOrderRepository {
         where: 'id = ?',
         whereArgs: [receiver.id],
       );
+      captureSync(
+        tableName: 'purchase_order_receiver',
+        entityMap: receiver.toMap(),
+        entityId: receiver.id.toString(),
+        operation: 'UPDATE',
+        company: receiver.company?.toString(),
+      );
     } catch (e) {
       throw Exception('Failed to update purchase order receiver: $e');
     }
   }
 
-  Future<void> deletePurchaseOrderReceiver(int id) async {
+  Future<void> deletePurchaseOrderReceiver(int id, int companyId) async {
     final db = await _db;
     try {
       await db.delete(
         'purchase_order_receiver',
         where: 'id = ?',
         whereArgs: [id],
+      );
+      captureSync(
+        tableName: 'purchase_order_receiver',
+        entityMap: {'id': id},
+        entityId: id.toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
       );
     } catch (e) {
       throw Exception('Failed to delete purchase order receiver: $e');
@@ -1012,7 +1108,7 @@ class PurchaseOrderRepository {
 
           // Only update if status is different
           if (udcId != currentStatusId) {
-            await db.update(
+         final result =   await db.update(
               'purchase_order_header',
               {
                 'po_receive_status': udcId,
@@ -1020,6 +1116,17 @@ class PurchaseOrderRepository {
               },
               where: 'id = ?',
               whereArgs: [headerId],
+            );
+            captureSync(
+              tableName: 'purchase_order_header',
+              entityMap: {
+                'id': headerId,
+                'po_receive_status': udcId,
+                'date_updated': DateTime.now().toIso8601String(),
+              },
+              entityId: headerId.toString(),
+              operation: 'UPDATE',
+              
             );
             return true;
           }
@@ -1111,12 +1218,24 @@ class PurchaseOrderRepository {
               whereArgs: [itemNumber],
             );
           } else {
-            await db.insert('item_cost', {
+            final result = await db.insert('item_cost', {
               'item_number': itemNumber,
               'amount_unit_cost': weightedAverageCost,
               'company': transactions.first['company'],
               'date_updated': DateTime.now().toIso8601String(),
             });
+            captureSync(
+              tableName: 'item_cost',
+              entityMap: {
+                'item_number': itemNumber,
+                'amount_unit_cost': weightedAverageCost,
+                'company': transactions.first['company'],
+                'date_updated': DateTime.now().toIso8601String(),
+              },
+              entityId: result.toString(),
+              operation: 'INSERT',
+              company: transactions.first['company'],
+            );
           }
         }
       }
@@ -1164,7 +1283,7 @@ class PurchaseOrderRepository {
         );
       } else {
         // Create new items_in_branch record
-        await db.insert('items_in_branch', {
+    final  result = await db.insert('items_in_branch', {
           'item_number': itemNumber,
           'branch': branchRecieved,
           'quantity_available': quantityRecieved,
@@ -1172,6 +1291,20 @@ class PurchaseOrderRepository {
           'created_at': DateTime.now().toIso8601String(),
           'updated_at': DateTime.now().toIso8601String(),
         });
+        captureSync(
+          tableName: 'items_in_branch',
+          entityMap: {
+            'item_number': itemNumber,
+            'branch': branchRecieved,
+            'quantity_available': quantityRecieved,
+            'unit_of_measure': receiver.unitOfMeasure,
+            'created_at': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+          },
+          entityId: result.toString(),
+          operation: 'INSERT',
+          company: receiver.company.toString(),
+        );
       }
 
       // Update items_table total quantity
@@ -1668,7 +1801,15 @@ class PurchaseOrderRepository {
   Future<int> createCreditPayment(CreditPayment payment) async {
     final db = await _db;
     try {
-      return await db.insert('credit_payment_table', payment.toMap());
+      final result = await db.insert('credit_payment_table', payment.toMap());
+      captureSync(
+        tableName: 'credit_payment_table',
+        entityMap: payment.toMap(),
+        entityId: result.toString(),
+        operation: 'INSERT',
+        company: payment.company.toString(),
+      );
+      return result;
     } catch (e) {
       throw Exception('Failed to create credit payment: $e');
     }
@@ -1678,11 +1819,18 @@ class PurchaseOrderRepository {
   Future<void> updateCreditPayment(CreditPayment payment) async {
     final db = await _db;
     try {
-      await db.update(
+     final result = await db.update(
         'credit_payment_table',
         payment.toMap(),
         where: 'id = ?',
         whereArgs: [payment.id],
+      );
+      captureSync(
+        tableName: 'credit_payment_table',
+        entityMap: payment.toMap(),
+        entityId: result.toString(),
+        operation: 'UPDATE',
+        company: payment.company.toString(),
       );
     } catch (e) {
       throw Exception('Failed to update credit payment: $e');

@@ -2,8 +2,10 @@
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/header/model/invoice_header_model.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:savvy_stock/core/repositories/base_repo.dart';
 
-class InvoiceHistoryHeaderRepository {
+class InvoiceHistoryHeaderRepository  extends BaseRepository{
+  @override
   final LocalDatabaseService databaseService;
 
   InvoiceHistoryHeaderRepository({required this.databaseService});
@@ -114,6 +116,14 @@ class InvoiceHistoryHeaderRepository {
         conflictAlgorithm: ConflictAlgorithm.fail,
       );
 
+      captureSync(
+        tableName: tableName,
+        entityMap: header.toMap(),
+        entityId: id.toString(),
+        operation: 'INSERT',
+        company: header.company?.toString(),
+      );
+
       return id;
     } catch (e) {
       throw Exception('Failed to create invoice history header: $e');
@@ -142,6 +152,14 @@ class InvoiceHistoryHeaderRepository {
         );
       }
 
+      captureSync(
+        tableName: tableName,
+        entityMap: header.toMap(),
+        entityId: header.id.toString(),
+        operation: 'UPDATE',
+        company: header.company?.toString(),
+      );
+
       return count;
     } catch (e) {
       throw Exception('Failed to update invoice history header: $e');
@@ -162,6 +180,13 @@ class InvoiceHistoryHeaderRepository {
       if (count == 0) {
         throw Exception('No invoice history header found with ID: $id');
       }
+
+      captureSync(
+        tableName: tableName,
+        entityMap: {'id': id},
+        entityId: id.toString(),
+        operation: 'DELETE',
+      );
 
       return count;
     } catch (e) {

@@ -2,12 +2,14 @@
 import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
+import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/models/item_uom_conversions_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 import 'package:sqflite/sqflite.dart';
 
-class ItemUomConversionsRepository {
+class ItemUomConversionsRepository extends BaseRepository {
+  @override
   final LocalDatabaseService databaseService;
 
   ItemUomConversionsRepository({required this.databaseService});
@@ -156,28 +158,52 @@ class ItemUomConversionsRepository {
     final db = await databaseService.database;
     final itemMap = item.toMap();
     itemMap.remove('id'); // Remove ID for new insertion
-    return await db.insert('item_uom_conversions', itemMap);
+    final result = await db.insert('item_uom_conversions', itemMap);
+    captureSync(
+      tableName: 'item_uom_conversions',
+      entityMap: itemMap,
+      entityId: result.toString(),
+      operation: 'INSERT',
+      company: item.company?.toString(),
+    );
+    return result;
   }
 
   // Update existing UoM conversion
   Future<int> updateItemUomConversion(ItemUomConversion item) async {
     final db = await databaseService.database;
-    return await db.update(
+    final result = await db.update(
       'item_uom_conversions',
       item.toMap(),
       where: 'id = ? AND company = ?',
       whereArgs: [item.id, item.company],
     );
+    captureSync(
+      tableName: 'item_uom_conversions',
+      entityMap: item.toMap(),
+      entityId: item.id.toString(),
+      operation: 'UPDATE',
+      company: item.company?.toString(),
+    );
+    return result;
   }
 
   // Delete UoM conversion
   Future<int> deleteItemUomConversion(int id, int companyId) async {
     final db = await databaseService.database;
-    return await db.delete(
+    final result = await db.delete(
       'item_uom_conversions',
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+    captureSync(
+      tableName: 'item_uom_conversions',
+      entityMap: {'id': id, 'company': companyId},
+      entityId: id.toString(),
+      operation: 'DELETE',
+      company: companyId.toString(),
+    );
+    return result;
   }
 
   // Check for duplication

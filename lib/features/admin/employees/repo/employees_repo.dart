@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
 import 'package:sqflite/sqflite.dart';
 
-class EmployeeRepository {
+class EmployeeRepository extends BaseRepository {
+  @override
   final LocalDatabaseService databaseService;
 
   EmployeeRepository({required this.databaseService});
@@ -27,28 +29,53 @@ class EmployeeRepository {
     employeeMap.remove('id');
     employeeMap['company'] = companyId;
     
-    return await db.insert('employees', employeeMap);
+    final id = await db.insert('employees', employeeMap);
+    employeeMap['id'] = id;
+    captureSync(
+      tableName: 'employees',
+      entityMap: employeeMap,
+      entityId: id.toString(),
+      operation: 'INSERT',
+      company: companyId.toString(),
+    );
+    return id;
   }
 
   // Update existing employee
   Future<int> updateEmployee(Employee employee, int companyId) async {
     final db = await databaseService.database;
-    return await db.update(
+    final result = await db.update(
       'employees',
       employee.toMap(),
       where: 'id = ? AND company = ?',
       whereArgs: [employee.id, companyId],
     );
+    captureSync(
+      tableName: 'employees',
+      entityMap: employee.toMap(),
+      entityId: employee.id.toString(),
+      operation: 'UPDATE',
+      company: companyId.toString(),
+    );
+    return result;
   }
 
   // Delete single employee
   Future<int> deleteEmployee(int employeeId, int companyId) async {
     final db = await databaseService.database;
-    return await db.delete(
+    final result = await db.delete(
       'employees',
       where: 'id = ? AND company = ?',
       whereArgs: [employeeId, companyId],
     );
+    captureSync(
+      tableName: 'employees',
+      entityMap: {'id': employeeId, 'company': companyId},
+      entityId: employeeId.toString(),
+      operation: 'DELETE',
+      company: companyId.toString(),
+    );
+    return result;
   }
 
   // Delete multiple employees

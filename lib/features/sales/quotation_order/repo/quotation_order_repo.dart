@@ -1,23 +1,32 @@
 // features/sales/quotation_order/repo/quotation_order_repository.dart
+import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/quotation_order/model/quotation_order_detail.dart';
 import 'package:savvy_stock/features/sales/quotation_order/model/quotation_order_header.dart';
 import 'package:sqflite/sqflite.dart';
 
-class QuotationOrderRepository {
-  final LocalDatabaseService _databaseService;
+class QuotationOrderRepository extends BaseRepository {
+  @override
+  final LocalDatabaseService databaseService;
 
-  QuotationOrderRepository({required LocalDatabaseService databaseService})
-    : _databaseService = databaseService;
+  QuotationOrderRepository({required this.databaseService});
 
-  Future<Database> get _db async => _databaseService.database;
+  Future<Database> get _db async => databaseService.database;
 
   // ============ HEADER CRUD OPERATIONS ============
 
   Future<int> createQuotationOrderHeader(QuotationOrderHeader header) async {
     final db = await _db;
     try {
-      return await db.insert('quote_order_header', header.toMap());
+      final result = await db.insert('quote_order_header', header.toMap());
+      captureSync(
+        tableName: 'quote_order_header',
+        entityMap: header.toMap(),
+        entityId: result.toString(),
+        operation: 'INSERT',
+        company: header.company?.toString(),
+      );
+      return result;
     } catch (e) {
       throw Exception('Failed to create quotation order header: $e');
     }
@@ -121,24 +130,40 @@ class QuotationOrderRepository {
   Future<int> updateQuotationOrderHeader(QuotationOrderHeader header) async {
     final db = await _db;
     try {
-      return await db.update(
+      final result = await db.update(
         'quote_order_header',
         header.toMap(),
         where: 'id = ?',
         whereArgs: [header.id],
       );
+      captureSync(
+        tableName: 'quote_order_header',
+        entityMap: header.toMap(),
+        entityId: header.id.toString(),
+        operation: 'UPDATE',
+        company: header.company?.toString(),
+      );
+      return result;
     } catch (e) {
       throw Exception('Failed to update quotation order: $e');
     }
   }
 
-  Future<int> deleteQuotationOrderHeader(int id) async {
+  Future<int> deleteQuotationOrderHeader(int id, int companyId) async {
     final db = await _db;
-    return await db.delete(
+    final result = await db.delete(
       'quote_order_header',
-      where: 'id = ?',
-      whereArgs: [id],
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
     );
+    captureSync(
+      tableName: 'quote_order_header',
+      entityMap: {'id': id},
+      entityId: id.toString(),
+      operation: 'DELETE',
+      company: companyId.toString(),
+    );
+    return result;
   }
 
   // ✅ ADDING MISSING: Get quotation header by ID
@@ -245,7 +270,15 @@ class QuotationOrderRepository {
   Future<int> createQuotationOrderDetail(QuotationOrderDetail detail) async {
     final db = await _db;
     try {
-      return await db.insert('quote_order_details', detail.toMap());
+      final id = await db.insert('quote_order_details', detail.toMap());
+      captureSync(
+        tableName: 'quote_order_details',
+        entityMap: detail.toMap(),
+        entityId: id.toString(),
+        operation: 'INSERT',
+        company: detail.company?.toString(),
+      );
+      return id;
     } catch (e) {
       throw Exception('Failed to create quotation order detail: $e');
     }
@@ -315,24 +348,39 @@ class QuotationOrderRepository {
   Future<int> updateQuotationOrderDetail(QuotationOrderDetail detail) async {
     final db = await _db;
     try {
-      return await db.update(
+      final result = await db.update(
         'quote_order_details',
         detail.toMap(),
         where: 'id = ?',
         whereArgs: [detail.id],
       );
+      captureSync(
+        tableName: 'quote_order_details',
+        entityMap: detail.toMap(),
+        entityId: detail.id.toString(),
+        operation: 'UPDATE',
+        company: detail.company?.toString(),
+      );
+      return result;
     } catch (e) {
       throw Exception('Failed to update quotation order detail: $e');
     }
   }
 
-  Future<int> deleteQuotationOrderDetail(int id) async {
+  Future<int> deleteQuotationOrderDetail(int id, int companyId) async {
     final db = await _db;
-    return await db.delete(
+    final result = await db.delete(
       'quote_order_details',
-      where: 'id = ?',
-      whereArgs: [id],
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
     );
+    captureSync(
+      tableName: 'quote_order_details',
+      entityMap: {'id': id},
+      entityId: id.toString(),
+      operation: 'DELETE',
+    );
+    return result;
   }
 
   // ============ BATCH DETAIL OPERATIONS ============

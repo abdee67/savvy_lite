@@ -1,6 +1,11 @@
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
+import 'package:savvy_stock/core/services/conectitvity_service.dart';
+import 'package:savvy_stock/core/services/sync/sync_receiver.dart';
+import 'package:savvy_stock/core/services/sync/sync_repository.dart';
+import 'package:savvy_stock/core/services/sync/sync_sender.dart';
+import 'package:savvy_stock/core/services/sync/sync_service.dart';
 import 'package:savvy_stock/features/FSNMR/blocs/FSNMR_bloc.dart';
 import 'package:savvy_stock/features/FSNMR/repo/FSNMR_repository.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
@@ -94,6 +99,31 @@ void initDependencies() {
   // Database Service
   getIt.registerLazySingleton<LocalDatabaseService>(
     () => LocalDatabaseService(),
+  );
+
+  // Connectivity Service
+  getIt.registerLazySingleton<ConnectivityService>(
+    () => ConnectivityService(),
+  );
+
+  // ─── Sync Services ─────────────────────────────────────────────────
+  getIt.registerLazySingleton<SyncRepository>(
+    () => SyncRepository(databaseService: getIt()),
+  );
+  getIt.registerLazySingleton<SyncSender>(
+    () => SyncSender(httpClient: getIt()),
+  );
+  getIt.registerLazySingleton<SyncReceiver>(
+    () => SyncReceiver(httpClient: getIt()),
+  );
+  getIt.registerLazySingleton<SyncService>(
+    () => SyncService(
+      syncRepository: getIt(),
+      syncSender: getIt(),
+      syncReceiver: getIt(),
+      connectivityService: getIt(),
+      databaseService: getIt(),
+    ),
   );
 
   // Repositories
@@ -203,7 +233,7 @@ void initDependencies() {
     () => LotExpirationColorsRepository(databaseService: getIt()),
   );
   getIt.registerLazySingleton<SalesOrderHeaderRepository>(
-    () => SalesOrderHeaderRepository(),
+    () => SalesOrderHeaderRepository(databaseService: getIt()),
   );
   getIt.registerLazySingleton<SalesOrderDetailRepository>(
     () => SalesOrderDetailRepository(
@@ -264,7 +294,7 @@ void initDependencies() {
     () => QuotationOrderRepository(databaseService: getIt()),
   );
   getIt.registerLazySingleton<SupplierRepository>(
-    () => SupplierRepositoryImpl(getIt()),
+    () => SupplierRepositoryImpl(databaseService: getIt()),
   );
   getIt.registerLazySingleton<PurchaseOrderRepository>(
     () => PurchaseOrderRepository(

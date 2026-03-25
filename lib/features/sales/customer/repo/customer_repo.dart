@@ -1,8 +1,10 @@
 // features/sales/customer/repositories/customer_repository.dart
+import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 
-class CustomerRepository {
+class CustomerRepository extends BaseRepository {
+  @override
   final LocalDatabaseService databaseService;
 
   CustomerRepository({required this.databaseService});
@@ -47,28 +49,53 @@ class CustomerRepository {
     final db = await databaseService.database;
     final customerMap = customer.toMap();
     customerMap.remove('id'); // Remove ID for new insertion
-    return await db.insert('customer_table', customerMap);
+    final id = await db.insert('customer_table', customerMap);
+    customerMap['id'] = id;
+    captureSync(
+      tableName: 'customer_table',
+      entityMap: customerMap,
+      entityId: id.toString(),
+      operation: 'INSERT',
+      company: customer.company?.toString(),
+    );
+    return id;
   }
 
   // Update existing customer
   Future<int> updateCustomer(Customer customer) async {
     final db = await databaseService.database;
-    return await db.update(
+    final result = await db.update(
       'customer_table',
       customer.toMap(),
       where: 'id = ? AND company = ?',
       whereArgs: [customer.id, customer.company],
     );
+    captureSync(
+      tableName: 'customer_table',
+      entityMap: customer.toMap(),
+      entityId: customer.id.toString(),
+      operation: 'UPDATE',
+      company: customer.company?.toString(),
+    );
+    return result;
   }
 
   // Delete customer
   Future<int> deleteCustomer(int id, int companyId) async {
     final db = await databaseService.database;
-    return await db.delete(
+    final result = await db.delete(
       'customer_table',
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+    captureSync(
+      tableName: 'customer_table',
+      entityMap: {'id': id, 'company': companyId},
+      entityId: id.toString(),
+      operation: 'DELETE',
+      company: companyId.toString(),
+    );
+    return result;
   }
 
   // Batch delete multiple customers

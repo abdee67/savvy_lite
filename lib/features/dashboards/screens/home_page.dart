@@ -14,7 +14,6 @@ import 'package:savvy_stock/features/auth/blocs/auth_event.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
 import 'package:savvy_stock/features/licensing/bloc/license_bloc.dart';
 import 'package:savvy_stock/features/licensing/bloc/license_state.dart';
-import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
 import 'package:savvy_stock/features/dashboards/widgets/modern_trial_counter.dart';
 
 class HomePage extends StatefulWidget {
@@ -115,10 +114,9 @@ class _HomePageState extends State<HomePage> {
               body: SafeArea(
                 top: false,
                 bottom: false,
-                child: LiquidPullToRefresh(
-                  color: Color(0xFF155888),
-                  backgroundColor: Colors.amber,
-                  showChildOpacityTransition: false,
+                child: RefreshIndicator(
+                  color: Colors.amber,
+                  backgroundColor: Color(0xFF155888),
                   onRefresh: () async {
                     // Trigger reload of system constants and other global data so changes appear instantly
                     final companyId = context.read<AuthBloc>().state.companyId;

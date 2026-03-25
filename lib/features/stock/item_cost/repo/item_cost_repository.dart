@@ -25,24 +25,48 @@ class ItemCostRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final itemMap = itemCost.toMap();
     itemMap.remove('id'); // Remove id for new insertion
-    return await db.insert('item_cost', itemMap);
+    final id = await db.insert('item_cost', itemMap);
+    itemMap['id'] = id;
+    captureSync(
+      tableName: 'item_cost',
+      entityMap: itemMap,
+      entityId: id.toString(),
+      operation: 'INSERT',
+      company: itemCost.company?.toString(),
+    );
+    return id;
   }
 
   // Update existing item cost
   Future<int> update(ItemCost itemCost, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
-    return await db.update(
+    final result = await db.update(
       'item_cost',
       itemCost.toMap(),
       where: 'id = ?',
       whereArgs: [itemCost.id],
     );
+    captureSync(
+      tableName: 'item_cost',
+      entityMap: itemCost.toMap(),
+      entityId: itemCost.id.toString(),
+      operation: 'UPDATE',
+      company: itemCost.company?.toString(),
+    );
+    return result;
   }
 
   // Delete item cost
   Future<int> delete(int id, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
-    return await db.delete('item_cost', where: 'id = ?', whereArgs: [id]);
+    final result = await db.delete('item_cost', where: 'id = ?', whereArgs: [id]);
+    captureSync(
+      tableName: 'item_cost',
+      entityMap: {'id': id},
+      entityId: id.toString(),
+      operation: 'DELETE',
+    );
+    return result;
   }
 
   // Delete multiple item costs
