@@ -365,12 +365,20 @@ class ItemLocationsRepository extends BaseRepository {
     required double quantity,
   }) async {
     final db = await databaseService.database;
-    return await db.update(
+    final result = await db.update(
       'item_location',
       {'quantity_on_hand': quantity},
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+    captureSync(
+      tableName: 'item_location',
+      entityMap: {'quantity_on_hand': quantity},
+      entityId: id.toString(),
+      operation: 'UPDATE',
+      company: companyId.toString(),
+    );
+    return result;
   }
 
   /// Saves item location for sales order and cascades to branch
@@ -451,11 +459,18 @@ class ItemLocationsRepository extends BaseRepository {
     );
 
     // 3. Update items in branch
-    await db.update(
+   final result = await db.update(
       'items_in_branch',
       {'quantity_available': totalLocationQty},
       where: 'company = ? AND item_number = ? AND branch = ?',
       whereArgs: [companyId, location.itemNumber, location.branch],
+    );
+    captureSync(
+      tableName: 'items_in_branch',
+      entityMap: {'quantity_available': totalLocationQty},
+      entityId: location.itemNumber.toString(),
+      operation: 'UPDATE',
+      company: companyId.toString(),
     );
 
     // 4. Transaction creation will be handled by item_transaction_repo
