@@ -325,12 +325,25 @@ class LotMasterRepository extends BaseRepository {
     required int companyId,
   }) async {
     final db = await databaseService.database;
-    return await db.update(
+    final result = await db.update(
       'lot_master',
       {'unit_price': unitPrice},
       where: 'item_number = ? AND branch = ? AND company = ?',
       whereArgs: [itemNumber, branch, companyId],
     );
+    captureSync(
+      tableName: 'lot_master',
+      entityMap: {
+        'item_number': itemNumber,
+        'branch': branch,
+        'company': companyId,
+        'unit_price': unitPrice,
+      },
+      entityId: result.toString(),
+      operation: 'UPDATE',
+      company: companyId.toString(),
+    );
+    return result;
   }
 
   // Update unit price for all lots of an item (all branches)
@@ -340,12 +353,24 @@ class LotMasterRepository extends BaseRepository {
     required int companyId,
   }) async {
     final db = await databaseService.database;
-    return await db.update(
+    final result = await db.update(
       'lot_master',
       {'unit_price': unitPrice},
       where: 'item_number = ? AND company = ?',
       whereArgs: [itemNumber, companyId],
     );
+    captureSync(
+      tableName: 'lot_master',
+      entityMap: {
+        'item_number': itemNumber,
+        'company': companyId,
+        'unit_price': unitPrice,
+      },
+      entityId: result.toString(),
+      operation: 'UPDATE',
+      company: companyId.toString(),
+    );
+    return result;
   }
 
   // Delete lot master
@@ -381,6 +406,13 @@ class LotMasterRepository extends BaseRepository {
         where: 'id = ? AND company = ?',
         whereArgs: [id, companyId],
       );
+      captureSync(
+        tableName: 'lot_master',
+        entityMap: {'id': id, 'company': companyId},
+        entityId: id.toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
+      );
     }
 
     await batch.commit();
@@ -404,6 +436,19 @@ class LotMasterRepository extends BaseRepository {
       where: 'company = ? AND item_number = ? AND branch = ? AND location = ?',
       whereArgs: [companyId, itemNumber, branch, location],
     );
+    captureSync(
+      tableName: 'item_location',
+      entityMap: {
+        'company': companyId,
+        'item_number': itemNumber,
+        'branch': branch,
+        'location': location,
+        'quantity_on_hand': quantity,
+      },
+      entityId: location.toString(),
+      operation: 'UPDATE',
+      company: companyId.toString(),
+    );
 
     // Update items_in_branch table
     final branchQuantities = await db.rawQuery(
@@ -424,6 +469,18 @@ class LotMasterRepository extends BaseRepository {
       where: 'company = ? AND item_number = ? AND branch = ?',
       whereArgs: [companyId, itemNumber, branch],
     );
+    captureSync(
+      tableName: 'items_in_branch',
+      entityMap: {
+        'company': companyId,
+        'item_number': itemNumber,
+        'branch': branch,
+        'quantity_available': branchQty,
+      },
+      entityId: branch.toString(),
+      operation: 'UPDATE',
+      company: companyId.toString(),
+    );
   }
 
   // Create item transaction
@@ -432,7 +489,15 @@ class LotMasterRepository extends BaseRepository {
     Transaction? txn,
   }) async {
     final db = txn ?? await databaseService.database;
-    return await db.insert('item_transactions', transaction);
+    final id = await db.insert('item_transactions', transaction);
+    captureSync(
+      tableName: 'item_transactions',
+      entityMap: transaction,
+      entityId: id.toString(),
+      operation: 'INSERT',
+      company: transaction['company']?.toString(),
+    );
+    return id;
   }
 
   // Get total quantity for item-branch-location
@@ -759,6 +824,17 @@ class LotMasterRepository extends BaseRepository {
       where: 'lot_number = ? AND company = ?',
       whereArgs: [lotNumber, companyId, quantity],
     );
+    captureSync(
+      tableName: 'lot_master',
+      entityMap: {
+        'lot_number': lotNumber,
+        'company': companyId,
+        'quantity_available': quantity,
+      },
+      entityId: lotNumber.toString(),
+      operation: 'UPDATE',
+      company: companyId.toString(),
+    );
     return;
   }
 
@@ -977,6 +1053,19 @@ class LotMasterRepository extends BaseRepository {
       where: 'company = ? AND item_number = ? AND branch = ? AND location = ?',
       whereArgs: [companyId, lot.itemNumber, lot.branch, lot.location],
     );
+    captureSync(
+      tableName: 'item_location',
+      entityMap: {
+        'company': companyId,
+        'item_number': lot.itemNumber,
+        'branch': lot.branch,
+        'location': lot.location,
+        'quantity_on_hand': lotQtySum,
+      },
+      entityId: lot.id.toString(),
+      operation: 'UPDATE',
+      company: companyId.toString(),
+    );
 
     // 3. Create transaction for lot (this is done HERE, not in handleLotStockUpdate)
     // This will be called from item_transaction_repo, so we skip it here to avoid circular dependency
@@ -1005,6 +1094,18 @@ class LotMasterRepository extends BaseRepository {
       {'quantity_available': branchQtySum},
       where: 'company = ? AND item_number = ? AND branch = ?',
       whereArgs: [companyId, lot.itemNumber, lot.branch],
+    );
+    captureSync(
+      tableName: 'items_in_branch',
+      entityMap: {
+        'company': companyId,
+        'item_number': lot.itemNumber,
+        'branch': lot.branch,
+        'quantity_available': branchQtySum,
+      },
+      entityId: lot.id.toString(),
+      operation: 'UPDATE',
+      company: companyId.toString(),
     );
   }
 
