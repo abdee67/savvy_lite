@@ -43,6 +43,13 @@ class StockItemInBranchRepository extends BaseRepository {
         where: 'item_number = ? AND branch = ? AND company = ?',
         whereArgs: [item.itemNumber, item.branch, item.company],
       );
+      captureSync(
+        tableName: 'lot_master',
+        entityMap: {'unit_price': item.unitPrice},
+        entityId: item.itemNumber.toString(),
+        operation: 'UPDATE',
+        company: item.company?.toString(),
+      );
     }
 
     final result = await db.update(
@@ -326,20 +333,35 @@ class StockItemInBranchRepository extends BaseRepository {
         where: 'item_number = ? AND branch = ? AND company = ?',
         whereArgs: [itemNumber, branch, companyId],
       );
+      captureSync(
+        tableName: 'lot_master',
+        entityMap: {'unit_price': unitPrice},
+        entityId: itemNumber.toString(),
+        operation: 'UPDATE',
+        company: companyId.toString(),
+      );
     }
 
-    return await db.update(
+    final result = await db.update(
       'items_in_branch',
       {'unit_price': unitPrice},
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+    captureSync(
+      tableName: 'items_in_branch',
+      entityMap: {'unit_price': unitPrice},
+      entityId: id.toString(),
+      operation: 'UPDATE',
+      company: companyId.toString(),
+    );
+    return result;
   }
 
   // Update quantity on hand for item in branch
   Future<int> updateQuantity(int id, double quantity, int companyId) async {
     final db = await databaseService.database;
-    return await db.update(
+    final result = await db.update(
       'items_in_branch',
       {
         // Keep both on-hand and available quantities in sync so that
@@ -350,6 +372,14 @@ class StockItemInBranchRepository extends BaseRepository {
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+    captureSync(
+      tableName: 'items_in_branch',
+      entityMap: {'quantity_available': quantity},
+      entityId: id.toString(),
+      operation: 'UPDATE',
+      company: companyId.toString(),
+    );
+    return result;
   }
 
   // Update margin for item in branch
@@ -360,12 +390,20 @@ class StockItemInBranchRepository extends BaseRepository {
     int companyId,
   ) async {
     final db = await databaseService.database;
-    return await db.update(
+    final result = await db.update(
       'items_in_branch',
       {'margin_type': marginType, 'margin_rate': marginRate},
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+    captureSync(
+      tableName: 'items_in_branch',
+      entityMap: {'margin_type': marginType, 'margin_rate': marginRate},
+      entityId: id.toString(),
+      operation: 'UPDATE',
+      company: companyId.toString(),
+    );
+    return result;
   }
 
   // Search items in branch
