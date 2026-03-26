@@ -76,6 +76,7 @@ class LocalDatabaseService {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         udc_code TEXT CHECK(length(udc_code) <= 2),
         udc_description TEXT CHECK(length(udc_description) <= 45),
+        sync_key TEXT CHECK(length(sync_key) <= 36),
         UNIQUE (udc_code),
         UNIQUE (udc_description)
       )
@@ -91,6 +92,7 @@ class LocalDatabaseService {
         description_2 TEXT CHECK(length(description_2) <= 255),
         record_header INTEGER,
         udc_group TEXT CHECK(length(udc_group) <= 10),
+        sync_key TEXT CHECK(length(sync_key) <= 36),
         FOREIGN KEY (record_header) REFERENCES udc_header (id) ON DELETE NO ACTION ON UPDATE NO ACTION,
         UNIQUE (detail_code, record_header)
       )
@@ -130,6 +132,7 @@ class LocalDatabaseService {
         margin_type TEXT CHECK(length(margin_type) <= 1),
         reorder_point REAL,
         inventory_planner INTEGER,
+        sync_key TEXT CHECK(length(sync_key) <= 36),
         FOREIGN KEY (category_code) REFERENCES udc_details (id) ON DELETE NO ACTION ON UPDATE NO ACTION,
         FOREIGN KEY (referred_by_salesperson_id) REFERENCES salespersons (id) ON DELETE NO ACTION ON UPDATE NO ACTION,
         FOREIGN KEY (inventory_planner) REFERENCES employees (id) ON DELETE NO ACTION ON UPDATE NO ACTION
@@ -238,6 +241,7 @@ class LocalDatabaseService {
         margin_rate REAL,
         margin_type TEXT CHECK(length(margin_type) <= 1),
         reorder_point REAL,
+        sync_key TEXT CHECK(length(sync_key) <= 36),
         FOREIGN KEY (company) REFERENCES company_table(id) ON DELETE NO ACTION ON UPDATE NO ACTION
       )
     ''');
@@ -266,6 +270,7 @@ class LocalDatabaseService {
     gender TEXT CHECK(length(gender) <= 7),
     company INTEGER,
     branch INTEGER,
+    sync_key TEXT CHECK(length(sync_key) <= 36),
     FOREIGN KEY (company) REFERENCES company_table(id),
     FOREIGN KEY (branch) REFERENCES branch_table(id)
   );
@@ -294,6 +299,7 @@ class LocalDatabaseService {
     link_lable TEXT UNIQUE CHECK(length(link_lable) <= 60),
     button_lable TEXT CHECK(length(button_lable) <= 20),
     vendor_only TEXT DEFAULT 'N' CHECK(length(vendor_only) <= 1),
+    sync_key TEXT CHECK(length(sync_key) <= 36),
     FOREIGN KEY (created_by) REFERENCES employees(id),
     FOREIGN KEY (updated_by) REFERENCES employees(id)
   );
@@ -317,6 +323,7 @@ class LocalDatabaseService {
     date_created TEXT,
     date_updated TEXT,
     company INTEGER,
+    sync_key TEXT CHECK(length(sync_key) <= 36),
     UNIQUE (name, company),
     FOREIGN KEY (created_by) REFERENCES employees(id),
     FOREIGN KEY (updated_by) REFERENCES employees(id),
@@ -344,6 +351,7 @@ class LocalDatabaseService {
     updated_by INTEGER,
     date_created TEXT,
     date_updated TEXT,
+    sync_key TEXT CHECK(length(sync_key) <= 36),
     FOREIGN KEY (role_table_id) REFERENCES role_table(id),
     FOREIGN KEY (privilege_table_id) REFERENCES privilege_table(id),
     FOREIGN KEY (created_by) REFERENCES employees(id),
@@ -387,6 +395,7 @@ class LocalDatabaseService {
         confirmations_expire_time TEXT,
         user_email TEXT CHECK(length(user_email) <= 100),
         table_number TEXT CHECK(length(table_number) <= 45),
+        sync_key TEXT CHECK(length(sync_key) <= 36),
         FOREIGN KEY (employees_id) REFERENCES employees(id),
         FOREIGN KEY (created_by) REFERENCES employees(id),
         FOREIGN KEY (updated_by) REFERENCES employees(id),
@@ -423,6 +432,7 @@ class LocalDatabaseService {
     updated_by INTEGER,
     date_created TEXT,
     date_updated TEXT,
+    sync_key TEXT CHECK(length(sync_key) <= 36),
     FOREIGN KEY (role_table_id) REFERENCES role_table(id),
     FOREIGN KEY (user_id) REFERENCES user_table(id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES employees(id),
@@ -460,6 +470,7 @@ CREATE TABLE items_table (
   reorder_point REAL,
   item_image TEXT CHECK(length(item_image) <= 200),
   reference_id TEXT,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
   UNIQUE (items_id, item_description, company),
   FOREIGN KEY (company) REFERENCES company_table(id) ON DELETE CASCADE,
   FOREIGN KEY (unit_of_measure) REFERENCES udc_details(id),
@@ -498,6 +509,7 @@ CREATE TABLE item_uom_conversions (
   uom_structure_level INTEGER,
   inverse_conversion REAL,
   company INTEGER,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
   FOREIGN KEY (branch) REFERENCES branch_table(id),
   FOREIGN KEY (company) REFERENCES company_table(id) ON UPDATE CASCADE,
   FOREIGN KEY (created_by) REFERENCES user_table(id) ON UPDATE CASCADE,
@@ -543,6 +555,7 @@ CREATE TABLE items_in_branch (
   margin_rate REAL,
   margin_type TEXT CHECK(length(margin_type) <= 1),
   reorder_point REAL,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
   FOREIGN KEY (item_number) REFERENCES items_table(id),
   FOREIGN KEY (branch) REFERENCES branch_table(id),
   FOREIGN KEY (company) REFERENCES company_table(id),
@@ -598,6 +611,7 @@ CREATE TABLE items_in_branch (
         last_sync_time INTEGER,
         created_at INTEGER DEFAULT (strftime('%s', 'now')),
         updated_at INTEGER DEFAULT (strftime('%s', 'now')),
+        sync_key TEXT CHECK(length(sync_key) <= 36),
         FOREIGN KEY (company) REFERENCES company_table (id) ON DELETE NO ACTION ON UPDATE NO ACTION,
         FOREIGN KEY (lot_type) REFERENCES udc_details (id) ON DELETE NO ACTION ON UPDATE NO ACTION,
         FOREIGN KEY (ubpdated_by) REFERENCES user_table (id) ON DELETE NO ACTION ON UPDATE NO ACTION
@@ -638,6 +652,7 @@ CREATE TABLE location_master (
   margin_rate REAL,
   margin_type TEXT CHECK(length(margin_type) <= 1),
   reorder_point REAL,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
   FOREIGN KEY (branch) REFERENCES branch_table(id),
   FOREIGN KEY (company) REFERENCES company_table(id) ON UPDATE CASCADE,
   FOREIGN KEY (created_by) REFERENCES user_table(id) ON UPDATE CASCADE,
@@ -671,6 +686,7 @@ CREATE TABLE item_location (
   date_updated TEXT,
   quantity_on_hand REAL,
   company INTEGER,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
   FOREIGN KEY (branch) REFERENCES branch_table(id),
   FOREIGN KEY (item_number) REFERENCES items_table(id),
   FOREIGN KEY (location) REFERENCES location_master(id) ON UPDATE CASCADE,
@@ -718,6 +734,7 @@ CREATE TABLE item_master (
   created_by_flag TEXT DEFAULT 'Y' CHECK(length(created_by_flag) <= 1),
   defualt_uom INTEGER,
   taxable_flag TEXT DEFAULT 'Y' CHECK(length(taxable_flag) <= 1),
+  sync_key TEXT CHECK(length(sync_key) <= 36),
   UNIQUE (item_description, company_category),
   FOREIGN KEY (company_category) REFERENCES udc_details(id),
   FOREIGN KEY (category_code_01) REFERENCES udc_details(id),
@@ -787,6 +804,7 @@ CREATE TABLE lot_master (
   location INTEGER,
   lot_status INTEGER,
   batch_number_supplier TEXT CHECK(length(batch_number_supplier) <= 50),
+  sync_key TEXT CHECK(length(sync_key) <= 36),
   FOREIGN KEY (item_number) REFERENCES items_table(id),
   FOREIGN KEY (branch) REFERENCES branch_table(id),
   FOREIGN KEY (company) REFERENCES company_table(id),
@@ -822,6 +840,7 @@ CREATE TABLE item_cost (
   date_updated TEXT,
   amount_unit_cost_base REAL,
   overhead_unit_cost REAL,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
   FOREIGN KEY (company) REFERENCES company_table(id),
   FOREIGN KEY (item_number) REFERENCES items_table(id),
   FOREIGN KEY (user_id) REFERENCES user_table(id)
@@ -860,6 +879,7 @@ CREATE TABLE item_cost (
     contact_person TEXT CHECK(length(contact_person) <= 50),
     contact_title TEXT CHECK(length(contact_title) <= 10),
     defaults_value TEXT DEFAULT 'N' CHECK(length(defaults_value) <= 1),
+    sync_key TEXT CHECK(length(sync_key) <= 36),
     FOREIGN KEY (company) REFERENCES company_table (id),
     FOREIGN KEY (created_by) REFERENCES user_table (id),
     FOREIGN KEY (user_id) REFERENCES user_table (id)
@@ -903,6 +923,7 @@ CREATE TABLE item_cost (
     order_type INTEGER,
     credit_due_date TEXT,
     invoice_number TEXT CHECK (length(invoice_number) <= 150),
+    sync_key TEXT CHECK(length(sync_key) <= 36),
 
     -- FOREIGN KEYS
     CONSTRAINT fk_poh_order_type FOREIGN KEY (order_type) REFERENCES udc_details (id),
@@ -948,6 +969,7 @@ CREATE INDEX fk_poh_order_type_idx ON purchase_order_header(order_type);
     date_expiration TEXT,
     unit_of_measure INTEGER,
     batch_number_supplier TEXT CHECK (length(batch_number_supplier) <= 50),
+    sync_key TEXT CHECK(length(sync_key) <= 36),
 
     -- FOREIGN KEYS
     CONSTRAINT fk_purchase_order_detail_company FOREIGN KEY (company) REFERENCES company_table (id),
@@ -991,6 +1013,7 @@ CREATE INDEX fk_purchase_order_uom_idx ON purchase_order_detail(unit_of_measure)
     location INTEGER,
     unit_of_measure INTEGER,
     batch_number_supplier TEXT CHECK (length(batch_number_supplier) <= 50),
+    sync_key TEXT CHECK(length(sync_key) <= 36),
 
     -- FOREIGN KEYS
     CONSTRAINT fk_purchase_order_po_detail FOREIGN KEY (po_detail) REFERENCES purchase_order_detail (id),
@@ -1038,6 +1061,7 @@ CREATE INDEX fk_purchase_order_rsv_uom_idx ON purchase_order_receiver(unit_of_me
     unit_cost REAL,
     amount_cost REAL,
     before_amount_cost REAL,
+    sync_key TEXT CHECK(length(sync_key) <= 36),
     FOREIGN KEY (item_location) REFERENCES item_location (id) ON UPDATE CASCADE,
     FOREIGN KEY (created_by) REFERENCES user_table (id) ON UPDATE CASCADE,
     FOREIGN KEY (company) REFERENCES company_table (id) ON UPDATE CASCADE,
@@ -1077,6 +1101,7 @@ CREATE INDEX fk_item_transactions_unit_of_measure_idx ON item_transactions(unit_
     next_number_description TEXT NOT NULL CHECK(length(next_number_description) <= 30),
     next_number INTEGER NOT NULL DEFAULT 1,
     company INTEGER,
+    sync_key TEXT CHECK(length(sync_key) <= 36),
     CONSTRAINT fk_next_number_company FOREIGN KEY (company) REFERENCES company_table (id)
   );
 ''');
@@ -1098,6 +1123,7 @@ CREATE INDEX fk_next_number_company_idx ON next_number(company);
     days_minimum INTEGER,
     active_for_sales_flag TEXT DEFAULT 'Y' CHECK(length(active_for_sales_flag) <= 1),
     lot_exp_level TEXT CHECK(length(lot_exp_level) <= 1),
+    sync_key TEXT CHECK(length(sync_key) <= 36),
     CONSTRAINT fk_lot_expiration_colors_itm_nmbr FOREIGN KEY (item_number) REFERENCES items_table (id),
     CONSTRAINT fk_lot_expiration_colors_branch FOREIGN KEY (branch) REFERENCES branch_table (id),
     CONSTRAINT fk_lot_expiration_colors_clr_typ FOREIGN KEY (color_type) REFERENCES udc_details (id),
@@ -1156,6 +1182,7 @@ CREATE INDEX fk_lot_expiration_colors_clr_typ_idx ON lot_expiration_colors(color
   return_date TEXT,
   invoice_number TEXT CHECK(length(invoice_number) <= 45),
   branch_value INTEGER,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
   FOREIGN KEY (customer_bill_to) REFERENCES customer_table (id),
   FOREIGN KEY (customer_table_id) REFERENCES customer_table (id),
   FOREIGN KEY (employees_id) REFERENCES employees (id),
@@ -1193,6 +1220,7 @@ CREATE INDEX fk_soh_branchvalue_idx ON sales_order_header(branch_value);
     unit_cost REAL,
     amount_cost REAL,
     unit_of_measure INTEGER,
+    sync_key TEXT CHECK(length(sync_key) <= 36),
     UNIQUE (id, items_table_id),
     CONSTRAINT fk_sales_order_details_soh FOREIGN KEY (sales_order_header_id) REFERENCES sales_order_header (id) ON DELETE CASCADE,
     CONSTRAINT fk_sales_order_details_items FOREIGN KEY (items_table_id) REFERENCES items_table (id),
@@ -1233,6 +1261,7 @@ CREATE TABLE invoice_history_header (
   quot_number INTEGER,
   sales_number INTEGER,
   invoice_number TEXT CHECK(length(invoice_number) <= 45),
+  sync_key TEXT CHECK(length(sync_key) <= 36),
   CONSTRAINT fk_invoice_history_header_company FOREIGN KEY (company) REFERENCES company_table(id)
 );
 CREATE INDEX fk_invoice_history_header_company_idx ON invoice_history_header(company);
@@ -1251,6 +1280,7 @@ CREATE TABLE invoice_history_detail (
   company INTEGER,
   date_experied TEXT CHECK(length(date_experied) <= 45),
   batch_number TEXT CHECK(length(batch_number) <= 50),
+  sync_key TEXT CHECK(length(sync_key) <= 36),
   CONSTRAINT fk_invc_hstry_dtl_invc_hstry FOREIGN KEY (invoice_history) REFERENCES invoice_history_header(id),
   CONSTRAINT fk_invoice_history_dtl_company FOREIGN KEY (company) REFERENCES company_table(id)
 );
@@ -1273,6 +1303,7 @@ CREATE TABLE salespersons (
   status TEXT NOT NULL DEFAULT 'ACTIVE',
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
 
   UNIQUE (uuid),
   UNIQUE (email),
@@ -1331,6 +1362,7 @@ CREATE TABLE salespersons (
   return_status INTEGER,
   sales_represent TEXT CHECK(length(sales_represent) <= 150),
   comment_for_return TEXT,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
 
   -- FOREIGN KEYS
   CONSTRAINT fk_sales_return_header_customer_table FOREIGN KEY (customer_bill_to) REFERENCES customer_table(id),
@@ -1395,6 +1427,7 @@ CREATE TABLE sales_return_details (
   unit_of_measure INTEGER,
   return_status INTEGER,
   return_reason INTEGER,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
 
   -- FOREIGN KEYS
   CONSTRAINT fk_sales_return_details_sales_return_header1 FOREIGN KEY (sales_return_header_id) REFERENCES sales_return_header(id),
@@ -1489,6 +1522,7 @@ CREATE TABLE quote_order_header (
   created_by INTEGER,
   updated_by INTEGER,
   comments_reason TEXT,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
 
   CONSTRAINT id_UNIQUE UNIQUE (id),
   CONSTRAINT order_number_UNIQUE UNIQUE (order_number),
@@ -1556,6 +1590,7 @@ CREATE TABLE quote_order_details (
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
   created_by INTEGER,
   updated_by INTEGER,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
 
   CONSTRAINT id_UNIQUE UNIQUE (id),
   CONSTRAINT id_item_UNIQUE UNIQUE (id, items_table_id),
@@ -1600,6 +1635,7 @@ CREATE TABLE credit_payment_table (
   company INTEGER,
   user_id INTEGER,
   date_updated TEXT,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
 
   -- FOREIGN KEYS
   CONSTRAINT fk_credit_payment_table_po_header FOREIGN KEY (po_header) REFERENCES purchase_order_header(id),
@@ -1626,6 +1662,7 @@ CREATE TABLE credit_receipt_table (
   company INTEGER,
   user_id INTEGER,
   date_updated TEXT,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
 
   -- FOREIGN KEYS
   CONSTRAINT fk_credit_receipt_table_company FOREIGN KEY (company) REFERENCES company_table(id),
@@ -1652,6 +1689,7 @@ CREATE TABLE other_expense_table (
   company INTEGER,
   user_id INTEGER,
   date_updated TEXT,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
 
   -- FOREIGN KEYS
   CONSTRAINT fk_other_expense_table_company FOREIGN KEY (company) REFERENCES company_table(id),
@@ -1676,6 +1714,7 @@ CREATE TABLE other_income_table (
   company INTEGER,
   user_id INTEGER,
   date_updated TEXT,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
 
   -- FOREIGN KEYS
   CONSTRAINT fk_other_income_table_company FOREIGN KEY (company) REFERENCES company_table(id),
@@ -1703,6 +1742,7 @@ CREATE TABLE fast_slow_nonmoving_rule_table (
   updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   company INTEGER,
   unit_of_meansure_default INTEGER,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
 
   -- FOREIGN KEYS
   CONSTRAINT fast_slow_nonmoving_rule_table_ibfk_1 FOREIGN KEY (user_id) REFERENCES user_table(id),
@@ -1732,6 +1772,7 @@ CREATE TABLE subscription_management (
   max_storage INTEGER,
   popular TEXT CHECK (length(popular) <= 1),
   features TEXT CHECK (length(features) <= 200),
+  sync_key TEXT CHECK(length(sync_key) <= 36),
 
   -- FOREIGN KEYS
   CONSTRAINT fk_sm_updated_by FOREIGN KEY (updated_by) REFERENCES user_table(id)
@@ -1751,6 +1792,7 @@ CREATE TABLE company_subscription (
   date_effective TEXT,
   date_expire TEXT,
   status TEXT CHECK (length(status) <= 12),
+  sync_key TEXT CHECK(length(sync_key) <= 36),
 
   -- FOREIGN KEYS
   CONSTRAINT fk_cs_company_id FOREIGN KEY (company_id) REFERENCES company_table(id),
@@ -1774,6 +1816,7 @@ CREATE INDEX fk_cs_subscription_id_idx ON company_subscription (subscription_id)
     table_number TEXT CHECK(length(table_number) <= 45),
     postfix_up_to_four TEXT CHECK(length(postfix_up_to_four) <= 4),
     prefix_up_to_three TEXT CHECK(length(prefix_up_to_three) <= 3),
+    sync_key TEXT CHECK(length(sync_key) <= 36),
 
     CONSTRAINT fk_fs_table_branch FOREIGN KEY (branch)
       REFERENCES branch_table(id)
