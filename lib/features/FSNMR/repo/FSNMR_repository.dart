@@ -214,28 +214,52 @@ class FSNMRRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final ruleMap = rule.toMap();
     ruleMap.remove('id');
-    return await db.insert('fast_slow_nonmoving_rule_table', ruleMap);
+    final id = await db.insert('fast_slow_nonmoving_rule_table', ruleMap);
+    captureSync(
+      tableName: 'fast_slow_nonmoving_rule_table',
+      entityMap: ruleMap,
+      entityId: id.toString(),
+      operation: 'INSERT',
+      company: rule.company?.toString(),
+    );
+    return id;
   }
 
   // Update existing rule
   Future<int> update(FastSlowNonMovingRule rule, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
-    return await db.update(
+    final result = await db.update(
       'fast_slow_nonmoving_rule_table',
       rule.toMap(),
       where: 'id = ? AND company = ?',
       whereArgs: [rule.id, rule.company],
     );
+    captureSync(
+      tableName: 'fast_slow_nonmoving_rule_table',
+      entityMap: rule.toMap(),
+      entityId: rule.id.toString(),
+      operation: 'UPDATE',
+      company: rule.company?.toString(),
+    );
+    return result;
   }
 
   // Delete rule
   Future<int> delete(int id, int companyId, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
-    return await db.delete(
+    final result = await db.delete(
       'fast_slow_nonmoving_rule_table',
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+    captureSync(
+      tableName: 'fast_slow_nonmoving_rule_table',
+      entityMap: {'id': id, 'company': companyId},
+      entityId: id.toString(),
+      operation: 'DELETE',
+      company: companyId.toString(),
+    );
+    return result;
   }
 
   // Delete multiple rules
@@ -252,6 +276,13 @@ class FSNMRRepository extends BaseRepository {
         'fast_slow_nonmoving_rule_table',
         where: 'id = ? AND company = ?',
         whereArgs: [id, companyId],
+      );
+      captureSync(
+        tableName: 'fast_slow_nonmoving_rule_table',
+        entityMap: {'id': id, 'company': companyId},
+        entityId: id.toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
       );
     }
 
@@ -466,6 +497,13 @@ class FSNMRRepository extends BaseRepository {
         rule.toMap(),
         where: 'id = ? AND company = ?',
         whereArgs: [rule.id, rule.company],
+      );
+      captureSync(
+        tableName: 'fast_slow_nonmoving_rule_table',
+        entityMap: rule.toMap(),
+        entityId: rule.id.toString(),
+        operation: 'UPDATE',
+        company: rule.company?.toString(),
       );
     }
 
