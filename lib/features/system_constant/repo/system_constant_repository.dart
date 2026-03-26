@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:savvy_stock/core/constants/api_constants.dart';
+import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
@@ -11,8 +12,9 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../../core/errors/exceptions.dart';
 
-class SystemConstantRepository {
-  final LocalDatabaseService localDatabaseService;
+class SystemConstantRepository extends BaseRepository {
+  @override
+  final LocalDatabaseService databaseService;
   final String baseUrl;
   // final AuthService authService;
   final http.Client httpClient;
@@ -21,11 +23,13 @@ class SystemConstantRepository {
 
   SystemConstantRepository({
     this.baseUrl = ApiConstants.baseUrl,
-    required this.localDatabaseService,
+    required this.databaseService,
     required this.authBloc,
     required this.httpClient,
     required this.udcRepository,
-  });
+  }) : localDatabaseService = databaseService;
+
+  final LocalDatabaseService localDatabaseService;
 
   // Offline-first: Try API first, fallback to local database
   Future<List<SystemConstant>> getSystemConstants() async {
@@ -85,7 +89,7 @@ class SystemConstantRepository {
     developer.log('Loading current company system constants from database...');
 
     try {
-      final db = await localDatabaseService.database;
+      final db = await databaseService.database;
       final companyId = authBloc.state.companyId;
 
       // Try to get company-specific constants first
@@ -130,7 +134,7 @@ class SystemConstantRepository {
   }
 
   Future<List<SystemConstant>> getLocalSystemConstants() async {
-    final db = await localDatabaseService.database;
+    final db = await databaseService.database;
     try {
       final List<Map<String, dynamic>> maps = await db.query('system_constant');
       developer.log('Found ${maps.length} system constants in local database');
@@ -142,7 +146,7 @@ class SystemConstantRepository {
   }
 
   Future<SystemConstant?> _getLocalSystemConstant(int id) async {
-    final db = await localDatabaseService.database;
+    final db = await databaseService.database;
     final List<Map<String, dynamic>> maps = await db.query(
       'system_constant',
       where: 'id = ?',
@@ -154,48 +158,23 @@ class SystemConstantRepository {
     return null;
   }
 
-  Future<SystemConstant> _getLocalCompanySystemConstants() async {
-    final db = await localDatabaseService.database;
-    final companyId = authBloc.state.companyId;
-
-    try {
-      // Try to get company-specific constants first
-      final companyMaps = await db.query(
-        'system_constant',
-        where: 'company = ?',
-        whereArgs: [companyId],
-      );
-
-      if (companyMaps.isNotEmpty) {
-        developer.log('Found company system constants in local database');
-        return SystemConstant.fromDatabaseMap(companyMaps.first);
-      }
-
-      // Fallback to default constants (company = null)
-      final defaultMaps = await db.query(
-        'system_constant',
-        where: 'company IS NULL',
-      );
-
-      if (defaultMaps.isNotEmpty) {
-        developer.log('Found default system constants in local database');
-        return SystemConstant.fromDatabaseMap(defaultMaps.first);
-      }
-
-      throw Exception("Local System Constants not found.");
-    } catch (e) {
-      developer.log('Error getting local company system constants: $e');
-      rethrow;
-    }
-  }
-
   Future<int> insertLocalSystemConstant(SystemConstant systemConstant) async {
-    final db = await localDatabaseService.database;
+    final db = await databaseService.database;
     try {
+      final map = systemConstant.toDatabaseMap();
+      map.remove('id');
       final id = await db.insert(
         'system_constant',
-        systemConstant.toDatabaseMap(),
+        map,
         conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      map['id'] = id;
+      captureSync(
+        tableName: 'system_constant',
+        entityMap: map,
+        entityId: id.toString(),
+        operation: 'INSERT',
+        company: systemConstant.company?.toString(),
       );
       developer.log('Inserted system constant with ID: $id');
       return id;
@@ -206,15 +185,23 @@ class SystemConstantRepository {
   }
 
   Future<int> _updateLocalSystemConstant(SystemConstant systemConstant) async {
-    final db = await localDatabaseService.database;
+    final db = await databaseService.database;
     try {
+      final map = systemConstant.toDatabaseMap();
       final count = await db.update(
         'system_constant',
-        systemConstant.toDatabaseMap(),
+        map,
         where: 'id = ?',
         whereArgs: [systemConstant.id],
       );
       developer.log('Updated $count system constant(s)');
+      captureSync(
+        tableName: 'system_constant',
+        entityMap: map,
+        entityId: systemConstant.id.toString(),
+        operation: 'UPDATE',
+        company: systemConstant.company?.toString(),
+      );
       return count;
     } catch (e) {
       developer.log('Error updating system constant: $e');
@@ -223,13 +210,20 @@ class SystemConstantRepository {
   }
 
   Future<int> _deleteLocalSystemConstant(int id) async {
-    final db = await localDatabaseService.database;
+    final db = await databaseService.database;
     try {
-      return await db.delete(
+      final count = await db.delete(
         'system_constant',
         where: 'id = ?',
         whereArgs: [id],
       );
+      captureSync(
+        tableName: 'system_constant',
+        entityMap: {'id': id},
+        entityId: id.toString(),
+        operation: 'DELETE',
+      );
+      return count;
     } catch (e) {
       developer.log('Error deleting local system constant: $e');
       rethrow;
@@ -296,7 +290,6 @@ class SystemConstantRepository {
 
   // Create system constant (offline-first)
   Future<void> createSystemConstant(SystemConstant systemConstant) async {
-    final db = await localDatabaseService.database;
     final companyId = authBloc.state.companyId;
     try {
       if (companyId != null) {
@@ -382,6 +375,13 @@ class SystemConstantRepository {
         constant.copyWith(isSynced: true).toDatabaseMap(),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
+      captureSync(
+        tableName: 'system_constant',
+        entityMap: constant.copyWith(isSynced: true).toDatabaseMap(),
+        entityId: constant.id.toString(),
+        operation: 'INSERT',
+        company: constant.company?.toString(),
+      );
     }
 
     await batch.commit();
@@ -411,6 +411,19 @@ class SystemConstantRepository {
       'data': data != null ? json.encode(data) : null,
       'created_at': DateTime.now().millisecondsSinceEpoch,
     });
+    captureSync(
+      tableName: 'sync_queue',
+      entityMap: {
+        'table_name': tableName,
+        'record_id': recordId,
+        'operation': operation,
+        'data': data != null ? json.encode(data) : null,
+        'created_at': DateTime.now().millisecondsSinceEpoch,
+      },
+      entityId: recordId.toString(),
+      operation: 'INSERT',
+      company: authBloc.state.companyId.toString(),
+    );
   }
 
   Future<Map<String, String>> _getAuthHeaders() async {
@@ -440,6 +453,13 @@ class SystemConstantRepository {
             remoteConstant.copyWith(isSynced: true).toDatabaseMap(),
             where: 'id = ?',
             whereArgs: [remoteConstant.id],
+          );
+          captureSync(
+            tableName: 'system_constant',
+            entityMap: remoteConstant.copyWith(isSynced: true).toDatabaseMap(),
+            entityId: remoteConstant.id.toString(),
+            operation: 'UPDATE',
+            company: remoteConstant.company?.toString(),
           );
         }
       }
