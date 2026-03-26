@@ -191,12 +191,26 @@ class SalesOrderDetailRepository  extends BaseRepository{
       where: 'id = ?',
       whereArgs: [details.id],
     );
+    captureSync(
+      tableName: 'sales_order_details',
+      entityMap: details.toMap(),
+      entityId: details.id.toString(),
+      operation: 'UPDATE',
+      company: details.company?.toString(),
+    );
   }
 
   // Delete
-  Future<void> deleteSalesOrderDetail(int id) async {
+  Future<void> deleteSalesOrderDetail(int id, int companyId) async {
     final db = await databaseService.database;
     await db.delete('sales_order_details', where: 'id = ?', whereArgs: [id]);
+    captureSync(
+      tableName: 'sales_order_details',
+      entityMap: {'id': id},
+      entityId: id.toString(),
+      operation: 'DELETE',
+      company: companyId.toString(),
+    );
   }
 
   // Batch delete
@@ -212,12 +226,19 @@ class SalesOrderDetailRepository  extends BaseRepository{
   }
 
   // Delete by Sales Order Header ID
-  Future<void> deleteSalesOrderDetailByHeaderId(int headerId) async {
+  Future<void> deleteSalesOrderDetailByHeaderId(int headerId, int companyId) async {
     final db = await databaseService.database;
     await db.delete(
       'sales_order_details',
       where: 'sales_order_header_id = ?',
       whereArgs: [headerId],
+    );
+    captureSync(
+      tableName: 'sales_order_details',
+      entityMap: {'sales_order_header_id': headerId},
+      entityId: headerId.toString(),
+      operation: 'DELETE',
+      company: companyId.toString(),
     );
   }
 
