@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/model/lot_coloring_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
-class LotExpirationColorsRepository {
+class LotExpirationColorsRepository extends BaseRepository {
+  @override
   final LocalDatabaseService databaseService;
 
   LotExpirationColorsRepository({required this.databaseService});
@@ -52,7 +54,17 @@ class LotExpirationColorsRepository {
     colorMap.remove('id');
     colorMap['company'] = companyId;
 
-    return await db.insert('lot_expiration_colors', colorMap);
+    final id = await db.insert('lot_expiration_colors', colorMap);
+    
+    captureSync(
+      tableName: 'lot_expiration_colors',
+      entityMap: colorMap,
+      entityId: id.toString(),
+      operation: 'INSERT',
+      company: companyId.toString(),
+    );
+
+    return id;
   }
 
   // Update existing lot expiration color
@@ -61,22 +73,46 @@ class LotExpirationColorsRepository {
     int companyId,
   ) async {
     final db = await databaseService.database;
-    return await db.update(
+    final rowsAffected = await db.update(
       'lot_expiration_colors',
       color.toMap(),
       where: 'id = ? AND company = ?',
       whereArgs: [color.id, companyId],
     );
+    
+    if (rowsAffected > 0) {
+      captureSync(
+        tableName: 'lot_expiration_colors',
+        entityMap: color.toMap(),
+        entityId: color.id.toString(),
+        operation: 'UPDATE',
+        company: companyId.toString(),
+      );
+    }
+    
+    return rowsAffected;
   }
 
   // Delete single lot expiration color
   Future<int> deleteLotExpirationColor(int id, int companyId) async {
     final db = await databaseService.database;
-    return await db.delete(
+    final rowsAffected = await db.delete(
       'lot_expiration_colors',
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+    
+    if (rowsAffected > 0) {
+      captureSync(
+        tableName: 'lot_expiration_colors',
+        entityMap: {'id': id},
+        entityId: id.toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
+      );
+    }
+    
+    return rowsAffected;
   }
 
   // Delete multiple lot expiration colors
@@ -92,6 +128,13 @@ class LotExpirationColorsRepository {
         'lot_expiration_colors',
         where: 'id = ? AND company = ?',
         whereArgs: [color.id, companyId],
+      );
+      captureSync(
+        tableName: 'lot_expiration_colors',
+        entityMap: {'id': color.id},
+        entityId: color.id.toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
       );
     }
 
