@@ -195,7 +195,7 @@ class InvoiceHistoryHeaderRepository  extends BaseRepository{
   }
 
   // Delete multiple invoice history headers - equivalent to Java's removeCollection()
-  Future<int> deleteMultipleInvoiceHistoryHeaders(List<int> ids) async {
+  Future<int> deleteMultipleInvoiceHistoryHeaders(List<int> ids, int companyId) async {
     final db = await databaseService.database;
 
     try {
@@ -205,6 +205,14 @@ class InvoiceHistoryHeaderRepository  extends BaseRepository{
         DELETE FROM $tableName 
         WHERE id IN ($placeholders)
       ''', ids);
+
+      captureSync(
+        tableName: tableName,
+        entityMap: {'id': ids},
+        entityId: ids.toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
+      );
 
       return count;
     } catch (e) {
