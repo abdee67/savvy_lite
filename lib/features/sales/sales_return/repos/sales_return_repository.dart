@@ -205,6 +205,14 @@ class SalesReturnRepository  extends BaseRepository{
       where: 'id = ?',
       whereArgs: [detail.id],
     );
+
+    captureSync(
+      tableName: 'sales_return_details',
+      entityMap: detail.toMap(),
+      entityId: detail.id.toString(),
+      operation: 'UPDATE',
+      company: detail.company?.toString(),
+    );
   }
 
   Future<void> deleteSalesReturnDetail(int id) async {
