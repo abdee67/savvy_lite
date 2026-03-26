@@ -283,7 +283,7 @@ class SalesOrderDetailBloc
     emit(state.copyWith(status: SalesOrderDetailStatus.deleting));
 
     try {
-      await repository.deleteSalesOrderDetail(event.id);
+      await repository.deleteSalesOrderDetail(event.id, authBloc.state.companyId!);
       emit(
         state.copyWith(
           status: SalesOrderDetailStatus.success,
