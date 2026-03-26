@@ -196,13 +196,26 @@ class UdcRepository extends BaseRepository {
       if (detail.id == 0) {
         // If it's a new record
         map.remove('id'); // ID is autoincrement
-        await db.insert('udc_details', map);
+        final id = await db.insert('udc_details', map);
+        map['id'] = id;
+        captureSync(
+          tableName: 'udc_details',
+          entityMap: map,
+          entityId: id.toString(),
+          operation: 'INSERT',
+        );
       } else {
         await db.update(
           'udc_details',
           map,
           where: 'id = ?',
           whereArgs: [detail.id],
+        );
+        captureSync(
+          tableName: 'udc_details',
+          entityMap: map,
+          entityId: detail.id.toString(),
+          operation: 'UPDATE',
         );
       }
     } catch (e) {
@@ -237,35 +250,5 @@ class UdcRepository extends BaseRepository {
       }
       return null;
     }
-  }
-
-  // Helper methods
-  Future<void> _saveUdcDetailsToLocal(List<UdcDetails> details) async {
-    final db = await databaseService.database;
-    final batch = db.batch();
-
-    for (final detail in details) {
-      batch.insert(
-        'udc_details',
-        detail.toDatabaseMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-    }
-
-    await batch.commit();
-    developer.log('Saved ${details.length} UDC details to local database');
-  }
-
-  Future<Map<String, String>> _getAuthHeaders() async {
-    final token = await _getAuthToken();
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    };
-  }
-
-  Future<String> _getAuthToken() async {
-    // Implement your auth token retrieval logic
-    return 'your-auth-token';
   }
 }
