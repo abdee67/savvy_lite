@@ -5,6 +5,7 @@ import 'package:get_it/get_it.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/core/services/sync/sync_service.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:uuid/uuid.dart';
 
 abstract class BaseRepository {
   Future<dynamic> getDatabaseExecutor({Transaction? txn}) async {
@@ -13,6 +14,15 @@ abstract class BaseRepository {
 
   // This should be implemented by each repository
   LocalDatabaseService get databaseService;
+
+  /// Helper to auto-inject a unique sync_key (UUID) into a payload before inserting.
+  Map<String, dynamic> withSyncKey(Map<String, dynamic> data) {
+    final map = Map<String, dynamic>.from(data);
+    if (!map.containsKey('sync_key') || map['sync_key'] == null) {
+      map['sync_key'] = const Uuid().v4();
+    }
+    return map;
+  }
 
   /// Lazily resolved SyncService from the DI container.
   /// All repositories that extend BaseRepository get sync for free.
