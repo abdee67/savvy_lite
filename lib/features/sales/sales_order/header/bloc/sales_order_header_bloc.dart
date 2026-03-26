@@ -1664,7 +1664,7 @@ class SalesOrderHeaderBloc
       }
 
       // Delete the receipt
-      await repository.deleteCreditReceipt(event.receiptId);
+      await repository.deleteCreditReceipt(event.receiptId, authBloc.state.companyId!);
 
       // Update state
       final updatedReceipts = state.creditReceipts
