@@ -617,14 +617,14 @@ class SalesOrderHeaderRepository  extends BaseRepository{
   }
 
   // Stock Reversal for Voided Orders
-  Future<void> reverseStockQuantity(int itemInBranchId, double quantity) async {
+  Future<void> reverseStockQuantity(int itemInBranchId, double quantity, int companyId) async {
     final db = await _db;
 
     // Get current quantity
     final currentResult = await db.query(
       'items_in_branch',
-      where: 'id = ?',
-      whereArgs: [itemInBranchId],
+      where: 'id = ? AND company = ?',
+      whereArgs: [itemInBranchId, companyId],
     );
 
     if (currentResult.isNotEmpty) {
@@ -633,8 +633,15 @@ class SalesOrderHeaderRepository  extends BaseRepository{
       await db.update(
         'items_in_branch',
         {'quantity_available': newQty},
-        where: 'id = ?',
-        whereArgs: [itemInBranchId],
+        where: 'id = ? AND company = ?',
+        whereArgs: [itemInBranchId, companyId],
+      );
+      captureSync(
+        tableName: 'items_in_branch',
+        entityMap: {'id': itemInBranchId, 'company': companyId, 'quantity_available': newQty},
+        entityId: itemInBranchId.toString(),
+        operation: 'UPDATE',
+        company: companyId.toString(),
       );
     }
   }
@@ -705,7 +712,15 @@ class SalesOrderHeaderRepository  extends BaseRepository{
   Future<int> create(SalesOrderHeader header) async {
     final db = await _db;
     try {
-      return await db.insert('sales_order_header', header.toMap());
+      final id = await db.insert('sales_order_header', header.toMap());
+      captureSync(
+        tableName: 'sales_order_header',
+        entityMap: header.toMap(),
+        entityId: id.toString(),
+        operation: 'INSERT',
+        company: header.company?.toString(),
+      );
+      return id;
     } catch (e) {
       throw Exception('Failed to create sales order header: $e');
     }
@@ -743,13 +758,21 @@ class SalesOrderHeaderRepository  extends BaseRepository{
     }
   }
 
-  Future<int> delete(int id) async {
+  Future<int> delete(int id, int companyId) async {
     final db = await _db;
-    return await db.delete(
+    final result = await db.delete(
       'sales_order_header',
       where: 'id = ?',
       whereArgs: [id],
     );
+    captureSync(
+      tableName: 'sales_order_header',
+      entityMap: {'id': id},
+      entityId: id.toString(),
+      operation: 'DELETE',
+      company: companyId.toString(),
+    );
+    return result;
   }
 
   Future<List<SalesOrderHeader>> getAll({required int companyId}) async {
@@ -855,7 +878,15 @@ class SalesOrderHeaderRepository  extends BaseRepository{
   Future<int> createCreditReceipt(CreditReceipt receipt) async {
     final db = await _db;
     try {
-      return await db.insert('credit_receipt_table', receipt.toMap());
+      final id = await db.insert('credit_receipt_table', receipt.toMap());
+      captureSync(
+        tableName: 'credit_receipt_table',
+        entityMap: receipt.toMap(),
+        entityId: id.toString(),
+        operation: 'INSERT',
+        company: receipt.company?.toString(),
+      );
+      return id;
     } catch (e) {
       throw Exception('Failed to create credit receipt: $e');
     }
@@ -870,18 +901,32 @@ class SalesOrderHeaderRepository  extends BaseRepository{
         where: 'id = ?',
         whereArgs: [receipt.id],
       );
+      captureSync(
+        tableName: 'credit_receipt_table',
+        entityMap: receipt.toMap(),
+        entityId: receipt.id.toString(),
+        operation: 'UPDATE',
+        company: receipt.company?.toString(),
+      );
     } catch (e) {
       throw Exception('Failed to update credit receipt: $e');
     }
   }
 
-  Future<void> deleteCreditReceipt(int receiptId) async {
+  Future<void> deleteCreditReceipt(int receiptId, int companyId) async {
     final db = await _db;
     try {
       await db.delete(
         'credit_receipt_table',
         where: 'id = ?',
         whereArgs: [receiptId],
+      );
+      captureSync(
+        tableName: 'credit_receipt_table',
+        entityMap: {'id': receiptId},
+        entityId: receiptId.toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
       );
     } catch (e) {
       throw Exception('Failed to delete credit receipt: $e');
