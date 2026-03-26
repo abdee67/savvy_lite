@@ -59,13 +59,17 @@ class ItemCostRepository extends BaseRepository {
   // Delete item cost
   Future<int> delete(int id, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
+    final itemCost = await findById(id);
     final result = await db.delete('item_cost', where: 'id = ?', whereArgs: [id]);
-    captureSync(
-      tableName: 'item_cost',
-      entityMap: {'id': id},
-      entityId: id.toString(),
-      operation: 'DELETE',
-    );
+    if (itemCost != null) {
+      captureSync(
+        tableName: 'item_cost',
+        entityMap: {'id': id, 'company': itemCost.company},
+        entityId: id.toString(),
+        operation: 'DELETE',
+        company: itemCost.company?.toString(),
+      );
+    }
     return result;
   }
 
@@ -611,6 +615,21 @@ class ItemCostRepository extends BaseRepository {
               where: 'item_number = ? AND company = ?',
               whereArgs: [itemNumber, companyId],
             );
+
+            captureSync(
+              tableName: 'item_cost',
+              entityMap: {
+                'item_number': itemNumber,
+                'amount_unit_cost': finalCost,
+                'company': companyId,
+                'user_id': userId,
+                'date_updated': DateTime.now().toIso8601String(),
+              },
+              entityId: itemNumber.toString(),
+              operation: 'UPDATE',
+              company: companyId.toString(),
+            );
+
             if (kDebugMode) {
               developer.log(
                 '✅ Updated item cost for item $itemNumber to $unitCostAvg',
@@ -632,6 +651,21 @@ class ItemCostRepository extends BaseRepository {
             'user_id': userId,
             'date_updated': DateTime.now().toIso8601String(),
           });
+
+          captureSync(
+            tableName: 'item_cost',
+            entityMap: {
+              'item_number': itemNumber,
+              'amount_unit_cost': unitCostAvg,
+              'company': companyId,
+              'user_id': userId,
+              'date_updated': DateTime.now().toIso8601String(),
+            },
+            entityId: itemNumber.toString(),
+            operation: 'INSERT',
+            company: companyId.toString(),
+          );
+
           if (kDebugMode) {
             developer.log(
               '✅ Created new item cost for item $itemNumber: $unitCostAvg',
