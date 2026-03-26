@@ -789,6 +789,13 @@ class ItemUomConversionsRepository extends BaseRepository {
         final itemMap = item.toMap();
         itemMap.remove('id');
         batch.insert('item_uom_conversions', itemMap);
+        captureSync(
+          tableName: 'item_uom_conversions',
+          entityMap: itemMap,
+          entityId: item.id.toString(),
+          operation: 'INSERT',
+          company: item.company.toString(),
+        );
       }
 
       await batch.commit(noResult: true);
@@ -810,6 +817,13 @@ class ItemUomConversionsRepository extends BaseRepository {
           where: 'id = ? AND company = ?',
           whereArgs: [item.id, item.company],
         );
+        captureSync(
+          tableName: 'item_uom_conversions',
+          entityMap: item.toMap(),
+          entityId: item.id.toString(),
+          operation: 'UPDATE',
+          company: item.company.toString(),
+        );
       }
 
       await batch.commit(noResult: true);
@@ -829,6 +843,13 @@ class ItemUomConversionsRepository extends BaseRepository {
           'item_uom_conversions',
           where: 'id = ? AND company = ?',
           whereArgs: [item.id, item.company],
+        );
+        captureSync(
+          tableName: 'item_uom_conversions',
+          entityMap: {'id': item.id, 'company': item.company},
+          entityId: item.id.toString(),
+          operation: 'DELETE',
+          company: item.company.toString(),
         );
       }
 
