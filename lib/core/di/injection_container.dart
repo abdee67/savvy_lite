@@ -102,9 +102,7 @@ void initDependencies() {
   );
 
   // Connectivity Service
-  getIt.registerLazySingleton<ConnectivityService>(
-    () => ConnectivityService(),
-  );
+  getIt.registerLazySingleton<ConnectivityService>(() => ConnectivityService());
 
   // ─── Sync Services ─────────────────────────────────────────────────
   getIt.registerLazySingleton<SyncRepository>(
@@ -131,7 +129,7 @@ void initDependencies() {
   getIt.registerLazySingleton<SystemConstantRepository>(
     () => SystemConstantRepository(
       baseUrl: ApiConstants.baseUrl,
-      localDatabaseService: getIt(),
+      databaseService: getIt(),
       httpClient: getIt(),
       authBloc: getIt(), // Pass auth service
       udcRepository: getIt(),
