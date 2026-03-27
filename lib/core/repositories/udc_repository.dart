@@ -196,7 +196,7 @@ class UdcRepository extends BaseRepository {
       if (detail.id == 0) {
         // If it's a new record
         map.remove('id'); // ID is autoincrement
-        final id = await db.insert('udc_details', map);
+        final id = await db.insert('udc_details', withSyncKey(map));
         map['id'] = id;
         captureSync(
           tableName: 'udc_details',

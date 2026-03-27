@@ -54,7 +54,7 @@ class LotExpirationColorsRepository extends BaseRepository {
     colorMap.remove('id');
     colorMap['company'] = companyId;
 
-    final id = await db.insert('lot_expiration_colors', colorMap);
+    final id = await db.insert('lot_expiration_colors', withSyncKey(colorMap));
     
     captureSync(
       tableName: 'lot_expiration_colors',

@@ -111,8 +111,7 @@ class InvoiceHistoryHeaderRepository  extends BaseRepository{
 
     try {
       final id = await db.insert(
-        tableName,
-        header.toMap(),
+        tableName, withSyncKey(header.toMap()),
         conflictAlgorithm: ConflictAlgorithm.fail,
       );
 

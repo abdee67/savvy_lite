@@ -68,7 +68,7 @@ class NextNumberRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final itemMap = item.toMap();
     itemMap.remove('id'); // Remove ID for new insertion
-    final id = await db.insert('next_number', itemMap);
+    final id = await db.insert('next_number', withSyncKey(itemMap));
     itemMap['id'] = id;
     captureSync(
       tableName: 'next_number',
@@ -153,7 +153,7 @@ class NextNumberRepository extends BaseRepository {
         company: companyId,
       );
 
-      await db.insert('next_number', newRecord.toMap());
+      await db.insert('next_number', withSyncKey(newRecord.toMap()));
     } else {
       // Record found, get current number and increment
       recordToUpdate = NextNumberModel.fromMap(nextNumberRecords.first);

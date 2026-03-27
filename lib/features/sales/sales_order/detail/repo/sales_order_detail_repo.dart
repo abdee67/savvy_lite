@@ -36,8 +36,7 @@ class SalesOrderDetailRepository  extends BaseRepository{
   Future<int> createSalesOrderDetail(SalesOrderDetail details) async {
     final db = await databaseService.database;
     final id = await db.insert(
-      'sales_order_details',
-      details.toMap(),
+      'sales_order_details', withSyncKey(details.toMap()),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
     captureSync(

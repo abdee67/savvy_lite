@@ -14,8 +14,7 @@ class SalesReturnRepository  extends BaseRepository{
   Future<int> createSalesReturnHeader(SalesReturnHeader header) async {
     final db = await databaseService.database;
     final map = await db.insert(
-      'sales_return_header',
-      header.toMap(),
+      'sales_return_header', withSyncKey(header.toMap()),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
     captureSync(
@@ -174,8 +173,7 @@ class SalesReturnRepository  extends BaseRepository{
   Future<void> createSalesReturnDetail(SalesReturnDetails detail) async {
     final db = await databaseService.database;
     await db.insert(
-      'sales_return_details',
-      detail.toMap(),
+      'sales_return_details', withSyncKey(detail.toMap()),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }

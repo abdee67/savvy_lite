@@ -260,7 +260,7 @@ class ItemTransactionRepository extends BaseRepository {
       customer: customer ?? soD?.orderHeader?.customerBillTo,
     );
 
-    await db.insert('item_transactions', transaction.toMap());
+    await db.insert('item_transactions', withSyncKey(transaction.toMap()));
     captureSync(
       tableName: 'item_transactions',
       entityMap: transaction.toMap(),
@@ -400,7 +400,7 @@ class ItemTransactionRepository extends BaseRepository {
           soD?.orderHeader?.customerBillTo,
     );
 
-    await db.insert('item_transactions', transaction.toMap());
+    await db.insert('item_transactions', withSyncKey(transaction.toMap()));
     captureSync(
       tableName: 'item_transactions',
       entityMap: transaction.toMap(),
@@ -582,7 +582,7 @@ class ItemTransactionRepository extends BaseRepository {
     if (kDebugMode) {
       developer.log('DEBUG: Inserting transaction');
     }
-    await db.insert('item_transactions', transaction.toMap());
+    await db.insert('item_transactions', withSyncKey(transaction.toMap()));
     captureSync(
       tableName: 'item_transactions',
       entityMap: transaction.toMap(),
@@ -2079,7 +2079,7 @@ class ItemTransactionRepository extends BaseRepository {
 
   Future<int> createTransaction(ItemTransactionModel transaction) async {
     final db = await databaseService.database;
-    final id = await db.insert('item_transactions', transaction.toMap());
+    final id = await db.insert('item_transactions', withSyncKey(transaction.toMap()));
 
     captureSync(
       tableName: 'item_transactions',

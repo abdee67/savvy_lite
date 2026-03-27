@@ -14,7 +14,7 @@ class ItemMasterRepository extends BaseRepository {
     final db = await databaseService.database;
     final itemMap = item.toMap();
     itemMap.remove('id');
-    final id = await db.insert('item_master', itemMap);
+    final id = await db.insert('item_master', withSyncKey(itemMap));
     itemMap['id'] = id;
     captureSync(
       tableName: 'item_master',

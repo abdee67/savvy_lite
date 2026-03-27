@@ -31,8 +31,7 @@ class SalesOrderHeaderRepository  extends BaseRepository{
       }
 
       final id = await db.insert(
-        'sales_order_header',
-        headerMap,
+        'sales_order_header', withSyncKey(headerMap),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
       headerMap['id'] = id;
@@ -712,7 +711,7 @@ class SalesOrderHeaderRepository  extends BaseRepository{
   Future<int> create(SalesOrderHeader header) async {
     final db = await _db;
     try {
-      final id = await db.insert('sales_order_header', header.toMap());
+      final id = await db.insert('sales_order_header', withSyncKey(header.toMap()));
       captureSync(
         tableName: 'sales_order_header',
         entityMap: header.toMap(),
@@ -878,7 +877,7 @@ class SalesOrderHeaderRepository  extends BaseRepository{
   Future<int> createCreditReceipt(CreditReceipt receipt) async {
     final db = await _db;
     try {
-      final id = await db.insert('credit_receipt_table', receipt.toMap());
+      final id = await db.insert('credit_receipt_table', withSyncKey(receipt.toMap()));
       captureSync(
         tableName: 'credit_receipt_table',
         entityMap: receipt.toMap(),

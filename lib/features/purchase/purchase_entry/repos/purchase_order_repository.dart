@@ -27,7 +27,7 @@ class PurchaseOrderRepository extends BaseRepository {
     try {
       final headerMap = header.toMap();
       headerMap.remove('id');
-      final id = await db.insert('purchase_order_header', headerMap);
+      final id = await db.insert('purchase_order_header', withSyncKey(headerMap));
       headerMap['id'] = id;
       captureSync(
         tableName: 'purchase_order_header',
@@ -453,7 +453,7 @@ class PurchaseOrderRepository extends BaseRepository {
     try {
       final map = detail.toMap();
       map.remove('id');
-      final id = await db.insert('purchase_order_detail', map);
+      final id = await db.insert('purchase_order_detail', withSyncKey(map));
       map['id'] = id;
       captureSync(
         tableName: 'purchase_order_detail',
@@ -799,7 +799,7 @@ class PurchaseOrderRepository extends BaseRepository {
     try {
       final map = receiver.toMap();
       map.remove('id');
-      final id = await db.insert('purchase_order_receiver', map);
+      final id = await db.insert('purchase_order_receiver', withSyncKey(map));
       map['id'] = id;
       captureSync(
         tableName: 'purchase_order_receiver',
@@ -1218,12 +1218,12 @@ class PurchaseOrderRepository extends BaseRepository {
               whereArgs: [itemNumber],
             );
           } else {
-            final result = await db.insert('item_cost', {
+            final result = await db.insert('item_cost', withSyncKey({
               'item_number': itemNumber,
               'amount_unit_cost': weightedAverageCost,
               'company': transactions.first['company'],
               'date_updated': DateTime.now().toIso8601String(),
-            });
+            }));
             captureSync(
               tableName: 'item_cost',
               entityMap: {
@@ -1283,14 +1283,14 @@ class PurchaseOrderRepository extends BaseRepository {
         );
       } else {
         // Create new items_in_branch record
-    final  result = await db.insert('items_in_branch', {
+    final  result = await db.insert('items_in_branch', withSyncKey({
           'item_number': itemNumber,
           'branch': branchRecieved,
           'quantity_available': quantityRecieved,
           'unit_of_measure': receiver.unitOfMeasure,
           'created_at': DateTime.now().toIso8601String(),
           'updated_at': DateTime.now().toIso8601String(),
-        });
+        }));
         captureSync(
           tableName: 'items_in_branch',
           entityMap: {
@@ -1801,7 +1801,7 @@ class PurchaseOrderRepository extends BaseRepository {
   Future<int> createCreditPayment(CreditPayment payment) async {
     final db = await _db;
     try {
-      final result = await db.insert('credit_payment_table', payment.toMap());
+      final result = await db.insert('credit_payment_table', withSyncKey(payment.toMap()));
       captureSync(
         tableName: 'credit_payment_table',
         entityMap: payment.toMap(),

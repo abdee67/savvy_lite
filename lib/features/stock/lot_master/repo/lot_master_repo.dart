@@ -286,7 +286,7 @@ class LotMasterRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final lotMap = lot.toMap();
     lotMap.remove('id'); // Remove ID for new insertion
-    final id = await db.insert('lot_master', lotMap);
+    final id = await db.insert('lot_master', withSyncKey(lotMap));
     lotMap['id'] = id;
     captureSync(
       tableName: 'lot_master',
@@ -489,7 +489,7 @@ class LotMasterRepository extends BaseRepository {
     Transaction? txn,
   }) async {
     final db = txn ?? await databaseService.database;
-    final id = await db.insert('item_transactions', transaction);
+    final id = await db.insert('item_transactions', withSyncKey(transaction));
     captureSync(
       tableName: 'item_transactions',
       entityMap: transaction,

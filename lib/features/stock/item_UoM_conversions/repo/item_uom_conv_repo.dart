@@ -158,7 +158,7 @@ class ItemUomConversionsRepository extends BaseRepository {
     final db = await databaseService.database;
     final itemMap = item.toMap();
     itemMap.remove('id'); // Remove ID for new insertion
-    final result = await db.insert('item_uom_conversions', itemMap);
+    final result = await db.insert('item_uom_conversions', withSyncKey(itemMap));
     captureSync(
       tableName: 'item_uom_conversions',
       entityMap: itemMap,

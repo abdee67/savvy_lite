@@ -26,7 +26,7 @@ class OtherExpenseRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final map = expense.toMap();
     map.remove('id'); // Remove id for new insertion
-    final id = await db.insert(_tableName, map);
+    final id = await db.insert(_tableName, withSyncKey(map));
     map['id'] = id;
     captureSync(
       tableName: _tableName,

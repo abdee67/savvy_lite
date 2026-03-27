@@ -29,7 +29,7 @@ class EmployeeRepository extends BaseRepository {
     employeeMap.remove('id');
     employeeMap['company'] = companyId;
     
-    final id = await db.insert('employees', employeeMap);
+    final id = await db.insert('employees', withSyncKey(employeeMap));
     employeeMap['id'] = id;
     captureSync(
       tableName: 'employees',

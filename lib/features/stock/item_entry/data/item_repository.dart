@@ -19,7 +19,7 @@ class StockItemsEntryRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final itemMap = item.toMap();
     itemMap.remove('id');
-    final id = await db.insert('items_table', itemMap);
+    final id = await db.insert('items_table', withSyncKey(itemMap));
     // Capture sync event
     itemMap['id'] = id;
     captureSync(

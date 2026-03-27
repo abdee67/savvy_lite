@@ -114,8 +114,7 @@ class InvoiceHistoryDetailRepository extends BaseRepository {
       mapToSave.remove('id');
 
       final id = await db.insert(
-        tableName,
-        mapToSave,
+        tableName, withSyncKey(mapToSave),
         conflictAlgorithm: ConflictAlgorithm.fail,
       );
 

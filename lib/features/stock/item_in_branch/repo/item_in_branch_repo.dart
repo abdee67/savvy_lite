@@ -19,7 +19,7 @@ class StockItemInBranchRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final itemMap = item.toMap();
     itemMap.remove('id'); // Remove id for new insertion
-    final id = await db.insert('items_in_branch', itemMap);
+    final id = await db.insert('items_in_branch', withSyncKey(itemMap));
     itemMap['id'] = id;
     captureSync(
       tableName: 'items_in_branch',

@@ -164,8 +164,7 @@ class SystemConstantRepository extends BaseRepository {
       final map = systemConstant.toDatabaseMap();
       map.remove('id');
       final id = await db.insert(
-        'system_constant',
-        map,
+        'system_constant', withSyncKey(map),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
       map['id'] = id;
@@ -404,13 +403,13 @@ class SystemConstantRepository extends BaseRepository {
     Map<String, dynamic>? data,
   ) async {
     final db = await localDatabaseService.database;
-    await db.insert('sync_queue', {
+    await db.insert('sync_queue', withSyncKey({
       'table_name': tableName,
       'record_id': recordId,
       'operation': operation,
       'data': data != null ? json.encode(data) : null,
       'created_at': DateTime.now().millisecondsSinceEpoch,
-    });
+    }));
     captureSync(
       tableName: 'sync_queue',
       entityMap: {

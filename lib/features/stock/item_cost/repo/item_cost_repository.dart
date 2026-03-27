@@ -25,7 +25,7 @@ class ItemCostRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final itemMap = itemCost.toMap();
     itemMap.remove('id'); // Remove id for new insertion
-    final id = await db.insert('item_cost', itemMap);
+    final id = await db.insert('item_cost', withSyncKey(itemMap));
     itemMap['id'] = id;
     captureSync(
       tableName: 'item_cost',
@@ -644,13 +644,13 @@ class ItemCostRepository extends BaseRepository {
           }
         } else {
           // Create new item cost record
-          await db.insert('item_cost', {
+          await db.insert('item_cost', withSyncKey({
             'item_number': itemNumber,
             'amount_unit_cost': unitCostAvg,
             'company': companyId,
             'user_id': userId,
             'date_updated': DateTime.now().toIso8601String(),
-          });
+          }));
 
           captureSync(
             tableName: 'item_cost',

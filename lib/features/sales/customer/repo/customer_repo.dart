@@ -49,7 +49,7 @@ class CustomerRepository extends BaseRepository {
     final db = await databaseService.database;
     final customerMap = customer.toMap();
     customerMap.remove('id'); // Remove ID for new insertion
-    final id = await db.insert('customer_table', customerMap);
+    final id = await db.insert('customer_table', withSyncKey(customerMap));
     customerMap['id'] = id;
     captureSync(
       tableName: 'customer_table',

@@ -113,7 +113,7 @@ class LocationMasterRepository extends BaseRepository {
     final locationMap = _prepareLocationMap(location, false, userId, companyId);
     locationMap.remove('id');
 
-    final id = await db.insert('location_master', locationMap);
+    final id = await db.insert('location_master', withSyncKey(locationMap));
     
     captureSync(
       tableName: 'location_master',

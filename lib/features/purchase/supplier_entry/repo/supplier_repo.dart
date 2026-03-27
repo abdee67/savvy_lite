@@ -72,7 +72,7 @@ class SupplierRepositoryImpl extends BaseRepository implements SupplierRepositor
       ..['date_created'] = DateTime.now().toIso8601String()
       ..['date_updated'] = DateTime.now().toIso8601String();
 
-    final id = await db.insert('supplier_table', supplierMap);
+    final id = await db.insert('supplier_table', withSyncKey(supplierMap));
     supplierMap['id'] = id;
     captureSync(
       tableName: 'supplier_table',

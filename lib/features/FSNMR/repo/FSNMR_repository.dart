@@ -214,7 +214,7 @@ class FSNMRRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final ruleMap = rule.toMap();
     ruleMap.remove('id');
-    final id = await db.insert('fast_slow_nonmoving_rule_table', ruleMap);
+    final id = await db.insert('fast_slow_nonmoving_rule_table', withSyncKey(ruleMap));
     captureSync(
       tableName: 'fast_slow_nonmoving_rule_table',
       entityMap: ruleMap,

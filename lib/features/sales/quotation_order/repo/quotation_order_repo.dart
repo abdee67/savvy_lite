@@ -18,7 +18,7 @@ class QuotationOrderRepository extends BaseRepository {
   Future<int> createQuotationOrderHeader(QuotationOrderHeader header) async {
     final db = await _db;
     try {
-      final result = await db.insert('quote_order_header', header.toMap());
+      final result = await db.insert('quote_order_header', withSyncKey(header.toMap()));
       captureSync(
         tableName: 'quote_order_header',
         entityMap: header.toMap(),
@@ -270,7 +270,7 @@ class QuotationOrderRepository extends BaseRepository {
   Future<int> createQuotationOrderDetail(QuotationOrderDetail detail) async {
     final db = await _db;
     try {
-      final id = await db.insert('quote_order_details', detail.toMap());
+      final id = await db.insert('quote_order_details', withSyncKey(detail.toMap()));
       captureSync(
         tableName: 'quote_order_details',
         entityMap: detail.toMap(),

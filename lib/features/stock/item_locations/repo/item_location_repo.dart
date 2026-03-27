@@ -116,7 +116,7 @@ class ItemLocationsRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final itemMap = item.toMap();
     itemMap.remove('id'); // Remove ID for new insertion
-    final id = await db.insert('item_location', itemMap);
+    final id = await db.insert('item_location', withSyncKey(itemMap));
     itemMap['id'] = id;
     captureSync(
       tableName: 'item_location',
