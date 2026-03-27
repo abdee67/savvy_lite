@@ -61,13 +61,13 @@ class RoleBloc extends Bloc<RoleEvent, RoleState> {
   Future<void> _onCreateRole(CreateRole event, Emitter<RoleState> emit) async {
     try {
       final db = await databaseService.database;
-      final roleId = await db.insert('role_table', {
+      final roleId = await db.insert('role_table', ({
         'name': event.name,
         'description': event.description,
         'company': authBloc.state.companyId,
         'created_by': authBloc.state.userId?.id,
         'date_created': DateTime.now().toIso8601String(),
-      });
+      }));
       developer.log(
         'Creating role for company: ${authBloc.state.companyId}, by user: ${authBloc.state.userId?.id}',
       );
@@ -80,12 +80,12 @@ class RoleBloc extends Bloc<RoleEvent, RoleState> {
       // Assign privileges if any
       if (event.privilegeIds.isNotEmpty) {
         for (final privilegeId in event.privilegeIds) {
-          await db.insert('role_privilege', {
+          await db.insert('role_privilege', ({
             'role_table_id': roleId,
             'privilege_table_id': privilegeId,
             'created_by': authBloc.state.userId?.id,
             'date_created': DateTime.now().toIso8601String(),
-          });
+          }));
         }
       }
 
@@ -116,13 +116,13 @@ class RoleBloc extends Bloc<RoleEvent, RoleState> {
 
       // Add new privileges
       for (final privilege in event.privilegeIds) {
-        await db.insert('role_privilege', {
+        await db.insert('role_privilege', ({
           'role_table_id': event.role.id,
           'privilege_table_id': privilege,
           'company': authBloc.state.companyId,
           'created_by': authBloc.state.userId?.id,
           'date_created': DateTime.now().toIso8601String(),
-        });
+        }));
       }
 
       add(LoadRoles(authBloc.state.companyId!)); // Reload the list

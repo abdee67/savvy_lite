@@ -168,17 +168,17 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       userMap.remove('id');
 
       // Create user
-      final userId = await db.insert('user_table', userMap);
+      final userId = await db.insert('user_table', (userMap));
 
       // Assign roles if any
       if (event.roles.isNotEmpty) {
         for (final role in event.roles) {
-          await db.insert('user_role', {
+          await db.insert('user_role',({
             'user_id': userId,
             'role_table_id': role.id,
             'created_by': createdBy,
             'date_created': DateTime.now().toIso8601String(),
-          });
+          }));
         }
       }
       add(LoadUsers(authBloc.state.companyId!)); // Reload the list
@@ -218,12 +218,12 @@ class UserBloc extends Bloc<UserEvent, UserState> {
 
       // Add new roles
       for (final roleId in event.roles) {
-        await db.insert('user_role', {
+        await db.insert('user_role', ({
           'user_id': event.userId,
           'role_table_id': roleId.id,
           'created_by': event.createdBy,
           'date_created': DateTime.now().toIso8601String(),
-        });
+        }));
       }
       add(LoadUsers(event.companyId)); // Reload the list
       emit(
@@ -325,12 +325,12 @@ class UserBloc extends Bloc<UserEvent, UserState> {
 
         // Then add new roles
         for (final role in event.roles) {
-          await db.insert('user_role', {
+          await db.insert('user_role', ({
             'user_id': updatedUser.id,
             'role_table_id': role.id,
             'created_by': updatedBy,
             'date_created': DateTime.now().toIso8601String(),
-          });
+          }));
         }
       }
       // 5. Reload users to get fresh data
@@ -572,8 +572,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
 
         // Also restore to DB
         await db.insert(
-          'user_table',
-          item.toMap(),
+          'user_table', (item.toMap()),
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
 

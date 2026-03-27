@@ -53,7 +53,7 @@ class PrivilegeBloc extends Bloc<PrivilegeEvent, PrivilegeState> {
   ) async {
     try {
       final db = await databaseService.database;
-      await db.insert('privilege_table', {
+      await db.insert('privilege_table', ({
         'name': event.name,
         'description': event.description,
         'type': event.type,
@@ -63,7 +63,7 @@ class PrivilegeBloc extends Bloc<PrivilegeEvent, PrivilegeState> {
         'vendor_only': event.vendorOnly ? 'Y' : 'N',
         'created_by': authBloc.state.userId?.id,
         'date_created': DateTime.now().toIso8601String(),
-      });
+      }));
 
       add(LoadPrivileges(authBloc.state.companyId!)); // Reload the list
     } catch (e) {

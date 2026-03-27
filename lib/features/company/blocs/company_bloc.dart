@@ -97,7 +97,7 @@ class CompanyBloc extends Bloc<CompanyEvent, CompanyState> {
       //remove id for new company insertion
       companyMap.remove('id');
 
-      await db.insert('company_table', companyMap);
+      await db.insert('company_table', (companyMap));
       add(LoadCompanys(authBloc.state.companyId!));
       emit(
         state.copyWith(

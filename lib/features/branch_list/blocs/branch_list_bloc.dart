@@ -137,7 +137,7 @@ class BranchBloc extends Bloc<BranchEvent, BranchState> {
       //add creation metadata
       branchMap['company'] = authBloc.state.companyId;
 
-      await db.insert('branch_table', branchMap);
+      await db.insert('branch_table',branchMap);
       add(LoadBranchs(authBloc.state.companyId!));
       emit(
         state.copyWith(
