@@ -1,8 +1,15 @@
 import 'package:savvy_stock/core/constants/app_routes.dart';
+import 'package:savvy_stock/core/repositories/base_repo.dart';
+import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:sqflite/sqflite.dart';
 
-class PrivilegeSeeder {
-  static Future<void> seedPrivileges(Database db) async {
+class PrivilegeSeeder extends BaseRepository {
+  @override
+  final LocalDatabaseService databaseService;
+
+  PrivilegeSeeder({required this.databaseService});
+  Future<void> seedPrivileges() async {
+    final db = await databaseService.database;
     final privileges = [
       // ==================== MAIN DASHBOARDS ====================
       _createPrivilege(
@@ -789,7 +796,14 @@ class PrivilegeSeeder {
         'date_updated': DateTime.now().toIso8601String(),
       };
 
-      await db.insert('privilege_table', fullPrivilege);
+      await db.insert('privilege_table', withSyncKey(fullPrivilege));
+      captureSync(
+        tableName: 'privilege_table',
+        entityMap: fullPrivilege,
+        entityId: fullPrivilege['id'].toString(),
+        operation: 'INSERT',
+        company: fullPrivilege['company'].toString(),
+      );
     }
   }
 
