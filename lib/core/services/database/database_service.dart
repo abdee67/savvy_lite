@@ -1,17 +1,16 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:savvy_stock/core/services/database/seeders/default_data_seeder.dart';
-import 'package:savvy_stock/core/services/database/seeders/privilege_seeder.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
 import 'dart:developer' as developer;
 
-class LocalDatabaseService  {
+class LocalDatabaseService {
   static final LocalDatabaseService _instance =
       LocalDatabaseService._internal();
   static Database? _database;
+  static bool _isInitializing = false;
 
   factory LocalDatabaseService() {
     return _instance;
@@ -25,7 +24,10 @@ class LocalDatabaseService  {
     return _database!;
   }
 
+  bool get isInitializing => _isInitializing;
+
   Future<Database> _initDatabase() async {
+    _isInitializing = true;
     String path;
     if (Platform.isWindows || Platform.isLinux) {
       // For desktop, use the FFI factory and a known writable directory
@@ -45,17 +47,21 @@ class LocalDatabaseService  {
         ? databaseFactoryFfi
         : databaseFactory;
 
-    return await factory.openDatabase(
-      path,
-      options: OpenDatabaseOptions(
-        version: 1, // Keep schema version at 1
-        onCreate: _onCreate,
-        onUpgrade: _onUpgrade, // Add upgrade handler
-        onOpen: (db) async {
-          // await _debugPrintTablesAndData(db);
-        },
-      ),
-    );
+    try {
+      return await factory.openDatabase(
+        path,
+        options: OpenDatabaseOptions(
+          version: 1, // Keep schema version at 1
+          onCreate: _onCreate,
+          onUpgrade: _onUpgrade, // Add upgrade handler
+          onOpen: (db) async {
+            // await _debugPrintTablesAndData(db);
+          },
+        ),
+      );
+    } finally {
+      _isInitializing = false;
+    }
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -1889,11 +1895,12 @@ CREATE INDEX fk_fs_table_company_idx ON fs_table (company);
       'CREATE INDEX idx_branch_reference ON branch_table(reference_id)',
     );
 
-    // Insert default data for LOT types
-    await DefaultDataSeeder(databaseService: this).insertDefaultData();
+    final defaultDataSeeder = DefaultDataSeeder(databaseService: this);
 
-    // Insert default system constant
-    await DefaultDataSeeder(databaseService: this).insertDefaultSystemConstant();
+    // Seed against the onCreate database instance to avoid re-entering the
+    // database getter while the database is still bootstrapping.
+    await defaultDataSeeder.insertDefaultData(db);
+    await defaultDataSeeder.insertDefaultSystemConstant(db);
   }
 
   // Helper method to debug specific table

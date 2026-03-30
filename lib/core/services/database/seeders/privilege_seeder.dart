@@ -8,8 +8,7 @@ class PrivilegeSeeder extends BaseRepository {
   final LocalDatabaseService databaseService;
 
   PrivilegeSeeder({required this.databaseService});
-  Future<void> seedPrivileges() async {
-    final db = await databaseService.database;
+  Future<void> seedPrivileges(Database db) async {
     final privileges = [
       // ==================== MAIN DASHBOARDS ====================
       _createPrivilege(

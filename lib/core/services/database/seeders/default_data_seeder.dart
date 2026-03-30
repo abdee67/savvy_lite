@@ -11,8 +11,7 @@ class DefaultDataSeeder extends BaseRepository {
 
   DefaultDataSeeder({required this.databaseService});
 
-  Future<void> insertDefaultSystemConstant() async {
-    final db = await databaseService.database;
+  Future<void> insertDefaultSystemConstant(Database db) async {
     developer.log('Inserting default system constant...');
 
     try {
@@ -54,7 +53,7 @@ class DefaultDataSeeder extends BaseRepository {
         'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
         'updated_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
       });
-      final id = db.insert('system_constant', payload);
+      final id = await db.insert('system_constant', payload);
       captureSync(
         tableName: 'system_constant',
         entityMap: payload,
@@ -70,8 +69,7 @@ class DefaultDataSeeder extends BaseRepository {
     }
   }
 
-  Future<void> insertDefaultData() async {
-    final db = await databaseService.database;
+  Future<void> insertDefaultData(Database db) async {
     developer.log('Inserting default data...');
 
     final List<Map<String, dynamic>> udcHeaderSeedData = [
@@ -913,7 +911,9 @@ class DefaultDataSeeder extends BaseRepository {
     developer.log('Inserted default udc headers and details');
 
     // Seed privileges (system-wide definitions - not company specific)
-    await PrivilegeSeeder(databaseService: databaseService).seedPrivileges();
+    await PrivilegeSeeder(
+      databaseService: databaseService,
+    ).seedPrivileges(db);
     developer.log('Seeded privileges');
 
     // Seed default Admin role with all privileges (template for new companies)

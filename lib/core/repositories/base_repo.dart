@@ -49,6 +49,13 @@ abstract class BaseRepository {
     required String operation,
     String? company,
   }) {
+    if (databaseService.isInitializing) {
+      developer.log(
+        'Skipping sync capture for $tableName during database initialization',
+      );
+      return;
+    }
+
     try {
       syncService?.capture(
         tableName: tableName,
