@@ -25,24 +25,60 @@ class ItemCostRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final itemMap = itemCost.toMap();
     itemMap.remove('id'); // Remove id for new insertion
-    return await db.insert('item_cost', itemMap);
+    final id = await db.insert('item_cost', withSyncKey(itemMap));
+    itemMap['id'] = id;
+    captureSync(
+      tableName: 'item_cost',
+      entityMap: itemMap,
+      entityId: id.toString(),
+      operation: 'INSERT',
+      company: itemCost.company?.toString(),
+    );
+    return id;
   }
 
   // Update existing item cost
   Future<int> update(ItemCost itemCost, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
-    return await db.update(
+    final result = await db.update(
       'item_cost',
       itemCost.toMap(),
       where: 'id = ?',
       whereArgs: [itemCost.id],
     );
+    captureSync(
+      tableName: 'item_cost',
+      entityMap: itemCost.toMap(),
+      entityId: itemCost.id.toString(),
+      operation: 'UPDATE',
+      company: itemCost.company?.toString(),
+    );
+    return result;
   }
 
   // Delete item cost
   Future<int> delete(int id, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
-    return await db.delete('item_cost', where: 'id = ?', whereArgs: [id]);
+    final itemCost = await findById(id);
+    // Fetch full row data BEFORE deleting
+    final itemCostRows = await db.query(
+      'item_cost',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    final result = await db.delete('item_cost', where: 'id = ?', whereArgs: [id]);
+    if (itemCost != null) {
+      for (final row in itemCostRows) {
+      captureSync(
+        tableName: 'item_cost',
+        entityMap: row,
+        entityId: row['id'].toString(),
+        operation: 'DELETE',
+        company: itemCost.company?.toString(),
+      );
+    }
+    }
+    return result;
   }
 
   // Delete multiple item costs
@@ -587,6 +623,21 @@ class ItemCostRepository extends BaseRepository {
               where: 'item_number = ? AND company = ?',
               whereArgs: [itemNumber, companyId],
             );
+
+            captureSync(
+              tableName: 'item_cost',
+              entityMap: {
+                'item_number': itemNumber,
+                'amount_unit_cost': finalCost,
+                'company': companyId,
+                'user_id': userId,
+                'date_updated': DateTime.now().toIso8601String(),
+              },
+              entityId: itemNumber.toString(),
+              operation: 'UPDATE',
+              company: companyId.toString(),
+            );
+
             if (kDebugMode) {
               developer.log(
                 '✅ Updated item cost for item $itemNumber to $unitCostAvg',
@@ -601,13 +652,28 @@ class ItemCostRepository extends BaseRepository {
           }
         } else {
           // Create new item cost record
-          await db.insert('item_cost', {
+          await db.insert('item_cost', withSyncKey({
             'item_number': itemNumber,
             'amount_unit_cost': unitCostAvg,
             'company': companyId,
             'user_id': userId,
             'date_updated': DateTime.now().toIso8601String(),
-          });
+          }));
+
+          captureSync(
+            tableName: 'item_cost',
+            entityMap: {
+              'item_number': itemNumber,
+              'amount_unit_cost': unitCostAvg,
+              'company': companyId,
+              'user_id': userId,
+              'date_updated': DateTime.now().toIso8601String(),
+            },
+            entityId: itemNumber.toString(),
+            operation: 'INSERT',
+            company: companyId.toString(),
+          );
+
           if (kDebugMode) {
             developer.log(
               '✅ Created new item cost for item $itemNumber: $unitCostAvg',

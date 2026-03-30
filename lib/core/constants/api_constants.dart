@@ -16,6 +16,11 @@ class ApiConstants {
   static const String systemConstants = '$baseUrl/system-constants';
   static String systemConstantById(int id) => '$systemConstants/$id';
 
+  // Sync endpoints (appended to target server URLs from system_url_config)
+  static const String syncPush = '/api/sync/push';
+  static const String syncPull = '/api/sync/pull';
+  static const String syncNodeStatus = '/api/sync/node-status';
+
   // Timeouts
   static const Duration connectTimeout = Duration(seconds: 5);
   static const Duration receiveTimeout = Duration(seconds: 5);

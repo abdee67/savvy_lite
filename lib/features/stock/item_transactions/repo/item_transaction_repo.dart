@@ -1,7 +1,7 @@
-// repositories/item_transaction_repository.dart
 import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
+import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/features/next_number/repo/next_number_repo.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
@@ -23,7 +23,8 @@ import 'package:savvy_stock/features/stock/item_transactions/model/item_transact
 import 'package:savvy_stock/features/stock/location_entry/repo/location_master_repository.dart';
 import 'package:sqflite/sqflite.dart';
 
-class ItemTransactionRepository {
+class ItemTransactionRepository extends BaseRepository {
+  @override
   final LocalDatabaseService databaseService;
   final AuthBloc authBloc;
   final SystemConstantBloc systemConstantBloc;
@@ -259,7 +260,14 @@ class ItemTransactionRepository {
       customer: customer ?? soD?.orderHeader?.customerBillTo,
     );
 
-    await db.insert('item_transactions', transaction.toMap());
+    await db.insert('item_transactions', withSyncKey(transaction.toMap()));
+    captureSync(
+      tableName: 'item_transactions',
+      entityMap: transaction.toMap(),
+      entityId: transaction.id.toString(),
+      operation: 'INSERT',
+      company: companyId.toString(),
+    );
 
     // Update item branch quantity
     // final updatedIb = ib.copyWith(quantityAvailable: qtyAvInStore);(Not necessary fpr sales order it will update there not here)
@@ -392,12 +400,17 @@ class ItemTransactionRepository {
           soD?.orderHeader?.customerBillTo,
     );
 
-    await db.insert('item_transactions', transaction.toMap());
+    await db.insert('item_transactions', withSyncKey(transaction.toMap()));
+    captureSync(
+      tableName: 'item_transactions',
+      entityMap: transaction.toMap(),
+      entityId: transaction.id.toString(),
+      operation: 'INSERT',
+      company: companyId.toString(),
+    );
 
     // Update item location quantity
-    final updatedLoc = loc.copyWith(
-      quantityOnHand: (loc.quantityOnHand ?? 0.0) + qty,
-    );
+    loc.copyWith(quantityOnHand: (loc.quantityOnHand ?? 0.0) + qty);
     // await itemLocationsRepository.updateItemLocation(updatedLoc);//Not necessary fpr sales order it will update there not here
 
     // Note: Item branch quantity update removed - now handled by cascading save in location repository
@@ -569,18 +582,21 @@ class ItemTransactionRepository {
     if (kDebugMode) {
       developer.log('DEBUG: Inserting transaction');
     }
-    await db.insert('item_transactions', transaction.toMap());
+    await db.insert('item_transactions', withSyncKey(transaction.toMap()));
+    captureSync(
+      tableName: 'item_transactions',
+      entityMap: transaction.toMap(),
+      entityId: transaction.id.toString(),
+      operation: 'INSERT',
+      company: companyId.toString(),
+    );
 
     // Update lot quantity
-    final updatedLm = lm.copyWith(
-      quantityAvailable: (lm.quantityAvailable ?? 0.0) + qty,
-    );
+    lm.copyWith(quantityAvailable: (lm.quantityAvailable ?? 0.0) + qty);
     //await lotMasterRepository.updateLotMaster(updatedLm);//Not necessary for sales order it will update there not here
 
     // Update item branch quantity
-    final updatedIb = ib.copyWith(
-      quantityAvailable: qtyAvInStore + (factorP * qty),
-    );
+    ib.copyWith(quantityAvailable: qtyAvInStore + (factorP * qty));
     //await itemInBranchRepository.update(updatedIb);//Not necessary for sales order it will update there not here
   }
 
@@ -733,6 +749,13 @@ class ItemTransactionRepository {
           explicitCode: transactionTypeCode,
         );
         batch.insert('item_transactions', enriched.toMap());
+        captureSync(
+          tableName: 'item_transactions',
+          entityMap: enriched.toMap(),
+          entityId: enriched.id.toString(),
+          operation: 'INSERT',
+          company: companyId.toString(),
+        );
       }
 
       await batch.commit();
@@ -2056,7 +2079,17 @@ class ItemTransactionRepository {
 
   Future<int> createTransaction(ItemTransactionModel transaction) async {
     final db = await databaseService.database;
-    return await db.insert('item_transactions', transaction.toMap());
+    final id = await db.insert('item_transactions', withSyncKey(transaction.toMap()));
+
+    captureSync(
+      tableName: 'item_transactions',
+      entityMap: transaction.toMap(),
+      entityId: id.toString(),
+      operation: 'INSERT',
+      company: authBloc.state.companyId.toString(),
+    );
+
+    return id;
   }
 
   Future<void> updateTransaction(ItemTransactionModel transaction) async {
@@ -2067,15 +2100,37 @@ class ItemTransactionRepository {
       where: 'id = ? AND company = ?',
       whereArgs: [transaction.id, authBloc.state.companyId],
     );
+    captureSync(
+      tableName: 'item_transactions',
+      entityMap: transaction.toMap(),
+      entityId: transaction.id.toString(),
+      operation: 'UPDATE',
+      company: authBloc.state.companyId.toString(),
+    );
   }
 
   Future<void> deleteTransaction(int id) async {
     final db = await databaseService.database;
+    // Fetch full row data BEFORE deleting
+    final itemRows = await db.query(
+      'item_transactions',
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, authBloc.state.companyId],
+    );
     await db.delete(
       'item_transactions',
       where: 'id = ? AND company = ?',
       whereArgs: [id, authBloc.state.companyId],
     );
+    for (final row in itemRows) {
+    captureSync(
+      tableName: 'item_transactions',
+      entityMap: row,
+      entityId: row['id'].toString(),
+      operation: 'DELETE',
+      company: authBloc.state.companyId.toString(),
+    );
+  }
   }
 
   Future<void> deleteTransactions(
@@ -2083,6 +2138,12 @@ class ItemTransactionRepository {
   ) async {
     final db = await databaseService.database;
     final batch = db.batch();
+    // Fetch full row data BEFORE deleting
+    final itemRows = await db.query(
+      'item_transactions',
+      where: 'id IN (${transactions.map((t) => t.id).join(',')}) AND company = ?',
+      whereArgs: [authBloc.state.companyId],
+    );
 
     for (final transaction in transactions) {
       if (transaction.id != null) {
@@ -2091,6 +2152,15 @@ class ItemTransactionRepository {
           where: 'id = ? AND company = ?',
           whereArgs: [transaction.id, authBloc.state.companyId],
         );
+        for (final row in itemRows) {
+        captureSync(
+          tableName: 'item_transactions',
+          entityMap: row,
+          entityId: row['id'].toString(),
+          operation: 'DELETE',
+          company: authBloc.state.companyId.toString(),
+        );
+      }
       }
     }
 

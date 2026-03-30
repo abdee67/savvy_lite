@@ -2,8 +2,10 @@
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/header/model/invoice_header_model.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:savvy_stock/core/repositories/base_repo.dart';
 
-class InvoiceHistoryHeaderRepository {
+class InvoiceHistoryHeaderRepository  extends BaseRepository{
+  @override
   final LocalDatabaseService databaseService;
 
   InvoiceHistoryHeaderRepository({required this.databaseService});
@@ -109,9 +111,16 @@ class InvoiceHistoryHeaderRepository {
 
     try {
       final id = await db.insert(
-        tableName,
-        header.toMap(),
+        tableName, withSyncKey(header.toMap()),
         conflictAlgorithm: ConflictAlgorithm.fail,
+      );
+
+      captureSync(
+        tableName: tableName,
+        entityMap: header.toMap(),
+        entityId: id.toString(),
+        operation: 'INSERT',
+        company: header.company?.toString(),
       );
 
       return id;
@@ -142,6 +151,14 @@ class InvoiceHistoryHeaderRepository {
         );
       }
 
+      captureSync(
+        tableName: tableName,
+        entityMap: header.toMap(),
+        entityId: header.id.toString(),
+        operation: 'UPDATE',
+        company: header.company?.toString(),
+      );
+
       return count;
     } catch (e) {
       throw Exception('Failed to update invoice history header: $e');
@@ -153,6 +170,12 @@ class InvoiceHistoryHeaderRepository {
     final db = await databaseService.database;
 
     try {
+      // Fetch full row data BEFORE deleting
+      final headerRows = await db.query(
+        'invoice_history_headers',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
       final count = await db.delete(
         tableName,
         where: 'id = ?',
@@ -162,7 +185,14 @@ class InvoiceHistoryHeaderRepository {
       if (count == 0) {
         throw Exception('No invoice history header found with ID: $id');
       }
-
+      for (final row in headerRows) {
+      captureSync(
+        tableName: tableName,
+        entityMap: row,
+        entityId: row['id'].toString(),
+        operation: 'DELETE',
+      );
+      }
       return count;
     } catch (e) {
       throw Exception('Failed to delete invoice history header: $e');
@@ -170,17 +200,31 @@ class InvoiceHistoryHeaderRepository {
   }
 
   // Delete multiple invoice history headers - equivalent to Java's removeCollection()
-  Future<int> deleteMultipleInvoiceHistoryHeaders(List<int> ids) async {
+  Future<int> deleteMultipleInvoiceHistoryHeaders(List<int> ids, int companyId) async {
     final db = await databaseService.database;
 
     try {
+      // Fetch full row data BEFORE deleting
+      final headerRows = await db.query(
+        'invoice_history_headers',
+        where: 'id IN (${List.filled(ids.length, '?').join(',')})',
+        whereArgs: ids,
+      );
       final placeholders = List.filled(ids.length, '?').join(',');
 
       final count = await db.rawDelete('''
         DELETE FROM $tableName 
         WHERE id IN ($placeholders)
       ''', ids);
-
+      for (final row in headerRows) {
+      captureSync(
+        tableName: tableName,
+        entityMap: row,
+        entityId: row['id'].toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
+      );
+      }
       return count;
     } catch (e) {
       throw Exception('Failed to delete multiple invoice history headers: $e');

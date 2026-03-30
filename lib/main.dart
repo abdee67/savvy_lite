@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
+import 'package:savvy_stock/core/services/sync/sync_service.dart';
 import 'package:savvy_stock/features/FSNMR/blocs/FSNMR_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/password_reset/password_reset_bloc.dart';
 
@@ -109,6 +110,10 @@ Future<void> _initializeAndRunApp() async {
     await SupabaseService.initialize();
     await getIt<LicenseService>().initialize();
 
+    // Start the sync service for background sync every 1 minute
+    final syncService = getIt<SyncService>();
+    await syncService.start();
+
     if (AppConfig.isTestMode) {
       developer.log('🚀 APP RUNNING IN TEST MODE');
       developer.log('📱 API calls bypassed');
@@ -121,7 +126,7 @@ Future<void> _initializeAndRunApp() async {
       //await LocalDatabaseService().debugTable('items_in_branch');
       //await LocalDatabaseService().debugTable('item_cost');
       //await LocalDatabaseService().debugTable('item_location');
-      await LocalDatabaseService().debugTable('lot_master');
+      //await LocalDatabaseService().debugTable('lot_master');
       //await LocalDatabaseService().debugTable('item_master');
       //await LocalDatabaseService().debugTable('items_table');
       // await LocalDatabaseService().debugTable('sales_order_header');
@@ -148,6 +153,9 @@ Future<void> _initializeAndRunApp() async {
       //await LocalDatabaseService().debugTable('role_privilege');
       //await LocalDatabaseService().debugTable('other_expense_table');
       // await LocalDatabaseService().debugTable('next_number');
+      await LocalDatabaseService().debugTable('sync_event');
+      //await LocalDatabaseService().debugTable('sync_device_detail');
+      // await LocalDatabaseService().debugTable('sync_node_status');
     }
   } catch (error, stackTrace) {
     if (kDebugMode) {

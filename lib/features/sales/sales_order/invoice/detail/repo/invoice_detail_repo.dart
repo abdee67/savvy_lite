@@ -1,9 +1,11 @@
 // features/sales/invoice_history/repo/invoice_history_detail_repo.dart
+import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/detail/model/invoice_detail_model.dart';
 import 'package:sqflite/sqflite.dart';
 
-class InvoiceHistoryDetailRepository {
+class InvoiceHistoryDetailRepository extends BaseRepository {
+  @override
   final LocalDatabaseService databaseService;
 
   InvoiceHistoryDetailRepository({required this.databaseService});
@@ -108,11 +110,21 @@ class InvoiceHistoryDetailRepository {
     try {
       // Ensure extended price is calculated
       final detailToSave = detail.calculateExtendedPrice();
+      final mapToSave = detailToSave.toMap();
+      mapToSave.remove('id');
 
       final id = await db.insert(
-        tableName,
-        detailToSave.toMap(),
+        tableName, withSyncKey(mapToSave),
         conflictAlgorithm: ConflictAlgorithm.fail,
+      );
+
+      mapToSave['id'] = id;
+      captureSync(
+        tableName: tableName,
+        entityMap: mapToSave,
+        entityId: id.toString(),
+        operation: 'INSERT',
+        company: detail.company?.toString(),
       );
 
       return id;
@@ -160,12 +172,20 @@ class InvoiceHistoryDetailRepository {
 
       // Ensure extended price is calculated
       final detailToSave = detail.calculateExtendedPrice();
+      final mapToSave = detailToSave.toMap();
 
       final count = await db.update(
         tableName,
-        detailToSave.toMap(),
+        mapToSave,
         where: 'id = ?',
         whereArgs: [detail.id],
+      );
+      captureSync(
+        tableName: tableName,
+        entityMap: mapToSave,
+        entityId: detail.id.toString(),
+        operation: 'UPDATE',
+        company: detail.company?.toString(),
       );
 
       if (count == 0) {
@@ -173,6 +193,14 @@ class InvoiceHistoryDetailRepository {
           'No invoice history detail found with ID: ${detail.id}',
         );
       }
+
+      captureSync(
+        tableName: tableName,
+        entityMap: mapToSave,
+        entityId: detail.id.toString(),
+        operation: 'UPDATE',
+        company: detail.company?.toString(),
+      );
 
       return count;
     } catch (e) {
@@ -183,8 +211,13 @@ class InvoiceHistoryDetailRepository {
   // Delete invoice history detail - equivalent to Java's getFacade().remove()
   Future<int> deleteInvoiceHistoryDetail(int id) async {
     final db = await databaseService.database;
-
+    final detailRows = await db.query(
+      'invoice_history_details',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
     try {
+      final detailToDelete = await getInvoiceHistoryDetailById(id);
       final count = await db.delete(
         tableName,
         where: 'id = ?',
@@ -195,6 +228,19 @@ class InvoiceHistoryDetailRepository {
         throw Exception('No invoice history detail found with ID: $id');
       }
 
+      if (detailToDelete != null) {
+        // Capture sync with full row data
+        for (final row in detailRows) {
+        captureSync(
+          tableName: tableName,
+          entityMap: row,
+          entityId: row['id'].toString(),
+          operation: 'DELETE',
+          company: detailToDelete.company?.toString(),
+        );
+        }
+      }
+
       return count;
     } catch (e) {
       throw Exception('Failed to delete invoice history detail: $e');
@@ -202,7 +248,7 @@ class InvoiceHistoryDetailRepository {
   }
 
   // Delete multiple invoice history details - equivalent to Java's removeCollection()
-  Future<int> deleteMultipleInvoiceHistoryDetails(List<int> ids) async {
+  Future<int> deleteMultipleInvoiceHistoryDetails(List<int> ids, int companyId) async {
     final db = await databaseService.database;
 
     try {
@@ -210,11 +256,27 @@ class InvoiceHistoryDetailRepository {
 
       final placeholders = List.filled(ids.length, '?').join(',');
 
+      // Fetch full row data BEFORE deleting
+      final detailRows = await db.query(
+        'invoice_history_details',
+        where: 'id IN ($placeholders)',
+        whereArgs: ids,
+      );
+
       final count = await db.rawDelete('''
         DELETE FROM $tableName 
         WHERE id IN ($placeholders)
       ''', ids);
-
+      // Capture sync with full row data
+      for (final row in detailRows) {
+      captureSync(
+        tableName: tableName,
+        entityMap: row,
+        entityId: row['id'].toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
+      );
+      }
       return count;
     } catch (e) {
       throw Exception('Failed to delete multiple invoice history details: $e');
@@ -229,12 +291,26 @@ class InvoiceHistoryDetailRepository {
     final db = await databaseService.database;
 
     try {
+      // Fetch full row data BEFORE deleting
+      final detailRows = await db.query(
+        'invoice_history_details',
+        where: 'invoice_history = ? AND company = ?',
+        whereArgs: [invoiceHistoryId, companyId],
+      );
       final count = await db.delete(
         tableName,
         where: 'invoice_history = ? AND company = ?',
         whereArgs: [invoiceHistoryId, companyId],
       );
-
+      for (final row in detailRows) {
+      captureSync(
+        tableName: tableName,
+        entityMap: row,
+        entityId: row['id'].toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
+      );
+      }
       return count;
     } catch (e) {
       throw Exception(
@@ -677,6 +753,14 @@ class InvoiceHistoryDetailRepository {
         [newInvoiceHistoryId, ...detailIds, companyId],
       );
 
+      captureSync(
+        tableName: tableName,
+        entityMap: {'id': detailIds, 'company': companyId},
+        entityId: detailIds.toString(),
+        operation: 'UPDATE',
+        company: companyId.toString(),
+      );
+
       return count;
     } catch (e) {
       throw Exception('Failed to update details invoice history: $e');
@@ -696,6 +780,14 @@ class InvoiceHistoryDetailRepository {
         AND LENGTH(item) > 45
       ''',
         [companyId],
+      );
+
+      captureSync(
+        tableName: tableName,
+        entityMap: {'company': companyId},
+        entityId: companyId.toString(),
+        operation: 'UPDATE',
+        company: companyId.toString(),
       );
 
       return result;

@@ -1,6 +1,7 @@
 import 'dart:developer' as developer;
 import 'dart:math';
 
+import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/auth/model/subscription_management_model.dart';
@@ -25,7 +26,8 @@ class RegistrationResult {
 }
 
 /// Service handling user registration - mirrors Java RegistrationService
-class RegistrationService {
+class RegistrationService extends BaseRepository {
+  @override
   final LocalDatabaseService databaseService;
 
   RegistrationService({required this.databaseService});
@@ -74,8 +76,15 @@ class RegistrationService {
             )
             .toMap();
         companyMap.remove('id');
-
-        final companyId = await txn.insert('company_table', companyMap);
+        final payloadForCompany = withSyncKey(companyMap);
+        final companyId = await txn.insert('company_table', payloadForCompany);
+        captureSync(
+          tableName: 'company_table',
+          entityMap: payloadForCompany,
+          entityId: companyId.toString(),
+          operation: 'INSERT',
+          company: companyId.toString(),
+        );
         developer.log('Created company with ID: $companyId');
 
         // 2. Create CompanySubscription
@@ -84,7 +93,7 @@ class RegistrationService {
           Duration(days: settings.initialSubscriptionDays ?? 7),
         );
 
-        await txn.insert('company_subscription', {
+        final payloadForCompanySubscription = withSyncKey({
           'company_id': companyId,
           'subscription_id': settings.id,
           'date_subscribed': now.toIso8601String(),
@@ -92,6 +101,17 @@ class RegistrationService {
           'date_expire': expireDate.toIso8601String(),
           'status': 'active',
         });
+        final id = await txn.insert(
+          'company_subscription',
+          payloadForCompanySubscription,
+        );
+        captureSync(
+          tableName: 'company_subscription',
+          entityMap: payloadForCompanySubscription,
+          entityId: id.toString(),
+          operation: 'INSERT',
+          company: companyId.toString(),
+        );
         developer.log('Created company subscription');
 
         // 3. Create Branch
@@ -99,7 +119,15 @@ class RegistrationService {
         branchMap.remove('id');
         branchMap['company'] = companyId;
 
-        final branchId = await txn.insert('branch_table', branchMap);
+        final payloadForBranch = withSyncKey(branchMap);
+        final branchId = await txn.insert('branch_table', payloadForBranch);
+        captureSync(
+          tableName: 'branch_table',
+          entityMap: payloadForBranch,
+          entityId: branchId.toString(),
+          operation: 'INSERT',
+          company: companyId.toString(),
+        );
         developer.log('Created branch with ID: $branchId');
 
         // 4. Create Employee
@@ -108,7 +136,15 @@ class RegistrationService {
         employeeMap['company'] = companyId;
         employeeMap['branch'] = branchId;
 
-        final employeeId = await txn.insert('employees', employeeMap);
+        final payloadForEmployee = withSyncKey(employeeMap);
+        final employeeId = await txn.insert('employees', payloadForEmployee);
+        captureSync(
+          tableName: 'employees',
+          entityMap: payloadForEmployee,
+          entityId: employeeId.toString(),
+          operation: 'INSERT',
+          company: companyId.toString(),
+        );
         developer.log('Created employee with ID: $employeeId');
 
         // 5. Create Admin User
@@ -136,7 +172,15 @@ class RegistrationService {
           'type': 'Company',
         };
 
-        userId = await txn.insert('user_table', userMap);
+        final payloadForUser = withSyncKey(userMap);
+        userId = await txn.insert('user_table', payloadForUser);
+        captureSync(
+          tableName: 'user_table',
+          entityMap: payloadForUser,
+          entityId: userId.toString(),
+          operation: 'INSERT',
+          company: companyId.toString(),
+        );
         developer.log('Created user with ID: $userId');
 
         // 6. Create FS Table entry
@@ -147,7 +191,7 @@ class RegistrationService {
           '$companyName $branchDesc',
         );
 
-        await txn.insert('fs_table', {
+        final payloadForFsTable = withSyncKey({
           'fs_number': 1,
           'branch': branchId,
           'mrc_number': prefixCode,
@@ -155,6 +199,14 @@ class RegistrationService {
           'prefix_up_to_three': prefixCode,
           'postfix_up_to_four': postfixCode,
         });
+        final idFs = await txn.insert('fs_table', payloadForFsTable);
+        captureSync(
+          tableName: 'fs_table',
+          entityMap: payloadForFsTable,
+          entityId: idFs.toString(),
+          operation: 'INSERT',
+          company: companyId.toString(),
+        );
         developer.log('Created FS table entry');
 
         // 7. Copy default roles and assign to user
@@ -165,37 +217,67 @@ class RegistrationService {
         if (defaultRoles.isEmpty) {
           developer.log('Warning: No default roles found, creating admin role');
           // Create a basic admin role if none exist
-          final adminRoleId = await txn.insert('role_table', {
+          final payloadForAdminRole = withSyncKey({
             'name': '${signupData.company.companyName} Admin',
             'description': 'Administrator role',
             'company': companyId,
             'date_created': DateTime.now().toIso8601String(),
             'created_by': employeeId,
           });
+          final adminRoleId = await txn.insert(
+            'role_table',
+            payloadForAdminRole,
+          );
+          captureSync(
+            tableName: 'role_table',
+            entityMap: payloadForAdminRole,
+            entityId: adminRoleId.toString(),
+            operation: 'INSERT',
+            company: companyId.toString(),
+          );
 
           // Assign admin role to user
-          await txn.insert('user_role', {
+          final payloadForUserRole = withSyncKey({
             'user_id': userId,
             'role_table_id': adminRoleId,
             'created_by': employeeId,
             'date_created': DateTime.now().toIso8601String(),
           });
+          final idUserRole = await txn.insert('user_role', payloadForUserRole);
+          captureSync(
+            tableName: 'user_role',
+            entityMap: payloadForUserRole,
+            entityId: idUserRole.toString(),
+            operation: 'INSERT',
+            company: companyId.toString(),
+          );
 
           // Assign ALL privileges to this Admin role
           final allPrivileges = await txn.query('privilege_table');
           for (final privilege in allPrivileges) {
-            await txn.insert('role_privilege', {
+            // 1. Create the new record map first, THEN wrap it with withSyncKey
+            final payload = withSyncKey({
               'role_table_id': adminRoleId,
               'privilege_table_id': privilege['id'],
               'date_created': DateTime.now().toIso8601String(),
               'created_by': employeeId,
             });
+            // 2. Insert the wrapped payload
+            final id = await txn.insert('role_privilege', payload);
+            // 3. Pass the payload to captureSync
+            captureSync(
+              tableName: 'role_privilege',
+              entityMap: payload, // Uses the map that now contains sync_key
+              entityId: id.toString(),
+              operation: 'INSERT',
+              company: companyId.toString(),
+            );
           }
           developer.log('Assigned all privileges to Admin role');
         } else {
           for (final defaultRole in defaultRoles) {
             // Create company-specific role
-            final newRoleId = await txn.insert('role_table', {
+            final payload = withSyncKey({
               'name':
                   '${signupData.company.companyName} ${defaultRole['name']}',
               'description': defaultRole['description'],
@@ -203,6 +285,14 @@ class RegistrationService {
               'date_created': DateTime.now().toIso8601String(),
               'created_by': employeeId,
             });
+            final newRoleId = await txn.insert('role_table', payload);
+            captureSync(
+              tableName: 'role_table',
+              entityMap: payload,
+              entityId: newRoleId.toString(),
+              operation: 'INSERT',
+              company: companyId.toString(),
+            );
 
             // Copy privileges for this role
             final defaultPrivileges = await txn.rawQuery(
@@ -213,21 +303,37 @@ class RegistrationService {
             );
 
             for (final privilege in defaultPrivileges) {
-              await txn.insert('role_privilege', {
+              final payload = withSyncKey({
                 'role_table_id': newRoleId,
                 'privilege_table_id': privilege['privilege_table_id'],
                 'date_created': DateTime.now().toIso8601String(),
                 'created_by': employeeId,
               });
+              final id = await txn.insert('role_privilege', payload);
+              captureSync(
+                tableName: 'role_privilege',
+                entityMap: payload,
+                entityId: id.toString(),
+                operation: 'INSERT',
+                company: companyId.toString(),
+              );
             }
 
             // Assign role to admin user
-            await txn.insert('user_role', {
+            final payloadForUserRole = withSyncKey({
               'user_id': userId,
               'role_table_id': newRoleId,
               'created_by': employeeId,
               'date_created': DateTime.now().toIso8601String(),
             });
+            final id = await txn.insert('user_role', payloadForUserRole);
+            captureSync(
+              tableName: 'user_role',
+              entityMap: payloadForUserRole,
+              entityId: id.toString(),
+              operation: 'INSERT',
+              company: companyId.toString(),
+            );
           }
         }
         developer.log('Created roles and assigned to user');
@@ -238,12 +344,20 @@ class RegistrationService {
         ''');
 
         for (final nn in defaultNextNumbers) {
-          await txn.insert('next_number', {
+          final payload = withSyncKey({
             'next_number': nn['next_number'],
             'next_number_code': nn['next_number_code'],
             'next_number_description': nn['next_number_description'],
             'company': companyId,
           });
+          final id = await txn.insert('next_number', payload);
+          captureSync(
+            tableName: 'next_number',
+            entityMap: payload,
+            entityId: id.toString(),
+            operation: 'INSERT',
+            company: companyId.toString(),
+          );
         }
         developer.log('Created next numbers: ${defaultNextNumbers.length}');
 
@@ -256,7 +370,15 @@ class RegistrationService {
           final newConstant = Map<String, dynamic>.from(sc);
           newConstant.remove('id');
           newConstant['company'] = companyId;
-          await txn.insert('system_constant', newConstant);
+          final payload = withSyncKey(newConstant);
+          final id = await txn.insert('system_constant', payload);
+          captureSync(
+            tableName: 'system_constant',
+            entityMap: payload,
+            entityId: id.toString(),
+            operation: 'INSERT',
+            company: companyId.toString(),
+          );
         }
         developer.log('Created system constants: ${defaultConstants.length}');
       });
@@ -330,7 +452,7 @@ class RegistrationService {
     }
 
     // If no subscription exists, create a default free trial
-    final defaultId = await db.insert('subscription_management', {
+    final payloadForSubscription = withSyncKey({
       'name': 'Free Trial',
       'description': 'Free trial with 2 branches and 3 users',
       'initial_subscription_branches': 2,
@@ -339,11 +461,21 @@ class RegistrationService {
       'initial_subscription_days': 5,
       'status': 'active',
     });
+    final id = await db.insert(
+      'subscription_management',
+      payloadForSubscription,
+    );
+    captureSync(
+      tableName: 'subscription_management',
+      entityMap: payloadForSubscription,
+      entityId: id.toString(),
+      operation: 'INSERT',
+    );
 
     final inserted = await db.query(
       'subscription_management',
       where: 'id = ?',
-      whereArgs: [defaultId],
+      whereArgs: [id],
     );
 
     if (inserted.isNotEmpty) {

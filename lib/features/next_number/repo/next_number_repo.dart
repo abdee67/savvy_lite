@@ -68,18 +68,35 @@ class NextNumberRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final itemMap = item.toMap();
     itemMap.remove('id'); // Remove ID for new insertion
-    return await db.insert('next_number', itemMap);
+    final id = await db.insert('next_number', withSyncKey(itemMap));
+    itemMap['id'] = id;
+    captureSync(
+      tableName: 'next_number',
+      entityMap: itemMap,
+      entityId: id.toString(),
+      operation: 'INSERT',
+      company: item.company?.toString(),
+    );
+    return id;
   }
 
   // Update existing next number
   Future<int> updateNextNumber(NextNumberModel item, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
-    return await db.update(
+    final result = await db.update(
       'next_number',
       item.toMap(),
       where: 'id = ? AND company = ?',
       whereArgs: [item.id, item.company],
     );
+    captureSync(
+      tableName: 'next_number',
+      entityMap: item.toMap(),
+      entityId: item.id.toString(),
+      operation: 'UPDATE',
+      company: item.company?.toString(),
+    );
+    return result;
   }
 
   // Delete next number
@@ -89,11 +106,26 @@ class NextNumberRepository extends BaseRepository {
     Transaction? txn,
   }) async {
     final db = txn ?? await databaseService.database;
-    return await db.delete(
+    final existingNextNumber = await db.query(
       'next_number',
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+    final result = await db.delete(
+      'next_number',
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
+    );
+    for(final row in existingNextNumber){
+    captureSync(
+      tableName: 'next_number',
+      entityMap: row,
+      entityId: row['id'].toString(),
+      operation: 'DELETE',
+      company: companyId.toString(),
+    );
+    }
+    return result;
   }
 
   // Generate next number for a code
@@ -128,7 +160,7 @@ class NextNumberRepository extends BaseRepository {
         company: companyId,
       );
 
-      await db.insert('next_number', newRecord.toMap());
+      await db.insert('next_number', withSyncKey(newRecord.toMap()));
     } else {
       // Record found, get current number and increment
       recordToUpdate = NextNumberModel.fromMap(nextNumberRecords.first);

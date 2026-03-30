@@ -1,16 +1,16 @@
 // features/privilege/blocs/privilege_bloc.dart
 import 'package:bloc/bloc.dart';
-import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_event.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_state.dart';
 import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart';
+import 'package:savvy_stock/features/admin/privilege/repo/privilege_repo.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 
 class PrivilegeBloc extends Bloc<PrivilegeEvent, PrivilegeState> {
-  final LocalDatabaseService databaseService;
+  final PrivilegeRepository repository;
   final AuthBloc authBloc;
 
-  PrivilegeBloc({required this.databaseService, required this.authBloc})
+  PrivilegeBloc({required this.repository, required this.authBloc})
     : super(PrivilegeState(status: PrivilegeStatus.initial)) {
     on<LoadPrivileges>(_onLoadPrivileges);
     on<CreatePrivilege>(_onCreatePrivilege);
@@ -24,12 +24,7 @@ class PrivilegeBloc extends Bloc<PrivilegeEvent, PrivilegeState> {
   ) async {
     emit(PrivilegeState(status: PrivilegeStatus.loading));
     try {
-      final db = await databaseService.database;
-      final privileges = await db.query('privilege_table');
-
-      final privilegeList = privileges
-          .map((p) => Privilege.fromMap(p))
-          .toList();
+      final privilegeList = await repository.loadPrivileges();
 
       emit(
         PrivilegeState(
@@ -52,20 +47,18 @@ class PrivilegeBloc extends Bloc<PrivilegeEvent, PrivilegeState> {
     Emitter<PrivilegeState> emit,
   ) async {
     try {
-      final db = await databaseService.database;
-      await db.insert('privilege_table', {
-        'name': event.name,
-        'description': event.description,
-        'type': event.type,
-        'link': event.uri,
-        'link_lable': event.linkLabel,
-        'button_lable': event.buttonLabel,
-        'vendor_only': event.vendorOnly ? 'Y' : 'N',
-        'created_by': authBloc.state.userId?.id,
-        'date_created': DateTime.now().toIso8601String(),
-      });
+      await repository.insertPrivilege(
+        name: event.name,
+        description: event.description,
+        type: event.type,
+        uri: event.uri,
+        linkLabel: event.linkLabel!,
+        buttonLabel: event.buttonLabel!,
+        vendorOnly: event.vendorOnly,
+        createdBy: authBloc.state.userId!.id!,
+      );
 
-      add(LoadPrivileges(authBloc.state.companyId!)); // Reload the list
+      add(LoadPrivileges(authBloc.state.companyId!));
     } catch (e) {
       emit(
         PrivilegeState(
@@ -81,15 +74,9 @@ class PrivilegeBloc extends Bloc<PrivilegeEvent, PrivilegeState> {
     Emitter<PrivilegeState> emit,
   ) async {
     try {
-      final db = await databaseService.database;
-      await db.update(
-        'privilege_table',
-        event.privilege.toMap(),
-        where: 'id = ?',
-        whereArgs: [event.privilege.id],
-      );
+      await repository.updatePrivilege(event.privilege);
 
-      add(LoadPrivileges(authBloc.state.companyId!)); // Reload the list
+      add(LoadPrivileges(authBloc.state.companyId!));
     } catch (e) {
       emit(
         PrivilegeState(
@@ -105,19 +92,9 @@ class PrivilegeBloc extends Bloc<PrivilegeEvent, PrivilegeState> {
     Emitter<PrivilegeState> emit,
   ) async {
     try {
-      final db = await databaseService.database;
-      await db.delete(
-        'privilege_table',
-        where: 'id = ?',
-        whereArgs: [event.privilegeId],
-      );
-      await db.delete(
-        'role_privilege',
-        where: 'privilege_table_id = ?',
-        whereArgs: [event.privilegeId],
-      );
+      await repository.deletePrivilege(event.privilegeId);
 
-      add(LoadPrivileges(authBloc.state.companyId!)); // Reload the list
+      add(LoadPrivileges(authBloc.state.companyId!));
     } catch (e) {
       emit(
         PrivilegeState(

@@ -2,17 +2,17 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
+import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/credit_receipt_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
 import 'package:sqflite/sqflite.dart';
 
-class SalesOrderHeaderRepository {
-  static final SalesOrderHeaderRepository _instance =
-      SalesOrderHeaderRepository._internal();
-  factory SalesOrderHeaderRepository() => _instance;
-  SalesOrderHeaderRepository._internal();
+class SalesOrderHeaderRepository  extends BaseRepository{
+  @override
+  final LocalDatabaseService databaseService;
+  SalesOrderHeaderRepository({required this.databaseService});
 
   Future<Database> get _db async => LocalDatabaseService().database;
 
@@ -31,9 +31,16 @@ class SalesOrderHeaderRepository {
       }
 
       final id = await db.insert(
-        'sales_order_header',
-        headerMap,
+        'sales_order_header', withSyncKey(headerMap),
         conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      headerMap['id'] = id;
+      captureSync(
+        tableName: 'sales_order_header',
+        entityMap: headerMap,
+        entityId: id.toString(),
+        operation: 'INSERT',
+        company: header.company?.toString(),
       );
 
       if (kDebugMode) {
@@ -81,16 +88,23 @@ class SalesOrderHeaderRepository {
     return null;
   }
 
-  // Update
   Future<int> updateSalesOrderHeader(SalesOrderHeader header) async {
     final db = await _db;
     try {
-      return await db.update(
+      final result = await db.update(
         'sales_order_header',
         header.toMap(),
         where: 'id = ?',
         whereArgs: [header.id],
       );
+      captureSync(
+        tableName: 'sales_order_header',
+        entityMap: header.toMap(),
+        entityId: header.id.toString(),
+        operation: 'UPDATE',
+        company: header.company?.toString(),
+      );
+      return result;
     } catch (e) {
       throw Exception('Failed to update sales order: $e');
     }
@@ -99,11 +113,28 @@ class SalesOrderHeaderRepository {
   // Delete
   Future<int> deleteSalesOrderHeader(int id) async {
     final db = await _db;
-    return await db.delete(
+    // Fetch full row data BEFORE deleting
+    final headerRows = await db.query(
       'sales_order_header',
       where: 'id = ?',
       whereArgs: [id],
     );
+    final result = await db.delete(
+      'sales_order_header',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    // Capture sync with full row data
+    for (final row in headerRows) {
+    captureSync(
+      tableName: 'sales_order_header',
+      entityMap: row,
+      entityId: row['id'].toString(),
+      operation: 'DELETE',
+      company: row['company'].toString(),
+    );
+    }
+    return result;
   }
 
   // Get all with filters
@@ -230,7 +261,7 @@ class SalesOrderHeaderRepository {
     String? commentIfVoid,
   }) async {
     final db = await _db;
-    return await db.update(
+    final result = await db.update(
       'sales_order_header',
       {
         'void_indicator': voidIndicator,
@@ -239,6 +270,17 @@ class SalesOrderHeaderRepository {
       where: 'id = ?',
       whereArgs: [id],
     );
+    final header = await getById(id);
+    if (header != null) {
+      captureSync(
+        tableName: 'sales_order_header',
+        entityMap: header.toMap(),
+        entityId: id.toString(),
+        operation: 'UPDATE',
+        company: header.company?.toString(),
+      );
+    }
+    return result;
   }
 
   // Get voided sales orders
@@ -584,14 +626,14 @@ class SalesOrderHeaderRepository {
   }
 
   // Stock Reversal for Voided Orders
-  Future<void> reverseStockQuantity(int itemInBranchId, double quantity) async {
+  Future<void> reverseStockQuantity(int itemInBranchId, double quantity, int companyId) async {
     final db = await _db;
 
     // Get current quantity
     final currentResult = await db.query(
       'items_in_branch',
-      where: 'id = ?',
-      whereArgs: [itemInBranchId],
+      where: 'id = ? AND company = ?',
+      whereArgs: [itemInBranchId, companyId],
     );
 
     if (currentResult.isNotEmpty) {
@@ -600,8 +642,15 @@ class SalesOrderHeaderRepository {
       await db.update(
         'items_in_branch',
         {'quantity_available': newQty},
-        where: 'id = ?',
-        whereArgs: [itemInBranchId],
+        where: 'id = ? AND company = ?',
+        whereArgs: [itemInBranchId, companyId],
+      );
+      captureSync(
+        tableName: 'items_in_branch',
+        entityMap: {'id': itemInBranchId, 'company': companyId, 'quantity_available': newQty},
+        entityId: itemInBranchId.toString(),
+        operation: 'UPDATE',
+        company: companyId.toString(),
       );
     }
   }
@@ -672,7 +721,15 @@ class SalesOrderHeaderRepository {
   Future<int> create(SalesOrderHeader header) async {
     final db = await _db;
     try {
-      return await db.insert('sales_order_header', header.toMap());
+      final id = await db.insert('sales_order_header', withSyncKey(header.toMap()));
+      captureSync(
+        tableName: 'sales_order_header',
+        entityMap: header.toMap(),
+        entityId: id.toString(),
+        operation: 'INSERT',
+        company: header.company?.toString(),
+      );
+      return id;
     } catch (e) {
       throw Exception('Failed to create sales order header: $e');
     }
@@ -691,24 +748,49 @@ class SalesOrderHeaderRepository {
   Future<int> update(SalesOrderHeader header) async {
     final db = await _db;
     try {
-      return await db.update(
+      final result = await db.update(
         'sales_order_header',
         header.toMap(),
         where: 'id = ?',
         whereArgs: [header.id],
       );
+      captureSync(
+        tableName: 'sales_order_header',
+        entityMap: header.toMap(),
+        entityId: header.id.toString(),
+        operation: 'UPDATE',
+        company: header.company?.toString(),
+      );
+      return result;
     } catch (e) {
       throw Exception('Failed to update sales order: $e');
     }
   }
 
-  Future<int> delete(int id) async {
+  Future<int> delete(int id, int companyId) async {
     final db = await _db;
-    return await db.delete(
+    // Fetch full row data BEFORE deleting
+    final headerRows = await db.query(
       'sales_order_header',
-      where: 'id = ?',
-      whereArgs: [id],
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
     );
+    final result = await db.delete(
+      'sales_order_header',
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
+    );
+    // Capture sync with full row data
+    for (final row in headerRows) {
+    captureSync(
+      tableName: 'sales_order_header',
+      entityMap: row,
+      entityId: row['id'].toString(),
+      operation: 'DELETE',
+      company: companyId.toString(),
+    );
+    }
+    return result;
   }
 
   Future<List<SalesOrderHeader>> getAll({required int companyId}) async {
@@ -814,7 +896,15 @@ class SalesOrderHeaderRepository {
   Future<int> createCreditReceipt(CreditReceipt receipt) async {
     final db = await _db;
     try {
-      return await db.insert('credit_receipt_table', receipt.toMap());
+      final id = await db.insert('credit_receipt_table', withSyncKey(receipt.toMap()));
+      captureSync(
+        tableName: 'credit_receipt_table',
+        entityMap: receipt.toMap(),
+        entityId: id.toString(),
+        operation: 'INSERT',
+        company: receipt.company?.toString(),
+      );
+      return id;
     } catch (e) {
       throw Exception('Failed to create credit receipt: $e');
     }
@@ -829,19 +919,41 @@ class SalesOrderHeaderRepository {
         where: 'id = ?',
         whereArgs: [receipt.id],
       );
+      captureSync(
+        tableName: 'credit_receipt_table',
+        entityMap: receipt.toMap(),
+        entityId: receipt.id.toString(),
+        operation: 'UPDATE',
+        company: receipt.company?.toString(),
+      );
     } catch (e) {
       throw Exception('Failed to update credit receipt: $e');
     }
   }
 
-  Future<void> deleteCreditReceipt(int receiptId) async {
+  Future<void> deleteCreditReceipt(int receiptId, int companyId) async {
     final db = await _db;
+    final receiptRows = await db.query(
+      'credit_receipt_table',
+      where: 'id = ? AND company = ?',
+      whereArgs: [receiptId, companyId],
+    );
     try {
       await db.delete(
         'credit_receipt_table',
         where: 'id = ?',
         whereArgs: [receiptId],
       );
+      // Capture sync with full row data
+      for (final row in receiptRows) {
+      captureSync(
+        tableName: 'credit_receipt_table',
+        entityMap: row,
+        entityId: row['id'].toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
+      );
+      }
     } catch (e) {
       throw Exception('Failed to delete credit receipt: $e');
     }

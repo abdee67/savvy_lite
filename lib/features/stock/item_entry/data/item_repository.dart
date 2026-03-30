@@ -19,28 +19,62 @@ class StockItemsEntryRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final itemMap = item.toMap();
     itemMap.remove('id');
-    return await db.insert('items_table', itemMap);
+    final id = await db.insert('items_table', withSyncKey(itemMap));
+    // Capture sync event
+    itemMap['id'] = id;
+    captureSync(
+      tableName: 'items_table',
+      entityMap: itemMap,
+      entityId: id.toString(),
+      operation: 'INSERT',
+      company: item.company?.toString(),
+    );
+    return id;
   }
 
   // Update existing item
   Future<int> update(ItemEntryModel item, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
-    return await db.update(
+    final result = await db.update(
       'items_table',
       item.toMap(),
       where: 'id = ? AND company = ?',
       whereArgs: [item.id, item.company],
     );
+    captureSync(
+      tableName: 'items_table',
+      entityMap: item.toMap(),
+      entityId: item.id.toString(),
+      operation: 'UPDATE',
+      company: item.company?.toString(),
+    );
+    return result;
   }
 
   // Delete item
   Future<int> delete(int id, int companyId, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
-    return await db.delete(
+    // Fetch full row data BEFORE deleting
+    final itemRows = await db.query(
       'items_table',
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+    final result = await db.delete(
+      'items_table',
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
+    );
+    for (final row in itemRows) {
+    captureSync(
+      tableName: 'items_table',
+      entityMap: row,
+      entityId: row['id'].toString(),
+      operation: 'DELETE',
+      company: companyId.toString(),
+    );
+    }
+    return result;
   }
 
   // Delete multiple items

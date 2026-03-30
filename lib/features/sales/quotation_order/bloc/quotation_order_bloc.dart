@@ -360,7 +360,10 @@ class QuotationOrderBloc
     emit(state.loadingState('delete_quotation_order_header'));
 
     try {
-      await repository.deleteQuotationOrderHeader(event.id);
+      await repository.deleteQuotationOrderHeader(
+        event.id,
+        state.companyId!,
+      );
 
       final updatedHeaders = state.headers
           .where((h) => h.id != event.id)
@@ -405,7 +408,10 @@ class QuotationOrderBloc
     try {
       for (final header in event.headers) {
         if (header.id != null) {
-          await repository.deleteQuotationOrderHeader(header.id!);
+          await repository.deleteQuotationOrderHeader(
+            header.id!,
+            state.companyId!,
+          );
         }
       }
 

@@ -19,7 +19,16 @@ class StockItemInBranchRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final itemMap = item.toMap();
     itemMap.remove('id'); // Remove id for new insertion
-    return await db.insert('items_in_branch', itemMap);
+    final id = await db.insert('items_in_branch', withSyncKey(itemMap));
+    itemMap['id'] = id;
+    captureSync(
+      tableName: 'items_in_branch',
+      entityMap: itemMap,
+      entityId: id.toString(),
+      operation: 'INSERT',
+      company: item.company?.toString(),
+    );
+    return id;
   }
 
   // Update existing item in branch
@@ -34,24 +43,55 @@ class StockItemInBranchRepository extends BaseRepository {
         where: 'item_number = ? AND branch = ? AND company = ?',
         whereArgs: [item.itemNumber, item.branch, item.company],
       );
+      captureSync(
+        tableName: 'lot_master',
+        entityMap: {'unit_price': item.unitPrice},
+        entityId: item.itemNumber.toString(),
+        operation: 'UPDATE',
+        company: item.company?.toString(),
+      );
     }
 
-    return await db.update(
+    final result = await db.update(
       'items_in_branch',
       item.toMap(),
       where: 'id = ? AND company = ? AND branch = ? ',
       whereArgs: [item.id, item.company, item.branch],
     );
+    captureSync(
+      tableName: 'items_in_branch',
+      entityMap: item.toMap(),
+      entityId: item.id.toString(),
+      operation: 'UPDATE',
+      company: item.company?.toString(),
+    );
+    return result;
   }
 
   // Delete item from branch
   Future<int> delete(int id, int companyId, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
-    return await db.delete(
+    // Fetch full row data BEFORE deleting
+    final itemRows = await db.query(
       'items_in_branch',
       where: 'id = ? AND company = ? AND branch = ?',
       whereArgs: [id, companyId],
     );
+    final result = await db.delete(
+      'items_in_branch',
+      where: 'id = ? AND company = ? AND branch = ?',
+      whereArgs: [id, companyId],
+    );
+    for (final row in itemRows) {
+    captureSync(
+      tableName: 'items_in_branch',
+      entityMap: row,
+      entityId: row['id'].toString(),
+      operation: 'DELETE',
+      company: companyId.toString(),
+    );
+    }
+    return result;
   }
 
   // Delete multiple items from branch
@@ -63,12 +103,25 @@ class StockItemInBranchRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final placeholders = List.filled(ids.length, '?').join(',');
     final whereArgs = [...ids, companyId];
-
+    final itemRows = await db.query(
+      'items_in_branch',
+      where: 'id IN ($placeholders) AND company = ?',
+      whereArgs: whereArgs,
+    );
     await db.delete(
       'items_in_branch',
       where: 'id IN ($placeholders) AND company = ?',
       whereArgs: whereArgs,
     );
+    for (final row in itemRows) {
+    captureSync(
+      tableName: 'items_in_branch',
+      entityMap: row,
+      entityId: row['id'].toString(),
+      operation: 'DELETE',
+      company: companyId.toString(),
+    );
+    }
   }
 
   // Find item in branch by ID
@@ -301,20 +354,35 @@ class StockItemInBranchRepository extends BaseRepository {
         where: 'item_number = ? AND branch = ? AND company = ?',
         whereArgs: [itemNumber, branch, companyId],
       );
+      captureSync(
+        tableName: 'lot_master',
+        entityMap: {'unit_price': unitPrice},
+        entityId: itemNumber.toString(),
+        operation: 'UPDATE',
+        company: companyId.toString(),
+      );
     }
 
-    return await db.update(
+    final result = await db.update(
       'items_in_branch',
       {'unit_price': unitPrice},
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+    captureSync(
+      tableName: 'items_in_branch',
+      entityMap: {'unit_price': unitPrice},
+      entityId: id.toString(),
+      operation: 'UPDATE',
+      company: companyId.toString(),
+    );
+    return result;
   }
 
   // Update quantity on hand for item in branch
   Future<int> updateQuantity(int id, double quantity, int companyId) async {
     final db = await databaseService.database;
-    return await db.update(
+    final result = await db.update(
       'items_in_branch',
       {
         // Keep both on-hand and available quantities in sync so that
@@ -325,6 +393,14 @@ class StockItemInBranchRepository extends BaseRepository {
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+    captureSync(
+      tableName: 'items_in_branch',
+      entityMap: {'quantity_available': quantity},
+      entityId: id.toString(),
+      operation: 'UPDATE',
+      company: companyId.toString(),
+    );
+    return result;
   }
 
   // Update margin for item in branch
@@ -335,12 +411,20 @@ class StockItemInBranchRepository extends BaseRepository {
     int companyId,
   ) async {
     final db = await databaseService.database;
-    return await db.update(
+    final result = await db.update(
       'items_in_branch',
       {'margin_type': marginType, 'margin_rate': marginRate},
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+    captureSync(
+      tableName: 'items_in_branch',
+      entityMap: {'margin_type': marginType, 'margin_rate': marginRate},
+      entityId: id.toString(),
+      operation: 'UPDATE',
+      company: companyId.toString(),
+    );
+    return result;
   }
 
   // Search items in branch

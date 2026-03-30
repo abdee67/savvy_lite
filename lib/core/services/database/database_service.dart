@@ -1,7 +1,6 @@
-import 'dart:convert';
 import 'dart:io';
 
-import 'package:savvy_stock/core/services/database/seeders/privilege_seeder.dart';
+import 'package:savvy_stock/core/services/database/seeders/default_data_seeder.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
@@ -11,6 +10,7 @@ class LocalDatabaseService {
   static final LocalDatabaseService _instance =
       LocalDatabaseService._internal();
   static Database? _database;
+  static bool _isInitializing = false;
 
   factory LocalDatabaseService() {
     return _instance;
@@ -24,7 +24,10 @@ class LocalDatabaseService {
     return _database!;
   }
 
+  bool get isInitializing => _isInitializing;
+
   Future<Database> _initDatabase() async {
+    _isInitializing = true;
     String path;
     if (Platform.isWindows || Platform.isLinux) {
       // For desktop, use the FFI factory and a known writable directory
@@ -44,17 +47,21 @@ class LocalDatabaseService {
         ? databaseFactoryFfi
         : databaseFactory;
 
-    return await factory.openDatabase(
-      path,
-      options: OpenDatabaseOptions(
-        version: 1, // Incremented for proforma fields migration
-        onCreate: _onCreate,
-        onUpgrade: _onUpgrade, // Add upgrade handler
-        onOpen: (db) async {
-          // await _debugPrintTablesAndData(db);
-        },
-      ),
-    );
+    try {
+      return await factory.openDatabase(
+        path,
+        options: OpenDatabaseOptions(
+          version: 1, // Keep schema version at 1
+          onCreate: _onCreate,
+          onUpgrade: _onUpgrade, // Add upgrade handler
+          onOpen: (db) async {
+            // await _debugPrintTablesAndData(db);
+          },
+        ),
+      );
+    } finally {
+      _isInitializing = false;
+    }
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -76,6 +83,7 @@ class LocalDatabaseService {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         udc_code TEXT CHECK(length(udc_code) <= 2),
         udc_description TEXT CHECK(length(udc_description) <= 45),
+        sync_key TEXT CHECK(length(sync_key) <= 36),
         UNIQUE (udc_code),
         UNIQUE (udc_description)
       )
@@ -91,6 +99,7 @@ class LocalDatabaseService {
         description_2 TEXT CHECK(length(description_2) <= 255),
         record_header INTEGER,
         udc_group TEXT CHECK(length(udc_group) <= 10),
+        sync_key TEXT CHECK(length(sync_key) <= 36),
         FOREIGN KEY (record_header) REFERENCES udc_header (id) ON DELETE NO ACTION ON UPDATE NO ACTION,
         UNIQUE (detail_code, record_header)
       )
@@ -130,6 +139,7 @@ class LocalDatabaseService {
         margin_type TEXT CHECK(length(margin_type) <= 1),
         reorder_point REAL,
         inventory_planner INTEGER,
+        sync_key TEXT CHECK(length(sync_key) <= 36),
         FOREIGN KEY (category_code) REFERENCES udc_details (id) ON DELETE NO ACTION ON UPDATE NO ACTION,
         FOREIGN KEY (referred_by_salesperson_id) REFERENCES salespersons (id) ON DELETE NO ACTION ON UPDATE NO ACTION,
         FOREIGN KEY (inventory_planner) REFERENCES employees (id) ON DELETE NO ACTION ON UPDATE NO ACTION
@@ -145,6 +155,82 @@ class LocalDatabaseService {
       'CREATE INDEX fk_company_table_inv_plnr_idx ON company_table(inventory_planner)',
     );
     developer.log('Created table: company_table');
+
+    // 3a. Create system_url_config table
+    await db.execute('''
+      CREATE TABLE system_url_config (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        config_key TEXT CHECK(length(config_key) <= 45),
+        config_value TEXT CHECK(length(config_value) <= 500),
+        environment TEXT CHECK(length(environment) <= 45),
+        active TEXT CHECK(length(active) <= 1),
+        company INTEGER,
+        sync_key TEXT CHECK(length(sync_key) <= 36),
+        UNIQUE (config_key),
+        UNIQUE (config_value),
+        FOREIGN KEY (company) REFERENCES company_table (id) ON DELETE NO ACTION ON UPDATE NO ACTION
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX fk_system_url_config_compay_idx ON system_url_config(company)',
+    );
+    developer.log('Created table: system_url_config');
+
+    // 3b. Create sync_event table
+    await db.execute('''
+      CREATE TABLE sync_event (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entity_name TEXT NOT NULL CHECK(length(entity_name) <= 255),
+        entity_id TEXT CHECK(length(entity_id) <= 100),
+        operation TEXT NOT NULL CHECK(length(operation) <= 10),
+        payload TEXT NOT NULL,
+        source_node TEXT CHECK(length(source_node) <= 20),
+        created_at TEXT,
+        company TEXT CHECK(length(company) <= 100),
+        source_key TEXT CHECK(length(source_key) <= 100),
+        source_address TEXT CHECK(length(source_address) <= 100),
+        source_id TEXT CHECK(length(source_id) <= 100),
+        sync_status TEXT DEFAULT 'PENDING' CHECK(length(sync_status) <= 20)
+      )
+    ''');
+    developer.log('Created table: sync_event');
+
+    // 3c. Create sync_device_detail table
+    await db.execute('''
+      CREATE TABLE sync_device_detail (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sync_status TEXT DEFAULT 'PENDING' CHECK(length(sync_status) <= 20),
+        last_attempt TEXT,
+        last_error TEXT CHECK(length(last_error) <= 1000),
+        device_address INTEGER,
+        retry_count INTEGER DEFAULT 0,
+        sync_event INTEGER,
+        company TEXT CHECK(length(company) <= 100),
+        FOREIGN KEY (device_address) REFERENCES system_url_config (id) ON DELETE NO ACTION ON UPDATE NO ACTION,
+        FOREIGN KEY (sync_event) REFERENCES sync_event (id) ON DELETE NO ACTION ON UPDATE NO ACTION
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX fk_sdd_device_sync_event_idx ON sync_device_detail(sync_event)',
+    );
+    await db.execute(
+      'CREATE INDEX fk_sdd_device_address_idx ON sync_device_detail(device_address)',
+    );
+    developer.log('Created table: sync_device_detail');
+
+    // 3d. Create sync_node_status table
+    await db.execute('''
+      CREATE TABLE sync_node_status (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        node_id TEXT CHECK(length(node_id) <= 500),
+        last_seen TEXT,
+        company TEXT NOT NULL CHECK(length(company) <= 100),
+        source_node TEXT CHECK(length(source_node) <= 20),
+        UNIQUE (node_id),
+        UNIQUE (source_node)
+      )
+    ''');
+    developer.log('Created table: sync_node_status');
 
     //4. Create branch table
     await db.execute('''
@@ -162,6 +248,7 @@ class LocalDatabaseService {
         margin_rate REAL,
         margin_type TEXT CHECK(length(margin_type) <= 1),
         reorder_point REAL,
+        sync_key TEXT CHECK(length(sync_key) <= 36),
         FOREIGN KEY (company) REFERENCES company_table(id) ON DELETE NO ACTION ON UPDATE NO ACTION
       )
     ''');
@@ -190,6 +277,7 @@ class LocalDatabaseService {
     gender TEXT CHECK(length(gender) <= 7),
     company INTEGER,
     branch INTEGER,
+    sync_key TEXT CHECK(length(sync_key) <= 36),
     FOREIGN KEY (company) REFERENCES company_table(id),
     FOREIGN KEY (branch) REFERENCES branch_table(id)
   );
@@ -218,6 +306,7 @@ class LocalDatabaseService {
     link_lable TEXT UNIQUE CHECK(length(link_lable) <= 60),
     button_lable TEXT CHECK(length(button_lable) <= 20),
     vendor_only TEXT DEFAULT 'N' CHECK(length(vendor_only) <= 1),
+    sync_key TEXT CHECK(length(sync_key) <= 36),
     FOREIGN KEY (created_by) REFERENCES employees(id),
     FOREIGN KEY (updated_by) REFERENCES employees(id)
   );
@@ -241,6 +330,7 @@ class LocalDatabaseService {
     date_created TEXT,
     date_updated TEXT,
     company INTEGER,
+    sync_key TEXT CHECK(length(sync_key) <= 36),
     UNIQUE (name, company),
     FOREIGN KEY (created_by) REFERENCES employees(id),
     FOREIGN KEY (updated_by) REFERENCES employees(id),
@@ -268,6 +358,7 @@ class LocalDatabaseService {
     updated_by INTEGER,
     date_created TEXT,
     date_updated TEXT,
+    sync_key TEXT CHECK(length(sync_key) <= 36),
     FOREIGN KEY (role_table_id) REFERENCES role_table(id),
     FOREIGN KEY (privilege_table_id) REFERENCES privilege_table(id),
     FOREIGN KEY (created_by) REFERENCES employees(id),
@@ -311,6 +402,7 @@ class LocalDatabaseService {
         confirmations_expire_time TEXT,
         user_email TEXT CHECK(length(user_email) <= 100),
         table_number TEXT CHECK(length(table_number) <= 45),
+        sync_key TEXT CHECK(length(sync_key) <= 36),
         FOREIGN KEY (employees_id) REFERENCES employees(id),
         FOREIGN KEY (created_by) REFERENCES employees(id),
         FOREIGN KEY (updated_by) REFERENCES employees(id),
@@ -347,6 +439,7 @@ class LocalDatabaseService {
     updated_by INTEGER,
     date_created TEXT,
     date_updated TEXT,
+    sync_key TEXT CHECK(length(sync_key) <= 36),
     FOREIGN KEY (role_table_id) REFERENCES role_table(id),
     FOREIGN KEY (user_id) REFERENCES user_table(id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES employees(id),
@@ -384,6 +477,7 @@ CREATE TABLE items_table (
   reorder_point REAL,
   item_image TEXT CHECK(length(item_image) <= 200),
   reference_id TEXT,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
   UNIQUE (items_id, item_description, company),
   FOREIGN KEY (company) REFERENCES company_table(id) ON DELETE CASCADE,
   FOREIGN KEY (unit_of_measure) REFERENCES udc_details(id),
@@ -422,6 +516,7 @@ CREATE TABLE item_uom_conversions (
   uom_structure_level INTEGER,
   inverse_conversion REAL,
   company INTEGER,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
   FOREIGN KEY (branch) REFERENCES branch_table(id),
   FOREIGN KEY (company) REFERENCES company_table(id) ON UPDATE CASCADE,
   FOREIGN KEY (created_by) REFERENCES user_table(id) ON UPDATE CASCADE,
@@ -467,6 +562,7 @@ CREATE TABLE items_in_branch (
   margin_rate REAL,
   margin_type TEXT CHECK(length(margin_type) <= 1),
   reorder_point REAL,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
   FOREIGN KEY (item_number) REFERENCES items_table(id),
   FOREIGN KEY (branch) REFERENCES branch_table(id),
   FOREIGN KEY (company) REFERENCES company_table(id),
@@ -522,6 +618,7 @@ CREATE TABLE items_in_branch (
         last_sync_time INTEGER,
         created_at INTEGER DEFAULT (strftime('%s', 'now')),
         updated_at INTEGER DEFAULT (strftime('%s', 'now')),
+        sync_key TEXT CHECK(length(sync_key) <= 36),
         FOREIGN KEY (company) REFERENCES company_table (id) ON DELETE NO ACTION ON UPDATE NO ACTION,
         FOREIGN KEY (lot_type) REFERENCES udc_details (id) ON DELETE NO ACTION ON UPDATE NO ACTION,
         FOREIGN KEY (ubpdated_by) REFERENCES user_table (id) ON DELETE NO ACTION ON UPDATE NO ACTION
@@ -562,6 +659,7 @@ CREATE TABLE location_master (
   margin_rate REAL,
   margin_type TEXT CHECK(length(margin_type) <= 1),
   reorder_point REAL,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
   FOREIGN KEY (branch) REFERENCES branch_table(id),
   FOREIGN KEY (company) REFERENCES company_table(id) ON UPDATE CASCADE,
   FOREIGN KEY (created_by) REFERENCES user_table(id) ON UPDATE CASCADE,
@@ -595,6 +693,7 @@ CREATE TABLE item_location (
   date_updated TEXT,
   quantity_on_hand REAL,
   company INTEGER,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
   FOREIGN KEY (branch) REFERENCES branch_table(id),
   FOREIGN KEY (item_number) REFERENCES items_table(id),
   FOREIGN KEY (location) REFERENCES location_master(id) ON UPDATE CASCADE,
@@ -642,6 +741,7 @@ CREATE TABLE item_master (
   created_by_flag TEXT DEFAULT 'Y' CHECK(length(created_by_flag) <= 1),
   defualt_uom INTEGER,
   taxable_flag TEXT DEFAULT 'Y' CHECK(length(taxable_flag) <= 1),
+  sync_key TEXT CHECK(length(sync_key) <= 36),
   UNIQUE (item_description, company_category),
   FOREIGN KEY (company_category) REFERENCES udc_details(id),
   FOREIGN KEY (category_code_01) REFERENCES udc_details(id),
@@ -711,6 +811,7 @@ CREATE TABLE lot_master (
   location INTEGER,
   lot_status INTEGER,
   batch_number_supplier TEXT CHECK(length(batch_number_supplier) <= 50),
+  sync_key TEXT CHECK(length(sync_key) <= 36),
   FOREIGN KEY (item_number) REFERENCES items_table(id),
   FOREIGN KEY (branch) REFERENCES branch_table(id),
   FOREIGN KEY (company) REFERENCES company_table(id),
@@ -746,6 +847,7 @@ CREATE TABLE item_cost (
   date_updated TEXT,
   amount_unit_cost_base REAL,
   overhead_unit_cost REAL,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
   FOREIGN KEY (company) REFERENCES company_table(id),
   FOREIGN KEY (item_number) REFERENCES items_table(id),
   FOREIGN KEY (user_id) REFERENCES user_table(id)
@@ -784,6 +886,7 @@ CREATE TABLE item_cost (
     contact_person TEXT CHECK(length(contact_person) <= 50),
     contact_title TEXT CHECK(length(contact_title) <= 10),
     defaults_value TEXT DEFAULT 'N' CHECK(length(defaults_value) <= 1),
+    sync_key TEXT CHECK(length(sync_key) <= 36),
     FOREIGN KEY (company) REFERENCES company_table (id),
     FOREIGN KEY (created_by) REFERENCES user_table (id),
     FOREIGN KEY (user_id) REFERENCES user_table (id)
@@ -827,6 +930,7 @@ CREATE TABLE item_cost (
     order_type INTEGER,
     credit_due_date TEXT,
     invoice_number TEXT CHECK (length(invoice_number) <= 150),
+    sync_key TEXT CHECK(length(sync_key) <= 36),
 
     -- FOREIGN KEYS
     CONSTRAINT fk_poh_order_type FOREIGN KEY (order_type) REFERENCES udc_details (id),
@@ -872,6 +976,7 @@ CREATE INDEX fk_poh_order_type_idx ON purchase_order_header(order_type);
     date_expiration TEXT,
     unit_of_measure INTEGER,
     batch_number_supplier TEXT CHECK (length(batch_number_supplier) <= 50),
+    sync_key TEXT CHECK(length(sync_key) <= 36),
 
     -- FOREIGN KEYS
     CONSTRAINT fk_purchase_order_detail_company FOREIGN KEY (company) REFERENCES company_table (id),
@@ -915,6 +1020,7 @@ CREATE INDEX fk_purchase_order_uom_idx ON purchase_order_detail(unit_of_measure)
     location INTEGER,
     unit_of_measure INTEGER,
     batch_number_supplier TEXT CHECK (length(batch_number_supplier) <= 50),
+    sync_key TEXT CHECK(length(sync_key) <= 36),
 
     -- FOREIGN KEYS
     CONSTRAINT fk_purchase_order_po_detail FOREIGN KEY (po_detail) REFERENCES purchase_order_detail (id),
@@ -962,6 +1068,7 @@ CREATE INDEX fk_purchase_order_rsv_uom_idx ON purchase_order_receiver(unit_of_me
     unit_cost REAL,
     amount_cost REAL,
     before_amount_cost REAL,
+    sync_key TEXT CHECK(length(sync_key) <= 36),
     FOREIGN KEY (item_location) REFERENCES item_location (id) ON UPDATE CASCADE,
     FOREIGN KEY (created_by) REFERENCES user_table (id) ON UPDATE CASCADE,
     FOREIGN KEY (company) REFERENCES company_table (id) ON UPDATE CASCADE,
@@ -1001,6 +1108,7 @@ CREATE INDEX fk_item_transactions_unit_of_measure_idx ON item_transactions(unit_
     next_number_description TEXT NOT NULL CHECK(length(next_number_description) <= 30),
     next_number INTEGER NOT NULL DEFAULT 1,
     company INTEGER,
+    sync_key TEXT CHECK(length(sync_key) <= 36),
     CONSTRAINT fk_next_number_company FOREIGN KEY (company) REFERENCES company_table (id)
   );
 ''');
@@ -1022,6 +1130,7 @@ CREATE INDEX fk_next_number_company_idx ON next_number(company);
     days_minimum INTEGER,
     active_for_sales_flag TEXT DEFAULT 'Y' CHECK(length(active_for_sales_flag) <= 1),
     lot_exp_level TEXT CHECK(length(lot_exp_level) <= 1),
+    sync_key TEXT CHECK(length(sync_key) <= 36),
     CONSTRAINT fk_lot_expiration_colors_itm_nmbr FOREIGN KEY (item_number) REFERENCES items_table (id),
     CONSTRAINT fk_lot_expiration_colors_branch FOREIGN KEY (branch) REFERENCES branch_table (id),
     CONSTRAINT fk_lot_expiration_colors_clr_typ FOREIGN KEY (color_type) REFERENCES udc_details (id),
@@ -1080,6 +1189,7 @@ CREATE INDEX fk_lot_expiration_colors_clr_typ_idx ON lot_expiration_colors(color
   return_date TEXT,
   invoice_number TEXT CHECK(length(invoice_number) <= 45),
   branch_value INTEGER,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
   FOREIGN KEY (customer_bill_to) REFERENCES customer_table (id),
   FOREIGN KEY (customer_table_id) REFERENCES customer_table (id),
   FOREIGN KEY (employees_id) REFERENCES employees (id),
@@ -1117,6 +1227,7 @@ CREATE INDEX fk_soh_branchvalue_idx ON sales_order_header(branch_value);
     unit_cost REAL,
     amount_cost REAL,
     unit_of_measure INTEGER,
+    sync_key TEXT CHECK(length(sync_key) <= 36),
     UNIQUE (id, items_table_id),
     CONSTRAINT fk_sales_order_details_soh FOREIGN KEY (sales_order_header_id) REFERENCES sales_order_header (id) ON DELETE CASCADE,
     CONSTRAINT fk_sales_order_details_items FOREIGN KEY (items_table_id) REFERENCES items_table (id),
@@ -1157,6 +1268,7 @@ CREATE TABLE invoice_history_header (
   quot_number INTEGER,
   sales_number INTEGER,
   invoice_number TEXT CHECK(length(invoice_number) <= 45),
+  sync_key TEXT CHECK(length(sync_key) <= 36),
   CONSTRAINT fk_invoice_history_header_company FOREIGN KEY (company) REFERENCES company_table(id)
 );
 CREATE INDEX fk_invoice_history_header_company_idx ON invoice_history_header(company);
@@ -1175,6 +1287,7 @@ CREATE TABLE invoice_history_detail (
   company INTEGER,
   date_experied TEXT CHECK(length(date_experied) <= 45),
   batch_number TEXT CHECK(length(batch_number) <= 50),
+  sync_key TEXT CHECK(length(sync_key) <= 36),
   CONSTRAINT fk_invc_hstry_dtl_invc_hstry FOREIGN KEY (invoice_history) REFERENCES invoice_history_header(id),
   CONSTRAINT fk_invoice_history_dtl_company FOREIGN KEY (company) REFERENCES company_table(id)
 );
@@ -1197,6 +1310,7 @@ CREATE TABLE salespersons (
   status TEXT NOT NULL DEFAULT 'ACTIVE',
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
 
   UNIQUE (uuid),
   UNIQUE (email),
@@ -1255,6 +1369,7 @@ CREATE TABLE salespersons (
   return_status INTEGER,
   sales_represent TEXT CHECK(length(sales_represent) <= 150),
   comment_for_return TEXT,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
 
   -- FOREIGN KEYS
   CONSTRAINT fk_sales_return_header_customer_table FOREIGN KEY (customer_bill_to) REFERENCES customer_table(id),
@@ -1319,6 +1434,7 @@ CREATE TABLE sales_return_details (
   unit_of_measure INTEGER,
   return_status INTEGER,
   return_reason INTEGER,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
 
   -- FOREIGN KEYS
   CONSTRAINT fk_sales_return_details_sales_return_header1 FOREIGN KEY (sales_return_header_id) REFERENCES sales_return_header(id),
@@ -1413,6 +1529,7 @@ CREATE TABLE quote_order_header (
   created_by INTEGER,
   updated_by INTEGER,
   comments_reason TEXT,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
 
   CONSTRAINT id_UNIQUE UNIQUE (id),
   CONSTRAINT order_number_UNIQUE UNIQUE (order_number),
@@ -1480,6 +1597,7 @@ CREATE TABLE quote_order_details (
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
   created_by INTEGER,
   updated_by INTEGER,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
 
   CONSTRAINT id_UNIQUE UNIQUE (id),
   CONSTRAINT id_item_UNIQUE UNIQUE (id, items_table_id),
@@ -1524,6 +1642,7 @@ CREATE TABLE credit_payment_table (
   company INTEGER,
   user_id INTEGER,
   date_updated TEXT,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
 
   -- FOREIGN KEYS
   CONSTRAINT fk_credit_payment_table_po_header FOREIGN KEY (po_header) REFERENCES purchase_order_header(id),
@@ -1550,6 +1669,7 @@ CREATE TABLE credit_receipt_table (
   company INTEGER,
   user_id INTEGER,
   date_updated TEXT,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
 
   -- FOREIGN KEYS
   CONSTRAINT fk_credit_receipt_table_company FOREIGN KEY (company) REFERENCES company_table(id),
@@ -1576,6 +1696,7 @@ CREATE TABLE other_expense_table (
   company INTEGER,
   user_id INTEGER,
   date_updated TEXT,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
 
   -- FOREIGN KEYS
   CONSTRAINT fk_other_expense_table_company FOREIGN KEY (company) REFERENCES company_table(id),
@@ -1600,6 +1721,7 @@ CREATE TABLE other_income_table (
   company INTEGER,
   user_id INTEGER,
   date_updated TEXT,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
 
   -- FOREIGN KEYS
   CONSTRAINT fk_other_income_table_company FOREIGN KEY (company) REFERENCES company_table(id),
@@ -1627,6 +1749,7 @@ CREATE TABLE fast_slow_nonmoving_rule_table (
   updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   company INTEGER,
   unit_of_meansure_default INTEGER,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
 
   -- FOREIGN KEYS
   CONSTRAINT fast_slow_nonmoving_rule_table_ibfk_1 FOREIGN KEY (user_id) REFERENCES user_table(id),
@@ -1656,6 +1779,7 @@ CREATE TABLE subscription_management (
   max_storage INTEGER,
   popular TEXT CHECK (length(popular) <= 1),
   features TEXT CHECK (length(features) <= 200),
+  sync_key TEXT CHECK(length(sync_key) <= 36),
 
   -- FOREIGN KEYS
   CONSTRAINT fk_sm_updated_by FOREIGN KEY (updated_by) REFERENCES user_table(id)
@@ -1675,6 +1799,7 @@ CREATE TABLE company_subscription (
   date_effective TEXT,
   date_expire TEXT,
   status TEXT CHECK (length(status) <= 12),
+  sync_key TEXT CHECK(length(sync_key) <= 36),
 
   -- FOREIGN KEYS
   CONSTRAINT fk_cs_company_id FOREIGN KEY (company_id) REFERENCES company_table(id),
@@ -1698,6 +1823,7 @@ CREATE INDEX fk_cs_subscription_id_idx ON company_subscription (subscription_id)
     table_number TEXT CHECK(length(table_number) <= 45),
     postfix_up_to_four TEXT CHECK(length(postfix_up_to_four) <= 4),
     prefix_up_to_three TEXT CHECK(length(prefix_up_to_three) <= 3),
+    sync_key TEXT CHECK(length(sync_key) <= 36),
 
     CONSTRAINT fk_fs_table_branch FOREIGN KEY (branch)
       REFERENCES branch_table(id)
@@ -1769,992 +1895,12 @@ CREATE INDEX fk_fs_table_company_idx ON fs_table (company);
       'CREATE INDEX idx_branch_reference ON branch_table(reference_id)',
     );
 
-    // Insert default data for LOT types
-    await _insertDefaultData(db);
+    final defaultDataSeeder = DefaultDataSeeder(databaseService: this);
 
-    // Insert default system constant
-    await _insertDefaultSystemConstant(db);
-  }
-
-  Future<void> _insertDefaultSystemConstant(Database db) async {
-    developer.log('Inserting default system constant...');
-
-    try {
-      // Get Lot Type 'X' (Expiration Date)
-      final List<Map<String, dynamic>> lotTypes = await db.query(
-        'udc_details',
-        columns: ['id'],
-        where: "detail_code = ? AND udc_group = ?",
-        whereArgs: ['X', 'LT'],
-      );
-
-      int? lotTypeId;
-      if (lotTypes.isNotEmpty) {
-        lotTypeId = lotTypes.first['id'] as int;
-      }
-
-      await db.insert('system_constant', {
-        'apply_lot_mgm': 'Y',
-        'apply_location_mgm': 'Y',
-        'decimal_places': 2,
-        'generate_barcode_for_item': 'N',
-        'company': 1, // Default company
-        'rate_vat_percentage': 15.0,
-        'rate_with_percentage': 2.0,
-        'with_hold_initials': 1000.0,
-        'auto_sales_price': 'N',
-        'lot_qty_auto_for_sales': 'Y',
-        'discount_display': 'Y',
-        'tax_info_display': 'Y',
-        'reorder_point_uom_type': 'I',
-        'currency_code': 'Birr',
-        'pos_integrated': 'N',
-        'apply_overhead_cost': 'N',
-        'attached_branch_only': 'N',
-        'days_left': 180,
-        'location_category_level': 1,
-        'is_synced': 0,
-        'lot_type': lotTypeId,
-        'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-        'updated_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      });
-
-      developer.log('Default system constant inserted');
-    } catch (e) {
-      developer.log('Error inserting default system constant: $e');
-    }
-  }
-
-  Future<void> _insertDefaultData(Database db) async {
-    developer.log('Inserting default data...');
-
-    final List<Map<String, dynamic>> udcHeaderSeedData = [
-      {'id': 1, 'udc_code': 'UM', 'udc_description': 'Unit of Measure'},
-      {'id': 2, 'udc_code': 'PI', 'udc_description': 'Payment Instrument'},
-      {
-        'id': 3,
-        'udc_code': 'PR',
-        'udc_description': 'Purchased Receive Status',
-      },
-      {'id': 4, 'udc_code': 'CN', 'udc_description': 'Countries'},
-      {'id': 5, 'udc_code': 'PS', 'udc_description': 'Payment Status'},
-      {'id': 6, 'udc_code': 'CT', 'udc_description': 'Color Types'},
-      {'id': 7, 'udc_code': 'LS', 'udc_description': 'Lot Status'},
-      {'id': 8, 'udc_code': 'TT', 'udc_description': 'Transaction Type'},
-      {'id': 9, 'udc_code': 'OT', 'udc_description': 'Order Type'},
-      {'id': 10, 'udc_code': 'CC', 'udc_description': 'Company Category'},
-      {'id': 11, 'udc_code': 'C1', 'udc_description': 'Item Category 1'},
-      {'id': 12, 'udc_code': 'C2', 'udc_description': 'Item Category 2'},
-      {'id': 13, 'udc_code': 'C3', 'udc_description': 'Item Category 3'},
-      {'id': 14, 'udc_code': 'C4', 'udc_description': 'Item Category 4'},
-      {'id': 15, 'udc_code': 'C5', 'udc_description': 'Item Category 5'},
-      {'id': 16, 'udc_code': 'C6', 'udc_description': 'Item Category 6'},
-      {'id': 17, 'udc_code': 'C7', 'udc_description': 'Item Category 7'},
-      {'id': 18, 'udc_code': 'C8', 'udc_description': 'Item Category 8'},
-      {'id': 19, 'udc_code': 'C9', 'udc_description': 'Item Category 9'},
-      {'id': 20, 'udc_code': 'C0', 'udc_description': 'Item Category 10'},
-      {'id': 21, 'udc_code': 'LT', 'udc_description': 'Lot Type'},
-      {'id': 22, 'udc_code': 'FQ', 'udc_description': 'Report Frequency'},
-      {'id': 23, 'udc_code': 'SR', 'udc_description': 'Sales Return Status'},
-    ];
-
-    for (final udcHeader in udcHeaderSeedData) {
-      await db.insert('udc_header', udcHeader);
-    }
-    developer.log('udc header data inserted');
-
-    final List<Map<String, dynamic>> udcDetailsSeedData = [
-      // --- Unit of Measure (UM) ---
-      {
-        'detail_code': 'PC',
-        'description_1': 'Pieces',
-        'description_2': null,
-        'record_header': 1,
-        'udc_group': 'UM',
-      },
-      {
-        'detail_code': 'KG',
-        'description_1': 'Kilogram',
-        'description_2': null,
-        'record_header': 1,
-        'udc_group': 'UM',
-      },
-      {
-        'detail_code': 'L',
-        'description_1': 'Litre',
-        'description_2': null,
-        'record_header': 1,
-        'udc_group': 'UM',
-      },
-      {
-        'detail_code': 'BX',
-        'description_1': 'Box',
-        'description_2': null,
-        'record_header': 1,
-        'udc_group': 'UM',
-      },
-      {
-        'detail_code': 'M',
-        'description_1': 'Meter',
-        'description_2': null,
-        'record_header': 1,
-        'udc_group': 'UM',
-      },
-
-      // --- Payment Instrument (PI) ---
-      {
-        'detail_code': 'CS',
-        'description_1': 'Cash',
-        'description_2': null,
-        'record_header': 2,
-        'udc_group': 'PI',
-      },
-      {
-        'detail_code': 'CK',
-        'description_1': 'Check Payment',
-        'description_2': null,
-        'record_header': 2,
-        'udc_group': 'PI',
-      },
-      {
-        'detail_code': 'TR',
-        'description_1': 'Transfer',
-        'description_2': null,
-        'record_header': 2,
-        'udc_group': 'PI',
-      },
-
-      // --- Purchased Receive Status (PR) ---
-      {
-        'detail_code': 'N',
-        'description_1': 'Ordered',
-        'description_2': null,
-        'record_header': 3,
-        'udc_group': 'PR',
-      },
-      {
-        'detail_code': 'P',
-        'description_1': 'Partially Received',
-        'description_2': null,
-        'record_header': 3,
-        'udc_group': 'PR',
-      },
-      {
-        'detail_code': 'R',
-        'description_1': 'Received',
-        'description_2': null,
-        'record_header': 3,
-        'udc_group': 'PR',
-      },
-
-      // --- Countries (CN) ---
-      {
-        'detail_code': 'ET',
-        'description_1': 'Ethiopia',
-        'description_2': null,
-        'record_header': 4,
-        'udc_group': 'CN',
-      },
-      {
-        'detail_code': 'KE',
-        'description_1': 'Kenya',
-        'description_2': null,
-        'record_header': 4,
-        'udc_group': 'CN',
-      },
-      {
-        'detail_code': 'US',
-        'description_1': 'United States',
-        'description_2': null,
-        'record_header': 4,
-        'udc_group': 'CN',
-      },
-      {
-        'detail_code': 'IN',
-        'description_1': 'India',
-        'description_2': null,
-        'record_header': 4,
-        'udc_group': 'CN',
-      },
-
-      // --- Payment Status (PS) ---
-      {
-        'detail_code': 'N',
-        'description_1': 'Not paid',
-        'description_2': null,
-        'record_header': 5,
-        'udc_group': 'PS',
-      },
-      {
-        'detail_code': 'P',
-        'description_1': 'Paid',
-        'description_2': null,
-        'record_header': 5,
-        'udc_group': 'PS',
-      },
-      {
-        'detail_code': 'S',
-        'description_1': 'Partially paid',
-        'description_2': null,
-        'record_header': 5,
-        'udc_group': 'PS',
-      },
-
-      // --- Color Types (CT) ---
-      {
-        'detail_code': '01',
-        'description_1': 'Red',
-        'description_2': null,
-        'record_header': 6,
-        'udc_group': 'CT',
-      },
-      {
-        'detail_code': '02',
-        'description_1': 'Orange',
-        'description_2': null,
-        'record_header': 6,
-        'udc_group': 'CT',
-      },
-      {
-        'detail_code': '03',
-        'description_1': 'Gray',
-        'description_2': null,
-        'record_header': 6,
-        'udc_group': 'CT',
-      },
-      {
-        'detail_code': '04',
-        'description_1': 'Green',
-        'description_2': null,
-        'record_header': 6,
-        'udc_group': 'CT',
-      },
-      {
-        'detail_code': '05',
-        'description_1': 'Lime',
-        'description_2': null,
-        'record_header': 6,
-        'udc_group': 'CT',
-      },
-      {
-        'detail_code': '06',
-        'description_1': 'Olive',
-        'description_2': null,
-        'record_header': 6,
-        'udc_group': 'CT',
-      },
-      {
-        'detail_code': '07',
-        'description_1': 'Yellow',
-        'description_2': null,
-        'record_header': 6,
-        'udc_group': 'CT',
-      },
-      {
-        'detail_code': '08',
-        'description_1': 'Purple',
-        'description_2': null,
-        'record_header': 6,
-        'udc_group': 'CT',
-      },
-      {
-        'detail_code': '09',
-        'description_1': 'Fuchsia',
-        'description_2': null,
-        'record_header': 6,
-        'udc_group': 'CT',
-      },
-      {
-        'detail_code': '10',
-        'description_1': 'Navy',
-        'description_2': null,
-        'record_header': 6,
-        'udc_group': 'CT',
-      },
-      {
-        'detail_code': '11',
-        'description_1': 'Blue',
-        'description_2': null,
-        'record_header': 6,
-        'udc_group': 'CT',
-      },
-      {
-        'detail_code': '12',
-        'description_1': 'Teal',
-        'description_2': null,
-        'record_header': 6,
-        'udc_group': 'CT',
-      },
-      {
-        'detail_code': '13',
-        'description_1': 'Aqua',
-        'description_2': null,
-        'record_header': 6,
-        'udc_group': 'CT',
-      },
-      {
-        'detail_code': '14',
-        'description_1': 'Brown',
-        'description_2': null,
-        'record_header': 6,
-        'udc_group': 'CT',
-      },
-      {
-        'detail_code': '15',
-        'description_1': 'Chartreuse',
-        'description_2': null,
-        'record_header': 6,
-        'udc_group': 'CT',
-      },
-      {
-        'detail_code': '16',
-        'description_1': 'Black',
-        'description_2': null,
-        'record_header': 6,
-        'udc_group': 'CT',
-      },
-      // --- Lot Status (LS) ---
-      {
-        'detail_code': 'A',
-        'description_1': 'Active Lot',
-        'description_2': null,
-        'record_header': 7,
-        'udc_group': 'LS',
-      },
-      {
-        'detail_code': 'D',
-        'description_1': 'Damaged Lot',
-        'description_2': null,
-        'record_header': 7,
-        'udc_group': 'LS',
-      },
-
-      {
-        'detail_code': 'E',
-        'description_1': 'Expired Lot',
-        'description_2': null,
-        'record_header': 7,
-        'udc_group': 'LS',
-      },
-
-      // --- Transaction Type (TT) ---
-      {
-        'detail_code': 'T',
-        'description_1': ' Inventory transfer',
-        'description_2': null,
-        'record_header': 8,
-        'udc_group': 'TT',
-      },
-      {
-        'detail_code': 'I',
-        'description_1': 'Inventory issue',
-        'description_2': null,
-        'record_header': 8,
-        'udc_group': 'TT',
-      },
-      {
-        'detail_code': 'A',
-        'description_1': 'Inventory adjustment',
-        'description_2': null,
-        'record_header': 8,
-        'udc_group': 'TT',
-      },
-      {
-        'detail_code': 'R',
-        'description_1': 'Inventory Receive',
-        'description_2': null,
-        'record_header': 8,
-        'udc_group': 'TT',
-      },
-      {
-        'detail_code': 'M',
-        'description_1': 'Migration',
-        'description_2': null,
-        'record_header': 8,
-        'udc_group': 'TT',
-      },
-
-      // --- Order Type (OT) ---
-      {
-        'detail_code': 'SO',
-        'description_1': 'Sales Order',
-        'description_2': null,
-        'record_header': 9,
-        'udc_group': 'OT',
-      },
-      {
-        'detail_code': 'PO',
-        'description_1': 'Purchase Order',
-        'description_2': null,
-        'record_header': 9,
-        'udc_group': 'OT',
-      },
-      /* // --- Company Category (CC) ---
-      {
-        'detail_code': 'SUP',
-        'description_1': 'Supplier',
-        'description_2': null,
-        'record_header': 10,
-        'udc_group': 'CC',
-      },
-      {
-        'detail_code': 'CUS',
-        'description_1': 'Customer',
-        'description_2': null,
-        'record_header': 10,
-        'udc_group': 'CC',
-      },
-      {
-        'detail_code': 'EMP',
-        'description_1': 'Employee',
-        'description_2': null,
-        'record_header': 10,
-        'udc_group': 'CC',
-      },
-
-      //---- Category 1 (CT1) ----
-      {
-        'detail_code': 'CT1',
-        'description_1': 'Category 1',
-        'description_2': null,
-        'record_header': 11,
-        'udc_group': 'CT1',
-      },
-      {
-        'detail_code': 'CT1pro',
-        'description_1': 'Category 1 pro ',
-        'description_2': null,
-        'record_header': 11,
-        'udc_group': 'CT1',
-      },
-
-      //---Category 2 (CT2)---
-      {
-        'detail_code': 'CT2',
-        'description_1': 'Category 2',
-        'description_2': null,
-        'record_header': 12,
-        'udc_group': 'CT2',
-      },
-      {
-        'detail_code': 'CT2pro',
-        'description_1': 'Category 2 pro',
-        'description_2': null,
-        'record_header': 12,
-        'udc_group': 'CT2',
-      },
-
-      //---Category 3 (CT3)---
-      {
-        'detail_code': 'CT3',
-        'description_1': 'Category 3',
-        'description_2': null,
-        'record_header': 13,
-        'udc_group': 'CT3',
-      },
-      {
-        'detail_code': 'CT3pro',
-        'description_1': 'Category 3 pro',
-        'description_2': null,
-        'record_header': 13,
-        'udc_group': 'CT3',
-      },*/
-
-      // --- Lot Type (LT) ---
-      {
-        'detail_code': 'X',
-        'description_1': 'Expiration',
-        'description_2': 'Expiration Date',
-        'record_header': 21,
-        'udc_group': 'LT',
-      },
-      {
-        'detail_code': 'F',
-        'description_1': 'Effective',
-        'description_2': 'Effective Date',
-        'record_header': 21,
-        'udc_group': 'LT',
-      },
-      {
-        'detail_code': 'R',
-        'description_1': 'Receipt',
-        'description_2': 'Receipt Date',
-        'record_header': 21,
-        'udc_group': 'LT',
-      },
-      {
-        'detail_code': 'DG',
-        'description_1': 'Damaged Goods',
-        'description_2': 'Product arrived broken or defective',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'EG',
-        'description_1': 'Expired Goods',
-        'description_2': 'Expired items (pharmacy, food, etc.)',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'WI',
-        'description_1': 'Wrong Item Supplied',
-        'description_2': 'Item mismatch compared to customer order',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'WQ',
-        'description_1': 'Wrong Quantity Supplied',
-        'description_2': 'More or fewer units supplied than ordered',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'QI',
-        'description_1': 'Quality Issues',
-        'description_2': 'Customer not satisfied with product quality',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'PR',
-        'description_1': 'Product Recall',
-        'description_2': 'Manufacturer recall due to safety/defect issues',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'CM',
-        'description_1': 'Customer Changed Mind',
-        'description_2': 'Return allowed within grace period',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'OC',
-        'description_1': 'Order Cancellation',
-        'description_2': 'Customer canceled after invoicing but before usage',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'LD',
-        'description_1': 'Late Delivery',
-        'description_2': 'Goods delivered outside agreed time',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'PI',
-        'description_1': 'Packaging Issues',
-        'description_2': 'Leaking, tampered, or opened package',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'WC',
-        'description_1': 'Warranty / Guarantee Claim',
-        'description_2': 'Returned within warranty terms',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'ND',
-        'description_1': 'Not as Described',
-        'description_2': 'Product specs don’t match description',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'DS',
-        'description_1': 'Duplicate Sale',
-        'description_2': 'Mistaken duplicate invoice/order',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'W1',
-        'description_1': 'Wrong Customer Selected',
-        'description_2': 'Sale recorded under wrong customer',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'W2',
-        'description_1': 'Wrong Item Selected',
-        'description_2': 'Wrong product/service chosen before finalizing sale',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'W3',
-        'description_1': 'Wrong Price Applied',
-        'description_2': 'Pricing error discovered immediately',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'D1',
-        'description_1': 'Discount Mistake',
-        'description_2': 'Wrong discount percentage applied',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'P2',
-        'description_1': 'Payment Error',
-        'description_2':
-            'Customer payment failed or incorrect payment recorded',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'C3',
-        'description_1': 'Cashier Mistake',
-        'description_2': 'Accidental entry (e.g., double billing)',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'T4',
-        'description_1': 'Training/Test Transaction',
-        'description_2': 'Dummy transactions during training/testing',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'S5',
-        'description_1': 'System Error / Power Failure',
-        'description_2': 'Technical issue during transaction',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'C6',
-        'description_1': 'Customer Walked Away / No Payment',
-        'description_2': 'Customer didn’t complete purchase',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'FP',
-        'description_1': 'Fraud Prevention',
-        'description_2': 'Suspicious sale identified and canceled',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'DI',
-        'description_1': 'Duplicate Invoice',
-        'description_2': 'Accidentally issued two invoices for same order',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'O7',
-        'description_1': 'Order Cancelled Before Fulfillment',
-        'description_2': 'Sale voided before goods delivered',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'S1',
-        'description_1': 'Incorrect Size/Variant',
-        'description_2':
-            'Product returned due to wrong size, color, or variant selection',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'S2',
-        'description_1': 'Late Defect Discovery',
-        'description_2': 'Customer discovers a defect after initial inspection',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'S3',
-        'description_1': 'Allergic Reaction / Health Issue',
-        'description_2':
-            'Returned due to personal health issues (pharma, food, etc.)',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'S4',
-        'description_1': 'Price/Offer Mismatch',
-        'description_2':
-            'Customer returns because of price difference or promotion mismatch',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'S8',
-        'description_1': 'Gift Return',
-        'description_2':
-            'Returned because it was gifted, not wanted by recipient',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'S6',
-        'description_1': 'Shipping Damage (Carrier Fault)',
-        'description_2':
-            'Product damaged during transit, not manufacturer fault',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'S7',
-        'description_1': 'Seasonal / Promotional Return',
-        'description_2': 'Customer returns a promotional or seasonal item',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'V1',
-        'description_1': 'Customer Changed Mind Before Payment',
-        'description_2': 'Sale canceled before payment attempt',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'V2',
-        'description_1': 'System Timeout / Session Expiry',
-        'description_2': 'Transaction aborted due to system timeout',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'V3',
-        'description_1': 'Inventory Not Available',
-        'description_2': 'Sale voided because stock was not actually available',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'V4',
-        'description_1': 'Duplicate Entry Detected Before Invoice',
-        'description_2': 'Mistaken entry detected before invoicing',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'V5',
-        'description_1': 'Promotional / Discount Override Error',
-        'description_2':
-            'Sale voided because a promotion or discount was misapplied',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      {
-        'detail_code': 'OT',
-        'description_1': 'Others',
-        'description_2': 'Other Reason',
-        'record_header': 23,
-        'udc_group': 'SR',
-      },
-      // --- Report Frequency (FQ) ---
-      {
-        'detail_code': 'M',
-        'description_1': 'Monthly',
-        'description_2': '30',
-        'record_header': 22,
-        'udc_group': 'FQ',
-      },
-      {
-        'detail_code': '2M',
-        'description_1': '2 Months',
-        'description_2': '60',
-        'record_header': 22,
-        'udc_group': 'FQ',
-      },
-      {
-        'detail_code': 'Q',
-        'description_1': 'Quarterly',
-        'description_2': '90',
-        'record_header': 22,
-        'udc_group': 'FQ',
-      },
-      {
-        'detail_code': '4M',
-        'description_1': '4 Months',
-        'description_2': '120',
-        'record_header': 22,
-        'udc_group': 'FQ',
-      },
-      {
-        'detail_code': '5M',
-        'description_1': '5 Months',
-        'description_2': '150',
-        'record_header': 22,
-        'udc_group': 'FQ',
-      },
-      {
-        'detail_code': 'H',
-        'description_1': 'Half-Yearly',
-        'description_2': '180',
-        'record_header': 21,
-        'udc_group': 'FQ',
-      },
-      {
-        'detail_code': '7M',
-        'description_1': '7 Months',
-        'description_2': '210',
-        'record_header': 22,
-        'udc_group': 'FQ',
-      },
-      {
-        'detail_code': '8M',
-        'description_1': '8 Months',
-        'description_2': '240',
-        'record_header': 22,
-        'udc_group': 'FQ',
-      },
-      {
-        'detail_code': '9M',
-        'description_1': '9 Months',
-        'description_2': '270',
-        'record_header': 22,
-        'udc_group': 'FQ',
-      },
-      {
-        'detail_code': 'MM',
-        'description_1': '10 Months',
-        'description_2': '300',
-        'record_header': 22,
-        'udc_group': 'FQ',
-      },
-      {
-        'detail_code': 'EM',
-        'description_1': '11 Months',
-        'description_2': '330',
-        'record_header': 22,
-        'udc_group': 'FQ',
-      },
-      {
-        'detail_code': 'Y',
-        'description_1': 'Yearly',
-        'description_2': '365',
-        'record_header': 22,
-        'udc_group': 'FQ',
-      },
-    ];
-
-    for (final lotType in udcDetailsSeedData) {
-      await db.insert('udc_details', lotType);
-    }
-    developer.log('Inserted default udc headers and details');
-
-    // Seed privileges (system-wide definitions - not company specific)
-    await PrivilegeSeeder.seedPrivileges(db);
-    developer.log('Seeded privileges');
-
-    // Seed default Admin role with all privileges (template for new companies)
-    final adminRoleId = await db.insert('role_table', {
-      'name': 'Admin',
-      'description': 'Default Administrator Role',
-      'created_by': 1,
-      'date_created': DateTime.now().toIso8601String(),
-      'company': null,
-    });
-
-    final allPrivileges = await db.query('privilege_table');
-    for (final privilege in allPrivileges) {
-      await db.insert('role_privilege', {
-        'role_table_id': adminRoleId,
-        'privilege_table_id': privilege['id'],
-        'created_by': 1,
-        'date_created': DateTime.now().toIso8601String(),
-      });
-    }
-    developer.log('Seeded default Admin role with all privileges');
-
-    // 13. Create customer table
-    await db.execute('''
-CREATE TABLE customer_table (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  customer_id INTEGER,
-  customer_name TEXT CHECK(length(customer_name) <= 45),
-  phone_number TEXT CHECK(length(phone_number) <= 45),
-  address TEXT CHECK(length(address) <= 45),
-  country TEXT CHECK(length(country) <= 45),
-  state TEXT CHECK(length(state) <= 45),
-  region TEXT CHECK(length(region) <= 45),
-  city TEXT CHECK(length(city) <= 45),
-  tin_number TEXT CHECK(length(tin_number) <= 45),
-  address1 TEXT CHECK(length(address1) <= 45),
-  address2 TEXT CHECK(length(address2) <= 45),
-  address3 TEXT CHECK(length(address3) <= 45),
-  address4 TEXT CHECK(length(address4) <= 45),
-  fax TEXT CHECK(length(fax) <= 45),
-  phone_2 TEXT CHECK(length(phone_2) <= 45),
-  contact_name TEXT CHECK(length(contact_name) <= 45),
-  contact_title TEXT CHECK(length(contact_title) <= 45),
-  company INTEGER,
-  defaults_value TEXT CHECK(length(defaults_value) <= 1),
-  UNIQUE (id),
-  FOREIGN KEY (company) REFERENCES company_table (id)
-);
-''');
-    await db.execute(
-      'CREATE INDEX fk_customer_table_company_idx ON customer_table (company)',
-    );
-    developer.log('Created table: customer_table');
-
-    developer.log(
-      '✅ Database initialized. User registration will create company data.',
-    );
-  }
-
-  Future<void> _debugPrintTablesAndData(Database db) async {
-    developer.log('\n📦 === DATABASE DEBUG START ===');
-
-    try {
-      // Get all tables excluding internal ones
-      final tables = await db.rawQuery(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
-      );
-
-      if (tables.isEmpty) {
-        developer.log('⚠️ No user-defined tables found.');
-        return;
-      }
-
-      for (final table in tables) {
-        final tableName = table['name'] as String;
-
-        // Table header
-        developer.log('\n📁 Table: $tableName');
-
-        // Row count
-        final countResult = await db.rawQuery(
-          "SELECT COUNT(*) AS count FROM $tableName",
-        );
-        final count = countResult.first['count'] as int;
-        developer.log('  🔢 Row count: $count');
-
-        // Sample data
-        if (count > 0) {
-          final sampleRows = await db.query(tableName, limit: 5);
-          developer.log('  📄 Sample rows (max 5):');
-
-          for (int i = 0; i < sampleRows.length; i++) {
-            final rowJson = const JsonEncoder.withIndent(
-              '    ',
-            ).convert(sampleRows[i]);
-            developer.log('    #${i + 1}:\n$rowJson');
-          }
-        } else {
-          developer.log('  🚫 No rows found.');
-        }
-      }
-
-      developer.log('\n✅ === DATABASE DEBUG END ===');
-    } catch (e, stackTrace) {
-      developer.log('❌ Error during database debug: $e\n$stackTrace');
-    }
+    // Seed against the onCreate database instance to avoid re-entering the
+    // database getter while the database is still bootstrapping.
+    await defaultDataSeeder.insertDefaultData(db);
+    await defaultDataSeeder.insertDefaultSystemConstant(db);
   }
 
   // Helper method to debug specific table

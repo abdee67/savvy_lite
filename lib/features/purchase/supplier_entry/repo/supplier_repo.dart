@@ -1,4 +1,5 @@
 // lib/features/purchase/supplier/repository/supplier_repository.dart
+import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/models/supplier_model.dart';
 
@@ -34,14 +35,15 @@ abstract class SupplierRepository {
 }
 
 // Implementation
-class SupplierRepositoryImpl implements SupplierRepository {
-  final LocalDatabaseService _databaseService;
+class SupplierRepositoryImpl extends BaseRepository implements SupplierRepository {
+  @override
+  final LocalDatabaseService databaseService;
 
-  SupplierRepositoryImpl(this._databaseService);
+  SupplierRepositoryImpl({required this.databaseService});
 
   @override
   Future<List<SupplierModel>> getAllSuppliers(int companyId) async {
-    final db = await _databaseService.database;
+    final db = await databaseService.database;
     final suppliers = await db.query(
       'supplier_table',
       where: 'company = ?',
@@ -53,7 +55,7 @@ class SupplierRepositoryImpl implements SupplierRepository {
 
   @override
   Future<SupplierModel?> getSupplierById(int id, int companyId) async {
-    final db = await _databaseService.database;
+    final db = await databaseService.database;
     final suppliers = await db.query(
       'supplier_table',
       where: 'id = ? AND company = ?',
@@ -64,42 +66,74 @@ class SupplierRepositoryImpl implements SupplierRepository {
 
   @override
   Future<int> createSupplier(SupplierModel supplier) async {
-    final db = await _databaseService.database;
+    final db = await databaseService.database;
     final supplierMap = supplier.toMap()
       ..remove('id')
       ..['date_created'] = DateTime.now().toIso8601String()
       ..['date_updated'] = DateTime.now().toIso8601String();
 
-    return await db.insert('supplier_table', supplierMap);
+    final id = await db.insert('supplier_table', withSyncKey(supplierMap));
+    supplierMap['id'] = id;
+    captureSync(
+      tableName: 'supplier_table',
+      entityMap: supplierMap,
+      entityId: id.toString(),
+      operation: 'INSERT',
+      company: supplier.company?.toString(),
+    );
+    return id;
   }
 
   @override
   Future<int> updateSupplier(SupplierModel supplier) async {
-    final db = await _databaseService.database;
+    final db = await databaseService.database;
     final supplierMap = supplier.toMap()
       ..['date_updated'] = DateTime.now().toIso8601String();
 
-    return await db.update(
+    final result = await db.update(
       'supplier_table',
       supplierMap,
       where: 'id = ? AND company = ?',
       whereArgs: [supplier.id, supplier.company],
     );
+    captureSync(
+      tableName: 'supplier_table',
+      entityMap: supplierMap,
+      entityId: supplier.id.toString(),
+      operation: 'UPDATE',
+      company: supplier.company?.toString(),
+    );
+    return result;
   }
 
   @override
   Future<int> deleteSupplier(int id, int companyId) async {
-    final db = await _databaseService.database;
-    return await db.delete(
+    final db = await databaseService.database;
+    final existingSupplier = await db.query(
       'supplier_table',
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+    final result = await db.delete(
+      'supplier_table',
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
+    );
+    for(final row in existingSupplier){
+    captureSync(
+      tableName: 'supplier_table',
+      entityMap: row,
+      entityId: row['id'].toString(),
+      operation: 'DELETE',
+      company: companyId.toString(),
+    );
+    }
+    return result;
   }
 
   @override
   Future<void> deleteMultipleSuppliers(List<int> ids, int companyId) async {
-    final db = await _databaseService.database;
+    final db = await databaseService.database;
     final placeholders = List.filled(ids.length, '?').join(',');
 
     await db.delete(
@@ -111,7 +145,7 @@ class SupplierRepositoryImpl implements SupplierRepository {
 
   @override
   Future<void> batchCreateSuppliers(List<SupplierModel> suppliers) async {
-    final db = await _databaseService.database;
+    final db = await databaseService.database;
     final batch = db.batch();
 
     for (final supplier in suppliers) {
@@ -128,7 +162,7 @@ class SupplierRepositoryImpl implements SupplierRepository {
 
   @override
   Future<void> batchUpdateSuppliers(List<SupplierModel> suppliers) async {
-    final db = await _databaseService.database;
+    final db = await databaseService.database;
     final batch = db.batch();
 
     for (final supplier in suppliers) {
@@ -151,7 +185,7 @@ class SupplierRepositoryImpl implements SupplierRepository {
     String query,
     int companyId,
   ) async {
-    final db = await _databaseService.database;
+    final db = await databaseService.database;
     final suppliers = await db.rawQuery(
       '''
       SELECT * FROM supplier_table 
@@ -179,7 +213,7 @@ class SupplierRepositoryImpl implements SupplierRepository {
     String? state,
     String? country,
   }) async {
-    final db = await _databaseService.database;
+    final db = await databaseService.database;
 
     final whereClauses = <String>['company = ?'];
     final whereArgs = <dynamic>[companyId];
@@ -230,7 +264,7 @@ class SupplierRepositoryImpl implements SupplierRepository {
     String supplierName,
     int companyId,
   ) async {
-    final db = await _databaseService.database;
+    final db = await databaseService.database;
     final suppliers = await db.query(
       'supplier_table',
       where: 'supplier_name = ? AND company = ?',

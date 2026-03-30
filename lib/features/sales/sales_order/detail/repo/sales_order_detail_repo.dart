@@ -12,8 +12,10 @@ import 'package:savvy_stock/features/stock/item_entry/data/item_repository.dart'
 import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_repo.dart';
 import 'package:savvy_stock/features/stock/lot_master/repo/lot_master_repo.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:savvy_stock/core/repositories/base_repo.dart';
 
-class SalesOrderDetailRepository {
+class SalesOrderDetailRepository  extends BaseRepository{
+  @override
   final LocalDatabaseService databaseService;
   final StockItemsEntryRepository itemEntryRepository;
   final StockItemInBranchRepository itemInBranchRepository;
@@ -34,9 +36,15 @@ class SalesOrderDetailRepository {
   Future<int> createSalesOrderDetail(SalesOrderDetail details) async {
     final db = await databaseService.database;
     final id = await db.insert(
-      'sales_order_details',
-      details.toMap(),
+      'sales_order_details', withSyncKey(details.toMap()),
       conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    captureSync(
+      tableName: 'sales_order_details',
+      entityMap: details.toMap(),
+      entityId: id.toString(),
+      operation: 'INSERT',
+      company: details.company?.toString(),
     );
     return id;
   }
@@ -182,12 +190,35 @@ class SalesOrderDetailRepository {
       where: 'id = ?',
       whereArgs: [details.id],
     );
+    captureSync(
+      tableName: 'sales_order_details',
+      entityMap: details.toMap(),
+      entityId: details.id.toString(),
+      operation: 'UPDATE',
+      company: details.company?.toString(),
+    );
   }
 
   // Delete
-  Future<void> deleteSalesOrderDetail(int id) async {
+  Future<void> deleteSalesOrderDetail(int id, int companyId) async {
     final db = await databaseService.database;
+    // Fetch full row data BEFORE deleting
+    final detailRows = await db.query(
+      'sales_order_details',
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
+    );
     await db.delete('sales_order_details', where: 'id = ?', whereArgs: [id]);
+    // Capture sync with full row data
+    for (final row in detailRows) {
+    captureSync(
+      tableName: 'sales_order_details',
+      entityMap: row,
+      entityId: row['id'].toString(),
+      operation: 'DELETE',
+      company: companyId.toString(),
+    );
+    }
   }
 
   // Batch delete
@@ -203,13 +234,29 @@ class SalesOrderDetailRepository {
   }
 
   // Delete by Sales Order Header ID
-  Future<void> deleteSalesOrderDetailByHeaderId(int headerId) async {
+  Future<void> deleteSalesOrderDetailByHeaderId(int headerId, int companyId) async {
     final db = await databaseService.database;
+    // Fetch full row data BEFORE deleting
+    final detailRows = await db.query(
+      'sales_order_details',
+      where: 'sales_order_header_id = ? AND company = ?',
+      whereArgs: [headerId, companyId],
+    );
     await db.delete(
       'sales_order_details',
       where: 'sales_order_header_id = ?',
       whereArgs: [headerId],
     );
+    // Capture sync with full row data
+    for (final row in detailRows) {
+    captureSync(
+      tableName: 'sales_order_details',
+      entityMap: row,
+      entityId: row['id'].toString(),
+      operation: 'DELETE',
+      company: companyId.toString(),
+    );
+    }
   }
 
   // Count details with complex filtering (equivalent to Java's countDetail method)
