@@ -150,12 +150,12 @@ Future<void> _initializeAndRunApp() async {
       //await LocalDatabaseService().debugTable('udc_details');
       //await LocalDatabaseService().debugTable('user_table');
       //await LocalDatabaseService().debugTable('user_role');
-      await LocalDatabaseService().debugTable('role_privilege');
+      //await LocalDatabaseService().debugTable('role_privilege');
       //await LocalDatabaseService().debugTable('other_expense_table');
       // await LocalDatabaseService().debugTable('next_number');
       await LocalDatabaseService().debugTable('sync_event');
-      await LocalDatabaseService().debugTable('sync_device_detail');
-      await LocalDatabaseService().debugTable('sync_node_status');
+      //await LocalDatabaseService().debugTable('sync_device_detail');
+      // await LocalDatabaseService().debugTable('sync_node_status');
     }
   } catch (error, stackTrace) {
     if (kDebugMode) {

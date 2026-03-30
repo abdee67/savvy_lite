@@ -60,15 +60,23 @@ class ItemCostRepository extends BaseRepository {
   Future<int> delete(int id, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
     final itemCost = await findById(id);
+    // Fetch full row data BEFORE deleting
+    final itemCostRows = await db.query(
+      'item_cost',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
     final result = await db.delete('item_cost', where: 'id = ?', whereArgs: [id]);
     if (itemCost != null) {
+      for (final row in itemCostRows) {
       captureSync(
         tableName: 'item_cost',
-        entityMap: {'id': id, 'company': itemCost.company},
-        entityId: id.toString(),
+        entityMap: row,
+        entityId: row['id'].toString(),
         operation: 'DELETE',
         company: itemCost.company?.toString(),
       );
+    }
     }
     return result;
   }

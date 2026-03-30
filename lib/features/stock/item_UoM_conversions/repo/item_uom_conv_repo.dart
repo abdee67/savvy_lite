@@ -191,18 +191,26 @@ class ItemUomConversionsRepository extends BaseRepository {
   // Delete UoM conversion
   Future<int> deleteItemUomConversion(int id, int companyId) async {
     final db = await databaseService.database;
+    // Fetch full row data BEFORE deleting
+    final itemRows = await db.query(
+      'item_uom_conversions',
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
+    );
     final result = await db.delete(
       'item_uom_conversions',
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+    for (final row in itemRows) {
     captureSync(
       tableName: 'item_uom_conversions',
-      entityMap: {'id': id, 'company': companyId},
-      entityId: id.toString(),
+      entityMap: row,
+      entityId: row['id'].toString(),
       operation: 'DELETE',
       company: companyId.toString(),
     );
+    }
     return result;
   }
 
@@ -836,6 +844,12 @@ class ItemUomConversionsRepository extends BaseRepository {
   Future<bool> removeBatch(List<ItemUomConversion> items) async {
     final db = await databaseService.database;
     final batch = db.batch();
+    // Fetch full row data BEFORE deleting
+    final itemRows = await db.query(
+      'item_uom_conversions',
+      where: 'id IN (${items.map((i) => i.id).join(',')}) AND company = ?',
+      whereArgs: [items.first.company],
+    );
 
     try {
       for (final item in items) {
@@ -844,13 +858,15 @@ class ItemUomConversionsRepository extends BaseRepository {
           where: 'id = ? AND company = ?',
           whereArgs: [item.id, item.company],
         );
+        for (final row in itemRows) {
         captureSync(
           tableName: 'item_uom_conversions',
-          entityMap: {'id': item.id, 'company': item.company},
-          entityId: item.id.toString(),
+          entityMap: row,
+          entityId: row['id'].toString(),
           operation: 'DELETE',
           company: item.company.toString(),
         );
+        }
       }
 
       await batch.commit(noResult: true);

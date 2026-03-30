@@ -113,17 +113,27 @@ class SalesOrderHeaderRepository  extends BaseRepository{
   // Delete
   Future<int> deleteSalesOrderHeader(int id) async {
     final db = await _db;
+    // Fetch full row data BEFORE deleting
+    final headerRows = await db.query(
+      'sales_order_header',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
     final result = await db.delete(
       'sales_order_header',
       where: 'id = ?',
       whereArgs: [id],
     );
+    // Capture sync with full row data
+    for (final row in headerRows) {
     captureSync(
       tableName: 'sales_order_header',
-      entityMap: {'id': id},
-      entityId: id.toString(),
+      entityMap: row,
+      entityId: row['id'].toString(),
       operation: 'DELETE',
+      company: row['company'].toString(),
     );
+    }
     return result;
   }
 
@@ -759,18 +769,27 @@ class SalesOrderHeaderRepository  extends BaseRepository{
 
   Future<int> delete(int id, int companyId) async {
     final db = await _db;
+    // Fetch full row data BEFORE deleting
+    final headerRows = await db.query(
+      'sales_order_header',
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
+    );
     final result = await db.delete(
       'sales_order_header',
-      where: 'id = ?',
-      whereArgs: [id],
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
     );
+    // Capture sync with full row data
+    for (final row in headerRows) {
     captureSync(
       tableName: 'sales_order_header',
-      entityMap: {'id': id},
-      entityId: id.toString(),
+      entityMap: row,
+      entityId: row['id'].toString(),
       operation: 'DELETE',
       company: companyId.toString(),
     );
+    }
     return result;
   }
 
@@ -914,19 +933,27 @@ class SalesOrderHeaderRepository  extends BaseRepository{
 
   Future<void> deleteCreditReceipt(int receiptId, int companyId) async {
     final db = await _db;
+    final receiptRows = await db.query(
+      'credit_receipt_table',
+      where: 'id = ? AND company = ?',
+      whereArgs: [receiptId, companyId],
+    );
     try {
       await db.delete(
         'credit_receipt_table',
         where: 'id = ?',
         whereArgs: [receiptId],
       );
+      // Capture sync with full row data
+      for (final row in receiptRows) {
       captureSync(
         tableName: 'credit_receipt_table',
-        entityMap: {'id': receiptId},
-        entityId: receiptId.toString(),
+        entityMap: row,
+        entityId: row['id'].toString(),
         operation: 'DELETE',
         company: companyId.toString(),
       );
+      }
     } catch (e) {
       throw Exception('Failed to delete credit receipt: $e');
     }

@@ -154,18 +154,26 @@ class ItemLocationsRepository extends BaseRepository {
     Transaction? txn,
   }) async {
     final db = txn ?? await databaseService.database;
+    // Fetch full row data BEFORE deleting
+    final itemRows = await db.query(
+      'item_location',
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
+    );
     final result = await db.delete(
       'item_location',
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+    for (final row in itemRows) {
     captureSync(
       tableName: 'item_location',
-      entityMap: {'id': id, 'company': companyId},
-      entityId: id.toString(),
+      entityMap: row,
+      entityId: row['id'].toString(),
       operation: 'DELETE',
       company: companyId.toString(),
     );
+    }
     return result;
   }
 

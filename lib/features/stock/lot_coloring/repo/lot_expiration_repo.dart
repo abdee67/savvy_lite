@@ -96,6 +96,12 @@ class LotExpirationColorsRepository extends BaseRepository {
   // Delete single lot expiration color
   Future<int> deleteLotExpirationColor(int id, int companyId) async {
     final db = await databaseService.database;
+    // Fetch full row data BEFORE deleting
+    final colorRows = await db.query(
+      'lot_expiration_colors',
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
+    );
     final rowsAffected = await db.delete(
       'lot_expiration_colors',
       where: 'id = ? AND company = ?',
@@ -103,13 +109,15 @@ class LotExpirationColorsRepository extends BaseRepository {
     );
     
     if (rowsAffected > 0) {
+      for (final row in colorRows) {
       captureSync(
         tableName: 'lot_expiration_colors',
-        entityMap: {'id': id},
+        entityMap: row,
         entityId: id.toString(),
         operation: 'DELETE',
         company: companyId.toString(),
       );
+      }
     }
     
     return rowsAffected;
@@ -122,6 +130,12 @@ class LotExpirationColorsRepository extends BaseRepository {
   ) async {
     final db = await databaseService.database;
     final batch = db.batch();
+    // Fetch full row data BEFORE deleting
+    final colorRows = await db.query(
+      'lot_expiration_colors',
+      where: 'id IN (${colors.map((c) => c.id).join(',')}) AND company = ?',
+      whereArgs: [companyId],
+    );
 
     for (final color in colors) {
       batch.delete(
@@ -129,13 +143,15 @@ class LotExpirationColorsRepository extends BaseRepository {
         where: 'id = ? AND company = ?',
         whereArgs: [color.id, companyId],
       );
+      for (final row in colorRows) {
       captureSync(
         tableName: 'lot_expiration_colors',
-        entityMap: {'id': color.id},
-        entityId: color.id.toString(),
+        entityMap: row,
+        entityId: row['id'].toString(),
         operation: 'DELETE',
         company: companyId.toString(),
       );
+      }
     }
 
     await batch.commit();

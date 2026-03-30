@@ -247,18 +247,25 @@ class FSNMRRepository extends BaseRepository {
   // Delete rule
   Future<int> delete(int id, int companyId, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
+    final existingRule = await db.query(
+      'fast_slow_nonmoving_rule_table',
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
+    );
     final result = await db.delete(
       'fast_slow_nonmoving_rule_table',
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+    for(final row in existingRule){
     captureSync(
       tableName: 'fast_slow_nonmoving_rule_table',
-      entityMap: {'id': id, 'company': companyId},
-      entityId: id.toString(),
+      entityMap: row,
+      entityId: row['id'].toString(),
       operation: 'DELETE',
       company: companyId.toString(),
     );
+    }
     return result;
   }
 
@@ -272,18 +279,25 @@ class FSNMRRepository extends BaseRepository {
     final batch = db.batch();
 
     for (final id in ids) {
+      final existingRule = await db.query(
+        'fast_slow_nonmoving_rule_table',
+        where: 'id = ? AND company = ?',
+        whereArgs: [id, companyId],
+      );
       batch.delete(
         'fast_slow_nonmoving_rule_table',
         where: 'id = ? AND company = ?',
         whereArgs: [id, companyId],
       );
+      for(final row in existingRule){
       captureSync(
         tableName: 'fast_slow_nonmoving_rule_table',
-        entityMap: {'id': id, 'company': companyId},
-        entityId: id.toString(),
+        entityMap: row,
+        entityId: row['id'].toString(),
         operation: 'DELETE',
         company: companyId.toString(),
       );
+    }
     }
 
     await batch.commit();

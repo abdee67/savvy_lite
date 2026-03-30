@@ -18,7 +18,10 @@ class QuotationOrderRepository extends BaseRepository {
   Future<int> createQuotationOrderHeader(QuotationOrderHeader header) async {
     final db = await _db;
     try {
-      final result = await db.insert('quote_order_header', withSyncKey(header.toMap()));
+      final result = await db.insert(
+        'quote_order_header',
+        withSyncKey(header.toMap()),
+      );
       captureSync(
         tableName: 'quote_order_header',
         entityMap: header.toMap(),
@@ -151,18 +154,25 @@ class QuotationOrderRepository extends BaseRepository {
 
   Future<int> deleteQuotationOrderHeader(int id, int companyId) async {
     final db = await _db;
+    final existingQuotationOrder = await db.query(
+      'quote_order_header',
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
+    );
     final result = await db.delete(
       'quote_order_header',
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
-    captureSync(
-      tableName: 'quote_order_header',
-      entityMap: {'id': id},
-      entityId: id.toString(),
-      operation: 'DELETE',
-      company: companyId.toString(),
-    );
+    for (final row in existingQuotationOrder) {
+      captureSync(
+        tableName: 'quote_order_header',
+        entityMap: row,
+        entityId: row['id'].toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
+      );
+    }
     return result;
   }
 
@@ -270,7 +280,10 @@ class QuotationOrderRepository extends BaseRepository {
   Future<int> createQuotationOrderDetail(QuotationOrderDetail detail) async {
     final db = await _db;
     try {
-      final id = await db.insert('quote_order_details', withSyncKey(detail.toMap()));
+      final id = await db.insert(
+        'quote_order_details',
+        withSyncKey(detail.toMap()),
+      );
       captureSync(
         tableName: 'quote_order_details',
         entityMap: detail.toMap(),
@@ -369,17 +382,27 @@ class QuotationOrderRepository extends BaseRepository {
 
   Future<int> deleteQuotationOrderDetail(int id, int companyId) async {
     final db = await _db;
+    // Fetch full row data BEFORE deleting
+    final detailRows = await db.query(
+      'quote_order_details',
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
+    );
     final result = await db.delete(
       'quote_order_details',
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
-    captureSync(
-      tableName: 'quote_order_details',
-      entityMap: {'id': id},
-      entityId: id.toString(),
-      operation: 'DELETE',
-    );
+    // Capture sync with full row data
+    for (final row in detailRows) {
+      captureSync(
+        tableName: 'quote_order_details',
+        entityMap: row,
+        entityId: row['id'].toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
+      );
+    }
     return result;
   }
 

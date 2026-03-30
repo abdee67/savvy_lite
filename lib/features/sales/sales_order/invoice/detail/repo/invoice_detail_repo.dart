@@ -211,7 +211,11 @@ class InvoiceHistoryDetailRepository extends BaseRepository {
   // Delete invoice history detail - equivalent to Java's getFacade().remove()
   Future<int> deleteInvoiceHistoryDetail(int id) async {
     final db = await databaseService.database;
-
+    final detailRows = await db.query(
+      'invoice_history_details',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
     try {
       final detailToDelete = await getInvoiceHistoryDetailById(id);
       final count = await db.delete(
@@ -225,13 +229,16 @@ class InvoiceHistoryDetailRepository extends BaseRepository {
       }
 
       if (detailToDelete != null) {
+        // Capture sync with full row data
+        for (final row in detailRows) {
         captureSync(
           tableName: tableName,
-          entityMap: {'id': id, 'company': detailToDelete.company},
-          entityId: id.toString(),
+          entityMap: row,
+          entityId: row['id'].toString(),
           operation: 'DELETE',
           company: detailToDelete.company?.toString(),
         );
+        }
       }
 
       return count;
@@ -249,19 +256,27 @@ class InvoiceHistoryDetailRepository extends BaseRepository {
 
       final placeholders = List.filled(ids.length, '?').join(',');
 
+      // Fetch full row data BEFORE deleting
+      final detailRows = await db.query(
+        'invoice_history_details',
+        where: 'id IN ($placeholders)',
+        whereArgs: ids,
+      );
+
       final count = await db.rawDelete('''
         DELETE FROM $tableName 
         WHERE id IN ($placeholders)
       ''', ids);
-
+      // Capture sync with full row data
+      for (final row in detailRows) {
       captureSync(
         tableName: tableName,
-        entityMap: {'id': ids, 'company': companyId},
-        entityId: ids.toString(),
+        entityMap: row,
+        entityId: row['id'].toString(),
         operation: 'DELETE',
         company: companyId.toString(),
       );
-
+      }
       return count;
     } catch (e) {
       throw Exception('Failed to delete multiple invoice history details: $e');
@@ -276,20 +291,26 @@ class InvoiceHistoryDetailRepository extends BaseRepository {
     final db = await databaseService.database;
 
     try {
+      // Fetch full row data BEFORE deleting
+      final detailRows = await db.query(
+        'invoice_history_details',
+        where: 'invoice_history = ? AND company = ?',
+        whereArgs: [invoiceHistoryId, companyId],
+      );
       final count = await db.delete(
         tableName,
         where: 'invoice_history = ? AND company = ?',
         whereArgs: [invoiceHistoryId, companyId],
       );
-
+      for (final row in detailRows) {
       captureSync(
         tableName: tableName,
-        entityMap: {'invoice_history': invoiceHistoryId, 'company': companyId},
-        entityId: invoiceHistoryId.toString(),
+        entityMap: row,
+        entityId: row['id'].toString(),
         operation: 'DELETE',
         company: companyId.toString(),
       );
-
+      }
       return count;
     } catch (e) {
       throw Exception(

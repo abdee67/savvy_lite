@@ -106,18 +106,25 @@ class NextNumberRepository extends BaseRepository {
     Transaction? txn,
   }) async {
     final db = txn ?? await databaseService.database;
+    final existingNextNumber = await db.query(
+      'next_number',
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
+    );
     final result = await db.delete(
       'next_number',
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+    for(final row in existingNextNumber){
     captureSync(
       tableName: 'next_number',
-      entityMap: {'id': id, 'company': companyId},
-      entityId: id.toString(),
+      entityMap: row,
+      entityId: row['id'].toString(),
       operation: 'DELETE',
       company: companyId.toString(),
     );
+    }
     return result;
   }
 

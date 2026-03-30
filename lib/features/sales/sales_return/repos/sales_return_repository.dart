@@ -46,13 +46,21 @@ class SalesReturnRepository  extends BaseRepository{
 
   Future<void> deleteSalesReturnHeader(int id) async {
     final db = await databaseService.database;
+    // Fetch full row data BEFORE deleting
+    final headerRows = await db.query(
+      'sales_return_header',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
     await db.delete('sales_return_header', where: 'id = ?', whereArgs: [id]);
+    for (final row in headerRows) {
     captureSync(
       tableName: 'sales_return_header',
-      entityMap: {'id': id},
-      entityId: id.toString(),
+      entityMap: row,
+      entityId: row['id'].toString(),
       operation: 'DELETE',
     );
+  }
   }
 
   Future<void> voidSalesReturn(int id, String voidIndicator) async {

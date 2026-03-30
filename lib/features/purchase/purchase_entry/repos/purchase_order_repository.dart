@@ -66,7 +66,19 @@ class PurchaseOrderRepository extends BaseRepository {
   Future<void> deletePurchaseOrderHeader(int id, int companyId) async {
     final db = await _db;
     try {
-      // First delete all details
+      // Fetch full row data BEFORE deleting
+      final detailRows = await db.query(
+        'purchase_order_detail',
+        where: 'po_header = ?',
+        whereArgs: [id],
+      );
+      final headerRows = await db.query(
+        'purchase_order_header',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
+      // Delete all details first
       await db.delete(
         'purchase_order_detail',
         where: 'po_header = ?',
@@ -79,13 +91,26 @@ class PurchaseOrderRepository extends BaseRepository {
         where: 'id = ?',
         whereArgs: [id],
       );
-      captureSync(
-        tableName: 'purchase_order_header',
-        entityMap: {'id': id},
-        entityId: id.toString(),
-        operation: 'DELETE',
-        company: companyId.toString(),
-      );
+
+      // Capture sync with full row data
+      for (final row in detailRows) {
+        captureSync(
+          tableName: 'purchase_order_detail',
+          entityMap: row,
+          entityId: row['id'].toString(),
+          operation: 'DELETE',
+          company: companyId.toString(),
+        );
+      }
+      for (final row in headerRows) {
+        captureSync(
+          tableName: 'purchase_order_header',
+          entityMap: row,
+          entityId: row['id'].toString(),
+          operation: 'DELETE',
+          company: companyId.toString(),
+        );
+      }
     } catch (e) {
       throw Exception('Failed to delete purchase order header: $e');
     }
@@ -492,18 +517,28 @@ class PurchaseOrderRepository extends BaseRepository {
   Future<void> deletePurchaseOrderDetail(int id, int companyId) async {
     final db = await _db;
     try {
+      // Fetch full row data BEFORE deleting
+      final detailRows = await db.query(
+        'purchase_order_detail',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
       await db.delete(
         'purchase_order_detail',
         where: 'id = ? AND company = ?',
         whereArgs: [id],
       );
-      captureSync(
-        tableName: 'purchase_order_detail',
-        entityMap: {'id': id},
-        entityId: id.toString(),
-        operation: 'DELETE',
-        company: companyId.toString(),
-      );
+
+      for (final row in detailRows) {
+        captureSync(
+          tableName: 'purchase_order_detail',
+          entityMap: row,
+          entityId: row['id'].toString(),
+          operation: 'DELETE',
+          company: companyId.toString(),
+        );
+      }
     } catch (e) {
       throw Exception('Failed to delete purchase order detail: $e');
     }
@@ -515,11 +550,29 @@ class PurchaseOrderRepository extends BaseRepository {
     final db = await _db;
     try {
       final placeholders = List.generate(ids.length, (_) => '?').join(',');
+
+      // Fetch full row data BEFORE deleting
+      final detailRows = await db.query(
+        'purchase_order_detail',
+        where: 'id IN ($placeholders)',
+        whereArgs: ids,
+      );
+
       await db.delete(
         'purchase_order_detail',
         where: 'id IN ($placeholders)',
         whereArgs: ids,
       );
+
+      for (final row in detailRows) {
+        captureSync(
+          tableName: 'purchase_order_detail',
+          entityMap: row,
+          entityId: row['id'].toString(),
+          operation: 'DELETE',
+          company: row['company']?.toString(),
+        );
+      }
     } catch (e) {
       throw Exception('Failed to delete purchase order detail batch: $e');
     }
@@ -840,18 +893,28 @@ class PurchaseOrderRepository extends BaseRepository {
   Future<void> deletePurchaseOrderReceiver(int id, int companyId) async {
     final db = await _db;
     try {
+      // Fetch full row data BEFORE deleting
+      final receiverRows = await db.query(
+        'purchase_order_receiver',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
       await db.delete(
         'purchase_order_receiver',
         where: 'id = ?',
         whereArgs: [id],
       );
-      captureSync(
-        tableName: 'purchase_order_receiver',
-        entityMap: {'id': id},
-        entityId: id.toString(),
-        operation: 'DELETE',
-        company: companyId.toString(),
-      );
+
+      for (final row in receiverRows) {
+        captureSync(
+          tableName: 'purchase_order_receiver',
+          entityMap: row,
+          entityId: row['id'].toString(),
+          operation: 'DELETE',
+          company: companyId.toString(),
+        );
+      }
     } catch (e) {
       throw Exception('Failed to delete purchase order receiver: $e');
     }
@@ -863,11 +926,29 @@ class PurchaseOrderRepository extends BaseRepository {
     final db = await _db;
     try {
       final placeholders = List.generate(ids.length, (_) => '?').join(',');
+
+      // Fetch full row data BEFORE deleting
+      final receiverRows = await db.query(
+        'purchase_order_receiver',
+        where: 'id IN ($placeholders)',
+        whereArgs: ids,
+      );
+
       await db.delete(
         'purchase_order_receiver',
         where: 'id IN ($placeholders)',
         whereArgs: ids,
       );
+
+      for (final row in receiverRows) {
+        captureSync(
+          tableName: 'purchase_order_receiver',
+          entityMap: row,
+          entityId: row['id'].toString(),
+          operation: 'DELETE',
+          company: row['company']?.toString(),
+        );
+      }
     } catch (e) {
       throw Exception('Failed to delete purchase order receiver batch: $e');
     }
@@ -1524,32 +1605,85 @@ class PurchaseOrderRepository extends BaseRepository {
     final db = await _db;
 
     try {
-      // Delete details first
       final detailPlaceholders = List.generate(
         ids.length,
         (_) => '?',
       ).join(',');
+
+      // Fetch full row data BEFORE deleting
+      final detailRows = await db.query(
+        'purchase_order_detail',
+        where: 'po_header IN ($detailPlaceholders)',
+        whereArgs: ids,
+      );
+      final detailIds = detailRows.map((r) => r['id']).toList();
+      final receiverPlaceholders = detailIds.isNotEmpty
+          ? List.generate(detailIds.length, (_) => '?').join(',')
+          : '';
+      final receiverRows = detailIds.isNotEmpty
+          ? await db.query(
+              'purchase_order_receiver',
+              where: 'po_detail IN ($receiverPlaceholders)',
+              whereArgs: detailIds,
+            )
+          : <Map<String, dynamic>>[];
+      final headerRows = await db.query(
+        'purchase_order_header',
+        where: 'id IN ($detailPlaceholders)',
+        whereArgs: ids,
+      );
+
+      // Delete receivers first
+      if (detailIds.isNotEmpty) {
+        await db.delete(
+          'purchase_order_receiver',
+          where: 'po_detail IN ($receiverPlaceholders)',
+          whereArgs: detailIds,
+        );
+      }
+
+      // Delete details
       await db.delete(
         'purchase_order_detail',
         where: 'po_header IN ($detailPlaceholders)',
         whereArgs: ids,
       );
 
-      // Delete receivers for those details
-      await db.rawDelete('''
-        DELETE FROM purchase_order_receiver 
-        WHERE po_detail IN (
-          SELECT id FROM purchase_order_detail 
-          WHERE po_header IN ($detailPlaceholders)
-        )
-        ''', ids);
-
-      // Finally delete headers
+      // Delete headers
       await db.delete(
         'purchase_order_header',
         where: 'id IN ($detailPlaceholders)',
         whereArgs: ids,
       );
+
+      // Capture sync with full row data
+      for (final row in receiverRows) {
+        captureSync(
+          tableName: 'purchase_order_receiver',
+          entityMap: row,
+          entityId: row['id'].toString(),
+          operation: 'DELETE',
+          company: row['company']?.toString(),
+        );
+      }
+      for (final row in detailRows) {
+        captureSync(
+          tableName: 'purchase_order_detail',
+          entityMap: row,
+          entityId: row['id'].toString(),
+          operation: 'DELETE',
+          company: row['company']?.toString(),
+        );
+      }
+      for (final row in headerRows) {
+        captureSync(
+          tableName: 'purchase_order_header',
+          entityMap: row,
+          entityId: row['id'].toString(),
+          operation: 'DELETE',
+          company: row['company']?.toString(),
+        );
+      }
     } catch (e) {
       throw Exception('Failed to delete purchase order headers batch: $e');
     }

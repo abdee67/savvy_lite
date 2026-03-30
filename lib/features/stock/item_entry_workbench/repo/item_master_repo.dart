@@ -48,13 +48,21 @@ class ItemMasterRepository extends BaseRepository {
   // Delete item master
   Future<int> delete(int id) async {
     final db = await databaseService.database;
+    // Fetch full row data BEFORE deleting
+    final itemRows = await db.query(
+      'item_master',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
     final result = await db.delete('item_master', where: 'id = ?', whereArgs: [id]);
+    for (final row in itemRows) {
     captureSync(
       tableName: 'item_master',
-      entityMap: {'id': id},
-      entityId: id.toString(),
+      entityMap: row,
+      entityId: row['id'].toString(),
       operation: 'DELETE',
     );
+    }
     return result;
   }
 

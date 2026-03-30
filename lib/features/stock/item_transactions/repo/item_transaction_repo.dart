@@ -2111,18 +2111,26 @@ class ItemTransactionRepository extends BaseRepository {
 
   Future<void> deleteTransaction(int id) async {
     final db = await databaseService.database;
+    // Fetch full row data BEFORE deleting
+    final itemRows = await db.query(
+      'item_transactions',
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, authBloc.state.companyId],
+    );
     await db.delete(
       'item_transactions',
       where: 'id = ? AND company = ?',
       whereArgs: [id, authBloc.state.companyId],
     );
+    for (final row in itemRows) {
     captureSync(
       tableName: 'item_transactions',
-      entityMap: {'id': id, 'company': authBloc.state.companyId},
-      entityId: id.toString(),
+      entityMap: row,
+      entityId: row['id'].toString(),
       operation: 'DELETE',
       company: authBloc.state.companyId.toString(),
     );
+  }
   }
 
   Future<void> deleteTransactions(
@@ -2130,6 +2138,12 @@ class ItemTransactionRepository extends BaseRepository {
   ) async {
     final db = await databaseService.database;
     final batch = db.batch();
+    // Fetch full row data BEFORE deleting
+    final itemRows = await db.query(
+      'item_transactions',
+      where: 'id IN (${transactions.map((t) => t.id).join(',')}) AND company = ?',
+      whereArgs: [authBloc.state.companyId],
+    );
 
     for (final transaction in transactions) {
       if (transaction.id != null) {
@@ -2138,13 +2152,15 @@ class ItemTransactionRepository extends BaseRepository {
           where: 'id = ? AND company = ?',
           whereArgs: [transaction.id, authBloc.state.companyId],
         );
+        for (final row in itemRows) {
         captureSync(
           tableName: 'item_transactions',
-          entityMap: {'id': transaction.id, 'company': authBloc.state.companyId},
-          entityId: transaction.id.toString(),
+          entityMap: row,
+          entityId: row['id'].toString(),
           operation: 'DELETE',
           company: authBloc.state.companyId.toString(),
         );
+      }
       }
     }
 

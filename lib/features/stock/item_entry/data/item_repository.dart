@@ -54,18 +54,26 @@ class StockItemsEntryRepository extends BaseRepository {
   // Delete item
   Future<int> delete(int id, int companyId, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
+    // Fetch full row data BEFORE deleting
+    final itemRows = await db.query(
+      'items_table',
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
+    );
     final result = await db.delete(
       'items_table',
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+    for (final row in itemRows) {
     captureSync(
       tableName: 'items_table',
-      entityMap: {'id': id, 'company': companyId},
-      entityId: id.toString(),
+      entityMap: row,
+      entityId: row['id'].toString(),
       operation: 'DELETE',
       company: companyId.toString(),
     );
+    }
     return result;
   }
 

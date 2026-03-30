@@ -9,8 +9,13 @@ import 'package:savvy_stock/core/services/sync/sync_service.dart';
 import 'package:savvy_stock/features/FSNMR/blocs/FSNMR_bloc.dart';
 import 'package:savvy_stock/features/FSNMR/repo/FSNMR_repository.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
+import 'package:savvy_stock/features/auth/repo/auth_repo.dart';
+import 'package:savvy_stock/features/admin/users/repo/user_repo.dart';
+import 'package:savvy_stock/features/admin/privilege/repo/privilege_repo.dart';
+import 'package:savvy_stock/features/admin/role/repo/role_repo.dart';
 import 'package:savvy_stock/features/auth/blocs/password_reset/password_reset_bloc.dart';
 import 'package:savvy_stock/features/company/blocs/company_bloc.dart';
+import 'package:savvy_stock/features/company/repo/company_repo.dart';
 import 'package:savvy_stock/features/licensing/bloc/license_bloc.dart';
 import 'package:savvy_stock/features/licensing/services/license_service.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
@@ -50,6 +55,7 @@ import 'package:savvy_stock/features/admin/role/blocs/role_bloc.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
+import 'package:savvy_stock/features/branch_list/repo/branch_repo.dart';
 import 'package:savvy_stock/features/next_number/bloc/next_number_bloc.dart';
 import 'package:savvy_stock/features/next_number/repo/next_number_repo.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
@@ -227,6 +233,24 @@ void initDependencies() {
   getIt.registerLazySingleton<EmployeeRepository>(
     () => EmployeeRepository(databaseService: getIt()),
   );
+  getIt.registerLazySingleton<BranchRepository>(
+    () => BranchRepository(databaseService: getIt()),
+  );
+  getIt.registerLazySingleton<CompanyRepository>(
+    () => CompanyRepository(databaseService: getIt()),
+  );
+  getIt.registerLazySingleton<AuthRepository>(
+    () => AuthRepository(databaseService: getIt()),
+  );
+  getIt.registerLazySingleton<UserRepository>(
+    () => UserRepository(databaseService: getIt()),
+  );
+  getIt.registerLazySingleton<PrivilegeRepository>(
+    () => PrivilegeRepository(databaseService: getIt()),
+  );
+  getIt.registerLazySingleton<RoleRepository>(
+    () => RoleRepository(databaseService: getIt()),
+  );
   getIt.registerLazySingleton<LotExpirationColorsRepository>(
     () => LotExpirationColorsRepository(databaseService: getIt()),
   );
@@ -344,14 +368,14 @@ void initDependencies() {
 
   getIt.registerLazySingleton<AuthBloc>(
     () => AuthBloc(
-      databaseService: getIt(),
+      repository: getIt(),
       secureStorage: getIt(),
       licenseService: getIt(),
     ),
   );
   getIt.registerLazySingleton<UserBloc>(
     () => UserBloc(
-      databaseService: getIt(),
+      repository: getIt(),
       authBloc: getIt(),
       licenseService: getIt(),
     ),
@@ -360,10 +384,10 @@ void initDependencies() {
     () => EmployeeBloc(repository: getIt(), authBloc: getIt()),
   );
   getIt.registerLazySingleton<PrivilegeBloc>(
-    () => PrivilegeBloc(databaseService: getIt(), authBloc: getIt()),
+    () => PrivilegeBloc(repository: getIt(), authBloc: getIt()),
   );
   getIt.registerLazySingleton<RoleBloc>(
-    () => RoleBloc(databaseService: getIt(), authBloc: getIt()),
+    () => RoleBloc(repository: getIt(), authBloc: getIt()),
   );
 
   // System constants should be shared across the app. Register as a singleton so
@@ -378,7 +402,7 @@ void initDependencies() {
 
   getIt.registerFactory<BranchBloc>(
     () => BranchBloc(
-      databaseService: getIt(),
+      repository: getIt(),
       authBloc: getIt(),
       licenseService: getIt(),
     ),
@@ -595,7 +619,7 @@ void initDependencies() {
     () => CashFlowBloc(authBloc: getIt(), cashFlowRepository: getIt()),
   );
   getIt.registerFactory<CompanyBloc>(
-    () => CompanyBloc(authBloc: getIt(), databaseService: getIt()),
+    () => CompanyBloc(authBloc: getIt(), repository: getIt()),
   );
 
   // FSNMR

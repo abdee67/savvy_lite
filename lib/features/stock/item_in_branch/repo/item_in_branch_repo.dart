@@ -71,18 +71,26 @@ class StockItemInBranchRepository extends BaseRepository {
   // Delete item from branch
   Future<int> delete(int id, int companyId, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
+    // Fetch full row data BEFORE deleting
+    final itemRows = await db.query(
+      'items_in_branch',
+      where: 'id = ? AND company = ? AND branch = ?',
+      whereArgs: [id, companyId],
+    );
     final result = await db.delete(
       'items_in_branch',
       where: 'id = ? AND company = ? AND branch = ?',
       whereArgs: [id, companyId],
     );
+    for (final row in itemRows) {
     captureSync(
       tableName: 'items_in_branch',
-      entityMap: {'id': id, 'company': companyId},
-      entityId: id.toString(),
+      entityMap: row,
+      entityId: row['id'].toString(),
       operation: 'DELETE',
       company: companyId.toString(),
     );
+    }
     return result;
   }
 
@@ -95,12 +103,25 @@ class StockItemInBranchRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final placeholders = List.filled(ids.length, '?').join(',');
     final whereArgs = [...ids, companyId];
-
+    final itemRows = await db.query(
+      'items_in_branch',
+      where: 'id IN ($placeholders) AND company = ?',
+      whereArgs: whereArgs,
+    );
     await db.delete(
       'items_in_branch',
       where: 'id IN ($placeholders) AND company = ?',
       whereArgs: whereArgs,
     );
+    for (final row in itemRows) {
+    captureSync(
+      tableName: 'items_in_branch',
+      entityMap: row,
+      entityId: row['id'].toString(),
+      operation: 'DELETE',
+      company: companyId.toString(),
+    );
+    }
   }
 
   // Find item in branch by ID

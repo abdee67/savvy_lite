@@ -63,18 +63,30 @@ class EmployeeRepository extends BaseRepository {
   // Delete single employee
   Future<int> deleteEmployee(int employeeId, int companyId) async {
     final db = await databaseService.database;
+
+    // Fetch full row data BEFORE deleting
+    final employeeRows = await db.query(
+      'employees',
+      where: 'id = ? AND company = ?',
+      whereArgs: [employeeId, companyId],
+    );
+
     final result = await db.delete(
       'employees',
       where: 'id = ? AND company = ?',
       whereArgs: [employeeId, companyId],
     );
-    captureSync(
-      tableName: 'employees',
-      entityMap: {'id': employeeId, 'company': companyId},
-      entityId: employeeId.toString(),
-      operation: 'DELETE',
-      company: companyId.toString(),
-    );
+
+    // Capture sync with full row data
+    for (final row in employeeRows) {
+      captureSync(
+        tableName: 'employees',
+        entityMap: row,
+        entityId: row['id'].toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
+      );
+    }
     return result;
   }
 
@@ -83,12 +95,30 @@ class EmployeeRepository extends BaseRepository {
     final db = await databaseService.database;
     final placeholders = List.filled(employeeIds.length, '?').join(',');
     final whereArgs = [...employeeIds, companyId];
-    
+
+    // Fetch full row data BEFORE deleting
+    final employeeRows = await db.query(
+      'employees',
+      where: 'id IN ($placeholders) AND company = ?',
+      whereArgs: whereArgs,
+    );
+
     await db.delete(
       'employees',
       where: 'id IN ($placeholders) AND company = ?',
       whereArgs: whereArgs,
     );
+
+    // Capture sync with full row data
+    for (final row in employeeRows) {
+      captureSync(
+        tableName: 'employees',
+        entityMap: row,
+        entityId: row['id'].toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
+      );
+    }
   }
 
   // Check if employee has user account

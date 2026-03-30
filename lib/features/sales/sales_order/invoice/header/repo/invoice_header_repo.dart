@@ -170,6 +170,12 @@ class InvoiceHistoryHeaderRepository  extends BaseRepository{
     final db = await databaseService.database;
 
     try {
+      // Fetch full row data BEFORE deleting
+      final headerRows = await db.query(
+        'invoice_history_headers',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
       final count = await db.delete(
         tableName,
         where: 'id = ?',
@@ -179,14 +185,14 @@ class InvoiceHistoryHeaderRepository  extends BaseRepository{
       if (count == 0) {
         throw Exception('No invoice history header found with ID: $id');
       }
-
+      for (final row in headerRows) {
       captureSync(
         tableName: tableName,
-        entityMap: {'id': id},
-        entityId: id.toString(),
+        entityMap: row,
+        entityId: row['id'].toString(),
         operation: 'DELETE',
       );
-
+      }
       return count;
     } catch (e) {
       throw Exception('Failed to delete invoice history header: $e');
@@ -198,21 +204,27 @@ class InvoiceHistoryHeaderRepository  extends BaseRepository{
     final db = await databaseService.database;
 
     try {
+      // Fetch full row data BEFORE deleting
+      final headerRows = await db.query(
+        'invoice_history_headers',
+        where: 'id IN (${List.filled(ids.length, '?').join(',')})',
+        whereArgs: ids,
+      );
       final placeholders = List.filled(ids.length, '?').join(',');
 
       final count = await db.rawDelete('''
         DELETE FROM $tableName 
         WHERE id IN ($placeholders)
       ''', ids);
-
+      for (final row in headerRows) {
       captureSync(
         tableName: tableName,
-        entityMap: {'id': ids},
-        entityId: ids.toString(),
+        entityMap: row,
+        entityId: row['id'].toString(),
         operation: 'DELETE',
         company: companyId.toString(),
       );
-
+      }
       return count;
     } catch (e) {
       throw Exception('Failed to delete multiple invoice history headers: $e');

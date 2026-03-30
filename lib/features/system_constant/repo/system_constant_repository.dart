@@ -211,17 +211,25 @@ class SystemConstantRepository extends BaseRepository {
   Future<int> _deleteLocalSystemConstant(int id) async {
     final db = await databaseService.database;
     try {
+      // Fetch full row data BEFORE deleting
+      final constantRows = await db.query(
+        'system_constant',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
       final count = await db.delete(
         'system_constant',
         where: 'id = ?',
         whereArgs: [id],
       );
+      for (final row in constantRows) {
       captureSync(
         tableName: 'system_constant',
-        entityMap: {'id': id},
-        entityId: id.toString(),
+        entityMap: row,
+        entityId: row['id'].toString(),
         operation: 'DELETE',
       );
+      }
       return count;
     } catch (e) {
       developer.log('Error deleting local system constant: $e');

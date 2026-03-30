@@ -60,13 +60,20 @@ class OtherExpenseRepository extends BaseRepository {
   /// Delete an expense by ID
   Future<int> delete(int id, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
+    final existingExpense = await db.query(
+      _tableName,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
     final result = await db.delete(_tableName, where: 'id = ?', whereArgs: [id]);
+    for(final row in existingExpense){
     captureSync(
       tableName: _tableName,
-      entityMap: {'id': id},
-      entityId: id.toString(),
+      entityMap: row,
+      entityId: row['id'].toString(),
       operation: 'DELETE',
     );
+    }
     return result;
   }
 

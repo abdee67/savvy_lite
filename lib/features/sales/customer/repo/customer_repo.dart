@@ -83,18 +83,27 @@ class CustomerRepository extends BaseRepository {
   // Delete customer
   Future<int> deleteCustomer(int id, int companyId) async {
     final db = await databaseService.database;
+    // Fetch full row data BEFORE deleting
+    final customerRows = await db.query(
+      'customer_table',
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
+    );
     final result = await db.delete(
       'customer_table',
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
-    captureSync(
-      tableName: 'customer_table',
-      entityMap: {'id': id, 'company': companyId},
-      entityId: id.toString(),
-      operation: 'DELETE',
+    // Capture sync with full row data
+    for (final row in customerRows) {
+      captureSync(
+        tableName: 'customer_table',
+        entityMap: row,
+        entityId: row['id'].toString(),
+        operation: 'DELETE',
       company: companyId.toString(),
     );
+    }
     return result;
   }
 

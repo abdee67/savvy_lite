@@ -376,18 +376,26 @@ class LotMasterRepository extends BaseRepository {
   // Delete lot master
   Future<int> deleteLotMaster(int id, int companyId, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
+    // Fetch full row data BEFORE deleting
+    final lotRows = await db.query(
+      'lot_master',
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
+    );
     final result = await db.delete(
       'lot_master',
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+    for (final row in lotRows) {
     captureSync(
       tableName: 'lot_master',
-      entityMap: {'id': id, 'company': companyId},
-      entityId: id.toString(),
+      entityMap: row,
+      entityId: row['id'].toString(),
       operation: 'DELETE',
       company: companyId.toString(),
     );
+    }
     return result;
   }
 
@@ -399,6 +407,12 @@ class LotMasterRepository extends BaseRepository {
   }) async {
     final db = txn ?? await databaseService.database;
     final batch = db.batch();
+    // Fetch full row data BEFORE deleting
+    final lotRows = await db.query(
+      'lot_master',
+      where: 'id IN (${ids.map((id) => id).join(',')}) AND company = ?',
+      whereArgs: [companyId],
+    );
 
     for (final id in ids) {
       batch.delete(
@@ -406,13 +420,15 @@ class LotMasterRepository extends BaseRepository {
         where: 'id = ? AND company = ?',
         whereArgs: [id, companyId],
       );
+      for (final row in lotRows) {
       captureSync(
         tableName: 'lot_master',
-        entityMap: {'id': id, 'company': companyId},
-        entityId: id.toString(),
+        entityMap: row,
+        entityId: row['id'].toString(),
         operation: 'DELETE',
         company: companyId.toString(),
       );
+    }
     }
 
     await batch.commit();

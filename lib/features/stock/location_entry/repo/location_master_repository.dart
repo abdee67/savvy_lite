@@ -163,22 +163,35 @@ class LocationMasterRepository extends BaseRepository {
     Transaction? txn,
   }) async {
     final db = txn ?? await databaseService.database;
-
+    // Fetch full row data BEFORE deleting
+    final itemRows = await db.query(
+      'item_location',
+      where: 'location = ? AND company = ?',
+      whereArgs: [locationId, companyId],
+    );
     // First delete related item locations
     await db.delete(
       'item_location',
       where: 'location = ? AND company = ?',
       whereArgs: [locationId, companyId],
     );
+    for (final row in itemRows) {
     captureSync(
       tableName: 'item_location',
-      entityMap: {'location': locationId, 'company': companyId},
-      entityId: locationId.toString(),
+      entityMap: row,
+      entityId: row['id'].toString(),
       operation: 'DELETE',
       company: companyId.toString(),
     );
+    }
 
     // Then delete the location
+    // Fetch full row data BEFORE deleting
+    final locationRows = await db.query(
+      'location_master',
+      where: 'id = ? AND company = ?',
+      whereArgs: [locationId, companyId],
+    );
     final rowsAffected = await db.delete(
       'location_master',
       where: 'id = ? AND company = ?',
@@ -186,13 +199,15 @@ class LocationMasterRepository extends BaseRepository {
     );
     
     if (rowsAffected > 0) {
+      for (final row in locationRows) {
       captureSync(
         tableName: 'location_master',
-        entityMap: {'id': locationId},
-        entityId: locationId.toString(),
+        entityMap: row,
+        entityId: row['id'].toString(),
         operation: 'DELETE',
         company: companyId.toString(),
       );
+      }
     }
 
     return rowsAffected;
@@ -206,6 +221,17 @@ class LocationMasterRepository extends BaseRepository {
   }) async {
     final db = txn ?? await databaseService.database;
     final batch = db.batch();
+    // Fetch full row data BEFORE deleting
+    final itemRows = await db.query(
+      'item_location',
+      where: 'location IN (${locationIds.join(',')}) AND company = ?',
+      whereArgs: [companyId],
+    );
+    final locationRows = await db.query(
+      'location_master',
+      where: 'id IN (${locationIds.join(',')}) AND company = ?',
+      whereArgs: [companyId],
+    );
 
     for (final locationId in locationIds) {
       // Delete related item locations
@@ -214,10 +240,11 @@ class LocationMasterRepository extends BaseRepository {
         where: 'location = ? AND company = ?',
         whereArgs: [locationId, companyId],
       );
+      for (final row in itemRows) {
       captureSync(
         tableName: 'item_location',
-        entityMap: {'location': locationId, 'company': companyId},
-        entityId: locationId.toString(),
+        entityMap: row,
+        entityId: row['id'].toString(),
         operation: 'DELETE',
         company: companyId.toString(),
       );
@@ -228,13 +255,16 @@ class LocationMasterRepository extends BaseRepository {
         where: 'id = ? AND company = ?',
         whereArgs: [locationId, companyId],
       );
+      }
+      for (final row in locationRows) {
       captureSync(
         tableName: 'location_master',
-        entityMap: {'id': locationId},
-        entityId: locationId.toString(),
+        entityMap: row,
+        entityId: row['id'].toString(),
         operation: 'DELETE',
         company: companyId.toString(),
       );
+      }
     }
 
     final results = await batch.commit();
@@ -355,20 +385,27 @@ class LocationMasterRepository extends BaseRepository {
     Transaction? txn,
   }) async {
     final db = txn ?? await databaseService.database;
-
+    // Fetch full row data BEFORE deleting
+    final itemRows = await db.query(
+      'item_location',
+      where: 'location = ? AND company = ?',
+      whereArgs: [locationId, companyId],
+    );
     // Remove all existing assignments for this location
     await db.delete(
       'item_location',
       where: 'location = ? AND company = ?',
       whereArgs: [locationId, companyId],
     );
+    for (final row in itemRows) {
     captureSync(
       tableName: 'item_location',
-      entityMap: {'location': locationId, 'company': companyId},
-      entityId: locationId.toString(),
+      entityMap: row,
+      entityId: row['id'].toString(),
       operation: 'DELETE',
       company: companyId.toString(),
     );
+    }
 
     // Add new assignments
     final batch = db.batch();

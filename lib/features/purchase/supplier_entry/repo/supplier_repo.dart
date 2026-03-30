@@ -109,18 +109,25 @@ class SupplierRepositoryImpl extends BaseRepository implements SupplierRepositor
   @override
   Future<int> deleteSupplier(int id, int companyId) async {
     final db = await databaseService.database;
+    final existingSupplier = await db.query(
+      'supplier_table',
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
+    );
     final result = await db.delete(
       'supplier_table',
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
+    for(final row in existingSupplier){
     captureSync(
       tableName: 'supplier_table',
-      entityMap: {'id': id, 'company': companyId},
-      entityId: id.toString(),
+      entityMap: row,
+      entityId: row['id'].toString(),
       operation: 'DELETE',
       company: companyId.toString(),
     );
+    }
     return result;
   }
 
