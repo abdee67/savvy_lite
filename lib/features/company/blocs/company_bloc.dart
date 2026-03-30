@@ -3,18 +3,18 @@
 import 'dart:async';
 
 import 'package:bloc/bloc.dart';
-import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/company/blocs/company_event.dart';
 import 'package:savvy_stock/features/company/blocs/company_state.dart';
 import 'package:savvy_stock/features/company/models/company_model.dart';
+import 'package:savvy_stock/features/company/repo/company_repo.dart';
 
 class CompanyBloc extends Bloc<CompanyEvent, CompanyState> {
-  final LocalDatabaseService databaseService;
+  final CompanyRepository repository;
   final AuthBloc authBloc;
   StreamSubscription? _authSubscription;
 
-  CompanyBloc({required this.databaseService, required this.authBloc})
+  CompanyBloc({required this.repository, required this.authBloc})
     : super(const CompanyState()) {
     // Listen to auth state changes
     _authSubscription = authBloc.stream.listen((authState) {
@@ -50,14 +50,7 @@ class CompanyBloc extends Bloc<CompanyEvent, CompanyState> {
   ) async {
     emit(CompanyState(status: CompanyStatus.loading));
     try {
-      final db = await databaseService.database;
-      final companys = await db.query(
-        'company_table',
-        where: 'id = ?',
-        whereArgs: [event.companyId],
-      );
-
-      final companyList = companys.map((p) => Company.fromMap(p)).toList();
+      final companyList = await repository.loadCompanies(event.companyId);
 
       emit(
         CompanyState(
@@ -91,13 +84,7 @@ class CompanyBloc extends Bloc<CompanyEvent, CompanyState> {
       ),
     );
     try {
-      final db = await databaseService.database;
-      final companyMap = event.company.toMap();
-
-      //remove id for new company insertion
-      companyMap.remove('id');
-
-      await db.insert('company_table', (companyMap));
+      await repository.insertCompany(event.company);
       add(LoadCompanys(authBloc.state.companyId!));
       emit(
         state.copyWith(
@@ -126,7 +113,6 @@ class CompanyBloc extends Bloc<CompanyEvent, CompanyState> {
       ),
     );
     try {
-      final db = await databaseService.database;
       final companyId = authBloc.state.companyId;
 
       // FIX: Add null checks
@@ -151,14 +137,7 @@ class CompanyBloc extends Bloc<CompanyEvent, CompanyState> {
         return;
       }
 
-      final companyMap = event.company.toMap();
-
-      await db.update(
-        'company_table',
-        companyMap,
-        where: 'id = ?',
-        whereArgs: [event.company.id],
-      );
+      await repository.updateCompany(event.company);
 
       add(LoadCompanys(companyId));
 
@@ -184,7 +163,6 @@ class CompanyBloc extends Bloc<CompanyEvent, CompanyState> {
   ) async {
     emit(state.copyWith(status: CompanyStatus.deleting, message: 'Deleting..'));
     try {
-      final db = await databaseService.database;
       final companyId = authBloc.state.companyId;
 
       // Authorization check: Ensure user can only delete their own company
@@ -208,11 +186,7 @@ class CompanyBloc extends Bloc<CompanyEvent, CompanyState> {
         return;
       }
 
-      await db.delete(
-        'company_table',
-        where: 'id = ?',
-        whereArgs: [event.companyId],
-      );
+      await repository.deleteCompany(event.companyId);
       final updateCompanys = List<Company>.from(state.companys)
         ..removeWhere((p) => p.id == event.companyId);
       final updateFilteredCompanys = List<Company>.from(state.filteredCompanys)
@@ -307,7 +281,6 @@ class CompanyBloc extends Bloc<CompanyEvent, CompanyState> {
     Emitter<CompanyState> emit,
   ) async {
     try {
-      final db = await databaseService.database;
       final companyId = authBloc.state.companyId;
 
       // Authorization check: Ensure user can only delete their own company
@@ -334,16 +307,7 @@ class CompanyBloc extends Bloc<CompanyEvent, CompanyState> {
         }
       }
 
-      final placeholders = List.filled(
-        event.selectedCompanys.length,
-        '?',
-      ).join(',');
-      final whereArgs = [...event.selectedCompanys];
-      await db.delete(
-        'company_table',
-        where: 'id IN ($placeholders)',
-        whereArgs: whereArgs,
-      );
+      await repository.deleteMultipleCompanies(event.selectedCompanys);
       final updatedCompanys = state.companys
           .where((e) => !event.selectedCompanys.contains(e.id))
           .toList();

@@ -3,22 +3,21 @@
 import 'dart:async';
 
 import 'package:bloc/bloc.dart';
-import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_event.dart';
-import 'package:savvy_stock/features/licensing/services/license_service.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_state.dart';
+import 'package:savvy_stock/features/licensing/services/license_service.dart';
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
+import 'package:savvy_stock/features/branch_list/repo/branch_repo.dart';
 
 class BranchBloc extends Bloc<BranchEvent, BranchState> {
-  final LocalDatabaseService databaseService;
+  final BranchRepository repository;
   final AuthBloc authBloc;
   final LicenseService licenseService;
   StreamSubscription? _authSubscription;
 
   BranchBloc({
-    required this.databaseService,
+    required this.repository,
     required this.authBloc,
     required this.licenseService,
   }) : super(const BranchState()) {
@@ -56,14 +55,7 @@ class BranchBloc extends Bloc<BranchEvent, BranchState> {
   ) async {
     emit(BranchState(status: BranchStatus.loading));
     try {
-      final db = await databaseService.database;
-      final branchs = await db.query(
-        'branch_table',
-        where: 'company = ?',
-        whereArgs: [event.companyId],
-      );
-
-      final branchList = branchs.map((p) => Branch.fromMap(p)).toList();
+      final branchList = await repository.loadBranches(event.companyId);
 
       emit(
         BranchState(
@@ -97,8 +89,6 @@ class BranchBloc extends Bloc<BranchEvent, BranchState> {
       ),
     );
     try {
-      final db = await databaseService.database;
-
       // License Logic: Check Branch Limit
       final licenseResult = await licenseService.loadAndValidateLicense();
       if (!licenseResult.isValid) {
@@ -112,11 +102,7 @@ class BranchBloc extends Bloc<BranchEvent, BranchState> {
       }
 
       final branchLimit = licenseResult.payload?.branchLimit ?? 0;
-      final currentBranchCount =
-          Sqflite.firstIntValue(
-            await db.rawQuery('SELECT COUNT(*) FROM branch_table'),
-          ) ??
-          0;
+      final currentBranchCount = await repository.countBranches();
 
       if (currentBranchCount >= branchLimit) {
         emit(
@@ -129,15 +115,7 @@ class BranchBloc extends Bloc<BranchEvent, BranchState> {
         return;
       }
 
-      final branchMap = event.branch.toMap();
-
-      //remove id for new employee insrtion
-      branchMap.remove('id');
-
-      //add creation metadata
-      branchMap['company'] = authBloc.state.companyId;
-
-      await db.insert('branch_table',branchMap);
+      await repository.insertBranch(event.branch, authBloc.state.companyId!);
       add(LoadBranchs(authBloc.state.companyId!));
       emit(
         state.copyWith(
@@ -166,7 +144,6 @@ class BranchBloc extends Bloc<BranchEvent, BranchState> {
       ),
     );
     try {
-      final db = await databaseService.database;
       final companyId = authBloc.state.companyId;
 
       // FIX: Add null checks
@@ -180,17 +157,7 @@ class BranchBloc extends Bloc<BranchEvent, BranchState> {
         return;
       }
 
-      final branchMap = event.branch.toMap();
-
-      // FIX: Ensure company field is included and not null
-      branchMap['company'] = companyId; // Make sure company is set
-
-      await db.update(
-        'branch_table',
-        branchMap,
-        where: 'id = ? AND company = ?',
-        whereArgs: [event.branch.id, companyId],
-      );
+      await repository.updateBranch(event.branch, companyId);
 
       add(LoadBranchs(companyId));
 
@@ -216,11 +183,9 @@ class BranchBloc extends Bloc<BranchEvent, BranchState> {
   ) async {
     emit(state.copyWith(status: BranchStatus.deleting, message: 'Deleting..'));
     try {
-      final db = await databaseService.database;
-      await db.delete(
-        'branch_table',
-        where: 'id = ? AND company = ?',
-        whereArgs: [event.branchId, authBloc.state.companyId],
+      await repository.deleteBranch(
+        event.branchId,
+        authBloc.state.companyId!,
       );
       final updateBranchs = List<Branch>.from(state.branchs)
         ..removeWhere((p) => p.id == event.branchId);
@@ -309,16 +274,9 @@ class BranchBloc extends Bloc<BranchEvent, BranchState> {
     Emitter<BranchState> emit,
   ) async {
     try {
-      final db = await databaseService.database;
-      final placeholders = List.filled(
-        event.selectedBranchs.length,
-        '?',
-      ).join(',');
-      final whereArgs = [...event.selectedBranchs, authBloc.state.companyId];
-      await db.delete(
-        'branch_table',
-        where: 'id IN ($placeholders) AND company = ?',
-        whereArgs: whereArgs,
+      await repository.deleteMultipleBranches(
+        event.selectedBranchs,
+        authBloc.state.companyId!,
       );
       final updatedBranchs = state.branchs
           .where((e) => !event.selectedBranchs.contains(e.id))

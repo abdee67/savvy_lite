@@ -6,7 +6,6 @@ import 'package:bloc/bloc.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
-import 'package:pointycastle/export.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/admin/users/models/user_with_role.dart';
@@ -15,15 +14,18 @@ import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
 import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 import 'package:savvy_stock/features/admin/users/models/user_model.dart';
+import 'package:savvy_stock/features/auth/repo/auth_repo.dart';
 import 'package:savvy_stock/features/company/models/company_model.dart';
 import 'package:savvy_stock/features/licensing/model/license_validation_result_model.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:savvy_stock/features/licensing/services/license_service.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  final LocalDatabaseService databaseService;
+  final AuthRepository repository;
   final FlutterSecureStorage secureStorage;
   final LicenseService licenseService;
+
+  // Keep databaseService accessor for hasAnyCompany check
+  LocalDatabaseService get databaseService => repository.databaseService;
 
   static const _tokenKey = 'jwt_token';
   static const _companyKey = 'company';
@@ -38,7 +40,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<String?> get authToken => secureStorage.read(key: _tokenKey);
 
   AuthBloc({
-    required this.databaseService,
+    required this.repository,
     required this.secureStorage,
     required this.licenseService,
   }) : super(AuthState(status: AuthStatus.initial)) {
@@ -50,21 +52,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<CompanyContextChanged>(_onCompanyContextChanged);
   }
 
-  Future<void> _debugUserTable(Database db) async {
-    try {
-      final allUsers = await db.query('user_table');
-      developer.log('=== USER TABLE DEBUG INFO ===');
-      for (final user in allUsers) {
-        developer.log(
-          'User: ${user['user_name']}, Password: ${user['password']}, Status: ${user['status']}',
-        );
-      }
-      developer.log('=== END DEBUG INFO ===');
-    } catch (e) {
-      developer.log('Debug error: $e');
-    }
-  }
-
   // features/auth/blocs/auth_bloc.dart - Updated LoginRequested handler
   Future<void> _onLoginRequested(
     LoginRequested event,
@@ -73,28 +60,19 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthState(status: AuthStatus.loading, message: 'Logging in...'));
 
     try {
-      final db = await databaseService.database;
-
-      // Use compute to run Argon2 hashing in a separate isolate
-      final hashedPassword = await _hashPasswordInIsolate(event.password);
+      // Use compute to run hashing in a separate isolate
+      final hashedPassword = await repository.hashPassword(event.password);
 
       developer.log('Username entered: ${event.username}');
       developer.log('Hashed password: $hashedPassword');
 
       // Check user credentials with company info
-      final users = await db.rawQuery(
-        '''
-        SELECT u.*, c.company_name, c.logo_company
-        FROM user_table u
-        LEFT JOIN company_table c ON u.company = c.id
-        WHERE u.user_name = ? AND u.password = ? AND u.status = "active"
-      ''',
-        [event.username, hashedPassword],
+      final user = await repository.findUserByCredentials(
+        event.username,
+        hashedPassword,
       );
 
-      developer.log('Found ${users.length} users matching credentials');
-
-      if (users.isEmpty) {
+      if (user == null) {
         developer.log('No users found matching credentials');
         emit(
           AuthState(
@@ -107,12 +85,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         return;
       }
 
-      final userData = users.first;
-      final user = UserModel.fromMap(userData);
-
       // Get user roles with their privileges through proper joins
-      // Get user roles with their privileges through proper joins
-      final userWithRoles = await _getUserWithRolesAndPrivileges(db, user);
+      final userWithRoles =
+          await repository.getUserWithRolesAndPrivileges(user);
 
       // Validate License
       final licenseResult = await licenseService.loadAndValidateLicense();
@@ -187,74 +162,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         ),
       );
     }
-  }
-
-  // Helper function to run Argon2 in isolate
-  Future<String> _hashPasswordInIsolate(String password) async {
-    return await compute(_sha256Hash, password);
-  }
-
-  // Static function that can be called in isolate
-  /*static String _performArgon2Hashing(String password) {
-    final salt = 'somesalt'.toBytesLatin1();
-    final parameters = Argon2Parameters(
-      Argon2Parameters.ARGON2_i,
-      salt,
-      version: Argon2Parameters.ARGON2_VERSION_10,
-      iterations: 2,
-      memoryPowerOf2: 16,
-    );
-
-    final argon2 = Argon2BytesGenerator();
-    argon2.init(parameters);
-    final passwordBytes = parameters.converter.convert(password);
-
-    final result = Uint8List(32);
-    argon2.generateBytes(passwordBytes, result, 0, result.length);
-
-    return result.toHexString();
-  }*/
-  static Future<String> _sha256Hash(String password) async {
-    final bytes = utf8.encode(password);
-    final digest = SHA256Digest();
-    final hash = digest.process(bytes);
-    return hash.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
-  }
-
-  Future<UserWithRole> _getUserWithRolesAndPrivileges(
-    Database db,
-    UserModel user,
-  ) async {
-    // Get user roles and privileges
-    final rolesResult = await db.rawQuery(
-      '''
-        SELECT r.* FROM role_table r
-        INNER JOIN user_role ur ON ur.role_table_id = r.id
-          WHERE ur.user_id = ? AND r.company = ?
-        ''',
-      [user.id, user.company!],
-    );
-
-    final roles = await Future.wait(
-      rolesResult.map((roleData) => Role.withPrivileges(roleData, db)),
-    );
-
-    return UserWithRole(user: user, roles: roles);
-  }
-
-  Future<List<Company>> _getCompaniesForUsers(
-    List<Map<String, dynamic>> users,
-  ) async {
-    final db = await databaseService.database;
-    final companyIds = users.map((u) => u['company'] as int).toList();
-
-    final placeholders = List.generate(companyIds.length, (_) => '?').join(',');
-    final results = await db.rawQuery('''
-    SELECT * FROM company_table 
-    WHERE id IN ($placeholders)
-  ''', companyIds);
-
-    return results.map((c) => Company.fromMap(c)).toList();
   }
 
   Future<void> _onLogoutRequested(

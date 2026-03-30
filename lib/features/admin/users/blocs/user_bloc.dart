@@ -6,24 +6,21 @@ import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
 import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
-import 'package:savvy_stock/core/services/database/database_service.dart';
-import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_event.dart';
 import 'package:savvy_stock/features/admin/users/blocs/user_state.dart';
 import 'package:savvy_stock/features/admin/users/models/user_model.dart';
-import 'package:savvy_stock/features/admin/users/models/user_with_role.dart';
+import 'package:savvy_stock/features/admin/users/repo/user_repo.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/licensing/services/license_service.dart';
-import 'package:sqflite/sqflite.dart';
 
 class UserBloc extends Bloc<UserEvent, UserState> {
-  final LocalDatabaseService databaseService;
+  final UserRepository repository;
   final AuthBloc authBloc;
   final LicenseService licenseService;
   StreamSubscription? _authSubscription;
 
   UserBloc({
-    required this.databaseService,
+    required this.repository,
     required this.authBloc,
     required this.licenseService,
   }) : super(UserState(status: UserStatus.initial)) {
@@ -50,21 +47,22 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     });
   }
 
+  @override
+  Future<void> close() {
+    _authSubscription?.cancel();
+    return super.close();
+  }
+
   Future<void> _onLoadUsers(LoadUsers event, Emitter<UserState> emit) async {
     emit(UserState(status: UserStatus.loading));
     try {
-      final db = await databaseService.database;
-      final users = await db.query('user_table');
-
-      final usersWithRole = await Future.wait(
-        users.map((u) async => await _getUserWithRoles(u, db)),
-      );
+      final usersWithRole = await repository.loadUsersWithRoles();
 
       emit(
         UserState(
           status: UserStatus.success,
           usersWithRole: usersWithRole,
-          filteredUsersWithRole: usersWithRole, // Initially, filtered = all
+          filteredUsersWithRole: usersWithRole,
           searchQuery: '',
           selectedUsers: [],
         ),
@@ -79,43 +77,17 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     }
   }
 
-  Future<UserWithRole> _getUserWithRoles(
-    Map<String, dynamic> userData,
-    Database db,
-  ) async {
-    final user = UserModel.fromMap(userData);
-
-    // Get user roles
-    final roleResults = await db.rawQuery(
-      '''
-      SELECT r.* FROM role_table r
-      INNER JOIN user_role ur ON ur.role_table_id = r.id
-      WHERE ur.user_id = ?
-    ''',
-      [user.id],
-    );
-
-    final roles = roleResults.map((r) => Role.fromMap(r)).toList();
-
-    return UserWithRole(user: user, roles: roles);
-  }
-
   Future<void> _onCreateUser(CreateUser event, Emitter<UserState> emit) async {
     emit(
       state.copyWith(status: UserStatus.creating, message: 'Creating User...'),
     );
     try {
-      final db = await databaseService.database;
       final companyId = authBloc.state.companyId;
       final createdBy = authBloc.state.userId!.id;
 
-      //check if user name is not duplicated
-      final user = await db.query(
-        'user_table',
-        where: 'user_name = ?',
-        whereArgs: [event.user.userName],
-      );
-      if (user.isNotEmpty) {
+      // Check if username is already taken
+      final isTaken = await repository.isUsernameTaken(event.user.userName!);
+      if (isTaken) {
         emit(
           state.copyWith(
             status: UserStatus.failure,
@@ -138,11 +110,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       }
 
       final userLimit = licenseResult.payload?.userLimit ?? 0;
-      final currentUsersCount =
-          Sqflite.firstIntValue(
-            await db.rawQuery('SELECT COUNT(*) FROM user_table'),
-          ) ??
-          0;
+      final currentUsersCount = await repository.getUserCount();
 
       if (currentUsersCount >= userLimit) {
         emit(
@@ -155,33 +123,14 @@ class UserBloc extends Bloc<UserEvent, UserState> {
         return;
       }
 
-      final password = await UserModel.sha256Hash(event.user.password!);
+      await repository.insertUser(
+        event.user,
+        companyId!,
+        createdBy!,
+        roles: event.roles,
+      );
 
-      final userMap = event.user
-          .copyWith(
-            company: companyId,
-            createdBy: createdBy,
-            dateCreated: DateTime.now(),
-            password: password,
-          )
-          .toMap();
-      userMap.remove('id');
-
-      // Create user
-      final userId = await db.insert('user_table', (userMap));
-
-      // Assign roles if any
-      if (event.roles.isNotEmpty) {
-        for (final role in event.roles) {
-          await db.insert('user_role',({
-            'user_id': userId,
-            'role_table_id': role.id,
-            'created_by': createdBy,
-            'date_created': DateTime.now().toIso8601String(),
-          }));
-        }
-      }
-      add(LoadUsers(authBloc.state.companyId!)); // Reload the list
+      add(LoadUsers(companyId));
 
       emit(
         state.copyWith(
@@ -207,25 +156,14 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     Emitter<UserState> emit,
   ) async {
     try {
-      final db = await databaseService.database;
-
-      // Remove existing roles
-      await db.delete(
-        'user_role',
-        where: 'user_id = ?',
-        whereArgs: [event.userId],
+      await repository.assignRolesToUser(
+        event.userId,
+        event.roles,
+        event.createdBy,
       );
 
-      // Add new roles
-      for (final roleId in event.roles) {
-        await db.insert('user_role', ({
-          'user_id': event.userId,
-          'role_table_id': roleId.id,
-          'created_by': event.createdBy,
-          'date_created': DateTime.now().toIso8601String(),
-        }));
-      }
-      add(LoadUsers(event.companyId)); // Reload the list
+      add(LoadUsers(event.companyId));
+
       emit(
         state.copyWith(
           status: UserStatus.success,
@@ -257,35 +195,12 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     emit(UserState(status: UserStatus.updating));
 
     try {
-      final db = await databaseService.database;
-      final companyId = authBloc.state.companyId;
+      final companyId = authBloc.state.companyId!;
       final updatedBy = authBloc.state.userId!.id;
-      // Check if password is being updated (new password provided)
-      String? finalPassword;
-      if (event.newPassword != null && event.newPassword!.isNotEmpty) {
-        // Hash the new password
-        finalPassword = await UserModel.sha256Hash(event.newPassword);
-      }
-      // Prepare updated user data
-      UserModel updatedUser = event.user.copyWith(
-        updatedBy: updatedBy,
-        dateUpdated: DateTime.now(),
-      );
-      if (finalPassword != null) {
-        updatedUser = updatedUser.copyWith(
-          password: finalPassword,
-          passwordLastUpdated: DateTime.now(),
-        );
-      }
 
-      // 2. Verify user exists and belongs to current company
-      final existingUsers = await db.query(
-        'user_table',
-        where: 'id = ? AND company = ?',
-        whereArgs: [updatedUser.id, companyId],
-      );
-
-      if (existingUsers.isEmpty) {
+      // Verify user exists and belongs to current company
+      final existingUser = await repository.findUser(event.user.id!, companyId);
+      if (existingUser == null) {
         emit(
           state.copyWith(
             status: UserStatus.failure,
@@ -294,53 +209,22 @@ class UserBloc extends Bloc<UserEvent, UserState> {
         );
         return;
       }
-      // 3. Update user in database - only update password if it was changed
-      final userMap = updatedUser.toMap();
-      if (finalPassword == null || finalPassword.isEmpty) {
-        // Don't update password if it wasn't changed
-        userMap.remove('password');
-        userMap.remove('password_last_updated');
-      }
 
-      // 3. Update user in database
-      final updateResult = await db.update(
-        'user_table',
-        userMap,
-        where: 'id = ? AND company = ?',
-        whereArgs: [updatedUser.id, companyId],
+      await repository.updateUser(
+        event.user,
+        companyId,
+        updatedBy,
+        newPassword: event.newPassword,
+        roles: event.roles,
       );
 
-      if (updateResult == 0) {
-        throw Exception('Failed to update user - no rows affected');
-      }
-
-      // 4. Update user roles if provided
-      if (event.roles.isNotEmpty) {
-        // First remove existing roles
-        await db.delete(
-          'user_role',
-          where: 'user_id = ?',
-          whereArgs: [updatedUser.id],
-        );
-
-        // Then add new roles
-        for (final role in event.roles) {
-          await db.insert('user_role', ({
-            'user_id': updatedUser.id,
-            'role_table_id': role.id,
-            'created_by': updatedBy,
-            'date_created': DateTime.now().toIso8601String(),
-          }));
-        }
-      }
-      // 5. Reload users to get fresh data
-      add(LoadUsers(companyId!));
+      add(LoadUsers(companyId));
 
       emit(
         state.copyWith(
           status: UserStatus.success,
           message:
-              'User updated successfully${finalPassword != null ? ' with new password' : ''}',
+              'User updated successfully${event.newPassword != null && event.newPassword!.isNotEmpty ? ' with new password' : ''}',
         ),
       );
     } catch (e) {
@@ -394,16 +278,9 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     emit(UserState(status: UserStatus.deleting));
 
     try {
-      final db = await databaseService.database;
-
-      // 4. Verify user exists and belongs to current company
-      final existingUsers = await db.query(
-        'user_table',
-        where: 'id = ? AND company = ?',
-        whereArgs: [event.userId, companyId],
-      );
-
-      if (existingUsers.isEmpty) {
+      // 3. Verify user exists and belongs to current company
+      final existingUser = await repository.findUser(event.userId, companyId);
+      if (existingUser == null) {
         emit(
           state.copyWith(
             status: UserStatus.failure,
@@ -413,11 +290,8 @@ class UserBloc extends Bloc<UserEvent, UserState> {
         return;
       }
 
-      // 5. Store user data for potential undo (optional)
-      final userToDelete = UserModel.fromMap(existingUsers.first);
-
-      // 6. Prevent deleting super admin or essential accounts
-      if (userToDelete.userName == 'admin') {
+      // 4. Prevent deleting super admin or essential accounts
+      if (existingUser.userName == 'admin') {
         emit(
           state.copyWith(
             status: UserStatus.failure,
@@ -427,31 +301,16 @@ class UserBloc extends Bloc<UserEvent, UserState> {
         return;
       }
 
-      // 7. Delete user roles first (foreign key constraint)
-      await db.delete(
-        'user_role',
-        where: 'user_id = ?',
-        whereArgs: [event.userId],
-      );
+      // 5. Delete user (roles are cleaned up inside the repo)
+      await repository.deleteUser(event.userId, companyId);
 
-      // 8. Delete user
-      final userDeleted = await db.delete(
-        'user_table',
-        where: 'id = ? AND company = ?',
-        whereArgs: [event.userId, companyId],
-      );
-
-      if (userDeleted == 0) {
-        throw Exception('Failed to delete user - no rows affected');
-      }
-
-      // 9. Reload users list
+      // 6. Reload users list
       add(LoadUsers(companyId));
 
       emit(
         state.copyWith(
           status: UserStatus.success,
-          message: 'User "${userToDelete.userName}" deleted successfully',
+          message: 'User "${existingUser.userName}" deleted successfully',
         ),
       );
     } catch (e) {
@@ -510,10 +369,8 @@ class UserBloc extends Bloc<UserEvent, UserState> {
 
   void _onSelectAllUsers(SelectAllUsers event, Emitter<UserState> emit) {
     if (state.selectedUsers.length == event.users.length) {
-      // If all are selected, clear selection
       emit(state.copyWith(selectedUsers: []));
     } else {
-      // Select all
       emit(state.copyWith(selectedUsers: List.from(event.users)));
     }
   }
@@ -523,17 +380,11 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     Emitter<UserState> emit,
   ) async {
     try {
-      final db = await databaseService.database;
-      final placeholders = List.filled(
-        event.selectedUsers.length,
-        '?',
-      ).join(',');
-      final whereArgs = [...event.selectedUsers, authBloc.state.companyId];
-      await db.delete(
-        'user_table',
-        where: 'id IN ($placeholders) AND company = ?',
-        whereArgs: whereArgs,
+      await repository.deleteMultipleUsers(
+        event.selectedUsers,
+        authBloc.state.companyId!,
       );
+
       emit(
         state.copyWith(
           status: UserStatus.success,
@@ -553,38 +404,19 @@ class UserBloc extends Bloc<UserEvent, UserState> {
 
   Future<void> _onUndoDelete(UndoDelete event, Emitter<UserState> emit) async {
     try {
-      final db = await databaseService.database;
+      await repository.batchInsertUsers(event.deletedItems);
 
-      // Reinsert at original positions in memory
-      final updatedUsers = List<UserModel>.from(state.users);
-      final updatedUsersRole = List<UserWithRole>.from(state.usersWithRole);
+      // Reload from DB to get consistent state
+      add(LoadUsers(authBloc.state.companyId!));
 
-      // Restore items at their original positions
-      for (int i = 0; i < event.deletedItems.length; i++) {
-        final item = event.deletedItems[i];
-        final index = event.deletedIndexes[i];
-
-        if (index >= 0 && index <= updatedUsers.length) {
-          updatedUsers.insert(index, item);
-        } else {
-          updatedUsers.add(item); // fallback if index is invalid
-        }
-
-        // Also restore to DB
-        await db.insert(
-          'user_table', (item.toMap()),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-
-        emit(
-          state.copyWith(
-            usersWithRole: updatedUsersRole,
-            filteredUsersWithRole: updatedUsersRole,
-            recentlyDeleted: [],
-            recentlyDeletedIndexes: [],
-          ),
-        );
-      }
+      emit(
+        state.copyWith(
+          recentlyDeleted: [],
+          recentlyDeletedIndexes: [],
+          message:
+              '${event.deletedItems.length} users restored successfully',
+        ),
+      );
     } catch (e) {
       emit(
         state.copyWith(
