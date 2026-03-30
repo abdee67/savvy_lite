@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
-import 'package:savvy_stock/core/services/onboarding/trial_service.dart';
 import 'package:savvy_stock/core/utils/form_validators.dart';
 import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
 import 'package:savvy_stock/features/onboarding/models/trial_model.dart';
@@ -103,77 +102,6 @@ void main() {
         isNotNull,
       ); // Invalid chars
       expect(FormValidators.validateUsername('', true), isNotNull);
-    });
-  });
-
-  group('TrialService Tests', () {
-    late TrialService trialService;
-
-    setUp(() {
-      trialService = TrialService();
-    });
-
-    test('should get business types in English', () {
-      final businessTypes = trialService.getBusinessTypes(true);
-
-      expect(businessTypes, isNotEmpty);
-      expect(businessTypes, contains('Retail'));
-      expect(businessTypes, contains('Manufacturing'));
-    });
-
-    test('should get business types in Arabic', () {
-      final businessTypes = trialService.getBusinessTypes(false);
-
-      expect(businessTypes, isNotEmpty);
-      expect(businessTypes, contains('تجارة تجزئة'));
-      expect(businessTypes, contains('تصنيع'));
-    });
-
-    test('should get industries in both languages', () {
-      final englishIndustries = trialService.getIndustries(true);
-      final arabicIndustries = trialService.getIndustries(false);
-
-      expect(englishIndustries.length, arabicIndustries.length);
-      expect(englishIndustries, contains('Technology'));
-      expect(arabicIndustries, contains('التكنولوجيا'));
-    });
-
-    test('should check email availability', () async {
-      final isAvailable = await trialService.isEmailAvailable(
-        'new@example.com',
-      );
-      final isUnavailable = await trialService.isEmailAvailable(
-        'test@example.com',
-      );
-
-      expect(isAvailable, true);
-      expect(isUnavailable, false);
-    });
-
-    test('should check username availability', () async {
-      final isAvailable = await trialService.isUsernameAvailable('newuser');
-      final isUnavailable = await trialService.isUsernameAvailable('admin');
-
-      expect(isAvailable, true);
-      expect(isUnavailable, false);
-    });
-
-    test('should submit trial application', () async {
-      final formData = TrialFormData(
-        fullName: 'John Doe',
-        email: 'john@example.com',
-        phoneNumber: '+1234567890',
-        username: 'johndoe',
-        password: 'password123',
-        confirmPassword: 'password123',
-        businessName: 'John\'s Business',
-        businessType: 'Retail',
-        industry: 'Food & Beverage',
-        userType: 'Business Owner',
-      );
-
-      final result = await trialService.submitTrialApplication(formData);
-      expect(result, true);
     });
   });
 

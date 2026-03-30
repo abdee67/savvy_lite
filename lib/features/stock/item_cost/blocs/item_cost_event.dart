@@ -102,6 +102,13 @@ class UpdateItemCosts extends ItemCostEvent {
   UpdateItemCosts(this.purchaseOrderHeader);
 }
 
+/// Event to update all item costs by adding overhead cost per unit
+/// Used by OtherExpensesBloc to distribute monthly expenses to item costs
+class UpdateItemCostsByOverhead extends ItemCostEvent {
+  final double overheadCostPerUnit;
+  UpdateItemCostsByOverhead(this.overheadCostPerUnit);
+}
+
 /*class UpdateItemCostsForItemMaster extends ItemCostEvent {
   final ItemMaster itemMaster;
   final ItemEntryModel item;
@@ -119,6 +126,37 @@ class FilterItemCosts extends ItemCostEvent {
   final List<ItemCost> filteredItems;
   FilterItemCosts(this.filteredItems);
 }
+
+//report events
+class LoadItemCostReport extends ItemCostEvent {
+  final int companyId;
+  final int page;
+  final int pageSize;
+
+  LoadItemCostReport({
+    required this.companyId,
+    this.page = 1,
+    this.pageSize = 20,
+  });
+}
+
+class UpdateItemCostReportFilters extends ItemCostEvent {
+  UpdateItemCostReportFilters();
+}
+
+class ClearItemCostReportFilters extends ItemCostEvent {
+  ClearItemCostReportFilters();
+}
+
+class ExportItemCostReportToExcel extends ItemCostEvent {
+  ExportItemCostReportToExcel();
+}
+
+class ExportItemCostReportToPDF extends ItemCostEvent {
+  ExportItemCostReportToPDF();
+}
+
+class LoadMoreItemCostReport extends ItemCostEvent {}
 
 // Cancel events
 class CancelUpdate extends ItemCostEvent {}

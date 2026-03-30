@@ -1,6 +1,7 @@
 # Miscellaneous
 *.class
 *.log
+.env
 *.pyc
 *.swp
 .DS_Store
@@ -11,6 +12,7 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+refactor_documentation.md
 
 # IntelliJ related
 *.iml

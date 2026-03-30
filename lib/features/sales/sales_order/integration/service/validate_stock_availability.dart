@@ -1,4 +1,7 @@
 // Case 1: Simple stock update without location/lot management
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_state.dart';
@@ -97,9 +100,11 @@ class ValidateStockAvailabilityService {
         companyId,
         lotTypeCodeId,
       );
-      print(
-        'DEBUG: Found ${lotMasterList.length} valid lots for sales. Total available: ${lotMasterList.fold(0.0, (sum, lot) => sum + (lot.quantityAvailable ?? 0))}',
-      );
+      if (kDebugMode) {
+        developer.log(
+          'DEBUG: Found ${lotMasterList.length} valid lots for sales. Total available: ${lotMasterList.fold(0.0, (sum, lot) => sum + (lot.quantityAvailable ?? 0))}',
+        );
+      }
     }
 
     double remainingQty = factor * soD.quantity!;
@@ -113,7 +118,9 @@ class ValidateStockAvailabilityService {
       );
 
       if (currentLot == null) {
-        print('DEBUG: Lot not found in DB: ${lot.id}');
+        if (kDebugMode) {
+          developer.log('DEBUG: Lot not found in DB: ${lot.id}');
+        }
         continue;
       }
 
@@ -156,6 +163,11 @@ class ValidateStockAvailabilityService {
         qty: -qtyToDeduct,
         por: null,
         soD: soD,
+        customer:
+            soD.orderHeader?.customerBillTo ??
+            soD.orderHeader?.customerTableRef?.id,
+        orderType:
+            soD.orderHeader?.orderType ?? soD.orderHeader?.orderTypeRef?.id,
       );
     }
 
@@ -182,14 +194,18 @@ class ValidateStockAvailabilityService {
     final lotTypeCodeId = lotTypeCode?.detailCode;
     List<LotMaster> filteredLots = [];
 
-    print(
-      'DEBUG: Filtering ${lots.length} lots for sales. LotType: $lotTypeCodeId',
-    );
+    if (kDebugMode) {
+      developer.log(
+        'DEBUG: Filtering ${lots.length} lots for sales. LotType: $lotTypeCodeId',
+      );
+    }
 
     for (final lot in lots) {
-      print(
-        'DEBUG: Checking lot ${lot.lotNumber} - Status: ${lot.statusCode}, Qty: ${lot.quantityAvailable}, Exp: ${lot.dateExpiration}',
-      );
+      if (kDebugMode) {
+        developer.log(
+          'DEBUG: Checking lot ${lot.lotNumber} - Status: ${lot.statusCode}, Qty: ${lot.quantityAvailable}, Exp: ${lot.dateExpiration}',
+        );
+      }
 
       bool isActiveForSales = await _isLotActiveForSales(
         soD,
@@ -200,15 +216,21 @@ class ValidateStockAvailabilityService {
 
       if (isActiveForSales) {
         filteredLots.add(lot);
-        print('DEBUG: ✓ Lot ${lot.lotNumber} PASSED filter');
+        if (kDebugMode) {
+          developer.log('DEBUG: ✓ Lot ${lot.lotNumber} PASSED filter');
+        }
       } else {
-        print('DEBUG: ✗ Lot ${lot.lotNumber} FAILED filter');
+        if (kDebugMode) {
+          developer.log('DEBUG: ✗ Lot ${lot.lotNumber} FAILED filter');
+        }
       }
     }
 
-    print(
-      'DEBUG: Filter result: ${filteredLots.length} of ${lots.length} lots available',
-    );
+    if (kDebugMode) {
+      developer.log(
+        'DEBUG: Filter result: ${filteredLots.length} of ${lots.length} lots available',
+      );
+    }
 
     // Sort based on lot type
     if (lotTypeCodeId == null || lotTypeCodeId == 'X') {
@@ -289,9 +311,11 @@ class ValidateStockAvailabilityService {
           expirationColor == null || expirationColor.activeForSalesFlag == 'Y';
 
       if (!isActive) {
-        print(
-          'DEBUG: Lot ${lot.lotNumber} excluded by expiration rule: $expirationColor',
-        );
+        if (kDebugMode) {
+          developer.log(
+            'DEBUG: Lot ${lot.lotNumber} excluded by expiration rule: $expirationColor',
+          );
+        }
       }
 
       return isActive;
@@ -385,7 +409,9 @@ class ValidateStockAvailabilityService {
 
         expiredQuantity += notAvailableDueToExpiration;
       } catch (e) {
-        print('Error calculating expired quantity: $e');
+        if (kDebugMode) {
+          developer.log('Error calculating expired quantity: $e');
+        }
       }
 
       // Calculate total available quantity from valid lots
@@ -514,7 +540,9 @@ class ValidateStockAvailabilityService {
       );
 
       if (currentLocation == null) {
-        print('DEBUG: Location not found in DB: ${location.id}');
+        if (kDebugMode) {
+          developer.log('DEBUG: Location not found in DB: ${location.id}');
+        }
         continue;
       }
 
@@ -557,6 +585,11 @@ class ValidateStockAvailabilityService {
         qty: -qtyToDeduct,
         por: null,
         soD: soD,
+        customer:
+            soD.orderHeader?.customerBillTo ??
+            soD.orderHeader?.customerTableRef?.id,
+        orderType:
+            soD.orderHeader?.orderType ?? soD.orderHeader?.orderTypeRef?.id,
       );
     }
 
@@ -643,6 +676,11 @@ class ValidateStockAvailabilityService {
       qty: -qtyToSubtract, // Negative quantity for sales
       por: null,
       soD: soD,
+      customer:
+          soD.orderHeader?.customerBillTo ??
+          soD.orderHeader?.customerTableRef?.id,
+      orderType:
+          soD.orderHeader?.orderType ?? soD.orderHeader?.orderTypeRef?.id,
     );
   }
 

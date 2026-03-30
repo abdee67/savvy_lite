@@ -1,8 +1,6 @@
 // features/privilege/screens/privilege_management_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
-import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_bloc.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_event.dart';
 import 'package:savvy_stock/features/admin/privilege/blocs/privilege_state.dart';
@@ -33,25 +31,27 @@ class _PrivilegeManagementScreenState extends State<PrivilegeManagementScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Privilege Management'),
-        actions: [
+        /*actions: [
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => context.push(AppRoutes.createPrivilege),
           ),
-        ],
+        ],*/
       ),
-      body: BlocBuilder<PrivilegeBloc, PrivilegeState>(
-        builder: (context, state) {
-          if (state.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (state.isSuccess) {
-            return _buildPrivilegeList(state.privileges, context);
-          } else if (state.isFailure) {
-            return Center(child: Text('Error: ${state.message}'));
-          } else {
-            return const Center(child: Text('No privileges found'));
-          }
-        },
+      body: SafeArea(
+        child: BlocBuilder<PrivilegeBloc, PrivilegeState>(
+          builder: (context, state) {
+            if (state.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (state.isSuccess) {
+              return _buildPrivilegeList(state.privileges, context);
+            } else if (state.isFailure) {
+              return Center(child: Text('Error: ${state.message}'));
+            } else {
+              return const Center(child: Text('No privileges found'));
+            }
+          },
+        ),
       ),
     );
   }
@@ -77,7 +77,7 @@ class _PrivilegeManagementScreenState extends State<PrivilegeManagementScreen> {
                 Text('Type: ${privilege.type}'),
               ],
             ),
-            trailing: Row(
+            /*trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
@@ -95,7 +95,7 @@ class _PrivilegeManagementScreenState extends State<PrivilegeManagementScreen> {
                     onPressed: () => _deletePrivilege(context, privilege.id),
                   ),
               ],
-            ),
+            ),*/
           ),
         );
       },

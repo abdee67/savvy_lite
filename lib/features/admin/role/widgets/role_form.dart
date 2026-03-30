@@ -1,5 +1,6 @@
 // features/role/screens/role_form_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
@@ -59,23 +60,25 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              // Role Information Section
-              _buildRoleInfoSection(),
-              const SizedBox(height: 24),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              children: [
+                // Role Information Section
+                _buildRoleInfoSection(),
+                const SizedBox(height: 24),
 
-              // Privilege Management Section
-              _buildPrivilegeManagementSection(),
-              const SizedBox(height: 24),
+                // Privilege Management Section
+                _buildPrivilegeManagementSection(),
+                const SizedBox(height: 24),
 
-              // Action Buttons
-              _buildActionButtons(),
-            ],
+                // Action Buttons
+                _buildActionButtons(),
+              ],
+            ),
           ),
         ),
       ),
@@ -100,9 +103,13 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
         CustomTextField(
           controller: _nameController,
           labelText: 'Role Name *',
+          inputFormatters: [LengthLimitingTextInputFormatter(200)],
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'Please enter role name';
+            }
+            if (value.length > 200) {
+              return 'Role name must be 200 characters or less';
             }
             return null;
           },
@@ -121,9 +128,13 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
               borderSide: BorderSide(color: Color(0xFF145888), width: 1),
             ),
           ),
+          inputFormatters: [LengthLimitingTextInputFormatter(200)],
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'Please enter description';
+            }
+            if (value.length > 200) {
+              return 'Description must be 200 characters or less';
             }
             return null;
           },

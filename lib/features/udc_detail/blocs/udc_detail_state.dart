@@ -14,6 +14,7 @@ enum UdcDetailsStatus {
 class UdcDetailsState extends Equatable {
   final UdcDetailsStatus status;
   final String? message;
+  final String? failure;
   final String? groupCode;
   final List<UdcDetails> details;
   final UdcDetails? selectedDetail;
@@ -21,6 +22,7 @@ class UdcDetailsState extends Equatable {
   const UdcDetailsState({
     this.status = UdcDetailsStatus.initial,
     this.message,
+    this.failure,
     this.groupCode,
     this.details = const [],
     this.selectedDetail,
@@ -29,6 +31,7 @@ class UdcDetailsState extends Equatable {
   UdcDetailsState copyWith({
     UdcDetailsStatus? status,
     String? message,
+    String? failure,
     String? groupCode,
     List<UdcDetails>? details,
     UdcDetails? selectedDetail,
@@ -36,6 +39,7 @@ class UdcDetailsState extends Equatable {
     return UdcDetailsState(
       status: status ?? this.status,
       message: message ?? this.message,
+      failure: failure ?? this.failure,
       groupCode: groupCode ?? this.groupCode,
       details: details ?? this.details,
       selectedDetail: selectedDetail ?? this.selectedDetail,
@@ -45,6 +49,7 @@ class UdcDetailsState extends Equatable {
   @override
   List<Object?> get props => [
     status,
+    failure,
     message,
     groupCode,
     details,

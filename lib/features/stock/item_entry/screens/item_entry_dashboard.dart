@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:intl/intl.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/utils/ui_helper.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -9,6 +10,7 @@ import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_state.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 
 class ItemEntryDashboard extends StatefulWidget {
   final AuthBloc authBloc;
@@ -34,6 +36,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
   // Detail panel state
   ItemEntryModel? _selectedItem;
   bool _itemDetail = false;
+  late int _decimalPlaces;
 
   @override
   void initState() {
@@ -51,6 +54,12 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
     context.read<StockItemsEntryBloc>().add(
       LoadItems(widget.authBloc.state.companyId!),
     );
+    _decimalPlaces = context
+        .read<SystemConstantBloc>()
+        .state
+        .systemConstants
+        .first
+        .decimalPlaces!;
   }
 
   void _setupAnimations() {
@@ -129,12 +138,10 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
 
   void _callItem(String itemId) {
     // Implement phone call functionality
-    print('Calling: $itemId');
   }
 
   void _emailItem(String itemId) {
     // Implement email functionality
-    print('Emailing: $itemId');
   }
 
   void _exportItem(ItemEntryModel item) {
@@ -251,40 +258,42 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey,
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Item Entry Management'),
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
       ),
-      body: BlocConsumer<StockItemsEntryBloc, ItemEntryState>(
-        listener: (context, state) {
-          if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
-            setState(() {
-              _isSelectionMode = true;
-            });
-          } else if (state.selectedItems.isEmpty && _isSelectionMode) {
-            setState(() {
-              _isSelectionMode = false;
-            });
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Search Bar
-                  _buildSearchBar(),
-                  _buildActionButtons(state),
+      body: SafeArea(
+        child: BlocConsumer<StockItemsEntryBloc, ItemEntryState>(
+          listener: (context, state) {
+            if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
+              setState(() {
+                _isSelectionMode = true;
+              });
+            } else if (state.selectedItems.isEmpty && _isSelectionMode) {
+              setState(() {
+                _isSelectionMode = false;
+              });
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Search Bar
+                    _buildSearchBar(),
+                    _buildActionButtons(state),
 
-                  // Item List
-                  Expanded(child: _buildItemList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+                    // Item List
+                    Expanded(child: _buildItemList(state)),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -330,11 +339,11 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
   Widget _buildActionButtons(ItemEntryState state) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      height: state.hasSelection ? 60 : 0,
+      height: state.hasSelection ? 30 : 0,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.grey,
-        border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Colors.white)),
       ),
       child: state.hasSelection
           ? Row(
@@ -441,13 +450,13 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Iconsax.box, size: 64, color: Colors.white),
+            const Icon(Iconsax.box, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
             Text(
               state.searchQuery.isEmpty
                   ? 'No items found'
                   : 'No results for "${state.searchQuery}"',
-              style: const TextStyle(color: Colors.white, fontSize: 16),
+              style: const TextStyle(color: Colors.grey, fontSize: 16),
             ),
           ],
         ),
@@ -457,7 +466,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
     return Container(
       width: screenWidth,
       height: screenHeight,
-      decoration: const BoxDecoration(color: Colors.grey),
+      decoration: const BoxDecoration(color: Colors.white),
       child: ListView.separated(
         controller: _scrollController,
         padding: const EdgeInsets.all(16),
@@ -490,19 +499,6 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
   ) {
     final offset = _dragOffset[index] ?? 0.0;
     final isExpanded = _itemDetail == true && _selectedItem == item;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-
-    // For responsiveness:
-    final collapsedHeight = isCompact
-        ? screenHeight *
-              0.22 // phones
-        : screenHeight * 0.14; // tablets / wide screens
-
-    final expandedHeight = isCompact
-        ? screenHeight * 0.55
-        : screenHeight * 0.45;
-    final collapsedWidth = isCompact ? screenWidth * 0.92 : screenWidth * 0.8;
 
     return GestureDetector(
       onTap: () {
@@ -528,237 +524,210 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
           _onHorizontalDragEnd(context, index, details),
       child: AnimatedBuilder(
         animation: _scrollController,
-        builder: (context, child) => Container(
-          transform: Matrix4.translationValues(offset, 0, 0),
-          width: collapsedWidth,
-          height: isExpanded ? expandedHeight : collapsedHeight,
+        builder: (context, child) => SizedBox(
+          width: cardWidth,
           child: Stack(
             children: [
               // 1. DELETE INDICATOR - Should be FIRST in Stack
-              if (!isExpanded) // Only show delete indicator when not expanded
-                Positioned.fill(
-                  child: Container(
-                    alignment: Alignment.centerRight,
-                    decoration: BoxDecoration(
-                      color: Colors.amber,
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    margin: const EdgeInsets.only(bottom: 2),
-                    child: const Icon(
-                      Icons.delete,
-                      color: Colors.white,
-                      size: 28,
-                    ),
+              // This uses Positioned.fill to match the Height of the foreground automatically
+              Positioned.fill(
+                child: Container(
+                  alignment: Alignment.centerRight,
+                  margin: const EdgeInsets.only(
+                    bottom: 2,
+                  ), // Same margin as card
+                  decoration: BoxDecoration(
+                    color: Colors.amber,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: const Icon(
+                    Icons.delete,
+                    color: Colors.white,
+                    size: 28,
                   ),
                 ),
+              ),
 
-              // 2. BACKGROUND LAYERS (only when expanded)
-              if (isExpanded) ...[
-                // Yellow background
-                Positioned.fill(
-                  top: 47,
-                  child: Container(
-                    width: collapsedWidth,
-                    height: expandedHeight,
-                    decoration: ShapeDecoration(
-                      color: const Color(0xFFFDD105), // Fixed yellow color
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+              // --- LAYER 2: FOREGROUND CARD (Content) ---
+              Transform.translate(
+                offset: Offset(offset, 0),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  // DECORATION: Handles the Yellow/White transition
+                  decoration: BoxDecoration(
+                    // If expanded, the base becomes yellow. If collapsed, white.
+                    color: isExpanded
+                        ? Colors.amber
+                        : (isSelected ? Colors.blue[50] : Colors.white),
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
+                    ],
+                    border: Border.all(
+                      color: isSelected
+                          ? const Color.fromARGB(255, 28, 66, 146)
+                          : Colors.transparent,
+                      width: 2,
                     ),
                   ),
-                ),
-              ],
 
-              // 3. ITEM CARD - Should come AFTER delete indicator
-              AnimatedContainer(
-                padding: const EdgeInsets.only(top: 10, left: 10, right: 10),
-                width: collapsedWidth,
-                height: collapsedHeight,
-                duration: const Duration(milliseconds: 400),
-                transform: Matrix4.translationValues(offset, 0, 0),
-                curve: Curves.easeInOut,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.blue[50] : Colors.white,
-                  borderRadius: BorderRadius.circular(30),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                  border: Border.all(
-                    color: isSelected
-                        ? const Color.fromARGB(255, 28, 66, 146)
-                        : Colors.transparent,
-                    width: 2,
-                  ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  // ANIMATED SIZE: This is the key to efficient height
+                  child: AnimatedSize(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    alignment: Alignment.topCenter,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min, // Shrink to fit content
                       children: [
-                        // Item Avatar
-                        _buildItemAvatar(item, isSelected, isCompact),
-                        const SizedBox(width: 12),
-                        Expanded(
+                        // --- PART A: HEADER (Name, Phone, Button) ---
+                        Container(
+                          padding: const EdgeInsets.fromLTRB(15, 15, 15, 10),
+                          decoration: BoxDecoration(
+                            // The header stays white (or blue-ish) even when expanded
+                            color: isSelected ? Colors.blue[50] : Colors.white,
+                            borderRadius: isExpanded
+                                ? const BorderRadius.vertical(
+                                    top: Radius.circular(30),
+                                    bottom: Radius.circular(
+                                      20,
+                                    ), // Slight curve when open
+                                  )
+                                : BorderRadius.circular(30),
+                          ),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    item.itemDescription ?? 'No Description',
-                                    style: TextStyle(
-                                      color: const Color(0xFF373737),
-                                      fontSize: isCompact ? 20 : 24,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: item.taxable == 'Y'
-                                          ? Colors.red[50]
-                                          : Colors.green[50],
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: item.taxable == 'Y'
-                                            ? Colors.red[200]!
-                                            : Colors.green[200]!,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      item.taxable == 'Y'
-                                          ? 'Taxable'
-                                          : 'Non-Tax',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: item.taxable == 'Y'
-                                            ? Colors.red[800]
-                                            : Colors.green[800],
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                  // Item Avatar
+                                  _buildItemAvatar(item, isSelected, isCompact),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        _buildNameAndTaxabelBage(
+                                          item,
+                                          isCompact,
+                                        ),
+                                        Text(
+                                          NumberFormat.currency(
+                                            decimalDigits: _decimalPlaces,
+                                            symbol: 'ETB ',
+                                          ).format(item.unitPrice),
+                                          style: TextStyle(
+                                            color: const Color(0xFF887F7F),
+                                            fontSize: isCompact ? 12 : 14,
+                                            fontStyle: FontStyle.italic,
+                                            fontFamily: 'Inter',
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                      ],
                                     ),
                                   ),
                                 ],
-                              ),
-
-                              Text(
-                                item.barcode ?? 'No Barcode',
-                                style: TextStyle(
-                                  color: const Color(0xFF887F7F),
-                                  fontSize: isCompact ? 12 : 14,
-                                  fontStyle: FontStyle.italic,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w300,
-                                ),
                               ),
                               const SizedBox(height: 8),
-                              // Price and tax info
-                              Row(
-                                children: [
-                                  if (item.unitPrice != null)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.green[50],
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: Colors.green[200]!,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        '\$${item.unitPrice!.toStringAsFixed(2)}',
+                              InkWell(
+                                onTap: () => isExpanded
+                                    ? _hideItemDetail()
+                                    : _showItemDetail(item),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 4,
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      // See More / See Less button
+                                      Text(
+                                        isExpanded ? 'See Less' : 'See More',
                                         style: TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.green[800],
-                                          fontWeight: FontWeight.bold,
+                                          color: Colors.grey[600],
+                                          fontSize: isCompact ? 10 : 12,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
-                                    ),
-                                ],
+                                      Icon(
+                                        isExpanded
+                                            ? Icons.keyboard_arrow_up
+                                            : Icons.keyboard_arrow_down,
+                                        color: Colors.grey[600],
+                                        size: 16,
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ],
                           ),
                         ),
+
+                        // 4. ANIMATED EXPANDED CONTENT
+                        if (isExpanded)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(20),
+                            child: _buildItemDetailContent(item, isCompact),
+                          ),
                       ],
                     ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        // See More / See Less button
-                        ElevatedButton(
-                          onPressed: () => isExpanded
-                              ? _hideItemDetail()
-                              : _showItemDetail(item),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF145888),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                          ),
-                          child: Text(
-                            isExpanded ? 'See Less' : 'See More',
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: isCompact ? 10 : 12,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              // 4. ANIMATED EXPANDED CONTENT
-              if (isExpanded)
-                Positioned(
-                  top: collapsedHeight + 10,
-                  left: 20,
-                  right: 20,
-                  child: AnimatedBuilder(
-                    animation: _detailAnimationController,
-                    builder: (context, child) {
-                      final currentHeight =
-                          _heightAnimation.value *
-                          (expandedHeight - collapsedHeight - 20);
-                      final currentOpacity = _opacityAnimation.value;
-
-                      return SlideTransition(
-                        position: _slideAnimation,
-                        child: Container(
-                          height: currentHeight > 0 ? currentHeight : 0,
-                          decoration: BoxDecoration(color: Colors.transparent),
-                          child: Opacity(opacity: currentOpacity, child: child),
-                        ),
-                      );
-                    },
-                    child: _buildItemDetailContent(item, isCompact),
                   ),
                 ),
+              ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildNameAndTaxabelBage(ItemEntryModel item, bool isCompact) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Flexible(
+          child: Text(
+            item.itemDescription ?? 'No Name',
+            style: TextStyle(
+              fontSize: isCompact ? 20 : 24,
+              fontWeight: FontWeight.bold,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: item.taxable == 'Y' ? Colors.red[50] : Colors.green[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: item.taxable == 'Y'
+                  ? Colors.red[200]!
+                  : Colors.green[200]!,
+            ),
+          ),
+          child: Text(
+            item.taxable == 'Y' ? 'Taxable' : 'Non-Tax',
+            style: TextStyle(
+              fontSize: 10,
+              color: item.taxable == 'Y' ? Colors.red[800] : Colors.green[800],
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -767,12 +736,6 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
       physics: const BouncingScrollPhysics(),
       child: Column(
         children: [
-          _buildItemInfoItem(
-            'Item ID : ',
-            item.itemsId.toString(),
-            Iconsax.card,
-            isCompact,
-          ),
           _buildItemInfoItem(
             'Item Description : ',
             item.itemDescription ?? 'No Description',
@@ -788,7 +751,10 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
           _buildItemInfoItem(
             'Unit Price : ',
             item.unitPrice != null
-                ? '\$${item.unitPrice!.toStringAsFixed(2)}'
+                ? NumberFormat.currency(
+                    decimalDigits: _decimalPlaces,
+                    symbol: 'ETB ',
+                  ).format(item.unitPrice)
                 : 'N/A',
             Iconsax.dollar_circle,
             isCompact,
@@ -807,7 +773,7 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
           ),
           _buildItemInfoItem(
             'Unit of Measure : ',
-            item.unitOfMeasure ?? 'N/A',
+            item.unitOfMeasureDescription?.description1 ?? 'N/A',
             Iconsax.rulerpen,
             isCompact,
           ),
@@ -834,12 +800,6 @@ class _ItemEntryDashboardState extends State<ItemEntryDashboard>
                   Iconsax.edit,
                   'Edit',
                   () => _navigateToEditScreen(item),
-                  isCompact,
-                ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportItem(item),
                   isCompact,
                 ),
                 _buildActionButton(

@@ -291,7 +291,7 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey,
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Location Master'),
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
@@ -305,33 +305,35 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
           ),
         ],
       ),
-      body: BlocConsumer<LocationMasterBloc, LocationMasterState>(
-        listener: (context, state) {
-          if (state.status == LocationMasterStatus.failure &&
-              state.message.isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
+      body: SafeArea(
+        child: BlocConsumer<LocationMasterBloc, LocationMasterState>(
+          listener: (context, state) {
+            if (state.status == LocationMasterStatus.failure &&
+                state.message.isNotEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Search Bar
+                    _buildSearchBar(),
+                    _buildActionButtons(state),
+                    // Location List
+                    Expanded(child: _buildLocationList(state)),
+                  ],
+                ),
+              ],
             );
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Search Bar
-                  _buildSearchBar(),
-                  _buildActionButtons(state),
-                  // Location List
-                  Expanded(child: _buildLocationList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+          },
+        ),
       ),
     );
   }
@@ -379,11 +381,11 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      height: hasSelection ? 60 : 0,
+      height: hasSelection ? 30 : 0,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.grey,
-        border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Colors.white)),
       ),
       child: hasSelection
           ? Row(
@@ -449,8 +451,8 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
   }
 
   Widget _buildLocationList(LocationMasterState state) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final screenHeight = MediaQuery.sizeOf(context).height;
     final isSmallScreen = screenWidth < 700;
     final cardSpacing = screenHeight * 0.02;
     final cardWidth = isSmallScreen ? screenWidth * 0.85 : screenWidth * 0.8;
@@ -482,20 +484,20 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
       );
     }
 
-    final filteredLocations = state.filteredItems;
+    final locations = state.filteredLocations;
 
-    if (filteredLocations.isEmpty) {
+    if (locations.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Iconsax.location, size: 64, color: Colors.white),
+            const Icon(Iconsax.location, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
             Text(
               _searchController.text.isEmpty
                   ? 'No locations found'
                   : 'No results for "${_searchController.text}"',
-              style: const TextStyle(color: Colors.white, fontSize: 16),
+              style: const TextStyle(color: Colors.grey, fontSize: 16),
             ),
           ],
         ),
@@ -505,14 +507,14 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
     return Container(
       width: screenWidth,
       height: screenHeight,
-      decoration: const BoxDecoration(color: Colors.grey),
+      decoration: const BoxDecoration(color: Colors.white),
       child: ListView.separated(
         controller: _scrollController,
         padding: const EdgeInsets.all(16),
-        itemCount: filteredLocations.length,
+        itemCount: locations.length,
         separatorBuilder: (context, index) => SizedBox(height: cardSpacing),
         itemBuilder: (context, index) {
-          final location = filteredLocations[index];
+          final location = locations[index];
           final isSelected = _selectedLocations.contains(location);
 
           return _buildLocationListItem(
@@ -538,19 +540,6 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
   ) {
     final offset = _dragOffset[index] ?? 0.0;
     final isExpanded = _locationDetail == true && _selectedLocation == location;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-
-    // For responsiveness:
-    final collapsedHeight = isCompact
-        ? screenHeight * 0.18
-        : screenHeight * 0.14;
-
-    final expandedHeight = isCompact
-        ? screenHeight * 0.55
-        : screenHeight * 0.45;
-    final collapsedWidth = isCompact ? screenWidth * 0.92 : screenWidth * 0.8;
-
     final assignedCodesCount = _getAssignedCodesCount(location);
 
     return GestureDetector(
@@ -577,200 +566,210 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
       onDoubleTap: () => _showLocationDetail(location),
       child: AnimatedBuilder(
         animation: _scrollController,
-        builder: (context, child) => Container(
-          transform: Matrix4.translationValues(offset, 0, 0),
-          width: collapsedWidth,
-          height: isExpanded ? expandedHeight : collapsedHeight,
+        builder: (context, child) => SizedBox(
+          width: cardWidth,
           child: Stack(
             children: [
               // 1. DELETE INDICATOR - Should be FIRST in Stack
-              if (!isExpanded)
-                Positioned.fill(
-                  child: Container(
-                    alignment: Alignment.centerRight,
-                    decoration: BoxDecoration(
-                      color: Colors.amber,
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    margin: const EdgeInsets.only(bottom: 2),
-                    child: const Icon(
-                      Icons.delete,
-                      color: Colors.white,
-                      size: 28,
-                    ),
+              Positioned.fill(
+                child: Container(
+                  alignment: Alignment.centerRight,
+                  decoration: BoxDecoration(
+                    color: Colors.amber,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  margin: const EdgeInsets.only(bottom: 2),
+                  child: const Icon(
+                    Icons.delete,
+                    color: Colors.white,
+                    size: 28,
                   ),
                 ),
+              ),
 
-              // 2. BACKGROUND LAYERS (only when expanded)
-              if (isExpanded) ...[
-                Positioned.fill(
-                  top: 47,
-                  child: Container(
-                    width: collapsedWidth,
-                    height: expandedHeight,
-                    decoration: ShapeDecoration(
-                      color: const Color(0xFFFDD105),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+              // --- LAYER 2: FOREGROUND CARD (Content) ---
+              Transform.translate(
+                offset: Offset(offset, 0),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  // DECORATION: Handles the Yellow/White transition
+                  decoration: BoxDecoration(
+                    // If expanded, the base becomes yellow. If collapsed, white.
+                    color: isExpanded
+                        ? Colors.amber
+                        : (isSelected ? Colors.blue[50] : Colors.white),
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
+                    ],
+                    border: Border.all(
+                      color: isSelected
+                          ? const Color.fromARGB(255, 28, 66, 146)
+                          : Colors.transparent,
+                      width: 2,
                     ),
                   ),
-                ),
-              ],
 
-              // 3. LOCATION CARD
-              AnimatedContainer(
-                padding: const EdgeInsets.only(
-                  top: 10,
-                  left: 10,
-                  right: 10,
-                  bottom: 10,
-                ),
-                width: collapsedWidth,
-                height: collapsedHeight,
-                duration: const Duration(milliseconds: 400),
-                transform: Matrix4.translationValues(offset, 0, 0),
-                curve: Curves.easeInOut,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.blue[50] : Colors.white,
-                  borderRadius: BorderRadius.circular(30),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                  border: Border.all(
-                    color: isSelected
-                        ? const Color.fromARGB(255, 28, 66, 146)
-                        : Colors.transparent,
-                    width: 2,
-                  ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  // ANIMATED SIZE: This is the key to efficient height
+                  child: AnimatedSize(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    alignment: Alignment.topCenter,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min, // Shrink to fit content
                       children: [
-                        // Location Avatar
-                        _buildLocationAvatar(location, isSelected, isCompact),
-                        const SizedBox(width: 12),
-                        Expanded(
+                        // --- PART A: HEADER (Name, Phone, Button) ---
+                        Container(
+                          padding: const EdgeInsets.fromLTRB(15, 15, 15, 10),
+                          decoration: BoxDecoration(
+                            // The header stays white (or blue-ish) even when expanded
+                            color: isSelected ? Colors.blue[50] : Colors.white,
+                            borderRadius: isExpanded
+                                ? const BorderRadius.vertical(
+                                    top: Radius.circular(30),
+                                    bottom: Radius.circular(
+                                      20,
+                                    ), // Slight curve when open
+                                  )
+                                : BorderRadius.circular(30),
+                          ),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                location.locationDescription ??
-                                    'Unnamed location',
-                                style: TextStyle(
-                                  color: const Color(0xFF373737),
-                                  fontSize: isCompact ? 20 : 24,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              Text(
-                                location.branchName ?? 'Unnamed branch',
-                                style: TextStyle(
-                                  color: const Color.fromARGB(
-                                    255,
-                                    107,
-                                    104,
-                                    104,
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Location Avatar
+                                  _buildLocationAvatar(
+                                    location,
+                                    isSelected,
+                                    isCompact,
                                   ),
-                                  fontSize: isCompact ? 12 : 14,
-                                  fontStyle: FontStyle.italic,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w800,
-                                ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              location.locationDescription ??
+                                                  'Unnamed location',
+                                              style: TextStyle(
+                                                color: const Color(0xFF373737),
+                                                fontSize: isCompact ? 20 : 24,
+                                                fontFamily: 'Inter',
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                            ),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 2,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.blue[50],
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color: Colors.blue[200]!,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                "${location.branchName ?? 'Unnamed branch'} Store",
+                                                style: TextStyle(
+                                                  color: const Color.fromARGB(
+                                                    255,
+                                                    107,
+                                                    104,
+                                                    104,
+                                                  ),
+                                                  fontSize: isCompact ? 12 : 14,
+                                                  fontStyle: FontStyle.italic,
+                                                  fontFamily: 'Inter',
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '$assignedCodesCount location codes',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: const Color(0xFF145888),
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 8),
-                              // Location codes count badge
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue[50],
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.blue[200]!),
-                                ),
-                                child: Text(
-                                  '$assignedCodesCount location codes',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: const Color(0xFF145888),
-                                    fontWeight: FontWeight.bold,
+                              InkWell(
+                                onTap: () => isExpanded
+                                    ? _hideLocationDetail()
+                                    : _showLocationDetail(location),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 4,
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      // See More / See Less button
+                                      Text(
+                                        isExpanded ? 'See Less' : 'See More',
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: isCompact ? 10 : 12,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      Icon(
+                                        isExpanded
+                                            ? Icons.keyboard_arrow_up
+                                            : Icons.keyboard_arrow_down,
+                                        color: Colors.grey[600],
+                                        size: 16,
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        // See More / See Less button
-                        ElevatedButton(
-                          onPressed: () => isExpanded
-                              ? _hideLocationDetail()
-                              : _showLocationDetail(location),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF145888),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+
+                        // 4. ANIMATED EXPANDED CONTENT
+                        if (isExpanded)
+                          SizedBox(
+                            height: 300,
+                            child: Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: _buildLocationDetailContent(
+                                location,
+                                isCompact,
+                              ),
                             ),
                           ),
-                          child: Text(
-                            isExpanded ? 'See Less' : 'See More',
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: isCompact ? 10 : 12,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-
-              // 4. ANIMATED EXPANDED CONTENT
-              if (isExpanded)
-                Positioned(
-                  top: collapsedHeight + 10,
-                  left: 20,
-                  right: 20,
-                  child: AnimatedBuilder(
-                    animation: _detailAnimationController,
-                    builder: (context, child) {
-                      final currentHeight =
-                          _heightAnimation.value *
-                          (expandedHeight - collapsedHeight - 20);
-                      final currentOpacity = _opacityAnimation.value;
-
-                      return SlideTransition(
-                        position: _slideAnimation,
-                        child: Container(
-                          height: currentHeight > 0 ? currentHeight : 0,
-                          decoration: BoxDecoration(color: Colors.transparent),
-                          child: Opacity(opacity: currentOpacity, child: child),
-                        ),
-                      );
-                    },
-                    child: _buildLocationDetailContent(location, isCompact),
                   ),
                 ),
+              ),
             ],
           ),
         ),
@@ -902,7 +901,11 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
           if (location.marginType != null)
             _buildLocationInfoItem(
               'Margin Type : ',
-              location.marginType == 'F' ? 'Flat' : 'Percentage',
+              location.marginType == 'F'
+                  ? 'Flat'
+                  : location.marginType == 'P'
+                  ? 'Percentage'
+                  : 'N/A',
               Iconsax.chart,
               isCompact,
             ),
@@ -926,12 +929,7 @@ class _LocationMasterListPageState extends State<LocationMasterListPage>
                   () => _navigateToEditScreen(location),
                   isCompact,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportLocation(location),
-                  isCompact,
-                ),
+
                 _buildActionButton(
                   Iconsax.trash,
                   'Delete',

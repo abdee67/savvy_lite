@@ -1,27 +1,32 @@
 // repositories/item_transaction_repository.dart
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
+import 'package:savvy_stock/features/next_number/repo/next_number_repo.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/stock/item_transactions/model/paginated_item_transaction_result.dart';
+import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_bloc.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
+import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
+import 'package:savvy_stock/features/stock/lot_master/repo/lot_master_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
-import 'package:savvy_stock/features/next_number/bloc/next_number_bloc.dart';
 import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_repo.dart';
 import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
 import 'package:savvy_stock/features/stock/item_locations/repo/item_location_repo.dart';
 import 'package:savvy_stock/features/stock/item_transactions/model/item_transaction_model.dart';
-import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
-import 'package:savvy_stock/features/stock/lot_master/repo/lot_master_repo.dart';
-import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_bloc.dart';
+import 'package:savvy_stock/features/stock/location_entry/repo/location_master_repository.dart';
+import 'package:sqflite/sqflite.dart';
 
 class ItemTransactionRepository {
   final LocalDatabaseService databaseService;
   final AuthBloc authBloc;
   final SystemConstantBloc systemConstantBloc;
-  final NextNumberBloc nextNumberBloc;
   final UdcRepository udcDetailsController;
   final ItemUomConversionBloc itemUomConversionBloc;
 
@@ -29,6 +34,8 @@ class ItemTransactionRepository {
   final StockItemInBranchRepository itemInBranchRepository;
   final ItemLocationsRepository itemLocationsRepository;
   final LotMasterRepository lotMasterRepository;
+  final LocationMasterRepository locationMasterRepository;
+  final NextNumberRepository nextNumberRepository;
 
   final ItemUomConversionsRepository itemUomConversionRepository;
   final ItemCostRepository itemCostRepository;
@@ -37,12 +44,13 @@ class ItemTransactionRepository {
     required this.databaseService,
     required this.authBloc,
     required this.systemConstantBloc,
-    required this.nextNumberBloc,
     required this.udcDetailsController,
     required this.itemUomConversionBloc,
     required this.itemInBranchRepository,
     required this.itemLocationsRepository,
     required this.lotMasterRepository,
+    required this.locationMasterRepository,
+    required this.nextNumberRepository,
     required this.itemUomConversionRepository,
     required this.itemCostRepository,
   });
@@ -58,11 +66,17 @@ class ItemTransactionRepository {
     required double qty,
     required PurchaseOrderReceiver? por,
     required SalesOrderDetail? soD,
+    int? supplier,
+    int? orderType,
+    int? customer,
+    Transaction? txn,
   }) async {
     try {
-      print(
-        'DEBUG: stockCardCreation started. ib: $ib, loc: $loc, lm: $lm, qty: $qty',
-      );
+      if (kDebugMode) {
+        developer.log(
+          'DEBUG: stockCardCreation started. ib: $ib, loc: $loc, lm: $lm, qty: $qty',
+        );
+      }
       if (ib != null || loc != null || lm != null) {
         final systemConstant = systemConstantBloc.state.selected;
         final applyLotMgmt = systemConstant?.applyLotMgmBoolean ?? false;
@@ -76,7 +90,9 @@ class ItemTransactionRepository {
         }
 
         if (ib != null && !applyLocationMgmt && !applyLotMgmt && qty != 0.0) {
-          print('DEBUG: Creating ItemBranchTransaction');
+          if (kDebugMode) {
+            developer.log('DEBUG: Creating ItemBranchTransaction');
+          }
           await _createItemBranchTransaction(
             ib: ib,
             transactionType: transactionType,
@@ -85,14 +101,20 @@ class ItemTransactionRepository {
             qty: qty,
             por: por,
             soD: soD,
+            supplier: supplier,
+            orderType: orderType,
+            customer: customer,
             user: user.id,
             companyId: companyId,
+            txn: txn,
           );
         } else if (loc != null &&
             applyLocationMgmt &&
             !applyLotMgmt &&
             qty != 0.0) {
-          print('DEBUG: Creating LocationTransaction');
+          if (kDebugMode) {
+            developer.log('DEBUG: Creating LocationTransaction');
+          }
           await _createLocationTransaction(
             loc: loc,
             transactionType: transactionType,
@@ -101,14 +123,20 @@ class ItemTransactionRepository {
             qty: qty,
             por: por,
             soD: soD,
+            supplier: supplier,
+            orderType: orderType,
+            customer: customer,
             user: user.id,
             companyId: companyId,
+            txn: txn,
           );
         } else if (lm != null &&
             applyLocationMgmt &&
             applyLotMgmt &&
             qty != 0.0) {
-          print('DEBUG: Creating LotTransaction');
+          if (kDebugMode) {
+            developer.log('DEBUG: Creating LotTransaction');
+          }
           await _createLotTransaction(
             lm: lm,
             transactionType: transactionType,
@@ -117,14 +145,20 @@ class ItemTransactionRepository {
             qty: qty,
             por: por,
             soD: soD,
+            supplier: supplier,
+            orderType: orderType,
+            customer: customer,
             user: user.id,
             companyId: companyId,
+            txn: txn,
           );
         }
       }
     } catch (e, stackTrace) {
-      print('DEBUG: Error in stock card creation: $e');
-      print('DEBUG: StackTrace: $stackTrace');
+      if (kDebugMode) {
+        developer.log('DEBUG: Error in stock card creation: $e');
+        developer.log('DEBUG: StackTrace: $stackTrace');
+      }
       throw Exception('Error in stock card creation: $e');
     }
   }
@@ -137,15 +171,20 @@ class ItemTransactionRepository {
     required double qty,
     required PurchaseOrderReceiver? por,
     required SalesOrderDetail? soD,
+    int? supplier,
+    int? orderType,
+    int? customer,
     required int user,
     required int companyId,
+    Transaction? txn,
   }) async {
-    final db = await databaseService.database;
+    final db = txn ?? await databaseService.database;
 
     // Get transaction type UDC
     final udcList = await udcDetailsController.getLocalUdcDetailsByCode(
       transactionType,
       'TT',
+      txn: txn,
     );
     if (udcList.isEmpty) {
       throw Exception(
@@ -160,7 +199,11 @@ class ItemTransactionRepository {
         soD?.orderHeader?.orderNumber ??
         trNo;
 
-    trNumber ??= await nextNumberBloc.generateFormattedNumber('TN');
+    trNumber ??= await nextNumberRepository.generateNextNumber(
+      'TN',
+      companyId,
+      txn: txn,
+    );
 
     // Calculate quantities and costs
     if (ib.itemNumber == 0 || ib.branch == 0) {
@@ -171,18 +214,10 @@ class ItemTransactionRepository {
       throw Exception('Unit of measure is missing for item branch: ${ib.id}');
     }
 
-    final factor = await itemUomConversionRepository.fromOtherToAnother(
-      ib.itemNumber,
-      ib.unitOfMeasure!,
-      ib.unitOfMeasure!, // Same UoM for item branch
-      companyId,
-    );
-
-    final qtyAvInStore = (ib.quantityAvailable ?? 0.0) + (factor * qty);
-
     final itemCost = await itemCostRepository.findByItem(
       ib.itemNumber,
       companyId,
+      txn: txn,
     );
     final unitCost = itemCost?.amountUnitCost ?? 0.0;
 
@@ -190,19 +225,20 @@ class ItemTransactionRepository {
       ib.itemNumber,
       ib.unitOfMeasure!,
       companyId,
+      txn: txn,
     );
 
-    final qTrn = (factorP * qty).abs();
+    final qTrn = factorP * qty;
     final amountCost = qTrn * unitCost;
 
-    final qBfrTrn = (factorP * qtyAvInStore).abs();
+    final qBfrTrn = factorP * (ib.quantityAvailable ?? 0.0);
     final beforeAmountCost = qBfrTrn * unitCost;
 
     // Create transaction
     final transaction = ItemTransactionModel(
       dateCreated: DateTime.now(),
-      quantityTransaction: qty,
-      beforeStoreQuantityAvailable: qtyAvInStore,
+      quantityTransaction: qTrn,
+      beforeStoreQuantityAvailable: qBfrTrn,
       unitCost: unitCost,
       amountCost: amountCost,
       beforeAmountCost: beforeAmountCost,
@@ -215,11 +251,12 @@ class ItemTransactionRepository {
       itemNumber: ib.itemNumber,
       branch: ib.branch,
       unitOfMeasure: ib.unitOfMeasure,
-      supplier: por?.poDetailRef?.poHeaderRef?.supplierId,
+      supplier: supplier ?? por?.poDetailRef?.poHeaderRef?.supplierId,
       orderType:
+          orderType ??
           por?.poDetailRef?.poHeaderRef?.orderType ??
-          soD?.orderHeader?.orderTypeRef?.id,
-      customer: soD?.orderHeader?.customerTableRef?.id,
+          soD?.orderHeader?.orderType,
+      customer: customer ?? soD?.orderHeader?.customerBillTo,
     );
 
     await db.insert('item_transactions', transaction.toMap());
@@ -237,15 +274,20 @@ class ItemTransactionRepository {
     required double qty,
     required PurchaseOrderReceiver? por,
     required SalesOrderDetail? soD,
+    int? supplier,
+    int? orderType,
+    int? customer,
     required int user,
     required int companyId,
+    Transaction? txn,
   }) async {
-    final db = await databaseService.database;
+    final db = txn ?? await databaseService.database;
 
     // Get transaction type UDC
     final udcList = await udcDetailsController.getLocalUdcDetailsByCode(
       transactionType,
       'TT',
+      txn: txn,
     );
     if (udcList.isEmpty) {
       throw Exception(
@@ -263,6 +305,7 @@ class ItemTransactionRepository {
       loc.itemNumber!,
       loc.branch!,
       companyId,
+      txn: txn,
     );
 
     if (ib == null) {
@@ -277,7 +320,11 @@ class ItemTransactionRepository {
         soD?.orderHeader?.orderNumber ??
         trNo;
 
-    trNumber ??= await nextNumberBloc.generateFormattedNumber('TN');
+    trNumber ??= await nextNumberRepository.generateNextNumber(
+      'TN',
+      companyId,
+      txn: txn,
+    );
 
     // Checks moved to top of function
 
@@ -285,6 +332,7 @@ class ItemTransactionRepository {
       loc.itemNumber!,
       loc.branch!,
       companyId,
+      txn: txn,
     );
 
     if (ib.unitOfMeasure == null && uom == null) {
@@ -297,6 +345,7 @@ class ItemTransactionRepository {
       loc.itemNumber!,
       effectiveUom!,
       companyId,
+      txn: txn,
     );
 
     final qtyAvInStore = ib.quantityAvailable ?? 0.0;
@@ -304,6 +353,7 @@ class ItemTransactionRepository {
     final itemCost = await itemCostRepository.findByItem(
       loc.itemNumber!,
       companyId,
+      txn: txn,
     );
     final unitCost = itemCost?.amountUnitCost ?? 0.0;
 
@@ -315,8 +365,8 @@ class ItemTransactionRepository {
     // Create transaction
     final transaction = ItemTransactionModel(
       dateCreated: DateTime.now(),
-      quantityTransaction: qty,
-      beforeStoreQuantityAvailable: qtyAvInStore,
+      quantityTransaction: qTrn,
+      beforeStoreQuantityAvailable: qBfrTrn,
       unitCost: unitCost,
       amountCost: amountCost,
       beforeAmountCost: beforeAmountCost,
@@ -330,11 +380,16 @@ class ItemTransactionRepository {
       itemNumber: loc.itemNumber,
       branch: loc.branch,
       unitOfMeasure: ib.unitOfMeasure ?? uom,
-      supplier: por?.poDetailRef?.poHeaderRef?.supplierId,
+      supplier: supplier ?? por?.poDetailRef?.poHeaderRef?.supplierId,
       orderType:
+          orderType ??
           por?.poDetailRef?.poHeaderRef?.orderType ??
-          soD?.orderHeader?.orderTypeRef?.id,
-      customer: soD?.orderHeader?.customerTableRef?.id,
+          soD?.orderHeader?.orderTypeRef?.id ??
+          soD?.orderHeader?.orderType,
+      customer:
+          customer ??
+          soD?.orderHeader?.customerTableRef?.id ??
+          soD?.orderHeader?.customerBillTo,
     );
 
     await db.insert('item_transactions', transaction.toMap());
@@ -356,18 +411,25 @@ class ItemTransactionRepository {
     required double qty,
     required PurchaseOrderReceiver? por,
     required SalesOrderDetail? soD,
+    int? supplier,
+    int? orderType,
+    int? customer,
     required int user,
     required int companyId,
+    Transaction? txn,
   }) async {
-    print(
-      'DEBUG: _createLotTransaction started. lm: ${lm.id}, item: ${lm.itemNumber}, branch: ${lm.branch}',
-    );
-    final db = await databaseService.database;
+    if (kDebugMode) {
+      developer.log(
+        'DEBUG: _createLotTransaction started. lm: ${lm.id}, item: ${lm.itemNumber}, branch: ${lm.branch}',
+      );
+    }
+    final db = txn ?? await databaseService.database;
 
     // Get transaction type UDC
     final udcList = await udcDetailsController.getLocalUdcDetailsByCode(
       transactionType,
       'TT',
+      txn: txn,
     );
     if (udcList.isEmpty) {
       throw Exception(
@@ -381,13 +443,16 @@ class ItemTransactionRepository {
     }
 
     // Get item branch
-    print(
-      'DEBUG: Finding ItemBranch for item: ${lm.itemNumber}, branch: ${lm.branch}',
-    );
+    if (kDebugMode) {
+      developer.log(
+        'DEBUG: Finding ItemBranch for item: ${lm.itemNumber}, branch: ${lm.branch}',
+      );
+    }
     final ib = await itemInBranchRepository.findByItemAndBranch(
       lm.itemNumber!,
       lm.branch!,
       companyId,
+      txn: txn,
     );
 
     if (ib == null) {
@@ -402,44 +467,67 @@ class ItemTransactionRepository {
         soD?.orderHeader?.orderNumber ??
         trNo;
 
-    trNumber ??= await nextNumberBloc.generateFormattedNumber('TN');
+    trNumber ??= await nextNumberRepository.generateNextNumber(
+      'TN',
+      companyId,
+      txn: txn,
+    );
 
     // Calculate quantities and costs
     final qtyAvInStore = ib.quantityAvailable ?? 0.0;
 
-    print('DEBUG: Finding ItemCost for item: ${lm.itemNumber}');
+    if (kDebugMode) {
+      developer.log('DEBUG: Finding ItemCost for item: ${lm.itemNumber}');
+    }
     final itemCost = await itemCostRepository.findByItem(
       lm.itemNumber!,
       companyId,
+      txn: txn,
     );
     final unitCost = itemCost?.amountUnitCost ?? 0.0;
 
     // Checks moved to top of function
 
-    print(
-      'DEBUG: Getting UoM for item: ${lm.itemNumber}, branch: ${lm.branch}',
+    if (kDebugMode) {
+      developer.log(
+        'DEBUG: Getting UoM for item: ${lm.itemNumber}, branch: ${lm.branch}',
+      );
+    }
+    final uom = await _getItemBranchUoM(
+      lm.itemNumber!,
+      lm.branch!,
+      companyId,
+      txn: txn,
     );
-    final uom = await _getItemBranchUoM(lm.itemNumber!, lm.branch!, companyId);
-    print('DEBUG: uom: $uom, ib.unitOfMeasure: ${ib.unitOfMeasure}');
+    if (kDebugMode) {
+      developer.log('DEBUG: uom: $uom, ib.unitOfMeasure: ${ib.unitOfMeasure}');
+    }
 
     if (ib.unitOfMeasure == null && uom == null) {
       throw Exception('Unit of measure not found for item: ${lm.itemNumber}');
     }
 
     final effectiveUom = ib.unitOfMeasure ?? uom;
-    print('DEBUG: effectiveUom: $effectiveUom');
+    if (kDebugMode) {
+      developer.log('DEBUG: effectiveUom: $effectiveUom');
+    }
 
     if (effectiveUom == null) {
       throw Exception('Effective UoM is null despite checks');
     }
 
-    print('DEBUG: Converting UoM');
+    if (kDebugMode) {
+      developer.log('DEBUG: Converting UoM');
+    }
     final factorP = await itemUomConversionRepository.fromOtherToPrimary(
       lm.itemNumber!,
       effectiveUom,
       companyId,
+      txn: txn,
     );
-    print('DEBUG: factorP: $factorP');
+    if (kDebugMode) {
+      developer.log('DEBUG: factorP: $factorP');
+    }
 
     final qTrn = (factorP * qty).abs();
     final amountCost = qTrn * unitCost;
@@ -449,8 +537,8 @@ class ItemTransactionRepository {
     // Create transaction
     final transaction = ItemTransactionModel(
       dateCreated: DateTime.now(),
-      quantityTransaction: qty,
-      beforeStoreQuantityAvailable: qtyAvInStore,
+      quantityTransaction: qTrn,
+      beforeStoreQuantityAvailable: qBfrTrn,
       unitCost: unitCost,
       amountCost: amountCost,
       beforeAmountCost: beforeAmountCost,
@@ -466,14 +554,21 @@ class ItemTransactionRepository {
       itemNumber: lm.itemNumber,
       branch: lm.branch,
       unitOfMeasure: ib.unitOfMeasure ?? uom,
-      supplier: por?.poDetailRef?.poHeaderRef?.supplierId,
+      supplier: supplier ?? por?.poDetailRef?.poHeaderRef?.supplierId,
       orderType:
+          orderType ??
           por?.poDetailRef?.poHeaderRef?.orderType ??
-          soD?.orderHeader?.orderTypeRef?.id,
-      customer: soD?.orderHeader?.customerBillToRef?.id,
+          soD?.orderHeader?.orderTypeRef?.id ??
+          soD?.orderHeader?.orderType,
+      customer:
+          customer ??
+          soD?.orderHeader?.customerTableRef?.id ??
+          soD?.orderHeader?.customerBillTo,
     );
 
-    print('DEBUG: Inserting transaction');
+    if (kDebugMode) {
+      developer.log('DEBUG: Inserting transaction');
+    }
     await db.insert('item_transactions', transaction.toMap());
 
     // Update lot quantity
@@ -493,6 +588,7 @@ class ItemTransactionRepository {
   Future<bool> executeInventoryTransactions({
     required ItemTransactionModel masterTransaction,
     required List<ItemTransactionModel> detailTransactions,
+    Transaction? txn,
   }) async {
     try {
       if (masterTransaction.transactionType == null) return false;
@@ -515,6 +611,7 @@ class ItemTransactionRepository {
           applyLocationMgmt,
           applyLotMgmt,
           companyId,
+          txn,
         );
         if (!isValid) {
           return false;
@@ -525,23 +622,86 @@ class ItemTransactionRepository {
       final db = await databaseService.database;
       final batch = db.batch();
 
-      for (final transaction in detailTransactions) {
-        // Enrich detail with master/defaults and resolved references before saving
-        final resolvedIb =
-            (transaction.itemNumber != null && masterTransaction.branch != null)
-            ? await itemInBranchRepository.findByItemAndBranch(
-                transaction.itemNumber!,
-                masterTransaction.branch!,
-                companyId,
-              )
-            : null;
+      // Resolve Transaction Type Code ONCE
+      final udc = await udcDetailsController.getUdcDetailById(
+        masterTransaction.transactionType!,
+      );
+      final transactionTypeCode = udc?.detailCode;
 
-        final resolvedLot = (transaction.lotNumber != null)
-            ? await lotMasterRepository.getLotMasterById(
-                transaction.lotNumber!,
+      if (transactionTypeCode == null) {
+        throw Exception(
+          'Transaction Type Detail Code not found (UDC may be missing)',
+        );
+      }
+      final masterWithCode = masterTransaction.copyWith(
+        transactionTypeDetail: udc,
+      );
+
+      for (final transaction in detailTransactions) {
+        // 1. Resolve Item Branch / Location / Lot relative fields
+        double currentQtyAvailable = 0.0;
+        int? effectiveUom;
+
+        // Resolve references
+        ItemInBranchModel? resolvedIb;
+        LotMaster? resolvedLot;
+
+        if (transaction.itemNumber != null &&
+            masterTransaction.branch != null) {
+          resolvedIb = await itemInBranchRepository.findByItemAndBranch(
+            transaction.itemNumber!,
+            masterTransaction.branch!,
+            companyId,
+          );
+        }
+
+        if (transaction.lotNumber != null) {
+          resolvedLot = await lotMasterRepository.getLotMasterById(
+            transaction.lotNumber!,
+            companyId,
+          );
+        }
+
+        // Determine current available quantity based on management policy
+        if (applyLotMgmt && resolvedLot != null) {
+          currentQtyAvailable = resolvedLot.quantityAvailable ?? 0.0;
+          effectiveUom = resolvedIb?.unitOfMeasure;
+        } else if (applyLocationMgmt && transaction.itemLocation != null) {
+          final il = await itemLocationsRepository.getItemLocationById(
+            transaction.itemLocation!,
+            companyId,
+          );
+          currentQtyAvailable = il?.quantityOnHand ?? 0.0;
+          effectiveUom = resolvedIb?.unitOfMeasure;
+        } else {
+          currentQtyAvailable = resolvedIb?.quantityAvailable ?? 0.0;
+          effectiveUom = resolvedIb?.unitOfMeasure;
+        }
+
+        // 2. Resolve Cost
+        final itemCostObj = await itemCostRepository.findByItem(
+          transaction.itemNumber!,
+          companyId,
+        );
+        final unitCost = itemCostObj?.amountUnitCost ?? 0.0;
+
+        // 3. UoM Conversion Factor (from transaction UoM to Primary/Base)
+        double factorToPrimary = 1.0;
+        if (transaction.unitOfMeasure != null && effectiveUom != null) {
+          factorToPrimary = await itemUomConversionRepository
+              .fromOtherToPrimary(
+                transaction.itemNumber!,
+                transaction.unitOfMeasure!,
                 companyId,
-              )
-            : null;
+              );
+        }
+
+        // Calculate Amounts
+        final beforeStoreQty = currentQtyAvailable;
+        final beforeAmtCost = beforeStoreQty * unitCost;
+
+        final qtyTrans = transaction.quantityTransaction;
+        final amtCost = (qtyTrans * factorToPrimary) * unitCost;
 
         final enriched = transaction.copyWith(
           remark: transaction.remark ?? masterTransaction.remark,
@@ -554,14 +714,23 @@ class ItemTransactionRepository {
           company: transaction.company ?? masterTransaction.company,
           itemBranch: transaction.itemBranch ?? resolvedIb?.id,
           lotStatus: transaction.lotStatus ?? resolvedLot?.lotStatus,
+          customer: transaction.customer ?? masterTransaction.customer,
+          orderType: transaction.orderType ?? masterTransaction.orderType,
+          supplier: transaction.supplier ?? masterTransaction.supplier,
+          // Populated Snapshots
+          beforeStoreQuantityAvailable: beforeStoreQty,
+          unitCost: unitCost,
+          amountCost: amtCost,
+          beforeAmountCost: beforeAmtCost,
         );
 
         await _processInventoryTransaction(
           enriched,
-          masterTransaction,
+          masterWithCode,
           applyLocationMgmt,
           applyLotMgmt,
           companyId,
+          explicitCode: transactionTypeCode,
         );
         batch.insert('item_transactions', enriched.toMap());
       }
@@ -579,6 +748,7 @@ class ItemTransactionRepository {
     bool applyLocationMgmt,
     bool applyLotMgmt,
     int companyId,
+    Transaction? txn,
   ) async {
     final transactionType = masterTransaction.transactionTypeDetail?.detailCode;
 
@@ -589,6 +759,7 @@ class ItemTransactionRepository {
         applyLocationMgmt,
         applyLotMgmt,
         companyId,
+        txn,
       );
     } else if (transactionType == 'I') {
       return await _validateIssueTransaction(
@@ -597,6 +768,7 @@ class ItemTransactionRepository {
         applyLocationMgmt,
         applyLotMgmt,
         companyId,
+        txn,
       );
     } else if (transactionType == 'T') {
       return await _validateTransferTransaction(
@@ -617,23 +789,93 @@ class ItemTransactionRepository {
     bool applyLocationMgmt,
     bool applyLotMgmt,
     int companyId,
+    Transaction? txn,
   ) async {
-    if (!applyLocationMgmt && !applyLotMgmt) {
-      final ib = await itemInBranchRepository.findByItemAndBranch(
-        item.itemNumber!,
-        masterTransaction.branch!,
-        companyId,
-      );
-      if (ib == null) return false;
+    // Determine conversion factor from Transaction UoM -> Storage UoM
+    Future<double> getFactor(int? storeUom) async {
+      if (item.unitOfMeasure != null && storeUom != null) {
+        return await itemUomConversionRepository.fromOtherToAnother(
+          item.itemNumber!,
+          item.unitOfMeasure!,
+          storeUom,
+          companyId,
+        );
+      }
+      return 1.0;
+    }
 
-      final currentQty = ib.quantityAvailable ?? 0.0;
-      final adjustmentQty = item.quantityTransaction;
+    if (!item.adjustToIncrease) {
+      // Validating Decrease Logic
+      if (!applyLocationMgmt && !applyLotMgmt) {
+        // Branch Check
+        final ib = await itemInBranchRepository.findByItemAndBranch(
+          item.itemNumber!,
+          masterTransaction.branch!,
+          companyId,
+          txn: txn,
+        );
+        if (ib == null) throw Exception('Item not found in branch');
 
-      if (!item.adjustToIncrease && currentQty < adjustmentQty.abs()) {
-        return false; // Insufficient quantity for decrease
+        final factor = await getFactor(ib.unitOfMeasure);
+        final currentQty = ib.quantityAvailable ?? 0.0;
+        final deduction = (item.quantityTransaction * factor).abs();
+
+        if (currentQty < deduction) {
+          throw Exception('Insufficient quantity in store for item');
+        }
+      } else if (applyLocationMgmt && !applyLotMgmt) {
+        // Location Check
+        if (item.itemLocation == null) throw Exception('Location is required');
+        final il = await itemLocationsRepository.getItemLocationById(
+          item.itemLocation!,
+          companyId,
+          txn: txn,
+        );
+        if (il == null) throw Exception('Location record not found');
+
+        // Assuming Location uses Primary UoM or we fetch it from Item/Branch
+        final ib = await itemInBranchRepository.findByItemAndBranch(
+          item.itemNumber!,
+          masterTransaction.branch!,
+          companyId,
+          txn: txn,
+        );
+
+        final factor = await getFactor(ib?.unitOfMeasure);
+        final currentQty = il.quantityOnHand ?? 0.0;
+        final deduction = (item.quantityTransaction * factor).abs();
+
+        if (currentQty < deduction) {
+          throw Exception(
+            'Insufficient quantity in location ${il.locationDescription?.locationDescription}',
+          );
+        }
+      } else if (applyLotMgmt) {
+        // Lot Check (covers Lot + Location if managed)
+        if (item.lotNumber == null) throw Exception('Lot is required');
+        final lm = await lotMasterRepository.getLotMasterById(
+          item.lotNumber!,
+          companyId,
+          txn: txn,
+        );
+        if (lm == null) throw Exception('Lot record not found');
+
+        final ib = await itemInBranchRepository.findByItemAndBranch(
+          item.itemNumber!,
+          masterTransaction.branch!,
+          companyId,
+          txn: txn,
+        );
+        final factor = await getFactor(ib?.unitOfMeasure);
+        final currentQty = lm.quantityAvailable ?? 0.0;
+        final deduction = (item.quantityTransaction * factor).abs();
+
+        if (currentQty < deduction) {
+          throw Exception('Insufficient quantity in Lot ${lm.lotNumber}');
+        }
       }
     }
-    // Add similar validations for location and lot management
+
     return true;
   }
 
@@ -643,8 +885,91 @@ class ItemTransactionRepository {
     bool applyLocationMgmt,
     bool applyLotMgmt,
     int companyId,
+    Transaction? txn,
   ) async {
     // Implement validation logic for issue transactions
+    // Determine conversion factor from Transaction UoM -> Storage UoM
+    Future<double> getFactor(int? storeUom) async {
+      if (item.unitOfMeasure != null && storeUom != null) {
+        return await itemUomConversionRepository.fromOtherToAnother(
+          item.itemNumber!,
+          item.unitOfMeasure!,
+          storeUom,
+          companyId,
+        );
+      }
+      return 1.0;
+    }
+
+    // Validating Decrease Logic
+    if (!applyLocationMgmt && !applyLotMgmt) {
+      // Branch Check
+      final ib = await itemInBranchRepository.findByItemAndBranch(
+        item.itemNumber!,
+        masterTransaction.branch!,
+        companyId,
+        txn: txn,
+      );
+      if (ib == null) throw Exception('Item not found in branch');
+
+      final factor = await getFactor(ib.unitOfMeasure);
+      final currentQty = ib.quantityAvailable ?? 0.0;
+      final deduction = (item.quantityTransaction * factor).abs();
+
+      if (currentQty < deduction) {
+        throw Exception('Insufficient quantity in store for item');
+      }
+    } else if (applyLocationMgmt && !applyLotMgmt) {
+      // Location Check
+      if (item.itemLocation == null) throw Exception('Location is required');
+      final il = await itemLocationsRepository.getItemLocationById(
+        item.itemLocation!,
+        companyId,
+        txn: txn,
+      );
+      if (il == null) throw Exception('Location record not found');
+
+      // Assuming Location uses Primary UoM or we fetch it from Item/Branch
+      final ib = await itemInBranchRepository.findByItemAndBranch(
+        item.itemNumber!,
+        masterTransaction.branch!,
+        companyId,
+        txn: txn,
+      );
+
+      final factor = await getFactor(ib?.unitOfMeasure);
+      final currentQty = il.quantityOnHand ?? 0.0;
+      final deduction = (item.quantityTransaction * factor).abs();
+
+      if (currentQty < deduction) {
+        throw Exception(
+          'Insufficient quantity in location ${il.locationDescription?.locationDescription}',
+        );
+      }
+    } else if (applyLotMgmt) {
+      // Lot Check (covers Lot + Location if managed)
+      if (item.lotNumber == null) throw Exception('Lot is required');
+      final lm = await lotMasterRepository.getLotMasterById(
+        item.lotNumber!,
+        companyId,
+        txn: txn,
+      );
+      if (lm == null) throw Exception('Lot record not found');
+
+      final ib = await itemInBranchRepository.findByItemAndBranch(
+        item.itemNumber!,
+        masterTransaction.branch!,
+        companyId,
+        txn: txn,
+      );
+      final factor = await getFactor(ib?.unitOfMeasure);
+      final currentQty = lm.quantityAvailable ?? 0.0;
+      final deduction = (item.quantityTransaction * factor).abs();
+
+      if (currentQty < deduction) {
+        throw Exception('Insufficient quantity in Lot ${lm.lotNumber}');
+      }
+    }
 
     return true;
   }
@@ -666,11 +991,13 @@ class ItemTransactionRepository {
     ItemTransactionModel masterTransaction,
     bool applyLocationMgmt,
     bool applyLotMgmt,
-    int companyId,
-  ) async {
+    int companyId, {
+    String? explicitCode,
+    Transaction? txn,
+  }) async {
     // Derive transaction type code from UDC using the id to avoid relying on unset relations
-    String? transactionType;
-    if (masterTransaction.transactionType != null) {
+    String? transactionType = explicitCode;
+    if (transactionType == null && masterTransaction.transactionType != null) {
       final udc = await udcDetailsController.getUdcDetailById(
         masterTransaction.transactionType,
       );
@@ -684,6 +1011,7 @@ class ItemTransactionRepository {
         applyLocationMgmt,
         applyLotMgmt,
         companyId,
+        txn,
       );
     } else if (transactionType == 'I') {
       await _processIssueTransaction(
@@ -692,6 +1020,7 @@ class ItemTransactionRepository {
         applyLocationMgmt,
         applyLotMgmt,
         companyId,
+        txn,
       );
     } else if (transactionType == 'T') {
       await _processTransferTransaction(
@@ -700,6 +1029,7 @@ class ItemTransactionRepository {
         applyLocationMgmt,
         applyLotMgmt,
         companyId,
+        txn,
       );
     }
   }
@@ -710,15 +1040,16 @@ class ItemTransactionRepository {
     bool applyLocationMgmt,
     bool applyLotMgmt,
     int companyId,
+    Transaction? txn,
   ) async {
     // Similar implementation for issue transactions
     // ✅ FIXED
     if (!applyLocationMgmt && !applyLotMgmt) {
-      await _adjustItemBranch(item, masterTransaction, 'D', companyId);
+      await _adjustItemBranch(item, masterTransaction, 'D', companyId, txn);
     } else if (applyLocationMgmt && !applyLotMgmt) {
-      await _adjustItemLocation(item, masterTransaction, 'D', companyId);
+      await _adjustItemLocation(item, masterTransaction, 'D', companyId, txn);
     } else if (applyLocationMgmt && applyLotMgmt) {
-      await _adjustLotMaster(item, masterTransaction, 'D', companyId);
+      await _adjustLotMaster(item, masterTransaction, 'D', companyId, txn);
     }
 
     return true;
@@ -730,14 +1061,429 @@ class ItemTransactionRepository {
     bool applyLocationMgmt,
     bool applyLotMgmt,
     int companyId,
+    Transaction? txn,
   ) async {
-    // Similar implementation for transfer transactions
+    // 1. Branch to Branch Transfer (No Location, No Lot)
     if (!applyLocationMgmt && !applyLotMgmt) {
-      await _adjustItemBranch(item, masterTransaction, 'D', companyId);
-    } else if (applyLocationMgmt && !applyLotMgmt) {
-      await _adjustItemLocation(item, masterTransaction, 'D', companyId);
-    } else if (applyLocationMgmt && applyLotMgmt) {
-      await _adjustLotMaster(item, masterTransaction, 'D', companyId);
+      final sourceBranchId = masterTransaction.branch;
+      final destBranchId = masterTransaction.branchTo;
+
+      if (sourceBranchId == null || destBranchId == null) {
+        throw Exception("Source and Destination Branch are required.");
+      }
+      if (sourceBranchId == destBranchId) {
+        throw Exception("Transferring to same branch not allowed!");
+      }
+
+      // Fetch Source
+      final ibSource = await itemInBranchRepository.findByItemAndBranch(
+        item.itemNumber!,
+        sourceBranchId,
+        companyId,
+        txn: txn,
+      );
+      if (ibSource == null) {
+        throw Exception("Item not found in source branch.");
+      }
+
+      // Fetch Dest (Create if not exists - needed for UoM)
+      final ibDest = await _getOrCreateItemInBranch(
+        item.itemNumber!,
+        destBranchId,
+        companyId,
+        masterTransaction.createdBy ?? 0,
+        int.tryParse(item.item?.unitOfMeasure ?? ''),
+        txn: txn,
+      );
+
+      // Conversions
+      double factorFrom = 1.0;
+      if (item.unitOfMeasure != null && ibSource.unitOfMeasure != null) {
+        factorFrom = await itemUomConversionRepository.fromOtherToAnother(
+          item.itemNumber!,
+          item.unitOfMeasure!,
+          ibSource.unitOfMeasure!,
+          companyId,
+          txn: txn,
+        );
+      }
+
+      double factorTo = 1.0;
+      if (item.unitOfMeasure != null && ibDest.unitOfMeasure != null) {
+        factorTo = await itemUomConversionRepository.fromOtherToAnother(
+          item.itemNumber!,
+          item.unitOfMeasure!,
+          ibDest.unitOfMeasure!,
+          companyId,
+          txn: txn,
+        );
+      }
+
+      double qIFrom = (factorFrom * item.quantityTransaction).abs();
+      double qITo = (factorTo * item.quantityTransaction).abs();
+      double qb = ibSource.quantityAvailable ?? 0.0;
+
+      // Strict Quantity Validation
+      if (qb < qIFrom) {
+        throw Exception("Quantity is Greater than expected value!");
+      }
+
+      // Execute Updates
+      await itemInBranchRepository.update(
+        ibSource.copyWith(quantityAvailable: qb - qIFrom),
+        txn: txn,
+      );
+
+      await itemInBranchRepository.update(
+        ibDest.copyWith(
+          quantityAvailable: (ibDest.quantityAvailable ?? 0.0) + qITo,
+        ),
+        txn: txn,
+      );
+    }
+    // 2. Location to Location Transfer
+    else if (applyLocationMgmt && !applyLotMgmt) {
+      // Validate Locations
+      if (item.itemLocation == null || item.itemLocationsTo == null) {
+        throw Exception("Source and Destination Locations are required.");
+      }
+      if (item.itemLocation == item.itemLocationsTo) {
+        throw Exception("Transferring to same location not allowed!");
+      }
+
+      // Fetch Source Location
+      final ilSource = await itemLocationsRepository.getItemLocationById(
+        item.itemLocation!,
+        companyId,
+        txn: txn,
+      );
+      if (ilSource == null) throw Exception("Source Location not found.");
+
+      final sourceBranchId = masterTransaction.branch!;
+
+      // Resolve Dest Branch from Dest Location Master
+      final destLocMaster = await locationMasterRepository
+          .getLocationMasterById(item.itemLocationsTo!, companyId, txn: txn);
+      if (destLocMaster == null) {
+        throw Exception("Destination Location Master not found.");
+      }
+      final destBranchId = destLocMaster.branch!;
+
+      // Fetch IBs for UoM conversions
+      final ibSource = await itemInBranchRepository.findByItemAndBranch(
+        item.itemNumber!,
+        sourceBranchId,
+        companyId,
+        txn: txn,
+      );
+      final ibDest = await _getOrCreateItemInBranch(
+        item.itemNumber!,
+        destBranchId,
+        companyId,
+        masterTransaction.createdBy ?? 0,
+        int.tryParse(item.item?.unitOfMeasure ?? ''),
+        txn: txn,
+      );
+
+      // Factors
+      double factorFrom = 1.0;
+      if (item.unitOfMeasure != null && ibSource?.unitOfMeasure != null) {
+        factorFrom = await itemUomConversionRepository.fromOtherToAnother(
+          item.itemNumber!,
+          item.unitOfMeasure!,
+          ibSource!.unitOfMeasure!,
+          companyId,
+          txn: txn,
+        );
+      }
+      double factorTo = 1.0;
+      if (item.unitOfMeasure != null && ibDest.unitOfMeasure != null) {
+        factorTo = await itemUomConversionRepository.fromOtherToAnother(
+          item.itemNumber!,
+          item.unitOfMeasure!,
+          ibDest.unitOfMeasure!,
+          companyId,
+          txn: txn,
+        );
+      }
+
+      double qIFrom = (item.quantityTransaction * factorFrom).abs();
+      double qITo = (item.quantityTransaction * factorTo).abs();
+      double qb = ilSource.quantityOnHand ?? 0.0;
+
+      // Strict Validation
+      if (qb < qIFrom) {
+        throw Exception("Quantity is Greater than expected value!");
+      }
+
+      // Find/Create Dest ItemLocation
+      var ilDest = await itemLocationsRepository
+          .getItemLocationByItemBranchLocation(
+            branchId: destBranchId,
+            itemNumber: item.itemNumber!,
+            locationId: destLocMaster.id!,
+            companyId: companyId,
+            txn: txn,
+          );
+
+      if (ilDest == null) {
+        final newItemLocation = ItemLocation(
+          branch: destBranchId,
+          itemNumber: item.itemNumber,
+          location: destLocMaster.id,
+          quantityOnHand: 0.0,
+          company: companyId,
+          dateCreated: DateTime.now(),
+          dateUpdated: DateTime.now(),
+          createdBy: masterTransaction.createdBy ?? 0,
+          updatedBy: masterTransaction.createdBy ?? 0,
+        );
+        final id = await itemLocationsRepository.createItemLocation(
+          newItemLocation,
+          txn: txn,
+        );
+        ilDest = newItemLocation.copyWith(id: id);
+      }
+
+      // 1. Locations
+      await itemLocationsRepository.updateItemLocation(
+        ilSource.copyWith(quantityOnHand: qb - qIFrom),
+        txn: txn,
+      );
+      await itemLocationsRepository.updateItemLocation(
+        ilDest.copyWith(quantityOnHand: (ilDest.quantityOnHand ?? 0.0) + qITo),
+        txn: txn,
+      );
+
+      // 2. Branches
+      // Handle same-branch case to avoid overwriting updates
+      if (sourceBranchId == destBranchId) {
+        if (ibSource != null) {
+          // factorFrom/factorTo should be identical if UoM is same for Branch
+          final newQty = (ibSource.quantityAvailable ?? 0.0) - qIFrom + qITo;
+          await itemInBranchRepository.update(
+            ibSource.copyWith(quantityAvailable: newQty),
+            txn: txn,
+          );
+        }
+      } else {
+        // Distinct Branches
+        if (ibSource != null) {
+          await itemInBranchRepository.update(
+            ibSource.copyWith(
+              quantityAvailable: (ibSource.quantityAvailable ?? 0.0) - qIFrom,
+            ),
+            txn: txn,
+          );
+        }
+        await itemInBranchRepository.update(
+          ibDest.copyWith(
+            quantityAvailable: (ibDest.quantityAvailable ?? 0.0) + qITo,
+          ),
+          txn: txn,
+        );
+      }
+    }
+    // 3. Lot to Lot Transfer (Move Lot to another Location)
+    else if (applyLocationMgmt && applyLotMgmt) {
+      if (item.lotNumber == null) {
+        throw Exception("Source Lot Number is required.");
+      }
+      if (item.itemLocationsTo == null) {
+        throw Exception("Destination Location is required for Lot Transfer.");
+      }
+
+      // Strict Check: Source Location != Dest Location
+      if (item.itemLocation != null) {
+        if (item.itemLocation == item.itemLocationsTo) {
+          throw Exception("Transferring to same location not allowed!");
+        }
+      }
+
+      // Fetch Source Lot
+      final sourceLot = await lotMasterRepository.getLotMasterById(
+        item.lotNumber!,
+        companyId,
+        txn: txn,
+      );
+      if (sourceLot == null) throw Exception("Source Lot not found.");
+
+      if (sourceLot.location == item.itemLocationsTo) {
+        throw Exception("Transferring to same location not allowed!");
+      }
+
+      // Dest Branch from Dest Location
+      final destLocMaster = await locationMasterRepository
+          .getLocationMasterById(item.itemLocationsTo!, companyId, txn: txn);
+      if (destLocMaster == null) {
+        throw Exception("Destination Location Master not found.");
+      }
+      final destBranchId = destLocMaster.branch!;
+      final sourceBranchId = masterTransaction.branch!;
+
+      // Fetch IBs for Factors
+      final ibSource = await itemInBranchRepository.findByItemAndBranch(
+        item.itemNumber!,
+        sourceBranchId,
+        companyId,
+        txn: txn,
+      );
+      final ibDest = await _getOrCreateItemInBranch(
+        item.itemNumber!,
+        destBranchId,
+        companyId,
+        masterTransaction.createdBy ?? 0,
+        int.tryParse(item.item?.unitOfMeasure ?? ''),
+        txn: txn,
+      );
+
+      // Factors
+      double factorFrom = 1.0;
+      if (item.unitOfMeasure != null && ibSource?.unitOfMeasure != null) {
+        factorFrom = await itemUomConversionRepository.fromOtherToAnother(
+          item.itemNumber!,
+          item.unitOfMeasure!,
+          ibSource!.unitOfMeasure!,
+          companyId,
+          txn: txn,
+        );
+      }
+      double factorTo = 1.0;
+      if (item.unitOfMeasure != null && ibDest.unitOfMeasure != null) {
+        factorTo = await itemUomConversionRepository.fromOtherToAnother(
+          item.itemNumber!,
+          item.unitOfMeasure!,
+          ibDest.unitOfMeasure!,
+          companyId,
+          txn: txn,
+        );
+      }
+
+      double qIFrom = (item.quantityTransaction * factorFrom).abs();
+      double qITo = (item.quantityTransaction * factorTo).abs();
+      double qb = sourceLot.quantityAvailable ?? 0.0;
+
+      if (qb < qIFrom) {
+        throw Exception("Quantity is Greater than expected value!");
+      }
+
+      // Destination Lot Logic
+      final destLots = await lotMasterRepository.getLotMastersByItemAndBranch(
+        itemNumber: item.itemNumber!,
+        branch: destBranchId,
+        companyId: companyId,
+        txn: txn,
+      );
+
+      LotMaster? destLot;
+      try {
+        destLot = destLots.firstWhere(
+          (l) =>
+              l.lotNumber == sourceLot.lotNumber &&
+              l.location == item.itemLocationsTo,
+        );
+      } catch (e) {
+        destLot = null;
+      }
+
+      if (destLot == null) {
+        final newLot = sourceLot.copyWith(
+          id: null,
+          branch: destBranchId,
+          location: item.itemLocationsTo,
+          quantityAvailable: 0.0,
+          dateReceived: DateTime.now(),
+        );
+        final id = await lotMasterRepository.createLotMaster(newLot, txn: txn);
+        destLot = newLot.copyWith(id: id);
+      }
+
+      // 1. Lots
+      await lotMasterRepository.updateLotMaster(
+        sourceLot.copyWith(quantityAvailable: qb - qIFrom),
+        txn: txn,
+      );
+      await lotMasterRepository.updateLotMaster(
+        destLot.copyWith(
+          quantityAvailable: (destLot.quantityAvailable ?? 0.0) + qITo,
+        ),
+        txn: txn,
+      );
+
+      // 2. Locations (Cascade)
+      // Source
+      if (sourceLot.location != null) {
+        final ilSource = await itemLocationsRepository.getItemLocationById(
+          sourceLot.location!,
+          companyId,
+          txn: txn,
+        );
+        if (ilSource != null) {
+          await itemLocationsRepository.updateItemLocation(
+            ilSource.copyWith(
+              quantityOnHand: (ilSource.quantityOnHand ?? 0.0) - qIFrom,
+            ),
+            txn: txn,
+          );
+        }
+      }
+      // Dest
+      var ilDest = await itemLocationsRepository
+          .getItemLocationByItemBranchLocation(
+            branchId: destBranchId,
+            itemNumber: item.itemNumber!,
+            locationId: destLocMaster.id!,
+            companyId: companyId,
+            txn: txn,
+          );
+      if (ilDest == null) {
+        final newItemLocation = ItemLocation(
+          branch: destBranchId,
+          itemNumber: item.itemNumber,
+          location: destLocMaster.id,
+          quantityOnHand: 0.0,
+          company: companyId,
+          dateCreated: DateTime.now(),
+          dateUpdated: DateTime.now(),
+          createdBy: masterTransaction.createdBy ?? 0,
+          updatedBy: masterTransaction.createdBy ?? 0,
+        );
+        final id = await itemLocationsRepository.createItemLocation(
+          newItemLocation,
+          txn: txn,
+        );
+        ilDest = newItemLocation.copyWith(id: id);
+      }
+      await itemLocationsRepository.updateItemLocation(
+        ilDest.copyWith(quantityOnHand: (ilDest.quantityOnHand ?? 0.0) + qITo),
+        txn: txn,
+      );
+
+      // 3. Branches (Cascade)
+      if (sourceBranchId == destBranchId) {
+        if (ibSource != null) {
+          final newQty = (ibSource.quantityAvailable ?? 0.0) - qIFrom + qITo;
+          await itemInBranchRepository.update(
+            ibSource.copyWith(quantityAvailable: newQty),
+            txn: txn,
+          );
+        }
+      } else {
+        if (ibSource != null) {
+          await itemInBranchRepository.update(
+            ibSource.copyWith(
+              quantityAvailable: (ibSource.quantityAvailable ?? 0.0) - qIFrom,
+            ),
+            txn: txn,
+          );
+        }
+        await itemInBranchRepository.update(
+          ibDest.copyWith(
+            quantityAvailable: (ibDest.quantityAvailable ?? 0.0) + qITo,
+          ),
+          txn: txn,
+        );
+      }
     }
     return true;
   }
@@ -748,15 +1494,22 @@ class ItemTransactionRepository {
     bool applyLocationMgmt,
     bool applyLotMgmt,
     int companyId,
+    Transaction? txn,
   ) async {
     final incDec = item.adjustToIncrease ? 'I' : 'D';
 
     if (!applyLocationMgmt && !applyLotMgmt) {
-      await _adjustItemBranch(item, masterTransaction, incDec, companyId);
+      await _adjustItemBranch(item, masterTransaction, incDec, companyId, txn);
     } else if (applyLocationMgmt && !applyLotMgmt) {
-      await _adjustItemLocation(item, masterTransaction, incDec, companyId);
+      await _adjustItemLocation(
+        item,
+        masterTransaction,
+        incDec,
+        companyId,
+        txn,
+      );
     } else if (applyLocationMgmt && applyLotMgmt) {
-      await _adjustLotMaster(item, masterTransaction, incDec, companyId);
+      await _adjustLotMaster(item, masterTransaction, incDec, companyId, txn);
     }
   }
 
@@ -765,23 +1518,43 @@ class ItemTransactionRepository {
     ItemTransactionModel masterTransaction,
     String incDec,
     int companyId,
+    Transaction? txn,
   ) async {
     final ib = await itemInBranchRepository.findByItemAndBranch(
       item.itemNumber!,
       masterTransaction.branch!,
       companyId,
+      txn: txn,
     );
 
     if (ib != null) {
       final currentQty = ib.quantityAvailable ?? 0.0;
-      final adjustmentQty = item.quantityTransaction;
+
+      // Calculate Factor: Transaction UoM -> Item Branch UoM (usually Primary)
+      double factor = 1.0;
+      if (item.unitOfMeasure != null && ib.unitOfMeasure != null) {
+        // Assuming 'ib.unitOfMeasure' is the storage UoM
+        factor = await itemUomConversionRepository.fromOtherToAnother(
+          item.itemNumber!,
+          item.unitOfMeasure!,
+          ib.unitOfMeasure!,
+          companyId,
+          txn: txn,
+        );
+      }
+
+      final adjustmentQty = (item.quantityTransaction * factor).abs();
+
+      if (incDec == 'D' && currentQty < adjustmentQty) {
+        throw Exception("Quantity is Greater than expected value!");
+      }
 
       final newQty = incDec == 'I'
           ? currentQty + adjustmentQty
           : currentQty - adjustmentQty;
 
       final updatedIb = ib.copyWith(quantityAvailable: newQty);
-      await itemInBranchRepository.update(updatedIb);
+      await itemInBranchRepository.update(updatedIb, txn: txn);
     }
   }
 
@@ -790,35 +1563,61 @@ class ItemTransactionRepository {
     ItemTransactionModel masterTransaction,
     String incDec,
     int companyId,
+    Transaction? txn,
   ) async {
-    if (item.location != null) {
-      final il = item.location!;
-      final qb = il.quantityOnHand ?? 0.0;
-      final uom = await _getItemBranchUoM(
-        item.itemNumber!,
-        masterTransaction.branch!,
+    if (item.itemLocation != null) {
+      // 1. Fetch by ID
+      final il = await itemLocationsRepository.getItemLocationById(
+        item.itemLocation!,
         companyId,
-      );
-      final factor = await itemUomConversionRepository.fromOtherToAnother(
-        item.itemNumber!,
-        uom!,
-        item.unitOfMeasure!,
-        companyId,
+        txn: txn,
       );
 
-      final qI = factor * (item.quantityTransaction).abs();
+      if (il != null) {
+        final qb = il.quantityOnHand ?? 0.0;
 
-      if (qI < 0.0 && qb < qI.abs()) {
-        return; // Quantity greater than expected
+        // 2. Conversion: Transaction UoM -> Item Primary (Standard)
+        // We assume Locations store in Primary UoM for simplicity, or we check IB's UoM.
+        final ib = await itemInBranchRepository.findByItemAndBranch(
+          item.itemNumber!,
+          masterTransaction.branch!,
+          companyId,
+        );
+
+        double factor = 1.0;
+        if (item.unitOfMeasure != null && ib?.unitOfMeasure != null) {
+          factor = await itemUomConversionRepository.fromOtherToAnother(
+            item.itemNumber!,
+            item.unitOfMeasure!,
+            ib!.unitOfMeasure!,
+            companyId,
+          );
+        }
+
+        final qI = (factor * item.quantityTransaction).abs();
+
+        if (incDec == 'D' && qb < qI) {
+          throw Exception("Quantity is Greater than expected value!");
+        }
+
+        final newQty = (incDec == 'I') ? qb + qI : qb - qI;
+        final updatedLoc = il.copyWith(quantityOnHand: newQty);
+
+        await itemLocationsRepository.updateItemLocation(updatedLoc, txn: txn);
+
+        // 3. Cascade to Branch
+        // We apply the SAME delta (qI) to the branch
+        if (ib != null) {
+          final currentBranchQty = ib.quantityAvailable ?? 0.0;
+          final newBranchQty = (incDec == 'I')
+              ? currentBranchQty + qI
+              : currentBranchQty - qI;
+
+          await itemInBranchRepository.update(
+            ib.copyWith(quantityAvailable: newBranchQty),
+          );
+        }
       }
-
-      if (incDec == 'I') {
-        il.quantityOnHand = qb + qI;
-      } else {
-        il.quantityOnHand = qb - qI;
-      }
-
-      itemLocationsRepository.updateItemLocation(item.location!);
     }
   }
 
@@ -827,35 +1626,78 @@ class ItemTransactionRepository {
     ItemTransactionModel masterTransaction,
     String incDec,
     int companyId,
+    Transaction? txn,
   ) async {
-    if (item.lot != null) {
-      final lm = item.lot!;
-      final qb = lm.quantityAvailable ?? 0.0;
-      final uom = await _getItemBranchUoM(
-        item.itemNumber!,
-        masterTransaction.branch!,
+    if (item.lotNumber != null) {
+      // 1. Fetch by ID
+      final lm = await lotMasterRepository.getLotMasterById(
+        item.lotNumber!,
         companyId,
-      );
-      final factor = await itemUomConversionRepository.fromOtherToAnother(
-        item.itemNumber!,
-        uom!,
-        item.unitOfMeasure!,
-        companyId,
+        txn: txn,
       );
 
-      final qI = factor * (item.quantityTransaction).abs();
+      if (lm != null) {
+        final qb = lm.quantityAvailable ?? 0.0;
 
-      if (qI < 0.0 && qb < qI.abs()) {
-        return; // Quantity greater than expected
+        // 2. Conversion
+        final ib = await itemInBranchRepository.findByItemAndBranch(
+          item.itemNumber!,
+          masterTransaction.branch!,
+          companyId,
+        );
+
+        double factor = 1.0;
+        if (item.unitOfMeasure != null && ib?.unitOfMeasure != null) {
+          factor = await itemUomConversionRepository.fromOtherToAnother(
+            item.itemNumber!,
+            item.unitOfMeasure!,
+            ib!.unitOfMeasure!,
+            companyId,
+          );
+        }
+
+        final qI = (factor * item.quantityTransaction).abs();
+
+        // Validation
+        if (incDec == 'D' && qb < qI) {
+          throw Exception("Quantity is Greater than expected value!");
+        }
+
+        final newQty = (incDec == 'I') ? qb + qI : qb - qI;
+        final updatedLot = lm.copyWith(quantityAvailable: newQty);
+
+        await lotMasterRepository.updateLotMaster(updatedLot, txn: txn);
+
+        // 3. Cascade - Location (if exists)
+        if (lm.location != null) {
+          final il = await itemLocationsRepository.getItemLocationById(
+            lm.location!,
+            companyId,
+            txn: txn,
+          );
+          if (il != null) {
+            final currentLocQty = il.quantityOnHand ?? 0.0;
+            final newLocQty = (incDec == 'I')
+                ? currentLocQty + qI
+                : currentLocQty - qI;
+            await itemLocationsRepository.updateItemLocation(
+              il.copyWith(quantityOnHand: newLocQty),
+              txn: txn,
+            );
+          }
+        }
+
+        // 4. Cascade - Branch
+        if (ib != null) {
+          final currentBranchQty = ib.quantityAvailable ?? 0.0;
+          final newBranchQty = (incDec == 'I')
+              ? currentBranchQty + qI
+              : currentBranchQty - qI;
+          await itemInBranchRepository.update(
+            ib.copyWith(quantityAvailable: newBranchQty),
+          );
+        }
       }
-
-      if (incDec == 'I') {
-        lm.quantityAvailable = qb + qI;
-      } else {
-        lm.quantityAvailable = qb - qI;
-      }
-
-      lotMasterRepository.updateLotMaster(lm);
     }
   }
 
@@ -1043,7 +1885,9 @@ class ItemTransactionRepository {
 
       return qOpen;
     } catch (e) {
-      print('Error calculating opening amount: $e');
+      if (kDebugMode) {
+        developer.log('Error calculating opening amount: $e');
+      }
       throw Exception('Error calculating opening amount: $e');
     }
   }
@@ -1068,7 +1912,9 @@ class ItemTransactionRepository {
 
       return totalOpening;
     } catch (e) {
-      print('Error calculating total opening: $e');
+      if (kDebugMode) {
+        developer.log('Error calculating total opening: $e');
+      }
       throw Exception('Failed to calculate total opening: $e');
     }
   }
@@ -1076,9 +1922,10 @@ class ItemTransactionRepository {
   Future<int?> _getItemBranchUoM(
     int itemNumber,
     int branch,
-    int companyId,
-  ) async {
-    final db = await databaseService.database;
+    int companyId, {
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
     final result = await db.rawQuery(
       'SELECT unit_of_measure FROM items_in_branch WHERE item_number = ? AND branch = ? AND company = ?',
       [itemNumber, branch, companyId],
@@ -1094,16 +1941,26 @@ class ItemTransactionRepository {
     final transactions = await db.rawQuery(
       '''
       SELECT it.*,
-             il.location,
+                 it.item_location,
+                il.location,
+                lcm.location_description as location_description,
              lm.lot_number,
              ib.quantity_available,
              i.item_description as item_description,
              b.description as branch_name,
-             udt.description_1 as transaction_type,
-             uds.description_1 as lot_status,
-             udm.description_1 as unit_of_measure
+             udt.description_1 as transaction_type_description,
+             udt.detail_code as transaction_type_code,
+             uds.description_1 as lot_status_description,
+             uds.detail_code as lot_status_code,
+             udo.description_1 as order_type_description,
+             udo.detail_code as order_type_code,
+             sup.supplier_name as supplier_name,
+             cus.customer_name as customer_name,
+             lm.batch_number_supplier as batch_number_supplier,
+             udm.description_1 as unit_of_measure_description
       FROM item_transactions it
       LEFT JOIN item_location il ON it.item_location = il.id
+      LEFT JOIN location_master lcm ON il.location = lcm.id
       LEFT JOIN lot_master lm ON it.lot_number = lm.id
       LEFT JOIN items_in_branch ib ON it.item_branch = ib.id
       LEFT JOIN items_table i ON it.item_number = i.id
@@ -1111,6 +1968,9 @@ class ItemTransactionRepository {
       LEFT JOIN udc_details udt ON it.transaction_type = udt.id
       LEFT JOIN udc_details uds ON it.lot_status = uds.id
       LEFT JOIN udc_details udm ON it.unit_of_measure = udm.id
+      LEFT JOIN udc_details udo ON it.order_type = udo.id
+      LEFT JOIN supplier_table sup ON it.supplier = sup.id
+      LEFT JOIN customer_table cus ON it.customer = cus.id
       WHERE it.company = ?
       ORDER BY it.date_created DESC
     ''',
@@ -1120,6 +1980,78 @@ class ItemTransactionRepository {
     return transactions
         .map((map) => ItemTransactionModel.fromMap(map))
         .toList();
+  }
+
+  Future<PaginatedItemTransactionResult> getPaginatedItemTransactions({
+    required int companyId,
+    required int page,
+    required int pageSize,
+    String? sortField,
+    bool ascending = true,
+  }) async {
+    final db = await databaseService.database;
+
+    // Build base query
+    var query = '''
+        SELECT it.*,
+             il.location,
+             lcm.location_description as location_description,
+             lm.lot_number,
+             lm.batch_number_supplier as batch_number_supplier,
+             ib.quantity_available,
+             i.item_description as item_description,
+             b.description as branch_name,
+             udt.description_1 as transaction_type_description,
+             uds.description_1 as lot_status_description,
+             udo.description_1 as order_type_description,
+             sup.supplier_name as supplier_name,
+             cus.customer_name as customer_name,
+             udm.description_1 as unit_of_measure_description
+      FROM item_transactions it
+      LEFT JOIN item_location il ON it.item_location = il.id
+      LEFT JOIN location_master lcm ON il.location = lcm.id
+      LEFT JOIN lot_master lm ON it.lot_number = lm.id
+      LEFT JOIN items_in_branch ib ON it.item_branch = ib.id
+      LEFT JOIN items_table i ON it.item_number = i.id
+      LEFT JOIN branch_table b ON it.branch = b.id
+      LEFT JOIN udc_details udt ON it.transaction_type = udt.id
+      LEFT JOIN udc_details uds ON it.lot_status = uds.id
+      LEFT JOIN udc_details udm ON it.unit_of_measure = udm.id
+      LEFT JOIN udc_details udo ON it.order_type = udo.id
+      LEFT JOIN supplier_table sup ON it.supplier = sup.id
+      LEFT JOIN customer_table cus ON it.customer = cus.id
+      WHERE it.company = ?
+    ''';
+
+    final params = <dynamic>[companyId];
+
+    // Add sorting
+    if (sortField != null) {
+      query += ' ORDER BY $sortField ${ascending ? 'ASC' : 'DESC'}';
+    }
+
+    // Add pagination
+    query += ' LIMIT ? OFFSET ?';
+    params.add(pageSize);
+    params.add((page - 1) * pageSize);
+
+    // Execute main query
+    final itemsData = await db.rawQuery(query, params);
+
+    // Count total records
+    final countResult = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM item_transactions WHERE company = ?',
+      [companyId],
+    );
+
+    final totalCount = (countResult.first['count'] as int?) ?? 0;
+
+    // Parse results
+    final items = itemsData.map((row) {
+      return ItemTransactionModel.fromMap(row);
+    }).toList();
+
+    return PaginatedItemTransactionResult(items: items, totalCount: totalCount);
   }
 
   Future<int> createTransaction(ItemTransactionModel transaction) async {
@@ -1163,5 +2095,666 @@ class ItemTransactionRepository {
     }
 
     await batch.commit();
+  }
+
+  Future<double> openingQuantityBefore(
+    int itemId,
+    int companyId,
+    DateTime dateFrom,
+  ) async {
+    try {
+      final db = await databaseService.database;
+      final typeCodes = ["A", "I", "T"];
+      final typeIds = <int>[];
+
+      for (var code in typeCodes) {
+        final udc = await udcDetailsController.getLocalUdcDetailsByCode(
+          code,
+          'TT',
+        );
+        if (udc.isNotEmpty) {
+          typeIds.add(udc.first.id);
+        }
+      }
+
+      final dateFromStr = dateFrom.toIso8601String();
+      final startOfDay = DateTime(
+        dateFrom.year,
+        dateFrom.month,
+        dateFrom.day,
+      ).toIso8601String();
+
+      double transValueTotal = 0.0;
+      if (typeIds.isNotEmpty) {
+        final typeIdsStr = typeIds.join(',');
+        final transactions = await db.rawQuery(
+          '''
+          SELECT quantity_transaction, unit_of_measure 
+          FROM item_transactions 
+          WHERE company = ? 
+          AND item_number = ? 
+          AND order_type IS NULL 
+          AND transaction_type IN ($typeIdsStr)
+          AND date_created < ?
+        ''',
+          [companyId, itemId, dateFromStr],
+        );
+
+        for (var row in transactions) {
+          final qty = row['quantity_transaction'] as double? ?? 0.0;
+          final uom = row['unit_of_measure'] as int?;
+
+          if (uom != null) {
+            final rowFactor = await itemUomConversionRepository
+                .fromOtherToPrimary(itemId, uom, companyId);
+            transValueTotal += (qty * rowFactor);
+          }
+        }
+      }
+      final purchasesResult = await db.rawQuery(
+        '''
+        SELECT SUM(d.quantity_transaction) as total
+        FROM purchase_order_detail d
+        JOIN purchase_order_header h ON d.po_header = h.id
+        WHERE d.company = ?
+        AND d.item_number = ?
+        AND h.date_transation < ?
+      ''',
+        [companyId, itemId, startOfDay],
+      );
+
+      final totalPurchases = (purchasesResult.first['total'] as double?) ?? 0.0;
+
+      final salesResult = await db.rawQuery(
+        '''
+        SELECT SUM(d.quantity) as total
+        FROM sales_order_details d
+        JOIN sales_order_header h ON d.sales_order_header_id = h.id
+        WHERE d.company = ?
+        AND d.items_table_id = ?
+        AND (h.void_indicator IS NULL OR h.void_indicator = 'null') 
+        AND h.order_date < ?
+      ''',
+        [companyId, itemId, startOfDay],
+      );
+
+      final cogs = (salesResult.first['total'] as double?) ?? 0.0;
+
+      return (transValueTotal + totalPurchases) - cogs;
+    } catch (e) {
+      if (kDebugMode) {
+        developer.log('Error in openingQuantityBefore: $e');
+      }
+      return 0.0;
+    }
+  }
+
+  Future<double> openingQuantityBeforeToday(
+    int itemId,
+    int companyId,
+    DateTime dateFrom,
+  ) async {
+    try {
+      final db = await databaseService.database;
+
+      final typeCodes = ["A", "I", "T"];
+      final typeIds = <int>[];
+      for (var code in typeCodes) {
+        final udc = await udcDetailsController.getLocalUdcDetailsByCode(
+          code,
+          'TT',
+        );
+        if (udc.isNotEmpty) {
+          typeIds.add(udc.first.id);
+        }
+      }
+
+      final startOfDay = DateTime(dateFrom.year, dateFrom.month, dateFrom.day);
+      final endOfDay = DateTime(
+        dateFrom.year,
+        dateFrom.month,
+        dateFrom.day,
+        23,
+        59,
+        59,
+        999,
+      );
+
+      final startStr = startOfDay.toIso8601String();
+      final endStr = endOfDay.toIso8601String();
+
+      double transValueTotal = 0.0;
+      if (typeIds.isNotEmpty) {
+        final typeIdsStr = typeIds.join(',');
+        final transactions = await db.rawQuery(
+          '''
+          SELECT quantity_transaction, unit_of_measure 
+          FROM item_transactions 
+          WHERE company = ? 
+          AND item_number = ? 
+          AND order_type IS NULL 
+          AND transaction_type IN ($typeIdsStr)
+          AND date_created BETWEEN ? AND ?
+        ''',
+          [companyId, itemId, startStr, endStr],
+        );
+
+        for (var row in transactions) {
+          final qty = row['quantity_transaction'] as double? ?? 0.0;
+          final uom = row['unit_of_measure'] as int?;
+
+          if (uom != null) {
+            final rowFactor = await itemUomConversionRepository
+                .fromOtherToPrimary(itemId, uom, companyId);
+            transValueTotal += (qty * rowFactor);
+          }
+        }
+      }
+      final purchasesResult = await db.rawQuery(
+        '''
+        SELECT SUM(d.quantity_transaction) as total
+        FROM purchase_order_detail d
+        JOIN purchase_order_header h ON d.po_header = h.id
+        WHERE d.company = ?
+        AND d.item_number = ?
+        AND h.date_transation BETWEEN ? AND ?
+      ''',
+        [companyId, itemId, startStr, endStr],
+      );
+
+      final totalPurchases = (purchasesResult.first['total'] as double?) ?? 0.0;
+
+      return transValueTotal + totalPurchases;
+    } catch (e) {
+      if (kDebugMode) {
+        developer.log('Error in openingQuantityBeforeToday: $e');
+      }
+      return 0.0;
+    }
+  }
+
+  Future<double> salesQTYonthisdates(
+    int itemId,
+    int companyId,
+    DateTime dateFrom,
+  ) async {
+    try {
+      final db = await databaseService.database;
+
+      // 1. Get UDC for Order Type "S" (Sales) in Header "OT"
+      final udcList = await udcDetailsController.getLocalUdcDetailsByCode(
+        'SO',
+        'OT',
+      );
+      int? orderTypeId;
+      if (udcList.isNotEmpty) {
+        orderTypeId = udcList.first.id;
+      }
+
+      if (orderTypeId == null) {
+        return 0.0;
+      }
+
+      // 2. Date Range: Start of Day to End of Day
+      final startOfDay = DateTime(
+        dateFrom.year,
+        dateFrom.month,
+        dateFrom.day,
+      ).toIso8601String();
+
+      final endOfDay = DateTime(
+        dateFrom.year,
+        dateFrom.month,
+        dateFrom.day,
+        23,
+        59,
+        59,
+        999,
+      ).toIso8601String();
+
+      // 3. Query ItemTransactions
+      // "SELECT i FROM ItemTransactions i WHERE ... AND orderType = :orderType"
+      // Sum quantityTransaction
+      final result = await db.rawQuery(
+        '''
+        SELECT SUM(quantity_transaction) as total
+        FROM item_transactions
+        WHERE company = ?
+        AND item_number = ?
+        AND order_type = ?
+        AND date_created BETWEEN ? AND ?
+      ''',
+        [companyId, itemId, orderTypeId, startOfDay, endOfDay],
+      );
+
+      final totalAmt = (result.first['total'] as double?) ?? 0.0;
+
+      return totalAmt.abs();
+    } catch (e) {
+      if (kDebugMode) {
+        developer.log('Error in salesQTYonthisdates: $e');
+      }
+      return 0.0;
+    }
+  }
+
+  Future<double> diffrencesalesOnThisdatesQTY(
+    int itemId,
+    int companyId,
+    DateTime dateFrom,
+  ) async {
+    try {
+      final salesQty = await salesQTYonthisdates(itemId, companyId, dateFrom);
+      final before = await openingQuantityBefore(itemId, companyId, dateFrom);
+      final today = await openingQuantityBeforeToday(
+        itemId,
+        companyId,
+        dateFrom,
+      );
+
+      final totalQty = before + today;
+      final amt = totalQty - salesQty;
+
+      return amt;
+    } catch (e) {
+      if (kDebugMode) {
+        developer.log('Error in diffrencesalesOnThisdatesQTY: $e');
+      }
+      return 0.0;
+    }
+  }
+
+  Future<double> openingAmountInitial(
+    int itemId,
+    int companyId,
+    DateTime dateFrom,
+    DateTime dateThru,
+  ) async {
+    try {
+      final db = await databaseService.database;
+
+      // 1. Get the balance as of the start of history (before any transactions in range)
+      double balanceBefore = await openingAmountBefore(
+        itemId,
+        companyId,
+        dateFrom,
+      );
+
+      // 2. Sum internal movements (A, I, T) DURING the range
+      double internalMovementsValue = 0.0;
+
+      final typeCodes = ["A", "I", "T"];
+      final typeIds = <int>[];
+      for (var code in typeCodes) {
+        final udc = await udcDetailsController.getUdcDetailsByCode(code, 'TT');
+        if (udc.isNotEmpty) {
+          typeIds.add(udc.first.id);
+        }
+      }
+
+      if (typeIds.isNotEmpty) {
+        final dateFromStr = DateTime(
+          dateFrom.year,
+          dateFrom.month,
+          dateFrom.day,
+        ).toIso8601String();
+        final dateThruEndOfDay = DateTime(
+          dateThru.year,
+          dateThru.month,
+          dateThru.day,
+          23,
+          59,
+          59,
+          999,
+        ).toIso8601String();
+
+        final typeIdsStr = typeIds.join(',');
+        final transactions = await db.rawQuery(
+          '''
+          SELECT amount_cost 
+          FROM item_transactions 
+          WHERE company = ? 
+          AND item_number = ? 
+          AND order_type IS NULL 
+          AND transaction_type IN ($typeIdsStr)
+          AND date_created BETWEEN ? AND ?
+        ''',
+          [companyId, itemId, dateFromStr, dateThruEndOfDay],
+        );
+
+        for (var row in transactions) {
+          internalMovementsValue +=
+              (row['amount_cost'] as num?)?.toDouble() ?? 0.0;
+        }
+      }
+
+      return balanceBefore + internalMovementsValue;
+    } catch (e) {
+      if (kDebugMode) {
+        developer.log('Error in openingAmountInitial: $e');
+      }
+      return 0.0;
+    }
+  }
+
+  Future<double> openingAmountBefore(
+    int itemId,
+    int companyId,
+    DateTime dateFrom,
+  ) async {
+    try {
+      final db = await databaseService.database;
+      final startOfDay = DateTime(
+        dateFrom.year,
+        dateFrom.month,
+        dateFrom.day,
+      ).toIso8601String();
+
+      // We can get the opening balance MUCH more reliably by looking at
+      // the 'before_amount_cost' of the FIRST transaction on or after dateFrom,
+      // OR the 'after' balance of the transaction before it.
+
+      final firstInPeriod = await db.rawQuery(
+        '''
+        SELECT before_amount_cost 
+        FROM item_transactions 
+        WHERE company = ? AND item_number = ? AND date_created >= ?
+        ORDER BY date_created ASC LIMIT 1
+      ''',
+        [companyId, itemId, startOfDay],
+      );
+
+      if (firstInPeriod.isNotEmpty) {
+        return (firstInPeriod.first['before_amount_cost'] as num?)
+                ?.toDouble() ??
+            0.0;
+      }
+
+      // If no transactions on or after dateFrom, find the LAST one BEFORE dateFrom
+      final lastBeforePeriod = await db.rawQuery(
+        '''
+        SELECT before_amount_cost, amount_cost 
+        FROM item_transactions 
+        WHERE company = ? AND item_number = ? AND date_created < ?
+        ORDER BY date_created DESC LIMIT 1
+      ''',
+        [companyId, itemId, startOfDay],
+      );
+
+      if (lastBeforePeriod.isNotEmpty) {
+        final before =
+            (lastBeforePeriod.first['before_amount_cost'] as num?)
+                ?.toDouble() ??
+            0.0;
+        final delta =
+            (lastBeforePeriod.first['amount_cost'] as num?)?.toDouble() ?? 0.0;
+        return before + delta;
+      }
+
+      // Fallback: Current items in branch value if NO transaction history exists
+      final itemInBranchList = await itemInBranchRepository.findByItem(
+        itemId,
+        companyId,
+      );
+      double currentTotalValue = 0.0;
+      final itemCost = await itemCostRepository.findByItem(itemId, companyId);
+      final unitCost = itemCost?.amountUnitCost ?? 0.0;
+
+      for (var ib in itemInBranchList) {
+        final factor = await itemUomConversionRepository.fromOtherToPrimary(
+          itemId,
+          ib.unitOfMeasure!,
+          companyId,
+        );
+        currentTotalValue += (ib.quantityAvailable ?? 0.0) * factor * unitCost;
+      }
+
+      return currentTotalValue;
+    } catch (e) {
+      if (kDebugMode) {
+        developer.log('Error in openingAmountBefore: $e');
+      }
+      return 0.0;
+    }
+  }
+
+  Future<double> purchaseAmountOnDate(
+    int itemId,
+    int companyId,
+    DateTime dateFrom,
+    DateTime dateThru,
+  ) async {
+    try {
+      final db = await databaseService.database;
+
+      final startOfDay = DateTime(
+        dateFrom.year,
+        dateFrom.month,
+        dateFrom.day,
+      ).toIso8601String();
+
+      final endOfDay = DateTime(
+        dateThru.year,
+        dateThru.month,
+        dateThru.day,
+        23,
+        59,
+        59,
+        999,
+      ).toIso8601String();
+
+      final result = await db.rawQuery(
+        '''
+        SELECT SUM(d.amount_extended_cost) as total
+        FROM purchase_order_detail d
+        JOIN purchase_order_header h ON d.po_header = h.id
+        WHERE d.company = ?
+        AND d.item_number = ?
+        AND h.date_transation BETWEEN ? AND ?
+      ''',
+        [companyId, itemId, startOfDay, endOfDay],
+      );
+
+      final totalAmt = (result.first['total'] as double?) ?? 0.0;
+      return totalAmt;
+    } catch (e) {
+      if (kDebugMode) {
+        developer.log('Error in purchaseAmountOnDate: $e');
+      }
+      return 0.0;
+    }
+  }
+
+  Future<double> salesAmountOnThisDate(
+    int itemId,
+    int companyId,
+    DateTime dateFrom,
+    DateTime dateThru,
+  ) async {
+    try {
+      final db = await databaseService.database;
+
+      final startOfDay = DateTime(
+        dateFrom.year,
+        dateFrom.month,
+        dateFrom.day,
+      ).toIso8601String();
+
+      final endOfDay = DateTime(
+        dateThru.year,
+        dateThru.month,
+        dateThru.day,
+        23,
+        59,
+        59,
+        999,
+      ).toIso8601String();
+
+      final result = await db.rawQuery(
+        '''
+        SELECT SUM(d.extended_price) as total
+        FROM sales_order_details d
+        JOIN sales_order_header h ON d.sales_order_header_id = h.id
+        WHERE d.company = ?
+        AND d.items_table_id = ?
+        AND h.order_date BETWEEN ? AND ?
+      ''',
+        [companyId, itemId, startOfDay, endOfDay],
+      );
+
+      final totalAmt = (result.first['total'] as double?) ?? 0.0;
+      return totalAmt;
+    } catch (e) {
+      if (kDebugMode) {
+        developer.log('Error in salesAmountOnDate: $e');
+      }
+      return 0.0;
+    }
+  }
+
+  Future<double> salesAmountOnThisDateCOS(
+    int itemId,
+    int companyId,
+    DateTime dateFrom,
+    DateTime dateThru,
+  ) async {
+    try {
+      final db = await databaseService.database;
+
+      final startOfDay = DateTime(
+        dateFrom.year,
+        dateFrom.month,
+        dateFrom.day,
+      ).toIso8601String();
+
+      final endOfDay = DateTime(
+        dateThru.year,
+        dateThru.month,
+        dateThru.day,
+        23,
+        59,
+        59,
+        999,
+      ).toIso8601String();
+
+      final result = await db.rawQuery(
+        '''
+        SELECT SUM(d.amount_cost) as total
+        FROM sales_order_details d
+        JOIN sales_order_header h ON d.sales_order_header_id = h.id
+        WHERE d.company = ?
+        AND d.items_table_id = ?
+        AND h.order_date BETWEEN ? AND ?
+      ''',
+        [companyId, itemId, startOfDay, endOfDay],
+      );
+
+      final totalAmt = (result.first['total'] as double?) ?? 0.0;
+      return totalAmt;
+    } catch (e) {
+      if (kDebugMode) {
+        developer.log('Error in salesAmountOnThisDateCOS: $e');
+      }
+      return 0.0;
+    }
+  }
+
+  //gross profit(salesAmountOnThisDate - salesAmountOnThisDateCOS)
+  Future<double> grossProfitOnThisDate(
+    int itemId,
+    int companyId,
+    DateTime dateFrom,
+    DateTime dateThru,
+  ) async {
+    try {
+      final totalSalesAmountOnThisDate = await salesAmountOnThisDate(
+        itemId,
+        companyId,
+        dateFrom,
+        dateThru,
+      );
+      final totalSalesAmountCostOnThisDateCOS = await salesAmountOnThisDateCOS(
+        itemId,
+        companyId,
+        dateFrom,
+        dateThru,
+      );
+      return totalSalesAmountOnThisDate - totalSalesAmountCostOnThisDateCOS;
+    } catch (e) {
+      if (kDebugMode) {
+        developer.log('Error in grossProfitOnThisDate: $e');
+      }
+      return 0.0;
+    }
+  }
+
+  //amount ending(openingAmountInitial - purchaseAmountOnDate + salesAmountOnDateCOS)
+  Future<double> amountEnding(
+    int itemId,
+    int companyId,
+    DateTime dateFrom,
+    DateTime dateThru,
+  ) async {
+    try {
+      final oai = await openingAmountInitial(
+        itemId,
+        companyId,
+        dateFrom,
+        dateThru,
+      );
+      final paotd = await purchaseAmountOnDate(
+        itemId,
+        companyId,
+        dateFrom,
+        dateThru,
+      );
+      final saotd = await salesAmountOnThisDateCOS(
+        itemId,
+        companyId,
+        dateFrom,
+        dateThru,
+      );
+      return oai + paotd - saotd;
+    } catch (e) {
+      if (kDebugMode) {
+        developer.log('Error in amountEnding: $e');
+      }
+      return 0.0;
+    }
+  }
+
+  Future<ItemInBranchModel> _getOrCreateItemInBranch(
+    int itemNumber,
+    int branchId,
+    int companyId,
+    int createdBy,
+    int? uom, {
+    Transaction? txn,
+  }) async {
+    final ib = await itemInBranchRepository.findByItemAndBranch(
+      itemNumber,
+      branchId,
+      companyId,
+      txn: txn,
+    );
+
+    if (ib != null) {
+      return ib;
+    }
+
+    // Create new ItemInBranch
+    final newIb = ItemInBranchModel(
+      id: 0,
+      itemNumber: itemNumber,
+      branch: branchId,
+      company: companyId,
+      quantityAvailable: 0.0,
+      //averageCost: 0.0, // Default
+      unitOfMeasure: uom,
+      reorderPoint: 0.0,
+    );
+
+    final id = await itemInBranchRepository.create(newIb, txn: txn);
+    return newIb.copyWith(id: id);
   }
 }

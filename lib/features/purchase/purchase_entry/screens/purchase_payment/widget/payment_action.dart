@@ -185,65 +185,73 @@ class _PurchasePaymentActionState extends State<PurchasePaymentAction> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Back Button
-        ElevatedButton(
-          onPressed: _isProcessing ? null : _navigateBack,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.grey.shade300,
-            foregroundColor: Colors.grey.shade700,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          child: const Row(
-            children: [
-              Icon(Icons.arrow_back),
-              SizedBox(width: 8),
-              Text('Back', style: TextStyle(fontWeight: FontWeight.bold)),
-            ],
-          ),
-        ),
-        // Complete Order Button
-        ElevatedButton(
-          onPressed: _isProcessing || !canComplete
-              ? null
-              : _completePurchaseOrder,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: canComplete
-                ? const Color(0xFF155888)
-                : Colors.grey.shade400,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          child: _isProcessing
-              ? const Row(
-                  children: [
-                    SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Text('Processing...'),
-                  ],
-                )
-              : const Row(
-                  children: [
-                    Icon(Icons.check_circle),
-                    SizedBox(width: 8),
-                    Text(
-                      'Complete Purchase',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ],
+        Expanded(
+          child:
+              // Back Button
+              ElevatedButton.icon(
+                onPressed: _isProcessing ? null : _navigateBack,
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('Back'),
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.amber,
+                  side: const BorderSide(color: Colors.white),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
+              ),
+        ),
+        const SizedBox(width: 16),
+        // Complete Order Button
+        Expanded(
+          child: ElevatedButton(
+            onPressed: _isProcessing || !canComplete
+                ? null
+                : _completePurchaseOrder,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: canComplete
+                  ? const Color(0xFF155888)
+                  : Colors.grey.shade400,
+              foregroundColor: Colors.white,
+              side: const BorderSide(color: Colors.white),
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: _isProcessing
+                ? const Row(
+                    children: [
+                      SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Text('Processing...'),
+                    ],
+                  )
+                : const Row(
+                    children: [
+                      Icon(Icons.check_circle),
+                      SizedBox(width: 8),
+                      Text(
+                        'Complete',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+          ),
         ),
       ],
     );

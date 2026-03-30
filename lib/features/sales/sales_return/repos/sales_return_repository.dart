@@ -49,21 +49,22 @@ class SalesReturnRepository {
     final db = await databaseService.database;
     final maps = await db.rawQuery(
       '''
-   SELECT srh.*,
-      cu.customer_name as customer_name_ref,
-      cu.customer_name as customer_ship_to_ref,
-      emp.employee_name as first_name,
-      ud.description_1 as payment_term_ref,
-      ud.description_1 as payment_status_ref,
-      ud.description_1 as payment_instrument_ref,
-      ud.description_1 as return_status_ref,
+      SELECT srh.*,
+      cu_customer_bill_to.customer_name as customer_bill_to_ref,
+      com.company_name as company_name,
+      emp.name_first as first_name,
+      ud_payment_term.description_1 as payment_term_ref,
+      ud_payment_status.description_1 as payment_status_ref,
+      ud_payment_instrument.description_1 as payment_instrument_ref,
+      ud_return_status.description_1 as return_status_ref
       FROM sales_return_header srh
-      INNER JOIN customer cu ON srh.customer_id = cu.id
-      INNER JOIN employee emp ON srh.employee_id = emp.id
-      INNER JOIN udc_details ud ON srh.payment_term_id = ud.id
-      INNER JOIN udc_details ud ON srh.payment_status_id = ud.id
-      INNER JOIN udc_details ud ON srh.payment_instrument_id = ud.id
-      INNER JOIN udc_details ud ON srh.return_status_id = ud.id
+      LEFT JOIN customer_table cu_customer_bill_to ON srh.customer_bill_to = cu_customer_bill_to.id
+      LEFT JOIN employees emp ON srh.employees_id  = emp.id
+      LEFT JOIN company_table com ON srh.company = com.id
+      LEFT JOIN udc_details ud_payment_term ON srh.payment_term = ud_payment_term.id
+      LEFT JOIN udc_details ud_payment_status ON srh.payment_status = ud_payment_status.id
+      LEFT JOIN udc_details ud_payment_instrument ON srh.payment_instrument = ud_payment_instrument.id
+      LEFT JOIN udc_details ud_return_status ON srh.return_status = ud_return_status.id
       WHERE srh.company = ? ORDER BY srh.fs_number DESC
       ''',
       [companyId],
@@ -77,20 +78,21 @@ class SalesReturnRepository {
     final maps = await db.rawQuery(
       '''
       SELECT srh.*,
-      cu.customer_name as customer_name_ref,
-      cu.customer_name as customer_ship_to_ref,
-      emp.employee_name as first_name,
-      ud.description_1 as payment_term_ref,
-      ud.description_1 as payment_status_ref,
-      ud.description_1 as payment_instrument_ref,
-      ud.description_1 as return_status_ref,
+      cu_customer_bill_to.customer_name as customer_bill_to_ref,
+      com.company_name as company_name,
+      emp.name_first as first_name,
+      ud_payment_term.description_1 as payment_term_ref,
+      ud_payment_status.description_1 as payment_status_ref,
+      ud_payment_instrument.description_1 as payment_instrument_ref,
+      ud_return_status.description_1 as return_status_ref
       FROM sales_return_header srh
-      INNER JOIN customer cu ON srh.customer_id = cu.id
-      INNER JOIN employee emp ON srh.employee_id = emp.id
-      INNER JOIN udc_details ud ON srh.payment_term_id = ud.id
-      INNER JOIN udc_details ud ON srh.payment_status_id = ud.id
-      INNER JOIN udc_details ud ON srh.payment_instrument_id = ud.id
-      INNER JOIN udc_details ud ON srh.return_status_id = ud.id
+      LEFT JOIN customer_table cu_customer_bill_to ON srh.customer_bill_to = cu_customer_bill_to.id
+      LEFT JOIN company_table com ON srh.company = com.id
+      LEFT JOIN employees emp ON srh.employees_id  = emp.id
+      LEFT JOIN udc_details ud_payment_term ON srh.payment_term = ud_payment_term.id
+      LEFT JOIN udc_details ud_payment_status ON srh.payment_status = ud_payment_status.id
+      LEFT JOIN udc_details ud_payment_instrument ON srh.payment_instrument = ud_payment_instrument.id
+      LEFT JOIN udc_details ud_return_status ON srh.return_status = ud_return_status.id
       WHERE srh.id = ? ORDER BY srh.fs_number DESC
       ''',
       [id],
@@ -212,7 +214,7 @@ class SalesReturnRepository {
       INNER JOIN udc_details ud ON srd.unit_of_measure = ud.id
       INNER JOIN udc_details rs ON srd.return_status = rs.id
       INNER JOIN udc_details rr ON srd.return_reason = rr.id
-      INNER JOIN item_entry it ON srd.item_table_id = it.id
+      INNER JOIN item_entry it ON srd.items_table_id = it.id
     ''',
       [companyId],
     );
@@ -243,46 +245,68 @@ class SalesReturnRepository {
   }
 
   // 🎯 GENERATE REFERENCE NOTE (like Java's generateReferenceNote3)
-  Future<String> generateReferenceNote3(String companyName) async {
+  Future<String> generateReferenceNote3(int companyId) async {
+    final companyName = await _getCompanyName(companyId);
     final prefix = "SR-V-";
     final companyCode = companyName.length >= 2
         ? companyName.substring(0, 2).toUpperCase()
         : companyName.toUpperCase();
 
-    final nextSeq = await _getNextSequenceForCompany(companyName);
+    final nextSeq = await _getNextSequenceForCompany(companyId);
     final seqFormatted = nextSeq.toString().padLeft(2, '0');
 
     return '$prefix$companyCode-$seqFormatted';
   }
 
-  Future<int> _getNextSequenceForCompany(String companyName) async {
+  Future<String> _getCompanyName(int companyId) async {
+    final db = await databaseService.database;
+    final result = await db.query(
+      'company_table',
+      columns: ['company_name'],
+      where: 'id = ?',
+      whereArgs: [companyId],
+    );
+
+    if (result.isNotEmpty) {
+      return result.first['company_name'] as String;
+    }
+    return '';
+  }
+
+  Future<int> _getNextSequenceForCompany(int companyId) async {
     try {
-      final lastRef = await getLastReferenceNote3(companyName);
-      if (lastRef != null && lastRef.isNotEmpty) {
-        final parts = lastRef.split('-');
-        final seqStr = parts.last;
-        final lastSeq = int.tryParse(seqStr) ?? 0;
-        return lastSeq + 1;
+      final references = await getAllReferenceNote3ForCompany(companyId);
+      int maxSeq = 0;
+
+      for (final ref in references) {
+        if (ref != null && ref.isNotEmpty) {
+          // Expected format: SR-V-[COMPANY]-[SEQ]
+          // Example: SR-V-TE-01
+          final parts = ref.split('-');
+          if (parts.isNotEmpty) {
+            final seqStr = parts.last;
+            final seq = int.tryParse(seqStr) ?? 0;
+            if (seq > maxSeq) {
+              maxSeq = seq;
+            }
+          }
+        }
       }
-      return 1;
+      return maxSeq + 1;
     } catch (e) {
       return 1;
     }
   }
 
-  Future<String?> getLastReferenceNote3(String companyName) async {
+  Future<List<String?>> getAllReferenceNote3ForCompany(int companyId) async {
     final db = await databaseService.database;
-    final maps = await db.rawQuery(
-      '''
-      SELECT MAX(reference_note3) as max_ref_note 
-      FROM sales_return_header 
-      WHERE company = ?
-    ''',
-      [companyName],
+    final maps = await db.query(
+      'sales_return_header',
+      columns: ['reference_note3'],
+      where: 'company = ?',
+      whereArgs: [companyId],
     );
 
-    final dynamic rawValue = maps.first['max_ref_note'];
-    final String? maxRefNote = rawValue?.toString();
-    return maxRefNote;
+    return maps.map((m) => m['reference_note3'] as String?).toList();
   }
 }

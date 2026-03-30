@@ -1,6 +1,8 @@
 // features/purchase_order/services/purchase_order_stock_service.dart
+import 'dart:developer' as developer;
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
@@ -41,18 +43,22 @@ class PurchaseOrderStockService {
     required int orderNumber,
   }) async {
     try {
-      print('📦 Starting stock update for receiver:');
-      print('  itemNumber: ${receiver.itemNumber}');
-      print('  branchRecieved: ${receiver.branchRecieved}');
-      print('  location: ${receiver.location}');
-      print('  unitOfMeasure: ${receiver.unitOfMeasure}');
+      if (kDebugMode) {
+        developer.log('📦 Starting stock update for receiver:');
+        developer.log('  itemNumber: ${receiver.itemNumber}');
+        developer.log('  branchRecieved: ${receiver.branchRecieved}');
+        developer.log('  location: ${receiver.location}');
+        developer.log('  unitOfMeasure: ${receiver.unitOfMeasure}');
+      }
 
       // Validate receiver (same as Java)
       if (receiver.itemNumber == null ||
           receiver.quantityRecieved == null ||
           receiver.quantityRecieved == 0.0 ||
           receiver.branchRecieved == null) {
-        print('⚠️ Receiver validation failed, skipping stock update');
+        if (kDebugMode) {
+          developer.log('⚠️ Receiver validation failed, skipping stock update');
+        }
         return; // Same early return as Java
       }
 
@@ -64,12 +70,16 @@ class PurchaseOrderStockService {
       final applyLocationMgmt = systemConstant.applyLocationMgmBoolean;
       final applyLotMgmt = systemConstant.applyLotMgmBoolean;
 
-      print('  applyLocationMgmt: $applyLocationMgmt');
-      print('  applyLotMgmt: $applyLotMgmt');
+      if (kDebugMode) {
+        developer.log('  applyLocationMgmt: $applyLocationMgmt');
+        developer.log('  applyLotMgmt: $applyLotMgmt');
+      }
 
       // Case 1: No location or lot management
       if (!applyLocationMgmt && !applyLotMgmt) {
-        print('📍 Using simple stock update (no location/lot mgmt)');
+        if (kDebugMode) {
+          developer.log('📍 Using simple stock update (no location/lot mgmt)');
+        }
         await _handleSimpleStockUpdateForPurchase(
           receiver: receiver,
           systemConstant: systemConstant,
@@ -81,7 +91,9 @@ class PurchaseOrderStockService {
       else if (applyLocationMgmt &&
           !applyLotMgmt &&
           receiver.location != null) {
-        print('📍 Using location stock update');
+        if (kDebugMode) {
+          developer.log('📍 Using location stock update');
+        }
         await _handleLocationStockUpdateForPurchase(
           receiver: receiver,
           systemConstant: systemConstant,
@@ -91,7 +103,9 @@ class PurchaseOrderStockService {
       }
       // Case 3: Both location and lot management
       else if (applyLocationMgmt && applyLotMgmt && receiver.location != null) {
-        print('📍 Using lot management');
+        if (kDebugMode) {
+          developer.log('📍 Using lot management');
+        }
         await _handleLotManagementForPurchase(
           receiver: receiver,
           orderNumber: orderNumber,
@@ -99,10 +113,14 @@ class PurchaseOrderStockService {
         );
       }
 
-      print('✅ Stock update completed successfully');
+      if (kDebugMode) {
+        developer.log('✅ Stock update completed successfully');
+      }
     } catch (e, stackTrace) {
-      print('❌ Error updating stock for purchase order: $e');
-      print('Stack trace: $stackTrace');
+      if (kDebugMode) {
+        developer.log('❌ Error updating stock for purchase order: $e');
+        developer.log('Stack trace: $stackTrace');
+      }
       rethrow; // Rethrow to see the error in the bloc
     }
   }
@@ -116,7 +134,11 @@ class PurchaseOrderStockService {
   }) async {
     // Validate unitOfMeasure is not null
     if (receiver.unitOfMeasure == null) {
-      print('⚠️ UnitOfMeasure is null for receiver, skipping stock update');
+      if (kDebugMode) {
+        developer.log(
+          '⚠️ UnitOfMeasure is null for receiver, skipping stock update',
+        );
+      }
       return;
     }
 
@@ -131,7 +153,11 @@ class PurchaseOrderStockService {
     if (itemsInBranchList != null) {
       // Validate that branch has unitOfMeasure set
       if (itemsInBranchList.unitOfMeasure == null) {
-        print('⚠️ ItemsInBranch.unitOfMeasure is null, skipping stock update');
+        if (kDebugMode) {
+          developer.log(
+            '⚠️ ItemsInBranch.unitOfMeasure is null, skipping stock update',
+          );
+        }
         return;
       }
 
@@ -169,12 +195,14 @@ class PurchaseOrderStockService {
         ib: itemsInBranchList,
         loc: null,
         lm: null,
-        transactionType: 'C', // 'C' for Receipt/Purchase//C IS COMPLETE
+        transactionType: 'R', // 'C' for Receipt/Purchase//C IS COMPLETE
         trNo: orderNumber,
         remark: 'Purchase',
         qty: roundedReceivedQuantity, // Positive quantity for purchase
         por: receiver,
         soD: null,
+        supplier: receiver.poDetailRef?.poHeaderRef?.supplierId,
+        orderType: receiver.poDetailRef?.poHeaderRef?.orderType,
       );
     }
   }
@@ -208,6 +236,19 @@ class PurchaseOrderStockService {
           branchUom,
           companyId,
         );
+        if (kDebugMode &&
+            factor == 1.0 &&
+            receiver.unitOfMeasure != branchUom) {
+          developer.log(
+            '⚠️ Warning: UOM conversion factor is 1.0 but UOMs differ',
+          );
+          developer.log(
+            '  From UOM: ${receiver.unitOfMeasure}, To UOM: $branchUom',
+          );
+        }
+        if (kDebugMode) {
+          developer.log('Factor: $factor');
+        }
 
         // Calculate new quantity on hand
         final currentQuantity = itemLocation.quantityOnHand ?? 0.0;
@@ -219,8 +260,13 @@ class PurchaseOrderStockService {
 
         final newQuantity = currentQuantity + roundedReceivedQuantity;
 
-        // Update ItemLocations (same as Java's saveRow)
-        await itemLocationsRepository.createItemLocation(
+        if (kDebugMode) {
+          developer.log('New Quantity for location: $newQuantity');
+          developer.log('Rounded Received Quantity: $roundedReceivedQuantity');
+        }
+
+        // Update ItemLocations (use updateItemLocation for existing locations)
+        await itemLocationsRepository.updateItemLocation(
           itemLocation.copyWith(quantityOnHand: newQuantity),
         );
 
@@ -230,7 +276,29 @@ class PurchaseOrderStockService {
           branchId: receiver.branchRecieved!,
           quantity: roundedReceivedQuantity,
           companyId: companyId,
-          isAddition: true,
+        );
+
+        // Get ItemsInBranch for stock card transaction
+        final itemsInBranch = await stockItemInBranchRepository
+            .findByItemAndBranch(
+              receiver.itemNumber!,
+              receiver.branchRecieved!,
+              companyId,
+            );
+
+        // Create stock card transaction (same as Java's stockCARDCreation)
+        await itemTransactionsRepository.stockCardCreation(
+          ib: itemsInBranch,
+          loc: itemLocation.copyWith(quantityOnHand: newQuantity),
+          lm: null,
+          transactionType: 'R', // Receipt/Purchase
+          trNo: orderNumber,
+          remark: 'Purchase',
+          qty: roundedReceivedQuantity,
+          por: receiver,
+          soD: null,
+          supplier: receiver.poDetailRef?.poHeaderRef?.supplierId,
+          orderType: receiver.poDetailRef?.poHeaderRef?.orderType,
         );
       }
     }
@@ -360,14 +428,16 @@ class PurchaseOrderStockService {
       // Update item location quantity (same as Java's updatingItemLocationQuantity)
       await _updateItemLocationQuantity(
         lot: persistedLot,
-        transactionType: 'A',
+        transactionType: 'R',
         trNo: orderNumber,
         remark: 'Purchase',
         qtyTr: qty,
         por: receiver,
       );
     } catch (e) {
-      print('Error auto-creating lot for purchase order: $e');
+      if (kDebugMode) {
+        developer.log('Error auto-creating lot for purchase order: $e');
+      }
       // Don't rethrow - same as Java
     }
   }
@@ -470,9 +540,13 @@ class PurchaseOrderStockService {
         qty: qtyTr,
         por: por,
         soD: null,
+        supplier: por.poDetailRef?.poHeaderRef?.supplierId,
+        orderType: por.poDetailRef?.poHeaderRef?.orderType,
       );
     } catch (e) {
-      print('Error updating item location quantity: $e');
+      if (kDebugMode) {
+        developer.log('Error updating item location quantity: $e');
+      }
     }
   }
 
@@ -509,7 +583,6 @@ class PurchaseOrderStockService {
     required int branchId,
     required double quantity,
     required int companyId,
-    required bool isAddition,
   }) async {
     try {
       final itemsInBranch = await stockItemInBranchRepository
@@ -517,9 +590,10 @@ class PurchaseOrderStockService {
 
       if (itemsInBranch != null) {
         final currentQuantity = itemsInBranch.quantityAvailable ?? 0.0;
-        final newQuantity = isAddition
-            ? currentQuantity + quantity
-            : currentQuantity - quantity;
+        final newQuantity = currentQuantity + quantity;
+        if (kDebugMode) {
+          developer.log('New Quantityyy for ib: $newQuantity');
+        }
 
         await stockItemInBranchRepository.updateQuantity(
           itemsInBranch.id,
@@ -528,7 +602,9 @@ class PurchaseOrderStockService {
         );
       }
     } catch (e) {
-      print('Failed to update ItemsInBranch quantity: $e');
+      if (kDebugMode) {
+        developer.log('Failed to update ItemsInBranch quantity: $e');
+      }
     }
   }
 
@@ -564,7 +640,9 @@ class PurchaseOrderStockService {
         );
       }
     } catch (e) {
-      print('Failed to update ItemsInBranch total quantity: $e');
+      if (kDebugMode) {
+        developer.log('Failed to update ItemsInBranch total quantity: $e');
+      }
     }
   }
 

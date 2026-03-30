@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:intl/intl.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/utils/ui_helper.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -9,6 +10,7 @@ import 'package:savvy_stock/features/stock/item_transactions/blocs/item_transact
 import 'package:savvy_stock/features/stock/item_transactions/blocs/item_transaction_event.dart';
 import 'package:savvy_stock/features/stock/item_transactions/blocs/item_transaction_state.dart';
 import 'package:savvy_stock/features/stock/item_transactions/model/item_transaction_model.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 
 class ItemTransactionsListPage extends StatefulWidget {
   final AuthBloc authBloc;
@@ -36,6 +38,8 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
   ItemTransactionModel? _selectedTransaction;
   bool _transactionDetail = false;
 
+  int? decmialPlace;
+
   @override
   void initState() {
     super.initState();
@@ -53,6 +57,11 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
     context.read<ItemTransactionsBloc>().add(
       LoadItemTransactions(companyId: widget.authBloc.state.companyId!),
     );
+    decmialPlace = context
+        .read<SystemConstantBloc>()
+        .state
+        .selected
+        ?.decimalPlaces;
   }
 
   void _setupAnimations() {
@@ -180,10 +189,6 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
     context.push(AppRoutes.inventoryTransactionCreate);
   }
 
-  void _navigateToEditScreen(ItemTransactionModel transaction) {
-    context.push(AppRoutes.inventoryTransactionEdit, extra: transaction);
-  }
-
   void _safeDelete(BuildContext context, {int? index}) {
     final bloc = context.read<ItemTransactionsBloc>();
     final state = bloc.state;
@@ -275,7 +280,7 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Inventory Transactions'),
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
@@ -288,152 +293,59 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
           ),
         ],
       ),
-      body: BlocConsumer<ItemTransactionsBloc, ItemTransactionsState>(
-        listener: (context, state) {
-          if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
-            setState(() {
-              _isSelectionMode = true;
-            });
-          } else if (state.selectedItems.isEmpty && _isSelectionMode) {
-            setState(() {
-              _isSelectionMode = false;
-            });
-          }
+      body: SafeArea(
+        child: BlocConsumer<ItemTransactionsBloc, ItemTransactionsState>(
+          listener: (context, state) {
+            if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
+              setState(() {
+                _isSelectionMode = true;
+              });
+            } else if (state.selectedItems.isEmpty && _isSelectionMode) {
+              setState(() {
+                _isSelectionMode = false;
+              });
+            }
 
-          if (state.status == ItemTransactionsStatus.success) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  state.successmessage ?? 'Operation completed successfully',
+            if (state.status == ItemTransactionsStatus.success) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    state.successmessage ?? 'Operation completed successfully',
+                  ),
+                  backgroundColor: Colors.green,
                 ),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
+              );
+            }
 
-          if (state.status == ItemTransactionsStatus.error) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.error ?? 'An error occurred'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Toolbar
-                  // _buildToolbar(),
-
-                  // Search Bar
-                  _buildSearchBar(),
-                  _buildActionButtons(state),
-
-                  // Transactions List
-                  Expanded(child: _buildTransactionsList(state)),
-                ],
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildToolbar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
-      ),
-      child: Row(
-        children: [
-          // Refresh Button
-          ElevatedButton.icon(
-            onPressed: _refreshList,
-            icon: const Icon(Iconsax.refresh, size: 16),
-            label: const Text('Refresh'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: const Color.fromARGB(255, 28, 66, 146),
-              side: BorderSide(
-                color: const Color.fromARGB(255, 28, 66, 146).withOpacity(0.3),
-              ),
-            ),
-          ),
-          const Spacer(),
-
-          // Export Menu
-          PopupMenuButton<String>(
-            icon: const Icon(
-              Iconsax.export,
-              color: Color.fromARGB(255, 28, 66, 146),
-            ),
-            offset: const Offset(0, 50),
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'excel',
-                child: Row(
+            if (state.status == ItemTransactionsStatus.error) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.error ?? 'An error occurred'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
                   children: [
-                    Icon(Iconsax.document, size: 16),
-                    SizedBox(width: 8),
-                    Text('Excel'),
+                    // Toolbar
+                    // _buildToolbar(),
+
+                    // Search Bar
+                    _buildSearchBar(),
+                    _buildActionButtons(state),
+
+                    // Transactions List
+                    Expanded(child: _buildTransactionsList(state)),
                   ],
                 ),
-              ),
-              const PopupMenuItem(
-                value: 'csv',
-                child: Row(
-                  children: [
-                    Icon(Iconsax.document_copy, size: 16),
-                    SizedBox(width: 8),
-                    Text('CSV'),
-                  ],
-                ),
-              ),
-            ],
-            onSelected: (value) {
-              if (value == 'excel') {
-                _exportToExcel();
-              } else if (value == 'csv') {
-                _exportToCSV();
-              }
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(
-                  color: const Color.fromARGB(
-                    255,
-                    28,
-                    66,
-                    146,
-                  ).withOpacity(0.3),
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Row(
-                children: [
-                  Icon(
-                    Iconsax.export,
-                    size: 16,
-                    color: Color.fromARGB(255, 28, 66, 146),
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    'Export',
-                    style: TextStyle(color: Color.fromARGB(255, 28, 66, 146)),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -482,8 +394,8 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
       height: state.selectedItems.isNotEmpty ? 60 : 0,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
-        border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Colors.white)),
       ),
       child: state.selectedItems.isNotEmpty
           ? Row(
@@ -498,17 +410,7 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
                   onPressed: () => _safeDelete(context),
                   tooltip: 'Delete selected',
                 ),
-                IconButton(
-                  icon: const Icon(
-                    Iconsax.edit,
-                    color: Color.fromARGB(255, 28, 66, 146),
-                  ),
-                  onPressed: () {
-                    final transaction = state.selectedItems.first;
-                    _navigateToEditScreen(transaction);
-                  },
-                  tooltip: 'Edit transaction',
-                ),
+
                 IconButton(
                   icon: const Icon(Iconsax.close_circle),
                   onPressed: () => _clearSelection(),
@@ -525,23 +427,14 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
       builder: (context, state) {
         return ElevatedButton(
           onPressed: () {
-            if (state.selectedItems.isNotEmpty) {
-              // Navigate to edit screen with selected transaction
-              final transaction = state.selectedItems.first;
-              _navigateToEditScreen(transaction);
-            } else {
-              // Navigate to create screen
-              _navigateToCreateScreen();
-            }
+            // Navigate to create screen
+            _navigateToCreateScreen();
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color.fromARGB(255, 28, 66, 146),
             shape: const CircleBorder(),
           ),
-          child: Icon(
-            state.selectedItems.isNotEmpty ? Icons.edit : Icons.add,
-            color: Colors.white,
-          ),
+          child: Icon(Iconsax.add, color: Colors.white),
         );
       },
     );
@@ -605,7 +498,7 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
     return Container(
       width: screenWidth,
       height: screenHeight,
-      decoration: BoxDecoration(color: Colors.grey[100]),
+      decoration: BoxDecoration(color: Colors.white),
       child: ListView.separated(
         controller: _scrollController,
         padding: const EdgeInsets.all(16),
@@ -639,18 +532,6 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
     final offset = _dragOffset[index] ?? 0.0;
     final isExpanded =
         _transactionDetail == true && _selectedTransaction == transaction;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-
-    // For responsiveness:
-    final collapsedHeight = isCompact
-        ? screenHeight * 0.22
-        : screenHeight * 0.14;
-
-    final expandedHeight = isCompact
-        ? screenHeight * 0.55
-        : screenHeight * 0.45;
-    final collapsedWidth = isCompact ? screenWidth * 0.92 : screenWidth * 0.8;
 
     return GestureDetector(
       onTap: () {
@@ -678,287 +559,241 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
         animation: _scrollController,
         builder: (context, child) => Container(
           transform: Matrix4.translationValues(offset, 0, 0),
-          width: collapsedWidth,
-          height: isExpanded ? expandedHeight : collapsedHeight,
+          width: cardWidth,
           child: Stack(
             children: [
               // 1. DELETE INDICATOR - Should be FIRST in Stack
-              if (!isExpanded)
-                Positioned.fill(
-                  child: Container(
-                    alignment: Alignment.centerRight,
-                    decoration: BoxDecoration(
-                      color: Colors.amber,
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    margin: const EdgeInsets.only(bottom: 2),
-                    child: const Icon(
-                      Icons.delete,
-                      color: Colors.white,
-                      size: 28,
-                    ),
+              Positioned.fill(
+                child: Container(
+                  alignment: Alignment.centerRight,
+                  decoration: BoxDecoration(
+                    color: Colors.amber,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  margin: const EdgeInsets.only(bottom: 2),
+                  child: const Icon(
+                    Icons.delete,
+                    color: Colors.white,
+                    size: 28,
                   ),
                 ),
+              ),
 
-              // 2. BACKGROUND LAYERS (only when expanded)
-              if (isExpanded) ...[
-                // Yellow background
-                Positioned.fill(
-                  top: 47,
-                  child: Container(
-                    width: collapsedWidth,
-                    height: expandedHeight,
-                    decoration: ShapeDecoration(
-                      color: const Color(0xFFFDD105),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+              // --- LAYER 2: FOREGROUND CARD (Content) ---
+              Transform.translate(
+                offset: Offset(offset, 0),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  // DECORATION: Handles the Yellow/White transition
+                  decoration: BoxDecoration(
+                    color: isExpanded
+                        ? Colors.amber
+                        : (isSelected ? Colors.blue[50] : Colors.white),
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
+                    ],
+                    border: Border.all(
+                      color: isSelected
+                          ? const Color.fromARGB(255, 28, 66, 146)
+                          : Colors.transparent,
+                      width: 2,
                     ),
                   ),
-                ),
-              ],
 
-              // 3. TRANSACTION CARD - Should come AFTER delete indicator
-              AnimatedContainer(
-                padding: const EdgeInsets.only(top: 10, left: 10, right: 10),
-                width: collapsedWidth,
-                height: collapsedHeight,
-                duration: const Duration(milliseconds: 400),
-                transform: Matrix4.translationValues(offset, 0, 0),
-                curve: Curves.easeInOut,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.blue[50] : Colors.white,
-                  borderRadius: BorderRadius.circular(30),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                  border: Border.all(
-                    color: isSelected
-                        ? const Color.fromARGB(255, 28, 66, 146)
-                        : Colors.transparent,
-                    width: 2,
-                  ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  // ANIMATED SIZE: This is the key to efficient height
+                  child: AnimatedSize(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    alignment: Alignment.topCenter,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min, // Shrink to fit content
                       children: [
-                        // Transaction Avatar
-                        _buildTransactionAvatar(
-                          transaction,
-                          isSelected,
-                          isCompact,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
+                        // --- PART A: HEADER (Name, Phone, Button) ---
+                        Container(
+                          padding: const EdgeInsets.fromLTRB(15, 15, 15, 10),
+                          decoration: BoxDecoration(
+                            // The header stays white (or blue-ish) even when expanded
+                            color: isSelected ? Colors.blue[50] : Colors.white,
+                            borderRadius: isExpanded
+                                ? const BorderRadius.vertical(
+                                    top: Radius.circular(30),
+                                    bottom: Radius.circular(
+                                      20,
+                                    ), // Slight curve when open
+                                  )
+                                : BorderRadius.circular(30),
+                          ),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    'Transaction #${transaction.transactionNumber ?? 'N/A'}',
-                                    style: TextStyle(
-                                      color: const Color(0xFF373737),
-                                      fontSize: isCompact ? 20 : 24,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w800,
+                                  // Transaction Avatar
+                                  _buildTransactionAvatar(
+                                    transaction,
+                                    isSelected,
+                                    isCompact,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Txn - ${transaction.transactionNumber ?? 'N/A'}',
+                                              style: TextStyle(
+                                                color: const Color(0xFF373737),
+                                                fontSize: isCompact ? 20 : 24,
+                                                fontFamily: 'Inter',
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                            ),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 2,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: _getTransactionTypeColor(
+                                                  transaction
+                                                      .transactionTypeDetail
+                                                      ?.detailCode,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color:
+                                                      _getTransactionTypeBorderColor(
+                                                        transaction
+                                                            .transactionTypeDetail
+                                                            ?.detailCode,
+                                                      ),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                transaction
+                                                        .transactionTypeDetail
+                                                        ?.description1 ??
+                                                    'Unknown',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+
+                                        Text(
+                                          transaction.item?.itemDescription ??
+                                              'Item ${transaction.itemNumber}',
+                                          style: TextStyle(
+                                            color: const Color(0xFF887F7F),
+                                            fontSize: isCompact ? 12 : 14,
+                                            fontStyle: FontStyle.italic,
+                                            fontFamily: 'Inter',
+                                            fontWeight: FontWeight.w300,
+                                          ),
+                                        ),
+
+                                        // Quantity and amount
+                                        Row(
+                                          children: [
+                                            Text(
+                                              'Qty: ${transaction.quantityTransaction} ,',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[700],
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              NumberFormat.currency(
+                                                decimalDigits: decmialPlace,
+                                                symbol: 'ETB ',
+                                              ).format(transaction.amountCost),
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[700],
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: _getTransactionTypeColor(
-                                        transaction
-                                            .transactionTypeDetail
-                                            ?.detailCode,
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: _getTransactionTypeBorderColor(
-                                          transaction
-                                              .transactionTypeDetail
-                                              ?.detailCode,
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              InkWell(
+                                onTap: () => isExpanded
+                                    ? _hideTransactionDetail()
+                                    : _showTransactionDetail(transaction),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 4,
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      // See More / See Less button
+                                      Text(
+                                        isExpanded ? 'See Less' : 'See More',
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: isCompact ? 10 : 12,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
-                                    ),
-                                    child: Text(
-                                      transaction
-                                              .transactionTypeDetail
-                                              ?.description1 ??
-                                          'Unknown',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
+                                      Icon(
+                                        isExpanded
+                                            ? Icons.keyboard_arrow_up
+                                            : Icons.keyboard_arrow_down,
+                                        color: Colors.grey[600],
+                                        size: 16,
                                       ),
-                                    ),
+                                    ],
                                   ),
-                                ],
-                              ),
-
-                              Text(
-                                transaction.item?.itemDescription ??
-                                    'Item ${transaction.itemNumber}',
-                                style: TextStyle(
-                                  color: const Color(0xFF887F7F),
-                                  fontSize: isCompact ? 12 : 14,
-                                  fontStyle: FontStyle.italic,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w300,
                                 ),
-                              ),
-                              const SizedBox(height: 8),
-                              // Store and date info
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue[50],
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: Colors.blue[200]!,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      transaction.branchDetail?.description ??
-                                          'Store ${transaction.branch}',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.blue[800],
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.green[50],
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: Colors.green[200]!,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      _formatDate(transaction.dateCreated),
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.green[800],
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              // Quantity and amount
-                              Row(
-                                children: [
-                                  Text(
-                                    'Qty: ${transaction.quantityTransaction}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[700],
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Text(
-                                    'Amount: \$${transaction.amountCost.toStringAsFixed(2)}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[700],
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
                               ),
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        // See More / See Less button
-                        ElevatedButton(
-                          onPressed: () => isExpanded
-                              ? _hideTransactionDetail()
-                              : _showTransactionDetail(transaction),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF145888),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+
+                        // 4. ANIMATED EXPANDED CONTENT
+                        if (isExpanded)
+                          SizedBox(
+                            height: 300,
+                            child: Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: _buildTransactionDetailContent(
+                                transaction,
+                                isCompact,
+                              ),
                             ),
                           ),
-                          child: Text(
-                            isExpanded ? 'See Less' : 'See More',
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: isCompact ? 10 : 12,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
                       ],
-                    ),
-                  ],
-                ),
-              ),
-
-              // 4. ANIMATED EXPANDED CONTENT
-              if (isExpanded)
-                Positioned(
-                  top: collapsedHeight + 10,
-                  left: 20,
-                  right: 20,
-                  child: AnimatedBuilder(
-                    animation: _detailAnimationController,
-                    builder: (context, child) {
-                      final currentHeight =
-                          _heightAnimation.value *
-                          (expandedHeight - collapsedHeight - 20);
-                      final currentOpacity = _opacityAnimation.value;
-
-                      return SlideTransition(
-                        position: _slideAnimation,
-                        child: Container(
-                          height: currentHeight > 0 ? currentHeight : 0,
-                          decoration: BoxDecoration(color: Colors.transparent),
-                          child: Opacity(opacity: currentOpacity, child: child),
-                        ),
-                      );
-                    },
-                    child: _buildTransactionDetailContent(
-                      transaction,
-                      isCompact,
                     ),
                   ),
                 ),
+              ),
             ],
           ),
         ),
@@ -1013,10 +848,10 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
               Iconsax.tag,
               isCompact,
             ),
-          if (transaction.lot?.batchNumberSupplier != null)
+          if (transaction.lotNumberRef?.batchNumberSupplier != null)
             _buildTransactionInfoItem(
               'Batch Number : ',
-              transaction.lot?.batchNumberSupplier ?? 'N/A',
+              transaction.lotNumberRef?.batchNumberSupplier ?? 'N/A',
               Iconsax.barcode,
               isCompact,
             ),
@@ -1031,7 +866,7 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
           if (transaction.customer != null)
             _buildTransactionInfoItem(
               'Customer : ',
-              transaction.customerDetail?.name ??
+              transaction.customerDetail?.customerName ??
                   'Customer ${transaction.customer}',
               Iconsax.profile_circle,
               isCompact,
@@ -1050,7 +885,10 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
           ),
           _buildTransactionInfoItem(
             'Amount Cost : ',
-            '\$${transaction.amountCost.toStringAsFixed(2)}',
+            NumberFormat.currency(
+              decimalDigits: decmialPlace,
+              symbol: 'ETB ',
+            ).format(transaction.amountCost),
             Iconsax.dollar_circle,
             isCompact,
           ),
@@ -1083,12 +921,7 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
                   ), // This would show even more details
                   isCompact,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportToExcel(), // Export this single transaction
-                  isCompact,
-                ),
+
                 _buildActionButton(
                   Iconsax.repeat,
                   'Duplicate',
@@ -1196,6 +1029,12 @@ class _ItemTransactionsListPageState extends State<ItemTransactionsListPage>
     if (isSelected) {
       backgroundColor = const Color.fromARGB(255, 28, 66, 146);
       iconColor = Colors.white;
+    } else if (transaction.adjustToIncrease == true) {
+      backgroundColor = Colors.grey[200]!;
+      iconColor = Colors.green;
+    } else if (transaction.adjustToIncrease == false) {
+      backgroundColor = Colors.grey[200]!;
+      iconColor = Colors.red;
     } else {
       backgroundColor = Colors.grey[200]!;
       iconColor = Colors.grey[600]!;

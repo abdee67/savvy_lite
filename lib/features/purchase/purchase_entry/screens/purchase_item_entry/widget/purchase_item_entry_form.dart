@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -28,7 +31,6 @@ import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_c
 import 'package:savvy_stock/features/stock/item_uom_conversions/blocs/item_uom_conversions_state.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_event.dart';
-import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_state.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class PurchaseItemEntryForm extends StatefulWidget {
@@ -186,7 +188,9 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
       // Load UOM conversions for this item
       _loadUomConversions(itemId);
     } catch (e) {
-      print('Item not found: $itemId');
+      if (kDebugMode) {
+        developer.log('Item not found: $itemId');
+      }
     }
   }
 
@@ -272,7 +276,7 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
 
     final updatedDetail = detail.copyWith(
       itemNumber: _selectedItem?.id,
-      // itemDescription: _selectedItem?.itemDescription,
+      itemNumberRef: _selectedItem,
       quantityTransaction: double.tryParse(_quantityController.text),
       unitCost: double.tryParse(_unitCostController.text),
       amountExtendedCost: double.tryParse(_extendedAmountController.text),
@@ -315,7 +319,11 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
   }
 
   void _onBranchSelected(Branch? branch) {
-    print('🔔 Branch selected: ${branch?.description} (ID: ${branch?.id})');
+    if (kDebugMode) {
+      developer.log(
+        '🔔 Branch selected: ${branch?.description} (ID: ${branch?.id})',
+      );
+    }
     setState(() {
       _selectedBranch = branch;
       _selectedLocation = null;
@@ -323,7 +331,9 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
 
     if (branch != null) {
       // Load locations for selected branch
-      print('📍 Loading locations for branch ID: ${branch.id}');
+      if (kDebugMode) {
+        developer.log('📍 Loading locations for branch ID: ${branch.id}');
+      }
       _loadBranchLocations(branch.id);
     }
   }
@@ -333,15 +343,19 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
     final companyId = authBloc.state.companyId;
 
     if (companyId != null) {
-      print(
-        '🔄 Dispatching LoadItemLocationsForBranch - Branch: $branchId, Company: $companyId',
-      );
+      if (kDebugMode) {
+        developer.log(
+          '🔄 Dispatching LoadItemLocationsForBranch - Branch: $branchId, Company: $companyId',
+        );
+      }
       final locationsBloc = context.read<StockItemLocationBloc>();
       locationsBloc.add(
         LoadItemLocationsForBranch(branchId: branchId, companyId: companyId),
       );
     } else {
-      print('❌ Company ID is null');
+      if (kDebugMode) {
+        developer.log('❌ Company ID is null');
+      }
     }
   }
 
@@ -430,6 +444,7 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
 
     return detail.copyWith(
       itemNumber: _selectedItem?.id,
+      itemNumberRef: _selectedItem,
       quantityTransaction: double.tryParse(_quantityController.text),
       unitCost: double.tryParse(_unitCostController.text),
       amountExtendedCost: double.tryParse(_extendedAmountController.text),
@@ -480,42 +495,6 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
-              Container(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Row(
-                  children: [
-                    Icon(
-                      widget.isEditing ? Icons.edit : Icons.add,
-                      color: widget.isEditing
-                          ? Colors.orange
-                          : const Color(0xFF155888),
-                      size: 24,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      widget.isEditing ? 'Editing Item' : 'Add Purchase Item',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: widget.isEditing
-                            ? Colors.orange
-                            : const Color(0xFF155888),
-                      ),
-                    ),
-                    const Spacer(),
-                    if (widget.isEditing && widget.onCancel != null)
-                      TextButton(
-                        onPressed: widget.onCancel,
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-
               // Item Selection
               BlocBuilder<StockItemsEntryBloc, ItemEntryState>(
                 builder: (context, itemsState) {
@@ -557,7 +536,7 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
                         header: 'Default UOM',
                         flex: 1,
                         cellBuilder: (item) => Text(
-                          item.unitOfMeasureDescription ??
+                          item.unitOfMeasureDescription?.description1 ??
                               item.unitOfMeasure ??
                               'N/A',
                           style: const TextStyle(
@@ -699,9 +678,11 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
                       prefixIcon: Icons.business,
                       allowCustomEntries: false,
                       onChanged: (selectedBranchDesc) {
-                        print(
-                          '🔹 Branch dropdown changed to: $selectedBranchDesc',
-                        );
+                        if (kDebugMode) {
+                          developer.log(
+                            '🔹 Branch dropdown changed to: $selectedBranchDesc',
+                          );
+                        }
                         _onBranchSelected(
                           branchState.branchs.firstWhere(
                             (branch) =>
@@ -726,9 +707,11 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
                 if (_selectedBranch != null) ...[
                   BlocBuilder<StockItemLocationBloc, ItemLocationsState>(
                     builder: (context, locationState) {
-                      print(
-                        '📋 BlocBuilder rebuilt - Status: ${locationState.status}, Items count: ${locationState.items.length}',
-                      );
+                      if (kDebugMode) {
+                        developer.log(
+                          '📋 BlocBuilder rebuilt - Status: ${locationState.status}, Items count: ${locationState.items.length}',
+                        );
+                      }
                       return CustomSearchableDropdown(
                         labelText: 'Location',
                         options: locationState.items
@@ -746,9 +729,11 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
                         prefixIcon: Icons.location_on,
                         allowCustomEntries: false,
                         onChanged: (selectedLocationDesc) {
-                          print(
-                            '🔹 Location dropdown changed to: $selectedLocationDesc',
-                          );
+                          if (kDebugMode) {
+                            developer.log(
+                              '🔹 Location dropdown changed to: $selectedLocationDesc',
+                            );
+                          }
                           _onLocationSelected(
                             locationState.items.firstWhere(
                               (location) =>
@@ -810,10 +795,16 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
               // Effective Date
               CustomTextField(
                 controller: _effectiveDateController,
-                labelText: 'Effective Date',
+                labelText: 'Effective Date *',
                 readOnly: true,
                 prefixIcon: const Icon(Icons.calendar_today),
                 onTap: () => _selectDate(context, true),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please select an effective date';
+                  }
+                  return null;
+                },
               ),
 
               const SizedBox(height: 16),
@@ -821,18 +812,24 @@ class _PurchaseItemEntryFormState extends State<PurchaseItemEntryForm> {
               // Expiration Date
               CustomTextField(
                 controller: _expirationDateController,
-                labelText: 'Expiration Date',
+                labelText: 'Expiration Date *',
                 readOnly: true,
                 prefixIcon: const Icon(Icons.event_busy),
                 onTap: () => _selectDate(context, false),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please select an expiration date';
+                  }
+                  return null;
+                },
               ),
 
               const SizedBox(height: 16),
 
-              // Supplier Batch Number
               CustomTextField(
                 controller: _batchNumberController,
                 labelText: 'Supplier Batch Number',
+                maxLength: 50,
                 onChanged: (value) {
                   _updateDetail();
                 },

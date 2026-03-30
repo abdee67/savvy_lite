@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:intl/intl.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/utils/ui_helper.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -11,6 +12,7 @@ import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_h
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 
 class SalesReviewPage extends StatefulWidget {
   final AuthBloc authBloc;
@@ -35,6 +37,7 @@ class _SalesReviewPageState extends State<SalesReviewPage>
   // Detail panel state
   bool _salesOrderDetail = false;
   SalesOrderHeader? _selectedSalesOrder;
+  late int _decimalPlace;
 
   @override
   void initState() {
@@ -53,6 +56,12 @@ class _SalesReviewPageState extends State<SalesReviewPage>
     context.read<SalesOrderHeaderBloc>().add(
       LoadSalesOrderHeaders(companyId: widget.authBloc.state.companyId!),
     );
+    _decimalPlace = context
+        .read<SystemConstantBloc>()
+        .state
+        .systemConstants
+        .first
+        .decimalPlaces!;
   }
 
   void _setupAnimations() {
@@ -201,16 +210,17 @@ class _SalesReviewPageState extends State<SalesReviewPage>
     final salesOrderToDelete = state.filteredHeaders[index];
     final voidIndicator = 'V';
 
-    showDeleteDialog(
+    showVoidDialog(
       context,
       title: 'Void salesOrder #${salesOrderToDelete.orderNumber}?',
       content:
           'Are you sure you want to void salesOrder #${salesOrderToDelete.orderNumber}?',
-      onConfirm: () {
+      onConfirm: (reason) {
         bloc.add(
           VoidSalesOrder(
             id: salesOrderToDelete.id!,
             voidIndicator: voidIndicator,
+            commentIfVoid: reason,
           ),
         );
       },
@@ -259,7 +269,7 @@ class _SalesReviewPageState extends State<SalesReviewPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Sales Order Report'),
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
@@ -272,47 +282,49 @@ class _SalesReviewPageState extends State<SalesReviewPage>
           ),
         ],
       ),
-      body: BlocConsumer<SalesOrderHeaderBloc, SalesOrderHeaderState>(
-        listener: (context, state) {
-          if (state.status == SalesOrderHeaderStatus.success) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  state.successmessage ?? 'Operation completed successfully',
+      body: SafeArea(
+        child: BlocConsumer<SalesOrderHeaderBloc, SalesOrderHeaderState>(
+          listener: (context, state) {
+            if (state.status == SalesOrderHeaderStatus.success) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    state.successmessage ?? 'Operation completed successfully',
+                  ),
+                  backgroundColor: Colors.green,
                 ),
-                backgroundColor: Colors.green,
-              ),
+              );
+            }
+
+            if (state.status == SalesOrderHeaderStatus.error) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.error ?? 'An error occurred'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Toolbar
+                    // _buildToolbar(),
+
+                    // Search Bar
+                    _buildSearchBar(),
+                    //  _buildActionButtons(state),
+
+                    // salesOrders List
+                    Expanded(child: _buildsalesOrdersList(state)),
+                  ],
+                ),
+              ],
             );
-          }
-
-          if (state.status == SalesOrderHeaderStatus.error) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.error ?? 'An error occurred'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Toolbar
-                  // _buildToolbar(),
-
-                  // Search Bar
-                  _buildSearchBar(),
-                  //  _buildActionButtons(state),
-
-                  // salesOrders List
-                  Expanded(child: _buildsalesOrdersList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+          },
+        ),
       ),
     );
   }
@@ -511,11 +523,11 @@ class _SalesReviewPageState extends State<SalesReviewPage>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Iconsax.receipt, size: 64, color: Colors.white),
+            const Icon(Iconsax.receipt, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
             Text(
-              !hasQuery ? 'No salesOrders found' : 'No results for "$query"',
-              style: const TextStyle(color: Colors.white, fontSize: 16),
+              !hasQuery ? 'No Sales Orders found' : 'No results for "$query"',
+              style: const TextStyle(color: Colors.grey, fontSize: 16),
             ),
           ],
         ),
@@ -525,7 +537,7 @@ class _SalesReviewPageState extends State<SalesReviewPage>
     return Container(
       width: screenWidth,
       height: screenHeight,
-      decoration: BoxDecoration(color: Colors.grey[100]),
+      decoration: BoxDecoration(color: Colors.white),
       child: ListView.separated(
         controller: _scrollController,
         padding: const EdgeInsets.all(16),
@@ -559,18 +571,6 @@ class _SalesReviewPageState extends State<SalesReviewPage>
     final offset = _dragOffset[index] ?? 0.0;
     final isExpanded =
         _salesOrderDetail == true && _selectedSalesOrder == salesOrder;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-
-    // For responsiveness:
-    final collapsedHeight = isCompact
-        ? screenHeight * 0.22
-        : screenHeight * 0.14;
-
-    final expandedHeight = isCompact
-        ? screenHeight * 0.55
-        : screenHeight * 0.45;
-    final collapsedWidth = isCompact ? screenWidth * 0.92 : screenWidth * 0.8;
 
     return GestureDetector(
       onDoubleTap: () => _showsalesOrderDetail(salesOrder),
@@ -580,254 +580,244 @@ class _SalesReviewPageState extends State<SalesReviewPage>
           _onHorizontalDragEnd(context, index, details),
       child: AnimatedBuilder(
         animation: _scrollController,
-        builder: (context, child) => Container(
-          transform: Matrix4.translationValues(offset, 0, 0),
-          width: collapsedWidth,
-          height: isExpanded ? expandedHeight : collapsedHeight,
+        builder: (context, child) => SizedBox(
+          width: cardWidth,
           child: Stack(
             children: [
               // 1. DELETE INDICATOR - Should be FIRST in Stack
-              if (!isExpanded)
-                Positioned.fill(
-                  child: Container(
-                    alignment: Alignment.centerRight,
-                    decoration: BoxDecoration(
-                      color: Colors.amber,
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    margin: const EdgeInsets.only(bottom: 2),
-                    child: const Icon(
-                      Icons.delete,
-                      color: Colors.white,
-                      size: 28,
-                    ),
+              Positioned.fill(
+                child: Container(
+                  alignment: Alignment.centerRight,
+                  decoration: BoxDecoration(
+                    color: Colors.amber,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  margin: const EdgeInsets.only(bottom: 2),
+                  child: const Icon(
+                    Icons.delete,
+                    color: Colors.white,
+                    size: 28,
                   ),
                 ),
+              ),
 
-              // 2. BACKGROUND LAYERS (only when expanded)
-              if (isExpanded) ...[
-                // Yellow background
-                Positioned.fill(
-                  top: 47,
-                  child: Container(
-                    width: collapsedWidth,
-                    height: expandedHeight,
-                    decoration: ShapeDecoration(
-                      color: const Color(0xFFFDD105),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+              // --- LAYER 2: FOREGROUND CARD (Content) ---
+              Transform.translate(
+                offset: Offset(offset, 0),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  // DECORATION: Handles the Yellow/White transition
+                  decoration: BoxDecoration(
+                    color: isExpanded
+                        ? Colors.amber
+                        : (isSelected ? Colors.blue[50] : Colors.white),
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
+                    ],
+                    border: Border.all(
+                      color: isSelected
+                          ? const Color.fromARGB(255, 28, 66, 146)
+                          : Colors.transparent,
+                      width: 2,
                     ),
                   ),
-                ),
-              ],
 
-              // 3. salesOrder CARD - Should come AFTER delete indicator
-              AnimatedContainer(
-                padding: const EdgeInsets.only(top: 10, left: 10, right: 10),
-                width: collapsedWidth,
-                height: collapsedHeight,
-                duration: const Duration(milliseconds: 400),
-                transform: Matrix4.translationValues(offset, 0, 0),
-                curve: Curves.easeInOut,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.blue[50] : Colors.white,
-                  borderRadius: BorderRadius.circular(30),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                  border: Border.all(
-                    color: isSelected
-                        ? const Color.fromARGB(255, 28, 66, 146)
-                        : Colors.transparent,
-                    width: 2,
-                  ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  // ANIMATED SIZE: This is the key to efficient height
+                  child: AnimatedSize(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    alignment: Alignment.topCenter,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min, // Shrink to fit content
                       children: [
-                        // salesOrder Avatar
-                        _buildsalesOrderAvatar(
-                          salesOrder,
-                          isSelected,
-                          isCompact,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
+                        // --- PART A: HEADER (Name, Phone, Button) ---
+                        Container(
+                          padding: const EdgeInsets.fromLTRB(15, 15, 15, 10),
+                          decoration: BoxDecoration(
+                            // The header stays white (or blue-ish) even when expanded
+                            color: isSelected ? Colors.blue[50] : Colors.white,
+                            borderRadius: isExpanded
+                                ? const BorderRadius.vertical(
+                                    top: Radius.circular(30),
+                                    bottom: Radius.circular(
+                                      20,
+                                    ), // Slight curve when open
+                                  )
+                                : BorderRadius.circular(30),
+                          ),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    'FS Number - ${salesOrder.fsNumber ?? 'N/A'}',
-                                    style: TextStyle(
-                                      color: const Color(0xFF373737),
-                                      fontSize: isCompact ? 20 : 24,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w800,
-                                    ),
+                                  // salesOrder Avatar
+                                  _buildsalesOrderAvatar(
+                                    salesOrder,
+                                    isSelected,
+                                    isCompact,
                                   ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: _getsalesOrderTypeColor(
-                                        salesOrder.salesType,
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: _getsalesOrderTypeBorderColor(
-                                          salesOrder.salesType,
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'FS - ${salesOrder.fsNumber ?? 'N/A'}',
+                                              style: TextStyle(
+                                                color: const Color(0xFF373737),
+                                                fontSize: isCompact ? 20 : 24,
+                                                fontFamily: 'Inter',
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                            ),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 2,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: _getsalesOrderTypeColor(
+                                                  salesOrder
+                                                      .orderTypeRef
+                                                      ?.description1,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color:
+                                                      _getsalesOrderTypeBorderColor(
+                                                        salesOrder
+                                                            .orderTypeRef
+                                                            ?.description1,
+                                                      ),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                salesOrder
+                                                        .orderTypeRef
+                                                        ?.description1 ??
+                                                    'Unknown',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      salesOrder.salesType ?? 'Unknown',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+
+                                        Text(
+                                          'Total - ${salesOrder.amountTotal}',
+                                          style: TextStyle(
+                                            color: const Color(0xFF887F7F),
+                                            fontSize: isCompact ? 12 : 14,
+                                            fontStyle: FontStyle.italic,
+                                            fontFamily: 'Inter',
+                                            fontWeight: FontWeight.w300,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        // Store and date info
+                                        Row(
+                                          children: [
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 2,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.blue[50],
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color: Colors.blue[200]!,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                'Order Date : ${_formatDateTime(salesOrder.orderDate ?? DateTime.now())}',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: Colors.blue[800],
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
-                              ),
-
-                              Text(
-                                'Total - ${salesOrder.amountTotal}',
-                                style: TextStyle(
-                                  color: const Color(0xFF887F7F),
-                                  fontSize: isCompact ? 12 : 14,
-                                  fontStyle: FontStyle.italic,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w300,
-                                ),
                               ),
                               const SizedBox(height: 8),
-                              // Store and date info
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue[50],
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: Colors.blue[200]!,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      'From ${_formatDateTime(salesOrder.orderDate ?? DateTime.now())}',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.blue[800],
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
+                              InkWell(
+                                onTap: () => isExpanded
+                                    ? _hidesalesOrderDetail()
+                                    : _showsalesOrderDetail(salesOrder),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 4,
                                   ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.green[50],
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: Colors.green[200]!,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      // See More / See Less button
+                                      Text(
+                                        isExpanded ? 'See Less' : 'See More',
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: isCompact ? 10 : 12,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
-                                    ),
-                                    child: Text(
-                                      'To ${_formatDateTime(salesOrder.shippedDate ?? DateTime.now())}',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.green[800],
-                                        fontWeight: FontWeight.bold,
+                                      Icon(
+                                        isExpanded
+                                            ? Icons.keyboard_arrow_up
+                                            : Icons.keyboard_arrow_down,
+                                        color: Colors.grey[600],
+                                        size: 16,
                                       ),
-                                    ),
+                                    ],
                                   ),
-                                ],
+                                ),
                               ),
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        // See More / See Less button
-                        ElevatedButton(
-                          onPressed: () => isExpanded
-                              ? _hidesalesOrderDetail()
-                              : _showsalesOrderDetail(salesOrder),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF145888),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+
+                        // 4. ANIMATED EXPANDED CONTENT
+                        if (isExpanded)
+                          SizedBox(
+                            height: 300,
+                            child: Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: _buildsalesOrderDetailContent(
+                                salesOrder,
+                                isCompact,
+                              ),
                             ),
                           ),
-                          child: Text(
-                            isExpanded ? 'See Less' : 'See More',
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: isCompact ? 10 : 12,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-
-              // 4. ANIMATED EXPANDED CONTENT
-              if (isExpanded)
-                Positioned(
-                  top: collapsedHeight + 10,
-                  left: 20,
-                  right: 20,
-                  child: AnimatedBuilder(
-                    animation: _detailAnimationController,
-                    builder: (context, child) {
-                      final currentHeight =
-                          _heightAnimation.value *
-                          (expandedHeight - collapsedHeight - 20);
-                      final currentOpacity = _opacityAnimation.value;
-
-                      return SlideTransition(
-                        position: _slideAnimation,
-                        child: Container(
-                          height: currentHeight > 0 ? currentHeight : 0,
-                          decoration: BoxDecoration(color: Colors.transparent),
-                          child: Opacity(opacity: currentOpacity, child: child),
-                        ),
-                      );
-                    },
-                    child: _buildsalesOrderDetailContent(salesOrder, isCompact),
                   ),
                 ),
+              ),
             ],
           ),
         ),
@@ -857,6 +847,13 @@ class _SalesReviewPageState extends State<SalesReviewPage>
               Iconsax.receipt,
               isCompact,
             ),
+          if (salesOrder.invoiceNumber != null)
+            _buildsalesOrderInfoItem(
+              'Invoice No : ',
+              salesOrder.invoiceNumber?.toString() ?? 'N/A',
+              Iconsax.receipt,
+              isCompact,
+            ),
           if (salesOrder.fsNumber != null)
             _buildsalesOrderInfoItem(
               'FS Number : ',
@@ -867,7 +864,7 @@ class _SalesReviewPageState extends State<SalesReviewPage>
           if (salesOrder.salesType != null)
             _buildsalesOrderInfoItem(
               'Order Type : ',
-              salesOrder.salesType?.toString() ?? 'N/A',
+              salesOrder.orderTypeRef?.description1.toString() ?? 'N/A',
               Iconsax.receipt_edit,
               isCompact,
             ),
@@ -895,21 +892,33 @@ class _SalesReviewPageState extends State<SalesReviewPage>
           if (salesOrder.withholdAmount != null)
             _buildsalesOrderInfoItem(
               'Withhold Amount : ',
-              salesOrder.withholdAmount?.toString() ?? 'N/A',
+              NumberFormat.currency(
+                    decimalDigits: _decimalPlace,
+                    symbol: 'ETB ',
+                  ).format(salesOrder.withholdAmount!) ??
+                  'N/A',
               Iconsax.barcode,
               isCompact,
             ),
           if (salesOrder.tax != null)
             _buildsalesOrderInfoItem(
               'Tax : ',
-              salesOrder.tax?.toString() ?? 'N/A',
+              NumberFormat.currency(
+                    decimalDigits: _decimalPlace,
+                    symbol: 'ETB ',
+                  ).format(salesOrder.tax!) ??
+                  'N/A',
               Iconsax.profile_2user,
               isCompact,
             ),
           if (salesOrder.discountAmount != null)
             _buildsalesOrderInfoItem(
               'Discount : ',
-              salesOrder.discountAmount?.toString() ?? 'N/A',
+              NumberFormat.currency(
+                    decimalDigits: _decimalPlace,
+                    symbol: 'ETB ',
+                  ).format(salesOrder.discountAmount!) ??
+                  'N/A',
               Iconsax.profile_circle,
               isCompact,
             ),
@@ -923,7 +932,11 @@ class _SalesReviewPageState extends State<SalesReviewPage>
           if (salesOrder.amountCost != null)
             _buildsalesOrderInfoItem(
               'Amount Cost : ',
-              '\$${salesOrder.amountCost}',
+              NumberFormat.currency(
+                    decimalDigits: _decimalPlace,
+                    symbol: 'ETB ',
+                  ).format(salesOrder.amountCost!) ??
+                  'N/A',
               Iconsax.dollar_circle,
               isCompact,
             ),
@@ -942,13 +955,6 @@ class _SalesReviewPageState extends State<SalesReviewPage>
                   ), // This would show even more details
                   isCompact,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportToExcel(), // Export this single salesOrder
-                  isCompact,
-                ),
-                _buildActionButton(Iconsax.repeat, 'Print', () {}, isCompact),
               ],
             ),
           ),
@@ -1065,11 +1071,11 @@ class _SalesReviewPageState extends State<SalesReviewPage>
   // Helper methods
   Color _getsalesOrderTypeColor(String? salesOrderType) {
     switch (salesOrderType) {
-      case 'A': // Adjustment
+      case 'Sales Order': // Adjustment
         return Colors.orange;
-      case 'I': // Issue
+      case 'Issue': // Issue
         return Colors.red;
-      case 'T': // Transfer
+      case 'Transfer': // Transfer
         return Colors.blue;
       default:
         return Colors.grey;
@@ -1078,11 +1084,11 @@ class _SalesReviewPageState extends State<SalesReviewPage>
 
   Color _getsalesOrderTypeBorderColor(String? salesOrderType) {
     switch (salesOrderType) {
-      case 'A': // Adjustment
+      case 'Sales Order': // Adjustment
         return Colors.orange[300]!;
-      case 'I': // Issue
+      case 'Issue': // Issue
         return Colors.red[300]!;
-      case 'T': // Transfer
+      case 'Transfer': // Transfer
         return Colors.blue[300]!;
       default:
         return Colors.grey[300]!;

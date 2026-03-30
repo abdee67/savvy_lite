@@ -62,52 +62,78 @@ class _QuotePaymentActionState extends State<QuotePaymentAction> {
       builder: (context, state) {
         final isValid = state.totalAmount != null && state.totalAmount! > 0;
 
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            ElevatedButton(
-              onPressed:
-                  isValid && state.status == QuotationOrderStatus.processing
-                  ? null
-                  : () => _navigateToInvoice(context, state),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF155888),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  vertical: 16,
-                  horizontal: 24,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(40),
+        return Container(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => context.pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.amber,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  child: const Text(
+                    'Back',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
-              child: state.status == QuotationOrderStatus.processing
-                  ? const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed:
+                      isValid && state.status == QuotationOrderStatus.processing
+                      ? null
+                      : () => _navigateToInvoice(context, state),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF155888),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  child: state.status == QuotationOrderStatus.processing
+                      ? const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                              ),
                             ),
+                            SizedBox(width: 12),
+                            Text('Processing Payment...'),
+                          ],
+                        )
+                      : const Text(
+                          'Review',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        SizedBox(width: 12),
-                        Text('Processing Payment...'),
-                      ],
-                    )
-                  : const Text(
-                      'Review',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-            ),
-          ],
+                ),
+              ),
+            ],
+          ),
         );
       },
     );

@@ -1,8 +1,10 @@
 // features/user/blocs/user_bloc.dart
 
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
@@ -11,15 +13,20 @@ import 'package:savvy_stock/features/admin/users/blocs/user_state.dart';
 import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/admin/users/models/user_with_role.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
+import 'package:savvy_stock/features/licensing/services/license_service.dart';
 import 'package:sqflite/sqflite.dart';
 
 class UserBloc extends Bloc<UserEvent, UserState> {
   final LocalDatabaseService databaseService;
   final AuthBloc authBloc;
+  final LicenseService licenseService;
   StreamSubscription? _authSubscription;
 
-  UserBloc({required this.databaseService, required this.authBloc})
-    : super(UserState(status: UserStatus.initial)) {
+  UserBloc({
+    required this.databaseService,
+    required this.authBloc,
+    required this.licenseService,
+  }) : super(UserState(status: UserStatus.initial)) {
     on<LoadUsers>(_onLoadUsers);
     on<CreateUser>(_onCreateUser);
     on<UpdateUser>(_onUpdateUser);
@@ -101,7 +108,54 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       final db = await databaseService.database;
       final companyId = authBloc.state.companyId;
       final createdBy = authBloc.state.userId!.id;
-      final password = await UserModel.generateArgon2Hash(event.user.password!);
+
+      //check if user name is not duplicated
+      final user = await db.query(
+        'user_table',
+        where: 'user_name = ?',
+        whereArgs: [event.user.userName],
+      );
+      if (user.isNotEmpty) {
+        emit(
+          state.copyWith(
+            status: UserStatus.failure,
+            message: 'User name already exists',
+          ),
+        );
+        return;
+      }
+
+      // License Logic: Check User Limit
+      final licenseResult = await licenseService.loadAndValidateLicense();
+      if (!licenseResult.isValid) {
+        emit(
+          state.copyWith(
+            status: UserStatus.failure,
+            message: licenseResult.errorMessage ?? 'License Invalid',
+          ),
+        );
+        return;
+      }
+
+      final userLimit = licenseResult.payload?.userLimit ?? 0;
+      final currentUsersCount =
+          Sqflite.firstIntValue(
+            await db.rawQuery('SELECT COUNT(*) FROM user_table'),
+          ) ??
+          0;
+
+      if (currentUsersCount >= userLimit) {
+        emit(
+          state.copyWith(
+            status: UserStatus.failure,
+            message:
+                'User creation limit reached ($userLimit users max). Please upgrade your license.',
+          ),
+        );
+        return;
+      }
+
+      final password = await UserModel.sha256Hash(event.user.password!);
 
       final userMap = event.user
           .copyWith(
@@ -139,9 +193,12 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       emit(
         state.copyWith(
           status: UserStatus.failure,
-          message: 'Failed to create user: $e',
+          message: 'Failed to create user',
         ),
       );
+      if (kDebugMode) {
+        developer.log('Failed to create user: $e');
+      }
     }
   }
 
@@ -207,7 +264,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       String? finalPassword;
       if (event.newPassword != null && event.newPassword!.isNotEmpty) {
         // Hash the new password
-        finalPassword = await UserModel.generateArgon2Hash(event.newPassword);
+        finalPassword = await UserModel.sha256Hash(event.newPassword);
       }
       // Prepare updated user data
       UserModel updatedUser = event.user.copyWith(
@@ -298,7 +355,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
 
   Future<void> _onDeleteUser(DeleteUser event, Emitter<UserState> emit) async {
     // Add null checks for critical authentication values
-    final currentUserId = authBloc.state.userId;
+    final currentUserId = authBloc.state.userId?.id;
     final companyId = authBloc.state.companyId;
 
     if (currentUserId == null || companyId == null) {

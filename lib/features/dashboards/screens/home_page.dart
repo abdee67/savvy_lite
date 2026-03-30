@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -10,7 +12,10 @@ import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.d
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_event.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
+import 'package:savvy_stock/features/licensing/bloc/license_bloc.dart';
+import 'package:savvy_stock/features/licensing/bloc/license_state.dart';
 import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
+import 'package:savvy_stock/features/dashboards/widgets/modern_trial_counter.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -68,6 +73,12 @@ class _HomePageState extends State<HomePage> {
       description: 'Branch management,controll, information and  and locations',
       color: Colors.indigo,
     ),
+    AppRoutes.reportDashboard: _DashboardConfig(
+      title: 'Reports',
+      icon: Iconsax.chart,
+      description: 'Reports and analytics',
+      color: Colors.amber,
+    ),
   };
 
   @override
@@ -101,70 +112,80 @@ class _HomePageState extends State<HomePage> {
         return BlocBuilder<SystemConstantBloc, SystemConstantState>(
           builder: (context, scState) {
             return Scaffold(
-              body: LiquidPullToRefresh(
-                color: Color(0xFF155888),
-                backgroundColor: Colors.amber,
-                showChildOpacityTransition: false,
-                onRefresh: () async {
-                  // Trigger reload of system constants and other global data so changes appear instantly
-                  final companyId = context.read<AuthBloc>().state.companyId;
-                  if (companyId != null) {
-                    context.read<SystemConstantBloc>().add(
-                      LoadSystemConstants(companyId),
-                    );
-                  }
-                  // Small delay to allow blocs to process and UI to reflect changes
-                  await Future.delayed(const Duration(milliseconds: 600));
-                  // Optionally show a quick feedback
-                  if (mounted) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(const SnackBar(content: Text('Refreshed')));
-                  }
-                },
-                // The child must be scrollable for RefreshIndicator to work
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: MediaQuery.of(context).size.height,
-                    ),
-                    child: Container(
-                      decoration: const BoxDecoration(color: Colors.white),
-                      child: Stack(
-                        children: [
-                          // Background with radial gradient
-                          Container(
-                            width: double.infinity,
-                            height: 167,
-                            decoration: const BoxDecoration(
-                              gradient: RadialGradient(
-                                center: Alignment(0.5, -0.5),
-                                radius: 2.5,
-                                colors: [Color(0xFF383838), Color(0xFF565555)],
-                                stops: [0.46, 1.0],
+              body: SafeArea(
+                top: false,
+                bottom: false,
+                child: LiquidPullToRefresh(
+                  color: Color(0xFF155888),
+                  backgroundColor: Colors.amber,
+                  showChildOpacityTransition: false,
+                  onRefresh: () async {
+                    // Trigger reload of system constants and other global data so changes appear instantly
+                    final companyId = context.read<AuthBloc>().state.companyId;
+                    if (companyId != null) {
+                      context.read<SystemConstantBloc>().add(
+                        LoadSystemConstants(companyId),
+                      );
+                    }
+                    // Small delay to allow blocs to process and UI to reflect changes
+                    await Future.delayed(const Duration(milliseconds: 600));
+                    // Optionally show a quick feedback
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Refreshed')),
+                      );
+                    }
+                  },
+                  // The child must be scrollable for RefreshIndicator to work
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: MediaQuery.sizeOf(context).height,
+                      ),
+                      child: Container(
+                        decoration: const BoxDecoration(color: Colors.white),
+                        child: Stack(
+                          children: [
+                            // Background with radial gradient
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 50),
+                              width: double.infinity,
+                              height: 167,
+                              decoration: const BoxDecoration(
+                                gradient: RadialGradient(
+                                  center: Alignment(0.5, -0.5),
+                                  radius: 2.5,
+                                  colors: [
+                                    Color(0xFF383838),
+                                    Color(0xFF565555),
+                                  ],
+                                  stops: [0.46, 1.0],
+                                ),
                               ),
                             ),
-                          ),
 
-                          // Main content
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildHeaderSection(context, authState),
-                              Column(
-                                children: [
-                                  _buildDashboardSelector(
-                                    context,
-                                    availableDashboards,
-                                    authState,
-                                  ),
-                                  _buildFeaturesSection(context, authState),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
+                            // Main content
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildHeaderSection(context, authState),
+                                Column(
+                                  children: [
+                                    _buildDashboardSelector(
+                                      context,
+                                      availableDashboards,
+                                      authState,
+                                    ),
+                                    _buildFeaturesSection(context, authState),
+                                    // Added space for footer visibility
+                                    const SizedBox(height: 40),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -180,7 +201,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildHeaderSection(BuildContext context, AuthState authState) {
     return Padding(
-      padding: const EdgeInsets.only(top: 40, left: 16, right: 16),
+      padding: const EdgeInsets.only(top: 30, left: 16, right: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -193,7 +214,32 @@ class _HomePageState extends State<HomePage> {
                   color: Colors.white,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.person, color: Colors.black),
+                clipBehavior: Clip.antiAlias,
+                child:
+                    authState.companyLogo != null &&
+                        authState.companyLogo!.isNotEmpty
+                    ? (authState.companyLogo!.startsWith('assets/')
+                          ? Image.asset(
+                              authState.companyLogo!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Icon(
+                                  Icons.business,
+                                  color: Colors.grey,
+                                );
+                              },
+                            )
+                          : Image.file(
+                              File(authState.companyLogo!),
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Icon(
+                                  Icons.business,
+                                  color: Colors.grey,
+                                );
+                              },
+                            ))
+                    : const Icon(Icons.business, color: Colors.grey),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -218,11 +264,33 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
               ),
+              // Trial Counter
+              BlocBuilder<LicenseBloc, LicenseState>(
+                builder: (context, state) {
+                  if (state.licensePayload?.licenseId == 'TRIAL') {
+                    final days = state.daysRemaining < 0
+                        ? 0
+                        : state.daysRemaining;
+
+                    return ModernTrialCounter(
+                      daysRemaining: state.daysRemaining,
+                      validTo: state.licensePayload!.validTo,
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
               PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert, color: Colors.white),
                 onSelected: (value) {
                   if (value == 'System Constants') {
                     context.push(AppRoutes.systemConstants);
+                  } else if (value == 'FSNMR') {
+                    context.push(AppRoutes.fsnmrManagement);
+                  } else if (value == 'License Detail') {
+                    context.push(AppRoutes.licenseDetails);
+                  } else if (value == 'Other Expenses') {
+                    context.push(AppRoutes.otherExpenses);
                   } else if (value == 'Logout') {
                     context.read<AuthBloc>().add(LogoutRequested(context));
                   }
@@ -231,6 +299,18 @@ class _HomePageState extends State<HomePage> {
                   const PopupMenuItem<String>(
                     value: 'System Constants',
                     child: Text('System Constants'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'FSNMR',
+                    child: Text('FSNMR'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'License Detail',
+                    child: Text('License Detail'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'Other Expenses',
+                    child: Text('Other Expenses'),
                   ),
                   const PopupMenuItem<String>(
                     value: 'Logout',
@@ -252,7 +332,7 @@ class _HomePageState extends State<HomePage> {
     AuthState authState,
   ) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(15),
         border: Border.all(color: const Color(0xFFEBEBEB), width: 0.3),
@@ -278,7 +358,7 @@ class _HomePageState extends State<HomePage> {
                   child: Scrollbar(
                     thumbVisibility:
                         false, // Always show scrollbar when scrollable
-                    thickness: 4,
+                    thickness: 2,
                     radius: const Radius.circular(2),
                     child: ListView(
                       scrollDirection: Axis.horizontal,
@@ -523,15 +603,47 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           const SizedBox(height: 16),
-          ...filteredFeatures.map(
-            (privilege) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _FeatureButton(
-                privilege: privilege,
-                color: config?.color ?? Colors.grey,
-                onPressed: () => _handleFeatureNavigation(context, privilege),
-              ),
-            ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 600;
+              if (isWide) {
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 3.2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  itemCount: filteredFeatures.length,
+                  itemBuilder: (context, index) {
+                    final privilege = filteredFeatures[index];
+                    return _FeatureButton(
+                      privilege: privilege,
+                      color: config?.color ?? Colors.grey,
+                      onPressed: () =>
+                          _handleFeatureNavigation(context, privilege),
+                    );
+                  },
+                );
+              }
+              return Column(
+                children: filteredFeatures
+                    .map(
+                      (privilege) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _FeatureButton(
+                          privilege: privilege,
+                          color: config?.color ?? Colors.grey,
+                          onPressed: () =>
+                              _handleFeatureNavigation(context, privilege),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              );
+            },
           ),
         ],
       ),
@@ -607,12 +719,26 @@ Widget _buildFooter() {
       border: Border(top: BorderSide(color: Colors.grey[300]!)),
     ),
     child: const Center(
-      child: Text(
-        'POWERED BY TECH EQUATIONS',
-        style: TextStyle(
-          color: Colors.black54,
-          fontSize: 14,
-          fontWeight: FontWeight.w300,
+      child: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: 'POWERED BY ',
+              style: TextStyle(
+                color: Colors.amber,
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            TextSpan(
+              text: 'TECH EQUATIONS',
+              style: TextStyle(
+                color: Color(0xFF155888),
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
         ),
       ),
     ),
@@ -663,7 +789,7 @@ class _FeatureButton extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w500),
         ),
         subtitle: Text(
-          privilege.uri,
+          privilege.description,
           style: TextStyle(fontSize: 10, color: Colors.grey[600]),
         ),
         trailing: const Icon(Icons.chevron_right, color: Colors.grey),

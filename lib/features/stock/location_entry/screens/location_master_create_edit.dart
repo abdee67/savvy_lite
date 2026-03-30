@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/core/widgets/custom_text_form.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
@@ -12,6 +13,7 @@ import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_
 import 'package:savvy_stock/features/stock/location_entry/widget/branch_dropdown.dart';
 import 'package:savvy_stock/features/stock/location_entry/widget/item_pick_list.dart';
 import 'package:savvy_stock/features/stock/location_entry/widget/location_code.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import '../blocs/location_master_bloc.dart';
 import '../models/location_master_model.dart';
 
@@ -68,119 +70,141 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isEditMode ? 'Edit Location ' : 'Create Location'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        title: Text(
+          widget.isEditMode ? 'Edit Location' : 'Create Location',
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+        backgroundColor: const Color(0xFF1C4292),
+        foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
-          // Single Save button in AppBar
           BlocBuilder<LocationMasterBloc, LocationMasterState>(
             builder: (context, state) {
-              final isSaveEnabled =
-                  state.dualListTarget.isNotEmpty && state.selected != null;
-              // Determine edit mode from state if not explicitly passed
               final isEditMode =
                   widget.isEditMode || state.selected?.id != null;
-              return IconButton(
-                icon: const Icon(Icons.save),
-                onPressed: isSaveEnabled
-                    ? () => _saveAndAddNew(context, state)
-                    : isEditMode
-                    ? () => _saveAndClose(context, state)
-                    : null,
-                tooltip: 'Save',
+              final isSaveEnabled =
+                  (state.dualListTarget.isNotEmpty && state.selected != null) ||
+                  isEditMode;
+
+              return Padding(
+                padding: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.amber,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: isSaveEnabled
+                      ? () => _saveLocation(context, state)
+                      : null,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isEditMode
+                            ? Iconsax.document_upload
+                            : Iconsax.document_copy,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        isEditMode ? 'Update' : 'Save',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
               );
             },
           ),
         ],
       ),
-      body: BlocConsumer<LocationMasterBloc, LocationMasterState>(
-        listener: (context, state) {
-          // Show success/error messages
-          if (state.status == LocationMasterStatus.success &&
-              state.message.isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.green,
-              ),
-            );
-          } else if (state.status == LocationMasterStatus.failure &&
-              state.message.isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
-            );
-          } else if (state.status == LocationMasterStatus.duplication) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.orange,
-              ),
-            );
-          }
+      body: SafeArea(
+        child: BlocConsumer<LocationMasterBloc, LocationMasterState>(
+          listener: (context, state) {
+            // Show success/error messages
+            if (state.status == LocationMasterStatus.success &&
+                state.message.isNotEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            } else if (state.status == LocationMasterStatus.failure &&
+                state.message.isNotEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            } else if (state.status == LocationMasterStatus.duplication) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+            }
 
-          // Update controllers when selected location changes
-          if (state.selected != null) {
-            _updateControllers(state.selected!);
-          }
-        },
-        builder: (context, state) {
-          return Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                // Removed LocationToolbar widget
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 600),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Store and Margin Section
-                            _buildStoreAndMarginSection(
-                              context,
-                              state,
-                              widget.isEditMode,
-                            ),
-                            const SizedBox(height: 16),
-                            // Location Codes Section
-                            LocationCodeForm(
-                              controllers: _codeControllers,
-                              onCodeChanged: (index, value) =>
-                                  _onCodeChanged(context, index, value),
-                              isFieldEnabled: _getFieldEnabledState(
-                                state.selected,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-
-                            // Items Pick List Section
-                            ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxWidth: MediaQuery.of(context).size.width * 1,
-                                maxHeight:
-                                    MediaQuery.of(context).size.height * 1,
-                              ),
-                              child: _buildItemsPickListSection(
+            // Update controllers when selected location changes
+            if (state.selected != null) {
+              _updateControllers(state.selected!);
+            }
+          },
+          builder: (context, state) {
+            return Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  // Removed LocationToolbar widget
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 600),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Store and Margin Section
+                              _buildStoreAndMarginSection(
                                 context,
                                 state,
                                 widget.isEditMode,
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 16),
+                              // Location Codes Section
+                              LocationCodeForm(
+                                controllers: _codeControllers,
+                                onCodeChanged: (index, value) =>
+                                    _onCodeChanged(context, index, value),
+                                isFieldEnabled: _getFieldEnabledState(
+                                  state.selected,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Items Pick List Section
+                              _buildItemsPickListSection(
+                                context,
+                                state,
+                                widget.isEditMode,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          );
-        },
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -190,20 +214,49 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
     LocationMasterState state,
     bool isEditMode,
   ) {
-    return Padding(
-      padding: const EdgeInsets.all(10.0),
+    return Container(
+      padding: const EdgeInsets.all(20.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.grey[200]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            isEditMode ? 'Store Information(Read Only)' : 'Store Information',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: isEditMode ? Colors.grey : null,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1C4292).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Iconsax.shop,
+                  size: 20,
+                  color: Color(0xFF1C4292),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                isEditMode ? 'Store Information' : 'Select Store',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF333333),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Column(
             children: [
               // Store dropdown - full width
@@ -286,45 +339,62 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
     LocationMasterState state,
     bool isEditMode,
   ) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SizedBox(
-          width: constraints.maxWidth,
-          height: MediaQuery.of(context).size.height * 0.8,
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Items to Location Attachment',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: ItemsPickList(
-                    sourceItems: state.dualListSource,
-                    targetItems: state.dualListTarget,
-                    authBloc: context.read<AuthBloc>(),
-                    onSelectionChanged: (source, target) {
-                      context.read<LocationMasterBloc>().add(
-                        UpdateDualListModel(source, target),
-                      );
-                    },
-                    isEditMode: isEditMode,
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final sectionHeight = (screenHeight * 0.6).clamp(400.0, 800.0);
+
+    return SizedBox(
+      height: sectionHeight,
+      child: Card(
+        elevation: 0, // Modern flat look, or use 2 for shadow
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.swap_horiz, color: Theme.of(context).primaryColor),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Item Assignment',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
+                ],
+              ),
+              const Divider(height: 24), // Visual separation
+              Expanded(
+                child: ItemsPickList(
+                  sourceItems: state.dualListSource,
+                  targetItems: state.dualListTarget,
+                  authBloc: context.read<AuthBloc>(),
+                  onSelectionChanged: (source, target) {
+                    context.read<LocationMasterBloc>().add(
+                      UpdateDualListModel(source, target),
+                    );
+                  },
+                  isEditMode: isEditMode,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
   bool _shouldShowMarginFields() {
     // This would come from your system settings
-    // For now, return true to show them
+    final showMargin = context
+        .read<SystemConstantBloc>()
+        .state
+        .selected!
+        .taxInfoDisplay!;
     return true;
   }
 
@@ -414,9 +484,41 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
   void _saveLocation(BuildContext context, LocationMasterState state) {
     if (_formKey.currentState?.validate() ?? false) {
       if (state.selected != null && state.dualListTarget.isNotEmpty) {
-        context.read<LocationMasterBloc>().add(
-          SaveLocationMaster(state.selected!, state.dualListTarget),
-        );
+        final isEditMode = widget.isEditMode || state.selected?.id != null;
+
+        if (isEditMode) {
+          context.read<LocationMasterBloc>().add(
+            UpdateLocationMaster(state.selected!, state.dualListTarget),
+          );
+        } else {
+          context.read<LocationMasterBloc>().add(
+            SaveLocationMaster(state.selected!, state.dualListTarget),
+          );
+        }
+
+        // Listen for success then navigate back or clear for new
+        final bloc = context.read<LocationMasterBloc>();
+        subscription?.cancel(); // Cancel previous subscription if any
+        subscription = bloc.stream.listen((state) {
+          if (state.status == LocationMasterStatus.success) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (isEditMode) {
+                Navigator.of(context).pop();
+              } else {
+                // Clear form for new entry if it was a create
+                context.read<LocationMasterBloc>().add(ClearCreateList());
+                context.read<LocationMasterBloc>().add(
+                  PrepareCreateLocation(state.companyId!),
+                );
+                // Clear controllers
+                for (var controller in _codeControllers) {
+                  controller.clear();
+                }
+              }
+              subscription?.cancel();
+            });
+          }
+        });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -424,55 +526,6 @@ class _LocationMasterCreatePageState extends State<LocationMasterCreatePage> {
             backgroundColor: Colors.orange,
           ),
         );
-      }
-    }
-  }
-
-  void _saveAndClose(BuildContext context, LocationMasterState state) {
-    if (_formKey.currentState?.validate() ?? false) {
-      if (state.selected != null && state.dualListTarget.isNotEmpty) {
-        context.read<LocationMasterBloc>().add(
-          SaveLocationMaster(state.selected!, state.dualListTarget),
-        );
-
-        // Listen for success then navigate back
-        final bloc = context.read<LocationMasterBloc>();
-        subscription = bloc.stream.listen((state) {
-          if (state.status == LocationMasterStatus.success) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              Navigator.of(context).pop();
-            });
-          }
-        });
-      }
-    }
-  }
-
-  void _saveAndAddNew(BuildContext context, LocationMasterState state) {
-    if (_formKey.currentState?.validate() ?? false) {
-      if (state.selected != null && state.dualListTarget.isNotEmpty) {
-        context.read<LocationMasterBloc>().add(
-          SaveLocationMaster(state.selected!, state.dualListTarget),
-        );
-
-        // Listen for success then clear form for new entry
-        final bloc = context.read<LocationMasterBloc>();
-        subscription = bloc.stream.listen((state) {
-          if (state.status == LocationMasterStatus.success) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              // Clear form for new entry
-              context.read<LocationMasterBloc>().add(ClearCreateList());
-              context.read<LocationMasterBloc>().add(
-                PrepareCreateLocation(state.companyId!),
-              );
-              // Clear controllers
-              for (var controller in _codeControllers) {
-                controller.clear();
-              }
-              subscription!.cancel();
-            });
-          }
-        });
       }
     }
   }

@@ -1,7 +1,9 @@
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
+import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
 import 'package:savvy_stock/features/stock/location_entry/models/location_master_model.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/model/lot_coloring_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class LotMaster {
   final int? id;
@@ -23,7 +25,7 @@ class LotMaster {
   LotExpirationColor? tempColorType;
   ItemEntryModel? itemRef;
   Branch? branchRef;
-  LocationMaster? locationRef;
+  ItemLocation? locationRef;
 
   LotMaster({
     this.id,
@@ -94,9 +96,9 @@ class LotMaster {
       statusCode: map['status_code']?.toString(), //A, E, I
       statusDescription: map['status_description']
           ?.toString(), //Active, Expired, Inactive
-      itemRef: itemNumber != null
+      itemRef: map['item_description'] != null
           ? ItemEntryModel(
-              id: itemNumber,
+              id: map['item_number'],
               itemsId: (map['items_id'] ?? map['item_id'])?.toString(),
               itemDescription: map['item_description']?.toString(),
               unitOfMeasure: map['unit_of_measure']?.toString(),
@@ -107,11 +109,19 @@ class LotMaster {
               marginRate: asDouble(map['margin_rate']),
               marginType: map['margin_type']?.toString(),
               reorderPoint: asDouble(map['reorder_point']),
+              unitOfMeasureDescription:
+                  map['unit_of_measure_description'] != null
+                  ? UdcDetails(
+                      id: map['unit_of_measure'],
+                      description1: map['unit_of_measure_description'],
+                      detailCode: map['unit_of_measure_detail_code'],
+                    )
+                  : null,
             )
           : null,
-      branchRef: branch != null
+      branchRef: map['description'] != null
           ? Branch(
-              id: branch,
+              id: map['branch'],
               referenceId: map['reference_id']?.toString(),
               description: (map['description'])?.toString(),
               city: map['city']?.toString(),
@@ -121,10 +131,17 @@ class LotMaster {
               marginType: map['margin_type']?.toString(),
             )
           : null,
-      locationRef: location != null
-          ? LocationMaster(
-              id: location,
-              locationDescription: map['location_description']?.toString(),
+      locationRef: map['location_description'] != null
+          ? ItemLocation(
+              id: map['location'],
+              location: map['location_id'],
+              locationDescription: map['location_description'] != null
+                  ? LocationMaster(
+                      id: map['location_id'],
+                      locationDescription: map['location_description']
+                          ?.toString(),
+                    )
+                  : null,
             )
           : null,
     );

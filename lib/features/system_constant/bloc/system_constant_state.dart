@@ -20,8 +20,6 @@ class SystemConstantState extends Equatable {
   final List<SystemConstant> editItems;
   final List<SystemConstant> multiselectionItems;
   final SystemConstant? selected;
-  final SystemConstant? selected1;
-  final SystemConstant? selected2;
   final String? errorMessage;
   final int unsyncedCount;
   final bool isOnline;
@@ -36,8 +34,6 @@ class SystemConstantState extends Equatable {
     this.editItems = const [],
     this.multiselectionItems = const [],
     this.selected,
-    this.selected1,
-    this.selected2,
     this.errorMessage,
     this.unsyncedCount = 0,
     this.isOnline = true,
@@ -73,8 +69,6 @@ class SystemConstantState extends Equatable {
       editItems: editItems ?? this.editItems,
       multiselectionItems: multiselectionItems ?? this.multiselectionItems,
       selected: selected ?? this.selected,
-      selected1: selected1 ?? this.selected1,
-      selected2: selected2 ?? this.selected2,
       errorMessage: errorMessage ?? this.errorMessage,
       unsyncedCount: unsyncedCount ?? this.unsyncedCount,
       isOnline: isOnline ?? this.isOnline,
@@ -92,8 +86,6 @@ class SystemConstantState extends Equatable {
     editItems,
     multiselectionItems,
     selected,
-    selected1,
-    selected2,
     errorMessage,
     unsyncedCount,
     isOnline,

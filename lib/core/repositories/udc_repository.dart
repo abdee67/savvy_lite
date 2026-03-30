@@ -1,4 +1,5 @@
 import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
@@ -87,7 +88,7 @@ class UdcRepository extends BaseRepository {
         SELECT udc_details.* 
         FROM udc_details 
         INNER JOIN udc_header ON udc_details.record_header = udc_header.id 
-        WHERE udc_details.detail_code = ? AND udc_header.header_code = ?
+        WHERE udc_details.detail_code = ? AND udc_header.udc_code = ?
         ''',
         [detailCode, headerCode],
       );
@@ -112,7 +113,7 @@ class UdcRepository extends BaseRepository {
         SELECT udc_details.* 
         FROM udc_details 
         INNER JOIN udc_header ON udc_details.record_header = udc_header.id 
-        WHERE udc_details.detail_code = ? AND udc_header.header_code = ?
+        WHERE udc_details.detail_code = ? AND udc_header.udc_code = ?
         ''',
         [detailCode, headerCode],
       );
@@ -135,7 +136,7 @@ class UdcRepository extends BaseRepository {
         '''
       SELECT ud.id FROM udc_details ud
       JOIN udc_header uh ON ud.record_header = uh.id
-      WHERE uh.header_code = ? AND ud.detail_code = ?
+      WHERE uh.udc_code = ? AND ud.detail_code = ?
       ''',
         [headerCode, detailCode],
       );
@@ -144,10 +145,16 @@ class UdcRepository extends BaseRepository {
         return result.first['id'] as int?;
       }
 
-      print('❌ No UDC found for header: $headerCode, detail: $detailCode');
+      if (kDebugMode) {
+        developer.log(
+          '❌ No UDC found for header: $headerCode, detail: $detailCode',
+        );
+      }
       return null;
     } catch (e) {
-      print('❌ Error getting UDC detail ID: $e');
+      if (kDebugMode) {
+        developer.log('❌ Error getting UDC detail ID: $e');
+      }
       return null;
     }
   }
@@ -162,13 +169,45 @@ class UdcRepository extends BaseRepository {
         SELECT udc_details.* 
         FROM udc_details 
         INNER JOIN udc_header ON udc_details.record_header = udc_header.id 
-        WHERE udc_header.header_code = ?
+        WHERE udc_header.udc_code = ?
       ''',
         [headerCode],
       );
       return maps.map((map) => UdcDetails.fromJson(map)).toList();
     } catch (e) {
       return [];
+    }
+  }
+
+  // Save UOM entry (matching Java logic)
+  Future<void> saveUomEntry(UdcDetails detail) async {
+    final db = await databaseService.database;
+    try {
+      final headerId = await getRecordHeaderId('UM');
+      if (headerId == null) {
+        throw Exception('UdcHeader with code UM not found');
+      }
+
+      final map = detail.toDatabaseMap();
+      // Ensure these are always set for UOM
+      map['record_header'] = headerId;
+      map['udc_group'] = 'UM';
+
+      if (detail.id == 0) {
+        // If it's a new record
+        map.remove('id'); // ID is autoincrement
+        await db.insert('udc_details', map);
+      } else {
+        await db.update(
+          'udc_details',
+          map,
+          where: 'id = ?',
+          whereArgs: [detail.id],
+        );
+      }
+    } catch (e) {
+      developer.log('Error saving UOM entry: $e');
+      rethrow;
     }
   }
 
@@ -179,7 +218,7 @@ class UdcRepository extends BaseRepository {
       final result = await db.rawQuery(
         '''
       SELECT uh.id FROM udc_header uh
-      WHERE uh.header_code = ?
+      WHERE uh.udc_code = ?
       ''',
         [headerCode],
       );
@@ -188,10 +227,14 @@ class UdcRepository extends BaseRepository {
         return result.first['id'] as int?;
       }
 
-      print('❌ No UDC header found for code: $headerCode');
+      if (kDebugMode) {
+        developer.log('❌ No UDC header found for code: $headerCode');
+      }
       return null;
     } catch (e) {
-      print('❌ Error getting UDC header ID: $e');
+      if (kDebugMode) {
+        developer.log('❌ Error getting UDC header ID: $e');
+      }
       return null;
     }
   }

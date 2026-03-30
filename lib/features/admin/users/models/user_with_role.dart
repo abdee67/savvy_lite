@@ -1,12 +1,16 @@
+import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 
-class UserWithRole {
+class UserWithRole extends Equatable {
   final UserModel user;
   final List<Role> roles;
 
-  UserWithRole({required this.user, required this.roles});
+  const UserWithRole({required this.user, required this.roles});
+
+  @override
+  List<Object?> get props => [user, roles];
 
   List<Privilege> get allPrivileges =>
       roles.expand((role) => role.privileges).toList();

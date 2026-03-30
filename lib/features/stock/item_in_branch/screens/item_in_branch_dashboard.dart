@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:intl/intl.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/core/utils/ui_helper.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -9,15 +10,11 @@ import 'package:savvy_stock/features/branch_list/blocs/branch_list_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_event.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_state.dart';
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
-import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_event.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_state.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
-
-import '../../item_entry/blocs/item_entry_bloc.dart';
-import '../../item_entry/blocs/item_entry_event.dart';
-import '../../item_entry/blocs/item_entry_state.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 
 class ItemInBranchDashboard extends StatefulWidget {
   final AuthBloc authBloc;
@@ -39,6 +36,7 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
   late Animation<double> _heightAnimation;
   late Animation<double> _opacityAnimation;
   late Animation<Offset> _slideAnimation;
+  late int _decimalPlace;
 
   // Detail panel state
   ItemInBranchModel? _selectedItem;
@@ -60,6 +58,11 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
     context.read<StockItemInBranchBloc>().add(
       LoadItemsFromBranch(widget.authBloc.state.companyId!),
     );
+    _decimalPlace = context
+        .read<SystemConstantBloc>()
+        .state
+        .selected!
+        .decimalPlaces!;
   }
 
   void _setupAnimations() {
@@ -140,12 +143,10 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
 
   void _callItem(String itemId) {
     // Implement phone call functionality
-    print('Calling: $itemId');
   }
 
   void _emailItem(String itemId) {
     // Implement email functionality
-    print('Emailing: $itemId');
   }
 
   void _exportItem(ItemInBranchModel item) {
@@ -157,10 +158,6 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
 
   void _navigateToEditScreen(ItemInBranchModel item) {
     context.push(AppRoutes.editItemInBranch, extra: item);
-  }
-
-  void _navigateToAddScreen() {
-    context.push(AppRoutes.addItemToBranch);
   }
 
   void _safeDelete(BuildContext context, {int? index}) {
@@ -235,13 +232,13 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
     int index,
     DragEndDetails details,
   ) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final threshold = screenWidth * 0.3;
+    final isCompact = MediaQuery.of(context).size.width;
+    final threshold = isCompact * 0.3;
     final current = _dragOffset[index] ?? 0;
     if (current.abs() > threshold) {
       // Swipe far enough → delete
       setState(() {
-        _dragOffset[index] = -screenWidth;
+        _dragOffset[index] = -isCompact;
       });
 
       Future.delayed(const Duration(milliseconds: 300), () {
@@ -256,24 +253,6 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
         _dragOffset[index] = 0.0;
       });
     }
-  }
-
-  String _getItemDescription(int? itemId) {
-    if (itemId == null) return '';
-    // load item descriptions from item_entry bloc
-    final itemEntryBloc = context.read<StockItemsEntryBloc>();
-    itemEntryBloc.add(LoadItems(widget.authBloc.state.companyId!));
-
-    final itemEntryState = itemEntryBloc.state;
-    if (itemEntryState.status == ItemEntryStatus.success) {
-      final item = itemEntryState.items.firstWhere(
-        (item) => item.id == itemId,
-        orElse: () => ItemEntryModel.empty(),
-      );
-      return item.itemDescription ?? 'Item $itemId';
-    }
-
-    return 'Item $itemId';
   }
 
   String _getItemBranch(int? branchId) {
@@ -297,40 +276,42 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey,
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Item In Branch Management'),
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
       ),
-      body: BlocConsumer<StockItemInBranchBloc, ItemInBranchState>(
-        listener: (context, state) {
-          if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
-            setState(() {
-              _isSelectionMode = true;
-            });
-          } else if (state.selectedItems.isEmpty && _isSelectionMode) {
-            setState(() {
-              _isSelectionMode = false;
-            });
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Search Bar
-                  _buildSearchBar(),
-                  _buildActionButtons(state),
+      body: SafeArea(
+        child: BlocConsumer<StockItemInBranchBloc, ItemInBranchState>(
+          listener: (context, state) {
+            if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
+              setState(() {
+                _isSelectionMode = true;
+              });
+            } else if (state.selectedItems.isEmpty && _isSelectionMode) {
+              setState(() {
+                _isSelectionMode = false;
+              });
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Search Bar
+                    _buildSearchBar(),
+                    _buildActionButtons(state),
 
-                  // Item List
-                  Expanded(child: _buildItemList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+                    // Item List
+                    Expanded(child: _buildItemList(state)),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -374,11 +355,11 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
   Widget _buildActionButtons(ItemInBranchState state) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      height: state.hasSelection ? 60 : 0,
+      height: state.hasSelection ? 30 : 0,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.grey,
-        border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Colors.white)),
       ),
       child: state.hasSelection
           ? Row(
@@ -417,33 +398,12 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
     );
   }
 
-  Widget _buildFloatingActionButton(BuildContext context) {
-    return BlocBuilder<StockItemInBranchBloc, ItemInBranchState>(
-      builder: (context, state) {
-        return ElevatedButton(
-          onPressed: () {
-            if (state.canEdit && state.selectedItems.isNotEmpty) {
-              // Navigate to edit screen with selected item
-              final item = state.selectedItems.first;
-              _navigateToEditScreen(item);
-            }
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color.fromARGB(255, 28, 66, 146),
-            shape: const CircleBorder(),
-          ),
-          child: const Icon(Icons.edit, color: Colors.white),
-        );
-      },
-    );
-  }
-
   Widget _buildItemList(ItemInBranchState state) {
-    final screenWidth = MediaQuery.of(context).size.width;
+    final isCompact = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    final isSmallScreen = screenWidth < 700;
+    final isSmallScreen = isCompact < 700;
     final cardSpacing = screenHeight * 0.02;
-    final cardWidth = isSmallScreen ? screenWidth * 0.85 : screenWidth * 0.8;
+    final cardWidth = isSmallScreen ? isCompact * 0.85 : isCompact * 0.8;
 
     if (state.status == ItemInBranchStatus.loading) {
       return const Center(child: CircularProgressIndicator());
@@ -491,9 +451,9 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
     }
 
     return Container(
-      width: screenWidth,
+      width: isCompact,
       height: screenHeight,
-      decoration: const BoxDecoration(color: Colors.grey),
+      decoration: const BoxDecoration(color: Colors.white),
       child: ListView.separated(
         controller: _scrollController,
         padding: const EdgeInsets.all(16),
@@ -526,15 +486,6 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
   ) {
     final offset = _dragOffset[index] ?? 0.0;
     final isExpanded = _itemDetail == true && _selectedItem == item;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-
-    // Responsive sizing based on screen size
-    final collapsedHeight = _getCollapsedHeight(screenWidth, screenHeight);
-    final expandedHeight = _getExpandedHeight(screenWidth, screenHeight);
-    final collapsedWidth = _getCardWidth(screenWidth);
-    final itemDescription = _getItemDescription(item.itemNumber);
-    final branch = _getItemBranch(item.branch);
 
     return GestureDetector(
       onTap: () {
@@ -560,225 +511,186 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
           _onHorizontalDragEnd(context, index, details),
       child: AnimatedBuilder(
         animation: _scrollController,
-        builder: (context, child) => Container(
-          transform: Matrix4.translationValues(offset, 0, 0),
-          width: collapsedWidth,
-          height: isExpanded ? expandedHeight : collapsedHeight,
+        builder: (context, child) => SizedBox(
+          width: cardWidth,
           child: Stack(
             children: [
               // 1. DELETE INDICATOR - Should be FIRST in Stack
-              if (!isExpanded) // Only show delete indicator when not expanded
-                Positioned.fill(
-                  child: Container(
-                    alignment: Alignment.centerRight,
-                    decoration: BoxDecoration(
-                      color: Colors.amber,
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    margin: const EdgeInsets.only(bottom: 2),
-                    child: const Icon(
-                      Icons.delete,
-                      color: Colors.white,
-                      size: 28,
-                    ),
+              Positioned.fill(
+                child: Container(
+                  alignment: Alignment.centerRight,
+                  decoration: BoxDecoration(
+                    color: Colors.amber,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  margin: const EdgeInsets.only(bottom: 2),
+                  child: const Icon(
+                    Icons.delete,
+                    color: Colors.white,
+                    size: 28,
                   ),
                 ),
+              ),
 
-              // 2. BACKGROUND LAYERS (only when expanded)
-              if (isExpanded) ...[
-                // Yellow background
-                Positioned.fill(
-                  top: 47,
-                  child: Container(
-                    width: collapsedWidth,
-                    height: expandedHeight,
-                    decoration: ShapeDecoration(
-                      color: const Color(0xFFFDD105), // Fixed yellow color
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+              // --- LAYER 2: FOREGROUND CARD (Content) ---
+              Transform.translate(
+                offset: Offset(offset, 0),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  // DECORATION: Handles the Yellow/White transition
+                  decoration: BoxDecoration(
+                    // If expanded, the base becomes yellow. If collapsed, white.
+                    color: isExpanded
+                        ? Colors.amber
+                        : (isSelected ? Colors.blue[50] : Colors.white),
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
+                    ],
+                    border: Border.all(
+                      color: isSelected
+                          ? const Color.fromARGB(255, 28, 66, 146)
+                          : Colors.transparent,
+                      width: 2,
                     ),
                   ),
-                ),
-              ],
-              // 3. ITEM CARD - Should come AFTER delete indicator
-              AnimatedContainer(
-                padding: const EdgeInsets.only(top: 5, left: 10, right: 10),
-                //width: collapsedWidth,
-                height: collapsedHeight,
-                duration: const Duration(milliseconds: 400),
-                transform: Matrix4.translationValues(offset, 0, 0),
-                curve: Curves.easeInOut,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.blue[50] : Colors.white,
-                  borderRadius: BorderRadius.circular(30),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                  border: Border.all(
-                    color: isSelected
-                        ? const Color.fromARGB(255, 28, 66, 146)
-                        : Colors.transparent,
-                    width: 2,
-                  ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+
+                  // ANIMATED SIZE: This is the key to efficient height
+                  child: AnimatedSize(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    alignment: Alignment.topCenter,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min, // Shrink to fit content
                       children: [
-                        // Item Avatar
-                        _buildItemAvatar(item, isSelected, isCompact),
-                        const SizedBox(width: 12),
-                        Expanded(
+                        // --- PART A: HEADER (Name, Phone, Button) ---
+                        Container(
+                          padding: const EdgeInsets.fromLTRB(15, 15, 15, 10),
+                          decoration: BoxDecoration(
+                            // The header stays white (or blue-ish) even when expanded
+                            color: isSelected ? Colors.blue[50] : Colors.white,
+                            borderRadius: isExpanded
+                                ? const BorderRadius.vertical(
+                                    top: Radius.circular(30),
+                                    bottom: Radius.circular(
+                                      20,
+                                    ), // Slight curve when open
+                                  )
+                                : BorderRadius.circular(30),
+                          ),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                item.itemRef!.itemDescription!,
-                                style: TextStyle(
-                                  color: const Color(0xFF373737),
-                                  fontSize: _getTitleFontSize(screenWidth),
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              Text(
-                                item.branchRef!.description!,
-                                style: TextStyle(
-                                  color: const Color(0xFF887F7F),
-                                  fontSize: _getSubtitleFontSize(screenWidth),
-                                  fontStyle: FontStyle.italic,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w300,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              // Stock and price info
                               Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Available Quantity
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue[50],
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: Colors.blue[200]!,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      'Qty: ${item.quantityAvailable}',
-                                      style: TextStyle(
-                                        fontSize: _getBadgeFontSize(
-                                          screenWidth,
+                                  // Item Avatar
+                                  _buildItemAvatar(item, isSelected, isCompact),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item.itemRef!.itemDescription!,
+                                          style: TextStyle(
+                                            color: const Color(0xFF373737),
+                                            fontSize: isCompact ? 14 : 16,
+                                            fontFamily: 'Inter',
+                                            fontWeight: FontWeight.w800,
+                                          ),
                                         ),
-                                        color: Colors.blue[800],
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                        Text(
+                                          item.branchRef!.description!,
+                                          style: TextStyle(
+                                            color: const Color.fromARGB(
+                                              255,
+                                              95,
+                                              88,
+                                              88,
+                                            ),
+                                            fontSize: isCompact ? 12 : 14,
+                                            fontStyle: FontStyle.italic,
+                                            fontFamily: 'Inter',
+                                            fontWeight: FontWeight.w300,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        // Stock and price info
+                                        Row(
+                                          children: [
+                                            // Available Quantity
+                                            Text(
+                                              'Qty: ${item.quantityAvailable}',
+                                              style: TextStyle(
+                                                fontSize: isCompact ? 10 : 14,
+                                                color: Colors.blue[800],
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                          ],
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  // Unit Price
-                                  if (item.unitPrice != null)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.green[50],
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: Colors.green[200]!,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        '\$${item.unitPrice!.toStringAsFixed(2)}',
-                                        style: TextStyle(
-                                          fontSize: _getBadgeFontSize(
-                                            screenWidth,
-                                          ),
-                                          color: Colors.green[800],
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
                                 ],
+                              ),
+                              const SizedBox(height: 8),
+                              InkWell(
+                                onTap: () => isExpanded
+                                    ? _hideItemDetail()
+                                    : _showItemDetail(item),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 4,
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      // See More / See Less button
+                                      Text(
+                                        isExpanded ? 'See Less' : 'See More',
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: isCompact ? 10 : 12,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      Icon(
+                                        isExpanded
+                                            ? Icons.keyboard_arrow_up
+                                            : Icons.keyboard_arrow_down,
+                                        color: Colors.grey[600],
+                                        size: 16,
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ],
                           ),
                         ),
+
+                        // 4. ANIMATED EXPANDED CONTENT
+                        if (isExpanded)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(20),
+                            child: _buildItemDetailContent(item, isCompact),
+                          ),
                       ],
                     ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        // See More / See Less button
-                        ElevatedButton(
-                          onPressed: () => isExpanded
-                              ? _hideItemDetail()
-                              : _showItemDetail(item),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF145888),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            padding: _getButtonPadding(screenWidth),
-                          ),
-                          child: Text(
-                            isExpanded ? 'See Less' : 'See More',
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: _getButtonFontSize(screenWidth),
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              // 4. ANIMATED EXPANDED CONTENT
-              if (isExpanded)
-                Positioned(
-                  top: collapsedHeight + 10,
-                  left: 20,
-                  right: 20,
-                  child: AnimatedBuilder(
-                    animation: _detailAnimationController,
-                    builder: (context, child) {
-                      final currentHeight =
-                          _heightAnimation.value *
-                          (expandedHeight - collapsedHeight - 20);
-                      final currentOpacity = _opacityAnimation.value;
-
-                      return SlideTransition(
-                        position: _slideAnimation,
-                        child: Container(
-                          height: currentHeight > 0 ? currentHeight : 0,
-                          decoration: BoxDecoration(color: Colors.transparent),
-                          child: Opacity(opacity: currentOpacity, child: child),
-                        ),
-                      );
-                    },
-                    child: _buildItemDetailContent(item, screenWidth),
                   ),
                 ),
+              ),
             ],
           ),
         ),
@@ -786,60 +698,59 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
     );
   }
 
-  Widget _buildItemDetailContent(ItemInBranchModel item, double screenWidth) {
+  Widget _buildItemDetailContent(ItemInBranchModel item, bool isCompact) {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       child: Column(
         children: [
           _buildItemInfoItem(
-            'Item in Branch ID : ',
-            item.id.toString(),
-            Iconsax.card,
-            screenWidth,
-          ),
-          _buildItemInfoItem(
             'Item : ',
-            item.itemRef!.itemsId.toString(),
+            item.itemRef!.itemDescription.toString(),
             Iconsax.box,
-            screenWidth,
+            isCompact,
           ),
           _buildItemInfoItem(
             'Branch : ',
             _getItemBranch(item.branch),
             Iconsax.building,
-            screenWidth,
+            isCompact,
           ),
           _buildItemInfoItem(
             'Unit Price : ',
-            item.unitPrice != null
-                ? '\$${item.unitPrice!.toStringAsFixed(2)}'
-                : 'N/A',
+            NumberFormat.currency(
+              symbol: 'ETB ',
+              decimalDigits: _decimalPlace,
+            ).format(item.unitPrice),
             Iconsax.dollar_circle,
-            screenWidth,
+            isCompact,
           ),
           _buildItemInfoItem(
             'Margin Rate : ',
             item.marginRate?.toStringAsFixed(2) ?? 'N/A',
             Iconsax.percentage_circle,
-            screenWidth,
+            isCompact,
           ),
           _buildItemInfoItem(
             'Margin Type : ',
-            item.marginType ?? 'N/A',
+            item.marginType == 'F'
+                ? 'Flat'
+                : item.marginType == 'P'
+                ? 'Percentage'
+                : 'N/A',
             Iconsax.chart,
-            screenWidth,
+            isCompact,
           ),
           _buildItemInfoItem(
             'Unit of Measure : ',
-            item.unitOfMeasure?.toString() ?? 'N/A',
+            item.unitOfMeasureRef?.description1.toString() ?? 'N/A',
             Iconsax.rulerpen,
-            screenWidth,
+            isCompact,
           ),
           _buildItemInfoItem(
             'Available Quantity : ',
-            item.quantityAvailable?.toString() ?? 'N/A',
+            '${NumberFormat.decimalPatternDigits(decimalDigits: _decimalPlace).format(item.quantityAvailable)} ${item.unitOfMeasureRef?.description1}',
             Iconsax.notification_status_copy,
-            screenWidth,
+            isCompact,
           ),
 
           // Action buttons row
@@ -852,19 +763,14 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
                   Iconsax.edit,
                   'Edit',
                   () => _navigateToEditScreen(item),
-                  screenWidth,
+                  isCompact,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportItem(item),
-                  screenWidth,
-                ),
+
                 _buildActionButton(
                   Iconsax.trash,
                   'Delete',
                   () => _safeDelete(context),
-                  screenWidth,
+                  isCompact,
                 ),
               ],
             ),
@@ -878,7 +784,7 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
     String label,
     String value,
     IconData icon,
-    double screenWidth,
+    bool isCompact,
   ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -886,19 +792,19 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: _getIconSize(screenWidth),
-            height: _getIconSize(screenWidth),
+            width: _getIconSize(isCompact),
+            height: _getIconSize(isCompact),
             decoration: BoxDecoration(
               color: Colors.grey[50],
               shape: BoxShape.circle,
             ),
             child: Icon(
               icon,
-              size: _getIconInnerSize(screenWidth),
+              size: _getIconInnerSize(isCompact),
               color: Colors.grey[600],
             ),
           ),
-          SizedBox(width: _getSpacing(screenWidth)),
+          SizedBox(width: _getSpacing(isCompact)),
           Expanded(
             child: Text.rich(
               TextSpan(
@@ -907,7 +813,7 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
                     text: label,
                     style: TextStyle(
                       color: const Color(0xFF373737),
-                      fontSize: _getDetailLabelFontSize(screenWidth),
+                      fontSize: _getDetailLabelFontSize(isCompact),
                       fontFamily: 'Inter',
                       fontWeight: FontWeight.w700,
                     ),
@@ -916,7 +822,7 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
                     text: value,
                     style: TextStyle(
                       color: const Color(0xFF373737),
-                      fontSize: _getDetailValueFontSize(screenWidth),
+                      fontSize: _getDetailValueFontSize(isCompact),
                       fontFamily: 'Inter',
                       fontWeight: FontWeight.w400,
                     ),
@@ -934,12 +840,12 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
     IconData icon,
     String label,
     VoidCallback onPressed,
-    double screenWidth,
+    bool isCompact,
   ) {
     return Column(
       children: [
         IconButton(
-          icon: Icon(icon, size: _getActionIconSize(screenWidth)),
+          icon: Icon(icon, size: _getActionIconSize(isCompact)),
           onPressed: onPressed,
           style: IconButton.styleFrom(
             backgroundColor: const Color(0xFF145888),
@@ -950,7 +856,7 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
         Text(
           label,
           style: TextStyle(
-            fontSize: _getActionLabelFontSize(screenWidth),
+            fontSize: _getActionLabelFontSize(isCompact),
             color: const Color(0xFF373737),
             fontWeight: FontWeight.w500,
           ),
@@ -983,117 +889,47 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
     );
   }
 
-  // Responsive helper methods
-  double _getCollapsedHeight(double screenWidth, double screenHeight) {
-    if (screenWidth < 360) return screenHeight * 0.22; // Very small phones
-    if (screenWidth < 400) return screenHeight * 0.20; // Small phones
-    if (screenWidth < 700) return screenHeight * 0.22; // Medium phones
-    return screenHeight * 0.14; // Tablets and larger
-  }
-
-  double _getExpandedHeight(double screenWidth, double screenHeight) {
-    if (screenWidth < 360) return screenHeight * 0.65; // Very small phones
-    if (screenWidth < 400) return screenHeight * 0.60; // Small phones
-    if (screenWidth < 700) return screenHeight * 0.55; // Medium phones
-    return screenHeight * 0.45; // Tablets and larger
-  }
-
-  double _getCardWidth(double screenWidth) {
-    if (screenWidth < 360) return screenWidth * 0.92; // Very small phones
-    if (screenWidth < 400) return screenWidth * 0.90; // Small phones
-    if (screenWidth < 700) return screenWidth * 0.85; // Medium phones
-    return screenWidth * 0.8; // Tablets and larger
-  }
-
-  double _getTitleFontSize(double screenWidth) {
-    if (screenWidth < 360) return 18; // Very small phones
-    if (screenWidth < 400) return 19; // Small phones
-    if (screenWidth < 700) return 20; // Medium phones
-    return 24; // Tablets and larger
-  }
-
-  double _getSubtitleFontSize(double screenWidth) {
-    if (screenWidth < 360) return 10; // Very small phones
-    if (screenWidth < 400) return 11; // Small phones
-    if (screenWidth < 700) return 12; // Medium phones
-    return 14; // Tablets and larger
-  }
-
-  double _getBadgeFontSize(double screenWidth) {
-    if (screenWidth < 360) return 9; // Very small phones
-    if (screenWidth < 400) return 9; // Small phones
-    if (screenWidth < 700) return 10; // Medium phones
-    return 10; // Tablets and larger
-  }
-
-  double _getInfoFontSize(double screenWidth) {
-    if (screenWidth < 360) return 10; // Very small phones
-    if (screenWidth < 400) return 11; // Small phones
-    if (screenWidth < 700) return 12; // Medium phones
-    return 14; // Tablets and larger
-  }
-
-  double _getButtonFontSize(double screenWidth) {
-    if (screenWidth < 360) return 9; // Very small phones
-    if (screenWidth < 400) return 9; // Small phones
-    if (screenWidth < 700) return 10; // Medium phones
-    return 12; // Tablets and larger
-  }
-
-  EdgeInsets _getButtonPadding(double screenWidth) {
-    if (screenWidth < 360) {
-      return const EdgeInsets.symmetric(horizontal: 12, vertical: 6);
-    }
-    if (screenWidth < 400) {
-      return const EdgeInsets.symmetric(horizontal: 14, vertical: 7);
-    }
-    if (screenWidth < 700) {
-      return const EdgeInsets.symmetric(horizontal: 16, vertical: 8);
-    }
-    return const EdgeInsets.symmetric(horizontal: 20, vertical: 10);
-  }
-
-  double _getIconSize(double screenWidth) {
-    if (screenWidth < 360) return 28; // Very small phones
-    if (screenWidth < 400) return 30; // Small phones
+  double _getIconSize(bool isCompact) {
+    if (isCompact) return 28; // Very small phones
+    if (isCompact) return 30; // Small phones
     return 32; // Medium phones and larger
   }
 
-  double _getIconInnerSize(double screenWidth) {
-    if (screenWidth < 360) return 14; // Very small phones
-    if (screenWidth < 400) return 15; // Small phones
+  double _getIconInnerSize(bool isCompact) {
+    if (isCompact) return 14; // Very small phones
+    if (isCompact) return 15; // Small phones
     return 16; // Medium phones and larger
   }
 
-  double _getSpacing(double screenWidth) {
-    if (screenWidth < 360) return 8; // Very small phones
-    if (screenWidth < 400) return 10; // Small phones
+  double _getSpacing(bool isCompact) {
+    if (isCompact) return 8; // Very small phones
+    if (isCompact) return 10; // Small phones
     return 12; // Medium phones and larger
   }
 
-  double _getDetailLabelFontSize(double screenWidth) {
-    if (screenWidth < 360) return 11; // Very small phones
-    if (screenWidth < 400) return 12; // Small phones
+  double _getDetailLabelFontSize(bool isCompact) {
+    if (isCompact) return 11; // Very small phones
+    if (isCompact) return 12; // Small phones
     return 13; // Medium phones and larger
   }
 
-  double _getDetailValueFontSize(double screenWidth) {
-    if (screenWidth < 360) return 11; // Very small phones
-    if (screenWidth < 400) return 12; // Small phones
+  double _getDetailValueFontSize(bool isCompact) {
+    if (isCompact) return 11; // Very small phones
+    if (isCompact) return 12; // Small phones
     return 13; // Medium phones and larger
   }
 
-  double _getActionIconSize(double screenWidth) {
-    if (screenWidth < 360) return 18; // Very small phones
-    if (screenWidth < 400) return 19; // Small phones
-    if (screenWidth < 700) return 20; // Medium phones
+  double _getActionIconSize(bool isCompact) {
+    if (isCompact) return 18; // Very small phones
+    if (isCompact) return 19; // Small phones
+    if (isCompact) return 20; // Medium phones
     return 24; // Tablets and larger
   }
 
-  double _getActionLabelFontSize(double screenWidth) {
-    if (screenWidth < 360) return 9; // Very small phones
-    if (screenWidth < 400) return 9; // Small phones
-    if (screenWidth < 700) return 10; // Medium phones
+  double _getActionLabelFontSize(bool isCompact) {
+    if (isCompact) return 9; // Very small phones
+    if (isCompact) return 9; // Small phones
+    if (isCompact) return 10; // Medium phones
     return 12; // Tablets and larger
   }
 }

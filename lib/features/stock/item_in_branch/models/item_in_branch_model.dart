@@ -1,10 +1,11 @@
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class ItemInBranchModel {
   final int id;
   final int itemNumber;
-  final ItemEntryModel? item;
+  //final ItemEntryModel? item;
   final int branch;
   final double? unitPrice;
   double? quantityAvailable;
@@ -18,11 +19,12 @@ class ItemInBranchModel {
   // Additional fields from joins
   ItemEntryModel? itemRef;
   Branch? branchRef;
+  final UdcDetails? unitOfMeasureRef;
 
   ItemInBranchModel({
     required this.id,
     required this.itemNumber,
-    this.item,
+    // this.item,
     required this.branch,
     this.unitPrice,
     this.quantityAvailable,
@@ -34,6 +36,7 @@ class ItemInBranchModel {
     this.tempId,
     this.itemRef,
     this.branchRef,
+    this.unitOfMeasureRef,
   });
 
   factory ItemInBranchModel.empty() {
@@ -83,12 +86,28 @@ class ItemInBranchModel {
               marginType: map['branch_margin_type']?.toString(),
             )
           : null,
+      unitOfMeasureRef: map['unit_of_measure'] != null
+          ? UdcDetails(
+              id: asInt(map['unit_of_measure']) ?? 0,
+              description1: map['unit_of_measure_description'],
+              detailCode: map['unit_of_measure_code'],
+            )
+          : null,
       itemRef: map['item_number'] != null
           ? ItemEntryModel(
               id: asInt(map['item_number']) ?? 0,
               itemsId: map['items_id']?.toString(),
               itemDescription: map['item_description']?.toString(),
               unitOfMeasure: map['unit_of_measure']?.toString(),
+              unitOfMeasureDescription:
+                  map['unit_of_measure_description'] != null
+                  ? UdcDetails(
+                      id: asInt(map['unit_of_measure']) ?? 0,
+                      description1:
+                          map['unit_of_measure_description']?.toString() ?? '',
+                      detailCode: map['unit_of_measure_code']?.toString() ?? '',
+                    )
+                  : null,
               unitPrice: asDouble(map['unit_price']),
               taxable: map['taxable']?.toString(),
               barcode: map['barcode']?.toString(),

@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/stock/lot_coloring/bloc/lot_coloring_event.dart';
@@ -131,9 +133,12 @@ class LotExpirationColorsBloc
       emit(
         state.copyWith(
           status: LotExpirationColorsStatus.failure,
-          message: 'Failed to save lot expiration color: $e',
+          //message: 'Failed to save lot expiration color: $e',
         ),
       );
+      if (kDebugMode) {
+        developer.log('Failed to save lot expiration color: $e');
+      }
     }
   }
 

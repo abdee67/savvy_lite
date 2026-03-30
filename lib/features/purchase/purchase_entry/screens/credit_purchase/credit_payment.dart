@@ -510,8 +510,8 @@ class _CreditPaymentScreenState extends State<CreditPaymentScreen> {
         _buildInfoRow(
           icon: Icons.calendar_today,
           label: 'Date Transaction',
-          value: header.dateTransaction != null
-              ? DateFormat('MM/dd/yyyy').format(header.dateTransaction!)
+          value: header.dateTransation != null
+              ? DateFormat('MM/dd/yyyy').format(header.dateTransation!)
               : 'N/A',
         ),
         const SizedBox(height: 12),
@@ -607,7 +607,7 @@ class _CreditPaymentScreenState extends State<CreditPaymentScreen> {
                         value: udc.id,
                         child: Text(udc.description1 ?? udc.detailCode ?? ''),
                       );
-                    }).toList(),
+                    }),
                   ],
                   onChanged: _onPaymentInstrumentSelected,
                   validator: (value) {

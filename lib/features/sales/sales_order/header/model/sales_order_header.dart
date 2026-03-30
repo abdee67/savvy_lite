@@ -40,6 +40,18 @@ class SalesOrderHeader {
   final double? unitCost;
   final double? amountCost;
   final int? tempId;
+  final String? salesRepresent;
+  final String? commentsSo;
+  final String? commentIfVoid;
+  final DateTime? returnDate;
+  final String? invoiceNumber;
+  final int? branchValue;
+
+  // 📊 Report specific fields (populated from JOINs in repository)
+  final String? customerBillToName;
+  final String? paymentStatusDescription;
+  final double? itemWiseGrossProfit;
+  final double? agedDays;
 
   // 🔗 Optional joined entities
   final Customer? customerBillToRef;
@@ -94,6 +106,16 @@ class SalesOrderHeader {
     this.paymentStatusRef,
     this.orderTypeRef,
     this.tempId,
+    this.customerBillToName,
+    this.paymentStatusDescription,
+    this.itemWiseGrossProfit,
+    this.agedDays,
+    this.salesRepresent,
+    this.commentsSo,
+    this.commentIfVoid,
+    this.returnDate,
+    this.invoiceNumber,
+    this.branchValue,
   });
 
   factory SalesOrderHeader.fromMap(Map<String, dynamic> map) {
@@ -139,6 +161,16 @@ class SalesOrderHeader {
       unitCost: (map['unit_cost'] as num?)?.toDouble(),
       amountCost: (map['amount_cost'] as num?)?.toDouble(),
       tempId: (map['temp_id'] as num?)?.toInt(),
+      customerBillToName: map['customer_bill_to_name']?.toString(),
+      paymentStatusDescription: map['payment_status_description']?.toString(),
+      itemWiseGrossProfit: (map['item_wise_gross_profit'] as num?)?.toDouble(),
+      agedDays: (map['aged_days'] as num?)?.toDouble(),
+      salesRepresent: map['sales_represent']?.toString(),
+      commentsSo: map['comments_so']?.toString(),
+      commentIfVoid: map['comment_ifVoid']?.toString(),
+      returnDate: parseDate(map['return_date']),
+      invoiceNumber: map['invoice_number']?.toString(),
+      branchValue: (map['branch_value'] as num?)?.toInt(),
 
       // 👇 Handle joined fields (if joined SELECT is used)
       customerBillToRef: map['customer_bill_to_name'] != null
@@ -149,13 +181,21 @@ class SalesOrderHeader {
               tinNumber: map['customer_bill_to_tin'],
             )
           : null,
+      customerTableRef: map['customer_table_name'] != null
+          ? Customer(
+              id: map['customer_table_id'],
+              customerName: map['customer_table_name'],
+              phoneNumber: map['customer_table_phone'],
+              tinNumber: map['customer_table_tin'],
+            )
+          : null,
       employee: map['employee_name'] != null
           ? Employee(
               id: map['employees_id'],
-              nameFirst: map['employee_name_first'] ?? map['employee_name'],
+              nameFirst: map['name_first'] ?? map['employee_name'],
               nameMiddle: map['employee_name_middle'] ?? '',
               nameLast: map['employee_name_last'] ?? '',
-              phone: map['employee_phone'] ?? '',
+              phoneHome: map['employee_phone'] ?? '',
               email: map['employee_email'] ?? '',
             )
           : null,
@@ -164,6 +204,20 @@ class SalesOrderHeader {
               id: map['payment_status'],
               detailCode: map['payment_status_code'] ?? '',
               description1: map['payment_status_description'] ?? '',
+            )
+          : null,
+      paymentInstrumentRef: map['payment_instrument_description'] != null
+          ? UdcDetails(
+              id: map['payment_instrument'],
+              detailCode: map['payment_instrument_code'] ?? '',
+              description1: map['payment_instrument_description'] ?? '',
+            )
+          : null,
+      orderTypeRef: map['order_type_description'] != null
+          ? UdcDetails(
+              id: map['order_type'],
+              detailCode: map['order_type_code'] ?? '',
+              description1: map['order_type_description'] ?? '',
             )
           : null,
     );
@@ -206,6 +260,12 @@ class SalesOrderHeader {
       'order_type': orderType,
       'unit_cost': unitCost,
       'amount_cost': amountCost,
+      'sales_represent': salesRepresent,
+      'comments_so': commentsSo,
+      'comment_ifVoid': commentIfVoid,
+      'return_date': returnDate?.toIso8601String(),
+      'invoice_number': invoiceNumber,
+      'branch_value': branchValue,
     };
   }
 
@@ -253,6 +313,14 @@ class SalesOrderHeader {
     UdcDetails? paymentStatusRef,
     UdcDetails? orderTypeRef,
     int? tempId,
+    double? itemWiseGrossProfit,
+    double? agedDays,
+    String? salesRepresent,
+    String? commentsSo,
+    String? commentIfVoid,
+    DateTime? returnDate,
+    String? invoiceNumber,
+    int? branchValue,
   }) {
     return SalesOrderHeader(
       id: id ?? this.id,
@@ -298,6 +366,14 @@ class SalesOrderHeader {
       paymentStatusRef: paymentStatusRef ?? this.paymentStatusRef,
       orderTypeRef: orderTypeRef ?? this.orderTypeRef,
       tempId: tempId ?? this.tempId,
+      itemWiseGrossProfit: itemWiseGrossProfit ?? this.itemWiseGrossProfit,
+      agedDays: agedDays ?? this.agedDays,
+      salesRepresent: salesRepresent ?? this.salesRepresent,
+      commentsSo: commentsSo ?? this.commentsSo,
+      commentIfVoid: commentIfVoid ?? this.commentIfVoid,
+      returnDate: returnDate ?? this.returnDate,
+      invoiceNumber: invoiceNumber ?? this.invoiceNumber,
+      branchValue: branchValue ?? this.branchValue,
     );
   }
 
@@ -356,5 +432,11 @@ class SalesOrderHeader {
     paymentStatusRef,
     orderTypeRef,
     tempId,
+    salesRepresent,
+    commentsSo,
+    commentIfVoid,
+    returnDate,
+    invoiceNumber,
+    branchValue,
   ];
 }

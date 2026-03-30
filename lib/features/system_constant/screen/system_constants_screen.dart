@@ -155,16 +155,18 @@ class _SystemConstantsScreenState extends State<SystemConstantsScreen>
               ],
             ),
           ),
-          body: TabBarView(
-            controller: _tabController,
-            children: [
-              GeneralSettingsTab(
-                onChanged: _handleFieldChange,
-                formKey: _formKey,
-                authBloc: widget.authBloc,
-              ),
-              const ReportSetupTab(),
-            ],
+          body: SafeArea(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                GeneralSettingsTab(
+                  onChanged: _handleFieldChange,
+                  formKey: _formKey,
+                  authBloc: widget.authBloc,
+                ),
+                const ReportSetupTab(),
+              ],
+            ),
           ),
           floatingActionButton: _hasChanges
               ? FloatingActionButton.extended(

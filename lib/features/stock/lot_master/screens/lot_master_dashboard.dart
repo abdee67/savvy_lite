@@ -1,7 +1,11 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:intl/intl.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
@@ -37,6 +41,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  // final List<LotMaster> items = List.generate(100, (index) => LotMaster());//used it for lazy loading but needs to be fix
   bool _isSelectionMode = false;
   final Map<int, double> _dragOffset = {};
 
@@ -45,6 +50,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
   late Animation<double> _heightAnimation;
   late Animation<double> _opacityAnimation;
   late Animation<Offset> _slideAnimation;
+  late int? _decimalPlace;
 
   //  Detail panel state
   LotMaster? _selectedLot;
@@ -67,6 +73,8 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     //   Set up animations
     _setupAnimations();
 
+    _scrollController.addListener(_onScroll);
+
     // Load system constants
     context.read<SystemConstantBloc>().add(
       LoadSystemConstants(widget.authBloc.state.companyId!),
@@ -85,15 +93,33 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     context.read<LocationMasterBloc>().add(
       LoadLocationMasters(widget.authBloc.state.companyId!),
     );
-    /*   WidgetsBinding.instance.addPostFrameCallback((_) {
-      _debugSystemConstants();
-      _debugSystemConstantBloc();
-      if (context.read<LotMasterBloc>().state.items.isNotEmpty) {
-        _debugLotColorCalculation(
-          context.read<LotMasterBloc>().state.items.first,
+    _decimalPlace = context
+        .read<SystemConstantBloc>()
+        .state
+        .selected
+        ?.decimalPlaces!;
+  }
+
+  void _onScroll() {
+    if (_isBottom) {
+      final bloc = context.read<LotMasterBloc>();
+      if (!bloc.state.hasReachedMax && !bloc.state.isLoading) {
+        bloc.add(
+          LoadLotMasters(
+            widget.authBloc.state.companyId!,
+            page: bloc.state.currentPage + 1,
+            pageSize: 20, // Keep consistent with bloc default or implementation
+          ),
         );
       }
-    });*/
+    }
+  }
+
+  bool get _isBottom {
+    if (!_scrollController.hasClients) return false;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.offset;
+    return currentScroll >= (maxScroll * 0.9);
   }
 
   void _setupAnimations() {
@@ -173,14 +199,21 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
 
   void _exportLot(LotMaster lot) {
     // Implement export functionality
-    print('Exporting lot: ${lot.lotNumber}');
+    if (kDebugMode) {
+      developer.log('Exporting lot: ${lot.lotNumber}');
+    }
   }
 
   void _navigateToCreateScreen() {
     final companyId = context.read<AuthBloc>().state.companyId;
     if (companyId != null) {
       context.read<LotMasterBloc>().add(PrepareCreateLot(companyId));
-      context.push(AppRoutes.lotCreation);
+      context.push(AppRoutes.lotCreation).then((_) {
+        // Refresh on return
+        context.read<LotMasterBloc>().add(
+          RefreshLotMasters(widget.authBloc.state.companyId!),
+        );
+      });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -193,7 +226,12 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
 
   void _navigateToEditScreen(LotMaster lot) {
     context.read<LotMasterBloc>().add(PrepareEditLot(lot));
-    context.push(AppRoutes.lotEdit, extra: lot);
+    context.push(AppRoutes.lotEdit, extra: lot).then((_) {
+      // Refresh on return
+      context.read<LotMasterBloc>().add(
+        RefreshLotMasters(widget.authBloc.state.companyId!),
+      );
+    });
   }
 
   String _getBranchName(int branchId) {
@@ -227,7 +265,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
             .where((entry) => entry.id == locationId)
             .firstOrNull
             ?.locationDescription ??
-        'Branch $locationId';
+        'Loc $locationId';
     return locationName;
   }
 
@@ -347,29 +385,31 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     final code = (color.colorTypeCode ?? '').trim().toUpperCase();
     final name = (color.colorTypeName ?? '').trim().toLowerCase();
 
-    print('🎨 Color Mapping - Code: $code, Name: $name');
+    if (kDebugMode) {
+      developer.log('🎨 Color Mapping - Code: $code, Name: $name');
+    }
 
     // Map based on your UDC data
     switch (code) {
-      case 'RED':
+      case '01':
         return Colors.red;
-      case 'BLU':
+      case '11':
         return Colors.blue;
-      case 'GRN':
+      case '04':
         return Colors.green;
-      case 'BLK':
+      case '16':
         return Colors.black;
-      case 'YL':
+      case '07':
         return Colors.yellow;
-      case 'ORG':
+      case '02':
         return Colors.orange;
-      case 'GRY':
+      case '03':
         return Colors.grey;
-      case 'OV':
+      case '06':
         return const Color.fromARGB(255, 14, 90, 4);
-      case 'PRPL':
+      case '08':
         return Colors.purple;
-      case 'LM':
+      case '05':
         return Colors.lime;
 
       default:
@@ -410,7 +450,8 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
           lotType,
         );
 
-    print('''
+    if (kDebugMode) {
+      developer.log('''
 🎯 DEBUG LOT COLOR CALCULATION:
   Lot: ${lot.lotNumber}
   Lot Type: $lotType (${lotTypeUdcDetail?.description1})
@@ -422,12 +463,14 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
   Calculated Color: ${color?.colorTypeName} (${color?.colorTypeCode})
   Days Difference: $daysDifference
 ''');
+    }
   }
 
   void _debugSystemConstants() async {
     try {
       final systemConstant = context.read<SystemConstantBloc>().state.selected;
-      print('''
+      if (kDebugMode) {
+        developer.log('''
 🔧 SYSTEM CONSTANT DEBUG:
   Company ID: ${widget.authBloc.state.companyId}
   System Constant ID: ${systemConstant?.id}
@@ -435,28 +478,37 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
   Apply Lot Mgmt: ${systemConstant?.applyLotMgm}
   Is Synced: ${systemConstant?.isSynced}
 ''');
+      }
 
       if (systemConstant?.lotType != null) {
         final lotTypeUdc = await _udcRepository.getUdcDetailById(
           systemConstant?.lotType,
         );
-        print(
-          '  Lot Type UDC: ${lotTypeUdc?.detailCode} - ${lotTypeUdc?.description1}',
-        );
+        if (kDebugMode) {
+          developer.log(
+            '  Lot Type UDC: ${lotTypeUdc?.detailCode} - ${lotTypeUdc?.description1}',
+          );
+        }
       } else {
-        print('  ❌ Lot Type is NULL in system constant');
+        if (kDebugMode) {
+          developer.log('  ❌ Lot Type is NULL in system constant');
+        }
 
         // Check if system constant is loaded at all
         final systemConstantState = context.read<SystemConstantBloc>().state;
-        print(
-          '  System Constant State: ${systemConstantState.systemConstants.length} constants loaded',
-        );
-        print(
-          '  Selected System Constant: ${systemConstantState.selected?.toJson()}',
-        );
+        if (kDebugMode) {
+          developer.log(
+            '  System Constant State: ${systemConstantState.systemConstants.length} constants loaded',
+          );
+          developer.log(
+            '  Selected System Constant: ${systemConstantState.selected?.toJson()}',
+          );
+        }
       }
     } catch (e) {
-      print('❌ Error debugging system constants: $e');
+      if (kDebugMode) {
+        developer.log('❌ Error debugging system constants: $e');
+      }
     }
   }
 
@@ -466,7 +518,8 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     final systemConstantState = context.read<SystemConstantBloc>().state;
     final systemConstant = systemConstantState.selected;
 
-    print('''
+    if (kDebugMode) {
+      developer.log('''
 🔍 SYSTEM CONSTANT BLOC STATE DEBUG:
   Status: ${systemConstantState.status}
   Constants Loaded: ${systemConstantState.systemConstants.length}
@@ -475,6 +528,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
   Has Selected: ${systemConstantState.selected != null}
   State: ${systemConstantState.toString()}
 ''');
+    }
   }
 
   // Call this in your build method
@@ -483,41 +537,43 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey,
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Lot Master'),
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
       ),
-      body: BlocConsumer<LotMasterBloc, LotMasterState>(
-        listener: (context, state) {
-          if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
-            setState(() {
-              _isSelectionMode = true;
-            });
-          } else if (state.selectedItems.isEmpty && _isSelectionMode) {
-            setState(() {
-              _isSelectionMode = false;
-            });
-          }
-        },
+      body: SafeArea(
+        child: BlocConsumer<LotMasterBloc, LotMasterState>(
+          listener: (context, state) {
+            if (state.selectedItems.isNotEmpty && !_isSelectionMode) {
+              setState(() {
+                _isSelectionMode = true;
+              });
+            } else if (state.selectedItems.isEmpty && _isSelectionMode) {
+              setState(() {
+                _isSelectionMode = false;
+              });
+            }
+          },
 
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Search Bar
-                  _buildSearchBar(),
-                  _buildActionButtons(state),
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Search Bar
+                    _buildSearchBar(),
+                    _buildActionButtons(state),
 
-                  // Lot List
-                  Expanded(child: _buildLotList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+                    // Lot List
+                    Expanded(child: _buildLotList(state)),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -576,8 +632,8 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
       height: hasSelection ? 60 : 0,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.grey,
-        border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Colors.white)),
       ),
       child: hasSelection
           ? Row(
@@ -658,11 +714,11 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.white),
+            const Icon(Icons.error_outline, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
             Text(
               state.message.isNotEmpty ? state.message : 'Failed to load lots',
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -681,13 +737,13 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Iconsax.box_1, size: 64, color: Colors.white),
+            const Icon(Iconsax.box_1, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
             Text(
               state.searchQuery.isEmpty
                   ? 'No lots found'
                   : 'No results for "${state.searchQuery}"',
-              style: const TextStyle(color: Colors.white, fontSize: 16),
+              style: const TextStyle(color: Colors.grey, fontSize: 16),
             ),
           ],
         ),
@@ -697,25 +753,35 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     return Container(
       width: screenWidth,
       height: screenHeight,
-      decoration: const BoxDecoration(color: Colors.grey),
-      child: ListView.separated(
-        controller: _scrollController,
-        padding: const EdgeInsets.all(16),
-        itemCount: state.filteredItems.length,
-        separatorBuilder: (context, index) => SizedBox(height: cardSpacing),
-        itemBuilder: (context, index) {
-          final lot = state.filteredItems[index];
-          final isSelected = state.selectedItems.contains(lot);
-
-          return _buildLotListItem(
-            lot,
-            isSelected,
-            state,
-            index,
-            isSmallScreen,
-            cardWidth,
+      decoration: const BoxDecoration(color: Colors.white),
+      child: RefreshIndicator(
+        onRefresh: () async {
+          context.read<LotMasterBloc>().add(
+            RefreshLotMasters(widget.authBloc.state.companyId!),
           );
         },
+        child: ListView.separated(
+          controller: _scrollController,
+          separatorBuilder: (context, index) => SizedBox(height: cardSpacing),
+          padding: const EdgeInsets.all(16),
+          itemCount: state.filteredItems.length + (state.hasReachedMax ? 0 : 1),
+          itemBuilder: (context, index) {
+            if (index >= state.filteredItems.length) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final lot = state.filteredItems[index];
+            final isSelected = state.selectedItems.contains(lot);
+
+            return _buildLotListItem(
+              lot,
+              isSelected,
+              state,
+              index,
+              isSmallScreen,
+              cardWidth,
+            );
+          },
+        ),
       ),
     );
   }
@@ -730,17 +796,6 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
   ) {
     final offset = _dragOffset[index] ?? 0.0;
     final isExpanded = _lotDetail == true && _selectedLot == lot;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-
-    // For responsiveness:
-    final collapsedHeight = isCompact
-        ? screenHeight * 0.22
-        : screenHeight * 0.14;
-    final expandedHeight = isCompact
-        ? screenHeight * 0.55
-        : screenHeight * 0.45;
-    final collapsedWidth = isCompact ? screenWidth * 0.92 : screenWidth * 0.8;
 
     return GestureDetector(
       onTap: () {
@@ -765,287 +820,218 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
           _onHorizontalDragEnd(context, index, details),
       child: AnimatedBuilder(
         animation: _scrollController,
-        builder: (context, child) => Container(
-          transform: Matrix4.translationValues(offset, 0, 0),
-          width: collapsedWidth,
-          height: isExpanded ? expandedHeight : collapsedHeight,
+        builder: (context, child) => SizedBox(
+          width: cardWidth,
           child: Stack(
             children: [
               // 1. DELETE INDICATOR
-              if (!isExpanded)
-                Positioned.fill(
-                  child: Container(
-                    alignment: Alignment.centerRight,
-                    decoration: BoxDecoration(
-                      color: Colors.amber,
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    margin: const EdgeInsets.only(bottom: 2),
-                    child: const Icon(
-                      Icons.delete,
-                      color: Colors.white,
-                      size: 28,
-                    ),
+              Positioned.fill(
+                child: Container(
+                  alignment: Alignment.centerRight,
+                  decoration: BoxDecoration(
+                    color: Colors.amber,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  margin: const EdgeInsets.only(bottom: 2),
+                  child: const Icon(
+                    Icons.delete,
+                    color: Colors.white,
+                    size: 28,
                   ),
                 ),
+              ),
 
-              // 2. BACKGROUND LAYERS (only when expanded)
-              if (isExpanded) ...[
-                Positioned.fill(
-                  top: 47,
-                  child: Container(
-                    width: collapsedWidth,
-                    height: expandedHeight,
-                    decoration: ShapeDecoration(
-                      color: const Color(0xFFFDD105),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+              // --- LAYER 2: FOREGROUND CARD (Content) ---
+              Transform.translate(
+                offset: Offset(offset, 0),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  // DECORATION: Handles the Yellow/White transition
+                  decoration: BoxDecoration(
+                    // If expanded, the base becomes yellow. If collapsed, white.
+                    color: isExpanded
+                        ? Colors.amber
+                        : (isSelected ? Colors.blue[50] : Colors.white),
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
+                    ],
+                    border: Border.all(
+                      color: isSelected
+                          ? const Color.fromARGB(255, 28, 66, 146)
+                          : Colors.transparent,
+                      width: 2,
                     ),
                   ),
-                ),
-              ],
 
-              // 3. LOT CARD
-              AnimatedContainer(
-                padding: const EdgeInsets.only(top: 10, left: 10, right: 10),
-                width: collapsedWidth,
-                height: collapsedHeight,
-                duration: const Duration(milliseconds: 400),
-                transform: Matrix4.translationValues(offset, 0, 0),
-                curve: Curves.easeInOut,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: _getColorFromType(lot.tempColorType),
-                  borderRadius: BorderRadius.circular(30),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                  border: Border.all(color: Colors.transparent, width: 2),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  // ANIMATED SIZE: This is the key to efficient height
+                  child: AnimatedSize(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    alignment: Alignment.topCenter,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min, // Shrink to fit content
                       children: [
-                        // Lot Avatar
-                        _buildLotAvatar(lot, isSelected, isCompact),
-                        const SizedBox(width: 12),
-                        Expanded(
+                        // --- PART A: HEADER (Name, Phone, Button) ---
+                        Container(
+                          padding: const EdgeInsets.fromLTRB(15, 15, 15, 10),
+                          decoration: BoxDecoration(
+                            // The header stays white (or blue-ish) even when expanded
+                            color: isSelected ? Colors.blue[50] : Colors.white,
+                            borderRadius: isExpanded
+                                ? const BorderRadius.vertical(
+                                    top: Radius.circular(30),
+                                    bottom: Radius.circular(
+                                      20,
+                                    ), // Slight curve when open
+                                  )
+                                : BorderRadius.circular(30),
+                          ),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    'Lot #${lot.lotNumber ?? 'N/A'}',
-                                    style: TextStyle(
-                                      color: const Color(0xFF373737),
-                                      fontSize: isCompact ? 20 : 24,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue[50],
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: Colors.blue[200]!,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
+                                  // Lot Avatar
+                                  _buildLotAvatar(lot, isSelected, isCompact),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Icon(
-                                          Icons.circle,
-                                          size: 14,
-                                          color: Colors.blue,
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Lot - ${lot.lotNumber ?? 'N/A'}',
+                                              style: TextStyle(
+                                                color: const Color(0xFF373737),
+                                                fontSize: isCompact ? 20 : 24,
+                                                fontFamily: 'Inter',
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 2,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.blue[50],
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color: Colors.blue[200]!,
+                                                ),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons.circle,
+                                                    size: 14,
+                                                    color: Colors.blue,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    _getStatusBadgeText(lot),
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      color: Colors.blue,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          _getStatusBadgeText(lot),
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            color: Colors.blue,
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                        // UPDATED: Quantity badge with status color
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Iconsax.weight,
+                                              size: 14,
+                                              color: Colors.blue,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'Qty: ${lot.quantityAvailable?.toStringAsFixed(2) ?? '0.00'}',
+                                              style: TextStyle(
+                                                color: Colors.blue,
+                                                fontSize: isCompact ? 14 : 16,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),
                                   ),
                                 ],
                               ),
-                              // Date information
-                              if (lot.dateEffective != null)
-                                Container(
+                              const SizedBox(height: 8),
+                              InkWell(
+                                onTap: () => isExpanded
+                                    ? _hideLotDetail()
+                                    : _showLotDetail(lot),
+                                child: Padding(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
                                     vertical: 4,
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.blue),
-                                  ),
                                   child: Row(
-                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(
-                                        Iconsax.calendar_1,
-                                        size: 12,
-                                        color: Colors.blue,
-                                      ),
-                                      const SizedBox(width: 4),
+                                      // See More / See Less button
                                       Text(
-                                        'Effective: ${_formatDate(lot.dateEffective!)}',
+                                        isExpanded ? 'See Less' : 'See More',
                                         style: TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.blue,
+                                          color: Colors.grey[600],
+                                          fontSize: isCompact ? 10 : 12,
+                                          fontFamily: 'Inter',
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                ),
-                              const SizedBox(height: 2),
-                              if (lot.dateExpiration != null)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.blue),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
                                       Icon(
-                                        Iconsax.calendar_tick,
-                                        size: 12,
-                                        color: Colors.blue,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        'Expires: ${_formatDate(lot.dateExpiration!)}',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.blue,
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                        isExpanded
+                                            ? Icons.keyboard_arrow_up
+                                            : Icons.keyboard_arrow_down,
+                                        color: Colors.grey[600],
+                                        size: 16,
                                       ),
                                     ],
                                   ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        // UPDATED: Quantity badge with status color
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.blue),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Iconsax.weight,
-                                size: 14,
-                                color: Colors.blue,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Qty: ${lot.quantityAvailable?.toStringAsFixed(2) ?? '0.00'}',
-                                style: TextStyle(
-                                  color: Colors.blue,
-                                  fontSize: isCompact ? 10 : 12,
-                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        // See More / See Less button
-                        ElevatedButton(
-                          onPressed: () => isExpanded
-                              ? _hideLotDetail()
-                              : _showLotDetail(lot),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF145888),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+
+                        // 4. ANIMATED EXPANDED CONTENT
+                        if (isExpanded)
+                          SizedBox(
+                            height: 300, // Fixed height for scrollable content
+                            child: Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: _buildLotDetailContent(lot, isCompact),
                             ),
                           ),
-                          child: Text(
-                            isExpanded ? 'See Less' : 'See More',
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: isCompact ? 10 : 12,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-
-              // 4. ANIMATED EXPANDED CONTENT
-              if (isExpanded)
-                Positioned(
-                  top: collapsedHeight + 10,
-                  left: 20,
-                  right: 20,
-                  child: AnimatedBuilder(
-                    animation: _detailAnimationController,
-                    builder: (context, child) {
-                      final currentHeight =
-                          _heightAnimation.value *
-                          (expandedHeight - collapsedHeight - 20);
-                      final currentOpacity = _opacityAnimation.value;
-
-                      return SlideTransition(
-                        position: _slideAnimation,
-                        child: Container(
-                          height: currentHeight > 0 ? currentHeight : 0,
-                          decoration: BoxDecoration(color: Colors.transparent),
-                          child: Opacity(opacity: currentOpacity, child: child),
-                        ),
-                      );
-                    },
-                    child: _buildLotDetailContent(lot, isCompact),
                   ),
                 ),
+              ),
             ],
           ),
         ),
@@ -1066,26 +1052,29 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
           ),
           _buildLotInfoItem(
             'Branch : ',
-            _getBranchName(lot.branch!),
+            _getBranchName(lot.branch!) ?? 'N/A',
             Iconsax.building,
             isCompact,
           ),
           _buildLotInfoItem(
             'Item Number : ',
-            _getItemName(lot.itemNumber!),
+            lot.itemRef?.itemDescription ?? 'N/A',
             Iconsax.box,
             isCompact,
           ),
           _buildLotInfoItem(
             'Location : ',
-            _getLocationName(lot.location!),
+            _getLocationName(lot.location!) ?? 'N/A',
             Iconsax.location,
             isCompact,
           ),
           _buildLotInfoItem(
             'Unit Price : ',
             lot.unitPrice != null
-                ? '\$${lot.unitPrice!.toStringAsFixed(2)}'
+                ? NumberFormat.currency(
+                    symbol: 'ETB ',
+                    decimalDigits: _decimalPlace,
+                  ).format(lot.unitPrice)
                 : 'N/A',
             Iconsax.dollar_circle,
             isCompact,
@@ -1141,12 +1130,7 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
                   () => _navigateToEditScreen(lot),
                   isCompact,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportLot(lot),
-                  isCompact,
-                ),
+
                 _buildActionButton(
                   Iconsax.calculator,
                   'Status',

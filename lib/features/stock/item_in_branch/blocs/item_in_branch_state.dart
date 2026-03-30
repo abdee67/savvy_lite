@@ -1,4 +1,6 @@
+import 'package:savvy_stock/features/stock/item_in_branch/models/available_items_in_branch_filter.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/models/paginated_aval_item_in_branch_result.dart';
 
 enum ItemInBranchStatus {
   initial,
@@ -13,17 +15,28 @@ enum ItemInBranchStatus {
   failure,
   duplication,
   editing,
+  loadingitemInBranchReport,
+  loadeditemInBranchReport,
+  loadingMoreitemInBranchReport,
+  exportingReport,
+  exportReportSuccess,
+
+  loadAvailableItemInBranch,
+  loadMoreAvailableItemInBranch,
+  loadedAvailableItemInBranch,
+  loadingMoreAvailableItemInBranch,
+  exportingAvailableItemInBranch,
+  exportAvailableItemInBranchSuccess,
 }
 
 enum ItemInBranchDetailStatus { hidden, showing, editing }
 
-class ItemInBranchState{
+class ItemInBranchState {
   final ItemInBranchStatus status;
   final String? message;
   final int? itemId;
   final int? companyId;
   final int? branchId;
-
 
   final List<ItemInBranchModel> items;
   final List<ItemInBranchModel> filteredItems;
@@ -48,17 +61,36 @@ class ItemInBranchState{
   final List<ItemInBranchModel> itemsByBranch;
   final List<ItemInBranchModel> lowStockItems;
   final List<ItemInBranchModel> outOfStockItems;
-    final List<ItemInBranchModel> availableItems;
+  final List<ItemInBranchModel> availableItems;
   final List<ItemInBranchModel> createItems;
   final List<ItemInBranchModel> editItems;
   final ItemInBranchModel? selected;
   final ItemInBranchModel? selected1;
   final ItemInBranchModel? selected2;
 
-    // Financial data
-   double totalAmountInETB = 0.0;
+  final List<ItemInBranchModel> itemInBranchReportItems;
+  final int itemInBranchReportPage;
+  final int itemInBranchReportTotalPages;
+  final int itemInBranchReportTotalCount;
+  final double itemInBranchReportTotalCost;
+  final bool hasMoreitemInBranchReport;
+  final String exportReportMessage;
 
-   ItemInBranchState({
+  // Financial data
+  double totalAmountInETB = 0.0;
+
+  final List<ItemInBranchModel> availableItemInBranchItems;
+  final List<PaginatedItemInBranchResult> availableItemInBranchResults;
+  final AvailableItemsInBranchFilter availableItemInBranchFilters;
+  final int availableItemInBranchPage;
+  final int availableItemInBranchTotalPages;
+  final int availableItemInBranchTotalCount;
+  final bool hasMoreAvailableItemInBranch;
+  final String exportAvailableItemInBranchMessage;
+  final Map<int, double> availableItemsInBranchCost;
+  final Map<int, double> availableItemsExpirationQty;
+
+  ItemInBranchState({
     this.status = ItemInBranchStatus.initial,
     this.message,
     this.itemId,
@@ -77,18 +109,35 @@ class ItemInBranchState{
     this.showDetailPanel = false,
     this.exportedItems = const [],
     this.exportedItem,
-        this.currentItemBranch,
+    this.currentItemBranch,
     this.itemsByItem = const [],
     this.itemsByBranch = const [],
     this.lowStockItems = const [],
     this.outOfStockItems = const [],
-        this.availableItems = const [],
-    this.createItems = const [],  
+    this.availableItems = const [],
+    this.createItems = const [],
     this.editItems = const [],
     this.selected,
     this.selected1,
     this.selected2,
     this.totalAmountInETB = 0.0,
+    this.itemInBranchReportItems = const [],
+    this.itemInBranchReportPage = 0,
+    this.itemInBranchReportTotalPages = 0,
+    this.itemInBranchReportTotalCount = 0,
+    this.itemInBranchReportTotalCost = 0,
+    this.hasMoreitemInBranchReport = false,
+    this.exportReportMessage = '',
+    this.availableItemInBranchItems = const [],
+    this.availableItemInBranchResults = const [],
+    this.availableItemInBranchFilters = const AvailableItemsInBranchFilter(),
+    this.availableItemInBranchPage = 0,
+    this.availableItemInBranchTotalPages = 0,
+    this.availableItemInBranchTotalCount = 0,
+    this.hasMoreAvailableItemInBranch = false,
+    this.exportAvailableItemInBranchMessage = '',
+    this.availableItemsInBranchCost = const {},
+    this.availableItemsExpirationQty = const {},
   });
 
   // --- Helper Getters ---
@@ -118,6 +167,9 @@ class ItemInBranchState{
   bool get hasLowStockItems => lowStockItems.isNotEmpty;
   bool get hasOutOfStockItems => outOfStockItems.isNotEmpty;
   bool get hasAvailableItems => availableItems.isNotEmpty;
+  bool get hasitemInBranchReport => itemInBranchReportItems.isNotEmpty;
+  bool get hasPreviousPage => itemInBranchReportPage > 1;
+  bool get hasNextPage => itemInBranchReportPage < itemInBranchReportTotalPages;
 
   // --- CopyWith for immutability ---
   ItemInBranchState copyWith({
@@ -150,6 +202,23 @@ class ItemInBranchState{
     ItemInBranchModel? selected1,
     ItemInBranchModel? selected2,
     double? totalAmountInETB,
+    List<ItemInBranchModel>? itemInBranchReportItems,
+    int? itemInBranchReportPage,
+    int? itemInBranchReportTotalPages,
+    int? itemInBranchReportTotalCount,
+    double? itemInBranchReportTotalCost,
+    bool? hasMoreitemInBranchReport,
+    String? exportReportMessage,
+    List<ItemInBranchModel>? availableItemInBranchItems,
+    List<PaginatedItemInBranchResult>? availableItemInBranchResults,
+    AvailableItemsInBranchFilter? availableItemInBranchFilters,
+    int? availableItemInBranchPage,
+    int? availableItemInBranchTotalPages,
+    int? availableItemInBranchTotalCount,
+    bool? hasMoreAvailableItemInBranch,
+    String? exportAvailableItemInBranchMessage,
+    Map<int, double>? availableItemsInBranchCost,
+    Map<int, double>? availableItemsExpirationQty,
   }) {
     return ItemInBranchState(
       status: status ?? this.status,
@@ -182,6 +251,40 @@ class ItemInBranchState{
       selected1: selected1 ?? this.selected1,
       selected2: selected2 ?? this.selected2,
       totalAmountInETB: totalAmountInETB ?? this.totalAmountInETB,
+      itemInBranchReportItems:
+          itemInBranchReportItems ?? this.itemInBranchReportItems,
+      itemInBranchReportPage:
+          itemInBranchReportPage ?? this.itemInBranchReportPage,
+      itemInBranchReportTotalPages:
+          itemInBranchReportTotalPages ?? this.itemInBranchReportTotalPages,
+      itemInBranchReportTotalCount:
+          itemInBranchReportTotalCount ?? this.itemInBranchReportTotalCount,
+      itemInBranchReportTotalCost:
+          itemInBranchReportTotalCost ?? this.itemInBranchReportTotalCost,
+      hasMoreitemInBranchReport:
+          hasMoreitemInBranchReport ?? this.hasMoreitemInBranchReport,
+      exportReportMessage: exportReportMessage ?? this.exportReportMessage,
+      availableItemInBranchFilters:
+          availableItemInBranchFilters ?? this.availableItemInBranchFilters,
+      availableItemInBranchItems:
+          availableItemInBranchItems ?? this.availableItemInBranchItems,
+      availableItemInBranchPage:
+          availableItemInBranchPage ?? this.availableItemInBranchPage,
+      availableItemInBranchTotalCount:
+          availableItemInBranchTotalCount ??
+          this.availableItemInBranchTotalCount,
+      availableItemInBranchTotalPages:
+          availableItemInBranchTotalPages ??
+          this.availableItemInBranchTotalPages,
+      hasMoreAvailableItemInBranch:
+          hasMoreAvailableItemInBranch ?? this.hasMoreAvailableItemInBranch,
+      exportAvailableItemInBranchMessage:
+          exportAvailableItemInBranchMessage ??
+          this.exportAvailableItemInBranchMessage,
+      availableItemsInBranchCost:
+          availableItemsInBranchCost ?? this.availableItemsInBranchCost,
+      availableItemsExpirationQty:
+          availableItemsExpirationQty ?? this.availableItemsExpirationQty,
     );
   }
 
@@ -215,6 +318,22 @@ class ItemInBranchState{
     selected,
     selected1,
     selected2,
-    totalAmountInETB
+    totalAmountInETB,
+    itemInBranchReportItems,
+    itemInBranchReportPage,
+    itemInBranchReportTotalPages,
+    itemInBranchReportTotalCount,
+    itemInBranchReportTotalCost,
+    hasMoreitemInBranchReport,
+    exportReportMessage,
+    availableItemInBranchFilters,
+    availableItemInBranchItems,
+    availableItemInBranchPage,
+    availableItemInBranchTotalCount,
+    availableItemInBranchTotalPages,
+    hasMoreAvailableItemInBranch,
+    exportAvailableItemInBranchMessage,
+    availableItemsInBranchCost,
+    availableItemsExpirationQty,
   ];
 }

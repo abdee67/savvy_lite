@@ -1,4 +1,5 @@
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
+import 'package:savvy_stock/features/purchase/supplier_entry/models/supplier_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class CreditPayment {
@@ -27,6 +28,7 @@ class CreditPayment {
     this.poHeaderRef,
     this.tempId,
     this.paymentInstrumentRef,
+    this.remaining,
   });
 
   /// -----------------------
@@ -46,12 +48,24 @@ class CreditPayment {
       dateUpdated: map['date_updated'] != null
           ? DateTime.tryParse(map['date_updated'])
           : null,
-      poHeaderRef: map['total_amount'] != null
+      poHeaderRef: map['po_header'] != null
           ? PurchaseOrderHeader(
-              id: map['po_header_id'],
-              amountGrandTotalCost: map['total_amount'],
+              id: map['po_header'],
+              amountGrandTotalCost: (map['total_amount'] as num?)?.toDouble(),
+              amountGross: (map['amount_gross'] as num?)?.toDouble(),
+              dateTransation: map['date_transaction'] != null
+                  ? DateTime.tryParse(map['date_transaction'])
+                  : null,
+              orderType: map['order_type'],
               invoiceNumber: map['invoice_number'],
               supplierId: map['supplier_id'],
+              orderNumber: map['order_number'],
+              supplierRef: map['supplier_name'] != null
+                  ? SupplierModel(
+                      id: map['supplier_id'],
+                      supplierName: map['supplier_name'],
+                    )
+                  : null,
             )
           : null,
       paymentInstrumentRef: map['payment_instrument_description'] != null
@@ -88,6 +102,7 @@ class CreditPayment {
     DateTime? dateUpdated,
     int? tempId,
     PurchaseOrderHeader? poHeaderRef,
+    double? remaining,
   }) {
     return CreditPayment(
       id: id ?? this.id,
@@ -99,7 +114,13 @@ class CreditPayment {
       userId: userId ?? this.userId,
       dateUpdated: dateUpdated ?? this.dateUpdated,
       poHeaderRef: poHeaderRef ?? this.poHeaderRef,
+      remaining: remaining ?? this.remaining,
       tempId: tempId ?? this.tempId,
     );
+  }
+
+  double? remaining;
+  void setRemaining(double value) {
+    remaining = value;
   }
 }

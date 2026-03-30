@@ -1,6 +1,8 @@
 // bloc/location_master_bloc.dart
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_event.dart';
 import 'package:savvy_stock/features/stock/location_entry/blocs/location_master_state.dart';
@@ -42,6 +44,7 @@ class LocationMasterBloc
     on<UpdateDualListModel>(_onUpdateDualList);
     on<LoadItemsForBranch>(_onLoadItemsForBranch);
     on<LoadLocationsByBranch>(_onLoadLocationsByBranch);
+    on<FilterLocationsByBranch>(_onFilterLocationsByBranch);
     on<CancelCreate>(_onCancelCreate);
     on<CancelUpdate>(_onCancelUpdate);
     on<ClearLocations>(_onClearLocations);
@@ -68,7 +71,11 @@ class LocationMasterBloc
     // Prevent duplicate loads
     if (state.status == LocationMasterStatus.loading) return;
 
-    print('🔄 BLoC: Loading locations for company ${event.companyId}');
+    if (kDebugMode) {
+      developer.log(
+        '🔄 BLoC: Loading locations for company ${event.companyId}',
+      );
+    }
     emit(state.copyWith(status: LocationMasterStatus.loading));
     try {
       final location = await locationMasterRepository.getLocationMasters(
@@ -79,16 +86,20 @@ class LocationMasterBloc
         state.copyWith(
           status: LocationMasterStatus.loaded,
           items: location,
-          filteredItems: location,
+          locations: location,
+          filteredLocations: location,
           companyId: authBloc.state.companyId,
           message: location.isEmpty ? 'No locations found' : null,
         ),
       );
     } catch (e) {
+      if (kDebugMode) {
+        developer.log('Failed to load locations: $e');
+      }
       emit(
         state.copyWith(
           status: LocationMasterStatus.failure,
-          message: 'Failed to load locations: $e',
+          message: 'Failed to load locations',
         ),
       );
     }
@@ -155,10 +166,13 @@ class LocationMasterBloc
         ),
       );
     } catch (e) {
+      if (kDebugMode) {
+        developer.log('Failed to create location: $e');
+      }
       emit(
         state.copyWith(
           status: LocationMasterStatus.failure,
-          message: 'Failed to create location: $e',
+          message: 'Failed to create location',
         ),
       );
     }
@@ -175,7 +189,10 @@ class LocationMasterBloc
       );
       emit(state.copyWith(dualListSource: items, dualListTarget: const []));
     } catch (e) {
-      emit(state.copyWith(message: 'Failed to load items for branch: $e'));
+      if (kDebugMode) {
+        developer.log('Failed to load items for branch: $e');
+      }
+      emit(state.copyWith(message: 'Failed to load items for branch'));
     }
   }
 
@@ -216,6 +233,19 @@ class LocationMasterBloc
         return;
       }
 
+      // Check for duplication
+      final isDuplication = await locationMasterRepository
+          .checkDuplicateLocation(event.item, companyId);
+      if (isDuplication) {
+        emit(
+          state.copyWith(
+            status: LocationMasterStatus.duplication,
+            message: 'Location already exists for this branch',
+          ),
+        );
+        return;
+      }
+
       await locationMasterRepository.updateLocationMaster(
         event.item,
         userId!.id,
@@ -238,10 +268,13 @@ class LocationMasterBloc
         ),
       );
     } catch (e) {
+      if (kDebugMode) {
+        developer.log('Failed to update location: $e');
+      }
       emit(
         state.copyWith(
           status: LocationMasterStatus.failure,
-          message: 'Failed to update location: $e',
+          message: 'Failed to update location',
         ),
       );
     }
@@ -288,10 +321,13 @@ class LocationMasterBloc
         ),
       );
     } catch (e) {
+      if (kDebugMode) {
+        developer.log('Failed to prepare edit: $e');
+      }
       emit(
         state.copyWith(
           status: LocationMasterStatus.failure,
-          message: 'Failed to prepare edit: $e',
+          message: 'Failed to prepare edit',
         ),
       );
     }
@@ -331,7 +367,7 @@ class LocationMasterBloc
       emit(
         state.copyWith(
           status: LocationMasterStatus.loaded,
-          filteredItems: locations,
+          locations: locations,
           items: locations,
           message: locations.isEmpty
               ? 'No locations found for this branch'
@@ -339,10 +375,47 @@ class LocationMasterBloc
         ),
       );
     } catch (e) {
+      if (kDebugMode) {
+        developer.log('Failed to load locations by branch: $e');
+      }
       emit(
         state.copyWith(
           status: LocationMasterStatus.failure,
-          message: 'Failed to load locations by branch: $e',
+          message: 'Failed to load locations by branch',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onFilterLocationsByBranch(
+    FilterLocationsByBranch event,
+    Emitter<LocationMasterState> emit,
+  ) async {
+    emit(state.copyWith(status: LocationMasterStatus.loading));
+    try {
+      final locations = await locationMasterRepository.filterLocationsByBranch(
+        event.branchId,
+        authBloc.state.companyId!,
+      );
+
+      emit(
+        state.copyWith(
+          status: LocationMasterStatus.loaded,
+          locations: locations,
+          items: locations,
+          message: locations.isEmpty
+              ? 'No locations found for this branch'
+              : null,
+        ),
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        developer.log('Failed to filter locations by branch: $e');
+      }
+      emit(
+        state.copyWith(
+          status: LocationMasterStatus.failure,
+          message: 'Failed to filter locations by branch',
         ),
       );
     }
@@ -459,10 +532,13 @@ class LocationMasterBloc
 
       add(LoadLocationMasters(companyId));
     } catch (e) {
+      if (kDebugMode) {
+        developer.log('Failed to delete location: $e');
+      }
       emit(
         state.copyWith(
           status: LocationMasterStatus.failure,
-          message: 'Failed to delete location: $e',
+          message: 'Failed to delete location',
         ),
       );
     }
@@ -480,16 +556,12 @@ class LocationMasterBloc
     SearchLocations event,
     Emitter<LocationMasterState> emit,
   ) async {
-    final results = await locationMasterRepository.searchLocations(
-      event.query,
-      authBloc.state.companyId!,
-    );
+    final query = event.query.toLowerCase();
 
-    if (event.query.isEmpty) {
+    if (query.isEmpty) {
       emit(
         state.copyWith(
-          filteredLocations: results,
-          selectedLocations: [],
+          filteredLocations: state.locations,
           searchQuery: event.query,
           status: LocationMasterStatus.success,
         ),
@@ -497,20 +569,23 @@ class LocationMasterBloc
       return;
     }
 
+    final filtered = state.locations.where((location) {
+      final description = (location.locationDescription ?? '').toLowerCase();
+      final branch = (location.branchName ?? '').toLowerCase();
+      final code01 = (location.code01 ?? '').toLowerCase();
+      final code02 = (location.code02 ?? '').toLowerCase();
+      final code03 = (location.code03 ?? '').toLowerCase();
+
+      return description.contains(query) ||
+          branch.contains(query) ||
+          code01.contains(query) ||
+          code02.contains(query) ||
+          code03.contains(query);
+    }).toList();
+
     emit(
       state.copyWith(
-        filteredLocations: state.locations.where((location) {
-          return location.locationDescription?.toLowerCase().contains(
-                    event.query,
-                  ) ==
-                  true ||
-              location.branchName?.toLowerCase().contains(event.query) ==
-                  true ||
-              location.code01?.toLowerCase().contains(event.query) == true ||
-              location.code02?.toLowerCase().contains(event.query) == true ||
-              location.code03?.toLowerCase().contains(event.query) == true;
-        }).toList(),
-        selectedLocations: [],
+        filteredLocations: filtered,
         searchQuery: event.query,
         status: LocationMasterStatus.success,
       ),

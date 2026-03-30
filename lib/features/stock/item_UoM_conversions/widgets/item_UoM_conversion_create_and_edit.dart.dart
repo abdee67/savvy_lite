@@ -684,7 +684,7 @@ class _ItemUomConversionFormState extends State<ItemUomConversionForm> {
             ],
           ],
         ),
-        body: _buildFormContent(),
+        body: SafeArea(child: _buildFormContent()),
       ),
     );
   }

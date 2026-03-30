@@ -23,7 +23,7 @@ class LocationMasterRepository {
       FROM location_master lm
       LEFT JOIN branch_table b ON lm.branch = b.id
       WHERE lm.company = ?
-      ORDER BY lm.location_description
+      ORDER BY lm.branch
       ''',
       [companyId],
     );
@@ -46,7 +46,7 @@ class LocationMasterRepository {
       FROM location_master lm
       LEFT JOIN branch_table b ON lm.branch = b.id
       WHERE lm.branch = ? AND lm.company = ? AND lm.location_description = ?
-      ORDER BY lm.location_description
+      ORDER BY lm.branch
       ''',
       [branchId, companyId, locationDescription],
     );
@@ -55,8 +55,12 @@ class LocationMasterRepository {
   }
 
   /// Get a single location master by ID
-  Future<LocationMaster?> getLocationMasterById(int id, int companyId) async {
-    final db = await databaseService.database;
+  Future<LocationMaster?> getLocationMasterById(
+    int id,
+    int companyId, {
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
     final locations = await db.rawQuery(
       '''
       SELECT lm.*,
@@ -194,8 +198,8 @@ class LocationMasterRepository {
       SELECT ib.*,
              it.item_description,
              it.items_id,
-             uom.detail_code as uom_code,
-             uom.description_1 as uom_name
+             uom.detail_code as unit_of_measure_code,
+             uom.description_1 as unit_of_measure_description
       FROM items_in_branch ib
       LEFT JOIN items_table it ON ib.item_number = it.id
       LEFT JOIN udc_details uom ON ib.unit_of_measure = uom.id
@@ -220,8 +224,8 @@ class LocationMasterRepository {
       SELECT ib.*,
              it.item_description,
              it.items_id,
-             uom.detail_code as uom_code,
-             uom.description_1 as uom_name,
+             uom.detail_code as unit_of_measure_code,
+             uom.description_1 as unit_of_measure_description,
              il.quantity_on_hand
       FROM item_location il
       JOIN items_in_branch ib ON il.item_number = ib.item_number AND il.branch = ib.branch
@@ -345,16 +349,12 @@ class LocationMasterRepository {
     Transaction? txn,
   }) async {
     final db = txn ?? await databaseService.database;
+    final generatedDescription = _generateLocationDescription(location);
 
     final idCondition = location.id != null ? 'AND id != ?' : '';
     final whereArgs = location.id != null
-        ? [
-            location.locationDescription,
-            location.branch,
-            companyId,
-            location.id,
-          ]
-        : [location.locationDescription, location.branch, companyId];
+        ? [generatedDescription, location.branch, companyId, location.id]
+        : [generatedDescription, location.branch, companyId];
 
     final existing = await db.rawQuery('''
       SELECT COUNT(*) as count FROM location_master 
@@ -444,7 +444,7 @@ class LocationMasterRepository {
         lm.code_09 LIKE ? OR
         lm.code_10 LIKE ?
       )
-      ORDER BY lm.location_description
+      ORDER BY lm.branch
       ''',
       [
         companyId,
@@ -482,7 +482,7 @@ class LocationMasterRepository {
       FROM location_master lm
       LEFT JOIN branch_table b ON lm.branch = b.id
       WHERE lm.company = ? AND lm.branch = ?
-      ORDER BY lm.location_description
+      ORDER BY lm.branch
       ''',
       [companyId, branchId],
     );
@@ -513,7 +513,7 @@ class LocationMasterRepository {
       FROM location_master lm
       LEFT JOIN branch_table b ON lm.branch = b.id
       $whereClause
-      ORDER BY lm.location_description
+      ORDER BY lm.branch
       ''', whereArgs);
 
     return locations.map((p) => LocationMaster.fromMap(p)).toList();
@@ -763,7 +763,7 @@ class LocationMasterRepository {
       LEFT JOIN items_in_branch ib ON il.item_number = ib.item_number AND il.branch = ib.branch
       WHERE lm.company = ?
       GROUP BY lm.id, lm.location_description, b.description
-      ORDER BY lm.location_description
+      ORDER BY lm.branch
       ''',
       [companyId, companyId],
     );
@@ -790,7 +790,7 @@ class LocationMasterRepository {
       LEFT JOIN branch_table b ON lm.branch = b.id
       LEFT JOIN item_location il ON lm.id = il.location AND il.company = ?
       WHERE lm.company = ? AND il.location IS NULL
-      ORDER BY lm.location_description
+      ORDER BY lm.branch
       ''',
       [companyId, companyId],
     );
@@ -820,7 +820,7 @@ class LocationMasterRepository {
       LEFT JOIN items_in_branch ib ON il.item_number = ib.item_number AND il.branch = ib.branch
       LEFT JOIN items_table it ON ib.item_number = it.id
       WHERE lm.company = ? AND il.quantity_on_hand < ?
-      ORDER BY lm.location_description, it.item_description
+      ORDER BY lm.branch, it.item_description
       ''',
       [companyId, companyId, threshold],
     );
@@ -875,7 +875,7 @@ class LocationMasterRepository {
         lm.code_01, lm.code_02, lm.code_03, lm.code_04, lm.code_05,
         lm.code_06, lm.code_07, lm.code_08, lm.code_09, lm.code_10,
         lm.date_created, lm.date_updated
-      ORDER BY lm.location_description
+      ORDER BY lm.branch
       ''',
       [companyId, companyId],
     );

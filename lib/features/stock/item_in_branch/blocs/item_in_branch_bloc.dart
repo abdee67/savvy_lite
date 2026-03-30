@@ -1,7 +1,11 @@
 // features/stock/item_in_branch/blocs/item_in_branch_bloc.dart
 
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
+import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/models/available_items_in_branch_filter.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -18,12 +22,14 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
   final SystemConstantBloc systemConstantBloc;
   final ItemTransactionRepository itemTransactionsRepository;
   final LotMasterBloc lotMasterBloc;
-  final ItemUomConversionsRepository itemUomConversionsBloc;
+  final ItemUomConversionsRepository itemUomConversionsRepo;
+  final ItemCostRepository itemCostRepository;
   // final NotificationTableBloc notificationTableBloc;
   //final ItemCostBloc itemCostBloc;
 
   StreamSubscription? _authSubscription;
   StreamSubscription? _systemConstantSubscription;
+  final Map<int, double> _itemCostCache = {};
 
   StockItemInBranchBloc({
     required this.repository,
@@ -31,7 +37,8 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     required this.systemConstantBloc,
     required this.itemTransactionsRepository,
     required this.lotMasterBloc,
-    required this.itemUomConversionsBloc,
+    required this.itemUomConversionsRepo,
+    required this.itemCostRepository,
     //required this.notificationTableBloc,
     // required this.itemCostBloc,
   }) : super(ItemInBranchState()) {
@@ -87,13 +94,21 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     on<UpdateItemBranchUnitPrice>(_onUpdateItemBranchUnitPrice);
     on<LoadItemsInBranchByItem>(_onLoadItemsInBranchByItem);
     on<LoadItemsInBranchByBranch>(_onLoadItemsInBranchByBranch);
-    on<LoadAvailableItemsInBranch>(_onLoadAvailableItemsInBranch);
     on<SendNotification>(_onSendNotification);
     on<LoadOutOfStockItems>(_onLoadOutOfStockItems);
     on<UpdateItemQuantity>(_onUpdateItemQuantity);
     on<ExportItemFromBranch>(_onExportItemFromBranch);
     on<ExportSingleItemFromBranch>(_onExportSingleItemFromBranch);
     on<LoadLowStockItems>(_onLoadLowStockItems);
+
+    on<LoadItemInBranchReport>(_onLoaditemInBranchReport);
+    on<LoadMoreItemInBranchReport>(_onLoadMoreitemInBranchReport);
+    on<ExportItemInBranchReportToExcel>(_onExportToExcel);
+
+    on<LoadAvailableItemsInBranch>(_onLoadAvailableItemsInBranch);
+    on<LoadMoreAvailableItemsInBranch>(_onLoadMoreAvailableItemInBranch);
+    on<FilterAvailableItemsInBranch>(_onFilterAvailableItemInBranch);
+    on<ClearAvailableItemsInBranchFilters>(_onClearAvailableItemInBranchFilter);
   }
 
   @override
@@ -408,9 +423,12 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
       emit(
         state.copyWith(
           status: ItemInBranchStatus.failure,
-          message: 'Failed to save row: $e',
+          //message: 'Failed to save row: $e',
         ),
       );
+      if (kDebugMode) {
+        developer.log('Failed to save row: $e');
+      }
     }
   }
 
@@ -523,7 +541,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
         );
 
         if (itemsInBranch != null) {
-          final factor = await itemUomConversionsBloc.fromOtherToAnother(
+          final factor = await itemUomConversionsRepo.fromOtherToAnother(
             purchaseOrderReceiver.itemNumber!,
             purchaseOrderReceiver.unitOfMeasure!,
             itemsInBranch.unitOfMeasure!,
@@ -542,7 +560,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
           // Create stock card entry
           await itemTransactionsRepository.stockCardCreation(
             ib: itemsInBranch,
-            transactionType: 'C', //C IS COMPLETE
+            transactionType: 'R', //R IS COMPLETE
             remark: 'Purchase Order Stock Addition',
             loc: null,
             lm: null,
@@ -684,7 +702,7 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     // This would need integration with ItemCostTable
      final itemCost = await itemCostBloc.getItemCostByItem(item.itemNumber!);
      if (itemCost?.amountUnitCost != null) {
-       final factor = await itemUomConversionsBloc.fromOtherToPrimary(
+       final factor = await itemUomConversionsRepo.fromOtherToPrimary(
          item.itemNumber, 
          item.unitOfMeasure!,
            authBloc.state.companyId!,
@@ -732,11 +750,13 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     } catch (e) {
       // Fallback to local search if repository search fails
       final filtered = state.items.where((item) {
-        return item.item?.itemDescription?.toLowerCase().contains(
+        return item.itemRef?.itemDescription?.toLowerCase().contains(
                   query.toLowerCase(),
                 ) ==
                 true ||
-            item.item?.barcode!.toLowerCase().contains(query.toLowerCase()) ==
+            item.itemRef?.barcode!.toLowerCase().contains(
+                  query.toLowerCase(),
+                ) ==
                 true ||
             item.branchRef?.description?.toLowerCase().contains(
                   query.toLowerCase(),
@@ -999,39 +1019,6 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     }
   }
 
-  void _onLoadAvailableItemsInBranch(
-    LoadAvailableItemsInBranch event,
-    Emitter<ItemInBranchState> emit,
-  ) async {
-    try {
-      // Implementation of itemInBranchVailablesOnly from Java controller
-      final items = await repository.findByItem(
-        event.itemNumber,
-        authBloc.state.companyId!,
-      );
-
-      // Filter available items based on complex business logic
-      final availableItems = items.where((item) {
-        // Add complex availability logic here
-        return (item.quantityAvailable ?? 0.0) > 0;
-      }).toList();
-
-      emit(
-        state.copyWith(
-          availableItems: availableItems,
-          status: ItemInBranchStatus.success,
-        ),
-      );
-    } catch (e) {
-      emit(
-        state.copyWith(
-          status: ItemInBranchStatus.failure,
-          message: 'Failed to load available items: $e',
-        ),
-      );
-    }
-  }
-
   void _onSendNotification(
     SendNotification event,
     Emitter<ItemInBranchState> emit,
@@ -1161,6 +1148,225 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
     }
   }
 
+  Future<void> _onLoaditemInBranchReport(
+    LoadItemInBranchReport event,
+    Emitter<ItemInBranchState> emit,
+  ) async {
+    emit(state.copyWith(status: ItemInBranchStatus.loadingitemInBranchReport));
+    try {
+      final companyId = event.companyId;
+
+      final result = await repository.getPaginatedItemsInBranch(
+        companyId: companyId,
+        page: event.page,
+        pageSize: event.pageSize,
+      );
+
+      final totalPages = (result.totalCount / event.pageSize).ceil();
+
+      emit(
+        state.copyWith(
+          status: ItemInBranchStatus.loadeditemInBranchReport,
+          itemInBranchReportItems: result.itemInBranch,
+          itemInBranchReportTotalCount: result.totalCount,
+          itemInBranchReportTotalPages: totalPages,
+          itemInBranchReportPage: event.page,
+          //itemInBranchReportTotalCost: result.totalCost,
+          hasMoreitemInBranchReport: event.page < totalPages,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemInBranchStatus.failure,
+          message: 'Failed to load Item report: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onLoadMoreitemInBranchReport(
+    LoadMoreItemInBranchReport event,
+    Emitter<ItemInBranchState> emit,
+  ) async {
+    if (!state.hasMoreitemInBranchReport) return;
+
+    emit(
+      state.copyWith(status: ItemInBranchStatus.loadingMoreitemInBranchReport),
+    );
+
+    try {
+      final nextPage = state.itemInBranchReportPage + 1;
+      final result = await repository.getPaginatedItemsInBranch(
+        companyId: authBloc.state.companyId!,
+        page: nextPage,
+        pageSize: 20,
+      );
+
+      final updatedItems = [
+        ...state.itemInBranchReportItems,
+        ...result.itemInBranch!,
+      ];
+      final totalPages = (result.totalCount / 20).ceil();
+
+      emit(
+        state.copyWith(
+          status: ItemInBranchStatus.loadeditemInBranchReport,
+          itemInBranchReportItems: updatedItems,
+          itemInBranchReportPage: nextPage,
+          //itemInBranchReportTotalCost:
+          //state.itemInBranchReportTotalCost + result.totalCost,
+          hasMoreitemInBranchReport: nextPage < totalPages,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemInBranchStatus.failure,
+          message: 'Failed to load more reports: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportToExcel(
+    ExportItemInBranchReportToExcel event,
+    Emitter<ItemInBranchState> emit,
+  ) async {
+    emit(state.copyWith(status: ItemInBranchStatus.exporting));
+
+    try {
+      // Get all data (without pagination) for export
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) throw Exception('Company ID not found');
+
+      final result = await repository.getPaginatedItemsInBranch(
+        companyId: companyId,
+        page: 1,
+        pageSize: 10000, // Large number to get all records
+      );
+
+      // Prepare data for Excel export
+      final exportData = _prepareExcelData(result.itemInBranch!);
+
+      // In a real app, you would use a package like excel or csv
+      // For now, we'll just simulate
+      await _simulateExcelExport(exportData);
+
+      emit(
+        state.copyWith(
+          status: ItemInBranchStatus.success,
+          message: 'Exported ${result.itemEntries!.length} records to Excel',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemInBranchStatus.failure,
+          message: 'Export failed: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportToPDF(
+    ExportItemInBranchReportToPDF event,
+    Emitter<ItemInBranchState> emit,
+  ) async {
+    emit(state.copyWith(status: ItemInBranchStatus.exporting));
+
+    try {
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) throw Exception('Company ID not found');
+
+      final result = await repository.getPaginatedItemsInBranch(
+        companyId: companyId,
+        page: 1,
+        pageSize: 10000,
+      );
+
+      // Prepare PDF data
+      await _simulatePDFExport(result.itemInBranch!);
+
+      emit(
+        state.copyWith(
+          status: ItemInBranchStatus.success,
+          message:
+              'Generated PDF report with ${result.itemEntries!.length} records',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemInBranchStatus.failure,
+          message: 'PDF generation failed: $e',
+        ),
+      );
+    }
+  }
+
+  // Helper methods for export
+  List<Map<String, dynamic>> _prepareExcelData(List<ItemInBranchModel> items) {
+    return items.map((item) {
+      return {
+        //'Batch': item.batchNumberSupplier ?? '',
+        // 'Item ID': item.itemRef?.itemsId ?? '',
+        //'Item Description': item.itemRef?.itemDescription ?? '',
+        'Branch/Store': item.branchRef?.description ?? '',
+        //'Location': item.locationRef?.locationDescription ?? '',
+        //'Unit of Measure': item.itemRef?.unitOfMeasure ?? '',
+        //'Item Date': item.dateItem?.toIso8601String() ?? '',
+        //'Available Quantity': item.quantityAvailable ?? 0.0,
+        //'Item Description': item.itemDescription ?? '',
+      };
+    }).toList();
+  }
+
+  Future<void> _simulateExcelExport(List<Map<String, dynamic>> data) async {
+    // In production, use a package like:
+    // - excel: ^2.0.0-null-safety-3
+    // - csv: ^5.0.0
+    await Future.delayed(const Duration(seconds: 1));
+    if (kDebugMode) {
+      developer.log('Exporting ${data.length} rows to Excel');
+    }
+  }
+
+  Future<void> _simulatePDFExport(List<ItemInBranchModel> items) async {
+    // In production, use a package like:
+    // - pdf: ^3.10.6
+    // - printing: ^5.11.2
+    await Future.delayed(const Duration(seconds: 2));
+    if (kDebugMode) {
+      developer.log('Generating PDF for ${items.length} Items');
+    }
+  }
+
+  // Public methods for pagination
+  void loadNextPage() {
+    if (state.hasMoreitemInBranchReport) {
+      add(LoadMoreItemInBranchReport());
+    }
+  }
+
+  void loadPreviousPage() {
+    if (state.hasPreviousPage) {
+      add(LoadMoreItemInBranchReport());
+    }
+  }
+
+  void loadPage(int page) {
+    if (page > 0 && page <= state.itemInBranchReportTotalPages) {
+      add(
+        LoadItemInBranchReport(
+          companyId: authBloc.state.companyId!,
+          page: page,
+          pageSize: 20,
+        ),
+      );
+    }
+  }
+
   // ========== PUBLIC METHODS FOR OTHER BLOCS ==========
 
   // Get item branch by item and branch (for ItemCost bloc)
@@ -1258,14 +1464,214 @@ class StockItemInBranchBloc extends Bloc<ItemInBranchEvent, ItemInBranchState> {
   // Send notification (placeholder implementation)
   void sendNotification(ItemInBranchModel itemBranch) {
     // Implement notification logic here
-    print(
-      'Notification: Item branch ${itemBranch.id} updated with new unit price',
-    );
+    if (kDebugMode) {
+      developer.log(
+        'Notification: Item branch ${itemBranch.id} updated with new unit price',
+      );
+    }
 
     // In a real app, you might want to:
     // - Show a snackbar
     // - Send a push notification
     // - Log the change
     // - Trigger a UI update
+  }
+
+  // ==============Available Item in branch =============== //
+  Future<Map<int, double>> _calculateItemInBranchCosts(
+    List<ItemInBranchModel> items,
+    int companyId,
+    Map<int, double> existingCosts,
+  ) async {
+    final newCosts = Map<int, double>.from(existingCosts);
+    for (final il in items) {
+      // if (il.id == null || il.itemNumber == null || il.branch == null) continue;
+      if (newCosts.containsKey(il.id)) continue;
+
+      // Get item cost
+      if (!_itemCostCache.containsKey(il.itemNumber)) {
+        final cost = await itemCostRepository.findByItem(
+          il.itemNumber,
+          companyId,
+        );
+        _itemCostCache[il.itemNumber] = cost?.amountUnitCost ?? 0.0;
+      }
+      final unitCost = _itemCostCache[il.itemNumber] ?? 0.0;
+
+      // Get branch UoM
+      int? branchUomId;
+      final ib = await repository.findByItemAndBranch(
+        il.itemNumber,
+        il.branch,
+        companyId,
+      );
+      branchUomId = ib?.unitOfMeasure;
+
+      double factor = 1.0;
+      if (branchUomId != null) {
+        factor = await itemUomConversionsRepo.fromOtherToPrimary(
+          il.itemNumber,
+          branchUomId,
+          companyId,
+        );
+      }
+
+      final ct = (il.quantityAvailable ?? 0.0) * factor * unitCost;
+      newCosts[il.id] = ct;
+    }
+    return newCosts;
+  }
+
+  Future<Map<int, double>> _calculateExpirationQuantities(
+    List<ItemInBranchModel> items,
+    int companyId,
+    Map<int, double> existingQtys,
+  ) async {
+    final systemConstant = systemConstantBloc.state.selected;
+    final applyLotMgm = systemConstant?.applyLotMgmBoolean ?? false;
+
+    if (!applyLotMgm) return existingQtys;
+
+    final newQtys = Map<int, double>.from(existingQtys);
+
+    for (final il in items) {
+      if (newQtys.containsKey(il.id)) continue;
+
+      final expQty = await repository.getExpirationQuantity(
+        itemNumber: il.itemNumber,
+        branchId: il.branch,
+        companyId: companyId,
+      );
+      newQtys[il.id] = expQty;
+    }
+    return newQtys;
+  }
+
+  Future<void> _onLoadAvailableItemsInBranch(
+    LoadAvailableItemsInBranch event,
+    Emitter<ItemInBranchState> emit,
+  ) async {
+    emit(state.copyWith(status: ItemInBranchStatus.loading));
+    try {
+      final result = await repository.getLazyItemInBranchPaginated(
+        companyId: event.companyId,
+        filters: state.availableItemInBranchFilters,
+        page: event.page,
+        pageSize: event.pageSize,
+        sortBy: event.sortBy,
+        sortAscending: event.sortAscending,
+      );
+
+      final newCosts = await _calculateItemInBranchCosts(
+        result.itemInBranch,
+        event.companyId,
+        state.availableItemsInBranchCost,
+      );
+
+      final newExpQtys = await _calculateExpirationQuantities(
+        result.itemInBranch,
+        event.companyId,
+        state.availableItemsExpirationQty,
+      );
+
+      final totalPages = (result.totalCount / event.pageSize).ceil();
+
+      emit(
+        state.copyWith(
+          status: ItemInBranchStatus.success,
+          availableItemInBranchItems: result.itemInBranch,
+          availableItemInBranchTotalCount: result.totalCount,
+          availableItemInBranchPage: event.page,
+          availableItemInBranchTotalPages: totalPages,
+          hasMoreAvailableItemInBranch: event.page < totalPages,
+          companyId: event.companyId,
+          availableItemsInBranchCost: newCosts,
+          availableItemsExpirationQty: newExpQtys,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemInBranchStatus.failure,
+          message: 'Failed to load item locations: \$e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onLoadMoreAvailableItemInBranch(
+    LoadMoreAvailableItemsInBranch event,
+    Emitter<ItemInBranchState> emit,
+  ) async {
+    if (!state.hasMoreAvailableItemInBranch || state.companyId == null) return;
+    try {
+      final nextPage = state.availableItemInBranchPage + 1;
+      final pageSize = 10;
+      final result = await repository.getLazyItemInBranchPaginated(
+        companyId: state.companyId!,
+        filters: state.availableItemInBranchFilters,
+        page: nextPage,
+        pageSize: pageSize,
+      );
+
+      final newCosts = await _calculateItemInBranchCosts(
+        result.itemInBranch,
+        state.companyId!,
+        state.availableItemsInBranchCost,
+      );
+
+      final newExpQtys = await _calculateExpirationQuantities(
+        result.itemInBranch,
+        state.companyId!,
+        state.availableItemsExpirationQty,
+      );
+
+      final totalPages = (result.totalCount / pageSize).ceil();
+
+      emit(
+        state.copyWith(
+          availableItemInBranchItems: [
+            ...state.availableItemInBranchItems,
+            ...result.itemInBranch,
+          ],
+          availableItemInBranchPage: nextPage,
+          availableItemInBranchTotalPages: totalPages,
+          hasMoreAvailableItemInBranch: nextPage < totalPages,
+          availableItemsInBranchCost: newCosts,
+          availableItemsExpirationQty: newExpQtys,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemInBranchStatus.failure,
+          message: 'Failed to load more locations: \$e',
+        ),
+      );
+    }
+  }
+
+  void _onFilterAvailableItemInBranch(
+    FilterAvailableItemsInBranch event,
+    Emitter<ItemInBranchState> emit,
+  ) {
+    emit(state.copyWith(availableItemInBranchFilters: event.filters));
+    if (state.companyId != null) {
+      add(LoadAvailableItemsInBranch(companyId: state.companyId!));
+    }
+  }
+
+  void _onClearAvailableItemInBranchFilter(
+    ClearAvailableItemsInBranchFilters event,
+    Emitter<ItemInBranchState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        availableItemInBranchFilters: const AvailableItemsInBranchFilter(),
+      ),
+    );
+    if (state.companyId != null) {
+      add(LoadAvailableItemsInBranch(companyId: state.companyId!));
+    }
   }
 }

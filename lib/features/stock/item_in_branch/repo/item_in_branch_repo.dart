@@ -2,7 +2,10 @@
 import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/models/available_items_in_branch_filter.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/models/paginated_aval_item_in_branch_result.dart';
+import 'package:savvy_stock/features/stock/item_transactions/model/paginated_item_transaction_result.dart';
 import 'package:sqflite/sqflite.dart';
 
 class StockItemInBranchRepository extends BaseRepository {
@@ -22,6 +25,17 @@ class StockItemInBranchRepository extends BaseRepository {
   // Update existing item in branch
   Future<int> update(ItemInBranchModel item, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
+
+    // Sync lot prices if unit price is present
+    if (item.unitPrice != null && item.company != null) {
+      await db.update(
+        'lot_master',
+        {'unit_price': item.unitPrice},
+        where: 'item_number = ? AND branch = ? AND company = ?',
+        whereArgs: [item.itemNumber, item.branch, item.company],
+      );
+    }
+
     return await db.update(
       'items_in_branch',
       item.toMap(),
@@ -101,11 +115,17 @@ class StockItemInBranchRepository extends BaseRepository {
 
     final maps = await db.rawQuery('''
       SELECT ib.*, 
-             i.item_description, i.barcode, i.items_id,
-             b.description as branch_description, b.reference_id as branch_reference
+             i.item_description,
+             i.barcode,
+             i.items_id,
+             b.description as branch_description,
+             b.reference_id as branch_reference,
+             u.description_1 as unit_of_measure_description,
+             u.detail_code as unit_of_measure_code
       FROM items_in_branch ib
       LEFT JOIN items_table i ON ib.item_number = i.id
       LEFT JOIN branch_table b ON ib.branch = b.id
+      LEFT JOIN udc_details u ON ib.unit_of_measure = u.id
       $whereClause
       ORDER BY i.item_description ASC
     ''', whereArgs);
@@ -124,11 +144,17 @@ class StockItemInBranchRepository extends BaseRepository {
     final maps = await db.rawQuery(
       '''
       SELECT ib.*, 
-             i.item_description, i.barcode, i.items_id,
-             b.description as branch_description, b.reference_id as branch_reference
+             i.item_description,
+             i.barcode,
+             i.items_id,
+             b.description as branch_description,
+             b.reference_id as branch_reference,
+             u.description_1 as unit_of_measure_description,
+             u.detail_code as unit_of_measure_code
       FROM items_in_branch ib
       LEFT JOIN items_table i ON ib.item_number = i.id
       LEFT JOIN branch_table b ON ib.branch = b.id
+      LEFT JOIN udc_details u ON ib.unit_of_measure = u.id
       WHERE ib.item_number = ? AND ib.branch = ? AND ib.company = ?
     ''',
       [itemNumber, branchId, companyId],
@@ -150,11 +176,17 @@ class StockItemInBranchRepository extends BaseRepository {
     final maps = await db.rawQuery(
       '''
       SELECT ib.*, 
-             i.item_description, i.barcode, i.items_id,
-             b.description as branch_description, b.reference_id as branch_reference
+             i.item_description,
+             i.barcode,
+             i.items_id,
+             b.description as branch_description,
+             b.reference_id as branch_reference,
+             u.description_1 as unit_of_measure_description,
+             u.detail_code as unit_of_measure_code
       FROM items_in_branch ib
       LEFT JOIN items_table i ON ib.item_number = i.id
       LEFT JOIN branch_table b ON ib.branch = b.id
+      LEFT JOIN udc_details u ON ib.unit_of_measure = u.id
       WHERE ib.item_number = ? AND ib.company = ?
     ''',
       [itemNumber, companyId],
@@ -172,11 +204,17 @@ class StockItemInBranchRepository extends BaseRepository {
     final maps = await db.rawQuery(
       '''
       SELECT ib.*, 
-             i.item_description, i.barcode, i.items_id,
-             b.description as branch_description, b.reference_id as branch_reference
+             i.item_description,
+             i.barcode,
+             i.items_id,
+             b.description as branch_description,
+             b.reference_id as branch_reference,
+             u.description_1 as unit_of_measure_description,
+             u.detail_code as unit_of_measure_code
       FROM items_in_branch ib
       LEFT JOIN items_table i ON ib.item_number = i.id
       LEFT JOIN branch_table b ON ib.branch = b.id
+      LEFT JOIN udc_details u ON ib.unit_of_measure = u.id
       WHERE ib.branch = ? AND ib.company = ?
     ''',
       [branchId, companyId],
@@ -194,11 +232,17 @@ class StockItemInBranchRepository extends BaseRepository {
     final maps = await db.rawQuery(
       '''
       SELECT ib.*, 
-             i.item_description, i.barcode, i.items_id,
-             b.description as branch_description, b.reference_id as branch_reference
+             i.item_description,
+             i.barcode,
+             i.items_id,
+             b.description as branch_description,
+             b.reference_id as branch_reference,
+             u.description_1 as unit_of_measure_description,
+             u.detail_code as unit_of_measure_code
       FROM items_in_branch ib
       LEFT JOIN items_table i ON ib.item_number = i.id
       LEFT JOIN branch_table b ON ib.branch = b.id
+      LEFT JOIN udc_details u ON ib.unit_of_measure = u.id
       WHERE i.barcode = ? AND ib.company = ?
     ''',
       [barcode, companyId],
@@ -237,6 +281,28 @@ class StockItemInBranchRepository extends BaseRepository {
   // Update unit price for item in branch
   Future<int> updateUnitPrice(int id, double unitPrice, int companyId) async {
     final db = await databaseService.database;
+
+    // Get item and branch for this record
+    final itemBranch = await db.query(
+      'items_in_branch',
+      columns: ['item_number', 'branch'],
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    if (itemBranch.isNotEmpty) {
+      final itemNumber = itemBranch.first['item_number'] as int;
+      final branch = itemBranch.first['branch'] as int;
+
+      // Update lots for this item+branch
+      await db.update(
+        'lot_master',
+        {'unit_price': unitPrice},
+        where: 'item_number = ? AND branch = ? AND company = ?',
+        whereArgs: [itemNumber, branch, companyId],
+      );
+    }
+
     return await db.update(
       'items_in_branch',
       {'unit_price': unitPrice},
@@ -298,11 +364,17 @@ class StockItemInBranchRepository extends BaseRepository {
 
     final maps = await db.rawQuery('''
       SELECT ib.*, 
-             i.item_description, i.barcode, i.items_id,
-             b.description as branch_description, b.reference_id as branch_reference
+             i.item_description,
+             i.barcode,
+             i.items_id,
+             b.description as branch_description,
+             b.reference_id as branch_reference,
+             u.description_1 as unit_of_measure_description,
+             u.detail_code as unit_of_measure_code
       FROM items_in_branch ib
       LEFT JOIN items_table i ON ib.item_number = i.id
       LEFT JOIN branch_table b ON ib.branch = b.id
+      LEFT JOIN udc_details u ON ib.unit_of_measure = u.id
       WHERE $whereClause
       ORDER BY i.item_description ASC
     ''', whereArgs);
@@ -522,5 +594,183 @@ class StockItemInBranchRepository extends BaseRepository {
         );
       }
     }
+  }
+
+  Future<PaginatedItemTransactionResult> getPaginatedItemsInBranch({
+    ///for reorder point report
+    required int companyId,
+    required int page,
+    required int pageSize,
+    String? sortField,
+    bool ascending = true,
+  }) async {
+    final db = await databaseService.database;
+
+    // Build WHERE clause dynamically
+    final whereConditions = <String>['company = ?'];
+    final whereArgs = <dynamic>[companyId];
+    // Build base query
+    var query = '''
+          SELECT ib.*,
+             i.item_description,
+             i.barcode,
+             i.items_id,
+             b.description as branch_description,
+             b.reference_id as branch_reference,
+             i.unit_of_measure,
+             umd.description_1 as unit_of_measure_description,
+             umd.detail_code as unit_of_measure_code
+      FROM items_in_branch ib
+      LEFT JOIN items_table i ON ib.item_number = i.id
+      LEFT JOIN branch_table b ON ib.branch = b.id
+      LEFT JOIN udc_details umd ON i.unit_of_measure = umd.id
+      WHERE ib.company = ?
+    ''';
+
+    final params = whereArgs;
+
+    // Add sorting
+    if (sortField != null) {
+      query += ' ORDER BY $sortField ${ascending ? 'ASC' : 'DESC'}';
+    }
+
+    // Add pagination
+    query += ' LIMIT ? OFFSET ?';
+    params.add(pageSize);
+    params.add((page - 1) * pageSize);
+
+    // Execute main query
+    final itemsData = await db.rawQuery(query, params);
+
+    // Count total records
+    final countResult = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM branch_table WHERE company = ?',
+      [companyId],
+    );
+
+    final totalCount = (countResult.first['count'] as int?) ?? 0;
+
+    // Parse results
+    final items = itemsData.map((row) {
+      return ItemInBranchModel.fromMap(row);
+    }).toList();
+
+    return PaginatedItemTransactionResult(
+      itemInBranch: items,
+      totalCount: totalCount,
+    );
+  }
+
+  // Get lazy paginated item locations with filters and sorting
+  Future<PaginatedItemInBranchResult> getLazyItemInBranchPaginated({
+    required int companyId,
+    required AvailableItemsInBranchFilter filters,
+    required int page,
+    required int pageSize,
+    String? sortBy,
+    bool sortAscending = true,
+  }) async {
+    final db = await databaseService.database;
+
+    final whereConditions = <String>['ib.company = ?'];
+    final whereArgs = <dynamic>[companyId];
+
+    if (filters.itemNumber != null) {
+      whereConditions.add('ib.item_number = ?');
+      whereArgs.add(filters.itemNumber);
+    }
+    if (filters.branchId != null) {
+      whereConditions.add('ib.branch = ?');
+      whereArgs.add(filters.branchId);
+    }
+
+    if (filters.noAvailable) {
+      whereConditions.add(
+        '(ib.quantity_available IS NULL OR ib.quantity_available = 0.0)',
+      );
+    }
+
+    final whereClause = whereConditions.join(' AND ');
+
+    // 1. COUNT query
+    final countResult = await db.rawQuery('''
+      SELECT COUNT(ib.id) as count
+      FROM items_in_branch ib
+      WHERE $whereClause
+    ''', whereArgs);
+
+    int totalCount = (countResult.first['count'] as int?) ?? 0;
+
+    // 2. DATA query with LEFT JOIN to emulate java's itemCostCache implicitly
+    String orderByClause;
+    if (sortBy != null && sortBy.isNotEmpty) {
+      // Basic protection against SQL injection on order by
+      final safeSortBy = sortBy.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '');
+      orderByClause = 'ib.$safeSortBy ${sortAscending ? "ASC" : "DESC"}';
+    } else {
+      orderByClause = 'ib.id DESC';
+    }
+
+    final query =
+        '''
+      SELECT ib.*,
+             it.item_description,
+             ib.unit_of_measure,
+             udc.description_1 as unit_of_measure_description,
+             udc.detail_code as unit_of_measure_code,
+             it.unit_price,
+             b.description as branch_description
+      FROM items_in_branch ib
+      LEFT JOIN items_table it ON ib.item_number = it.id
+      LEFT JOIN udc_details udc ON ib.unit_of_measure = udc.id
+      LEFT JOIN branch_table b ON ib.branch = b.id
+      WHERE $whereClause
+      ORDER BY $orderByClause
+      LIMIT ? OFFSET ?
+    ''';
+
+    final dataArgs = [...whereArgs, pageSize, (page - 1) * pageSize];
+    final itemsData = await db.rawQuery(query, dataArgs);
+
+    final items = itemsData
+        .map((map) => ItemInBranchModel.fromMap(map))
+        .toList();
+
+    return PaginatedItemInBranchResult(
+      itemInBranch: items,
+      totalCount: totalCount,
+    );
+  }
+
+  /// Returns the total quantity of expired lots for a given item+branch.
+  /// Mirrors the Java `getExpirationQuantity()` logic:
+  ///   SELECT SUM(quantity_available)
+  ///   FROM lot_master
+  ///   WHERE company = :company AND item_number = :itemNumber
+  ///         AND branch = :branch AND lot_status detail_code = 'E'
+  Future<double> getExpirationQuantity({
+    required int itemNumber,
+    required int branchId,
+    required int companyId,
+  }) async {
+    final db = await databaseService.database;
+    final result = await db.rawQuery(
+      '''
+      SELECT COALESCE(SUM(lm.quantity_available), 0.0) as expiration_qty
+      FROM lot_master lm
+      INNER JOIN udc_details ls ON lm.lot_status = ls.id
+      WHERE lm.company = ?
+        AND lm.item_number = ?
+        AND lm.branch = ?
+        AND ls.detail_code = 'E'
+    ''',
+      [companyId, itemNumber, branchId],
+    );
+
+    if (result.isNotEmpty) {
+      final val = result.first['expiration_qty'];
+      if (val is num) return val.toDouble();
+    }
+    return 0.0;
   }
 }

@@ -118,15 +118,59 @@ class UpdatePaymentDetails extends SalesOrderCoordinatorEvent {
   final String paymentMethod;
   final int paymentInstrument;
   final String paymentTerm;
+  final String? salesRepresent;
+  final String? commentsSo;
+  final String? referenceNote1;
+  final String? referenceNote2;
+  final String? referenceNote3;
 
   const UpdatePaymentDetails({
     required this.paymentMethod,
     required this.paymentInstrument,
     required this.paymentTerm,
+    this.salesRepresent,
+    this.commentsSo,
+    this.referenceNote1,
+    this.referenceNote2,
+    this.referenceNote3,
   });
 
   @override
-  List<Object> get props => [paymentMethod, paymentInstrument, paymentTerm];
+  List<Object?> get props => [
+    paymentMethod,
+    paymentInstrument,
+    paymentTerm,
+    salesRepresent,
+    commentsSo,
+    referenceNote1,
+    referenceNote2,
+    referenceNote3,
+  ];
+}
+
+class UpdateExtraHeaderDetails extends SalesOrderCoordinatorEvent {
+  final String? salesRepresent;
+  final String? commentsSo;
+  final String? referenceNote1;
+  final String? referenceNote2;
+  final String? referenceNote3;
+
+  const UpdateExtraHeaderDetails({
+    this.salesRepresent,
+    this.commentsSo,
+    this.referenceNote1,
+    this.referenceNote2,
+    this.referenceNote3,
+  });
+
+  @override
+  List<Object?> get props => [
+    salesRepresent,
+    commentsSo,
+    referenceNote1,
+    referenceNote2,
+    referenceNote3,
+  ];
 }
 
 class LoadFeeSystemConstants extends SalesOrderCoordinatorEvent {

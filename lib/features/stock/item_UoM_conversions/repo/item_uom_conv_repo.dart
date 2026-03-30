@@ -1,7 +1,11 @@
 // features/stock/item_uom_conversions/repositories/item_uom_conversions_repository.dart
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/models/item_uom_conversions_model.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
+import 'package:sqflite/sqflite.dart';
 
 class ItemUomConversionsRepository {
   final LocalDatabaseService databaseService;
@@ -134,13 +138,15 @@ class ItemUomConversionsRepository {
       final placeholders = List.filled(uomIds.length, '?').join(',');
       final uomDetailsResult = await db.rawQuery('''
       SELECT * FROM udc_details 
-      WHERE id IN ($placeholders) 
+      WHERE id IN ($placeholders) AND udc_group = 'UM'
       ORDER BY description_1
       ''', uomIds);
 
       return uomDetailsResult.map((row) => UdcDetails.fromJson(row)).toList();
     } catch (e) {
-      print('Error getting UoMs for item: $e');
+      if (kDebugMode) {
+        developer.log('Error getting UoMs for item: $e');
+      }
       return [];
     }
   }
@@ -285,8 +291,9 @@ class ItemUomConversionsRepository {
     int fromUomId,
     int toUomId,
     int companyId,
+    Transaction? txn,
   ) async {
-    final db = await databaseService.database;
+    final db = txn ?? await databaseService.database;
     final result = await db.rawQuery(
       '''
       SELECT conversion_factor 
@@ -307,12 +314,15 @@ class ItemUomConversionsRepository {
     int itemId,
     int uomId,
     String fromTo,
-    int companyId,
-  ) async {
-    final db = await databaseService.database;
+    int companyId, {
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
+
+    // First, try the specified column (from_uom or to_uom)
     final column = fromTo.toLowerCase() == 'to' ? 'to_uom' : 'from_uom';
 
-    final result = await db.rawQuery(
+    var result = await db.rawQuery(
       '''
       SELECT uom_structure_level 
       FROM item_uom_conversions 
@@ -324,6 +334,30 @@ class ItemUomConversionsRepository {
     if (result.isNotEmpty) {
       return result.first['uom_structure_level'] as int?;
     }
+
+    // If not found, check the other column as well
+    // This handles cases where UOM is in the opposite column
+    final otherColumn = column == 'from_uom' ? 'to_uom' : 'from_uom';
+    result = await db.rawQuery(
+      '''
+      SELECT uom_structure_level 
+      FROM item_uom_conversions 
+      WHERE item_number = ? AND $otherColumn = ? AND company = ?
+      ''',
+      [itemId, uomId, companyId],
+    );
+
+    if (result.isNotEmpty) {
+      // Found in opposite column - return adjusted structure level
+      // If found in to_uom, it's one level lower than the record's structure
+      if (kDebugMode) {
+        developer.log(
+          '  → Found UOM $uomId in $otherColumn column at structure level ${result.first['uom_structure_level']}',
+        );
+      }
+      return result.first['uom_structure_level'] as int?;
+    }
+
     return null;
   }
 
@@ -369,8 +403,9 @@ class ItemUomConversionsRepository {
     int itemId,
     int fromUomId,
     int toUomId,
-    int companyId,
-  ) async {
+    int companyId, {
+    Transaction? txn,
+  }) async {
     if (fromUomId == toUomId) {
       return 1.0;
     }
@@ -378,13 +413,29 @@ class ItemUomConversionsRepository {
     try {
       // Get item primary UoM
       final primaryUomId = await getItemPrimaryUom(itemId, companyId);
+      if (kDebugMode) {
+        developer.log(
+          '🔄 UOM Conversion: item=$itemId, from=$fromUomId, to=$toUomId, primary=$primaryUomId',
+        );
+      }
 
       // Check if one of the UoMs is primary like Java does
       if (primaryUomId != null) {
         if (primaryUomId == fromUomId) {
-          return await fromPrimaryToOther(itemId, toUomId, companyId);
+          if (kDebugMode) {
+            developer.log('  → fromUom is primary, calling fromPrimaryToOther');
+          }
+          return await fromPrimaryToOther(itemId, toUomId, companyId, txn: txn);
         } else if (primaryUomId == toUomId) {
-          return await fromOtherToPrimary(itemId, fromUomId, companyId);
+          if (kDebugMode) {
+            developer.log('  → toUom is primary, calling fromOtherToPrimary');
+          }
+          return await fromOtherToPrimary(
+            itemId,
+            fromUomId,
+            companyId,
+            txn: txn,
+          );
         }
       }
 
@@ -402,19 +453,36 @@ class ItemUomConversionsRepository {
         companyId,
       );
 
+      if (kDebugMode) {
+        developer.log('  → Structure levels: from=$strFrom, to=$strTo');
+      }
+
       if (strFrom != null && strTo != null) {
         // Use structured conversion like Java
-        return await _structuredConversion(itemId, strFrom, strTo, companyId);
+        return await _structuredConversion(
+          itemId,
+          strFrom,
+          strTo,
+          companyId,
+          txn: txn,
+        );
       }
 
       // Fallback to unstructured conversion
+      if (kDebugMode) {
+        developer.log('  → Falling back to unstructured conversion');
+      }
       return await getUnstructuredUomConversion(
         itemId,
         fromUomId,
         toUomId,
         companyId,
+        txn,
       );
     } catch (e) {
+      if (kDebugMode) {
+        developer.log('❌ UOM Conversion error: $e');
+      }
       return 1.0;
     }
   }
@@ -422,50 +490,124 @@ class ItemUomConversionsRepository {
   Future<double> fromPrimaryToOther(
     int itemId,
     int toUomId,
-    int companyId,
-  ) async {
-    final factor = await fromOtherToPrimary(itemId, toUomId, companyId);
+    int companyId, {
+    Transaction? txn,
+  }) async {
+    final factor = await fromOtherToPrimary(
+      itemId,
+      toUomId,
+      companyId,
+      txn: txn,
+    );
     return factor != 0.0 ? 1.0 / factor : 1.0;
   }
 
   Future<double> fromOtherToPrimary(
     int itemId,
     int fromUomId,
-    int companyId,
-  ) async {
+    int companyId, {
+    Transaction? txn,
+  }) async {
     try {
-      final str = await getItemUomStructureCode(
-        itemId,
-        fromUomId,
-        'from',
-        companyId,
-      );
+      final db = txn ?? await databaseService.database;
 
-      if (str == null) return 1.0;
-
-      // Get all conversions from this level upward to primary
-      final db = await databaseService.database;
-      final conversions = await db.rawQuery(
+      // First check if this UOM is in the from_uom column (regular structure)
+      var result = await db.rawQuery(
         '''
-        SELECT conversion_factor 
+        SELECT uom_structure_level, conversion_factor 
         FROM item_uom_conversions 
-        WHERE item_number = ? AND company = ? 
-          AND uom_structure_level >= ?
-        ORDER BY uom_structure_level ASC
+        WHERE item_number = ? AND from_uom = ? AND company = ?
         ''',
-        [itemId, companyId, str],
+        [itemId, fromUomId, companyId],
       );
 
-      double factor = 1.0;
-      for (final conversion in conversions) {
-        final conversionFactor = conversion['conversion_factor'] as double?;
-        if (conversionFactor != null) {
-          factor *= conversionFactor;
+      if (result.isNotEmpty) {
+        // UOM is in from_uom column - multiply factors from this level upward
+        final str = result.first['uom_structure_level'] as int?;
+        if (kDebugMode) {
+          developer.log(
+            '  → fromOtherToPrimary: fromUomId=$fromUomId found in from_uom at level $str',
+          );
         }
+
+        if (str == null) return 1.0;
+
+        final conversions = await db.rawQuery(
+          '''
+          SELECT conversion_factor, uom_structure_level 
+          FROM item_uom_conversions 
+          WHERE item_number = ? AND company = ? 
+            AND uom_structure_level >= ?
+          ORDER BY uom_structure_level ASC
+          ''',
+          [itemId, companyId, str],
+        );
+
+        double factor = 1.0;
+        for (final conversion in conversions) {
+          final conversionFactor = conversion['conversion_factor'] as double?;
+          if (conversionFactor != null) {
+            factor *= conversionFactor;
+          }
+        }
+
+        if (kDebugMode) {
+          developer.log(
+            '  → Found ${conversions.length} records, final factor: $factor',
+          );
+        }
+        return factor;
       }
 
-      return factor;
+      // Check if UOM is in to_uom column - this means it's a derived UOM
+      // and we need to calculate the INVERSE to get back to primary
+      result = await db.rawQuery(
+        '''
+        SELECT uom_structure_level, conversion_factor 
+        FROM item_uom_conversions 
+        WHERE item_number = ? AND to_uom = ? AND company = ?
+        ''',
+        [itemId, fromUomId, companyId],
+      );
+
+      if (result.isNotEmpty) {
+        // UOM is in to_uom column - need to take inverse of factor
+        final conversionFactor = result.first['conversion_factor'] as double?;
+        final str = result.first['uom_structure_level'] as int?;
+
+        if (kDebugMode) {
+          developer.log(
+            '  → fromOtherToPrimary: fromUomId=$fromUomId found in to_uom at level $str',
+          );
+          developer.log(
+            '  → Base conversion factor: $conversionFactor, taking inverse',
+          );
+        }
+
+        if (conversionFactor == null || conversionFactor == 0.0) return 1.0;
+
+        // For UOM in to_uom, we divide by factor (inverse)
+        // e.g., if from_uom=1(pieces), to_uom=2(kg), factor=5 means 1 piece = 5 kg
+        // To convert kg → pieces, we need 1/5 = 0.2
+        final inverseFactor = 1.0 / conversionFactor;
+
+        if (kDebugMode) {
+          developer.log('  → Final inverse factor: $inverseFactor');
+        }
+
+        return inverseFactor;
+      }
+
+      if (kDebugMode) {
+        developer.log(
+          '  ⚠️ UOM $fromUomId not found in any conversion, returning 1.0',
+        );
+      }
+      return 1.0;
     } catch (e) {
+      if (kDebugMode) {
+        developer.log('  ❌ fromOtherToPrimary error: $e');
+      }
       return 1.0;
     }
   }
@@ -474,9 +616,10 @@ class ItemUomConversionsRepository {
     int itemId,
     int fromLevel,
     int toLevel,
-    int companyId,
-  ) async {
-    final db = await databaseService.database;
+    int companyId, {
+    Transaction? txn,
+  }) async {
+    final db = txn ?? await databaseService.database;
 
     // Determine the conversion direction and levels
     final isAscending = fromLevel <= toLevel;

@@ -1,7 +1,9 @@
 // features/sales/quotation_order/bloc/quotation_order_bloc.dart
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'dart:math';
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/repo/customer_repo.dart';
@@ -19,6 +21,7 @@ import 'package:savvy_stock/features/sales/sales_order/invoice/header/bloc/invoi
 import 'package:savvy_stock/features/sales/sales_order/invoice/header/model/invoice_header_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/header/repo/invoice_header_repo.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/repo/item_in_branch_repo.dart';
+import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
 import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_conv_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
@@ -39,6 +42,7 @@ class QuotationOrderBloc
   final InvoiceHistoryDetailRepository invoiceDetailRepository;
   final InvoiceHistoryHeaderRepository invoiceHeaderRepository;
   final UdcRepository udcRepository;
+  final ItemCostRepository itemCostRepository;
 
   StreamSubscription? _authSubscription;
   StreamSubscription? _systemConstantSubscription;
@@ -55,6 +59,7 @@ class QuotationOrderBloc
     required this.invoiceDetailRepository,
     required this.invoiceHeaderRepository,
     required this.udcRepository,
+    required this.itemCostRepository,
   }) : super(const QuotationOrderState()) {
     _authSubscription = authBloc.stream.listen((authState) {
       if (authState.isAuthenticated &&
@@ -231,7 +236,11 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to load quotation orders: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to load quotation orders: $e'));
+      } else {
+        emit(state.errorState('Failed to load quotation orders'));
+      }
     }
   }
 
@@ -276,7 +285,11 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to create quotation order: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to create quotation order: $e'));
+      } else {
+        emit(state.errorState('Failed to create quotation order'));
+      }
     }
   }
 
@@ -288,6 +301,7 @@ class QuotationOrderBloc
       tax: header.tax ?? 0.0,
       withholdAmount: header.withholdAmount ?? 0.0,
       discountAmount: header.discountAmount ?? 0.0,
+      discount: header.discountAmount == 0 ? 'N' : 'Y',
       quotationValidationInDays: header.quotationValidationInDays ?? 30,
       currencyCode: header.currencyCode ?? 'ETB',
       exchangeRate: header.exchangeRate ?? 1.0,
@@ -331,7 +345,11 @@ class QuotationOrderBloc
             ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to update quotation order: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to update quotation order: $e'));
+      } else {
+        emit(state.errorState('Failed to update quotation order'));
+      }
     }
   }
 
@@ -369,7 +387,11 @@ class QuotationOrderBloc
             ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to delete quotation order: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to delete quotation order: $e'));
+      } else {
+        emit(state.errorState('Failed to delete quotation order'));
+      }
     }
   }
 
@@ -410,7 +432,11 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to delete quotation orders: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to delete quotation orders: $e'));
+      } else {
+        emit(state.errorState('Failed to delete quotation orders'));
+      }
     }
   }
 
@@ -441,7 +467,10 @@ class QuotationOrderBloc
 
       add(RefreshQuotationOrders());
     } catch (e) {
-      emit(state.errorState('Failed to save quotation orders: $e'));
+      // emit(state.errorState('Failed to save quotation orders: $e'));
+      if (kDebugMode) {
+        developer.log('Failed to save quotation orders: $e');
+      }
     }
   }
 
@@ -509,7 +538,11 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to cancel quotation order: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to cancel quotation order: $e'));
+      } else {
+        emit(state.errorState('Failed to cancel quotation order'));
+      }
     }
   }
 
@@ -536,7 +569,11 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to load quotation order details: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to load quotation order details: $e'));
+      } else {
+        emit(state.errorState('Failed to load quotation order details'));
+      }
     }
   }
 
@@ -611,12 +648,21 @@ class QuotationOrderBloc
         );
       }
     } catch (e) {
-      emit(
-        state.errorState(
-          'Failed to add quotation order detail: $e',
-          operation: 'add_quotation_order_detail',
-        ),
-      );
+      if (kDebugMode) {
+        emit(
+          state.errorState(
+            'Failed to add quotation order detail: $e',
+            operation: 'add_quotation_order_detail',
+          ),
+        );
+      } else {
+        emit(
+          state.errorState(
+            'Failed to add quotation order detail',
+            operation: 'add_quotation_order_detail',
+          ),
+        );
+      }
     }
   }
 
@@ -673,12 +719,21 @@ class QuotationOrderBloc
         );
       }
     } catch (e) {
-      emit(
-        state.errorState(
-          'Failed to remove quotation order detail: $e',
-          operation: 'remove_quotation_order_detail',
-        ),
-      );
+      if (kDebugMode) {
+        emit(
+          state.errorState(
+            'Failed to remove quotation order detail: $e',
+            operation: 'remove_quotation_order_detail',
+          ),
+        );
+      } else {
+        emit(
+          state.errorState(
+            'Failed to remove quotation order detail',
+            operation: 'remove_quotation_order_detail',
+          ),
+        );
+      }
     }
   }
 
@@ -705,7 +760,11 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to delete quotation details: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to delete quotation details: $e'));
+      } else {
+        emit(state.errorState('Failed to delete quotation details'));
+      }
     }
   }
 
@@ -732,7 +791,10 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to save row: $e'));
+      //emit(state.errorState('Failed to save row: $e'));
+      if (kDebugMode) {
+        developer.log('Failed to save row: $e');
+      }
     }
   }
 
@@ -819,7 +881,11 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to calculate totals: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to calculate totals: $e'));
+      } else {
+        emit(state.errorState('Failed to calculate totals'));
+      }
     }
   }
 
@@ -868,9 +934,11 @@ class QuotationOrderBloc
     Emitter<QuotationOrderState> emit,
   ) {
     try {
-      print(
-        'Coordinator: Updating tax and fees - Discount: ${event.discountAmount}, Withholding: ${event.isWithholdingEnabled}',
-      );
+      if (kDebugMode) {
+        developer.log(
+          'Coordinator: Updating tax and fees - Discount: ${event.discountAmount}, Withholding: ${event.isWithholdingEnabled}',
+        );
+      }
 
       // Update withholding in header bloc
       add(ApplyWithholdingTax(applyWithholding: event.isWithholdingEnabled));
@@ -903,7 +971,11 @@ class QuotationOrderBloc
         );
       }
     } catch (e) {
-      emit(state.errorState('Failed to update tax and fees: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to update tax and fees: $e'));
+      } else {
+        emit(state.errorState('Failed to update tax and fees'));
+      }
     }
   }
 
@@ -921,9 +993,11 @@ class QuotationOrderBloc
       final withholdingRate = systemConstantsService.withholdingRate;
       final withholdingInitial = systemConstantsService.withholdingInitial;
 
-      print(
-        'Coordinator: Loaded system constants - VAT: $vatRate, Withholding Rate: $withholdingRate, Withholding Initial: $withholdingInitial',
-      );
+      if (kDebugMode) {
+        developer.log(
+          'Coordinator: Loaded system constants - VAT: $vatRate, Withholding Rate: $withholdingRate, Withholding Initial: $withholdingInitial',
+        );
+      }
 
       emit(
         state.copyWith(
@@ -988,6 +1062,8 @@ class QuotationOrderBloc
         final updatedHeader = event.currentHeader!.copyWith(
           customerTableId: customer.id!,
           customerBillTo: customer.id!,
+          customerBillToRef: customer,
+          customerTableRef: customer,
         );
 
         emit(updatedState.copyWith(selectedHeader: updatedHeader));
@@ -996,6 +1072,8 @@ class QuotationOrderBloc
         final updatedHeader = state.selectedHeader!.copyWith(
           customerTableId: customer.id!,
           customerBillTo: customer.id!,
+          customerBillToRef: customer,
+          customerTableRef: customer,
         );
 
         emit(updatedState.copyWith(selectedHeader: updatedHeader));
@@ -1003,7 +1081,11 @@ class QuotationOrderBloc
         emit(updatedState);
       }
     } catch (e) {
-      emit(state.errorState('Failed to update customer info: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to update customer info: $e'));
+      } else {
+        emit(state.errorState('Failed to update customer info'));
+      }
     }
   }
 
@@ -1017,10 +1099,20 @@ class QuotationOrderBloc
         event.companyId,
       );
 
+      //if default customer is not null, update customer info
       if (defaultCustomer != null) {
         add(
           UpdateCustomerInfo(
             customer: defaultCustomer,
+            currentHeader: state.selectedHeader,
+          ),
+        );
+      }
+      //if default customer is null, just grab the customer from the state
+      else if (state.defaultCustomer != null) {
+        add(
+          UpdateCustomerInfo(
+            customer: state.defaultCustomer!,
             currentHeader: state.selectedHeader,
           ),
         );
@@ -1033,7 +1125,11 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to set customer: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to set customer: $e'));
+      } else {
+        emit(state.errorState('Failed to set customer'));
+      }
     }
   }
 
@@ -1117,7 +1213,11 @@ class QuotationOrderBloc
 
       emit(state.copyWith(barCode: '', status: QuotationOrderStatus.loaded));
     } catch (e) {
-      emit(state.errorState('Error scanning barcode: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Error scanning barcode: $e'));
+      } else {
+        emit(state.errorState('Error scanning barcode'));
+      }
     }
   }
 
@@ -1203,7 +1303,11 @@ class QuotationOrderBloc
         }
       }
     } catch (e) {
-      emit(state.copyWith(error: 'Failed to update unit price: $e'));
+      if (kDebugMode) {
+        emit(state.copyWith(error: 'Failed to update unit price: $e'));
+      } else {
+        emit(state.copyWith(error: 'Failed to update unit price'));
+      }
     }
   }
 
@@ -1262,7 +1366,11 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to filter quotation orders: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to filter quotation orders: $e'));
+      } else {
+        emit(state.errorState('Failed to filter quotation orders'));
+      }
     }
   }
 
@@ -1390,11 +1498,17 @@ class QuotationOrderBloc
               barCode: '',
             ),
       );
-      print(
-        'Coordinator: New order prepared - Header: ${newHeader.id}, defaultCustomerCount=${defaultCustomer ?? 0}',
-      );
+      if (kDebugMode) {
+        developer.log(
+          'Coordinator: New order prepared - Header: ${newHeader.id}, defaultCustomerCount=${defaultCustomer ?? 0}',
+        );
+      }
     } catch (e) {
-      emit(state.errorState('Failed to prepare create: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to prepare create: $e'));
+      } else {
+        emit(state.errorState('Failed to prepare create'));
+      }
     }
   }
 
@@ -1495,10 +1609,28 @@ class QuotationOrderBloc
         // Financial values from state calculations
         tax: state.tax,
         withholdAmount: state.withholdAmount,
-        discountAmount: state.discountAmount,
+        discountAmount: state.discountAmount ?? 0.0,
+        discount: (state.discountAmount ?? 0) == 0 ? 'N' : 'Y',
+        discountInPercent:
+            (state.discountAmount == null ||
+                state.discountAmount == 0 ||
+                state.subTotal == null ||
+                state.subTotal == 0)
+            ? 0
+            : (state.discountAmount! / state.subTotal!) * 100,
+        addOn: event.header.addOn ?? '0',
         amountTotal: state.totalAmount,
         amountOpen: state.totalAmount, // Initially equals total
         withHoldApply: state.canApplyWithholding == true ? 'Y' : 'N',
+        // Cost totals from details
+        unitCost: event.details.fold<double>(
+          0.0,
+          (sum, d) => sum + (d.unitCost ?? 0.0),
+        ),
+        amountCost: event.details.fold<double>(
+          0.0,
+          (sum, d) => sum + ((d.unitCost ?? 0.0) * (d.quantity ?? 0.0)),
+        ),
 
         // Audit fields (only override if not already set)
         createdBy: event.header.createdBy ?? currentUser,
@@ -1569,7 +1701,10 @@ class QuotationOrderBloc
       add(GenerateInvoiceFromQuotation());
       add(ClearQuotationOrderDetails());
     } catch (e) {
-      emit(state.errorState('Failed to save quotation order: $e'));
+      //emit(state.errorState('Failed to save quotation order: $e'));
+      if (kDebugMode) {
+        developer.log('Failed to save quotation order: $e');
+      }
     }
   }
 
@@ -1588,7 +1723,10 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to save quotation details: $e'));
+      //emit(state.errorState('Failed to save quotation details: $e'));
+      if (kDebugMode) {
+        developer.log('Failed to save quotation details: $e');
+      }
     }
   }
 
@@ -1607,14 +1745,18 @@ class QuotationOrderBloc
 
     try {
       // 1. Fetch Details
-      print(
-        'DEBUG: Fetching quotation details for header ID: ${event.quotationHeader.id}',
-      );
+      if (kDebugMode) {
+        developer.log(
+          'DEBUG: Fetching quotation details for header ID: ${event.quotationHeader.id}',
+        );
+      }
       final details = await repository.getQuotationOrderDetailsByHeaderId(
         event.quotationHeader.id!,
         event.quotationHeader.company!,
       );
-      print('DEBUG: Fetched ${details.length} details');
+      if (kDebugMode) {
+        developer.log('DEBUG: Fetched ${details.length} details');
+      }
       if (details.isEmpty) {
         emit(
           state.errorState(
@@ -1625,17 +1767,24 @@ class QuotationOrderBloc
       }
 
       // 2. Map Header
-      print(
-        'DEBUG: Mapping header - customerBillTo: ${event.quotationHeader.customerBillTo}, customerTableId: ${event.quotationHeader.customerTableId}, employeesId: ${event.quotationHeader.employeesId}',
-      );
+      if (kDebugMode) {
+        developer.log(
+          'DEBUG: Mapping header - customerBillTo: ${event.quotationHeader.customerBillTo}, customerTableId: ${event.quotationHeader.customerTableId}, employeesId: ${event.quotationHeader.employeesId}',
+        );
+      }
+      if (kDebugMode) {
+        developer.log(
+          'DEBUG: Discount character  : ${event.quotationHeader.discount}',
+        );
+      }
 
       final salesHeader = SalesOrderHeader(
         orderDate: DateTime.now(),
         requiredDate: DateTime.now(),
         shippedDate: event.quotationHeader.shippedDate,
         salesType: 'Sales Order',
-        discount: event.quotationHeader.discount.toString(),
-        addOn: event.quotationHeader.addOn.toString(),
+        discount: event.quotationHeader.discountAmount == 0 ? 'N' : 'Y',
+        addOn: event.quotationHeader.addOn ?? 'N',
         tax: event.quotationHeader.tax,
         withHoldApply: event.quotationHeader.withHoldApply,
         withholdAmount: event.quotationHeader.withholdAmount,
@@ -1649,6 +1798,8 @@ class QuotationOrderBloc
         proformaReference: event.quotationHeader.fsNumber,
         creditDateToPay: null,
         fsNumber: null, // Will be generated by SalesOrderHeaderBloc
+        invoiceNumber: null, // Will be generated by SalesOrderHeaderBloc
+        branchValue: event.quotationHeader.branchId,
         customerBillTo: event.quotationHeader.customerBillTo,
         customerTableId: event.quotationHeader.customerTableId,
         employeesId: event.quotationHeader.employeesId, // ✅ CRITICAL FIX
@@ -1668,10 +1819,14 @@ class QuotationOrderBloc
         paymentStatusRef: event.quotationHeader.paymentStatusRef,
         orderTypeRef: event.quotationHeader.orderTypeRef,
       );
-      print('DEBUG: Header mapped successfully');
+      if (kDebugMode) {
+        developer.log('DEBUG: Header mapped successfully');
+      }
 
       // 3. Map Details
-      print('DEBUG: Mapping ${details.length} details');
+      if (kDebugMode) {
+        developer.log('DEBUG: Mapping ${details.length} details');
+      }
       final salesDetails = details.map((d) {
         return SalesOrderDetail(
           unitPrice: d.unitPrice,
@@ -1694,7 +1849,9 @@ class QuotationOrderBloc
           uom: d.uomRef,
         );
       }).toList();
-      print('DEBUG: All details mapped successfully');
+      if (kDebugMode) {
+        developer.log('DEBUG: All details mapped successfully');
+      }
 
       emit(
         state.copyWith(
@@ -1707,8 +1864,10 @@ class QuotationOrderBloc
         ),
       );
     } catch (e, stackTrace) {
-      print('DEBUG: Error during conversion: $e');
-      print('DEBUG: Stack trace: $stackTrace');
+      if (kDebugMode) {
+        developer.log('DEBUG: Error during conversion: $e');
+        developer.log('DEBUG: Stack trace: $stackTrace');
+      }
       emit(
         state.copyWith(
           status: QuotationOrderStatus.failure,
@@ -1749,7 +1908,11 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to get next order number: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to get next order number: $e'));
+      } else {
+        emit(state.errorState('Failed to get next order number'));
+      }
     }
   }
 
@@ -1777,7 +1940,11 @@ class QuotationOrderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to generate FS number: $e'));
+      if (kDebugMode) {
+        emit(state.errorState('Failed to generate FS number: $e'));
+      } else {
+        emit(state.errorState('Failed to generate FS number'));
+      }
     }
   }
 
@@ -1841,10 +2008,53 @@ class QuotationOrderBloc
     // ✅ Get current user and timestamp for audit fields
     final currentUser = authBloc.state.userId?.id;
     final currentTime = DateTime.now();
+    final companyId = authBloc.state.companyId;
+
+    // ✅ Calculate total extended price for proportional discount distribution
+    final headerDiscountAmount = state.discountAmount ?? 0.0;
+    final totalExtendedPrice = details.fold<double>(
+      0.0,
+      (sum, d) => sum + (d.extendedPrice ?? 0.0),
+    );
 
     for (final detail in details) {
+      // ✅ Calculate unit cost from item cost table
+      double unitCost = detail.unitCost ?? 0.0;
+      if (unitCost == 0.0 && companyId != null) {
+        try {
+          final itemCosts = await itemCostRepository.findByItemNumberAndCompany(
+            detail.itemsTableId,
+            companyId,
+          );
+          if (itemCosts.isNotEmpty) {
+            unitCost = itemCosts.first.amountUnitCost ?? 0.0;
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            developer.log('Failed to get item cost: $e');
+          }
+        }
+      }
+      final amountCost = unitCost * (detail.quantity ?? 0.0);
+
+      // ✅ Distribute header discount proportionally across details
+      double lineDiscountAmount = 0.0;
+      double lineDiscountPercent = 0.0;
+      if (headerDiscountAmount > 0 && totalExtendedPrice > 0) {
+        final proportion = (detail.extendedPrice ?? 0.0) / totalExtendedPrice;
+        lineDiscountAmount = headerDiscountAmount * proportion;
+        lineDiscountPercent = (detail.extendedPrice ?? 0.0) > 0
+            ? (lineDiscountAmount / (detail.extendedPrice ?? 1.0)) * 100
+            : 0.0;
+      }
+
       final detailToSave = detail.copyWith(
         quoteOrderHeaderId: headerId,
+        unitCost: unitCost,
+        amountCost: amountCost,
+        discountPercent: lineDiscountPercent,
+        discountAmount: lineDiscountAmount,
+        taxable: detail.taxable ?? 'Y',
         // ✅ Set audit fields
         createdBy: detail.createdBy ?? currentUser,
         updatedBy: currentUser,
@@ -1955,7 +2165,7 @@ class QuotationOrderBloc
           quantityTransaction: salesDetail.quantity ?? 0.0,
           amountUnitPrice: salesDetail.unitPrice ?? 0.0,
           amountExtendedPrice: salesDetail.extendedPrice ?? 0.0,
-          unitOfMeasure: salesDetail.itemTableRef?.unitOfMeasure ?? 'PCS',
+          unitOfMeasure: salesDetail.itemTableRef?.unitOfMeasure ?? 'PC',
         );
       }).toList();
 
@@ -1978,16 +2188,16 @@ class QuotationOrderBloc
             ),
       );
 
-      print(
-        'Coordinator: Invoice generated - FS Number: $nextFsNumber, Items: ${invoiceDetails.length}',
-      );
+      if (kDebugMode) {
+        developer.log(
+          'Coordinator: Invoice generated - FS Number: $nextFsNumber, Items: ${invoiceDetails.length}',
+        );
+      }
     } catch (e) {
-      emit(
-        state.errorState(
-          'Failed to generate invoice: $e',
-          operation: 'generate_invoice',
-        ),
-      );
+      emit(state.errorState('', operation: 'generate_invoice'));
+      if (kDebugMode) {
+        developer.log('Failed to generate invoice: $e');
+      }
     }
   }
 

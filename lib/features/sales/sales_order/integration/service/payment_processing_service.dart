@@ -134,14 +134,11 @@ class PaymentProcessingService {
       case 'Cash':
         await _processCashPayment(amount, transactionId, companyId);
         break;
-      case 'Credit':
-        await _processCreditPayment(amount, transactionId, companyId);
+      case 'Check':
+        await _processCheckPayment(amount, transactionId, companyId);
         break;
-      case 'Card':
-        await _processCardPayment(amount, transactionId, companyId);
-        break;
-      case 'Bank Transfer':
-        await _processBankTransfer(amount, transactionId, companyId);
+      case 'Transfer':
+        await _processTransfer(amount, transactionId, companyId);
         break;
       default:
         throw Exception('Unsupported payment type: $paymentType');
@@ -158,7 +155,7 @@ class PaymentProcessingService {
     // Create accounting entry
   }
 
-  Future<void> _processCreditPayment(
+  Future<void> _processCheckPayment(
     double amount,
     String transactionId,
     int companyId,
@@ -168,17 +165,7 @@ class PaymentProcessingService {
     // Notify credit department if needed
   }
 
-  Future<void> _processCardPayment(
-    double amount,
-    String transactionId,
-    int companyId,
-  ) async {
-    // Integrate with payment gateway
-    // Process card transaction
-    // Record bank deposit
-  }
-
-  Future<void> _processBankTransfer(
+  Future<void> _processTransfer(
     double amount,
     String transactionId,
     int companyId,

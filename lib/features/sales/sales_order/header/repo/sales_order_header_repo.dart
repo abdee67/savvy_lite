@@ -1,5 +1,7 @@
 // repositories/sales_order_header_repository.dart
 import 'dart:async';
+import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/credit_receipt_model.dart';
@@ -22,7 +24,11 @@ class SalesOrderHeaderRepository {
       final headerMap = header.toMap();
 
       // Log the data being inserted for debugging
-      print('DEBUG: Creating sales order header with data: $headerMap');
+      if (kDebugMode) {
+        developer.log(
+          'DEBUG: Creating sales order header with data: $headerMap',
+        );
+      }
 
       final id = await db.insert(
         'sales_order_header',
@@ -30,12 +36,18 @@ class SalesOrderHeaderRepository {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
 
-      print('DEBUG: Sales order header created successfully with ID: $id');
+      if (kDebugMode) {
+        developer.log(
+          'DEBUG: Sales order header created successfully with ID: $id',
+        );
+      }
       return id;
     } catch (e, stackTrace) {
-      print('ERROR: Failed to create sales order header: $e');
-      print('ERROR: Stack trace: $stackTrace');
-      print('ERROR: Header data: ${header.toMap()}');
+      if (kDebugMode) {
+        developer.log('ERROR: Failed to create sales order header: $e');
+        developer.log('ERROR: Stack trace: $stackTrace');
+        developer.log('ERROR: Header data: ${header.toMap()}');
+      }
       throw Exception('Failed to create sales order header: $e');
     }
   }
@@ -47,12 +59,19 @@ class SalesOrderHeaderRepository {
         SELECT 
           soh.*,
           cu.customer_name as customer_bill_to_name,
+          ct.customer_name as customer_table_name,
+          udc.description_1 as payment_status_description,
           udc.detail_code as payment_status_code ,
-          udc.description_1 as payment_instrument_description
+          pi.description_1 as payment_instrument_description,
+          pi.detail_code as payment_instrument_code,
+          ot.description_1 as order_type_description,
+          ot.detail_code as order_type_code
         FROM sales_order_header soh
         LEFT JOIN customer_table cu ON soh.customer_bill_to = cu.id
+        LEFT JOIN customer_table ct ON soh.customer_table_id = ct.id
         LEFT JOIN udc_details pi ON soh.payment_instrument = pi.id
         LEFT JOIN udc_details udc ON soh.payment_status = udc.id
+        LEFT JOIN udc_details ot ON soh.order_type = ot.id
         WHERE soh.id = ?
       ''';
     final maps = await db.rawQuery(query, [id]);
@@ -142,12 +161,19 @@ class SalesOrderHeaderRepository {
         SELECT 
           soh.*,
           cu.customer_name as customer_bill_to_name,
+          ct.customer_name as customer_table_name,
           udc.detail_code as payment_status_code ,
-          udc.description_1 as payment_instrument_description
+          udc.description_1 as payment_instrument_description,
+          pi.detail_code as payment_instrument_code,
+          pi.description_1 as payment_instrument_description,
+          ot.detail_code as order_type_code,
+          ot.description_1 as order_type_description
         FROM sales_order_header soh
         LEFT JOIN customer_table cu ON soh.customer_bill_to = cu.id
+        LEFT JOIN customer_table ct ON soh.customer_table_id = ct.id
         LEFT JOIN udc_details pi ON soh.payment_instrument = pi.id
         LEFT JOIN udc_details udc ON soh.payment_status = udc.id
+        LEFT JOIN udc_details ot ON soh.order_type = ot.id
         WHERE  $where
         ORDER BY soh.id DESC
       ''';
@@ -176,13 +202,20 @@ class SalesOrderHeaderRepository {
         SELECT 
           soh.*,
           cu.customer_name as customer_bill_to_name,
-          udc.detail_code as payment_status_code ,
-          udc.description_1 as payment_instrument_description
+          ct.customer_name as customer_table_name,
+          ps.detail_code as payment_status_code ,
+          ps.description_1 as payment_status_description,
+          ot.detail_code as order_type_code,
+          ot.description_1 as order_type_description,
+          pi.description_1 as payment_instrument_description,
+          pi.detail_code as payment_instrument_code
         FROM sales_order_header soh
         LEFT JOIN customer_table cu ON soh.customer_bill_to = cu.id
+        LEFT JOIN customer_table ct ON soh.customer_table_id = ct.id
         LEFT JOIN udc_details pi ON soh.payment_instrument = pi.id
-        LEFT JOIN udc_details udc ON soh.payment_status = udc.id
-        WHERE soh.company = ? AND soh.payment_term IS NOT NULL AND (soh.void_indicator IS NULL OR soh.void_indicator = "")
+        LEFT JOIN udc_details ot ON soh.order_type = ot.id
+        LEFT JOIN udc_details ps ON soh.payment_status = ps.id
+        WHERE soh.company = ? AND soh.payment_term IS NOT NULL AND soh.payment_method = 'Credit' AND (soh.void_indicator IS NULL OR soh.void_indicator = "")
         ORDER BY soh.id DESC
       ''';
     final maps = await db.rawQuery(query, [companyId]);
@@ -191,11 +224,18 @@ class SalesOrderHeaderRepository {
   }
 
   // Void sales order
-  Future<int> voidSalesOrder(int id, String voidIndicator) async {
+  Future<int> voidSalesOrder(
+    int id,
+    String voidIndicator, {
+    String? commentIfVoid,
+  }) async {
     final db = await _db;
     return await db.update(
       'sales_order_header',
-      {'void_indicator': voidIndicator},
+      {
+        'void_indicator': voidIndicator,
+        if (commentIfVoid != null) 'comment_ifVoid': commentIfVoid,
+      },
       where: 'id = ?',
       whereArgs: [id],
     );
@@ -398,6 +438,61 @@ class SalesOrderHeaderRepository {
     final nextFs = (maxFs ?? 0) + 1;
 
     return nextFs.toString().padLeft(8, '0');
+  }
+
+  /// Generate invoice number using the Java generateReference pattern.
+  /// Format: PREFIX-00000001-POSTFIX
+  /// Queries fs_table for prefix/postfix by branch + company,
+  /// then finds MAX(invoice_number) matching the pattern in the given [tableName].
+  Future<String> generateInvoiceNumber(
+    int companyId,
+    int branchId,
+    String tableName,
+  ) async {
+    final db = await _db;
+
+    // Step 1: Query fs_table for prefix/postfix
+    final fsResult = await db.query(
+      'fs_table',
+      where: 'company = ? AND branch = ?',
+      whereArgs: [companyId, branchId],
+      limit: 1,
+    );
+
+    if (fsResult.isEmpty) {
+      // User requested no fallback checking, but if fs_table is empty, we must return something.
+      // We'll return an empty string or a generic error-like string.
+      // However, usually prefix/postfix are mandatory for this logic.
+      return "";
+    }
+
+    final fsRow = fsResult.first;
+    final prefix = fsRow['prefix_up_to_three'] as String? ?? "";
+    final postfix = fsRow['postfix_up_to_four'] as String? ?? "";
+
+    // Step 2: Query MAX(invoice_number) matching pattern PREFIX-%-POSTFIX
+    final pattern = '$prefix-%-$postfix';
+    final maxResult = await db.rawQuery(
+      '''
+      SELECT MAX(invoice_number) as last_invoice
+      FROM $tableName
+      WHERE invoice_number LIKE ? AND company = ?
+    ''',
+      [pattern, companyId],
+    );
+
+    int nextNumber = 1;
+    final lastInvoice = maxResult.first['last_invoice'] as String?;
+    if (lastInvoice != null && lastInvoice.isNotEmpty) {
+      final parts = lastInvoice.split('-');
+      if (parts.length >= 2) {
+        // parts[1] is the sequential number part
+        nextNumber = (int.tryParse(parts[1]) ?? 0) + 1;
+      }
+    }
+
+    // Step 3: Format as PREFIX-00000001-POSTFIX
+    return '$prefix-${nextNumber.toString().padLeft(8, '0')}-$postfix';
   }
 
   // Sales Order Details for Void Processing
@@ -628,16 +723,39 @@ class SalesOrderHeaderRepository {
   }
 
   //get sales order by fs number which it doesnt have void indicator
-  Future<SalesOrderHeader?> getSalesOrderByFsNumber(
+  Future<SalesOrderHeader?> getSalesOrderByFsNumberAndInvoiceNumber(
     String fsNumber,
-    int companyId,
-  ) async {
+    int companyId, {
+    String? invoiceNumber,
+  }) async {
     final db = await _db;
-    final maps = await db.query(
-      'sales_order_header',
-      where: 'fs_number = ? AND void_indicator IS NULL AND company = ?',
-      whereArgs: [fsNumber, companyId],
-    );
+
+    String whereClause = 'soh.company = ? AND soh.void_indicator IS NULL';
+    List<dynamic> whereArgs = [companyId];
+
+    if (fsNumber.isNotEmpty) {
+      whereClause += ' AND soh.fs_number = ?';
+      whereArgs.add(fsNumber);
+    }
+
+    if (invoiceNumber != null && invoiceNumber.isNotEmpty) {
+      whereClause += ' AND soh.invoice_number = ?';
+      whereArgs.add(invoiceNumber);
+    }
+
+    final query =
+        '''
+      SELECT 
+        soh.*,
+        cu.customer_name as customer_bill_to_name,
+        ct.customer_name as customer_table_name
+      FROM sales_order_header soh
+      INNER JOIN customer_table cu ON soh.customer_bill_to = cu.id
+      INNER JOIN customer_table ct ON soh.customer_table_id = ct.id
+      WHERE $whereClause
+    ''';
+
+    final maps = await db.rawQuery(query, whereArgs);
     return maps.isNotEmpty ? SalesOrderHeader.fromMap(maps.first) : null;
   }
 
@@ -673,11 +791,14 @@ class SalesOrderHeaderRepository {
           '''
         SELECT 
           crt.*,
-          soh.order_number as order_number,
           soh.fs_number as fs_number ,
+          cb.customer_name as customer_bill_to_name,
+          ct.customer_name as customer_table_name,
           pi.description_1 as payment_instrument_description
         FROM credit_receipt_table crt
         LEFT JOIN sales_order_header soh ON crt.so_header = soh.id
+        LEFT JOIN customer_table ct ON soh.customer_table_id = ct.id
+        LEFT JOIN customer_table cb ON soh.customer_bill_to = cb.id
         LEFT JOIN udc_details pi ON crt.payment_instrument = pi.id
         WHERE $where
         ORDER BY crt.date_receipt DESC
@@ -729,8 +850,7 @@ class SalesOrderHeaderRepository {
   Future<List<CreditReceipt>> filterCreditReceipts({
     required int companyId,
     int? customerId,
-    DateTime? startDate,
-    DateTime? endDate,
+    String? fsNumber,
   }) async {
     final db = await _db;
 
@@ -743,14 +863,9 @@ class SalesOrderHeaderRepository {
         whereArgs.add(customerId);
       }
 
-      if (startDate != null) {
-        where += ' AND crt.date_receipt >= ?';
-        whereArgs.add(startDate.toIso8601String());
-      }
-
-      if (endDate != null) {
-        where += ' AND crt.date_receipt <= ?';
-        whereArgs.add(endDate.toIso8601String());
+      if (fsNumber != null) {
+        where += ' AND soh.fs_number = ?';
+        whereArgs.add(fsNumber);
       }
 
       final query =
@@ -758,10 +873,14 @@ class SalesOrderHeaderRepository {
         SELECT 
           crt.*,
            soh.order_number as order_number,
+           cb.customer_name as customer_bill_to_name,
+           ct.customer_name as customer_table_name,
           soh.fs_number as fs_number ,
           pi.description_1 as payment_instrument_description
         FROM credit_receipt_table crt
         LEFT JOIN sales_order_header soh ON crt.so_header = soh.id
+        LEFT JOIN customer_table ct ON soh.customer_table_id = ct.id
+        LEFT JOIN customer_table cb ON soh.customer_bill_to = cb.id
         LEFT JOIN udc_details pi ON crt.payment_instrument = pi.id
         WHERE $where
         ORDER BY crt.date_receipt DESC
@@ -790,7 +909,7 @@ class SalesOrderHeaderRepository {
       final total = result.first['total_received'] as double?;
       return total ?? 0.0;
     } catch (e) {
-      throw Exception('Failed to get total credit receipts for header: $e');
+      throw Exception('Failed to get total credit receipts: $e');
     }
   }
 }

@@ -5,7 +5,17 @@ import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 class PurchaseOrderHeader {
   final int? id;
   final int? supplierId;
-  final DateTime? dateTransaction;
+
+  static DateTime? _parseDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return null;
+    try {
+      return DateTime.parse(dateStr);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  final DateTime? dateTransation;
   final DateTime? dateDelivery;
   final int? poReceiveStatus;
   final int? company;
@@ -36,10 +46,13 @@ class PurchaseOrderHeader {
   final UdcDetails? orderTypeRef;
   final UserModel? userRef;
 
+  //for aged credit payment
+  final double? agedDays;
+
   PurchaseOrderHeader({
     this.id,
     this.supplierId,
-    this.dateTransaction,
+    this.dateTransation,
     this.dateDelivery,
     this.poReceiveStatus,
     this.company,
@@ -67,18 +80,15 @@ class PurchaseOrderHeader {
     this.supplierRef,
     this.poReceiveStatusRef,
     this.userRef,
+    this.agedDays,
   });
 
   factory PurchaseOrderHeader.fromMap(Map<String, dynamic> map) {
     return PurchaseOrderHeader(
       id: map['id'],
       supplierId: map['supplier_id'],
-      dateTransaction: map['date_transaction'] == null
-          ? null
-          : DateTime.parse(map['date_transaction']),
-      dateDelivery: map['date_delivery'] == null
-          ? null
-          : DateTime.parse(map['date_delivery']),
+      dateTransation: _parseDate(map['date_transation']),
+      dateDelivery: _parseDate(map['date_delivery']),
       poReceiveStatus: map['po_receive_status'],
       company: map['company'],
       taxableAmount: map['taxable_amount'],
@@ -91,17 +101,14 @@ class PurchaseOrderHeader {
       paymentStatus: map['payment_status'],
       paymentInstrument: map['payment_instrument'],
       userId: map['user_id'],
-      dateUpdated: map['date_updated'] == null
-          ? null
-          : DateTime.parse(map['date_updated']),
+      dateUpdated: _parseDate(map['date_updated']),
       amountOpenCredit: map['amount_open_credit'],
       orderNumber: map['order_number'],
       paymentTerm: map['payment_term'],
       orderType: map['order_type'],
       tempId: map['temp_id'],
-      creditDueDate: map['credit_due_date'] == null
-          ? null
-          : DateTime.parse(map['credit_due_date']),
+      agedDays: map['aged_days'],
+      creditDueDate: _parseDate(map['credit_due_date']),
       invoiceNumber: map['invoice_number'],
       paymentStatusRef: map['payment_status_description'] != null
           ? UdcDetails(
@@ -151,7 +158,7 @@ class PurchaseOrderHeader {
     return {
       'id': id,
       'supplier_id': supplierId,
-      'date_transaction': dateTransaction?.toIso8601String(),
+      'date_transation': dateTransation?.toIso8601String(),
       'date_delivery': dateDelivery?.toIso8601String(),
       'po_receive_status': poReceiveStatus,
       'company': company,
@@ -179,7 +186,7 @@ class PurchaseOrderHeader {
   PurchaseOrderHeader copyWith({
     int? id,
     int? supplierId,
-    DateTime? dateTransaction,
+    DateTime? dateTransation,
     DateTime? dateDelivery,
     int? poReceiveStatus,
     int? company,
@@ -205,11 +212,12 @@ class PurchaseOrderHeader {
     UdcDetails? orderTypeRef,
     SupplierModel? supplierRef,
     UdcDetails? poReceiveStatusRef,
+    double? agedDays,
   }) {
     return PurchaseOrderHeader(
       id: id ?? this.id,
       supplierId: supplierId ?? this.supplierId,
-      dateTransaction: dateTransaction ?? this.dateTransaction,
+      dateTransation: dateTransation ?? this.dateTransation,
       dateDelivery: dateDelivery ?? this.dateDelivery,
       poReceiveStatus: poReceiveStatus ?? this.poReceiveStatus,
       company: company ?? this.company,
@@ -235,6 +243,7 @@ class PurchaseOrderHeader {
       orderTypeRef: orderTypeRef ?? this.orderTypeRef,
       supplierRef: supplierRef ?? this.supplierRef,
       poReceiveStatusRef: poReceiveStatusRef ?? this.poReceiveStatusRef,
+      agedDays: agedDays ?? this.agedDays,
     );
   }
 
@@ -242,7 +251,7 @@ class PurchaseOrderHeader {
   List<Object?> get props => [
     id,
     supplierId,
-    dateTransaction,
+    dateTransation,
     dateDelivery,
     poReceiveStatus,
     company,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
+import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/widget/invoice_action.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/widget/invoice_first_part.dart';
@@ -25,19 +26,6 @@ class InvoiceReviewScreen extends StatelessWidget {
             message:
                 'Sales order header is not available. Please complete the order process.',
             icon: Icons.error_outline,
-          );
-        }
-
-        final hasAnyDetails =
-            state.currentDetails.isNotEmpty ||
-            state.lastSavedDetails.isNotEmpty;
-
-        if (!hasAnyDetails) {
-          _buildErrorScreen(
-            title: 'No Items in Order',
-            message:
-                'There are no items in the order. Please add items before generating invoice.',
-            icon: Icons.shopping_cart_outlined,
           );
         }
 
@@ -249,8 +237,11 @@ class _InvoiceReviewContent extends StatelessWidget {
                     InvoiceFirstPart(
                       customer: customer,
                       date: header.orderDate ?? DateTime.now(),
-                      invoiceNumber: state.invoiceFsNumber ?? 'Pending',
+                      invoiceNumber: header.invoiceNumber ?? '',
                       salesOrderNumber: header.fsNumber ?? 'N/A',
+                      salesRepresent:
+                          state.salesRepresent ?? header.salesRepresent,
+                      commentsSo: state.commentsSo ?? header.commentsSo,
                     ),
                     const SizedBox(height: 16),
 
@@ -277,7 +268,7 @@ class _InvoiceReviewContent extends StatelessWidget {
             ),
 
             // Action buttons
-            const InvoiceAction(),
+            InvoiceAction(authBloc: context.read<AuthBloc>()),
           ],
         ),
       ),
@@ -300,17 +291,17 @@ class _InvoiceReviewContent extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Sales Order: ${state.currentHeader!.fsNumber ?? 'N/A'}',
+                  'Sales Invoice: ${state.currentHeader!.invoiceNumber ?? 'N/A'}',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
                 ),
-                if (state.invoiceFsNumber != null)
+                /*  if (state.currentHeader!.fsNumber != null)
                   Text(
-                    'Invoice: ${state.invoiceFsNumber}',
+                    'Sales Order: ${state.currentHeader!.fsNumber}',
                     style: const TextStyle(fontSize: 12, color: Colors.green),
-                  ),
+                  ),*/
               ],
             ),
           ),

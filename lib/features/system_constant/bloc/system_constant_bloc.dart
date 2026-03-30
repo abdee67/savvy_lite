@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/errors/exceptions.dart';
 import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 import 'package:savvy_stock/features/system_constant/repo/system_constant_repository.dart';
@@ -85,17 +86,20 @@ class SystemConstantBloc
           unsyncedCount: unSyncedCount,
         ),
       );
-      print(
-        '✅ SystemConstantBloc: State updated with lot_type: ${companyConstants.lotType}',
-      );
+      if (kDebugMode) {
+        developer.log(
+          '✅ SystemConstantBloc: State updated with lot_type: ${companyConstants.lotType}',
+        );
+      }
     } catch (e) {
       developer.log('Error loading system constants: $e');
       emit(
         state.copyWith(
           status: SystemConstantStatus.failure,
-          errorMessage: 'Failed to load system constants: ${e.toString()}',
+          // errorMessage: 'Failed to load system constants: ${e.toString()}',
         ),
       );
+      developer.log('Error loading system constants: $e');
     }
   }
 
@@ -122,9 +126,10 @@ class SystemConstantBloc
       emit(
         state.copyWith(
           status: SystemConstantStatus.failure,
-          errorMessage: 'Failed to load system constant: ${e.toString()}',
+          // errorMessage: 'Failed to load system constant: ${e.toString()}',
         ),
       );
+      developer.log('Error loading system constant: $e');
     }
   }
 
@@ -150,10 +155,11 @@ class SystemConstantBloc
       emit(
         state.copyWith(
           status: SystemConstantStatus.failure,
-          errorMessage:
-              'Failed to load system constant for company: ${e.toString()}',
+          // errorMessage:
+          // 'Failed to load system constant for company: ${e.toString()}',
         ),
       );
+      developer.log('Error loading system constant for company: $e');
     }
   }
 
@@ -419,6 +425,7 @@ class SystemConstantBloc
         selectedSystemConstant = SystemConstant(
           company: companyId,
           applyLotMgm: 'N',
+          applyOverheadCost: 'N',
           applyLocationMgm: 'Y',
           decimalPlaces: 2,
           autoSalesPrice: 'N',
@@ -431,6 +438,8 @@ class SystemConstantBloc
           reorderPointUomType: 'I',
           discountDisplay: 'Y',
           taxInfoDisplay: 'Y',
+          daysLeft: 180,
+          currencyCode: 'ETB',
         );
       }
 
@@ -598,9 +607,12 @@ class SystemConstantBloc
       emit(
         state.copyWith(
           status: SystemConstantStatus.failure,
-          errorMessage: 'Failed to save system constants: ${e.toString()}',
+          // errorMessage: 'Failed to save system constants: ${e.toString()}',
         ),
       );
+      if (kDebugMode) {
+        developer.log('Failed to save system constants: ${e.toString()}');
+      }
     }
   }
 

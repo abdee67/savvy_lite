@@ -1,4 +1,6 @@
+import 'package:savvy_stock/features/stock/item_entry/models/item_entry_model.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
+import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class ItemCost {
   int? id;
@@ -7,10 +9,13 @@ class ItemCost {
   int? company;
   int? userId;
   DateTime? dateUpdated;
+  double? amountUnitCostBase;
+  double? overheadUnitCost;
   int? tempId;
 
   //from join
   final ItemInBranchModel? fromUOM;
+  final ItemEntryModel? itemRef;
 
   ItemCost({
     this.id,
@@ -19,8 +24,11 @@ class ItemCost {
     this.company,
     this.userId,
     this.dateUpdated,
+    this.amountUnitCostBase,
+    this.overheadUnitCost,
     this.fromUOM,
     this.tempId,
+    this.itemRef,
   });
   factory ItemCost.empty() {
     return ItemCost(
@@ -30,8 +38,11 @@ class ItemCost {
       company: null,
       userId: null,
       dateUpdated: null,
+      amountUnitCostBase: null,
+      overheadUnitCost: null,
       fromUOM: null,
       tempId: null,
+      itemRef: null,
     );
   }
 
@@ -45,8 +56,32 @@ class ItemCost {
       dateUpdated: map['date_updated'] != null
           ? DateTime.parse(map['date_updated'])
           : null,
+      amountUnitCostBase: (map['amount_unit_cost_base'] as num?)?.toDouble(),
+      overheadUnitCost: (map['overhead_unit_cost'] as num?)?.toDouble(),
       tempId: map['temp_id'],
-      fromUOM: map['branch'] != null ? ItemInBranchModel.fromMap(map) : null,
+      fromUOM: map['branch_description'] != null
+          ? ItemInBranchModel(
+              id: map['branch'],
+              itemNumber: map['item_number'],
+              branch: map['branch'],
+            )
+          : null,
+      itemRef: map['item_description'] != null
+          ? ItemEntryModel(
+              id: map['item_number'],
+              itemsId: map['item_id'],
+              unitOfMeasure: map['unit_of_measure']?.toString(),
+              itemDescription: map['item_description'],
+              unitOfMeasureDescription:
+                  map['unit_of_measure_description'] != null
+                  ? UdcDetails(
+                      id: map['unit_of_measure'],
+                      description1: map['unit_of_measure_description'],
+                      detailCode: map['unit_of_measure_code'],
+                    )
+                  : null,
+            )
+          : null,
     );
   }
 
@@ -58,6 +93,8 @@ class ItemCost {
       'company': company,
       'user_id': userId,
       'date_updated': dateUpdated?.toIso8601String(),
+      'amount_unit_cost_base': amountUnitCostBase,
+      'overhead_unit_cost': overheadUnitCost,
     };
   }
 
@@ -68,6 +105,8 @@ class ItemCost {
     int? company,
     int? userId,
     DateTime? dateUpdated,
+    double? amountUnitCostBase,
+    double? overheadUnitCost,
     int? tempId,
   }) {
     return ItemCost(
@@ -77,6 +116,8 @@ class ItemCost {
       company: company ?? this.company,
       userId: userId ?? this.userId,
       dateUpdated: dateUpdated ?? this.dateUpdated,
+      amountUnitCostBase: amountUnitCostBase ?? this.amountUnitCostBase,
+      overheadUnitCost: overheadUnitCost ?? this.overheadUnitCost,
       tempId: tempId ?? this.tempId,
     );
   }

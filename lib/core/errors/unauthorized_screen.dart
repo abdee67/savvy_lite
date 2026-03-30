@@ -19,40 +19,42 @@ class UnauthorizedScreen extends StatelessWidget {
         title: const Text('Access Denied'),
         backgroundColor: Colors.orange[700],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.lock_outline, size: 80, color: Colors.orange[700]),
-            const SizedBox(height: 24),
-            const Text(
-              'Permission Required',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'You need additional permissions to access this feature.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-            ),
-            const SizedBox(height: 32),
-
-            // Required Privilege Hierarchy
-            if (hierarchy.isNotEmpty) ...[
-              _buildHierarchySection(hierarchy, missingPrivileges),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.lock_outline, size: 80, color: Colors.orange[700]),
               const SizedBox(height: 24),
-            ],
+              const Text(
+                'Permission Required',
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'You need additional permissions to access this feature.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+              ),
+              const SizedBox(height: 32),
 
-            // Missing Privileges
-            if (missingPrivileges.isNotEmpty) ...[
-              _buildMissingPrivilegesSection(missingPrivileges),
-              const SizedBox(height: 24),
-            ],
+              // Required Privilege Hierarchy
+              if (hierarchy.isNotEmpty) ...[
+                _buildHierarchySection(hierarchy, missingPrivileges),
+                const SizedBox(height: 24),
+              ],
 
-            // Action Buttons
-            _buildActionButtons(context),
-          ],
+              // Missing Privileges
+              if (missingPrivileges.isNotEmpty) ...[
+                _buildMissingPrivilegesSection(missingPrivileges),
+                const SizedBox(height: 24),
+              ],
+
+              // Action Buttons
+              _buildActionButtons(context),
+            ],
+          ),
         ),
       ),
     );

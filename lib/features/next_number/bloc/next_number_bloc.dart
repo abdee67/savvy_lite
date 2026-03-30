@@ -573,13 +573,16 @@ class NextNumberBloc extends Bloc<NextNumberEvent, NextNumberState> {
   }
 
   // Public methods
-  Future<int> generateFormattedNumber(String code) async {
-    final number = await repository.generateNextNumber(code, state.companyId);
+  Future<int> generateFormattedNumber(String code, int companyId) async {
+    final number = await repository.generateNextNumber(code, companyId);
     return number;
   }
 
-  Future<String> generateFormattedNumberString(String code) async {
-    return await repository.generateFormattedNumber(code, state.companyId);
+  Future<String> generateFormattedNumberString(
+    String code,
+    int companyId,
+  ) async {
+    return await repository.generateFormattedNumber(code, companyId);
   }
 
   // Get description for code

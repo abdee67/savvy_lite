@@ -16,7 +16,10 @@ class InvoiceHistoryHeader {
   final String? mrcNumber;
   final double? discountAmount;
   final double? amountBeforeTax;
-  int? company;
+  final int? company;
+  final int? quotNumber;
+  final int? salesNumber;
+  final String? invoiceNumber;
   final int? tempId;
 
   InvoiceHistoryHeader({
@@ -37,6 +40,9 @@ class InvoiceHistoryHeader {
     this.discountAmount,
     this.amountBeforeTax,
     this.company,
+    this.quotNumber,
+    this.salesNumber,
+    this.invoiceNumber,
     this.tempId,
   });
 
@@ -59,6 +65,9 @@ class InvoiceHistoryHeader {
     double? discountAmount,
     double? amountBeforeTax,
     int? company,
+    int? quotNumber,
+    int? salesNumber,
+    String? invoiceNumber,
     int? tempId,
   }) {
     return InvoiceHistoryHeader(
@@ -79,6 +88,9 @@ class InvoiceHistoryHeader {
       discountAmount: discountAmount ?? this.discountAmount,
       amountBeforeTax: amountBeforeTax ?? this.amountBeforeTax,
       company: company ?? this.company,
+      quotNumber: quotNumber ?? this.quotNumber,
+      salesNumber: salesNumber ?? this.salesNumber,
+      invoiceNumber: invoiceNumber ?? this.invoiceNumber,
       tempId: tempId ?? this.tempId,
     );
   }
@@ -103,6 +115,9 @@ class InvoiceHistoryHeader {
       'discount_amount': discountAmount,
       'amount_beforeTax': amountBeforeTax,
       'company': company,
+      'quot_number': quotNumber,
+      'sales_number': salesNumber,
+      'invoice_number': invoiceNumber,
     };
   }
 
@@ -128,6 +143,9 @@ class InvoiceHistoryHeader {
       discountAmount: map['discount_amount']?.toDouble(),
       amountBeforeTax: map['amount_beforeTax']?.toDouble(),
       company: map['company'],
+      quotNumber: map['quot_number'],
+      salesNumber: map['sales_number'],
+      invoiceNumber: map['invoice_number'],
     );
   }
 

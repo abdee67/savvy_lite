@@ -1,7 +1,11 @@
 // features/stock/lot_master/blocs/lot_master_bloc.dart
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
+import 'package:savvy_stock/features/stock/lot_master/models/expiration_report_filters.dart';
+import 'package:savvy_stock/features/stock/lot_master/models/lot_availability_filters.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -21,6 +25,7 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
   final NextNumberBloc nextNumberBloc;
   final LotExpirationColorsBloc lotExpirationColorsBloc;
   final UdcRepository udcRepository;
+  final int defaultPageSize = 20;
 
   StreamSubscription? _authSubscription;
   StreamSubscription? _systemConstantSubscription;
@@ -66,6 +71,25 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
     on<CheckLotNumberDuplication>(_onCheckLotNumberDuplication);
     on<GetExpiringLots>(_onGetExpiringLots);
     on<GetLotQuantitySummary>(_onGetLotQuantitySummary);
+    on<LoadExpirationReport>(_onLoadExpirationReport);
+    on<LoadMoreExpirationReport>(_onLoadMoreExpirationReport);
+    on<UpdateExpirationReportFilters>(_onUpdateExpirationReportFilters);
+    on<ClearExpirationReportFilters>(_onClearFilters);
+    on<ExportExpirationReportToExcel>(_onExportToExcel);
+    on<ExportExpirationReportToPDF>(_onExportToPDF);
+    on<LoadUpcomingExpiryReport>(_onLoadUpcomingExpiryReport);
+    on<LoadMoreUpcomingExpiryReport>(_onLoadMoreUpcomingExpiryReport);
+    on<UpdateUpcomingExpiryReportFilters>(_onUpdateUpcomingExpiryReportFilters);
+    on<ClearUpcomingExpiryReportFilters>(_onClearUpcomingExpiryReportFilters);
+    // on<ExportUpcomingExpiryReportToExcel>(_onExportUpcomingExpiryToExcel);
+    //  on<ExportUpcomingExpiryReportToPDF>(_onExportUpcomingExpiryToPDF);
+
+    on<LoadLotAvailability>(_onLoadLotAvailability);
+    on<LoadMoreLotAvailability>(_onLoadMoreLotAvailability);
+    on<FilterLotAvailability>(_onFilterLotAvailability);
+    on<ClearLotAvailabilityFilters>(_onClearLotAvailabilityFilters);
+
+    on<RefreshLotMasters>(_onRefreshLots);
   }
 
   @override
@@ -79,19 +103,54 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
     LoadLotMasters event,
     Emitter<LotMasterState> emit,
   ) async {
-    emit(state.copyWith(status: LotMasterStatus.loading));
-    try {
-      final items = await repository.getLotMasters(event.companyId);
-      final itemsWithColors = await _calculateColorsForLots(items);
+    if (state.hasReachedMax && event.page != 1) return;
 
-      emit(
-        state.copyWith(
-          status: LotMasterStatus.loaded,
-          items: itemsWithColors,
-          filteredItems: itemsWithColors,
-          companyId: event.companyId,
-        ),
+    try {
+      if (event.page == 1) {
+        emit(
+          state.copyWith(
+            status: LotMasterStatus.loading,
+            items: [],
+            filteredItems: [],
+            hasReachedMax: false,
+            currentPage: 1,
+            companyId: event.companyId,
+          ),
+        );
+      }
+
+      final offset = (event.page - 1) * event.pageSize;
+      final items = await repository.getLotMasters(
+        event.companyId,
+        limit: event.pageSize,
+        offset: offset,
       );
+
+      final itemsWithColors = await _calculateColorsForLots(items);
+      final hasReachedMax = items.length < event.pageSize;
+
+      if (event.page == 1) {
+        emit(
+          state.copyWith(
+            status: LotMasterStatus.loaded,
+            items: itemsWithColors,
+            filteredItems: itemsWithColors,
+            hasReachedMax: hasReachedMax,
+            currentPage: event.page,
+          ),
+        );
+      } else {
+        emit(
+          state.copyWith(
+            status: LotMasterStatus.loaded,
+            items: List.of(state.items)..addAll(itemsWithColors),
+            filteredItems: List.of(state.filteredItems)
+              ..addAll(itemsWithColors),
+            hasReachedMax: hasReachedMax,
+            currentPage: event.page,
+          ),
+        );
+      }
     } catch (e) {
       emit(
         state.copyWith(
@@ -100,6 +159,13 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
         ),
       );
     }
+  }
+
+  Future<void> _onRefreshLots(
+    RefreshLotMasters event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    add(LoadLotMasters(event.companyId, page: 1));
   }
 
   Future<void> _onFilterLots(
@@ -609,7 +675,9 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
         ),
       );
     } catch (e) {
-      print('Error calculating lot status: $e');
+      if (kDebugMode) {
+        developer.log('Error calculating lot status: $e');
+      }
     }
   }
 
@@ -633,7 +701,9 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
         state.copyWith(items: itemsWithColors, filteredItems: itemsWithColors),
       );
     } catch (e) {
-      print('Error recalculating all lot status: $e');
+      if (kDebugMode) {
+        developer.log('Error recalculating all lot status: $e');
+      }
     }
   }
 
@@ -654,7 +724,9 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
         ),
       );
     } catch (e) {
-      print('Error calculating lot colors: $e');
+      if (kDebugMode) {
+        developer.log('Error calculating lot colors: $e');
+      }
     }
   }
 
@@ -691,7 +763,9 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
       final expiringWithColors = await _calculateColorsForLots(expiringLots);
       emit(state.copyWith(expiringLots: expiringWithColors));
     } catch (e) {
-      print('Error getting expiring lots: $e');
+      if (kDebugMode) {
+        developer.log('Error getting expiring lots: $e');
+      }
     }
   }
 
@@ -705,7 +779,9 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
       );
       emit(state.copyWith(quantitySummary: quantitySummary));
     } catch (e) {
-      print('Error getting lot quantity summary: $e');
+      if (kDebugMode) {
+        developer.log('Error getting lot quantity summary: $e');
+      }
     }
   }
 
@@ -738,7 +814,9 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
         lot.dateReceived,
       );
     } catch (e) {
-      print('Error calculating lot color: $e');
+      if (kDebugMode) {
+        developer.log('Error calculating lot color: $e');
+      }
       return null;
     }
   }
@@ -857,7 +935,10 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
   }
 
   Future<int> _generateLotNumber() async {
-    return await nextNumberBloc.generateFormattedNumber('LM');
+    return await nextNumberBloc.generateFormattedNumber(
+      'LM',
+      authBloc.state.companyId!,
+    );
   }
 
   Future<UdcDetails?> _getLotTypeUdcDetail(int? lotType) async {
@@ -886,5 +967,509 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
       itemNumber: itemNumber,
       branch: branch,
     );
+  }
+
+  Future<void> _onLoadExpirationReport(
+    LoadExpirationReport event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    emit(state.copyWith(status: LotMasterStatus.loadingExpirationReport));
+    try {
+      final companyId = event.companyId;
+
+      final result = await repository.getExpirationReport(
+        companyId: companyId,
+        filters: event.filters,
+        page: event.page,
+        pageSize: event.pageSize,
+      );
+
+      final totalPages = (result.totalCount / event.pageSize).ceil();
+
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.loadedExpirationReport,
+          expirationReportLots: result.lots,
+          expirationReportTotalCount: result.totalCount,
+          expirationReportTotalPages: totalPages,
+          expirationReportPage: event.page,
+          expirationReportTotalCost: result.totalCost,
+          expirationReportFilters: event.filters,
+          hasMoreExpirationReport: event.page < totalPages,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.failure,
+          message: 'Failed to load expiration report: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onLoadMoreExpirationReport(
+    LoadMoreExpirationReport event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    if (!state.hasMoreExpirationReport) return;
+
+    emit(state.copyWith(status: LotMasterStatus.loadingMoreExpirationReport));
+
+    try {
+      final nextPage = state.expirationReportPage + 1;
+      final result = await repository.getExpirationReport(
+        companyId: authBloc.state.companyId!,
+        filters: state.expirationReportFilters,
+        page: nextPage,
+        pageSize: 20,
+      );
+
+      final updatedLots = [...state.expirationReportLots, ...result.lots];
+      final totalPages = (result.totalCount / 20).ceil();
+
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.loadedExpirationReport,
+          expirationReportLots: updatedLots,
+          expirationReportPage: nextPage,
+          expirationReportTotalCost:
+              state.expirationReportTotalCost + result.totalCost,
+          hasMoreExpirationReport: nextPage < totalPages,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.failure,
+          message: 'Failed to load more reports: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onUpdateExpirationReportFilters(
+    UpdateExpirationReportFilters event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    // Reset to page 1 when filters change
+    add(
+      LoadExpirationReport(
+        companyId: authBloc.state.companyId!,
+        filters: event.filters,
+        page: 1,
+        pageSize: defaultPageSize,
+      ),
+    );
+  }
+
+  Future<void> _onClearFilters(
+    ClearExpirationReportFilters event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    add(
+      LoadExpirationReport(
+        companyId: authBloc.state.companyId!,
+        filters: const ExpirationReportFilters(),
+        page: 1,
+        pageSize: defaultPageSize,
+      ),
+    );
+  }
+
+  Future<void> _onExportToExcel(
+    ExportExpirationReportToExcel event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    emit(state.copyWith(status: LotMasterStatus.exporting));
+
+    try {
+      // Get all data (without pagination) for export
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) throw Exception('Company ID not found');
+
+      final result = await repository.getExpirationReport(
+        companyId: companyId,
+        filters: event.filters,
+        page: 1,
+        pageSize: 10000, // Large number to get all records
+      );
+
+      // Prepare data for Excel export
+      final exportData = _prepareExcelData(result.lots);
+
+      // In a real app, you would use a package like excel or csv
+      // For now, we'll just simulate
+      await _simulateExcelExport(exportData);
+
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.success,
+          message: 'Exported ${result.lots.length} records to Excel',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.failure,
+          message: 'Export failed: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportToPDF(
+    ExportExpirationReportToPDF event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    emit(state.copyWith(status: LotMasterStatus.exporting));
+
+    try {
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) throw Exception('Company ID not found');
+
+      final result = await repository.getExpirationReport(
+        companyId: companyId,
+        filters: event.filters,
+        page: 1,
+        pageSize: 10000,
+      );
+
+      // Prepare PDF data
+      await _simulatePDFExport(result.lots, result.totalCost);
+
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.success,
+          message: 'Generated PDF report with ${result.lots.length} records',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.failure,
+          message: 'PDF generation failed: $e',
+        ),
+      );
+    }
+  }
+
+  //upcoming expiry report
+  Future<void> _onLoadUpcomingExpiryReport(
+    LoadUpcomingExpiryReport event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    emit(state.copyWith(status: LotMasterStatus.loadingUpcomingExpiryReport));
+
+    try {
+      final result = await repository.getUpComingExpirationReport(
+        companyId: event.companyId,
+        filters: event.filters,
+        daysThreshold: event.daysThreshold, // Pass threshold
+        page: event.page,
+        pageSize: event.pageSize,
+      );
+
+      final totalPages = (result.totalCount / event.pageSize).ceil();
+
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.loadedUpcomingExpiryReport,
+          upcomingExpiryLots: result.lots,
+          upcomingExpiryTotalCount: result.totalCount,
+          upcomingExpiryTotalPages: totalPages,
+          upcomingExpiryPage: event.page,
+          upcomingExpiryTotalCost: result.totalCost,
+          upcomingExpiryFilters: event.filters,
+          upcomingExpiryDaysThreshold: event.daysThreshold, // Store threshold
+          hasMoreUpcomingExpiry: event.page < totalPages,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.failure,
+          message: 'Failed to load upcoming expiry report: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onUpdateUpcomingExpiryReportFilters(
+    UpdateUpcomingExpiryReportFilters event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    add(
+      LoadUpcomingExpiryReport(
+        companyId: authBloc.state.companyId!,
+        filters: const ExpirationReportFilters(),
+        page: 1,
+        pageSize: defaultPageSize,
+        daysThreshold: event.daysThreshold,
+      ),
+    );
+  }
+
+  Future<void> _onLoadMoreUpcomingExpiryReport(
+    LoadMoreUpcomingExpiryReport event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    emit(
+      state.copyWith(status: LotMasterStatus.loadingMoreUpcomingExpiryReport),
+    );
+
+    try {
+      final result = await repository.getUpComingExpirationReport(
+        companyId: authBloc.state.companyId!,
+        filters: state.upcomingExpiryFilters,
+        daysThreshold: state.upcomingExpiryDaysThreshold,
+        page: state.upcomingExpiryPage + 1,
+        pageSize: state.upcomingExpiryTotalPages,
+      );
+
+      final totalPages = (result.totalCount / state.upcomingExpiryTotalPages)
+          .ceil();
+      //final daysLeft = repository.calculateDaysUntilExpiry(result.lots.first.dateExpiration);
+
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.loadedUpcomingExpiryReport,
+          upcomingExpiryLots: [...state.upcomingExpiryLots, ...result.lots],
+          upcomingExpiryTotalCount: result.totalCount,
+          upcomingExpiryTotalPages: totalPages,
+          upcomingExpiryPage: state.upcomingExpiryPage + 1,
+          upcomingExpiryTotalCost: result.totalCost,
+          upcomingExpiryFilters: state.upcomingExpiryFilters,
+          upcomingExpiryDaysThreshold: state.upcomingExpiryDaysThreshold,
+          hasMoreUpcomingExpiry: state.upcomingExpiryPage < totalPages,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.failure,
+          message: 'Failed to load more upcoming expiry report: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onClearUpcomingExpiryReportFilters(
+    ClearUpcomingExpiryReportFilters event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    add(
+      LoadUpcomingExpiryReport(
+        companyId: authBloc.state.companyId!,
+        filters: const ExpirationReportFilters(),
+        page: 1,
+        pageSize: defaultPageSize,
+        daysThreshold: systemConstantBloc.state.selected!.daysLeft!,
+      ),
+    );
+  }
+
+  // --- Lot Master Availability ---
+  Future<void> _onLoadLotAvailability(
+    LoadLotAvailability event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    emit(state.copyWith(status: LotMasterStatus.loadingLotAvailability));
+
+    try {
+      final systemConstant = systemConstantBloc.state.selected;
+      String? lotTypeCode;
+      if (systemConstant?.lotType != null) {
+        final udcDetail = await udcRepository.getUdcDetailById(
+          systemConstant!.lotType!,
+        );
+        lotTypeCode = udcDetail?.detailCode.toUpperCase();
+      }
+
+      if (kDebugMode) {
+        developer.log('Loading Lots with lotTypeCode: $lotTypeCode');
+        developer.log(
+          'Loading Lots with filters: ${state.availabilityFilters}',
+        );
+      }
+
+      final result = await repository.getLotAvailabilityPaginated(
+        companyId: event.companyId,
+        filters: state.availabilityFilters,
+        page: event.page,
+        pageSize: event.pageSize,
+        lotTypeCode: lotTypeCode,
+      );
+
+      final totalPages = (result.count / event.pageSize).ceil();
+
+      final itemsWithColors = await _calculateColorsForLots(result.items);
+
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.loadedLotAvailability,
+          availabilityLots: itemsWithColors,
+          availabilityTotalCount: result.count,
+          availabilityPage: event.page,
+          availabilityTotalPages: totalPages,
+          hasMoreAvailability: event.page < totalPages,
+        ),
+      );
+    } catch (e) {
+      if (kDebugMode) developer.log('Error loading lot availability: $e');
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.failure,
+          message: 'Failed to load availability: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onLoadMoreLotAvailability(
+    LoadMoreLotAvailability event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    if (!state.hasMoreAvailability) return;
+
+    emit(state.copyWith(status: LotMasterStatus.loadingMoreLotAvailability));
+
+    try {
+      final nextPage = state.availabilityPage + 1;
+      final systemConstant = systemConstantBloc.state.selected;
+      String? lotTypeCode;
+      if (systemConstant?.lotType != null) {
+        final udcDetail = await udcRepository.getUdcDetailById(
+          systemConstant!.lotType!,
+        );
+        lotTypeCode = udcDetail?.detailCode.toUpperCase();
+      }
+
+      final result = await repository.getLotAvailabilityPaginated(
+        companyId: authBloc.state.companyId!,
+        filters: state.availabilityFilters,
+        page: nextPage,
+        pageSize: defaultPageSize,
+        lotTypeCode: lotTypeCode,
+      );
+
+      final totalPages = (result.count / defaultPageSize).ceil();
+
+      final itemsWithColors = await _calculateColorsForLots(result.items);
+
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.loadedLotAvailability,
+          availabilityLots: [...state.availabilityLots, ...itemsWithColors],
+          availabilityPage: nextPage,
+          availabilityTotalPages: totalPages,
+          hasMoreAvailability: nextPage < totalPages,
+        ),
+      );
+    } catch (e) {
+      if (kDebugMode) developer.log('Error loading more lot availability: $e');
+      emit(
+        state.copyWith(
+          status: LotMasterStatus.failure,
+          message: 'Failed to load more availability: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onFilterLotAvailability(
+    FilterLotAvailability event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    emit(state.copyWith(availabilityFilters: event.filters));
+    add(
+      LoadLotAvailability(
+        companyId: authBloc.state.companyId!,
+        page: 1,
+        pageSize: defaultPageSize,
+      ),
+    );
+  }
+
+  Future<void> _onClearLotAvailabilityFilters(
+    ClearLotAvailabilityFilters event,
+    Emitter<LotMasterState> emit,
+  ) async {
+    emit(state.copyWith(availabilityFilters: const LotAvailabilityFilters()));
+    add(
+      LoadLotAvailability(
+        companyId: authBloc.state.companyId!,
+        page: 1,
+        pageSize: defaultPageSize,
+      ),
+    );
+  }
+
+  // Helper methods for export
+  List<Map<String, dynamic>> _prepareExcelData(List<LotMaster> lots) {
+    return lots.map((lot) {
+      return {
+        'Batch': lot.batchNumberSupplier ?? '',
+        'Item ID': lot.itemRef?.itemsId ?? '',
+        'Item Description': lot.itemRef?.itemDescription ?? '',
+        'Branch/Store': lot.branchRef?.description ?? '',
+        'Location': lot.locationRef?.locationDescription ?? '',
+        'Unit of Measure': lot.itemRef?.unitOfMeasure ?? '',
+        'Expiration Date': lot.dateExpiration?.toIso8601String() ?? '',
+        'Available Quantity': lot.quantityAvailable ?? 0.0,
+        'Status': lot.statusDescription ?? '',
+      };
+    }).toList();
+  }
+
+  Future<void> _simulateExcelExport(List<Map<String, dynamic>> data) async {
+    // In production, use a package like:
+    // - excel: ^2.0.0-null-safety-3
+    // - csv: ^5.0.0
+    await Future.delayed(const Duration(seconds: 1));
+    if (kDebugMode) {
+      developer.log('Exporting ${data.length} rows to Excel');
+    }
+  }
+
+  Future<void> _simulatePDFExport(
+    List<LotMaster> lots,
+    double totalCost,
+  ) async {
+    // In production, use a package like:
+    // - pdf: ^3.10.6
+    // - printing: ^5.11.2
+    await Future.delayed(const Duration(seconds: 2));
+    if (kDebugMode) {
+      developer.log(
+        'Generating PDF for ${lots.length} lots, total cost: $totalCost',
+      );
+    }
+  }
+
+  // Public methods for pagination
+  void loadNextPage() {
+    if (state.hasMoreExpirationReport) {
+      add(LoadMoreExpirationReport());
+    }
+  }
+
+  void loadPreviousPage() {
+    if (state.hasPreviousPage) {
+      add(LoadMoreExpirationReport());
+    }
+  }
+
+  void loadPage(int page) {
+    if (page > 0 && page <= state.expirationReportTotalPages) {
+      add(
+        LoadExpirationReport(
+          companyId: authBloc.state.companyId!,
+          filters: state.expirationReportFilters,
+          page: page,
+          pageSize: defaultPageSize,
+        ),
+      );
+    }
   }
 }

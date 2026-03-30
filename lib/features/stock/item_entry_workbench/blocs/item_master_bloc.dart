@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:open_file/open_file.dart';
+import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/next_number/bloc/next_number_bloc.dart';
@@ -66,24 +69,24 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
     on<DeleteSelectedItemMasters>(_onDeleteSelectedItemMasters);
 
     // Event handlers - Preparation operations
-    on<PrepareCreate>(_onPrepareCreate);
-    on<PrepareCopy>(_onPrepareCopy);
-    on<PrepareCreateInCreate>(_onPrepareCreateInCreate);
-    on<PrepareCreate1>(_onPrepareCreate1);
-    on<PrepareCreateInEdit>(_onPrepareCreateInEdit);
-    on<PrepareEdit>(_onPrepareEdit);
+    on<PrepareCreateItemMaster>(_onPrepareCreate);
+    on<PrepareCopyItemMaster>(_onPrepareCopy);
+    on<PrepareCreateInCreateItemMaster>(_onPrepareCreateInCreate);
+    on<PrepareCreate1ItemMaster>(_onPrepareCreate1);
+    on<PrepareCreateInEditItemMaster>(_onPrepareCreateInEdit);
+    on<PrepareEditItemMaster>(_onPrepareEdit);
 
     // Event handlers - Complex business operations
-    on<SaveRow>(_onSaveRow);
-    on<SaveInEdit>(_onSaveInEdit);
-    on<CreateInEdit>(_onCreateInEdit);
-    on<RemoveInCreate>(_onRemoveInCreate);
-    on<RemoveInEdit>(_onRemoveInEdit);
-    on<RemoveRecord>(_onRemoveRecord);
-    on<CancelUpdate>(_onCancelUpdate);
-    on<CancelCreate>(_onCancelCreate);
-    on<DiscardChanges>(_onDiscardChanges);
-    on<RefreshList>(_onRefreshList);
+    on<SaveRowItemMaster>(_onSaveRow);
+    on<SaveInEditItemMaster>(_onSaveInEdit);
+    on<CreateInEditItemMaster>(_onCreateInEdit);
+    on<RemoveInCreateItemMaster>(_onRemoveInCreate);
+    on<RemoveInEditItemMaster>(_onRemoveInEdit);
+    on<RemoveRecordItemMaster>(_onRemoveRecord);
+    on<CancelUpdateItemMaster>(_onCancelUpdate);
+    on<CancelCreateItemMaster>(_onCancelCreate);
+    on<DiscardChangesItemMaster>(_onDiscardChanges);
+    on<RefreshListItemMaster>(_onRefreshList);
 
     // Event handlers - Data migration operations
     on<ApplyMigration>(_onApplyMigration);
@@ -110,9 +113,9 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
     on<UpdateEditItems>(_onUpdateEditItems);
     on<UpdateFilteredValues>(_onUpdateFilteredValues);
     on<UpdateFirst>(_onUpdateFirst);
-    on<SaveAndClose>(_onSaveAndClose);
-    on<SaveAndAddNew>(_onSaveAndAddNew);
-    on<SaveAndAddContinue>(_onSaveAndAddContinue);
+    on<SaveAndCloseItemMaster>(_onSaveAndClose);
+    on<SaveAndAddNewItemMaster>(_onSaveAndAddNew);
+    on<SaveAndAddContinueItemMaster>(_onSaveAndAddContinue);
     on<CheckDuplicate>(_onCheckDuplicate);
     on<UpdateMigrationColumns>(_onUpdateMigrationColumns);
   }
@@ -329,7 +332,7 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
   // ========== PREPARATION OPERATIONS ==========
 
   Future<void> _onPrepareCreate(
-    PrepareCreate event,
+    PrepareCreateItemMaster event,
     Emitter<ItemMasterState> emit,
   ) async {
     final createItems = List<ItemMaster>.from(state.createItems);
@@ -357,7 +360,7 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
   }
 
   Future<void> _onPrepareCopy(
-    PrepareCopy event,
+    PrepareCopyItemMaster event,
     Emitter<ItemMasterState> emit,
   ) async {
     if (state.multiselectionItems.isEmpty) return;
@@ -377,7 +380,7 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
   }
 
   Future<void> _onPrepareCreateInCreate(
-    PrepareCreateInCreate event,
+    PrepareCreateInCreateItemMaster event,
     Emitter<ItemMasterState> emit,
   ) async {
     final items = List<ItemMaster>.from(state.items);
@@ -389,7 +392,7 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
   }
 
   Future<void> _onPrepareCreate1(
-    PrepareCreate1 event,
+    PrepareCreate1ItemMaster event,
     Emitter<ItemMasterState> emit,
   ) async {
     final createItems = List<ItemMaster>.from(state.createItems);
@@ -409,7 +412,7 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
   }
 
   Future<void> _onPrepareCreateInEdit(
-    PrepareCreateInEdit event,
+    PrepareCreateInEditItemMaster event,
     Emitter<ItemMasterState> emit,
   ) async {
     final editItems = List<ItemMaster>.from(state.editItems);
@@ -430,7 +433,7 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
   }
 
   Future<void> _onPrepareEdit(
-    PrepareEdit event,
+    PrepareEditItemMaster event,
     Emitter<ItemMasterState> emit,
   ) async {
     if (state.multiselectionItems.isEmpty) return;
@@ -448,7 +451,10 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
 
   // ========== COMPLEX BUSINESS OPERATIONS ==========
 
-  Future<void> _onSaveRow(SaveRow event, Emitter<ItemMasterState> emit) async {
+  Future<void> _onSaveRow(
+    SaveRowItemMaster event,
+    Emitter<ItemMasterState> emit,
+  ) async {
     emit(state.copyWith(status: ItemMasterStatus.saving));
 
     try {
@@ -473,14 +479,17 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
       emit(
         state.copyWith(
           status: ItemMasterStatus.failure,
-          message: 'Failed to save row: $e',
+          //message: 'Failed to save row: $e',
         ),
       );
+      if (kDebugMode) {
+        developer.log('Failed to save row: $e');
+      }
     }
   }
 
   Future<void> _onSaveInEdit(
-    SaveInEdit event,
+    SaveInEditItemMaster event,
     Emitter<ItemMasterState> emit,
   ) async {
     emit(state.copyWith(status: ItemMasterStatus.saving));
@@ -528,14 +537,17 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
       emit(
         state.copyWith(
           status: ItemMasterStatus.failure,
-          message: 'Failed to save in edit: $e',
+          //message: 'Failed to save in edit: $e',
         ),
       );
+      if (kDebugMode) {
+        developer.log('Failed to save in edit: $e');
+      }
     }
   }
 
   Future<void> _onCreateInEdit(
-    CreateInEdit event,
+    CreateInEditItemMaster event,
     Emitter<ItemMasterState> emit,
   ) async {
     if (state.selected1 == null) return;
@@ -565,7 +577,7 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
   }
 
   Future<void> _onRemoveInCreate(
-    RemoveInCreate event,
+    RemoveInCreateItemMaster event,
     Emitter<ItemMasterState> emit,
   ) async {
     final items = [ItemMaster(itemDescription: '')];
@@ -574,7 +586,7 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
   }
 
   Future<void> _onRemoveInEdit(
-    RemoveInEdit event,
+    RemoveInEditItemMaster event,
     Emitter<ItemMasterState> emit,
   ) async {
     final editItems = List<ItemMaster>.from(state.editItems);
@@ -592,7 +604,7 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
   }
 
   Future<void> _onRemoveRecord(
-    RemoveRecord event,
+    RemoveRecordItemMaster event,
     Emitter<ItemMasterState> emit,
   ) async {
     if (event.item.id != null) {
@@ -604,14 +616,14 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
   }
 
   Future<void> _onCancelUpdate(
-    CancelUpdate event,
+    CancelUpdateItemMaster event,
     Emitter<ItemMasterState> emit,
   ) async {
     emit(state.copyWith(selected1: null, editItems: [], showEditPanel: false));
   }
 
   Future<void> _onCancelCreate(
-    CancelCreate event,
+    CancelCreateItemMaster event,
     Emitter<ItemMasterState> emit,
   ) async {
     emit(
@@ -625,7 +637,7 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
   }
 
   Future<void> _onDiscardChanges(
-    DiscardChanges event,
+    DiscardChangesItemMaster event,
     Emitter<ItemMasterState> emit,
   ) async {
     final createItems = List<ItemMaster>.from(state.createItems);
@@ -640,7 +652,7 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
   }
 
   Future<void> _onRefreshList(
-    RefreshList event,
+    RefreshListItemMaster event,
     Emitter<ItemMasterState> emit,
   ) async {
     emit(state.copyWith(items: []));
@@ -660,12 +672,17 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
 
       if (result.success) {
         // Refresh data after successful migration
-        add(LoadItemMasters(authBloc.state.companyId));
+        final companyId = authBloc.state.companyId;
+        if (companyId != null) {
+          itemsEntryBloc.add(LoadItems(companyId));
+        }
 
         emit(
           state.copyWith(
             status: ItemMasterStatus.success,
             message: result.message,
+            createItems: const [],
+            selected: null,
           ),
         );
       } else {
@@ -676,6 +693,7 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
           ),
         );
       }
+      add(LoadItemMasters(authBloc.state.companyId));
     } catch (e) {
       emit(
         state.copyWith(
@@ -980,7 +998,9 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
       }
     } catch (e) {
       // Handle error silently as this is a convenience feature
-      print('Error setting defaults: $e');
+      if (kDebugMode) {
+        developer.log('Error setting defaults: $e');
+      }
     }
   }
 
@@ -1027,7 +1047,9 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
       // The result would be stored in appropriate state or used directly in UI
     } catch (e) {
       // Handle error
-      print('Error getting items for select many: $e');
+      if (kDebugMode) {
+        developer.log('Error getting items for select many: $e');
+      }
     }
   }
 
@@ -1040,7 +1062,9 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
       // This would typically be used for dropdown components
     } catch (e) {
       // Handle error
-      print('Error getting items for select one: $e');
+      if (kDebugMode) {
+        developer.log('Error getting items for select one: $e');
+      }
     }
   }
 
@@ -1055,7 +1079,9 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
       // This would be used for autocomplete or search suggestions
     } catch (e) {
       // Handle error
-      print('Error getting item descriptions: $e');
+      if (kDebugMode) {
+        developer.log('Error getting item descriptions: $e');
+      }
     }
   }
 
@@ -1068,7 +1094,9 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
       // For now, we'll leave it as a placeholder
     } catch (e) {
       // Handle error
-      print('Error getting location categories: $e');
+      if (kDebugMode) {
+        developer.log('Error getting location categories: $e');
+      }
     }
   }
 
@@ -1116,19 +1144,25 @@ class ItemMasterBloc extends Bloc<ItemMasterEvent, ItemMasterState> {
     emit(state.copyWith(first: event.first));
   }
 
-  void _onSaveAndClose(SaveAndClose event, Emitter<ItemMasterState> emit) {
-    add(const CancelUpdate());
-    add(const CancelCreate());
+  void _onSaveAndClose(
+    SaveAndCloseItemMaster event,
+    Emitter<ItemMasterState> emit,
+  ) {
+    add(const CancelUpdateItemMaster());
+    add(const CancelCreateItemMaster());
     // Navigation would be handled in the UI layer
   }
 
-  void _onSaveAndAddNew(SaveAndAddNew event, Emitter<ItemMasterState> emit) {
+  void _onSaveAndAddNew(
+    SaveAndAddNewItemMaster event,
+    Emitter<ItemMasterState> emit,
+  ) {
     emit(state.copyWith(createItems: [ItemMaster(itemDescription: '')]));
     // Navigation would be handled in the UI layer
   }
 
   void _onSaveAndAddContinue(
-    SaveAndAddContinue event,
+    SaveAndAddContinueItemMaster event,
     Emitter<ItemMasterState> emit,
   ) {
     if (state.selected != null) {

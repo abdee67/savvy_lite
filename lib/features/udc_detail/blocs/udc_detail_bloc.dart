@@ -3,14 +3,19 @@ import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_event.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_state.dart';
+import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class UdcDetailsBloc extends Bloc<UdcDetailsEvent, UdcDetailsState> {
   final LocalDatabaseService databaseService;
   final AuthBloc authBloc;
+  final UdcRepository udcRepository;
 
-  UdcDetailsBloc({required this.databaseService, required this.authBloc})
-    : super(const UdcDetailsState()) {
+  UdcDetailsBloc({
+    required this.databaseService,
+    required this.authBloc,
+    required this.udcRepository,
+  }) : super(const UdcDetailsState()) {
     on<LoadUdcDetailsByGroup>(_onLoadUdcDetailsByGroup);
     on<LoadAllUdcDetails>(_onLoadAllUdcDetails);
     on<DeleteSelectedUdcDetails>(_onDeleteSelectedUdcDetails);
@@ -30,7 +35,7 @@ class UdcDetailsBloc extends Bloc<UdcDetailsEvent, UdcDetailsState> {
         '''
       SELECT d.* FROM udc_details d
       INNER JOIN udc_header h ON d.record_header = h.id
-      WHERE h.header_code = ?
+      WHERE h.udc_code = ?
     ''',
         [event.groupCode],
       );
@@ -115,12 +120,12 @@ class UdcDetailsBloc extends Bloc<UdcDetailsEvent, UdcDetailsState> {
       ),
     );
     try {
-      final db = await databaseService.database;
-      final map = event.detail.toJson();
-      map.remove('id'); // Ensure auto increment
+      await udcRepository.saveUomEntry(event.detail);
 
-      await db.insert('udc_details', map);
-      if (state.groupCode != null) add(LoadUdcDetailsByGroup(state.groupCode!));
+      // Invalidate list of items to trigger re-query (matching Java setEditItems(null))
+      if (state.groupCode != null) {
+        add(LoadUdcDetailsByGroup(state.groupCode!));
+      }
 
       emit(
         state.copyWith(
@@ -149,15 +154,11 @@ class UdcDetailsBloc extends Bloc<UdcDetailsEvent, UdcDetailsState> {
       ),
     );
     try {
-      final db = await databaseService.database;
-      await db.update(
-        'udc_details',
-        event.detail.toJson(),
-        where: 'id = ?',
-        whereArgs: [event.detail.id],
-      );
+      await udcRepository.saveUomEntry(event.detail);
 
-      if (state.groupCode != null) add(LoadUdcDetailsByGroup(state.groupCode!));
+      if (state.groupCode != null) {
+        add(LoadUdcDetailsByGroup(state.groupCode!));
+      }
 
       emit(
         state.copyWith(

@@ -1,6 +1,7 @@
-// lib/features/purchase/supplier/ui/supplier_entry_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_searchable_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
@@ -42,6 +43,8 @@ class _SupplierEntryScreenState extends State<SupplierEntryScreen> {
 
   // Country selection
   String? _selectedCountry;
+  String? _selectedDefault;
+  final List<String> _defaultValues = ['YES', 'NO'];
 
   @override
   void initState() {
@@ -81,6 +84,7 @@ class _SupplierEntryScreenState extends State<SupplierEntryScreen> {
     _tinNumberController = TextEditingController(text: supplier.tinNumber);
 
     _selectedCountry = supplier.country;
+    _selectedDefault = supplier.defaultsValue == 'Y' ? 'YES' : 'NO';
   }
 
   @override
@@ -143,6 +147,7 @@ class _SupplierEntryScreenState extends State<SupplierEntryScreen> {
             ? null
             : _tinNumberController.text.trim(),
         company: companyId,
+        defaultsValue: _selectedDefault == 'YES' ? 'Y' : 'N',
         dateCreated: widget.supplier?.dateCreated ?? DateTime.now(),
         dateUpdated: DateTime.now(),
       );
@@ -296,6 +301,7 @@ class _SupplierEntryScreenState extends State<SupplierEntryScreen> {
     IconData icon, [
     TextInputType? keyboardType,
     bool isRequired = false,
+    int? maxLength,
     String? Function(String?)? customValidator,
   ]) {
     return CustomTextField(
@@ -303,12 +309,18 @@ class _SupplierEntryScreenState extends State<SupplierEntryScreen> {
       keyboardType: keyboardType,
       labelText: label,
       prefixIcon: Icon(icon),
+      inputFormatters: [
+        if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
+      ],
       validator: (value) {
         if (customValidator != null) {
           return customValidator(value);
         }
         if (isRequired && (value == null || value.isEmpty)) {
           return 'This field is required';
+        }
+        if (maxLength != null && value != null && value.length > maxLength) {
+          return 'Value exceeds $maxLength characters';
         }
         return null;
       },
@@ -375,262 +387,297 @@ class _SupplierEntryScreenState extends State<SupplierEntryScreen> {
               ),
           ],
         ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Basic Information Section
-                Card(
-                  elevation: 2,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Basic Information',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF145888),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildTextField(
-                          _supplierNameController,
-                          'Supplier Name *',
-                          Icons.business,
-                          TextInputType.text,
-                          true,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildTextField(
-                          _contactPersonController,
-                          'Contact Person *',
-                          Icons.person,
-                          TextInputType.text,
-                          true,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildTextField(
-                          _contactTitleController,
-                          'Contact Title',
-                          Icons.title,
-                          TextInputType.text,
-                          false,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildTextField(
-                          _tinNumberController,
-                          'TIN Number',
-                          Icons.numbers,
-                          TextInputType.number,
-                          false,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Contact Information Section
-                Card(
-                  elevation: 2,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Contact Information',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF145888),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildTextField(
-                          _phoneNo1Controller,
-                          'Phone Number 1 *',
-                          Icons.phone,
-                          TextInputType.phone,
-                          true,
-                          (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Phone number is required';
-                            }
-                            if (!RegExp(r'^[0-9+]{10,}$').hasMatch(value)) {
-                              return 'Enter a valid phone number';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        _buildTextField(
-                          _phoneNo2Controller,
-                          'Phone Number 2',
-                          Icons.phone_android,
-                          TextInputType.phone,
-                          false,
-                          (value) {
-                            if (value != null &&
-                                value.isNotEmpty &&
-                                !RegExp(r'^[0-9+]{10,}$').hasMatch(value)) {
-                              return 'Enter a valid phone number';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        _buildTextField(
-                          _emailController,
-                          'Email',
-                          Icons.email,
-                          TextInputType.emailAddress,
-                          false,
-                          (value) {
-                            if (value != null &&
-                                value.isNotEmpty &&
-                                !RegExp(
-                                  r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                                ).hasMatch(value)) {
-                              return 'Enter a valid email address';
-                            }
-                            return null;
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Address Information Section
-                Card(
-                  elevation: 2,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Address Information',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF145888),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildTextField(
-                          _addressLineController,
-                          'Address Line',
-                          Icons.location_on,
-                          TextInputType.text,
-                          false,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildTextField(
-                          _cityController,
-                          'City',
-                          Icons.location_city,
-                          TextInputType.text,
-                          false,
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildTextField(
-                                _regionController,
-                                'Region',
-                                Icons.map,
-                                TextInputType.text,
-                                false,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: _buildTextField(
-                                _stateController,
-                                'State',
-                                Icons.location_pin,
-                                TextInputType.text,
-                                false,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        _buildCountryField(),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-
-                // Save Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isSaving ? null : _saveSupplier,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF145888),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: _isSaving
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation(Colors.white),
-                            ),
-                          )
-                        : Text(
-                            widget.supplier == null
-                                ? 'Create Supplier'
-                                : 'Update Supplier',
-                            style: const TextStyle(
-                              fontSize: 16,
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Basic Information Section
+                  Card(
+                    elevation: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Basic Information',
+                            style: TextStyle(
+                              fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: Color(0xFF145888),
                             ),
                           ),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Cancel Button
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                          const SizedBox(height: 16),
+                          _buildTextField(
+                            _supplierNameController,
+                            'Supplier Name *',
+                            Icons.business,
+                            TextInputType.text,
+                            true,
+                            50,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildTextField(
+                            _contactPersonController,
+                            'Contact Person ',
+                            Icons.person,
+                            TextInputType.text,
+                            false,
+                            50,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildTextField(
+                            _contactTitleController,
+                            'Contact Title',
+                            Icons.title,
+                            TextInputType.text,
+                            false,
+                            10,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildTextField(
+                            _tinNumberController,
+                            'TIN Number',
+                            Icons.numbers,
+                            TextInputType.number,
+                            false,
+                            45,
+                          ),
+                          const SizedBox(height: 16),
+                          CustomDropdown(
+                            labelText: 'Default Supplier',
+                            prefixIcon: const Icon(Icons.person),
+                            items: _defaultValues
+                                .map(
+                                  (val) => DropdownMenuItem(
+                                    value: val,
+                                    child: Text(val),
+                                  ),
+                                )
+                                .toList(),
+                            value: _selectedDefault,
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedDefault = value;
+                              });
+                            },
+                          ),
+                        ],
                       ),
-                      side: const BorderSide(color: Colors.grey),
-                    ),
-                    child: const Text(
-                      'Cancel',
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
                     ),
                   ),
-                ),
-              ],
+
+                  const SizedBox(height: 20),
+
+                  // Contact Information Section
+                  Card(
+                    elevation: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Contact Information',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF145888),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          _buildTextField(
+                            _phoneNo1Controller,
+                            'Phone Number 1 *',
+                            Icons.phone,
+                            TextInputType.phone,
+                            true,
+                            45,
+                            (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Phone number is required';
+                              }
+                              if (!RegExp(r'^[0-9+]{10,}$').hasMatch(value)) {
+                                return 'Enter a valid phone number';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          _buildTextField(
+                            _phoneNo2Controller,
+                            'Phone Number 2',
+                            Icons.phone_android,
+                            TextInputType.phone,
+                            false,
+                            45,
+                            (value) {
+                              if (value != null &&
+                                  value.isNotEmpty &&
+                                  !RegExp(r'^[0-9+]{10,}$').hasMatch(value)) {
+                                return 'Enter a valid phone number';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          _buildTextField(
+                            _emailController,
+                            'Email',
+                            Icons.email,
+                            TextInputType.emailAddress,
+                            false,
+                            200,
+                            (value) {
+                              if (value != null &&
+                                  value.isNotEmpty &&
+                                  !RegExp(
+                                    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                                  ).hasMatch(value)) {
+                                return 'Enter a valid email address';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Address Information Section
+                  Card(
+                    elevation: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Address Information',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF145888),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          _buildTextField(
+                            _addressLineController,
+                            'Address Line',
+                            Icons.location_on,
+                            TextInputType.text,
+                            false,
+                            200,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildTextField(
+                            _cityController,
+                            'City',
+                            Icons.location_city,
+                            TextInputType.text,
+                            false,
+                            45,
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildTextField(
+                                  _regionController,
+                                  'Region',
+                                  Icons.map,
+                                  TextInputType.text,
+                                  false,
+                                  45,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildTextField(
+                                  _stateController,
+                                  'State',
+                                  Icons.location_pin,
+                                  TextInputType.text,
+                                  false,
+                                  45,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          _buildCountryField(),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // Save Button
+                  Row(
+                    children: [
+                      // Cancel Button
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: Colors.amber,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            side: const BorderSide(color: Colors.grey),
+                          ),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(fontSize: 16, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _isSaving ? null : _saveSupplier,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF145888),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: _isSaving
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  widget.supplier == null
+                                      ? 'Create Supplier'
+                                      : 'Update Supplier',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),

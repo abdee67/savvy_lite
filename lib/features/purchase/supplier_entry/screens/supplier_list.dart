@@ -178,13 +178,11 @@ class _SupplierListPageState extends State<SupplierListPage>
 
   void _callCustomer(String phone) {
     // Implement phone call functionality
-    print('Calling: $phone');
   }
 
   void _emailCustomer(String? email) {
     if (email != null) {
       // Implement email functionality
-      print('Emailing: $email');
     }
   }
 
@@ -238,34 +236,36 @@ class _SupplierListPageState extends State<SupplierListPage>
     return Scaffold(
       backgroundColor: Colors.grey,
       appBar: AppBar(title: const Text('SupplierModel List')),
-      body: BlocConsumer<SupplierBloc, SupplierState>(
-        listener: (context, state) {
-          // Update selection mode based on state
-          if (state.selectedSuppliers.isNotEmpty && !_isSelectionMode) {
-            setState(() {
-              _isSelectionMode = true;
-            });
-          } else if (state.selectedSuppliers.isEmpty && _isSelectionMode) {
-            setState(() {
-              _isSelectionMode = false;
-            });
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Header with Search and Actions
-                  _buildSearchBar(),
-                  _buildActionButtons(state),
-                  // SupplierModel List
-                  Expanded(child: _buildCustomerList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+      body: SafeArea(
+        child: BlocConsumer<SupplierBloc, SupplierState>(
+          listener: (context, state) {
+            // Update selection mode based on state
+            if (state.selectedSuppliers.isNotEmpty && !_isSelectionMode) {
+              setState(() {
+                _isSelectionMode = true;
+              });
+            } else if (state.selectedSuppliers.isEmpty && _isSelectionMode) {
+              setState(() {
+                _isSelectionMode = false;
+              });
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Header with Search and Actions
+                    _buildSearchBar(),
+                    _buildActionButtons(state),
+                    // SupplierModel List
+                    Expanded(child: _buildCustomerList(state)),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -475,13 +475,13 @@ class _SupplierListPageState extends State<SupplierListPage>
     // For responsiveness:
     final collapsedHeight = isCompact
         ? screenHeight *
-              0.24 // phones
+              0.22 // phones
         : screenHeight * 0.14; // tablets / wide screens
 
     final expandedHeight = isCompact
         ? screenHeight * 0.55
         : screenHeight * 0.45;
-    final collapsedWidth = isCompact ? screenWidth * 0.92 : screenWidth * 0.8;
+    final collapsedWidth = screenWidth * 1;
 
     return GestureDetector(
       onTap: () {
@@ -615,45 +615,6 @@ class _SupplierListPageState extends State<SupplierListPage>
                                     ),
                                   ),
                                 ],
-                              ),
-                              Text(
-                                supplier.phoneNo1 ??
-                                    supplier.phoneNo2 ??
-                                    'No Phone',
-                                style: TextStyle(
-                                  color: const Color.fromARGB(255, 104, 75, 75),
-                                  fontSize: isCompact ? 12 : 14,
-                                  fontStyle: FontStyle.italic,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              // SupplierModel contact info
-                              if (supplier.contactPerson != null)
-                                Text(
-                                  'Contact: ${supplier.contactPerson}',
-                                  style: TextStyle(
-                                    color: const Color.fromARGB(
-                                      255,
-                                      104,
-                                      75,
-                                      75,
-                                    ),
-                                    fontSize: isCompact ? 12 : 14,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                              // SupplierModel ID
-                              Text(
-                                'Tin: ${supplier.tinNumber.toString()}',
-                                style: TextStyle(
-                                  color: const Color.fromARGB(255, 104, 75, 75),
-                                  fontSize: isCompact ? 12 : 14,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w400,
-                                ),
                               ),
                             ],
                           ),
@@ -809,12 +770,6 @@ class _SupplierListPageState extends State<SupplierListPage>
                   Iconsax.sms,
                   'Email',
                   () => _emailCustomer(supplier.email?.toString()),
-                  isCompact,
-                ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportCustomer(supplier),
                   isCompact,
                 ),
               ],

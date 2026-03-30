@@ -29,7 +29,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
     required this.itemUomConversionsController,
     required this.itemsInBranchController,
     required this.systemConstantController,
-  }) : super(const ItemCostInitial()) {
+  }) : super(const ItemCostState()) {
     on<LoadItemCosts>(_onLoadItemCosts);
     on<RefreshItemCosts>(_onRefreshItemCosts);
     on<SelectItemCost>(_onSelectItemCost);
@@ -52,12 +52,17 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
     on<SaveAndAddNew>(_onSaveAndAddNew);
     on<SaveAndAddContinue>(_onSaveAndAddContinue);
     on<UpdateItemCosts>(_onUpdateItemCosts);
+    on<UpdateItemCostsByOverhead>(_onUpdateItemCostsByOverhead);
     //on<UpdateItemCostsForItemMaster>(_onUpdateItemCostsForItemMaster);
     on<UpdateUnitPrice>(_onUpdateUnitPrice);
     on<FilterItemCosts>(_onFilterItemCosts);
     on<CancelUpdate>(_onCancelUpdate);
     on<CancelCreate>(_onCancelCreate);
     on<DiscardChanges>(_onDiscardChanges);
+
+    on<UpdateItemCostReportFilters>(_onUpdateItemCostReportFilters);
+    on<LoadItemCostReport>(_onLoadItemCostReport);
+    on<LoadMoreItemCostReport>(_onLoadMoreItemCostReport);
   }
 
   // Helper method to filter items based on user permissions
@@ -90,37 +95,31 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
     Emitter<ItemCostState> emit,
   ) async {
     emit(
-      ItemCostLoading(
+      ItemCostState(
         items: state.items,
         createItems: state.createItems,
-        editItems: state.editItems,
         multiselectionItems: state.multiselectionItems,
         filteredValues: state.filteredValues,
         selected: state.selected,
-        selected1: state.selected1,
-        selected2: state.selected2,
       ),
     );
 
     try {
-      final items = await repository.findAll();
+      final items = await repository.findAll(authBloc.state.companyId!);
       final filteredItems = _filterItemsByUserPermission(items);
 
       emit(
-        ItemCostLoaded(
+        ItemCostState(
           items: filteredItems,
           createItems: state.createItems,
-          editItems: state.editItems,
           multiselectionItems: state.multiselectionItems,
           filteredValues: state.filteredValues,
           selected: state.selected,
-          selected1: state.selected1,
-          selected2: state.selected2,
         ),
       );
     } catch (e) {
       emit(
-        ItemCostError(
+        ItemCostState(
           items: state.items,
           createItems: state.createItems,
           editItems: state.editItems,
@@ -223,7 +222,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
     Emitter<ItemCostState> emit,
   ) async {
     emit(
-      ItemCostLoading(
+      ItemCostState(
         items: state.items,
         createItems: state.createItems,
         editItems: state.editItems,
@@ -244,11 +243,11 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
         }
       }
 
-      final updatedItems = await repository.findAll();
+      final updatedItems = await repository.findAll(authBloc.state.companyId!);
       final filteredItems = _filterItemsByUserPermission(updatedItems);
 
       emit(
-        ItemCostOperationSuccess(
+        ItemCostState(
           items: filteredItems,
           createItems: [],
           editItems: [],
@@ -262,7 +261,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
       );
     } catch (e) {
       emit(
-        ItemCostError(
+        ItemCostState(
           items: state.items,
           createItems: state.createItems,
           editItems: state.editItems,
@@ -288,7 +287,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
       }
 
       emit(
-        ItemCostOperationSuccess(
+        ItemCostState(
           items: state.items,
           createItems: state.createItems,
           editItems: state.editItems,
@@ -302,7 +301,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
       );
     } catch (e) {
       emit(
-        ItemCostError(
+        ItemCostState(
           items: state.items,
           createItems: state.createItems,
           editItems: state.editItems,
@@ -330,11 +329,11 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
         }
       }
 
-      final updatedItems = await repository.findAll();
+      final updatedItems = await repository.findAll(authBloc.state.companyId!);
       final filteredItems = _filterItemsByUserPermission(updatedItems);
 
       emit(
-        ItemCostOperationSuccess(
+        ItemCostState(
           items: filteredItems,
           createItems: state.createItems,
           editItems: [],
@@ -348,7 +347,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
       );
     } catch (e) {
       emit(
-        ItemCostError(
+        ItemCostState(
           items: state.items,
           createItems: state.createItems,
           editItems: state.editItems,
@@ -370,11 +369,11 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
     try {
       await repository.create(event.itemCost);
 
-      final updatedItems = await repository.findAll();
+      final updatedItems = await repository.findAll(authBloc.state.companyId!);
       final filteredItems = _filterItemsByUserPermission(updatedItems);
 
       emit(
-        ItemCostOperationSuccess(
+        ItemCostState(
           items: filteredItems,
           createItems: state.createItems,
           editItems: state.editItems,
@@ -388,7 +387,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
       );
     } catch (e) {
       emit(
-        ItemCostError(
+        ItemCostState(
           items: state.items,
           createItems: state.createItems,
           editItems: state.editItems,
@@ -412,11 +411,11 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
         await repository.delete(event.itemCost.id!);
       }
 
-      final updatedItems = await repository.findAll();
+      final updatedItems = await repository.findAll(authBloc.state.companyId!);
       final filteredItems = _filterItemsByUserPermission(updatedItems);
 
       emit(
-        ItemCostOperationSuccess(
+        ItemCostState(
           items: filteredItems,
           createItems: state.createItems,
           editItems: state.editItems,
@@ -430,7 +429,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
       );
     } catch (e) {
       emit(
-        ItemCostError(
+        ItemCostState(
           items: state.items,
           createItems: state.createItems,
           editItems: state.editItems,
@@ -452,11 +451,11 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
     try {
       await repository.deleteMultiple(event.itemCosts);
 
-      final updatedItems = await repository.findAll();
+      final updatedItems = await repository.findAll(authBloc.state.companyId!);
       final filteredItems = _filterItemsByUserPermission(updatedItems);
 
       emit(
-        ItemCostOperationSuccess(
+        ItemCostState(
           items: filteredItems,
           createItems: state.createItems,
           editItems: state.editItems,
@@ -470,7 +469,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
       );
     } catch (e) {
       emit(
-        ItemCostError(
+        ItemCostState(
           items: state.items,
           createItems: state.createItems,
           editItems: state.editItems,
@@ -615,7 +614,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
       }
 
       emit(
-        ItemCostOperationSuccess(
+        ItemCostState(
           items: state.items,
           createItems: state.createItems,
           editItems: state.editItems,
@@ -629,7 +628,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
       );
     } catch (e) {
       emit(
-        ItemCostError(
+        ItemCostState(
           items: state.items,
           createItems: state.createItems,
           editItems: state.editItems,
@@ -697,7 +696,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
         }
       }
 
-      emit(ItemCostOperationSuccess(
+      emit(ItemCostState(
         items: state.items,
         createItems: state.createItems,
         editItems: state.editItems,
@@ -709,7 +708,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
         successMessage: 'Item master costs updated successfully',
       ));
     } catch (e) {
-      emit(ItemCostError(
+      emit(ItemCostState(
         items: state.items,
         createItems: state.createItems,
         editItems: state.editItems,
@@ -797,7 +796,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
         // Additional steps would continue here following the same pattern...
 
         emit(
-          ItemCostOperationSuccess(
+          ItemCostState(
             items: state.items,
             createItems: state.createItems,
             editItems: state.editItems,
@@ -812,7 +811,7 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
       }
     } catch (e) {
       emit(
-        ItemCostError(
+        ItemCostState(
           items: state.items,
           createItems: state.createItems,
           editItems: state.editItems,
@@ -822,6 +821,97 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
           selected1: state.selected1,
           selected2: state.selected2,
           errorMessage: 'Error updating unit price: $e',
+        ),
+      );
+    }
+  }
+
+  //load report item cost
+  Future<void> _onLoadItemCostReport(
+    LoadItemCostReport event,
+    Emitter<ItemCostState> emit,
+  ) async {
+    emit(state.copyWith(status: ItemCostStatus.loadingItemCostReport));
+
+    try {
+      final result = await repository.getPaginatedItemCosts(
+        companyId: event.companyId,
+        page: event.page,
+        pageSize: event.pageSize,
+      );
+
+      final totalPages = (result.totalCount / event.pageSize).ceil();
+
+      emit(
+        state.copyWith(
+          status: ItemCostStatus.loadedItemCostReport,
+          itemCostReportItems: result.items,
+          itemCostReportTotalCount: result.totalCount,
+          itemCostReportTotalPages: totalPages,
+          itemCostReportPage: event.page,
+          // itemCostReportTotalCost: result.totalCost,
+          hasMoreItemCostReport: event.page < totalPages,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemCostStatus.failure,
+          errorMessage: 'Failed to load item cost report: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onUpdateItemCostReportFilters(
+    UpdateItemCostReportFilters event,
+    Emitter<ItemCostState> emit,
+  ) async {
+    // Reset to page 1 when filters change
+    add(
+      LoadItemCostReport(
+        companyId: authBloc.state.companyId!,
+        page: 1,
+        pageSize: 20,
+      ),
+    );
+  }
+
+  //load more report item cost
+  Future<void> _onLoadMoreItemCostReport(
+    LoadMoreItemCostReport event,
+    Emitter<ItemCostState> emit,
+  ) async {
+    if (!state.hasMoreItemCostReport) return;
+
+    emit(state.copyWith(status: ItemCostStatus.loadingMoreItemCostReport));
+
+    try {
+      final nextPage = state.itemCostReportPage + 1;
+      final result = await repository.getPaginatedItemCosts(
+        companyId: authBloc.state.companyId!,
+        page: nextPage,
+        pageSize: 20,
+      );
+
+      final updatedLots = [...state.itemCostReportItems, ...result.items];
+      final totalPages = (result.totalCount / 20).ceil();
+
+      emit(
+        state.copyWith(
+          status: ItemCostStatus.loadedItemCostReport,
+          itemCostReportItems: updatedLots,
+          itemCostReportPage: nextPage,
+          itemCostReportTotalPages: totalPages,
+          itemCostReportTotalCount: result.totalCount,
+          hasMoreItemCostReport: nextPage < totalPages,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemCostStatus.failure,
+          errorMessage: 'Failed to load more reports: $e',
         ),
       );
     }
@@ -888,5 +978,55 @@ class ItemCostBloc extends Bloc<ItemCostEvent, ItemCostState> {
     emit(state.copyWith(selected: null, createItems: null, items: null));
 
     // This would typically show a success message in the UI
+  }
+
+  /// Update all item costs by adding overhead cost per unit
+  /// Used by OtherExpensesBloc to distribute monthly expenses to item costs
+  Future<void> _onUpdateItemCostsByOverhead(
+    UpdateItemCostsByOverhead event,
+    Emitter<ItemCostState> emit,
+  ) async {
+    try {
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) return;
+
+      final items = await repository.findAll(companyId);
+      final updatedItems = <ItemCost>[];
+
+      for (final item in items) {
+        if (item.amountUnitCost != null) {
+          final updatedItem = item.copyWith(
+            amountUnitCost: item.amountUnitCost! + event.overheadCostPerUnit,
+            dateUpdated: DateTime.now(),
+            userId: authBloc.state.userId?.id,
+          );
+          await repository.update(updatedItem);
+          updatedItems.add(updatedItem);
+        }
+      }
+
+      emit(
+        ItemCostState(
+          items: updatedItems,
+          createItems: state.createItems,
+          editItems: state.editItems,
+          multiselectionItems: state.multiselectionItems,
+          filteredValues: state.filteredValues,
+          successMessage:
+              'Item costs updated with overhead: ${event.overheadCostPerUnit}',
+        ),
+      );
+    } catch (e) {
+      emit(
+        ItemCostState(
+          items: state.items,
+          createItems: state.createItems,
+          editItems: state.editItems,
+          multiselectionItems: state.multiselectionItems,
+          filteredValues: state.filteredValues,
+          errorMessage: 'Error updating item costs by overhead: $e',
+        ),
+      );
+    }
   }
 }

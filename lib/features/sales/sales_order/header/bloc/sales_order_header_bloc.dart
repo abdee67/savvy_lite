@@ -1,7 +1,13 @@
 // bloc/sales_order_header_bloc.dart
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
+import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/model/aged_credit_receipt_totals_mode.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/credit_receipt_model.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/model/sales_transaction_filtering_model.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/repo/sales_order_report_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/admin/employees/repo/employees_repo.dart';
@@ -12,6 +18,7 @@ import 'package:savvy_stock/features/stock/item_uom_conversions/repo/item_uom_co
 import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_event.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_state.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/model/sales_transaction_report_totals.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/repo/sales_order_header_repo.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
@@ -26,6 +33,7 @@ class SalesOrderHeaderBloc
   final EmployeeRepository employeesRepository;
   final ItemUomConversionsRepository uomConversionsRepository;
   final StockItemInBranchRepository itemInBranchRepository;
+  final SalesOrderReportRepository salesOrderReportRepository;
 
   StreamSubscription? _authSubscription;
   StreamSubscription? _systemConstantsSubscription;
@@ -42,6 +50,7 @@ class SalesOrderHeaderBloc
     required this.udcDetailRepository,
     required this.uomConversionsRepository,
     required this.itemInBranchRepository,
+    required this.salesOrderReportRepository,
   }) : super(const SalesOrderHeaderState()) {
     // Listen to authentication state
     _authSubscription = authBloc.stream.listen((authState) {
@@ -136,6 +145,29 @@ class SalesOrderHeaderBloc
     on<DeleteCreditReceipt>(_onDeleteCreditReceipt);
     on<SelectCreditReceipt>(_onSelectCreditReceipt);
     on<FilterCreditReceipts>(_onFilterCreditReceipts);
+    on<ClearCreditReceiptFilters>(_onClearCreditReceiptFilters);
+    on<LoadMoreCreditReceiptsReport>(_onLoadMoreCreditReceiptsReport);
+    on<UpdateCreditReceiptReportFilters>(_onUpdateCreditReceiptReportFilters);
+    on<ClearCreditReceiptsReportFilters>(_onClearCreditReceiptsReportFilters);
+    on<ExportCreditReceiptReportToExcel>(_onExportCreditReceiptReportToExcel);
+    on<ExportCreditReceiptReportToPDF>(_onExportCreditReceiptReportToPDF);
+    on<LoadCreditReceiptsReport>(_onLoadCreditReceiptsReport);
+
+    // Sales Transaction Report
+    on<LoadSalesTransactionReport>(_onLoadSalesTransactionReport);
+    on<LoadMoreSalesTransactionReport>(_onLoadMoreSalesTransactionReport);
+    on<UpdateSalesTransactionFilters>(_onUpdateSalesTransactionFilters);
+    on<ClearSalesTransactionFilters>(_onClearSalesTransactionFilters);
+    on<ExportSalesTransactionToExcel>(_onExportSalesTransactionToExcel);
+    on<ExportSalesTransactionToPDF>(_onExportSalesTransactionToPDF);
+
+    // Aged Credit Receipt Report
+    on<LoadAgedCreditReceiptReport>(_onLoadAgedCreditReceiptReport);
+    on<LoadMoreAgedCreditReceiptReport>(_onLoadMoreAgedCreditReceiptReport);
+    on<UpdateAgedCreditReceiptReportFilters>(_onUpdateAgedCreditReceiptFilters);
+    on<ClearAgedCreditReceiptReportFilters>(_onClearAgedCreditReceiptFilters);
+    on<ExportAgedCreditReceiptReportToExcel>(_onExportAgedCreditReceiptToExcel);
+    on<ExportAgedCreditReceiptReportToPDF>(_onExportAgedCreditReceiptToPDF);
   }
   @override
   Future<void> close() {
@@ -394,14 +426,31 @@ class SalesOrderHeaderBloc
       // Process header with business logic
       var headerToCreate = event.header.copyWith(orderNumber: nextOrderNumber);
 
+      // Ensure branchValue is set
+      final branchId =
+          headerToCreate.branchValue ?? authBloc.state.branchId ?? 1;
+      headerToCreate = headerToCreate.copyWith(branchValue: branchId);
+
       // Generate FS Number if missing (e.g. during conversion)
       if (headerToCreate.fsNumber == null || headerToCreate.fsNumber!.isEmpty) {
-        final branchId = authBloc.state.branchId ?? 1;
         final nextFsNumber = await repository.generateNextFsNumber(
           headerToCreate.company!,
           branchId,
         );
         headerToCreate = headerToCreate.copyWith(fsNumber: nextFsNumber);
+      }
+
+      // Generate Invoice Number if missing (e.g. during conversion)
+      if (headerToCreate.invoiceNumber == null ||
+          headerToCreate.invoiceNumber!.isEmpty) {
+        final nextInvoiceNumber = await repository.generateInvoiceNumber(
+          headerToCreate.company!,
+          branchId,
+          'sales_order_header',
+        );
+        headerToCreate = headerToCreate.copyWith(
+          invoiceNumber: nextInvoiceNumber,
+        );
       }
 
       final processedHeader = await _processHeaderBusinessLogic(headerToCreate);
@@ -427,7 +476,10 @@ class SalesOrderHeaderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to create sales order: $e'));
+      // emit(state.errorState('Failed to create sales order: $e'));
+      if (kDebugMode) {
+        developer.log('Failed to create sales order: $e');
+      }
     }
   }
 
@@ -447,10 +499,9 @@ class SalesOrderHeaderBloc
         header.paymentTerm!,
         header.orderDate!,
       );
-
-      final paymentStatus = await udcDetailRepository.getSingleUdcDetailsByCode(
-        'N',
-        "PS",
+      final orderType = await udcDetailRepository.getSingleUdcDetailsByCode(
+        'SO',
+        "OT",
       );
 
       final discount = header.discountAmount ?? 0.0;
@@ -458,10 +509,9 @@ class SalesOrderHeaderBloc
       final openAmount = total - discount;
 
       processedHeader = processedHeader.copyWith(
-        creditDateToPay: dueDate,
-        paymentStatus: paymentStatus?.id,
+        //creditDateToPay: dueDate,
         amountOpen: openAmount,
-        orderType: header.orderType,
+        orderType: orderType?.id,
       );
     }
 
@@ -539,12 +589,19 @@ class SalesOrderHeaderBloc
     try {
       emit(state.copyWith(status: SalesOrderHeaderStatus.voiding));
       // Void in repository
-      await repository.voidSalesOrder(event.id, 'V');
+      await repository.voidSalesOrder(
+        event.id,
+        event.voidIndicator,
+        commentIfVoid: event.commentIfVoid,
+      );
 
       // Update local state
       final updatedHeaders = state.headers.map((h) {
         if (h.id == event.id) {
-          return h.copyWith(voidIndicator: 'V');
+          return h.copyWith(
+            voidIndicator: event.voidIndicator,
+            commentIfVoid: event.commentIfVoid,
+          );
         }
         return h;
       }).toList();
@@ -691,7 +748,7 @@ class SalesOrderHeaderBloc
       emit(state.copyWith(status: SalesOrderHeaderStatus.filtering));
 
       final filteredHeaders = await repository.getSalesOrdersWithDateRange(
-        companyId: state.companyId!,
+        companyId: state.companyId ?? authBloc.state.companyId!,
         customerBillTo: event.filter.customerBillTo,
         fsNumber: event.filter.fsNumber,
         proformaReference: event.filter.fsNumber, //this is proformaReference
@@ -723,7 +780,7 @@ class SalesOrderHeaderBloc
       emit(state.copyWith(status: SalesOrderHeaderStatus.filtering));
 
       final creditHeaders = await repository.getCreditSalesWithOpenAmount(
-        companyId: state.companyId!,
+        companyId: state.companyId ?? authBloc.state.companyId!,
         minOpenAmount: event.filter.amountOpen,
       );
 
@@ -749,7 +806,7 @@ class SalesOrderHeaderBloc
       emit(state.copyWith(status: SalesOrderHeaderStatus.filtering));
 
       final voidedHeaders = await repository.getVoidedSalesOrders(
-        state.companyId!,
+        state.companyId ?? authBloc.state.companyId!,
       );
 
       emit(
@@ -944,7 +1001,11 @@ class SalesOrderHeaderBloc
     Emitter<SalesOrderHeaderState> emit,
   ) async {
     if (state.companyId != null) {
-      add(LoadSalesOrderHeaders(companyId: state.companyId!));
+      add(
+        LoadSalesOrderHeaders(
+          companyId: state.companyId ?? authBloc.state.companyId!,
+        ),
+      );
     }
   }
 
@@ -970,6 +1031,13 @@ class SalesOrderHeaderBloc
       // Get default order type from UDC
       final defaultOrderType = await _getDefaultOrderType();
 
+      // Generate invoice number using fs_table prefix/postfix
+      final invoiceNumber = await repository.generateInvoiceNumber(
+        event.companyId,
+        event.branchId,
+        'sales_order_header',
+      );
+
       // Create new header with system constant defaults
       final newHeader = SalesOrderHeader(
         orderDate: DateTime.now(),
@@ -982,6 +1050,8 @@ class SalesOrderHeaderBloc
         paymentMethod: 'Cash',
         orderType: defaultOrderType?.id,
         fsNumber: nextFsNumber,
+        invoiceNumber: invoiceNumber,
+        branchValue: event.branchId,
         // Set default tax settings from system constants
         tax: 0.0,
         withholdAmount: 0.0,
@@ -1023,10 +1093,16 @@ class SalesOrderHeaderBloc
                 'header defaultCustomer: company=${event.companyId}, count=${defaultCustomer ?? 0}',
           ),
         );
-        print(
-          'header defaultCustomer: company=${event.companyId}, count=${defaultCustomer ?? 0}',
-        );
-        print('header company=${event.companyId}, Header=${newHeader.id}');
+        if (kDebugMode) {
+          developer.log(
+            'header defaultCustomer: company=${event.companyId}, count=${defaultCustomer ?? 0}',
+          );
+        }
+        if (kDebugMode) {
+          developer.log(
+            'header company=${event.companyId}, Header=${newHeader.id}',
+          );
+        }
       }
     } catch (e) {
       emit(state.errorState('Failed to prepare create: $e'));
@@ -1177,7 +1253,10 @@ class SalesOrderHeaderBloc
         add(UpdateSalesOrderHeader(header: event.header));
       }
     } catch (e) {
-      emit(state.errorState('Failed to save sales order: $e'));
+      //emit(state.errorState('Failed to save sales order: $e'));
+      if (kDebugMode) {
+        developer.log('Failed to save sales order: $e');
+      }
     }
   }
 
@@ -1316,7 +1395,10 @@ class SalesOrderHeaderBloc
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to load credit receipts: $e'));
+      //emit(state.errorState('Failed to load credit receipts: $e'));
+      if (kDebugMode) {
+        developer.log('Failed to load credit receipts: $e');
+      }
     }
   }
 
@@ -1502,10 +1584,13 @@ class SalesOrderHeaderBloc
       emit(
         state.copyWith(
           status: SalesOrderHeaderStatus.error,
-          creditReceiptError: 'Failed to save credit receipt: $e',
+          //creditReceiptError: 'Failed to save credit receipt: $e',
           creditReceiptSuccess: false,
         ),
       );
+      if (kDebugMode) {
+        developer.log('Failed to save credit receipt: $e');
+      }
     }
   }
 
@@ -1624,8 +1709,7 @@ class SalesOrderHeaderBloc
       final filteredReceipts = await repository.filterCreditReceipts(
         companyId: event.companyId,
         customerId: event.customerId,
-        startDate: event.startDate,
-        endDate: event.endDate,
+        fsNumber: event.fsNumber,
       );
 
       emit(
@@ -1636,6 +1720,26 @@ class SalesOrderHeaderBloc
       );
     } catch (e) {
       emit(state.errorState('Failed to filter credit receipts: $e'));
+    }
+  }
+
+  Future<void> _onClearCreditReceiptFilters(
+    ClearCreditReceiptFilters event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    emit(
+      state.copyWith(status: SalesOrderHeaderStatus.loadingCreditReceiptReport),
+    );
+
+    try {
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loadedCreditReceiptReport,
+          filteredCreditReceipts: [],
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to clear credit receipts filters: $e'));
     }
   }
 
@@ -1666,9 +1770,9 @@ class SalesOrderHeaderBloc
     final centsInWords = _convertNumberToWords(cents);
 
     if (cents == 0) {
-      return '$dollarsInWords Birr Only';
+      return '$dollarsInWords ETB Only';
     } else {
-      return '$dollarsInWords Birr and $centsInWords Cents Only';
+      return '$dollarsInWords ETB and $centsInWords Cents Only';
     }
   }
 
@@ -1766,6 +1870,646 @@ class SalesOrderHeaderBloc
       return defaultOrderType.first;
     } catch (e) {
       return null;
+    }
+  }
+
+  // ============================================================================
+  // SALES TRANSACTION REPORT EVENT HANDLERS
+  // ============================================================================
+
+  Future<void> _onLoadSalesTransactionReport(
+    LoadSalesTransactionReport event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: SalesOrderHeaderStatus.loading));
+
+      // Fetch paginated data based on filter view type
+      final result = event.filters.isDetailView
+          ? await salesOrderReportRepository.getSalesTransactionDetailReport(
+              companyId: event.companyId,
+              page: event.page,
+              pageSize: event.pageSize,
+              customerId: event.filters.customerId,
+              itemId: event.filters.itemId,
+              fsNumber: event.filters.fsNumber,
+              proformaReference: event.filters.proformaReference,
+              startDate: event.filters.dateFrom,
+              endDate: event.filters.dateTo,
+              salesType: event.filters.salesType,
+              voidIndicator: event.filters.voidIndicator,
+            )
+          : await salesOrderReportRepository.getSalesTransactionReport(
+              companyId: event.companyId,
+              page: event.page,
+              pageSize: event.pageSize,
+              customerId: event.filters.customerId,
+              itemId: event.filters.itemId,
+              fsNumber: event.filters.fsNumber,
+              proformaReference: event.filters.proformaReference,
+              startDate: event.filters.dateFrom,
+              endDate: event.filters.dateTo,
+              salesType: event.filters.salesType,
+              voidIndicator: event.filters.voidIndicator,
+            );
+
+      // Calculate totals
+      final totalsResult = await salesOrderReportRepository
+          .calculateSalesTransactionTotals(
+            companyId: event.companyId,
+            customerId: event.filters.customerId,
+            itemId: event.filters.itemId,
+            fsNumber: event.filters.fsNumber,
+            proformaReference: event.filters.proformaReference,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+            salesType: event.filters.salesType,
+            voidIndicator: event.filters.voidIndicator,
+            isDetailView: event.filters.isDetailView,
+          );
+
+      final totals = SalesTransactionReportTotals(
+        withholdTotal: totalsResult['withholdTotal'] as double,
+        vatTotal: totalsResult['vatTotal'] as double,
+        discountTotal: totalsResult['discountTotal'] as double,
+        revenueTotal: totalsResult['revenueTotal'] as double,
+        cogsTotal: totalsResult['cogsTotal'] as double,
+        grossProfitTotal: totalsResult['grossProfitTotal'] as double,
+        totalCount: totalsResult['totalCount'] as int,
+        currentPage: result['currentPage'] as int,
+        totalPages: result['totalPages'] as int,
+      );
+
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loaded,
+          salesTransactionHeaders: event.filters.isDetailView
+              ? []
+              : (result['headers'] as List<SalesOrderHeader>),
+          salesTransactionDetails: event.filters.isDetailView
+              ? (result['details'] as List<SalesOrderDetail>)
+              : [],
+          salesTransactionFilters: event.filters,
+          salesTransactionTotals: totals,
+          salesTransactionPage: result['currentPage'] as int,
+          salesTransactionPageSize: event.pageSize,
+          salesTransactionTotalCount: result['totalCount'] as int,
+          salesTransactionTotalPages: result['totalPages'] as int,
+          hasMoreSalesTransaction:
+              (result['currentPage'] as int) < (result['totalPages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load sales transaction report: $e'));
+    }
+  }
+
+  Future<void> _onLoadMoreSalesTransactionReport(
+    LoadMoreSalesTransactionReport event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    if (!state.hasMoreSalesTransaction) return;
+
+    try {
+      emit(state.loadingMoreState());
+      final nextPage = state.salesTransactionPage + 1;
+      final filters = state.salesTransactionFilters;
+
+      // Fetch next page
+      final result = filters.isDetailView
+          ? await salesOrderReportRepository.getSalesTransactionDetailReport(
+              companyId: state.companyId ?? authBloc.state.companyId!,
+              page: nextPage,
+              pageSize: state.salesTransactionPageSize,
+              customerId: filters.customerId,
+              itemId: filters.itemId,
+              fsNumber: filters.fsNumber,
+              proformaReference: filters.proformaReference,
+              startDate: filters.dateFrom,
+              endDate: filters.dateTo,
+              salesType: filters.salesType,
+              voidIndicator: filters.voidIndicator,
+            )
+          : await salesOrderReportRepository.getSalesTransactionReport(
+              companyId: state.companyId ?? authBloc.state.companyId!,
+              page: nextPage,
+              pageSize: state.salesTransactionPageSize,
+              customerId: filters.customerId,
+              itemId: filters.itemId,
+              fsNumber: filters.fsNumber,
+              proformaReference: filters.proformaReference,
+              startDate: filters.dateFrom,
+              endDate: filters.dateTo,
+              salesType: filters.salesType,
+              voidIndicator: filters.voidIndicator,
+            );
+
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loaded,
+          salesTransactionHeaders: filters.isDetailView
+              ? state.salesTransactionHeaders
+              : [
+                  ...state.salesTransactionHeaders,
+                  ...(result['headers'] as List<SalesOrderHeader>),
+                ],
+          salesTransactionDetails: filters.isDetailView
+              ? [
+                  ...state.salesTransactionDetails,
+                  ...(result['details'] as List<SalesOrderDetail>),
+                ]
+              : state.salesTransactionDetails,
+          salesTransactionPage: result['currentPage'] as int,
+          hasMoreSalesTransaction:
+              (result['currentPage'] as int) < (result['totalPages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load more transactions: $e'));
+    }
+  }
+
+  Future<void> _onUpdateSalesTransactionFilters(
+    UpdateSalesTransactionFilters event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    // Reload data with new filters
+    add(
+      LoadSalesTransactionReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.salesTransactionPageSize,
+        filters: event.filters,
+      ),
+    );
+  }
+
+  void _onClearSalesTransactionFilters(
+    ClearSalesTransactionFilters event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) {
+    // Reload with empty filters
+    add(
+      LoadSalesTransactionReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.salesTransactionPageSize,
+        filters: const SalesTransactionReportFilters(),
+      ),
+    );
+  }
+
+  Future<void> _onExportSalesTransactionToExcel(
+    ExportSalesTransactionToExcel event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: SalesOrderHeaderStatus.exporting));
+
+      // TODO: Implement Excel export logic
+      // This will be similar to _onExportTransactions but for the report data
+      // You'll need to fetch all data (not paginated) and create Excel file
+
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loaded,
+          exportSalesTransactionMessage:
+              'Excel export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loaded,
+          exportSalesTransactionMessage: 'Failed to export to Excel: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportSalesTransactionToPDF(
+    ExportSalesTransactionToPDF event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: SalesOrderHeaderStatus.exporting));
+
+      // TODO: Implement PDF export logic
+      // This will be similar to Excel export but generate PDF
+
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loaded,
+          exportSalesTransactionMessage: 'PDF export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loaded,
+          exportSalesTransactionMessage: 'Failed to export to PDF: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onLoadCreditReceiptsReport(
+    LoadCreditReceiptsReport event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loadingCreditReceiptReport,
+          creditReceiptReportPage: event.page,
+          creditReceiptReportFilters: event.filters,
+        ),
+      );
+
+      final int offset = (event.page - 1) * event.pageSize;
+
+      final receipts = await salesOrderReportRepository.getCreditReceiptsReport(
+        companyId: event.companyId,
+        customerBillTo: event.filters.customerId,
+        fsNumber: event.filters.fsNumber,
+        sortBy: event.sortBy,
+        limit: event.pageSize,
+        offset: offset,
+      );
+
+      // Post-processing logic (Same as before but on the fetched page)
+      // Group by Sales Order Header
+      final Map<int, List<CreditReceipt>> groupedReceipts = {};
+      for (var receipt in receipts) {
+        if (receipt.soHeaderRef?.id != null) {
+          if (!groupedReceipts.containsKey(receipt.soHeaderRef!.id)) {
+            groupedReceipts[receipt.soHeaderRef!.id!] = [];
+          }
+          groupedReceipts[receipt.soHeaderRef!.id]!.add(receipt);
+        }
+      }
+
+      final List<CreditReceipt> processedReceipts = [];
+
+      groupedReceipts.forEach((soId, soReceipts) {
+        // Sort by date receipt (Ascending for calculation?)
+        // Java code sorts retrieving by DESC, then in memory compares by DateReceipt.
+        // Assuming DateReceipt is comparable.
+        soReceipts.sort((a, b) {
+          final aDate = a.dateReceipt ?? DateTime(0);
+          final bDate = b.dateReceipt ?? DateTime(0);
+          return aDate.compareTo(bDate);
+        });
+
+        // Calculate Remaining Values
+        // remaining starts at SO Amount Total
+        double remaining = soReceipts.isNotEmpty
+            ? (soReceipts.first.soHeaderRef?.amountTotal ?? 0.0)
+            : 0.0;
+
+        for (var receipt in soReceipts) {
+          remaining -= (receipt.receiptAmount ?? 0.0);
+          receipt.setRemainingValues(remaining);
+          processedReceipts.add(receipt);
+        }
+      });
+      processedReceipts.sort(
+        (a, b) => (b.dateReceipt ?? DateTime(0)).compareTo(
+          a.dateReceipt ?? DateTime(0),
+        ),
+      );
+
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loadedCreditReceiptReport,
+          creditReceiptsReport: processedReceipts,
+          hasMoreCreditReceiptReport: receipts.length == event.pageSize,
+          creditReceiptReportTotalCount: 0, // Should fetch count if needed
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load credit receipts report: $e'));
+    }
+  }
+
+  Future<void> _onLoadMoreCreditReceiptsReport(
+    LoadMoreCreditReceiptsReport event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    if (state.hasMoreCreditReceiptReport &&
+        state.status != SalesOrderHeaderStatus.loadingMoreCreditReceiptReport) {
+      final nextPage = state.creditReceiptReportPage + 1;
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loadingMoreCreditReceiptReport,
+        ),
+      );
+
+      // Trigger load for next page. But wait, reusing _onLoad replaces the list.
+      // I need to append.
+      // So I should implement the logic here, or make _onLoad handle appending (if I passed a flag).
+      // Standard pattern: Separate handler or helper.
+      // I will implement helper logic here.
+
+      try {
+        final int offset = (nextPage - 1) * state.creditReceiptReportPageSize;
+        final receipts = await salesOrderReportRepository
+            .getCreditReceiptsReport(
+              companyId: state.companyId ?? 1, // Default or generic
+              customerBillTo: state.creditReceiptReportFilters.customerId,
+              fsNumber: state.creditReceiptReportFilters.fsNumber,
+              limit: state.creditReceiptReportPageSize,
+              offset: offset,
+            );
+
+        // Process newly fetched receipts
+        // Note: Remaining value calculation is PER PAGE here as per logic discussion.
+        final Map<int, List<CreditReceipt>> groupedReceipts = {};
+        for (var receipt in receipts) {
+          if (receipt.soHeaderRef?.id != null) {
+            if (!groupedReceipts.containsKey(receipt.soHeaderRef!.id)) {
+              groupedReceipts[receipt.soHeaderRef!.id!] = [];
+            }
+            groupedReceipts[receipt.soHeaderRef!.id]!.add(receipt);
+          }
+        }
+
+        final List<CreditReceipt> processedReceipts = [];
+        groupedReceipts.forEach((soId, soReceipts) {
+          soReceipts.sort(
+            (a, b) => (a.dateReceipt ?? DateTime(0)).compareTo(
+              b.dateReceipt ?? DateTime(0),
+            ),
+          );
+          double remaining = soReceipts.isNotEmpty
+              ? (soReceipts.first.soHeaderRef?.amountTotal ?? 0.0)
+              : 0.0;
+          for (var receipt in soReceipts) {
+            remaining -= (receipt.receiptAmount ?? 0.0);
+            receipt.setRemainingValues(remaining);
+            processedReceipts.add(receipt);
+          }
+        });
+        processedReceipts.sort(
+          (a, b) => (b.dateReceipt ?? DateTime(0)).compareTo(
+            a.dateReceipt ?? DateTime(0),
+          ),
+        );
+
+        emit(
+          state.copyWith(
+            status: SalesOrderHeaderStatus.loadedCreditReceiptReport,
+            creditReceiptsReport: List.of(state.creditReceiptsReport)
+              ..addAll(processedReceipts),
+            creditReceiptReportPage: nextPage,
+            hasMoreCreditReceiptReport:
+                receipts.length == state.creditReceiptReportPageSize,
+          ),
+        );
+      } catch (e) {
+        emit(state.errorState('Failed to load more credit receipts: $e'));
+      }
+    }
+  }
+
+  Future<void> _onUpdateCreditReceiptReportFilters(
+    UpdateCreditReceiptReportFilters event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    emit(state.copyWith(creditReceiptReportFilters: event.filters));
+    add(
+      LoadCreditReceiptsReport(
+        companyId: state.companyId ?? 1,
+        filters: event.filters,
+        page: 1,
+        pageSize: state.creditReceiptReportPageSize,
+      ),
+    );
+  }
+
+  Future<void> _onClearCreditReceiptsReportFilters(
+    ClearCreditReceiptsReportFilters event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        creditReceiptReportFilters: const SalesTransactionReportFilters(),
+      ),
+    );
+    add(
+      LoadCreditReceiptsReport(
+        companyId: state.companyId ?? 1,
+        filters: const SalesTransactionReportFilters(),
+        page: 1,
+        pageSize: state.creditReceiptReportPageSize,
+      ),
+    );
+  }
+
+  Future<void> _onExportCreditReceiptReportToExcel(
+    ExportCreditReceiptReportToExcel event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    // Placeholder for export logic
+    emit(state.successState('Export to Excel not implemented yet'));
+  }
+
+  Future<void> _onExportCreditReceiptReportToPDF(
+    ExportCreditReceiptReportToPDF event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    // Placeholder for export logic
+    emit(state.successState('Export to PDF not implemented yet'));
+  }
+  // ============================================================================
+  // Aged Credit Receipt REPORT EVENT HANDLERS
+  // ============================================================================
+
+  Future<void> _onLoadAgedCreditReceiptReport(
+    LoadAgedCreditReceiptReport event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loadingAgedCreditReceiptReport,
+        ),
+      );
+
+      // Fetch paginated data based on filter view type
+      final result = await salesOrderReportRepository
+          .getAgedCreditReceiptReport(
+            companyId: event.companyId,
+            page: event.page,
+            pageSize: event.pageSize,
+            customerId: event.filters.customerId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+          );
+
+      // Calculate totals
+      final totalsResult = await salesOrderReportRepository
+          .calculateAgedCreditReceiptTotals(
+            companyId: event.companyId,
+            customerId: event.filters.customerId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+          );
+
+      final totals = AgedCreditReceiptTotals(
+        totalAmountprice: totalsResult['totalAmountprice'] as double,
+        paidpriceAmount: totalsResult['paidpriceAmount'] as double,
+        remainingPriceAmount: totalsResult['remainingPriceAmount'] as double,
+        totalCount:
+            totalsResult['totalCount'] as int? ??
+            0, // Adjusted as repo calc doesn't return count, but report result does
+        currentPage: result['currentPage'] as int,
+        totalPages: result['totalPages'] as int,
+      );
+
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loadedAgedCreditReceiptReport,
+          agedCreditReceiptReport: result['headers'] as List<SalesOrderHeader>,
+          agedCreditReceiptReportFilters: event.filters,
+          agedCreditReceiptReportTotals: totals,
+          agedCreditReceiptReportPage: result['currentPage'] as int,
+          agedCreditReceiptReportPageSize: event.pageSize,
+          agedCreditReceiptReportTotalCount: result['totalCount'] as int,
+          agedCreditReceiptReportTotalPages: result['totalPages'] as int,
+          hasMoreAgedCreditReceiptReport:
+              (result['currentPage'] as int) < (result['totalPages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load aged credit receipt report: $e'));
+    }
+  }
+
+  Future<void> _onLoadMoreAgedCreditReceiptReport(
+    LoadMoreAgedCreditReceiptReport event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    if (!state.hasMoreAgedCreditReceiptReport) return;
+
+    try {
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loadingMoreAgedCreditReceiptReport,
+        ),
+      );
+      final nextPage = state.agedCreditReceiptReportPage + 1;
+      final filters = state.agedCreditReceiptReportFilters;
+
+      // Fetch next page
+      final result = await salesOrderReportRepository
+          .getAgedCreditReceiptReport(
+            companyId: state.companyId ?? authBloc.state.companyId!,
+            page: nextPage,
+            pageSize: state.agedCreditReceiptReportPageSize,
+            customerId: filters.customerId,
+            startDate: filters.dateFrom,
+            endDate: filters.dateTo,
+          );
+
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loadedAgedCreditReceiptReport,
+          agedCreditReceiptReport: [
+            ...state.agedCreditReceiptReport,
+            ...(result['headers'] as List<SalesOrderHeader>),
+          ],
+          agedCreditReceiptReportPage: result['currentPage'] as int,
+          hasMoreAgedCreditReceiptReport:
+              (result['currentPage'] as int) < (result['totalPages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load more aged credit receipts: $e'));
+    }
+  }
+
+  Future<void> _onUpdateAgedCreditReceiptFilters(
+    UpdateAgedCreditReceiptReportFilters event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    // Reload data with new filters
+    add(
+      LoadAgedCreditReceiptReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.agedCreditReceiptReportPageSize,
+        filters: event.filters,
+      ),
+    );
+  }
+
+  void _onClearAgedCreditReceiptFilters(
+    ClearAgedCreditReceiptReportFilters event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) {
+    // Reload with empty filters
+    add(
+      LoadAgedCreditReceiptReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.agedCreditReceiptReportPageSize,
+        filters: const SalesTransactionReportFilters(),
+      ),
+    );
+  }
+
+  Future<void> _onExportAgedCreditReceiptToExcel(
+    ExportAgedCreditReceiptReportToExcel event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: SalesOrderHeaderStatus.exporting));
+
+      // TODO: Implement Excel export logic
+      // This will be similar to _onExportTransactions but for the report data
+      // You'll need to fetch all data (not paginated) and create Excel file
+
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loaded,
+          exportSalesTransactionMessage:
+              'Excel export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loaded,
+          exportSalesTransactionMessage: 'Failed to export to Excel: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportAgedCreditReceiptToPDF(
+    ExportAgedCreditReceiptReportToPDF event,
+    Emitter<SalesOrderHeaderState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: SalesOrderHeaderStatus.exporting));
+
+      // TODO: Implement PDF export logic
+      // This will be similar to Excel export but generate PDF
+
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loaded,
+          exportSalesTransactionMessage: 'PDF export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: SalesOrderHeaderStatus.loaded,
+          exportSalesTransactionMessage: 'Failed to export to PDF: $e',
+        ),
+      );
     }
   }
 }

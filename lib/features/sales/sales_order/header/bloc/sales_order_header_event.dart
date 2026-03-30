@@ -4,6 +4,7 @@ import 'package:meta/meta.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/credit_receipt_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/model/sales_order_header.dart';
+import 'package:savvy_stock/features/sales/sales_order/header/model/sales_transaction_filtering_model.dart';
 import 'package:savvy_stock/features/stock/lot_master/models/lot_master_model.dart';
 import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
@@ -148,10 +149,15 @@ class RefreshSalesOrderHeaders extends SalesOrderHeaderEvent {
 class VoidSalesOrder extends SalesOrderHeaderEvent {
   final int id;
   final String voidIndicator;
+  final String? commentIfVoid;
 
-  const VoidSalesOrder({required this.id, required this.voidIndicator});
+  const VoidSalesOrder({
+    required this.id,
+    required this.voidIndicator,
+    this.commentIfVoid,
+  });
   @override
-  List<Object?> get props => [id, voidIndicator];
+  List<Object?> get props => [id, voidIndicator, commentIfVoid];
 }
 
 class CalculateUomConversion extends SalesOrderHeaderEvent {
@@ -543,15 +549,206 @@ class SelectCreditReceipt extends SalesOrderHeaderEvent {
 class FilterCreditReceipts extends SalesOrderHeaderEvent {
   final int companyId;
   final int? customerId;
-  final DateTime? startDate;
-  final DateTime? endDate;
+  final String? fsNumber;
 
   const FilterCreditReceipts({
     required this.companyId,
     this.customerId,
-    this.startDate,
-    this.endDate,
+    this.fsNumber,
   });
   @override
-  List<Object?> get props => [companyId, customerId, startDate, endDate];
+  List<Object?> get props => [companyId, customerId, fsNumber];
+}
+
+class ClearCreditReceiptFilters extends SalesOrderHeaderEvent {
+  const ClearCreditReceiptFilters();
+  @override
+  List<Object?> get props => [];
+}
+
+// ============================================================================
+// SALES TRANSACTION REPORT EVENTS
+// ============================================================================
+
+class LoadSalesTransactionReport extends SalesOrderHeaderEvent {
+  final int companyId;
+  final int page;
+  final int pageSize;
+  final SalesTransactionReportFilters filters;
+
+  const LoadSalesTransactionReport({
+    required this.companyId,
+    this.page = 1,
+    this.pageSize = 25,
+    this.filters = const SalesTransactionReportFilters(),
+  });
+
+  @override
+  List<Object?> get props => [companyId, page, pageSize, filters];
+}
+
+class LoadMoreSalesTransactionReport extends SalesOrderHeaderEvent {
+  const LoadMoreSalesTransactionReport();
+
+  @override
+  List<Object?> get props => [];
+}
+
+class UpdateSalesTransactionFilters extends SalesOrderHeaderEvent {
+  final SalesTransactionReportFilters filters;
+
+  const UpdateSalesTransactionFilters(this.filters);
+
+  @override
+  List<Object?> get props => [filters];
+}
+
+class ClearSalesTransactionFilters extends SalesOrderHeaderEvent {
+  const ClearSalesTransactionFilters();
+
+  @override
+  List<Object?> get props => [];
+}
+
+class ExportSalesTransactionToExcel extends SalesOrderHeaderEvent {
+  final SalesTransactionReportFilters filters;
+
+  const ExportSalesTransactionToExcel(this.filters);
+
+  @override
+  List<Object?> get props => [filters];
+}
+
+class ExportSalesTransactionToPDF extends SalesOrderHeaderEvent {
+  final SalesTransactionReportFilters filters;
+
+  const ExportSalesTransactionToPDF(this.filters);
+
+  @override
+  List<Object?> get props => [filters];
+}
+
+// ============================================================================
+// CREDIT RECEIPT REPORT EVENTS
+// ============================================================================
+
+class LoadCreditReceiptsReport extends SalesOrderHeaderEvent {
+  final int companyId;
+  final int page;
+  final int pageSize;
+  final SalesTransactionReportFilters filters;
+  final String? sortBy;
+
+  const LoadCreditReceiptsReport({
+    required this.companyId,
+    this.page = 1,
+    this.pageSize = 25,
+    this.filters = const SalesTransactionReportFilters(),
+    this.sortBy,
+  });
+
+  @override
+  List<Object?> get props => [companyId, page, pageSize, filters, sortBy];
+}
+
+class LoadMoreCreditReceiptsReport extends SalesOrderHeaderEvent {
+  const LoadMoreCreditReceiptsReport();
+
+  @override
+  List<Object?> get props => [];
+}
+
+class UpdateCreditReceiptReportFilters extends SalesOrderHeaderEvent {
+  final SalesTransactionReportFilters filters;
+
+  const UpdateCreditReceiptReportFilters(this.filters);
+
+  @override
+  List<Object?> get props => [filters];
+}
+
+class ClearCreditReceiptsReportFilters extends SalesOrderHeaderEvent {
+  const ClearCreditReceiptsReportFilters();
+
+  @override
+  List<Object?> get props => [];
+}
+
+class ExportCreditReceiptReportToExcel extends SalesOrderHeaderEvent {
+  final SalesTransactionReportFilters filters;
+
+  const ExportCreditReceiptReportToExcel(this.filters);
+
+  @override
+  List<Object?> get props => [filters];
+}
+
+class ExportCreditReceiptReportToPDF extends SalesOrderHeaderEvent {
+  final SalesTransactionReportFilters filters;
+
+  const ExportCreditReceiptReportToPDF(this.filters);
+
+  @override
+  List<Object?> get props => [filters];
+}
+
+// ============================================================================
+// Aged Credit Receipt Report Events
+// ============================================================================
+class LoadAgedCreditReceiptReport extends SalesOrderHeaderEvent {
+  final int companyId;
+  final int page;
+  final int pageSize;
+  final SalesTransactionReportFilters filters;
+
+  const LoadAgedCreditReceiptReport({
+    required this.companyId,
+    this.page = 1,
+    this.pageSize = 25,
+    this.filters = const SalesTransactionReportFilters(),
+  });
+
+  @override
+  List<Object?> get props => [companyId, page, pageSize, filters];
+}
+
+class LoadMoreAgedCreditReceiptReport extends SalesOrderHeaderEvent {
+  const LoadMoreAgedCreditReceiptReport();
+
+  @override
+  List<Object?> get props => [];
+}
+
+class UpdateAgedCreditReceiptReportFilters extends SalesOrderHeaderEvent {
+  final SalesTransactionReportFilters filters;
+
+  const UpdateAgedCreditReceiptReportFilters(this.filters);
+
+  @override
+  List<Object?> get props => [filters];
+}
+
+class ClearAgedCreditReceiptReportFilters extends SalesOrderHeaderEvent {
+  const ClearAgedCreditReceiptReportFilters();
+
+  @override
+  List<Object?> get props => [];
+}
+
+class ExportAgedCreditReceiptReportToExcel extends SalesOrderHeaderEvent {
+  final SalesTransactionReportFilters filters;
+
+  const ExportAgedCreditReceiptReportToExcel(this.filters);
+
+  @override
+  List<Object?> get props => [filters];
+}
+
+class ExportAgedCreditReceiptReportToPDF extends SalesOrderHeaderEvent {
+  final SalesTransactionReportFilters filters;
+
+  const ExportAgedCreditReceiptReportToPDF(this.filters);
+
+  @override
+  List<Object?> get props => [filters];
 }

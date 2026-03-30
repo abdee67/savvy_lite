@@ -19,18 +19,19 @@ class BranchDashboard extends StatefulWidget {
   State<BranchDashboard> createState() => _BranchDashboardState();
 }
 
-class _BranchDashboardState extends State<BranchDashboard> with SingleTickerProviderStateMixin {
+class _BranchDashboardState extends State<BranchDashboard>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isSelectionMode = false;
   final Map<int, double> _dragOffset = {};
-  
+
   // Animation controllers for detail panel
   late AnimationController _detailAnimationController;
   late Animation<double> _heightAnimation;
   late Animation<double> _opacityAnimation;
   late Animation<Offset> _slideAnimation;
-  
+
   // Detail panel state
   Branch? _selectedBranch;
   bool _branchDetail = false;
@@ -38,45 +39,43 @@ class _BranchDashboardState extends State<BranchDashboard> with SingleTickerProv
   @override
   void initState() {
     super.initState();
-    
+
     // Initialize animation controller
     _detailAnimationController = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
-    
+
     // Set up animations
     _setupAnimations();
-    
+
     context.read<BranchBloc>().add(
       LoadBranchs(widget.authBloc.state.companyId!),
     );
   }
 
   void _setupAnimations() {
-    _heightAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _detailAnimationController,
-      curve: const Interval(0.0, 0.6, curve: Curves.easeInOutCubic),
-    ));
+    _heightAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _detailAnimationController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeInOutCubic),
+      ),
+    );
 
-    _opacityAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _detailAnimationController,
-      curve: const Interval(0.3, 1.0, curve: Curves.easeIn),
-    ));
+    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _detailAnimationController,
+        curve: const Interval(0.3, 1.0, curve: Curves.easeIn),
+      ),
+    );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0.0, -0.1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _detailAnimationController,
-      curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
-    ));
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0.0, -0.1), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _detailAnimationController,
+            curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
+          ),
+        );
   }
 
   @override
@@ -105,7 +104,7 @@ class _BranchDashboardState extends State<BranchDashboard> with SingleTickerProv
       _selectedBranch = branch;
       _branchDetail = true;
     });
-    
+
     // Start the animation
     _detailAnimationController.forward(from: 0.0);
   }
@@ -163,7 +162,7 @@ class _BranchDashboardState extends State<BranchDashboard> with SingleTickerProv
       });
 
       Future.delayed(const Duration(milliseconds: 300), () {
-        // _safeDelete(context, index: index);
+        _safeDeleteBranch(context, index: index);
         setState(() {
           _dragOffset.remove(index);
         });
@@ -185,40 +184,42 @@ class _BranchDashboardState extends State<BranchDashboard> with SingleTickerProv
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
       ),
-      body: BlocConsumer<BranchBloc, BranchState>(
-        listener: (context, state) {
-          if (state.status == BranchStatus.failure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message ?? 'Operation failed'),
-                backgroundColor: Colors.red,
-              ),
+      body: SafeArea(
+        child: BlocConsumer<BranchBloc, BranchState>(
+          listener: (context, state) {
+            if (state.status == BranchStatus.failure) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message ?? 'Operation failed'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            } else if (state.status == BranchStatus.success &&
+                state.message != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message!),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Search Bar
+                    _buildSearchBar(),
+                    _buildActionButtons(state),
+                    // Branch List
+                    Expanded(child: _buildBranchList(state)),
+                  ],
+                ),
+              ],
             );
-          } else if (state.status == BranchStatus.success &&
-              state.message != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message!),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Search Bar
-                  _buildSearchBar(),
-                  _buildActionButtons(state),
-                  // Branch List
-                  Expanded(child: _buildBranchList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+          },
+        ),
       ),
     );
   }
@@ -326,7 +327,9 @@ class _BranchDashboardState extends State<BranchDashboard> with SingleTickerProv
             shape: const CircleBorder(),
           ),
           child: Icon(
-            state.canEdit && state.selectedBranchs.isNotEmpty ? Icons.edit : Icons.add,
+            state.canEdit && state.selectedBranchs.isNotEmpty
+                ? Icons.edit
+                : Icons.add,
             color: Colors.white,
           ),
         );
@@ -350,11 +353,11 @@ class _BranchDashboardState extends State<BranchDashboard> with SingleTickerProv
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+            const Icon(Icons.error_outline, size: 64, color: Colors.white),
             const SizedBox(height: 16),
             Text(
               state.message ?? 'Failed to load branches',
-              style: const TextStyle(color: Colors.grey),
+              style: const TextStyle(color: Colors.white),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -373,13 +376,13 @@ class _BranchDashboardState extends State<BranchDashboard> with SingleTickerProv
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Iconsax.building, size: 64, color: Colors.grey),
+            const Icon(Iconsax.building, size: 64, color: Colors.white),
             const SizedBox(height: 16),
             Text(
               state.searchQuery.isEmpty
                   ? 'No branches found'
                   : 'No results for "${state.searchQuery}"',
-              style: const TextStyle(color: Colors.grey, fontSize: 16),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
           ],
         ),
@@ -422,18 +425,18 @@ class _BranchDashboardState extends State<BranchDashboard> with SingleTickerProv
   ) {
     final offset = _dragOffset[index] ?? 0.0;
     final isExpanded = _branchDetail == true && _selectedBranch == branch;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final screenHeight = MediaQuery.sizeOf(context).height;
+
     // For responsiveness:
     final collapsedHeight = isCompact
-        ? screenHeight * 0.15
+        ? screenHeight * 0.22
         : screenHeight * 0.14;
 
     final expandedHeight = isCompact
         ? screenHeight * 0.55
         : screenHeight * 0.45;
-    final collapsedWidth = isCompact ? screenWidth * 0.92 : screenWidth * 0.8;
+    final collapsedWidth = screenWidth * 1;
 
     return GestureDetector(
       onTap: () {
@@ -452,8 +455,10 @@ class _BranchDashboardState extends State<BranchDashboard> with SingleTickerProv
         }
         _toggleBranchSelection(branch, !isSelected);
       },
-      onHorizontalDragUpdate: (details) => _onHorizontalDragUpdate(index, details),
-      onHorizontalDragEnd: (details) => _onHorizontalDragEnd(context, index, details),
+      onHorizontalDragUpdate: (details) =>
+          _onHorizontalDragUpdate(index, details),
+      onHorizontalDragEnd: (details) =>
+          _onHorizontalDragEnd(context, index, details),
       onDoubleTap: () => _showBranchDetail(branch),
       child: AnimatedBuilder(
         animation: _scrollController,
@@ -474,7 +479,7 @@ class _BranchDashboardState extends State<BranchDashboard> with SingleTickerProv
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     margin: const EdgeInsets.only(bottom: 2),
-                  /*  child: const Icon(
+                    /*  child: const Icon(
                       Icons.delete,
                       color: Colors.white,
                       size: 28,
@@ -563,7 +568,6 @@ class _BranchDashboardState extends State<BranchDashboard> with SingleTickerProv
                                 ),
                               ),
                               const SizedBox(height: 8),
-                             
                             ],
                           ),
                         ),
@@ -599,9 +603,9 @@ class _BranchDashboardState extends State<BranchDashboard> with SingleTickerProv
                   ],
                 ),
               ),
-              
+
               // 4. ANIMATED EXPANDED CONTENT
-              if (isExpanded) 
+              if (isExpanded)
                 Positioned(
                   top: collapsedHeight + 10,
                   left: 20,
@@ -609,20 +613,17 @@ class _BranchDashboardState extends State<BranchDashboard> with SingleTickerProv
                   child: AnimatedBuilder(
                     animation: _detailAnimationController,
                     builder: (context, child) {
-                      final currentHeight = _heightAnimation.value * (expandedHeight - collapsedHeight - 20);
+                      final currentHeight =
+                          _heightAnimation.value *
+                          (expandedHeight - collapsedHeight - 20);
                       final currentOpacity = _opacityAnimation.value;
-                      
+
                       return SlideTransition(
                         position: _slideAnimation,
                         child: Container(
                           height: currentHeight > 0 ? currentHeight : 0,
-                          decoration: BoxDecoration(
-                            color: Colors.transparent,
-                          ),
-                          child: Opacity(
-                            opacity: currentOpacity,
-                            child: child,
-                          ),
+                          decoration: BoxDecoration(color: Colors.transparent),
+                          child: Opacity(opacity: currentOpacity, child: child),
                         ),
                       );
                     },
@@ -694,14 +695,14 @@ class _BranchDashboardState extends State<BranchDashboard> with SingleTickerProv
               Iconsax.call,
               isCompact,
             ),
-          if (branch.marginRate!= null)
+          if (branch.marginRate != null)
             _buildBranchInfoItem(
               'Margin Rate : ',
               branch.marginRate.toString(),
               Iconsax.sms,
               isCompact,
             ),
-          
+
           // Action buttons row
           Padding(
             padding: const EdgeInsets.only(top: 16, bottom: 8),
@@ -714,13 +715,6 @@ class _BranchDashboardState extends State<BranchDashboard> with SingleTickerProv
                   () => _navigateToEditScreen(branch),
                   isCompact,
                 ),
-                _buildActionButton(
-                  Iconsax.export,
-                  'Export',
-                  () => _exportBranch(branch),
-                  isCompact,
-                ),
-            
               ],
             ),
           ),
@@ -781,7 +775,12 @@ class _BranchDashboardState extends State<BranchDashboard> with SingleTickerProv
     );
   }
 
-  Widget _buildActionButton(IconData icon, String label, VoidCallback onPressed, bool isCompact) {
+  Widget _buildActionButton(
+    IconData icon,
+    String label,
+    VoidCallback onPressed,
+    bool isCompact,
+  ) {
     return Column(
       children: [
         IconButton(
@@ -820,10 +819,7 @@ class _BranchDashboardState extends State<BranchDashboard> with SingleTickerProv
     return Container(
       width: 48,
       height: 48,
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: backgroundColor, shape: BoxShape.circle),
       child: Icon(
         Iconsax.building,
         color: iconColor,
@@ -853,21 +849,63 @@ class _BranchDashboardState extends State<BranchDashboard> with SingleTickerProv
 
   void _exportBranch(Branch branch) {
     // Implement export functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Branch data exported')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Branch data exported')));
   }
 
-  void _safeDelete(Branch branch) {
-    // Implement safe delete functionality
+  void _safeDeleteBranch(BuildContext context, {int? index}) {
+    final bloc = context.read<BranchBloc>();
+    final state = bloc.state;
+
+    // CASE 1: Multiple branchs
+    if (state.selectedBranchs.isNotEmpty) {
+      final branchsToDelete = state.selectedBranchs;
+
+      showDeleteDialog(
+        context,
+        title: 'Delete selected Branchs?',
+        content:
+            'Are you sure you want to delete ${branchsToDelete.length} Branchs?',
+        onConfirm: () {
+          final ids = branchsToDelete.map((e) => e.id).toList();
+          final deletedIndexes = branchsToDelete
+              .map((emp) => state.branchs.indexOf(emp))
+              .toList();
+          bloc.add(
+            DeleteSelectedBranchs(
+              selectedBranchs: ids,
+              deletedBranchs: branchsToDelete,
+              deletedIndexes: deletedIndexes,
+            ),
+          );
+        },
+      );
+      return;
+    }
+
+    // CASE 2: Single branch by index
+    if (index == null || index < 0 || index >= state.filteredBranchs.length) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot delete item. Invalid index.')),
+      );
+      return;
+    }
+
+    final branchToDelete = state.filteredBranchs[index];
+
     showDeleteDialog(
       context,
-      title: 'Delete "${branch.description}"?',
-      content: 'Are you sure you want to delete "${branch.description}"?',
+      title: 'Delete "${branchToDelete.description}"?',
+      content:
+          'Are you sure you want to delete "${branchToDelete.description}"?',
       onConfirm: () {
-        // context.read<BranchBloc>().add(DeleteBranch(branch));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Branch deleted')),
+        bloc.add(
+          DeleteBranch(
+            deletedBranch: branchToDelete,
+            deletedIndex: index,
+            branchId: branchToDelete.id,
+          ),
         );
       },
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
@@ -122,41 +123,43 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         backgroundColor: const Color.fromARGB(255, 28, 66, 146),
         foregroundColor: Colors.white,
       ),
-      body: MultiBlocListener(
-        listeners: [
-          BlocListener<UserBloc, UserState>(
-            listener: (context, state) {
-              if (state.status == UserStatus.failure) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(state.message ?? 'Operation failed'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              } else if (state.status == UserStatus.success &&
-                  state.message?.isNotEmpty == true) {
-                _showSuccessDialog();
-              }
-            },
-          ),
-        ],
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Form(
-            key: _formKey,
-            child: ListView(
-              children: [
-                // User Information Section
-                _buildUserInfoSection(),
-                const SizedBox(height: 24),
+      body: SafeArea(
+        child: MultiBlocListener(
+          listeners: [
+            BlocListener<UserBloc, UserState>(
+              listener: (context, state) {
+                if (state.status == UserStatus.failure) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message ?? 'Operation failed'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                } else if (state.status == UserStatus.success &&
+                    state.message?.isNotEmpty == true) {
+                  _showSuccessDialog();
+                }
+              },
+            ),
+          ],
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                children: [
+                  // User Information Section
+                  _buildUserInfoSection(),
+                  const SizedBox(height: 24),
 
-                // Role Management Section
-                _buildRoleManagementSection(),
-                const SizedBox(height: 24),
+                  // Role Management Section
+                  _buildRoleManagementSection(),
+                  const SizedBox(height: 24),
 
-                // Action Buttons
-                _buildActionButtons(),
-              ],
+                  // Action Buttons
+                  _buildActionButtons(),
+                ],
+              ),
             ),
           ),
         ),
@@ -254,9 +257,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               },
               labelText: 'Username *',
               prefixIcon: const Icon(Iconsax.user),
+              inputFormatters: [LengthLimitingTextInputFormatter(45)],
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Please enter username';
+                }
+                if (value.length > 45) {
+                  return 'Username must be 45 characters or less';
                 }
                 return null;
               },
@@ -273,9 +280,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               },
               labelText: 'Refrence id *',
               prefixIcon: const Icon(Iconsax.user_octagon),
+              inputFormatters: [LengthLimitingTextInputFormatter(45)],
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Please enter refrence id';
+                }
+                if (value.length > 45) {
+                  return 'Reference ID must be 45 characters or less';
                 }
                 return null;
               },
@@ -292,9 +303,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               },
               labelText: 'Email *',
               prefixIcon: const Icon(Iconsax.sms),
+              inputFormatters: [LengthLimitingTextInputFormatter(100)],
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Please enter email';
+                }
+                if (value.length > 100) {
+                  return 'Email must be 100 characters or less';
                 }
                 if (!value.contains('@')) {
                   return 'Please enter a valid email';

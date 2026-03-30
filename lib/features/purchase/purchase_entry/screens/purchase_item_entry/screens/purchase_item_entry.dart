@@ -154,14 +154,14 @@ class _PurchaseItemEntryScreenContentState
           AddPurchaseOrderDetail(detail: detail),
         );
 
-        _showSuccessSnackBar('Item updated successfully');
+        // _showSuccessSnackBar('Item updated successfully');
       } else {
         // Add new item
         context.read<PurchaseOrderBloc>().add(
           AddPurchaseOrderDetail(detail: detail),
         );
 
-        _showSuccessSnackBar('Item added successfully');
+        //   _showSuccessSnackBar('Item added successfully');
       }
 
       _resetForm();
@@ -346,62 +346,61 @@ class _PurchaseItemEntryScreenContentState
                 ),
             ],
           ),
-          body: Column(
-            children: [
-              // Order Information Banner
-              _buildOrderInfoBanner(purchaseState),
-
-              // Main Content (Form + Confirmed Items)
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Form Section
-                    Expanded(
-                      flex: 4,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(
-                              color: Colors.grey.shade300,
-                              width: 1,
+          body: SafeArea(
+            child: Column(
+              children: [
+                // Main Content (Form + Confirmed Items)
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Form Section
+                      Expanded(
+                        flex: 4,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: Colors.grey.shade300,
+                                width: 1,
+                              ),
+                            ),
+                          ),
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.all(16),
+                            child: PurchaseItemEntryForm(
+                              initialDetail: initialFormDetail,
+                              formKey: _formKey,
+                              isEditing: _isEditing,
+                              onUpdate: _updateFormDetail,
+                              onConfirm: (detail) {
+                                // When form is confirmed, use the detail passed from the form
+                                _confirmItem(detail);
+                              },
+                              onCancel: _isEditing ? _cancelEditing : null,
+                              orderData: {
+                                ...widget.orderData,
+                                'autoReceipt': autoReceipt,
+                              },
                             ),
                           ),
                         ),
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(16),
-                          child: PurchaseItemEntryForm(
-                            initialDetail: initialFormDetail,
-                            formKey: _formKey,
-                            isEditing: _isEditing,
-                            onUpdate: _updateFormDetail,
-                            onConfirm: (detail) {
-                              // When form is confirmed, use the detail passed from the form
-                              _confirmItem(detail);
-                            },
-                            onCancel: _isEditing ? _cancelEditing : null,
-                            orderData: {
-                              ...widget.orderData,
-                              'autoReceipt': autoReceipt,
-                            },
-                          ),
+                      ),
+
+                      // Confirmed Items Section
+                      Expanded(
+                        flex: 4,
+                        child: PurchaseItemEntryConfirmedItem(
+                          onEditItem: _startEditingItem,
+                          onProceed: _proceedToPayment,
+                          showProceedButton: true,
                         ),
                       ),
-                    ),
-
-                    // Confirmed Items Section
-                    Expanded(
-                      flex: 4,
-                      child: PurchaseItemEntryConfirmedItem(
-                        onEditItem: _startEditingItem,
-                        onProceed: _proceedToPayment,
-                        showProceedButton: true,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },

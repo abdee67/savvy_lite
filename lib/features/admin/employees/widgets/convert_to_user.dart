@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/features/admin/employees/models/employee_model.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
@@ -130,9 +131,13 @@ class _ConvertToUserDialogState extends State<ConvertToUserDialog> {
                       prefixIcon: Icon(Icons.person),
                       border: OutlineInputBorder(),
                     ),
+                    inputFormatters: [LengthLimitingTextInputFormatter(45)],
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Please enter username';
+                      }
+                      if (value.length > 45) {
+                        return 'Username must be 45 characters or less';
                       }
                       return null;
                     },
@@ -145,9 +150,13 @@ class _ConvertToUserDialogState extends State<ConvertToUserDialog> {
                       prefixIcon: Icon(Icons.email),
                       border: OutlineInputBorder(),
                     ),
+                    inputFormatters: [LengthLimitingTextInputFormatter(100)],
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Please enter email';
+                      }
+                      if (value.length > 100) {
+                        return 'Email must be 100 characters or less';
                       }
                       if (!value.contains('@')) {
                         return 'Please enter a valid email';

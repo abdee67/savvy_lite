@@ -6,16 +6,22 @@ import 'package:bloc/bloc.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_event.dart';
+import 'package:savvy_stock/features/licensing/services/license_service.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:savvy_stock/features/branch_list/blocs/branch_list_state.dart';
 import 'package:savvy_stock/features/branch_list/models/branch_list_model.dart';
 
 class BranchBloc extends Bloc<BranchEvent, BranchState> {
   final LocalDatabaseService databaseService;
   final AuthBloc authBloc;
+  final LicenseService licenseService;
   StreamSubscription? _authSubscription;
 
-  BranchBloc({required this.databaseService, required this.authBloc})
-    : super(const BranchState()) {
+  BranchBloc({
+    required this.databaseService,
+    required this.authBloc,
+    required this.licenseService,
+  }) : super(const BranchState()) {
     // Listen to auth state changes
     _authSubscription = authBloc.stream.listen((authState) {
       if (authState.isAuthenticated && authState.companyId != null) {
@@ -92,6 +98,37 @@ class BranchBloc extends Bloc<BranchEvent, BranchState> {
     );
     try {
       final db = await databaseService.database;
+
+      // License Logic: Check Branch Limit
+      final licenseResult = await licenseService.loadAndValidateLicense();
+      if (!licenseResult.isValid) {
+        emit(
+          BranchState(
+            status: BranchStatus.failure,
+            message: licenseResult.errorMessage ?? 'License Invalid',
+          ),
+        );
+        return;
+      }
+
+      final branchLimit = licenseResult.payload?.branchLimit ?? 0;
+      final currentBranchCount =
+          Sqflite.firstIntValue(
+            await db.rawQuery('SELECT COUNT(*) FROM branch_table'),
+          ) ??
+          0;
+
+      if (currentBranchCount >= branchLimit) {
+        emit(
+          BranchState(
+            status: BranchStatus.failure,
+            message:
+                'Branch creation limit reached ($branchLimit branches max). Please upgrade your license.',
+          ),
+        );
+        return;
+      }
+
       final branchMap = event.branch.toMap();
 
       //remove id for new employee insrtion
@@ -194,10 +231,6 @@ class BranchBloc extends Bloc<BranchEvent, BranchState> {
           branchs: updateBranchs,
           filteredBranchs: updateFilteredBranchs,
           recentlyDeleted: [...state.recentlyDeleted, event.deletedBranch],
-          recentlyDeletedIndexes: [
-            ...state.recentlyDeletedIndexes,
-            event.deletedIndex,
-          ],
           message: 'Branch deleted successfully',
         ),
       );

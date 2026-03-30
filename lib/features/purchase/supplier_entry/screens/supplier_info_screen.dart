@@ -92,7 +92,7 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
     // Set default dates
     final now = DateTime.now();
     _transactionDate = now;
-    _deliveryDate = now.add(const Duration(days: 7));
+    //_deliveryDate = now.add(const Duration(days: 7));
     _receivingDate = now;
 
     _updateDateControllers();
@@ -146,27 +146,29 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: _buildAppBar(context),
-        body: BlocBuilder<SupplierBloc, SupplierState>(
-          builder: (context, supplierState) {
-            return BlocBuilder<PurchaseOrderBloc, PurchaseOrderState>(
-              builder: (context, purchaseState) {
-                final isValid =
-                    _selectedSupplier != null &&
-                    purchaseState.selectedHeader != null;
+        body: SafeArea(
+          child: BlocBuilder<SupplierBloc, SupplierState>(
+            builder: (context, supplierState) {
+              return BlocBuilder<PurchaseOrderBloc, PurchaseOrderState>(
+                builder: (context, purchaseState) {
+                  final isValid =
+                      _selectedSupplier != null &&
+                      purchaseState.selectedHeader != null;
 
-                return Stack(
-                  children: [
-                    _buildContent(purchaseState, isValid, supplierState),
-                    if (purchaseState.status == PurchaseOrderStatus.loading &&
-                        purchaseState.pendingOperations.contains(
-                          'prepare_create_purchase_order',
-                        ))
-                      const _LoadingOverlay(),
-                  ],
-                );
-              },
-            );
-          },
+                  return Stack(
+                    children: [
+                      _buildContent(purchaseState, isValid, supplierState),
+                      if (purchaseState.status == PurchaseOrderStatus.loading &&
+                          purchaseState.pendingOperations.contains(
+                            'prepare_create_purchase_order',
+                          ))
+                        const _LoadingOverlay(),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
         ),
       ),
     );
@@ -195,7 +197,7 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
       // Set initial dates from state
       final header = purchaseState.selectedHeader;
       if (header != null) {
-        _transactionDate = header.dateTransaction ?? DateTime.now();
+        _transactionDate = header.dateTransation ?? DateTime.now();
         _deliveryDate = header.dateDelivery ?? _deliveryDate;
         _updateDateControllers();
       }
@@ -364,7 +366,7 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Purchase Order Information:',
+                  'PO Information:',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: _titleFontSize,
@@ -541,7 +543,7 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
   Widget _buildInvoiceNumberField(PurchaseOrderState state) {
     return CustomTextField(
       controller: _invoiceNumberController,
-      labelText: 'Supplier Invoice Number',
+      labelText: ' Invoice Number',
       keyboardType: TextInputType.text,
       prefixIcon: Icon(Icons.receipt, color: Colors.blue.shade700),
       onChanged: (value) {
@@ -586,7 +588,7 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
     final header = state.selectedHeader;
     if (header != null) {
       final updatedHeader = header.copyWith(
-        dateTransaction: _transactionDate,
+        dateTransation: _transactionDate,
         dateDelivery: _deliveryDate,
       );
       context.read<PurchaseOrderBloc>().add(
@@ -745,7 +747,7 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // Cancel Button
-              Expanded(
+              Flexible(
                 child: OutlinedButton(
                   onPressed: () {
                     _cancelOrder(context);
@@ -772,7 +774,7 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
               const SizedBox(width: 16),
 
               // Next Button
-              Expanded(
+              Flexible(
                 child: ElevatedButton(
                   onPressed: isValid && !isProcessing && !isLoading
                       ? () => _goToNextPage(context)
@@ -811,9 +813,6 @@ class _SupplierInfoScreenContentState extends State<SupplierInfoScreenContent> {
                           'Add Items',
                           style: TextStyle(fontSize: _titleFontSize),
                         ),
-                      if (!isProcessing) const SizedBox(width: 8),
-                      if (!isProcessing)
-                        const Icon(Icons.arrow_forward, size: 18),
                     ],
                   ),
                 ),

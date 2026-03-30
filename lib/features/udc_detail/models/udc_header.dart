@@ -24,7 +24,7 @@ class UdcHeader {
   factory UdcHeader.fromJson(Map<String, dynamic> json) {
     return UdcHeader(
       id: json['id'],
-      headerCode: json['header_code'],
+      headerCode: json['udc_code'],
       description1: json['description_1'],
       description2: json['description_2'],
       systemCode: json['system_code'],
@@ -42,7 +42,7 @@ class UdcHeader {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'header_code': headerCode,
+      'udc_code': headerCode,
       'description_1': description1,
       'description_2': description2,
       'system_code': systemCode,
@@ -56,7 +56,7 @@ class UdcHeader {
   Map<String, dynamic> toDatabaseMap() {
     return {
       'id': id,
-      'header_code': headerCode,
+      'udc_code': headerCode,
       'description_1': description1,
       'description_2': description2,
       'system_code': systemCode,

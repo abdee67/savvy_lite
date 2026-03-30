@@ -1,6 +1,7 @@
 import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
@@ -206,6 +207,13 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
               ),
               const SizedBox(height: 16),
               _buildSwitchTile(
+                title: 'Apply Overhead Cost',
+                value: _localSystemConstant.applyOverheadCost == 'Y',
+                onChanged: (value) =>
+                    _updateField(applyOverheadCost: value ? 'Y' : 'N'),
+              ),
+              const SizedBox(height: 16),
+              _buildSwitchTile(
                 title: 'Auto-Issue Lot Quantity at Sales',
                 value: _localSystemConstant.lotQtyAutoForSales == 'Y',
                 onChanged: (value) =>
@@ -240,6 +248,23 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
               onChanged: (value) =>
                   _updateField(taxInfoDisplay: value ? 'Y' : 'N'),
             ),
+            const SizedBox(height: 16),
+            _buildNumberField(
+              label: 'Days Left',
+              value: _localSystemConstant.daysLeft?.toDouble() ?? 180,
+              onChanged: (value) => _updateField(daysLeft: value.toInt()),
+              isInteger: true,
+              min: 0,
+              max: 365,
+            ),
+            const SizedBox(height: 16),
+            _buildTextField(
+              label: 'Currency Code',
+              value: _localSystemConstant.currencyCode ?? 'Birr',
+              onChanged: (value) => _updateField(currencyCode: value),
+              maxLength: 10,
+            ),
+            const SizedBox(height: 16),
 
             // Reorder Point UOM Type Dropdown
             CustomDropdown<String>(
@@ -349,6 +374,35 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
     );
   }
 
+  Widget _buildTextField({
+    required String label,
+    required String value,
+    required Function(String) onChanged,
+    int? maxLength,
+  }) {
+    return CustomTextField(
+      labelText: label,
+      value: value,
+      keyboardType: TextInputType.text,
+      inputFormatters: [
+        if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
+      ],
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Field is required';
+        }
+        if (maxLength != null && value.length > maxLength) {
+          return 'Must be $maxLength characters or less';
+        }
+        return null;
+      },
+      onChanged: (text) {
+        onChanged(text);
+        _setEditingState();
+      },
+    );
+  }
+
   Widget _buildSwitchTile({
     required String title,
     required bool value,
@@ -430,12 +484,15 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
     double? rateVatPercentage,
     double? rateWithholdingPercentage,
     String? applyLotMgm,
+    String? applyOverheadCost,
     int? lotType,
     String? lotQtyAutoForSales,
     String? autoSalesPrice,
     String? generateBarcodeForItem,
     String? discountDisplay,
     String? taxInfoDisplay,
+    int? daysLeft,
+    String? currencyCode,
     String? reorderPointUomType,
     int? decimalPlaces,
     int? locationCategoryLevel,
@@ -446,12 +503,15 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
         rateVatPercentage: rateVatPercentage,
         rateWithholdingPercentage: rateWithholdingPercentage,
         applyLotMgm: applyLotMgm,
+        applyOverheadCost: applyOverheadCost,
         lotType: lotType,
         lotQtyAutoForSales: lotQtyAutoForSales,
         autoSalesPrice: autoSalesPrice,
         generateBarcodeForItem: generateBarcodeForItem,
         discountDisplay: discountDisplay,
         taxInfoDisplay: taxInfoDisplay,
+        daysLeft: daysLeft,
+        currencyCode: currencyCode,
         reorderPointUomType: reorderPointUomType,
         decimalPlaces: decimalPlaces,
         locationCategoryLevel: locationCategoryLevel,

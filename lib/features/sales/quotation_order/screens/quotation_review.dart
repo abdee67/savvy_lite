@@ -729,32 +729,6 @@ class _QuotationReviewPageState extends State<QuotationReviewPage>
                                       fontWeight: FontWeight.w800,
                                     ),
                                   ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: _getquotationOrderTypeColor(
-                                        quotationOrder.salesType,
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color:
-                                            _getquotationOrderTypeBorderColor(
-                                              quotationOrder.salesType,
-                                            ),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      quotationOrder.salesType ?? 'Unknown',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
                                 ],
                               ),
 
@@ -785,32 +759,10 @@ class _QuotationReviewPageState extends State<QuotationReviewPage>
                                       ),
                                     ),
                                     child: Text(
-                                      'From ${_formatDateTime(quotationOrder.orderDate ?? DateTime.now())}',
+                                      'Order Date: ${_formatDateTime(quotationOrder.orderDate ?? DateTime.now())}',
                                       style: TextStyle(
                                         fontSize: 10,
                                         color: Colors.blue[800],
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.green[50],
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: Colors.green[200]!,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      'To ${_formatDateTime(quotationOrder.shippedDate ?? DateTime.now())}',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.green[800],
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -1026,13 +978,6 @@ class _QuotationReviewPageState extends State<QuotationReviewPage>
                       () => _safeVoid(context, header: quotationOrder),
                       isCompact,
                     ),
-                  _buildActionButton(
-                    Iconsax.export,
-                    'Export',
-                    () => _exportToExcel(),
-                    isCompact,
-                  ),
-                  _buildActionButton(Iconsax.repeat, 'Print', () {}, isCompact),
                 ],
               ),
             ),

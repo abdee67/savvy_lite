@@ -1,7 +1,10 @@
 // features/stock/items_table/blocs/items_table_bloc.dart
 
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
+import 'package:savvy_stock/features/stock/item_entry/models/item_report_filter.model.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
@@ -87,6 +90,13 @@ class StockItemsEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
     // Event handlers - Navigation operations
     on<SaveAndClose>(_onSaveAndClose);
     on<SaveAndAddNew>(_onSaveAndAddNew);
+
+    on<LoadItemReport>(_onLoadItemReport);
+    on<LoadMoreItemReport>(_onLoadMoreItemReport);
+    on<UpdateItemReportFilters>(_onUpdateItemReportFilters);
+    on<ClearItemReportFilters>(_onClearFilters);
+    on<ExportItemReportToExcel>(_onExportToExcel);
+    on<ExportItemReportToPDF>(_onExportToPDF);
     //on<SaveAndAddContinue>(_onSaveAndAddContinue);
   }
 
@@ -305,9 +315,12 @@ class StockItemsEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
       emit(
         state.copyWith(
           status: ItemEntryStatus.failure,
-          message: 'Failed to save row: $e',
+          //message: 'Failed to save row: $e',
         ),
       );
+      if (kDebugMode) {
+        developer.log('Failed to save row: $e');
+      }
     }
   }
 
@@ -371,9 +384,12 @@ class StockItemsEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
       emit(
         state.copyWith(
           status: ItemEntryStatus.failure,
-          message: 'Failed to save row: $e',
+          //message: 'Failed to save row: $e',
         ),
       );
+      if (kDebugMode) {
+        developer.log('Failed to save row: $e');
+      }
     }
   }
 
@@ -440,9 +456,12 @@ class StockItemsEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
       emit(
         state.copyWith(
           status: ItemEntryStatus.failure,
-          message: 'Failed to save row: $e',
+          //message: 'Failed to save row: $e',
         ),
       );
+      if (kDebugMode) {
+        developer.log('Failed to save row: $e');
+      }
     }
   }
 
@@ -510,9 +529,12 @@ class StockItemsEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
       emit(
         state.copyWith(
           status: ItemEntryStatus.failure,
-          message: 'Failed to save in edit: $e',
+          //message: 'Failed to save in edit: $e',
         ),
       );
+      if (kDebugMode) {
+        developer.log('Failed to save in edit: $e');
+      }
     }
   }
 
@@ -1072,6 +1094,255 @@ class StockItemsEntryBloc extends Bloc<ItemEntryEvent, ItemEntryState> {
         state.copyWith(
           status: ItemEntryStatus.failure,
           message: 'Failed to create item: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onLoadItemReport(
+    LoadItemReport event,
+    Emitter<ItemEntryState> emit,
+  ) async {
+    emit(state.copyWith(status: ItemEntryStatus.loadingItemReport));
+    try {
+      final companyId = event.companyId;
+
+      final result = await repository.getPaginatedItems(
+        companyId: companyId,
+        filters: event.filters,
+        page: event.page,
+        pageSize: event.pageSize,
+      );
+
+      final totalPages = (result.totalCount / event.pageSize).ceil();
+
+      emit(
+        state.copyWith(
+          status: ItemEntryStatus.loadedItemReport,
+          itemReportItems: result.itemEntries,
+          itemReportTotalCount: result.totalCount,
+          itemReportTotalPages: totalPages,
+          itemReportPage: event.page,
+          //itemReportTotalCost: result.totalCost,
+          itemReportFilters: event.filters,
+          hasMoreItemReport: event.page < totalPages,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemEntryStatus.failure,
+          message: 'Failed to load Item report: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onLoadMoreItemReport(
+    LoadMoreItemReport event,
+    Emitter<ItemEntryState> emit,
+  ) async {
+    if (!state.hasMoreItemReport) return;
+
+    emit(state.copyWith(status: ItemEntryStatus.loadingMoreItemReport));
+
+    try {
+      final nextPage = state.itemReportPage + 1;
+      final result = await repository.getPaginatedItems(
+        companyId: authBloc.state.companyId!,
+        filters: state.itemReportFilters,
+        page: nextPage,
+        pageSize: 20,
+      );
+
+      final updatedItems = [...state.itemReportItems, ...result.itemEntries!];
+      final totalPages = (result.totalCount / 20).ceil();
+
+      emit(
+        state.copyWith(
+          status: ItemEntryStatus.loadedItemReport,
+          itemReportItems: updatedItems,
+          itemReportPage: nextPage,
+          //itemReportTotalCost:
+          //state.itemReportTotalCost + result.totalCost,
+          hasMoreItemReport: nextPage < totalPages,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemEntryStatus.failure,
+          message: 'Failed to load more reports: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onUpdateItemReportFilters(
+    UpdateItemReportFilters event,
+    Emitter<ItemEntryState> emit,
+  ) async {
+    // Reset to page 1 when filters change
+    add(
+      LoadItemReport(
+        companyId: authBloc.state.companyId!,
+        filters: event.filters,
+        page: 1,
+        pageSize: 20,
+      ),
+    );
+  }
+
+  Future<void> _onClearFilters(
+    ClearItemReportFilters event,
+    Emitter<ItemEntryState> emit,
+  ) async {
+    add(
+      LoadItemReport(
+        companyId: authBloc.state.companyId!,
+        filters: const ItemReportFilters(),
+        page: 1,
+        pageSize: 20,
+      ),
+    );
+  }
+
+  Future<void> _onExportToExcel(
+    ExportItemReportToExcel event,
+    Emitter<ItemEntryState> emit,
+  ) async {
+    emit(state.copyWith(status: ItemEntryStatus.exporting));
+
+    try {
+      // Get all data (without pagination) for export
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) throw Exception('Company ID not found');
+
+      final result = await repository.getPaginatedItems(
+        companyId: companyId,
+        filters: event.filters,
+        page: 1,
+        pageSize: 10000, // Large number to get all records
+      );
+
+      // Prepare data for Excel export
+      final exportData = _prepareExcelData(result.itemEntries!);
+
+      // In a real app, you would use a package like excel or csv
+      // For now, we'll just simulate
+      await _simulateExcelExport(exportData);
+
+      emit(
+        state.copyWith(
+          status: ItemEntryStatus.success,
+          message: 'Exported ${result.itemEntries!.length} records to Excel',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemEntryStatus.failure,
+          message: 'Export failed: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportToPDF(
+    ExportItemReportToPDF event,
+    Emitter<ItemEntryState> emit,
+  ) async {
+    emit(state.copyWith(status: ItemEntryStatus.exporting));
+
+    try {
+      final companyId = authBloc.state.companyId;
+      if (companyId == null) throw Exception('Company ID not found');
+
+      final result = await repository.getPaginatedItems(
+        companyId: companyId,
+        filters: event.filters,
+        page: 1,
+        pageSize: 10000,
+      );
+
+      // Prepare PDF data
+      await _simulatePDFExport(result.itemEntries!);
+
+      emit(
+        state.copyWith(
+          status: ItemEntryStatus.success,
+          message:
+              'Generated PDF report with ${result.itemEntries!.length} records',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: ItemEntryStatus.failure,
+          message: 'PDF generation failed: $e',
+        ),
+      );
+    }
+  }
+
+  // Helper methods for export
+  List<Map<String, dynamic>> _prepareExcelData(List<ItemEntryModel> items) {
+    return items.map((item) {
+      return {
+        //'Batch': item.batchNumberSupplier ?? '',
+        // 'Item ID': item.itemRef?.itemsId ?? '',
+        //'Item Description': item.itemRef?.itemDescription ?? '',
+        //'Branch/Store': item.branchRef?.description ?? '',
+        //'Location': item.locationRef?.locationDescription ?? '',
+        //'Unit of Measure': item.itemRef?.unitOfMeasure ?? '',
+        //'Item Date': item.dateItem?.toIso8601String() ?? '',
+        //'Available Quantity': item.quantityAvailable ?? 0.0,
+        'Item Description': item.itemDescription ?? '',
+      };
+    }).toList();
+  }
+
+  Future<void> _simulateExcelExport(List<Map<String, dynamic>> data) async {
+    // In production, use a package like:
+    // - excel: ^2.0.0-null-safety-3
+    // - csv: ^5.0.0
+    await Future.delayed(const Duration(seconds: 1));
+    if (kDebugMode) {
+      developer.log('Exporting ${data.length} rows to Excel');
+    }
+  }
+
+  Future<void> _simulatePDFExport(List<ItemEntryModel> items) async {
+    // In production, use a package like:
+    // - pdf: ^3.10.6
+    // - printing: ^5.11.2
+    await Future.delayed(const Duration(seconds: 2));
+    if (kDebugMode) {
+      developer.log('Generating PDF for ${items.length} Items');
+    }
+  }
+
+  // Public methods for pagination
+  void loadNextPage() {
+    if (state.hasMoreItemReport) {
+      add(LoadMoreItemReport());
+    }
+  }
+
+  void loadPreviousPage() {
+    if (state.hasPreviousPage) {
+      add(LoadMoreItemReport());
+    }
+  }
+
+  void loadPage(int page) {
+    if (page > 0 && page <= state.itemReportTotalPages) {
+      add(
+        LoadItemReport(
+          companyId: authBloc.state.companyId!,
+          filters: state.itemReportFilters,
+          page: page,
+          pageSize: 20,
         ),
       );
     }

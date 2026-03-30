@@ -17,7 +17,6 @@ enum LocationMasterStatus {
 class LocationMasterState extends Equatable {
   final LocationMasterStatus status;
   final List<LocationMaster> items;
-  final List<LocationMaster> filteredItems;
   final List<LocationMaster> createItems;
   final List<LocationMaster> editItems;
   final List<LocationMaster> multiSelectionItems;
@@ -43,7 +42,6 @@ class LocationMasterState extends Equatable {
   const LocationMasterState({
     this.status = LocationMasterStatus.initial,
     this.items = const [],
-    this.filteredItems = const [],
     this.createItems = const [],
     this.editItems = const [],
     this.multiSelectionItems = const [],
@@ -66,7 +64,6 @@ class LocationMasterState extends Equatable {
   LocationMasterState copyWith({
     LocationMasterStatus? status,
     List<LocationMaster>? items,
-    List<LocationMaster>? filteredItems,
     List<LocationMaster>? createItems,
     List<LocationMaster>? editItems,
     List<LocationMaster>? multiSelectionItems,
@@ -88,7 +85,6 @@ class LocationMasterState extends Equatable {
     return LocationMasterState(
       status: status ?? this.status,
       items: items ?? this.items,
-      filteredItems: filteredItems ?? this.filteredItems,
       createItems: createItems ?? this.createItems,
       editItems: editItems ?? this.editItems,
       multiSelectionItems: multiSelectionItems ?? this.multiSelectionItems,
@@ -115,7 +111,6 @@ class LocationMasterState extends Equatable {
     message,
     companyId,
     items,
-    filteredItems,
     createItems,
     editItems,
     multiSelectionItems,

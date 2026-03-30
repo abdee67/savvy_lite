@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -166,13 +169,17 @@ class _EmployeeListPageState extends State<EmployeeListPage>
 
   void _callEmployee(String phone) {
     // Implement phone call functionality
-    print('Calling: $phone');
+    if (kDebugMode) {
+      developer.log('Calling: $phone');
+    }
   }
 
   void _emailEmployee(String? email) {
     if (email != null) {
       // Implement email functionality
-      print('Emailing: $email');
+      if (kDebugMode) {
+        developer.log('Emailing: $email');
+      }
     }
   }
 
@@ -284,33 +291,35 @@ class _EmployeeListPageState extends State<EmployeeListPage>
     return Scaffold(
       backgroundColor: Colors.grey,
       appBar: AppBar(title: const Text('Employee List')),
-      body: BlocConsumer<EmployeeBloc, EmployeeState>(
-        listener: (context, state) {
-          if (state.employees.isNotEmpty && !_isSelectionMode) {
-            setState(() {
-              _isSelectionMode = true;
-            });
-          } else if (state.employees.isEmpty && _isSelectionMode) {
-            setState(() {
-              _isSelectionMode = false;
-            });
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // Header with Search and Actions
-                  _buildSearchBar(),
-                  _buildActionButtons(state),
-                  // Employee List
-                  Expanded(child: _buildEmployeeList(state)),
-                ],
-              ),
-            ],
-          );
-        },
+      body: SafeArea(
+        child: BlocConsumer<EmployeeBloc, EmployeeState>(
+          listener: (context, state) {
+            if (state.employees.isNotEmpty && !_isSelectionMode) {
+              setState(() {
+                _isSelectionMode = true;
+              });
+            } else if (state.employees.isEmpty && _isSelectionMode) {
+              setState(() {
+                _isSelectionMode = false;
+              });
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    // Header with Search and Actions
+                    _buildSearchBar(),
+                    _buildActionButtons(state),
+                    // Employee List
+                    Expanded(child: _buildEmployeeList(state)),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -529,13 +538,13 @@ class _EmployeeListPageState extends State<EmployeeListPage>
     // For responsiveness:
     final collapsedHeight = isCompact
         ? screenHeight *
-              0.2 // phones
+              0.22 // phones
         : screenHeight * 0.12; // tablets / wide screens
 
     final expandedHeight = isCompact
         ? screenHeight * 0.55
         : screenHeight * 0.45;
-    final collapsedWidth = isCompact ? screenWidth * 0.92 : screenWidth * 0.8;
+    final collapsedWidth = screenWidth * 1;
 
     return GestureDetector(
       onTap: () {
@@ -666,7 +675,7 @@ class _EmployeeListPageState extends State<EmployeeListPage>
                                 ),
                               ),
                               Text(
-                                employee.phone,
+                                employee.phoneHome,
                                 style: TextStyle(
                                   color: const Color(0xFF887F7F),
                                   fontSize: isCompact ? 12 : 14,
@@ -761,21 +770,25 @@ class _EmployeeListPageState extends State<EmployeeListPage>
                         BlocProvider.value(value: context.read<EmployeeBloc>()),
                         BlocProvider.value(value: widget.userBloc),
                       ],
-                      child: BlocConsumer<EmployeeBloc, EmployeeState>(
-                        listener: (context, state) {
-                          if (state.status == EmployeeStatus.success &&
-                              state.message != null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(state.message!)),
-                            );
-                          }
-                        },
-                        builder: (context, state) {
-                          return _buildContentSection(
-                            employee,
-                            state,
-                            !isCompact, // useHorizontalLayout
-                            isCompact,
+                      child: BlocBuilder<UserBloc, UserState>(
+                        builder: (context, userState) {
+                          return BlocConsumer<EmployeeBloc, EmployeeState>(
+                            listener: (context, state) {
+                              if (state.status == EmployeeStatus.success &&
+                                  state.message != null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(state.message!)),
+                                );
+                              }
+                            },
+                            builder: (context, state) {
+                              return _buildContentSection(
+                                employee,
+                                state,
+                                !isCompact, // useHorizontalLayout
+                                isCompact,
+                              );
+                            },
                           );
                         },
                       ),
@@ -869,7 +882,7 @@ class _EmployeeListPageState extends State<EmployeeListPage>
     return BlocConsumer<UserBloc, UserState>(
       listener: (context, userState) {
         if (userState.status == UserStatus.success &&
-            userState.message?.contains('role') == true) {
+            (userState.message?.toLowerCase().contains('role') == true)) {
           // Roles were updated successfully
           context.read<EmployeeBloc>().add(ToggleRoleManagement(0));
           context.read<EmployeeBloc>().add(ClearRoleSelection());
@@ -1031,7 +1044,8 @@ class _EmployeeListPageState extends State<EmployeeListPage>
     );
     // Clear selection and exit role management mode
     context.read<EmployeeBloc>().add(ClearRoleSelection());
-    context.read<EmployeeBloc>().add(ToggleRoleManagement(0));
+    context.read<RoleBloc>().add(LoadRoles(widget.authBloc.state.companyId!));
+    context.read<UserBloc>().add(LoadUsers(widget.authBloc.state.companyId!));
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -1092,7 +1106,7 @@ class _EmployeeListPageState extends State<EmployeeListPage>
               ),
               _buildInfoItem(
                 'Phone : ',
-                employee.phone,
+                employee.phoneHome,
                 Iconsax.call,
                 isCompact,
               ),
@@ -1111,19 +1125,13 @@ class _EmployeeListPageState extends State<EmployeeListPage>
                     _buildActionButton(
                       Iconsax.call,
                       'Call',
-                      () => _callEmployee(employee.phone ?? ''),
+                      () => _callEmployee(employee.phoneHome ?? ''),
                       isCompact,
                     ),
                     _buildActionButton(
                       Iconsax.sms,
                       'Email',
                       () => _emailEmployee(employee.email ?? ''),
-                      isCompact,
-                    ),
-                    _buildActionButton(
-                      Iconsax.export,
-                      'Export',
-                      () => _exportEmployee(employee),
                       isCompact,
                     ),
                   ],
@@ -1199,27 +1207,54 @@ class _EmployeeListPageState extends State<EmployeeListPage>
           );
         }
 
-        // Get current assigned roles
-        final assignedRoles = userWithRole?.roles ?? [];
+        // Get current assigned roles from fresh UserBloc state
+        return BlocConsumer<UserBloc, UserState>(
+          builder: (context, userState) {
+            // Get fresh user data for this employee
+            final freshUserWithRole = userState.usersWithRole
+                .where(
+                  (userWithRole) =>
+                      userWithRole.user.employeesId == employee.id,
+                )
+                .firstOrNull;
 
-        // Get all available roles
-        final allRoles = roleState.roles;
+            // Get current assigned roles from fresh data
+            final currentAssignedRoles = freshUserWithRole?.roles ?? [];
 
-        // Filter available roles (not assigned)
-        final availableRoles = allRoles
-            .where(
-              (role) =>
-                  !assignedRoles.any((assigned) => assigned.id == role.id),
-            )
-            .toList();
+            final currentAssignedRoleIds = currentAssignedRoles
+                .map((r) => r.id)
+                .toSet();
 
-        return _buildSimpleRoleManagement(
-          assignedRoles,
-          availableRoles,
-          employee,
-          userWithRole,
-          state,
-          isCompact,
+            final selectedRoleIds = state.selectedRolesForAssignment
+                .map((r) => r.id)
+                .toSet();
+
+            bool willBeAssigned(Role role) {
+              final isCurrentlyAssigned = currentAssignedRoleIds.contains(
+                role.id,
+              );
+              final isToggled = selectedRoleIds.contains(role.id);
+              return isToggled ? !isCurrentlyAssigned : isCurrentlyAssigned;
+            }
+
+            final allRoles = roleState.roles;
+            final assignedRoles = allRoles.where(willBeAssigned).toList();
+            final availableRoles = allRoles
+                .where((r) => !willBeAssigned(r))
+                .toList();
+
+            return _buildSimpleRoleManagement(
+              assignedRoles,
+              availableRoles,
+              employee,
+              freshUserWithRole,
+              state,
+              isCompact,
+            );
+          },
+          listener: (context, userState) {
+            // Handle user state changes if needed
+          },
         );
       },
     );
@@ -1280,7 +1315,7 @@ class _EmployeeListPageState extends State<EmployeeListPage>
                   const SizedBox(height: 16),
                   _buildSelectedRolesPreview(
                     state.selectedRolesForAssignment,
-                    assignedRoles,
+                    userWithRole?.roles ?? const [],
                     isCompact,
                   ),
                 ],
@@ -1521,7 +1556,6 @@ class _EmployeeListPageState extends State<EmployeeListPage>
     );
   }
 
-  // Dynamic role items wrapping
   Widget _buildDynamicRoleItemsWrap({
     required List<Role> roles,
     required bool isAssigned,
@@ -1529,36 +1563,12 @@ class _EmployeeListPageState extends State<EmployeeListPage>
     required bool isCompact,
     required ValueChanged<Role> onRoleTap,
   }) {
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    // Calculate items per row based on screen width
-    int getItemsPerRow() {
-      if (screenWidth < 400) return 2; // Very small screens: 2 per row
-      if (screenWidth < 600) return 3; // Small screens: 3 per row
-      if (screenWidth < 900) return 4; // Medium screens: 4 per row
-      return 5; // Large screens: 5 per row
-    }
-
-    final itemsPerRow = getItemsPerRow();
-    final itemWidth =
-        (screenWidth - 48 - (8 * (itemsPerRow - 1))) / itemsPerRow;
-
     return Wrap(
-      spacing: 8, // Horizontal space between items
-      runSpacing: 8, // Vertical space between lines
+      spacing: 2, // Horizontal space between items
+      runSpacing: 2, // Vertical space between lines
       alignment: WrapAlignment.start,
       children: roles.map((role) {
         return Container(
-          constraints: BoxConstraints(
-            minWidth: itemWidth.clamp(
-              130,
-              200,
-            ), // Minimum width for each role item
-            maxWidth: itemWidth.clamp(
-              150,
-              200,
-            ), // Maximum width for each role item
-          ),
           child: _buildRoleItem(
             role: role,
             isAssigned: isAssigned,
@@ -1599,8 +1609,8 @@ class _EmployeeListPageState extends State<EmployeeListPage>
     return GestureDetector(
       onTap: onRoleTap,
       child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        margin: EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: ShapeDecoration(
           color: getBackgroundColor(),
           shape: RoundedRectangleBorder(
@@ -1627,6 +1637,7 @@ class _EmployeeListPageState extends State<EmployeeListPage>
             fontSize: isCompact ? 12 : 14,
             fontFamily: 'Inter',
             fontWeight: FontWeight.w500,
+            overflow: TextOverflow.ellipsis,
             color: getTextColor(),
           ),
         ),

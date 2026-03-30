@@ -1,4 +1,8 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
@@ -232,9 +236,11 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
         _unitPriceController.text = itemInBranch.unitPrice?.toString() ?? '';
       });
 
-      print(
-        '🔄 Item selected - UOM: $_itemUom, Available Qty: $_availableQuantity',
-      );
+      if (kDebugMode) {
+        developer.log(
+          '🔄 Item selected - UOM: $_itemUom, Available Qty: $_availableQuantity',
+        );
+      }
     }
   }
 
@@ -423,61 +429,71 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
         backgroundColor: const Color(0xFF155888),
         elevation: 0,
       ),
-      body: MultiBlocListener(
-        listeners: [
-          BlocListener<LotMasterBloc, LotMasterState>(
-            listener: (context, state) {
-              // Update lot number when it's generated or changed
-              if (state.selected?.lotNumber != null &&
-                  (() {
-                    final txt = _lotNumberController.text.trim();
-                    final current = int.tryParse(txt);
-                    return current == null ||
-                        state.selected!.lotNumber != current;
-                  })()) {
-                setState(() {
-                  _lotNumberController.text = state.selected!.lotNumber
-                      .toString();
-                });
-              }
-              if (state.status == LotMasterStatus.success) {
-                _showSuccessDialog();
-              } else if (state.status == LotMasterStatus.failure) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(state.message ?? 'An error occurred'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-          ),
-          BlocListener<StockItemInBranchBloc, ItemInBranchState>(
-            listener: (context, state) {
-              if (state.status == ItemInBranchStatus.loaded) {
-                setState(() {
-                  _branchItems = state.items;
-                });
-                print('📦 Loaded ${_branchItems.length} items for branch');
-              }
-            },
-          ),
-          BlocListener<StockItemLocationBloc, ItemLocationsState>(
-            listener: (context, state) {
-              if (state.status == ItemLocationsStatus.success) {
-                setState(() {
-                  _itemLocations = state.items;
-                });
-                print('📍 Loaded ${_itemLocations.length} locations for item');
-              }
-            },
-          ),
-        ],
-        child: Column(
-          children: [
-            Expanded(child: _buildForm()),
-            _buildBottomNavigation(),
+      body: SafeArea(
+        child: MultiBlocListener(
+          listeners: [
+            BlocListener<LotMasterBloc, LotMasterState>(
+              listener: (context, state) {
+                // Update lot number when it's generated or changed
+                if (state.selected?.lotNumber != null &&
+                    (() {
+                      final txt = _lotNumberController.text.trim();
+                      final current = int.tryParse(txt);
+                      return current == null ||
+                          state.selected!.lotNumber != current;
+                    })()) {
+                  setState(() {
+                    _lotNumberController.text = state.selected!.lotNumber
+                        .toString();
+                  });
+                }
+                if (state.status == LotMasterStatus.success) {
+                  _showSuccessDialog();
+                } else if (state.status == LotMasterStatus.failure) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message ?? 'An error occurred'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+            ),
+            BlocListener<StockItemInBranchBloc, ItemInBranchState>(
+              listener: (context, state) {
+                if (state.status == ItemInBranchStatus.loaded) {
+                  setState(() {
+                    _branchItems = state.items;
+                  });
+                  if (kDebugMode) {
+                    developer.log(
+                      '📦 Loaded ${_branchItems.length} items for branch',
+                    );
+                  }
+                }
+              },
+            ),
+            BlocListener<StockItemLocationBloc, ItemLocationsState>(
+              listener: (context, state) {
+                if (state.status == ItemLocationsStatus.success) {
+                  setState(() {
+                    _itemLocations = state.items;
+                  });
+                  if (kDebugMode) {
+                    developer.log(
+                      '📍 Loaded ${_itemLocations.length} locations for item',
+                    );
+                  }
+                }
+              },
+            ),
           ],
+          child: Column(
+            children: [
+              Expanded(child: _buildForm()),
+              _buildBottomNavigation(),
+            ],
+          ),
         ),
       ),
     );
@@ -825,6 +841,7 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
               labelText: 'Supplier Batch Number',
               controller: _supplierBatchController,
               prefixIcon: const Icon(Iconsax.barcode),
+              inputFormatters: [LengthLimitingTextInputFormatter(50)],
             ),
           ],
         ),

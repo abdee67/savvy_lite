@@ -3,6 +3,7 @@ import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 class SystemConstant {
   final int? id;
   late final String? applyLotMgm;
+  late final String? applyOverheadCost;
   late final String? applyLocationMgm;
   final String? interfaceCustomer;
   final String? interfaceEmployee;
@@ -21,8 +22,12 @@ class SystemConstant {
   late final String? lotQtyAutoForSales;
   late final String? discountDisplay;
   late final String? taxInfoDisplay;
+  final int? daysLeft;
+  late final String? currencyCode;
   late final String? reorderPointUomType;
   final int? tempId;
+  final String? totVat;
+  final String? totWithHolding;
   final bool isSynced;
   final DateTime? lastSyncTime;
 
@@ -31,6 +36,7 @@ class SystemConstant {
   SystemConstant({
     this.id,
     this.applyLotMgm,
+    this.applyOverheadCost,
     this.applyLocationMgm,
     this.interfaceCustomer,
     this.interfaceEmployee,
@@ -49,8 +55,12 @@ class SystemConstant {
     this.lotQtyAutoForSales,
     this.discountDisplay,
     this.taxInfoDisplay,
+    this.daysLeft,
+    this.currencyCode,
     this.reorderPointUomType,
     this.tempId,
+    this.totVat,
+    this.totWithHolding,
     this.isSynced = true,
     this.lastSyncTime,
     this.lotTypeRef,
@@ -60,6 +70,7 @@ class SystemConstant {
     return SystemConstant(
       id: json['id'],
       applyLotMgm: json['apply_lot_mgm'],
+      applyOverheadCost: json['apply_overhead_cost'],
       applyLocationMgm: json['apply_location_mgm'],
       interfaceCustomer: json['interface_customer'],
       interfaceEmployee: json['interface_employee'],
@@ -82,7 +93,11 @@ class SystemConstant {
       lotQtyAutoForSales: json['lot_qty_auto_for_sales'],
       discountDisplay: json['discount_display'],
       taxInfoDisplay: json['tax_info_display'],
+      daysLeft: json['days_left'],
+      currencyCode: json['currency_code'],
       reorderPointUomType: json['reorder_point_uom_type'],
+      totVat: json['tot_vat'],
+      totWithHolding: json['tot_withholding'],
       isSynced: json['is_synced'] == 1,
       lastSyncTime: json['last_sync_time'] != null
           ? DateTime.fromMillisecondsSinceEpoch(json['last_sync_time'])
@@ -101,6 +116,7 @@ class SystemConstant {
     return {
       'id': id,
       'apply_lot_mgm': applyLotMgm,
+      'apply_overhead_cost': applyOverheadCost,
       'apply_location_mgm': applyLocationMgm,
       'interface_customer': interfaceCustomer,
       'interface_employee': interfaceEmployee,
@@ -122,6 +138,8 @@ class SystemConstant {
       'lot_qty_auto_for_sales': lotQtyAutoForSales,
       'discount_display': discountDisplay,
       'tax_info_display': taxInfoDisplay,
+      'days_left': daysLeft,
+      'currency_code': currencyCode,
       'reorder_point_uom_type': reorderPointUomType,
       'is_synced': isSynced ? 1 : 0,
       'last_sync_time': lastSyncTime?.millisecondsSinceEpoch,
@@ -132,13 +150,14 @@ class SystemConstant {
     return {
       'id': id,
       'apply_lot_mgm': applyLotMgm,
+      'apply_overhead_cost': applyOverheadCost,
       'apply_location_mgm': applyLocationMgm,
       'interface_customer': interfaceCustomer,
       'interface_employee': interfaceEmployee,
       'decimal_places': decimalPlaces,
       'date_last_updated': dateLastUpdated?.millisecondsSinceEpoch,
       'time_last_updated': timeLastUpdated?.millisecondsSinceEpoch,
-      'updated_by': updatedBy,
+      'ubpdated_by': updatedBy,
       'generate_barcode_for_item': generateBarcodeForItem,
       'company': company,
       'rate_vat_percentage': rateVatPercentage,
@@ -150,6 +169,8 @@ class SystemConstant {
       'lot_qty_auto_for_sales': lotQtyAutoForSales,
       'discount_display': discountDisplay,
       'tax_info_display': taxInfoDisplay,
+      'days_left': daysLeft,
+      'currency_code': currencyCode,
       'reorder_point_uom_type': reorderPointUomType,
       'is_synced': isSynced ? 1 : 0,
       'last_sync_time': lastSyncTime?.millisecondsSinceEpoch,
@@ -160,17 +181,26 @@ class SystemConstant {
     return SystemConstant(
       id: map['id'],
       applyLotMgm: map['apply_lot_mgm'],
+      applyOverheadCost: map['apply_overhead_cost'],
       applyLocationMgm: map['apply_location_mgm'],
       interfaceCustomer: map['interface_customer'],
       interfaceEmployee: map['interface_employee'],
       decimalPlaces: map['decimal_places'],
       dateLastUpdated: map['date_last_updated'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['date_last_updated'])
+          ? DateTime.fromMillisecondsSinceEpoch(
+              map['date_last_updated'] is String
+                  ? int.parse(map['date_last_updated'])
+                  : map['date_last_updated'],
+            )
           : null,
       timeLastUpdated: map['time_last_updated'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['time_last_updated'])
+          ? DateTime.fromMillisecondsSinceEpoch(
+              map['time_last_updated'] is String
+                  ? int.parse(map['time_last_updated'])
+                  : map['time_last_updated'],
+            )
           : null,
-      updatedBy: map['updated_by'],
+      updatedBy: map['ubpdated_by'],
       generateBarcodeForItem: map['generate_barcode_for_item'],
       company: map['company'],
       rateVatPercentage: map['rate_vat_percentage']?.toDouble(),
@@ -184,10 +214,18 @@ class SystemConstant {
       lotQtyAutoForSales: map['lot_qty_auto_for_sales'],
       discountDisplay: map['discount_display'],
       taxInfoDisplay: map['tax_info_display'],
+      daysLeft: map['days_left'],
+      currencyCode: map['currency_code'],
       reorderPointUomType: map['reorder_point_uom_type'],
+      totVat: map['tot_vat'],
+      totWithHolding: map['tot_withholding'],
       isSynced: map['is_synced'] == 1,
       lastSyncTime: map['last_sync_time'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['last_sync_time'])
+          ? DateTime.fromMillisecondsSinceEpoch(
+              map['last_sync_time'] is String
+                  ? int.parse(map['last_sync_time'])
+                  : map['last_sync_time'],
+            )
           : null,
       lotTypeRef: map['lotType_description'] != null
           ? UdcDetails(
@@ -203,6 +241,7 @@ class SystemConstant {
   SystemConstant copyWith({
     int? id,
     String? applyLotMgm,
+    String? applyOverheadCost,
     String? applyLocationMgm,
     String? interfaceCustomer,
     String? interfaceEmployee,
@@ -221,6 +260,8 @@ class SystemConstant {
     String? lotQtyAutoForSales,
     String? discountDisplay,
     String? taxInfoDisplay,
+    int? daysLeft,
+    String? currencyCode,
     String? reorderPointUomType,
     int? tempId,
     bool? isSynced,
@@ -230,6 +271,7 @@ class SystemConstant {
     return SystemConstant(
       id: id ?? this.id,
       applyLotMgm: applyLotMgm ?? this.applyLotMgm,
+      applyOverheadCost: applyOverheadCost ?? this.applyOverheadCost,
       applyLocationMgm: applyLocationMgm ?? this.applyLocationMgm,
       interfaceCustomer: interfaceCustomer ?? this.interfaceCustomer,
       interfaceEmployee: interfaceEmployee ?? this.interfaceEmployee,
@@ -251,6 +293,8 @@ class SystemConstant {
       lotQtyAutoForSales: lotQtyAutoForSales ?? this.lotQtyAutoForSales,
       discountDisplay: discountDisplay ?? this.discountDisplay,
       taxInfoDisplay: taxInfoDisplay ?? this.taxInfoDisplay,
+      daysLeft: daysLeft ?? this.daysLeft,
+      currencyCode: currencyCode ?? this.currencyCode,
       reorderPointUomType: reorderPointUomType ?? this.reorderPointUomType,
       tempId: tempId ?? this.tempId,
       isSynced: isSynced ?? this.isSynced,
@@ -261,6 +305,7 @@ class SystemConstant {
 
   // Helper methods for boolean conversions
   bool get applyLotMgmBoolean => applyLotMgm == 'Y';
+  bool get applyOverheadCostBoolean => applyOverheadCost == 'Y';
   bool get applyLocationMgmBoolean => applyLocationMgm == 'Y';
   bool get lotQtyAutoForSalesBoolean => lotQtyAutoForSales == 'Y';
   bool get autoSalesPriceBoolean => autoSalesPrice == 'Y';
@@ -270,6 +315,8 @@ class SystemConstant {
   bool get reorderPointUomTypeBoolean => reorderPointUomType == 'I';
 
   set applyLotMgmBoolean(bool value) => applyLotMgm = value ? 'Y' : 'N';
+  set applyOverheadCostBoolean(bool value) =>
+      applyOverheadCost = value ? 'Y' : 'N';
   set applyLocationMgmBoolean(bool value) =>
       applyLocationMgm = value ? 'Y' : 'N';
   set lotQtyAutoForSalesBoolean(bool value) =>

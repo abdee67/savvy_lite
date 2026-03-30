@@ -23,9 +23,14 @@ class LoadSalesReturns extends SalesReturnEvent {
 
 class LoadSalesReturnByFsNumber extends SalesReturnEvent {
   final String fsNumber;
+  final String invoiceNumber;
   final int companyId;
 
-  LoadSalesReturnByFsNumber({required this.fsNumber, required this.companyId});
+  LoadSalesReturnByFsNumber({
+    required this.fsNumber,
+    required this.invoiceNumber,
+    required this.companyId,
+  });
 }
 
 // Header CRUD Operations
@@ -166,14 +171,12 @@ class SearchSalesReturns extends SalesReturnEvent {
 
 class FilterSalesReturns extends SalesReturnEvent {
   final String fsNumber;
-  final String invoiceNumber;
   final DateTime? startDate;
   final DateTime? endDate;
   final int companyId;
 
   FilterSalesReturns({
     required this.fsNumber,
-    required this.invoiceNumber,
     this.startDate,
     this.endDate,
     required this.companyId,

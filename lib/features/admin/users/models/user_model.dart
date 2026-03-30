@@ -1,8 +1,9 @@
-import 'dart:typed_data';
+import 'dart:convert';
+import 'package:equatable/equatable.dart';
+import 'package:pointycastle/digests/sha256.dart';
+import 'package:savvy_stock/features/company/models/company_model.dart';
 
-import 'package:argon2/argon2.dart';
-
-class UserModel {
+class UserModel extends Equatable {
   final int id;
   final String? password;
   final int? employeesId;
@@ -21,8 +22,12 @@ class UserModel {
   final String? userName;
   final String? type;
   final int? salesperson;
+  final String? superUser;
+  final String? tableNumber;
 
-  UserModel({
+  final Company? companyRef;
+
+  const UserModel({
     required this.id,
     required this.password,
     this.employeesId,
@@ -41,6 +46,9 @@ class UserModel {
     this.userName,
     this.type = 'Company',
     this.salesperson,
+    this.superUser,
+    this.tableNumber,
+    this.companyRef,
   });
 
   factory UserModel.fromMap(Map<String, dynamic> json) {
@@ -98,10 +106,19 @@ class UserModel {
       userName: asString(json['user_name']),
       type: asString(json['type']) ?? 'Company',
       salesperson: asInt(json['salesperson']),
+      superUser: asString(json['super_user']),
+      tableNumber: asString(json['table_number']),
+      companyRef: json['company'] != null
+          ? Company(
+              id: json['company'],
+              companyName: json['company_name'] ?? '',
+              logoCompany: json['logo_company'],
+            )
+          : null,
     );
   }
   // Argon2 password hashing helper
-  static Future<String> generateArgon2Hash(password) async {
+  /* static Future<String> generateArgon2Hash(password) async {
     final salt = 'somesalt'.toBytesLatin1();
     final parameters = Argon2Parameters(
       Argon2Parameters.ARGON2_i,
@@ -117,6 +134,13 @@ class UserModel {
     final result = Uint8List(32);
     argon2.generateBytes(passwordBytes, result, 0, result.length);
     return result.toHexString();
+  }*/
+
+  static Future<String> sha256Hash(password) async {
+    final bytes = utf8.encode(password);
+    final digest = SHA256Digest();
+    final hash = digest.process(bytes);
+    return hash.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
   }
 
   // Factory method for creating new users with hashed password
@@ -129,7 +153,7 @@ class UserModel {
     int? company,
     int? employeesId,
   }) async {
-    final hashedPassword = await generateArgon2Hash(plainPassword);
+    final hashedPassword = await sha256Hash(plainPassword);
     return UserModel(
       id: id,
       password: hashedPassword,
@@ -146,7 +170,7 @@ class UserModel {
   // Method to verify password
   Future<bool> verifyPassword(String plainPassword) async {
     if (password == null) return false;
-    final hashedInput = await generateArgon2Hash(plainPassword);
+    final hashedInput = await sha256Hash(plainPassword);
     return hashedInput == password;
   }
 
@@ -176,6 +200,12 @@ class UserModel {
       'user_name': userName,
       'type': type,
       'salesperson': salesperson,
+      'super_user': superUser,
+      'table_number': tableNumber,
+      if (companyRef != null) ...{
+        'company_name': companyRef!.companyName,
+        'logo_company': companyRef!.logoCompany,
+      },
     };
   }
 
@@ -199,6 +229,8 @@ class UserModel {
     String? userName,
     String? type,
     int? salesperson,
+    String? tableNumber,
+    Company? companyRef,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -220,9 +252,13 @@ class UserModel {
       userName: userName ?? this.userName,
       type: type ?? this.type,
       salesperson: salesperson ?? this.salesperson,
+      superUser: superUser ?? this.superUser,
+      tableNumber: tableNumber ?? this.tableNumber,
+      companyRef: companyRef ?? this.companyRef,
     );
   }
 
+  @override
   List<Object?> get props => [
     id,
     password,
@@ -242,9 +278,12 @@ class UserModel {
     userName,
     type,
     salesperson,
+    superUser,
+    tableNumber,
+    companyRef,
   ];
   @override
   String toString() {
-    return 'UserModel{id: $id, password: $password, employeesId: $employeesId, createdBy: $createdBy, updatedBy: $updatedBy, dateCreated: $dateCreated, dateUpdated: $dateUpdated, usercol: $usercol, branch: $branch, status: $status, passwordLastUpdated: $passwordLastUpdated, company: $company, userEmail: $userEmail, confirmationCode: $confirmationCode, confirmationsExpireTime: $confirmationsExpireTime, userName: $userName, type: $type, salesperson: $salesperson}';
+    return 'UserModel{id: $id, password: $password, employeesId: $employeesId, createdBy: $createdBy, updatedBy: $updatedBy, dateCreated: $dateCreated, dateUpdated: $dateUpdated, usercol: $usercol, branch: $branch, status: $status, passwordLastUpdated: $passwordLastUpdated, company: $company, userEmail: $userEmail, confirmationCode: $confirmationCode, confirmationsExpireTime: $confirmationsExpireTime, userName: $userName, type: $type, salesperson: $salesperson, superUser: $superUser, tableNumber: $tableNumber}';
   }
 }

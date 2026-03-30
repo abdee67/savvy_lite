@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_text_Form.dart';
@@ -232,6 +233,8 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
             onPressed: () {
               Navigator.of(context).pop(); // Close dialog
               Navigator.of(context).pop(); // Close page
+              Navigator.of(context).pop(); // Close page
+              //context.push(AppRoutes.homePage);
             },
             child: const Text('OK'),
           ),
@@ -282,32 +285,35 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
           backgroundColor: const Color(0xFF145888),
           elevation: 0,
         ),
-        body: Column(
-          children: [
-            // Progress Indicator
-            Container(
-              padding: const EdgeInsets.all(8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildProgressStep(1, 'Customer Info', _currentPage >= 0),
-                  _buildProgressStep(2, 'Contact Details', _currentPage >= 1),
-                ],
-              ),
-            ),
-            // Form
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: PageView(
-                  controller: _pageController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  onPageChanged: (page) => setState(() => _currentPage = page),
-                  children: [_buildSlide1(), _buildSlide2()],
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Progress Indicator
+              Container(
+                padding: const EdgeInsets.all(8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildProgressStep(1, 'Customer Info', _currentPage >= 0),
+                    _buildProgressStep(2, 'Contact Details', _currentPage >= 1),
+                  ],
                 ),
               ),
-            ),
-          ],
+              // Form
+              Expanded(
+                child: Form(
+                  key: _formKey,
+                  child: PageView(
+                    controller: _pageController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    onPageChanged: (page) =>
+                        setState(() => _currentPage = page),
+                    children: [_buildSlide1(), _buildSlide2()],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -359,6 +365,9 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
             _customerNameController,
             'Customer Name *',
             Icons.person,
+            null,
+            true,
+            45,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -367,13 +376,16 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
             Icons.numbers,
             TextInputType.number,
             false,
+            45,
           ),
           const SizedBox(height: 16),
           _buildTextField(
             _contactPhone1Controller,
-            'Customer Phone 1 *',
+            'Customer Phone 1 ',
             Icons.phone,
             TextInputType.phone,
+            true,
+            45,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -382,6 +394,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
             Icons.numbers,
             TextInputType.number,
             false,
+            45,
           ),
           const SizedBox(height: 16),
           CustomDropdown(
@@ -409,6 +422,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
             Icons.location_city,
             TextInputType.text,
             false,
+            45,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -417,6 +431,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
             Icons.location_city,
             TextInputType.text,
             false,
+            45,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -425,6 +440,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
             Icons.location_city,
             TextInputType.text,
             false,
+            45,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -433,6 +449,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
             Icons.streetview_sharp,
             TextInputType.text,
             false,
+            45,
           ),
           const SizedBox(height: 16),
           _buildBottomNavigation(),
@@ -454,8 +471,11 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
           const SizedBox(height: 16),
           _buildTextField(
             _contactNameController,
-            'Contact Name *',
+            'Contact Name ',
             Icons.person,
+            null,
+            true,
+            45,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -464,6 +484,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
             Icons.phone,
             TextInputType.phone,
             false,
+            45,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -472,6 +493,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
             Icons.title,
             TextInputType.text,
             false,
+            45,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -480,6 +502,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
             Icons.fax,
             TextInputType.text,
             false,
+            45,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -488,6 +511,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
             Icons.streetview_sharp,
             TextInputType.text,
             false,
+            45,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -496,6 +520,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
             Icons.streetview_sharp,
             TextInputType.text,
             false,
+            45,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -504,6 +529,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
             Icons.streetview_sharp,
             TextInputType.text,
             false,
+            45,
           ),
           const SizedBox(height: 16),
           _buildTextField(
@@ -512,6 +538,7 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
             Icons.streetview_sharp,
             TextInputType.text,
             false,
+            45,
           ),
           const SizedBox(height: 16),
           _buildBottomNavigation(),
@@ -526,17 +553,24 @@ class _CustomerCreateEditState extends State<CustomerCreateEdit> {
     IconData icon, [
     TextInputType? keyboardType,
     bool isRequired = true,
+    int? maxLength,
   ]) {
     return CustomTextField(
       controller: controller,
       keyboardType: keyboardType,
       labelText: label,
       prefixIcon: Icon(icon),
+      inputFormatters: [
+        if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
+      ],
       validator: (value) {
         if (label.contains('*') &&
             isRequired &&
             (value == null || value.isEmpty)) {
           return 'This field is required';
+        }
+        if (maxLength != null && value != null && value.length > maxLength) {
+          return 'Value exceeds $maxLength characters';
         }
         return null;
       },

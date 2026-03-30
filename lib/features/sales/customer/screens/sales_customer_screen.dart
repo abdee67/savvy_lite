@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -9,7 +12,6 @@ import 'package:savvy_stock/features/sales/customer/blocs/customer_event.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_state.dart';
 import 'package:savvy_stock/features/sales/customer/models/customer_model.dart';
 import 'package:savvy_stock/features/sales/customer/widget/customer_section.dart';
-import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_person.model.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
@@ -95,18 +97,28 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
       final header = widget.extra!['header'];
       final details = widget.extra!['details'];
 
-      print(
-        'DEBUG CustomerInfo: Found converted data - header: $header, details count: ${details?.length}',
-      );
+      if (kDebugMode) {
+        developer.log(
+          'DEBUG CustomerInfo: Found converted data - header: $header, details count: ${details?.length}',
+        );
+      }
 
       context.read<SalesOrderCoordinatorBloc>().add(
         InitializeFromQuotation(header: header, details: details),
       );
-      print('DEBUG CustomerInfo: Dispatched InitializeFromQuotation event');
+      if (kDebugMode) {
+        developer.log(
+          'DEBUG CustomerInfo: Dispatched InitializeFromQuotation event',
+        );
+      }
       return;
     }
 
-    print('DEBUG CustomerInfo: No converted data found, preparing new order');
+    if (kDebugMode) {
+      developer.log(
+        'DEBUG CustomerInfo: No converted data found, preparing new order',
+      );
+    }
     // Otherwise, prepare a new sales order
     final companyId = widget.authBloc.state.companyId;
     final userId = widget.authBloc.state.userId?.id;
@@ -121,10 +133,6 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
         ),
       );
     }
-  }
-
-  void _prefillCustomerData(Salesperson salesPerson) {
-    _salesPersonController.text = salesPerson.fullName;
   }
 
   @override
@@ -149,40 +157,45 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: _buildAppBar(context),
-        body: BlocBuilder<CustomerBloc, CustomerState>(
-          builder: (context, customerState) {
-            return BlocBuilder<
-              SalesOrderCoordinatorBloc,
-              SalesOrderCoordinatorState
-            >(
-              builder: (context, coordinatorState) {
-                // Use post-frame callback to initialize default customer AFTER build
-                if (!_isInitialized &&
-                    coordinatorState.defaultCustomer != null &&
-                    coordinatorState.defaultCustomer!.isNotEmpty &&
-                    customerState.customers.isNotEmpty) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    _initializeDefaultCustomer(coordinatorState, customerState);
-                  });
-                }
+        body: SafeArea(
+          child: BlocBuilder<CustomerBloc, CustomerState>(
+            builder: (context, customerState) {
+              return BlocBuilder<
+                SalesOrderCoordinatorBloc,
+                SalesOrderCoordinatorState
+              >(
+                builder: (context, coordinatorState) {
+                  // Use post-frame callback to initialize default customer AFTER build
+                  if (!_isInitialized &&
+                      coordinatorState.defaultCustomer != null &&
+                      coordinatorState.defaultCustomer!.isNotEmpty &&
+                      customerState.customers.isNotEmpty) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _initializeDefaultCustomer(
+                        coordinatorState,
+                        customerState,
+                      );
+                    });
+                  }
 
-                final isValid =
-                    _selectedBillToCustomer != null &&
-                    _selectedShipToCustomer != null &&
-                    coordinatorState.currentHeader != null;
+                  final isValid =
+                      _selectedBillToCustomer != null &&
+                      _selectedShipToCustomer != null &&
+                      coordinatorState.currentHeader != null;
 
-                return Stack(
-                  children: [
-                    _buildContent(coordinatorState, isValid, customerState),
-                    if (coordinatorState.pendingOperations.contains(
-                      'prepare_new_order',
-                    ))
-                      const _LoadingOverlay(),
-                  ],
-                );
-              },
-            );
-          },
+                  return Stack(
+                    children: [
+                      _buildContent(coordinatorState, isValid, customerState),
+                      if (coordinatorState.pendingOperations.contains(
+                        'prepare_new_order',
+                      ))
+                        const _LoadingOverlay(),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
         ),
       ),
     );
@@ -446,7 +459,7 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
   }
 
   Widget _buildSalesPersonField(SalesOrderCoordinatorState state) {
-    final salesPerson = state.currentHeader?.employee?.fullName ?? '';
+    final salesPerson = widget.authBloc.state.userId?.userName ?? '';
     if (salesPerson.isNotEmpty && _salesPersonController.text.isEmpty) {
       _salesPersonController.text = salesPerson;
     }
@@ -486,12 +499,41 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
               ),
             ),
             const SizedBox(height: _sizedBoxHeight8),
-            _buildDetailRow('Name', displayCustomer.customerName),
-            _buildDetailRow('TIN Number', displayCustomer.tinNumber),
-            _buildDetailRow('Phone', displayCustomer.phoneNumber),
-            _buildDetailRow('Country', displayCustomer.country),
-            _buildDetailRow('Region', displayCustomer.region),
-            _buildDetailRow('City', displayCustomer.city),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _buildDetailRow('Name', displayCustomer.customerName),
+                ),
+                Expanded(
+                  child: _buildDetailRow(
+                    'TIN Number',
+                    displayCustomer.tinNumber,
+                  ),
+                ),
+              ],
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _buildDetailRow('Phone', displayCustomer.phoneNumber),
+                ),
+                Expanded(
+                  child: _buildDetailRow('Country', displayCustomer.country),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                Expanded(child: _buildDetailRow('City', displayCustomer.city)),
+                Expanded(
+                  child: _buildDetailRow('Region', displayCustomer.region),
+                ),
+              ],
+            ),
             if (displayCustomer.defaultsValue == 'Y')
               _buildDetailRow('Status', 'Default Customer'),
           ],

@@ -1,6 +1,12 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_bloc.dart';
+import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_event.dart';
+import 'package:savvy_stock/features/stock/item_entry/blocs/item_entry_state.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
@@ -70,7 +76,15 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
       context.read<SystemConstantBloc>().add(
         LoadSystemConstants(widget.authBloc.state.companyId!),
       );
-      //context.read<ItemMasterBloc>().add(LoadItemMasters());
+
+      // Load items table
+      context.read<StockItemsEntryBloc>().add(
+        LoadItems(widget.authBloc.state.companyId!),
+      );
+
+      context.read<ItemMasterBloc>().add(
+        LoadItemMasters(widget.authBloc.state.companyId),
+      );
     }
   }
 
@@ -98,6 +112,18 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
       final item = _items[index];
       context.read<ItemMasterBloc>().add(ApplyMigration(item));
     }
+  }
+
+  void _resetForm() {
+    setState(() {
+      _items.clear();
+      _items.add(ItemMaster(itemDescription: ''));
+      _effectiveDate = null;
+      _expirationDate = null;
+      _receivedDate = null;
+      _selectedItem = null;
+      _updateDateControllers();
+    });
   }
 
   void _onItemDescriptionChanged(int index, String value) {
@@ -182,48 +208,57 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Header with Add button
-        Padding(
-          padding: const EdgeInsets.only(bottom: 16.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Item Entries',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF155888),
-                ),
-              ),
-              /* ElevatedButton.icon(
-                onPressed: _addNewItem,
-                icon: const Icon(Icons.add, size: 20),
-                label: const Text('Add Item'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF155888),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+    return BlocListener<ItemMasterBloc, ItemMasterState>(
+      listener: (context, state) {
+        if (state.status == ItemMasterStatus.success) {
+          _resetForm();
+          // The message is already shown by BlocConsumer in the parent or should be here
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message ?? 'Item saved successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else if (state.status == ItemMasterStatus.failure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message ?? 'Failed to save item'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+      child: Column(
+        children: [
+          // Header with Add button
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Item Entries',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF155888),
                   ),
                 ),
-              ),*/
-            ],
-          ),
-        ),
-
-        // Items List
-        Expanded(
-          child: Form(
-            key: _formKey,
-            child: ListView.builder(
-              itemCount: _items.length,
-              itemBuilder: (context, index) => _buildItemCard(index),
+              ],
             ),
           ),
-        ),
-      ],
+
+          // Items List
+          Expanded(
+            child: Form(
+              key: _formKey,
+              child: ListView.builder(
+                itemCount: _items.length,
+                itemBuilder: (context, index) => _buildItemCard(index),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -364,38 +399,62 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
 
   Widget _buildItemDescriptionField(int index) {
     return BlocBuilder<ItemMasterBloc, ItemMasterState>(
-      builder: (context, state) {
-        if (state.status == ItemMasterStatus.loading) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final itemDescriptions = state.items
-            .where(
-              (item) =>
-                  item.itemDescription != null &&
-                  item.itemDescription!.isNotEmpty,
-            )
-            .map((item) => item.itemDescription!)
-            .toSet()
-            .toList();
-        // In your form widget
-        return CustomSearchableDropdown(
-          labelText: 'Item Description',
-          options: itemDescriptions,
-          value: _items[index].itemDescription,
-          onChanged: (value) {
-            setState(() {
-              _items[index] = _items[index].copyWith(itemDescription: value);
-            });
-            print('Selected: $value');
-          },
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Please select or enter an item description';
+      builder: (context, masterState) {
+        return BlocBuilder<StockItemsEntryBloc, ItemEntryState>(
+          builder: (context, entryState) {
+            if (masterState.status == ItemMasterStatus.loading ||
+                entryState.status == ItemEntryStatus.loading) {
+              return const Center(child: CircularProgressIndicator());
             }
-            return null;
+
+            // Combine descriptions from both sources
+            final Set<String> descriptions = {};
+
+            // Add from ItemMaster (Workbench)
+            for (var item in masterState.items) {
+              if (item.itemDescription != null &&
+                  item.itemDescription!.isNotEmpty) {
+                descriptions.add(item.itemDescription!);
+              }
+            }
+
+            // Add from ItemEntry (Main Items table)
+            for (var item in entryState.items) {
+              if (item.itemDescription != null &&
+                  item.itemDescription!.isNotEmpty) {
+                descriptions.add(item.itemDescription!);
+              }
+            }
+
+            final sortedDescriptions = descriptions.toList()..sort();
+
+            return CustomSearchableDropdown(
+              labelText: 'Item Description',
+              options: sortedDescriptions,
+              value: _items[index].itemDescription,
+              onChanged: (value) {
+                setState(() {
+                  _items[index] = _items[index].copyWith(
+                    itemDescription: value,
+                  );
+                });
+                if (kDebugMode) {
+                  developer.log('Selected: $value');
+                }
+              },
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please select or enter an item description';
+                }
+                if (value.length > 200) {
+                  return 'Description must be 200 characters or less';
+                }
+                return null;
+              },
+              prefixIcon: Icons.description,
+              allowCustomEntries: true,
+            );
           },
-          prefixIcon: Icons.description,
-          allowCustomEntries: true, // Set to false if you only want selection
         );
       },
     );
@@ -418,6 +477,7 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
         return CustomDropdown(
           labelText: 'Store *',
           prefixIcon: const Icon(Icons.store),
+          value: _items[index].branch?.toString(),
           items: branches.map((branch) {
             return DropdownMenuItem(
               value: branch.id.toString(),
@@ -533,7 +593,8 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
   Widget _buildUnitPriceField(int index) {
     return CustomTextField(
       labelText: 'Unit Price',
-      keyboardType: TextInputType.numberWithOptions(decimal: true),
+      value: _items[index].unitPrice?.toString(),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
       onChanged: (value) {
         setState(() {
           _items[index] = _items[index].copyWith(
@@ -548,7 +609,8 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
   Widget _buildUnitCostField(int index) {
     return CustomTextField(
       labelText: 'Unit Cost',
-      keyboardType: TextInputType.numberWithOptions(decimal: true),
+      value: _items[index].unitCost?.toString(),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
       onChanged: (value) {
         setState(() {
           _items[index] = _items[index].copyWith(
@@ -582,8 +644,43 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
   }
 
   Widget _buildLocationField(int index, int locationNumber) {
+    String? locationValue;
+    switch (locationNumber) {
+      case 1:
+        locationValue = _items[index].locationCode1;
+        break;
+      case 2:
+        locationValue = _items[index].locationCode2;
+        break;
+      case 3:
+        locationValue = _items[index].locationCode3;
+        break;
+      case 4:
+        locationValue = _items[index].locationCode4;
+        break;
+      case 5:
+        locationValue = _items[index].locationCode5;
+        break;
+      case 6:
+        locationValue = _items[index].locationCode6;
+        break;
+      case 7:
+        locationValue = _items[index].locationCode7;
+        break;
+      case 8:
+        locationValue = _items[index].locationCode8;
+        break;
+      case 9:
+        locationValue = _items[index].locationCode9;
+        break;
+      case 10:
+        locationValue = _items[index].locationCode10;
+        break;
+    }
+
     return CustomTextField(
       labelText: 'Location $locationNumber *',
+      value: locationValue,
       onChanged: (value) {
         setState(() {
           switch (locationNumber) {
@@ -633,7 +730,8 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
   Widget _buildQuantityField(int index) {
     return CustomTextField(
       labelText: 'Quantity *',
-      keyboardType: TextInputType.numberWithOptions(decimal: true),
+      value: _items[index].quantity?.toString(),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
       onChanged: (value) {
         setState(() {
           _items[index] = _items[index].copyWith(
@@ -763,6 +861,7 @@ class _SingleItemEntryFormState extends State<SingleItemEntryForm> {
   Widget _buildBatchNumberField(int index) {
     return CustomTextField(
       labelText: 'Batch Number',
+      value: _items[index].batchNumber,
       onChanged: (value) {
         setState(() {
           _items[index] = _items[index].copyWith(batchNumber: value);

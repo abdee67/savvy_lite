@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:savvy_stock/features/stock/item_locations/models/item_location_filters.dart';
 import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
 
 enum ItemLocationsStatus {
@@ -11,6 +12,8 @@ enum ItemLocationsStatus {
   updating,
   deleting,
   exporting,
+  loadingItemLocationAvailability,
+  loadingMoreItemLocationAvailability,
 }
 
 enum ItemLocationsDetailStatus { hidden, showing, editing }
@@ -38,6 +41,15 @@ class ItemLocationsState extends Equatable {
   final List<ItemLocation> exportedItems; //export multiple Branchs
   final ItemLocation? exportedItem; //export single Branch
 
+  // Lazy loading state
+  final List<ItemLocation> lazyItems;
+  final ItemLocationFilters lazyFilters;
+  final int lazyTotalCount;
+  final int lazyTotalPages;
+  final int lazyPage;
+  final bool hasMoreLazyItems;
+  final Map<int, double> locationCosts;
+
   // Role management state
 
   const ItemLocationsState({
@@ -59,6 +71,13 @@ class ItemLocationsState extends Equatable {
     this.showDetailPanel = false,
     this.exportedItems = const [],
     this.exportedItem,
+    this.lazyItems = const [],
+    this.lazyFilters = const ItemLocationFilters(),
+    this.lazyTotalCount = 0,
+    this.lazyTotalPages = 0,
+    this.lazyPage = 1,
+    this.hasMoreLazyItems = false,
+    this.locationCosts = const {},
   });
 
   // --- Helper Getters ---
@@ -102,6 +121,13 @@ class ItemLocationsState extends Equatable {
     bool? showDetailPanel,
     List<ItemLocation>? exportedItems,
     ItemLocation? exportedItem,
+    List<ItemLocation>? lazyItems,
+    ItemLocationFilters? lazyFilters,
+    int? lazyTotalCount,
+    int? lazyTotalPages,
+    int? lazyPage,
+    bool? hasMoreLazyItems,
+    Map<int, double>? locationCosts,
   }) {
     return ItemLocationsState(
       status: status ?? this.status,
@@ -123,6 +149,13 @@ class ItemLocationsState extends Equatable {
       showDetailPanel: showDetailPanel ?? this.showDetailPanel,
       exportedItems: exportedItems ?? this.exportedItems,
       exportedItem: exportedItem ?? this.exportedItem,
+      lazyItems: lazyItems ?? this.lazyItems,
+      lazyFilters: lazyFilters ?? this.lazyFilters,
+      lazyTotalCount: lazyTotalCount ?? this.lazyTotalCount,
+      lazyTotalPages: lazyTotalPages ?? this.lazyTotalPages,
+      lazyPage: lazyPage ?? this.lazyPage,
+      hasMoreLazyItems: hasMoreLazyItems ?? this.hasMoreLazyItems,
+      locationCosts: locationCosts ?? this.locationCosts,
     );
   }
 
@@ -146,5 +179,12 @@ class ItemLocationsState extends Equatable {
     showDetailPanel,
     exportedItems,
     exportedItem,
+    lazyItems,
+    lazyFilters,
+    lazyTotalCount,
+    lazyTotalPages,
+    lazyPage,
+    hasMoreLazyItems,
+    locationCosts,
   ];
 }

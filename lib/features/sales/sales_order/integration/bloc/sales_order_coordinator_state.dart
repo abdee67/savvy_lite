@@ -54,6 +54,11 @@ class SalesOrderCoordinatorState extends Equatable {
   final int paymentInstrument;
   final String paymentTerm;
   final String? transactionID;
+  final String? salesRepresent;
+  final String? commentsSo;
+  final String? referenceNote1;
+  final String? referenceNote2;
+  final String? referenceNote3;
 
   // Tax & Fees Configuration
   final double? vatRate;
@@ -103,6 +108,11 @@ class SalesOrderCoordinatorState extends Equatable {
     this.paymentInstrument = 0,
     this.paymentTerm = '',
     this.transactionID,
+    this.salesRepresent,
+    this.commentsSo,
+    this.referenceNote1,
+    this.referenceNote2,
+    this.referenceNote3,
     this.vatRate,
     this.withholdingRate,
     this.withholdingInitial,
@@ -172,6 +182,11 @@ class SalesOrderCoordinatorState extends Equatable {
     paymentInstrument,
     paymentTerm,
     transactionID,
+    salesRepresent,
+    commentsSo,
+    referenceNote1,
+    referenceNote2,
+    referenceNote3,
     vatRate,
     withholdingRate,
     withholdingInitial,
@@ -211,6 +226,11 @@ class SalesOrderCoordinatorState extends Equatable {
     int? paymentInstrument,
     String? paymentTerm,
     String? transactionID,
+    String? salesRepresent,
+    String? commentsSo,
+    String? referenceNote1,
+    String? referenceNote2,
+    String? referenceNote3,
     double? vatRate,
     double? withholdingRate,
     double? withholdingInitial,
@@ -251,6 +271,11 @@ class SalesOrderCoordinatorState extends Equatable {
       paymentInstrument: paymentInstrument ?? this.paymentInstrument,
       paymentTerm: paymentTerm ?? this.paymentTerm,
       transactionID: transactionID ?? this.transactionID,
+      salesRepresent: salesRepresent ?? this.salesRepresent,
+      commentsSo: commentsSo ?? this.commentsSo,
+      referenceNote1: referenceNote1 ?? this.referenceNote1,
+      referenceNote2: referenceNote2 ?? this.referenceNote2,
+      referenceNote3: referenceNote3 ?? this.referenceNote3,
       vatRate: vatRate ?? this.vatRate,
       withholdingRate: withholdingRate ?? this.withholdingRate,
       withholdingInitial: withholdingInitial ?? this.withholdingInitial,

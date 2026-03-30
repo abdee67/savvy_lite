@@ -51,66 +51,71 @@ class _PaymentActionState extends State<PaymentAction> {
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  vertical: 16,
-                  horizontal: 24,
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                    horizontal: 24,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(40),
+                child: const Text(
+                  'Back',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-              ),
-              child: const Text(
-                'Back',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
-            ElevatedButton(
-              onPressed:
-                  isValid &&
-                      state.status == SalesOrderCoordinatorStatus.processing
-                  ? null
-                  : () => _navigateToInvoice(context, state),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF155888),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  vertical: 16,
-                  horizontal: 24,
+            const SizedBox(width: 16),
+            Expanded(
+              child: ElevatedButton(
+                onPressed:
+                    isValid &&
+                        state.status == SalesOrderCoordinatorStatus.processing
+                    ? null
+                    : () => _navigateToInvoice(context, state),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF155888),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                    horizontal: 24,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(40),
-                ),
-              ),
-              child: state.status == SalesOrderCoordinatorStatus.processing
-                  ? const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
+                child: state.status == SalesOrderCoordinatorStatus.processing
+                    ? const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           ),
+                          SizedBox(width: 12),
+                          Text('Processing Payment...'),
+                        ],
+                      )
+                    : const Text(
+                        'Review',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
-                        SizedBox(width: 12),
-                        Text('Processing Payment...'),
-                      ],
-                    )
-                  : const Text(
-                      'Review',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
                       ),
-                    ),
+              ),
             ),
           ],
         );

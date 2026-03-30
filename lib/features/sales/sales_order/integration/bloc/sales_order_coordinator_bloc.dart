@@ -1,7 +1,9 @@
 // features/sales/sales_order/coordinator/bloc/sales_order_coordinator_bloc.dart
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'dart:math';
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/detail/bloc/invoice_detail.event.dart';
@@ -18,6 +20,7 @@ import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_h
 import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_event.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/bloc/sales_order_detail_state.dart';
+import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
 import 'package:savvy_stock/features/sales/quotation_order/repo/quotation_order_repo.dart';
@@ -34,6 +37,7 @@ class SalesOrderCoordinatorBloc
   final AuthBloc authBloc;
   final SalesOrderIntegrationService integrationService;
   final QuotationOrderRepository quotationRepo;
+  final ItemCostRepository itemCostRepository;
 
   StreamSubscription<SalesOrderHeaderState>? _headerSubscription;
   StreamSubscription<SalesOrderDetailState>? _detailSubscription;
@@ -50,6 +54,7 @@ class SalesOrderCoordinatorBloc
     required this.systemConstantBloc,
     required this.authBloc,
     required this.quotationRepo,
+    required this.itemCostRepository,
   }) : integrationService = SalesOrderIntegrationService(
          headerBloc: headerBloc,
          detailBloc: detailBloc,
@@ -92,6 +97,7 @@ class SalesOrderCoordinatorBloc
     on<UpdateTaxAndFees>(_onUpdateTaxAndFees);
     on<ProcessPayment>(_onProcessPayment);
     on<UpdatePaymentDetails>(_onUpdatePaymentDetails);
+    on<UpdateExtraHeaderDetails>(_onUpdateExtraHeaderDetails);
     on<LoadFeeSystemConstants>(_onLoadFeeSystemConstants);
 
     // Synchronization
@@ -141,7 +147,16 @@ class SalesOrderCoordinatorBloc
         withholdAmount: state.lastWithholdAmount,
         discountAmount: state.lastDiscountAmount,
         // Ensure defaults if null
-        discount: headerToCreate.discount ?? '0',
+        discount: state.lastDiscountAmount == 0
+            ? 'N'
+            : 'Y', //IF discountAmount is 0 make it N or Y
+        discountInPercent:
+            (state.lastDiscountAmount == null ||
+                state.lastDiscountAmount == 0 ||
+                state.lastSubTotal == null ||
+                state.lastSubTotal == 0)
+            ? 0
+            : (state.lastDiscountAmount! / state.lastSubTotal!) * 100,
         addOn: headerToCreate.addOn ?? '0',
         // Populate payment data
         paymentMethod: state.paymentMethod,
@@ -151,6 +166,11 @@ class SalesOrderCoordinatorBloc
         requiredDate: headerToCreate.requiredDate ?? DateTime.now(),
         shippedDate: headerToCreate.shippedDate ?? DateTime.now(),
         salesType: headerToCreate.salesType ?? 'Unknown',
+        salesRepresent: state.salesRepresent,
+        commentsSo: state.commentsSo,
+        referenceNote1: state.referenceNote1,
+        referenceNote2: state.referenceNote2,
+        referenceNote3: state.referenceNote3,
       );
 
       // Handle payment term if it's a date string (for Credit)
@@ -159,20 +179,43 @@ class SalesOrderCoordinatorBloc
           final creditDate = DateTime.parse(state.paymentTerm);
           headerToCreate = headerToCreate.copyWith(creditDateToPay: creditDate);
         } catch (e) {
-          print('Error parsing credit date: $e');
+          if (kDebugMode) {
+            developer.log('Error parsing credit date: $e');
+          }
         }
       }
 
-      // Calculate total cost from details
-      double totalCost = 0.0;
-      for (final detail in event.details) {
-        totalCost += (detail.amountCost ?? 0.0);
+      // Calculate total cost from details (Enriching details with costs before header creation)
+      double totalHeaderCost = 0.0;
+      final enrichedDetails = <SalesOrderDetail>[];
+      final companyId = headerToCreate.company ?? authBloc.state.companyId;
+
+      if (companyId != null) {
+        for (final detail in event.details) {
+          final unitCost = await itemCostRepository.calculateItemCost(
+            item: detail,
+            companyId: companyId,
+          );
+          final amountCost = unitCost * (detail.quantity ?? 0.0);
+          final enrichedDetail = detail.copyWith(
+            unitCost: unitCost,
+            amountCost: amountCost,
+          );
+          enrichedDetails.add(enrichedDetail);
+          totalHeaderCost += amountCost;
+        }
+      } else {
+        enrichedDetails.addAll(event.details);
       }
-      headerToCreate = headerToCreate.copyWith(amountCost: totalCost);
+
+      headerToCreate = headerToCreate.copyWith(
+        amountCost: totalHeaderCost,
+        unitCost: totalHeaderCost, // As per user request, setting both
+      );
 
       await integrationService.createSalesOrderWithDetails(
         header: headerToCreate,
-        details: event.details,
+        details: enrichedDetails,
       );
       final currentHeader = headerBloc.state.selected;
       // Use the details that were used to create the order; detailBloc.createItems
@@ -202,12 +245,16 @@ class SalesOrderCoordinatorBloc
               conversionDate: headerToCreate.orderDate ?? DateTime.now(),
             );
             await quotationRepo.updateQuotationOrderHeader(updatedQuotation);
-            print(
-              'DEBUG: Updated quotation ${quotationHeader.fsNumber} status to Converted, linked to sales order ${currentHeader.fsNumber}',
-            );
+            if (kDebugMode) {
+              developer.log(
+                'DEBUG: Updated quotation ${quotationHeader.fsNumber} status to Converted, linked to sales order ${currentHeader.fsNumber}',
+              );
+            }
           }
         } catch (e) {
-          print('WARNING: Failed to update quotation status: $e');
+          if (kDebugMode) {
+            developer.log('WARNING: Failed to update quotation status: $e');
+          }
           // Don't fail the entire operation if quotation update fails
         }
       }
@@ -238,6 +285,9 @@ class SalesOrderCoordinatorBloc
           operation: 'create_order',
         ),
       );
+      if (kDebugMode) {
+        developer.log('Failed to create sales order: $e');
+      }
     }
   }
 
@@ -374,7 +424,11 @@ class SalesOrderCoordinatorBloc
       return;
     }
 
-    print('Coordinator: Calculating totals for ${currentDetails.length} items');
+    if (kDebugMode) {
+      developer.log(
+        'Coordinator: Calculating totals for ${currentDetails.length} items',
+      );
+    }
 
     emit(state.loadingState('calculate_totals'));
 
@@ -399,9 +453,11 @@ class SalesOrderCoordinatorBloc
         ),
       );
 
-      print(
-        'Coordinator: Totals calculation requested for ${currentDetails.length} items',
-      );
+      if (kDebugMode) {
+        developer.log(
+          'Coordinator: Totals calculation requested for ${currentDetails.length} items',
+        );
+      }
     } catch (e) {
       emit(
         state.errorState(
@@ -417,9 +473,11 @@ class SalesOrderCoordinatorBloc
     Emitter<SalesOrderCoordinatorState> emit,
   ) async {
     try {
-      print(
-        'Coordinator: Updating tax and fees - Discount: ${event.discountAmount}, Withholding: ${event.isWithholdingEnabled}',
-      );
+      if (kDebugMode) {
+        developer.log(
+          'Coordinator: Updating tax and fees - Discount: ${event.discountAmount}, Withholding: ${event.isWithholdingEnabled}',
+        );
+      }
 
       // Update withholding in header bloc
       headerBloc.add(
@@ -483,9 +541,11 @@ class SalesOrderCoordinatorBloc
         // Finalize the sales order with invoice generation
         add(const GenerateInvoiceFromSalesOrder());
 
-        print(
-          'Coordinator: Payment successful - Transaction ID: $transactionID',
-        );
+        if (kDebugMode) {
+          developer.log(
+            'Coordinator: Payment successful - Transaction ID: $transactionID',
+          );
+        }
 
         emit(
           state
@@ -497,9 +557,11 @@ class SalesOrderCoordinatorBloc
               ),
         );
 
-        print(
-          'Coordinator: Payment successful - Transaction ID: $transactionID',
-        );
+        if (kDebugMode) {
+          developer.log(
+            'Coordinator: Payment successful - Transaction ID: $transactionID',
+          );
+        }
       } else {
         // Payment failed
         emit(state.errorState('Payment processing failed. Please try again.'));
@@ -513,15 +575,22 @@ class SalesOrderCoordinatorBloc
     UpdatePaymentDetails event,
     Emitter<SalesOrderCoordinatorState> emit,
   ) {
-    print(
-      'Coordinator: Updating payment details - Type: ${event.paymentMethod}, Instrument: ${event.paymentInstrument}',
-    );
+    if (kDebugMode) {
+      developer.log(
+        'Coordinator: Updating payment details - Type: ${event.paymentMethod}, Instrument: ${event.paymentInstrument}',
+      );
+    }
 
     emit(
       state.copyWith(
         paymentMethod: event.paymentMethod,
         paymentInstrument: event.paymentInstrument,
         paymentTerm: event.paymentTerm.toString(),
+        salesRepresent: event.salesRepresent ?? state.salesRepresent,
+        commentsSo: event.commentsSo ?? state.commentsSo,
+        referenceNote1: event.referenceNote1 ?? state.referenceNote1,
+        referenceNote2: event.referenceNote2 ?? state.referenceNote2,
+        referenceNote3: event.referenceNote3 ?? state.referenceNote3,
         lastOperation: 'Payment details updated',
         lastSyncTime: DateTime.now(),
       ),
@@ -539,6 +608,23 @@ class SalesOrderCoordinatorBloc
     }
   }
 
+  void _onUpdateExtraHeaderDetails(
+    UpdateExtraHeaderDetails event,
+    Emitter<SalesOrderCoordinatorState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        salesRepresent: event.salesRepresent ?? state.salesRepresent,
+        commentsSo: event.commentsSo ?? state.commentsSo,
+        referenceNote1: event.referenceNote1 ?? state.referenceNote1,
+        referenceNote2: event.referenceNote2 ?? state.referenceNote2,
+        referenceNote3: event.referenceNote3 ?? state.referenceNote3,
+        lastOperation: 'Extra header details updated',
+        lastSyncTime: DateTime.now(),
+      ),
+    );
+  }
+
   Future<void> _onLoadFeeSystemConstants(
     LoadFeeSystemConstants event,
     Emitter<SalesOrderCoordinatorState> emit,
@@ -553,9 +639,11 @@ class SalesOrderCoordinatorBloc
       final withholdingRate = systemConstantsService.withholdingRate;
       final withholdingInitial = systemConstantsService.withholdingInitial;
 
-      print(
-        'Coordinator: Loaded system constants - VAT: $vatRate, Withholding Rate: $withholdingRate, Withholding Initial: $withholdingInitial',
-      );
+      if (kDebugMode) {
+        developer.log(
+          'Coordinator: Loaded system constants - VAT: $vatRate, Withholding Rate: $withholdingRate, Withholding Initial: $withholdingInitial',
+        );
+      }
 
       emit(
         state.copyWith(
@@ -609,12 +697,18 @@ class SalesOrderCoordinatorBloc
     final currentDetails = state.currentDetails; // Use coordinator state
 
     if (currentDetails.isEmpty) {
-      print('Coordinator: No details available for stock validation');
+      if (kDebugMode) {
+        developer.log('Coordinator: No details available for stock validation');
+      }
       emit(state.copyWith(isStockValidated: true));
       return;
     }
 
-    print('Coordinator: Validating stock for ${currentDetails.length} items');
+    if (kDebugMode) {
+      developer.log(
+        'Coordinator: Validating stock for ${currentDetails.length} items',
+      );
+    }
 
     try {
       await integrationService.validateAllStock(currentDetails);
@@ -636,9 +730,15 @@ class SalesOrderCoordinatorBloc
         ),
       );
 
-      print('Coordinator: Stock validation completed - All valid: $allValid');
+      if (kDebugMode) {
+        developer.log(
+          'Coordinator: Stock validation completed - All valid: $allValid',
+        );
+      }
     } catch (e) {
-      print('Coordinator: Error validating stock - $e');
+      if (kDebugMode) {
+        developer.log('Coordinator: Error validating stock - $e');
+      }
       emit(
         state.copyWith(
           pendingOperations: {...state.pendingOperations}
@@ -683,10 +783,12 @@ class SalesOrderCoordinatorBloc
   ) {
     integrationService.updateCustomerInfo(event.customer);
 
+    // 🎯 Also store customer in coordinator state for invoice review access
     emit(
       state.copyWith(
         lastSyncTime: DateTime.now(),
         lastOperation: 'Customer data synced to order',
+        defaultCustomer: event.customer,
       ),
     );
   }
@@ -762,9 +864,11 @@ class SalesOrderCoordinatorBloc
             ),
       );
 
-      print(
-        'Coordinator: New order prepared - Header: ${preparedHeader?.id}, defaultCustomerCount=${defaultCustomer ?? 0}',
-      );
+      if (kDebugMode) {
+        developer.log(
+          'Coordinator: New order prepared - Header: ${preparedHeader?.id}, defaultCustomerCount=${defaultCustomer ?? 0}',
+        );
+      }
     } catch (e) {
       emit(
         state.errorState(
@@ -893,14 +997,54 @@ class SalesOrderCoordinatorBloc
     AddDetailToOrder event,
     Emitter<SalesOrderCoordinatorState> emit,
   ) {
-    print('Coordinator: Adding detail to order - ${event.detail.tempId}');
+    if (kDebugMode) {
+      developer.log(
+        'Coordinator: Adding detail to order - ${event.detail.tempId}',
+      );
+    }
 
     try {
-      // Add to detail bloc first
-      detailBloc.add(AddToCreateItemsSalesOrderDetails(item: event.detail));
+      // Check if item already exists
+      final existingIndex = state.currentDetails.indexWhere(
+        (d) =>
+            d.itemInBranch == event.detail.itemInBranch &&
+            d.unitOfMeasure == event.detail.unitOfMeasure &&
+            d.itemsTableId == event.detail.itemsTableId,
+      );
 
-      // Update coordinator state with the new detail
-      final updatedDetails = [...state.currentDetails, event.detail];
+      List<SalesOrderDetail> updatedDetails;
+
+      if (existingIndex != -1) {
+        // Merge with existing item
+        final existingItem = state.currentDetails[existingIndex];
+        final newQuantity =
+            (existingItem.quantity ?? 0) + (event.detail.quantity ?? 0);
+        final newExtendedPrice = (existingItem.unitPrice ?? 0) * newQuantity;
+
+        final mergedDetail = existingItem.copyWith(
+          quantity: newQuantity,
+          extendedPrice: newExtendedPrice,
+        );
+
+        // Update in detail bloc
+        detailBloc.add(
+          UpdateInCreateItemsSalesOrderDetails(
+            item: mergedDetail,
+            index: existingIndex,
+          ),
+        );
+
+        updatedDetails = List<SalesOrderDetail>.from(state.currentDetails);
+        updatedDetails[existingIndex] = mergedDetail;
+
+        if (kDebugMode) {
+          developer.log('Coordinator: Merged item. New Quantity: $newQuantity');
+        }
+      } else {
+        // Add new item
+        detailBloc.add(AddToCreateItemsSalesOrderDetails(item: event.detail));
+        updatedDetails = [...state.currentDetails, event.detail];
+      }
 
       emit(
         state.copyWith(
@@ -908,13 +1052,17 @@ class SalesOrderCoordinatorBloc
           isStockValidated: false,
           isCalculationsComplete: false,
           status: SalesOrderCoordinatorStatus.success,
-          lastOperation: 'Item added to order',
+          lastOperation: existingIndex != -1
+              ? 'Item merged in order'
+              : 'Item added to order',
         ),
       );
 
-      print(
-        'Coordinator: Detail added successfully. Total items: ${updatedDetails.length}',
-      );
+      if (kDebugMode) {
+        developer.log(
+          'Coordinator: Detail process completed. Total items: ${updatedDetails.length}',
+        );
+      }
 
       // Schedule validation and calculation for later to avoid blocking
       Future.delayed(Duration.zero, () {
@@ -924,7 +1072,9 @@ class SalesOrderCoordinatorBloc
         }
       });
     } catch (e) {
-      print('Coordinator: Error adding detail - $e');
+      if (kDebugMode) {
+        developer.log('Coordinator: Error adding detail - $e');
+      }
       emit(state.errorState('Failed to add item: $e', operation: 'add_detail'));
     }
   }
@@ -1023,6 +1173,7 @@ class SalesOrderCoordinatorBloc
     Emitter<SalesOrderCoordinatorState> emit,
   ) {
     detailBloc.add(const ClearCreateItemsSalesOrderDetails());
+    detailBloc.add(const ResetSalesOrderDetails());
 
     emit(
       state.copyWith(
@@ -1225,6 +1376,14 @@ class SalesOrderCoordinatorBloc
         effectiveCompanyId,
       );
 
+      // Generate invoice number for invoice_history_header using fs_table prefix/postfix
+      final branchId = authBloc.state.branchId ?? 1;
+      final invoiceNumber = await headerBloc.repository.generateInvoiceNumber(
+        effectiveCompanyId,
+        branchId,
+        'invoice_history_header',
+      );
+
       // Derive customer info safely
       final customerName =
           currentHeader.customerBillToRef?.customerName ??
@@ -1243,19 +1402,24 @@ class SalesOrderCoordinatorBloc
         city: state.defaultCustomer?.city ?? '',
         country: state.defaultCustomer?.country ?? '',
         region: state.defaultCustomer?.region ?? '',
-        // salesPerson: currentDetails.first.,
+        salesPerson: authBloc.state.userId?.userName,
         totalAmount: state.lastTotalAmount ?? 0.0,
         taxAmount: state.lastTax ?? 0.0,
         withholdAmount: state.lastWithholdAmount ?? 0.0,
         discountAmount: state.lastDiscountAmount ?? 0.0,
         amountBeforeTax: state.subtotal,
+        quotNumber: int.tryParse(
+          currentHeader.proformaReference ?? '',
+        ), //only when proforma converted into sales order
+        salesNumber: currentHeader.id ?? 0,
+        invoiceNumber: invoiceNumber,
       );
 
       // Create invoice header
       invoiceHeaderBloc.add(CreateInvoiceHistoryHeader(header: invoiceHeader));
 
       // Wait for header creation
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 1000));
 
       // Get the created header ID
       final createdHeader = invoiceHeaderBloc.state.selected;
@@ -1272,7 +1436,9 @@ class SalesOrderCoordinatorBloc
           quantityTransaction: salesDetail.quantity ?? 0.0,
           amountUnitPrice: salesDetail.unitPrice ?? 0.0,
           amountExtendedPrice: salesDetail.extendedPrice ?? 0.0,
-          unitOfMeasure: salesDetail.item?.unitOfMeasure ?? 'PCS',
+          unitOfMeasure: salesDetail.item?.unitOfMeasure ?? 'PC',
+          dateExperied: salesDetail.lot?.dateExpiration,
+          batchNumber: salesDetail.lot?.batchNumberSupplier,
         );
       }).toList();
 
@@ -1295,16 +1461,16 @@ class SalesOrderCoordinatorBloc
             ),
       );
 
-      print(
-        'Coordinator: Invoice generated - FS Number: $nextFsNumber, Items: ${invoiceDetails.length}',
-      );
+      if (kDebugMode) {
+        developer.log(
+          'Coordinator: Invoice generated - FS Number: $nextFsNumber, Items: ${invoiceDetails.length}',
+        );
+      }
     } catch (e) {
-      emit(
-        state.errorState(
-          'Failed to generate invoice: $e',
-          operation: 'generate_invoice',
-        ),
-      );
+      emit(state.errorState('', operation: 'generate_invoice'));
+      if (kDebugMode) {
+        developer.log('Failed to generate invoice: $e');
+      }
     }
   }
 

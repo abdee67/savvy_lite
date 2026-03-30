@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/customer/blocs/customer_bloc.dart';
@@ -9,6 +10,7 @@ import 'package:savvy_stock/features/sales/quotation_order/model/quotation_order
 import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_bloc.dart';
 import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_event.dart';
 import 'package:savvy_stock/features/sales/quotation_order/bloc/quotation_order_state.dart';
+import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 
 class QuoteItemEntryConfirmedItem extends StatefulWidget {
   final Function(QuotationOrderDetail, int) onEditItem;
@@ -23,22 +25,21 @@ class QuoteItemEntryConfirmedItem extends StatefulWidget {
 class _QuoteItemEntryConfirmedItemState
     extends State<QuoteItemEntryConfirmedItem> {
   final Map<int, double> _dragOffset = {};
-  static const _containerHeight = 20.0;
-  static const _containerWidth = 20.0;
-  static const _circularProgressStrokeWidth = 2.0;
   static const _elevatedButtonBorderRadius = 20.0;
   static const _horizontalPadding32 = 32.0;
   static const _verticalPadding12 = 12.0;
-  static const _sizedBoxHeight16 = 16.0;
-  static const _sizedBoxHeight8 = 8.0;
-  static const _sizedBoxHeight20 = 20.0;
-  static const _sizedBoxWidth16 = 16.0;
-  static const _appBarFontSize = 25.0;
   static const _titleFontSize = 16.0;
-  static const _detailLabelWidth = 100.0;
-  static const _cardElevation = 2.0;
-  static const _cardPadding = 16.0;
-  static const _verticalDetailPadding = 4.0;
+  late int? decimalPlace;
+
+  @override
+  void initState() {
+    super.initState();
+    decimalPlace = context
+        .read<SystemConstantBloc>()
+        .state
+        .selected
+        ?.decimalPlaces;
+  }
 
   void _safeDeleteItem(BuildContext context, int index) {
     final coordinatorBloc = context.read<QuotationOrderBloc>();
@@ -244,7 +245,7 @@ class _QuoteItemEntryConfirmedItemState
                     ),
                     const Spacer(),
                     Text(
-                      'Total: \$${totalAmount.toStringAsFixed(2)}',
+                      'Total: ${NumberFormat.currency(decimalDigits: decimalPlace, symbol: 'ETB ').format(totalAmount)}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -382,7 +383,7 @@ class _QuoteItemEntryConfirmedItemState
                                                 // Unit Price
                                                 Expanded(
                                                   child: Text(
-                                                    '${item.unitPrice?.toStringAsFixed(2) ?? '0'} Birr/${item.uomRef?.description1 ?? 'unit'}',
+                                                    '${NumberFormat.currency(decimalDigits: decimalPlace, symbol: 'ETB ').format(item.unitPrice)} /${item.uomRef?.description1 ?? 'N/A'}',
                                                     style: const TextStyle(
                                                       fontSize: 12,
                                                     ),
@@ -452,18 +453,6 @@ class _QuoteItemEntryConfirmedItemState
                             ),
                           ),
                         ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // Help text
-                    Text(
-                      'Double tap to edit • Swipe to delete',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.grey[600],
-                        fontStyle: FontStyle.italic,
                       ),
                     ),
                   ],

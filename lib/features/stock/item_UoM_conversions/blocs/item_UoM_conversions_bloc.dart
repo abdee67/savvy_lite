@@ -593,13 +593,13 @@ class ItemUomConversionBloc
                   lowerQuery,
                 ) ??
                 false) ||
-            (item.itemName!.unitOfMeasureDescription!.toLowerCase().contains(
-                  lowerQuery,
-                ) ??
+            (item.itemName!.unitOfMeasureDescription!.description1
+                    .toLowerCase()
+                    .contains(lowerQuery) ??
                 false) ||
-            (item.itemName!.unitOfMeasureDescription!.toLowerCase().contains(
-                  lowerQuery,
-                ) ??
+            (item.itemName!.unitOfMeasureDescription!.description2!
+                    .toLowerCase()
+                    .contains(lowerQuery) ??
                 false) ||
             (item.conversionFactor.toString().contains(lowerQuery));
       }).toList();

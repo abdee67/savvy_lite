@@ -16,6 +16,7 @@ enum AuthStatus {
   authenticated,
   unauthenticated,
   error,
+  licenseActivationRequired,
 }
 
 class AuthState extends Equatable {
@@ -41,6 +42,8 @@ class AuthState extends Equatable {
   final DateTime? occuredAt;
   final String? tokenRefreshRequiredAt;
   final CompanySelectionRequired? companySelectionRequired;
+  final String? companyLogo;
+  final bool hasExistingCompany;
 
   const AuthState({
     required this.status,
@@ -62,6 +65,8 @@ class AuthState extends Equatable {
     this.occuredAt,
     this.tokenRefreshRequiredAt,
     this.companySelectionRequired,
+    this.companyLogo,
+    this.hasExistingCompany = false,
   });
 
   // --- Helper Getters ---
@@ -198,6 +203,7 @@ class AuthState extends Equatable {
     UserWithRole? userWithRole,
     int? companyId,
     int? branchId,
+    String? companyLogo,
   }) {
     return AuthState(
       status: AuthStatus.authenticated,
@@ -208,6 +214,7 @@ class AuthState extends Equatable {
       userWithRole: userWithRole,
       companyId: companyId,
       branchId: branchId,
+      companyLogo: companyLogo,
       authenticatedAt: DateTime.now(),
       tokenExpiryTime: DateTime.now().add(const Duration(hours: 2)), // Example
     );
@@ -251,6 +258,8 @@ class AuthState extends Equatable {
     String? tokenRefreshRequiredAt,
     String? password,
     CompanySelectionRequired? companySelectionRequired,
+    String? companyLogo,
+    bool? hasExistingCompany,
   }) {
     return AuthState(
       status: status ?? this.status,
@@ -274,6 +283,8 @@ class AuthState extends Equatable {
       password: password ?? this.password,
       companySelectionRequired:
           companySelectionRequired ?? this.companySelectionRequired,
+      companyLogo: companyLogo ?? this.companyLogo,
+      hasExistingCompany: hasExistingCompany ?? this.hasExistingCompany,
     );
   }
 
@@ -298,6 +309,8 @@ class AuthState extends Equatable {
     tokenRefreshRequiredAt,
     password,
     companySelectionRequired,
+    companyLogo,
+    hasExistingCompany,
   ];
 }
 

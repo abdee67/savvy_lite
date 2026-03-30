@@ -4,6 +4,7 @@ import 'package:savvy_stock/features/purchase/purchase_entry/models/credit_payme
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_report_filter_model.dart';
 import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 
 abstract class PurchaseOrderEvent extends Equatable {
@@ -1125,4 +1126,222 @@ class FilterCreditPayments extends PurchaseOrderEvent {
     this.endDate,
     this.referenceNumber,
   });
+}
+// ============================================================================
+// PURCHASE ORDER REPORT EVENTS
+// ============================================================================
+
+class LoadPurchaseTransactionReport extends PurchaseOrderEvent {
+  final int companyId;
+  final int page;
+  final int pageSize;
+  final PurchaseReportFilters filters;
+
+  const LoadPurchaseTransactionReport({
+    required this.companyId,
+    this.page = 1,
+    this.pageSize = 25,
+    this.filters = const PurchaseReportFilters(),
+  });
+}
+
+class LoadMorePurchaseTransactionReport extends PurchaseOrderEvent {
+  const LoadMorePurchaseTransactionReport();
+}
+
+class UpdatePurchaseTransactionReportFilters extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const UpdatePurchaseTransactionReportFilters(this.filters);
+}
+
+class ClearPurchaseTransactionReportFilters extends PurchaseOrderEvent {
+  const ClearPurchaseTransactionReportFilters();
+}
+
+class ExportPurchaseTransactionReportToExcel extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const ExportPurchaseTransactionReportToExcel(this.filters);
+}
+
+class ExportPurchaseTransactionReportToPDF extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const ExportPurchaseTransactionReportToPDF(this.filters);
+}
+// ============================================================================
+// GRN REPORT EVENTS
+// ============================================================================
+
+class LoadGRNReport extends PurchaseOrderEvent {
+  final int companyId;
+  final int page;
+  final int pageSize;
+  final PurchaseReportFilters filters;
+
+  const LoadGRNReport({
+    required this.companyId,
+    this.page = 1,
+    this.pageSize = 25,
+    this.filters = const PurchaseReportFilters(),
+  });
+}
+
+class LoadMoreGRNReport extends PurchaseOrderEvent {
+  const LoadMoreGRNReport();
+}
+
+class UpdateGRNReportFilters extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const UpdateGRNReportFilters(this.filters);
+}
+
+class ClearGRNReportFilters extends PurchaseOrderEvent {
+  const ClearGRNReportFilters();
+}
+
+class ExportGRNReportToExcel extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const ExportGRNReportToExcel(this.filters);
+}
+
+class ExportGRNReportToPDF extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const ExportGRNReportToPDF(this.filters);
+}
+// ============================================================================
+// PENDING PURCHASE REPORT EVENTS
+// ============================================================================
+
+class LoadPendingPurchaseReport extends PurchaseOrderEvent {
+  final int companyId;
+  final int page;
+  final int pageSize;
+  final PurchaseReportFilters filters;
+
+  const LoadPendingPurchaseReport({
+    required this.companyId,
+    this.page = 1,
+    this.pageSize = 25,
+    this.filters = const PurchaseReportFilters(),
+  });
+}
+
+class LoadMorePendingPurchaseReport extends PurchaseOrderEvent {
+  const LoadMorePendingPurchaseReport();
+}
+
+class UpdatePendingPurchaseReportFilters extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const UpdatePendingPurchaseReportFilters(this.filters);
+}
+
+class ClearPendingPurchaseReportFilters extends PurchaseOrderEvent {
+  const ClearPendingPurchaseReportFilters();
+}
+
+class ExportPendingPurchaseReportToExcel extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const ExportPendingPurchaseReportToExcel(this.filters);
+}
+
+class ExportPendingPurchaseReportToPDF extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const ExportPendingPurchaseReportToPDF(this.filters);
+}
+
+// ============================================================================
+// CREDIT PAYMENT REPORT EVENTS
+// ============================================================================
+
+class LoadCreditPaymentReport extends PurchaseOrderEvent {
+  final int companyId;
+  final int page;
+  final int pageSize;
+  final PurchaseReportFilters filters;
+  final String? sortBy;
+
+  const LoadCreditPaymentReport({
+    required this.companyId,
+    this.page = 1,
+    this.pageSize = 25,
+    this.filters = const PurchaseReportFilters(),
+    this.sortBy,
+  });
+}
+
+class LoadMoreCreditPaymentReport extends PurchaseOrderEvent {
+  const LoadMoreCreditPaymentReport();
+}
+
+class UpdateCreditPaymentReportFilters extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const UpdateCreditPaymentReportFilters(this.filters);
+}
+
+class ClearCreditPaymentReportFilters extends PurchaseOrderEvent {
+  const ClearCreditPaymentReportFilters();
+}
+
+class ExportCreditPaymentReportToExcel extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const ExportCreditPaymentReportToExcel(this.filters);
+}
+
+class ExportCreditPaymentReportToPDF extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const ExportCreditPaymentReportToPDF(this.filters);
+}
+
+// ============================================================================
+// Aged Credit Payment Report Events
+// ============================================================================
+class LoadAgedCreditPaymentReport extends PurchaseOrderEvent {
+  final int companyId;
+  final int page;
+  final int pageSize;
+  final PurchaseReportFilters filters;
+
+  const LoadAgedCreditPaymentReport({
+    required this.companyId,
+    this.page = 1,
+    this.pageSize = 25,
+    this.filters = const PurchaseReportFilters(),
+  });
+}
+
+class LoadMoreAgedCreditPaymentReport extends PurchaseOrderEvent {
+  const LoadMoreAgedCreditPaymentReport();
+}
+
+class UpdateAgedCreditPaymentReportFilters extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const UpdateAgedCreditPaymentReportFilters(this.filters);
+}
+
+class ClearAgedCreditPaymentReportFilters extends PurchaseOrderEvent {
+  const ClearAgedCreditPaymentReportFilters();
+}
+
+class ExportAgedCreditPaymentReportToExcel extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const ExportAgedCreditPaymentReportToExcel(this.filters);
+}
+
+class ExportAgedCreditPaymentReportToPDF extends PurchaseOrderEvent {
+  final PurchaseReportFilters filters;
+
+  const ExportAgedCreditPaymentReportToPDF(this.filters);
 }

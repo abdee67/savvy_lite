@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_detail.dart';
+import 'package:savvy_stock/features/stock/item_locations/models/item_location_filters.dart';
 import 'package:savvy_stock/features/stock/item_locations/models/item_locations_model.dart';
 
 // Events
@@ -8,8 +9,39 @@ abstract class ItemLocationsEvent extends Equatable {
   const ItemLocationsEvent();
 
   @override
-  List<Object> get props => [];
+  List<Object?> get props => [];
 }
+
+class LoadLazyItemLocations extends ItemLocationsEvent {
+  final int companyId;
+  final int page;
+  final int pageSize;
+  final String? sortBy;
+  final bool sortAscending;
+
+  const LoadLazyItemLocations({
+    required this.companyId,
+    this.page = 1,
+    this.pageSize = 10,
+    this.sortBy,
+    this.sortAscending = true,
+  });
+
+  @override
+  List<Object?> get props => [companyId, page, pageSize, sortBy, sortAscending];
+}
+
+class LoadMoreLazyItemLocations extends ItemLocationsEvent {}
+
+class FilterLazyItemLocations extends ItemLocationsEvent {
+  final ItemLocationFilters filters;
+  const FilterLazyItemLocations(this.filters);
+
+  @override
+  List<Object?> get props => [filters];
+}
+
+class ClearLazyItemLocationsFilters extends ItemLocationsEvent {}
 
 class LoadItemLocations extends ItemLocationsEvent {
   final int companyId;
@@ -45,6 +77,18 @@ class LoadItemLocationsForBranch extends ItemLocationsEvent {
 
   @override
   List<Object> get props => [companyId, branchId];
+}
+
+class LoadItemLocationsByItemNumber extends ItemLocationsEvent {
+  final int companyId;
+  final int itemId;
+  const LoadItemLocationsByItemNumber({
+    required this.companyId,
+    required this.itemId,
+  });
+
+  @override
+  List<Object> get props => [companyId, itemId];
 }
 
 class CreateItemLocation extends ItemLocationsEvent {

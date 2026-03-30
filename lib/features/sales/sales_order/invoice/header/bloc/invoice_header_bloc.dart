@@ -1,6 +1,8 @@
 // features/sales/invoice_history/bloc/invoice_history_header_bloc.dart
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/invoice/header/bloc/invoice_header_event.dart';
@@ -152,6 +154,9 @@ class InvoiceHistoryHeaderBloc
           errorMessage: 'Failed to create invoice history header: $e',
         ),
       );
+      if (kDebugMode) {
+        developer.log('Failed to create invoice history header: $e');
+      }
     }
   }
 
@@ -452,9 +457,9 @@ class InvoiceHistoryHeaderBloc
     try {
       emit(state.copyWith(status: InvoiceHistoryHeaderStatus.saving));
 
-      for (final item in state.editItems) {
+      for (var item in state.editItems) {
         if (item.id == null) {
-          item.company = authBloc.state.companyId;
+          item = item.copyWith(company: authBloc.state.companyId);
           await repository.createInvoiceHistoryHeader(item);
         } else {
           await repository.updateInvoiceHistoryHeader(item);
@@ -471,9 +476,12 @@ class InvoiceHistoryHeaderBloc
       emit(
         state.copyWith(
           status: InvoiceHistoryHeaderStatus.failure,
-          errorMessage: 'Failed to save row: $e',
+          //errorMessage: 'Failed to save row: $e',
         ),
       );
+      if (kDebugMode) {
+        developer.log('Failed to save row: $e');
+      }
     }
   }
 
@@ -484,9 +492,9 @@ class InvoiceHistoryHeaderBloc
     try {
       emit(state.copyWith(status: InvoiceHistoryHeaderStatus.saving));
 
-      for (final item in state.editItems) {
+      for (var item in state.editItems) {
         if (item.id == null) {
-          item.company = authBloc.state.companyId;
+          item = item.copyWith(company: authBloc.state.companyId);
           await repository.createInvoiceHistoryHeader(item);
         } else {
           await repository.updateInvoiceHistoryHeader(item);
@@ -506,9 +514,12 @@ class InvoiceHistoryHeaderBloc
       emit(
         state.copyWith(
           status: InvoiceHistoryHeaderStatus.failure,
-          errorMessage: 'Failed to save in edit: $e',
+          //errorMessage: 'Failed to save in edit: $e',
         ),
       );
+      if (kDebugMode) {
+        developer.log('Failed to save in edit: $e');
+      }
     }
   }
 

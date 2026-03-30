@@ -6,11 +6,6 @@ import 'package:intl/intl.dart';
 import 'package:savvy_stock/core/widgets/custom_dropdown.dart';
 import 'package:savvy_stock/core/widgets/custom_text_form.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
-import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_bloc.dart';
-import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_event.dart';
-import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_state.dart';
-import 'package:savvy_stock/features/purchase/purchase_entry/models/credit_payment_model.dart';
-import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_event.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_state.dart';
@@ -599,7 +594,7 @@ class _CreditReceiptScreenState extends State<CreditReceiptScreen> {
                         value: udc.id,
                         child: Text(udc.description1 ?? udc.detailCode ?? ''),
                       );
-                    }).toList(),
+                    }),
                   ],
                   onChanged: _onPaymentInstrumentSelected,
                   validator: (value) {

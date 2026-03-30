@@ -1,6 +1,8 @@
 // features/sales/sales_order_details/blocs/sales_order_details_bloc.dart
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/header/bloc/sales_order_header_bloc.dart';
@@ -243,7 +245,9 @@ class SalesOrderDetailBloc
           errorMessage: 'Failed to create sales order details: $e',
         ),
       );
-      print(e);
+      if (kDebugMode) {
+        developer.log(e.toString());
+      }
     }
   }
 
@@ -534,9 +538,11 @@ class SalesOrderDetailBloc
     );
 
     final updatedCreateItems = [...state.createItems, newItem];
-    print(
-      '🎯 DEBUG: Added item to create - Lot: ${newItem.lotNumber}, Taxable: ${newItem.taxable}',
-    );
+    if (kDebugMode) {
+      developer.log(
+        '🎯 DEBUG: Added item to create - Lot: ${newItem.lotNumber}, Taxable: ${newItem.taxable}',
+      );
+    }
 
     emit(state.copyWith(createItems: updatedCreateItems, selected1: newItem));
   }
@@ -549,9 +555,11 @@ class SalesOrderDetailBloc
     if (event.index < updatedCreateItems.length) {
       updatedCreateItems[event.index] = event.item;
     }
-    print(
-      '🎯 DEBUG: Updated item in create - Lot: ${event.item.lotNumber}, Taxable: ${event.item.taxable}',
-    );
+    if (kDebugMode) {
+      developer.log(
+        '🎯 DEBUG: Updated item in create - Lot: ${event.item.lotNumber}, Taxable: ${event.item.taxable}',
+      );
+    }
 
     emit(state.copyWith(createItems: updatedCreateItems));
   }
@@ -563,6 +571,11 @@ class SalesOrderDetailBloc
     final updatedEditItems = List<SalesOrderDetail>.from(state.editItems);
     if (event.index < updatedEditItems.length) {
       updatedEditItems[event.index] = event.item;
+    }
+    if (kDebugMode) {
+      developer.log(
+        '🎯 DEBUG: Updated item in edit - Lot: ${event.item.lotNumber}, Taxable: ${event.item.taxable}',
+      );
     }
 
     emit(state.copyWith(editItems: updatedEditItems));
@@ -791,7 +804,10 @@ class SalesOrderDetailBloc
       if (applyLocationMgmt && applyLotMgmt) {
         // Case 1: Both location and lot management
         final lotAvailability = await validateStockAvailabilityService
-            .validateLotLevelAvailability(soD, state.companyId!);
+            .validateLotLevelAvailability(
+              soD,
+              state.companyId ?? authBloc.state.companyId!,
+            );
         availableQuantity = lotAvailability.availableQty;
         validationMessage = lotAvailability.message;
         isValid = lotAvailability.isValid;
@@ -824,20 +840,28 @@ class SalesOrderDetailBloc
             ),
           );
 
-          print(
-            '🎯 DEBUG: Auto-assigned lot number ${firstAvailableLot.id} for item ${soD.itemsTableId}',
-          );
+          if (kDebugMode) {
+            developer.log(
+              '🎯 DEBUG: Auto-assigned lot number ${firstAvailableLot.id} for item ${soD.itemsTableId}',
+            );
+          }
         }
       } else if (applyLocationMgmt && !applyLotMgmt) {
         // 🎯 Get actual available quantity from ItemsInBranch
         final locationAvailability = await validateStockAvailabilityService
-            .validateLocationLevelAvailability(soD, state.companyId!);
+            .validateLocationLevelAvailability(
+              soD,
+              state.companyId ?? authBloc.state.companyId!,
+            );
         availableQuantity = locationAvailability.availableQty;
         validationMessage = locationAvailability.message;
         isValid = locationAvailability.isValid;
       } else {
         final branchAvailability = await validateStockAvailabilityService
-            .validateBranchLevelAvailability(soD, state.companyId!);
+            .validateBranchLevelAvailability(
+              soD,
+              state.companyId ?? authBloc.state.companyId!,
+            );
         availableQuantity = branchAvailability.availableQty;
         validationMessage = branchAvailability.message;
         isValid = branchAvailability.isValid;
@@ -1067,12 +1091,11 @@ class SalesOrderDetailBloc
       }
 
       // 🎯 Get item cost from ItemCostTableBloc
-      final itemCost = await itemCostRepository.calculateItemCost(
+      final unitCost = await itemCostRepository.calculateItemCost(
         item: event.salesOrderDetail,
         companyId: effectiveCompanyId,
       );
 
-      final unitCost = itemCost;
       final amountCost = unitCost * (event.salesOrderDetail.quantity ?? 0.0);
 
       final updatedDetail = event.salesOrderDetail.copyWith(
@@ -1094,7 +1117,9 @@ class SalesOrderDetailBloc
         );
       }
     } catch (e) {
-      print('Failed to calculate item cost: $e');
+      if (kDebugMode) {
+        developer.log('Failed to calculate item cost: $e');
+      }
     }
   }
 
@@ -1221,6 +1246,25 @@ class SalesOrderDetailBloc
           );
         }
 
+        // 🎯 ENRICH WITH HEADER IF MISSING (ENSURE CUSTOMER/ORDERTYPE)
+        var enrichedSOD = salesOrderDetail;
+        if (enrichedSOD.orderHeader == null &&
+            enrichedSOD.salesOrderHeaderId != null) {
+          try {
+            final header = await salesOrderHeaderRepository
+                .getSalesOrderHeaderById(enrichedSOD.salesOrderHeaderId!);
+            if (header != null) {
+              enrichedSOD = enrichedSOD.copyWith(orderHeader: header);
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              developer.log(
+                'WARNING: Could not enrich SalesOrderDetail with header: $e',
+              );
+            }
+          }
+        }
+
         // Get conversion factor
         final factor = await itemUOMConversionsRepository.fromOtherToPrimary(
           salesOrderDetail.itemsTableId!,
@@ -1238,28 +1282,28 @@ class SalesOrderDetailBloc
         if (!applyLocationMgmt && !applyLotMgmt) {
           // Case 1: No location or lot management
           await validateStockAvailabilityService.handleSimpleStockUpdate(
-            salesOrderDetail,
+            enrichedSOD,
             factor,
             companyId,
           );
         } else if (applyLocationMgmt && !applyLotMgmt) {
           // Case 2: Location management only
           await validateStockAvailabilityService.handleLocationStockUpdate(
-            salesOrderDetail,
+            enrichedSOD,
             factor,
             companyId,
           );
         } else if (!applyLocationMgmt && applyLotMgmt) {
           // Lot management only
           await validateStockAvailabilityService.handleLotStockUpdate(
-            salesOrderDetail,
+            enrichedSOD,
             factor,
             companyId,
           );
         } else if (applyLocationMgmt && applyLotMgmt) {
           // Case 3: Both location and lot management
           await validateStockAvailabilityService.handleLotStockUpdate(
-            salesOrderDetail,
+            enrichedSOD,
             factor,
             companyId,
           );
@@ -1307,39 +1351,57 @@ class SalesOrderDetailBloc
             salesOrderDetail.quantity != null &&
             salesOrderDetail.quantity != 0.0 &&
             salesOrderDetail.itemInBranch != null) {
+          // 🎯 ENRICH WITH HEADER IF MISSING (ENSURE CUSTOMER/ORDERTYPE)
+          var enrichedSOD = salesOrderDetail;
+          if (enrichedSOD.orderHeader == null &&
+              enrichedSOD.salesOrderHeaderId != null) {
+            try {
+              final header = await salesOrderHeaderRepository
+                  .getSalesOrderHeaderById(enrichedSOD.salesOrderHeaderId!);
+              if (header != null) {
+                enrichedSOD = enrichedSOD.copyWith(orderHeader: header);
+              }
+            } catch (e) {
+              if (kDebugMode) {
+                developer.log(
+                  'WARNING: Could not enrich SalesOrderDetail with header: $e',
+                );
+              }
+            }
+          }
+
           // Get conversion factor
           final factor = await itemUOMConversionsRepository.fromOtherToPrimary(
-            salesOrderDetail.itemsTableId!,
-            salesOrderDetail.unitOfMeasure ??
-                salesOrderDetail.itemBranch!.unitOfMeasure!,
+            enrichedSOD.itemsTableId!,
+            enrichedSOD.unitOfMeasure ?? enrichedSOD.itemBranch!.unitOfMeasure!,
             companyId,
           );
 
           if (!applyLocationMgmt && !applyLotMgmt) {
             // Case 1: No location or lot management
             await validateStockAvailabilityService.handleSimpleStockUpdate(
-              salesOrderDetail,
+              enrichedSOD,
               factor,
               companyId,
             );
           } else if (applyLocationMgmt && !applyLotMgmt) {
             // Case 2: Location management only
             await validateStockAvailabilityService.handleLocationStockUpdate(
-              salesOrderDetail,
+              enrichedSOD,
               factor,
               companyId,
             );
           } else if (!applyLocationMgmt && applyLotMgmt) {
             // Lot management only
             await validateStockAvailabilityService.handleLotStockUpdate(
-              salesOrderDetail,
+              enrichedSOD,
               factor,
               companyId,
             );
           } else if (applyLocationMgmt && applyLotMgmt) {
             // Case 3: Both location and lot management
             await validateStockAvailabilityService.handleLotStockUpdate(
-              salesOrderDetail,
+              enrichedSOD,
               factor,
               companyId,
             );
@@ -1410,9 +1472,11 @@ class SalesOrderDetailBloc
       }
 
       if (!allValid) {
-        print(
-          'Quantity beyond available (Beyond quantity is ${beyondQuantity.abs()})!',
-        );
+        if (kDebugMode) {
+          developer.log(
+            'Quantity beyond available (Beyond quantity is ${beyondQuantity.abs()})!',
+          );
+        }
         throw Exception(
           'Quantity beyond available (Beyond quantity is ${beyondQuantity.abs()})!',
         );
@@ -1424,22 +1488,38 @@ class SalesOrderDetailBloc
         throw Exception('Company ID is required to save sales order details');
       }
 
-      // 🎯 CALCULATE ALL COSTS BEFORE SAVING
-      add(
-        CalculateAllItemCosts(
-          salesOrderDetail: state.createItems,
+      // 🎯 CALCULATE ALL COSTS BEFORE SAVING (AWAITED)
+      final enrichedItems = <SalesOrderDetail>[];
+      for (final item in state.createItems) {
+        final unitCost = await itemCostRepository.calculateItemCost(
+          item: item,
           companyId: effectiveCompanyId,
-        ),
-      );
-      // 🎯 DEBUG: PRINT DETAILS BEFORE SAVING
-      print('🎯 DEBUG: Saving ${state.createItems.length} sales order details');
-      for (final detail in state.createItems) {
-        print(
-          '🎯 DEBUG: Detail - Lot: ${detail.lotNumber}, Taxable: ${detail.taxable}, Item: ${detail.itemsTableId}, Branch: ${detail.itemInBranch}',
+        );
+        final amountCost = unitCost * (item.quantity ?? 0.0);
+        enrichedItems.add(
+          item.copyWith(
+            unitCost: unitCost,
+            amountCost: amountCost,
+            salesOrderHeaderId: event.salesOrderHeaderId,
+          ),
         );
       }
+
+      // 🎯 DEBUG: PRINT DETAILS BEFORE SAVING
+      if (kDebugMode) {
+        developer.log(
+          '🎯 DEBUG: Saving ${enrichedItems.length} sales order details',
+        );
+      }
+      for (final detail in enrichedItems) {
+        if (kDebugMode) {
+          developer.log(
+            '🎯 DEBUG: Detail - Lot: ${detail.lotNumber}, Taxable: ${detail.taxable}, Item: ${detail.itemsTableId}, Branch: ${detail.itemInBranch}, Cost: ${detail.unitCost}',
+          );
+        }
+      }
       // 🎯 SAVE DETAILS
-      await repository.createSalesOrderDetailBatch(state.createItems);
+      await repository.createSalesOrderDetailBatch(enrichedItems);
 
       emit(
         state.copyWith(
@@ -1456,9 +1536,12 @@ class SalesOrderDetailBloc
       emit(
         state.copyWith(
           status: SalesOrderDetailStatus.failure,
-          errorMessage: 'Failed to save sales order details: $e',
+          // errorMessage: 'Failed to save sales order details: $e',
         ),
       );
+      if (kDebugMode) {
+        developer.log('Failed to save sales order details: $e');
+      }
     }
   }
 
@@ -1490,9 +1573,12 @@ class SalesOrderDetailBloc
       emit(
         state.copyWith(
           status: SalesOrderDetailStatus.failure,
-          errorMessage: 'Failed to save sales order details: $e',
+          //errorMessage: 'Failed to save sales order details: $e',
         ),
       );
+      if (kDebugMode) {
+        developer.log('Failed to save sales order details: $e');
+      }
     }
   }
 
@@ -1521,9 +1607,12 @@ class SalesOrderDetailBloc
       emit(
         state.copyWith(
           status: SalesOrderDetailStatus.failure,
-          errorMessage: 'Failed to save row: $e',
+          //errorMessage: 'Failed to save row: $e',
         ),
       );
+      if (kDebugMode) {
+        developer.log('Failed to save row: $e');
+      }
     }
   }
 

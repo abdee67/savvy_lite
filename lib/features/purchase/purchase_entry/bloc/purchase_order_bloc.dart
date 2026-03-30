@@ -1,20 +1,29 @@
 // features/purchase_order/bloc/purchase_order_bloc.dart
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:savvy_stock/core/repositories/udc_repository.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/next_number/repo/next_number_repo.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_event.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_state.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/GRNtotals.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/aged_credit_payment_report_totals.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/credit_payment_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/pending_purchase_totals.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_header_model.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_receiver_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_report_filter_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_transaction_totals_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_report_repo.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/repos/purchase_order_repository.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/services/purchase_order_stock_service.dart';
 import 'package:savvy_stock/features/purchase/supplier_entry/repo/supplier_repo.dart';
 import 'package:savvy_stock/features/stock/item_cost/repo/item_cost_repository.dart';
 import 'package:savvy_stock/features/stock/item_entry/data/item_repository.dart';
+import 'package:savvy_stock/features/stock/pricing/services/pricing_service.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
 
@@ -28,6 +37,8 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
   final UdcRepository udcRepository;
   final NextNumberRepository nextNumberRepository;
   final PurchaseOrderStockService stockService;
+  final PurchaseOrderReportRepository purchaseOrderReportRepository;
+  final PricingService pricingService;
 
   StreamSubscription? _authSubscription;
   StreamSubscription? _systemConstantSubscription;
@@ -42,6 +53,8 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     required this.udcRepository,
     required this.nextNumberRepository,
     required this.stockService,
+    required this.purchaseOrderReportRepository,
+    required this.pricingService,
   }) : super(const PurchaseOrderState()) {
     _authSubscription = authBloc.stream.listen((authState) {
       if (authState.isAuthenticated && authState.companyId != null) {
@@ -157,6 +170,52 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     on<DeleteCreditPayment>(_onDeleteCreditPayment);
     on<SelectCreditPayment>(_onSelectCreditPayment);
     on<FilterCreditPayments>(_onFilterCreditPayments);
+
+    //Purchase Transaction Report
+    on<LoadPurchaseTransactionReport>(_onLoadPurchaseTransactionReport);
+    on<LoadMorePurchaseTransactionReport>(_onLoadMorePurchaseTransactionReport);
+    on<UpdatePurchaseTransactionReportFilters>(
+      _onUpdatePurchaseTransactionFilters,
+    );
+    on<ClearPurchaseTransactionReportFilters>(
+      _onClearPurchaseTransactionFilters,
+    );
+    on<ExportPurchaseTransactionReportToExcel>(
+      _onExportPurchaseTransactionToExcel,
+    );
+    on<ExportPurchaseTransactionReportToPDF>(_onExportPurchaseTransactionToPDF);
+
+    //GRN Report
+    on<LoadGRNReport>(_onLoadGRNReport);
+    on<LoadMoreGRNReport>(_onLoadMoreGRNReport);
+    on<UpdateGRNReportFilters>(_onUpdateGRNFilters);
+    on<ClearGRNReportFilters>(_onClearGRNFilters);
+    on<ExportGRNReportToExcel>(_onExportGRNToExcel);
+    on<ExportGRNReportToPDF>(_onExportGRNToPDF);
+
+    //Pending Purchase Report
+    on<LoadPendingPurchaseReport>(_onLoadPendingPurchaseReport);
+    on<LoadMorePendingPurchaseReport>(_onLoadMorePendingPurchaseReport);
+    on<UpdatePendingPurchaseReportFilters>(_onUpdatePendingPurchaseFilters);
+    on<ClearPendingPurchaseReportFilters>(_onClearPendingPurchaseFilters);
+    on<ExportPendingPurchaseReportToExcel>(_onExportPendingPurchaseToExcel);
+    on<ExportPendingPurchaseReportToPDF>(_onExportPendingPurchaseToPDF);
+
+    //Credit Payment Report
+    on<LoadCreditPaymentReport>(_onLoadCreditPaymentReport);
+    on<LoadMoreCreditPaymentReport>(_onLoadMoreCreditPaymentReport);
+    on<UpdateCreditPaymentReportFilters>(_onUpdateCreditPaymentFilters);
+    on<ClearCreditPaymentReportFilters>(_onClearCreditPaymentFilters);
+    on<ExportCreditPaymentReportToExcel>(_onExportCreditPaymentToExcel);
+    on<ExportCreditPaymentReportToPDF>(_onExportCreditPaymentToPDF);
+
+    //Aged Credit Payment Report
+    on<LoadAgedCreditPaymentReport>(_onLoadAgedCreditPaymentReport);
+    on<LoadMoreAgedCreditPaymentReport>(_onLoadMoreAgedCreditPaymentReport);
+    on<UpdateAgedCreditPaymentReportFilters>(_onUpdateAgedCreditPaymentFilters);
+    on<ClearAgedCreditPaymentReportFilters>(_onClearAgedCreditPaymentFilters);
+    on<ExportAgedCreditPaymentReportToExcel>(_onExportAgedCreditPaymentToExcel);
+    on<ExportAgedCreditPaymentReportToPDF>(_onExportAgedCreditPaymentToPDF);
   }
 
   @override
@@ -185,8 +244,8 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
 
       emit(
         state.copyWith(
-          companyId: event.companyId,
-          userId: event.userId,
+          companyId: event.companyId ?? authBloc.state.companyId!,
+          userId: event.userId ?? authBloc.state.userId!.id,
           status: PurchaseOrderStatus.loaded,
         ),
       );
@@ -317,8 +376,8 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
             : null,
         company: event.companyId,
         tempId: _getNextHeaderTempId(state.createHeaders),
-        dateTransaction: DateTime.now(),
-        userId: state.userId,
+        dateTransation: DateTime.now(),
+        userId: state.userId ?? authBloc.state.userId!.id,
         dateUpdated: DateTime.now(),
         //branchReceive: event.branchId,
       );
@@ -412,7 +471,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         id: null,
         orderNumber: nextOrderNumber,
         tempId: _getNextHeaderTempId(state.createHeaders),
-        dateTransaction: DateTime.now(),
+        dateTransation: DateTime.now(),
         dateUpdated: DateTime.now(),
         poReceiveStatus: await _getUdcDetailId('N', 'PR'),
         paymentStatus: originalHeader.paymentTerm != null
@@ -509,8 +568,8 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
 
     // Calculate credit due date if payment term exists
     DateTime? creditDueDate;
-    if (header.paymentTerm != null && header.dateTransaction != null) {
-      creditDueDate = header.dateTransaction!.add(
+    if (header.paymentTerm != null && header.dateTransation != null) {
+      creditDueDate = header.dateTransation!.add(
         Duration(days: header.paymentTerm!),
       );
     }
@@ -533,7 +592,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       poReceiveStatus: notReceivedStatus,
       paymentStatus: header.paymentTerm != null ? notPaidStatus : null,
       creditDueDate: creditDueDate,
-      userId: state.userId,
+      userId: state.userId ?? authBloc.state.userId!.id,
       dateUpdated: DateTime.now(),
       amountGross: grossAmount,
       amountGrandTotalCost: grandTotal,
@@ -686,7 +745,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
             quantityRecieved: savedDetail.quantityTransaction,
             company: savedHeader.company,
             dateReceived: state.receivingDates ?? DateTime.now(),
-            userId: state.userId,
+            userId: state.userId ?? authBloc.state.userId!.id,
             dateUpdated: DateTime.now(),
             // Use data from original detail (form input)
             branchRecieved: autoData?.branchRecieved,
@@ -720,7 +779,10 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       // Refresh lists
       add(RefreshPurchaseOrders());
     } catch (e) {
-      emit(state.errorState('Failed to save purchase order: $e'));
+      //emit(state.errorState('Failed to save purchase order: $e'));
+      if (kDebugMode) {
+        developer.log('Failed to save purchase order: $e');
+      }
     }
   }
 
@@ -764,55 +826,6 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     }
   }
 
-  Future<void> _processAutoReceipt(int headerId) async {
-    try {
-      // Load details for auto-receipt
-      final details = await repository.getDetailsByHeaderId(
-        headerId,
-        state.companyId!,
-      );
-
-      if (details.isEmpty) return;
-
-      final receivers = <PurchaseOrderReceiver>[];
-      for (final detail in details) {
-        final receiver = PurchaseOrderReceiver(
-          poDetail: detail.id,
-          itemNumber: detail.itemNumber,
-          quantityTransaction: detail.quantityTransaction,
-          unitCost: detail.unitCost,
-          amountExtendedCost: detail.amountExtendedCost,
-          quantityOpen: detail.quantityOpen,
-          amountOpen: detail.amountOpen,
-          company: detail.company,
-          dateReceived: state.receivingDates ?? DateTime.now(),
-          quantityRecieved: detail.quantityTransaction,
-          branchRecieved: authBloc.state.branchId,
-          userId: state.userId,
-          dateUpdated: DateTime.now(),
-          tempId: _getNextReceiverTempId(receivers),
-        );
-
-        // Apply location if system setting enabled
-        if (state.systemConstants?.applyLocationMgmBoolean == true) {
-          // receiver = receiver.copyWith(location: detail.itemLocationsSelect);
-        }
-
-        receivers.add(receiver);
-      }
-
-      // Save receivers
-      for (final receiver in receivers) {
-        if (await repository.canCreateReceipt(receiver)) {
-          await _saveReceiverWithBusinessLogic(receiver);
-        }
-      }
-    } catch (e) {
-      // Log error but don't fail the entire operation
-      print('Auto receipt failed: $e');
-    }
-  }
-
   // ============ DETAIL OPERATIONS WITH COMPLEX LOGIC ============
 
   Future<void> _onLoadDetails(
@@ -845,18 +858,48 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     Emitter<PurchaseOrderState> emit,
   ) async {
     try {
-      final newDetail = event.detail.copyWith(
-        tempId: _getNextDetailTempId(state.createDetails),
-        company: state.selectedHeader?.company,
-        poHeader: state.selectedHeader?.id,
+      // Check if item already exists
+      final existingIndex = state.createDetails.indexWhere(
+        (d) =>
+            d.itemNumber == event.detail.itemNumber &&
+            d.unitOfMeasure == event.detail.unitOfMeasure,
       );
 
-      final updatedDetails = [...state.createDetails, newDetail];
+      List<PurchaseOrderDetail> updatedDetails;
+
+      if (existingIndex != -1) {
+        // Merge with existing item
+        final existingItem = state.createDetails[existingIndex];
+        final newQuantity =
+            (existingItem.quantityTransaction ?? 0) +
+            (event.detail.quantityTransaction ?? 0);
+        final newExtendedCost = (existingItem.unitCost ?? 0) * newQuantity;
+
+        final mergedDetail = existingItem.copyWith(
+          quantityTransaction: newQuantity,
+          amountExtendedCost: newExtendedCost,
+          quantityOpen: newQuantity,
+          amountOpen: newExtendedCost,
+        );
+
+        updatedDetails = List<PurchaseOrderDetail>.from(state.createDetails);
+        updatedDetails[existingIndex] = mergedDetail;
+      } else {
+        // Add new item
+        final newDetail = event.detail.copyWith(
+          tempId: _getNextDetailTempId(state.createDetails),
+          company: state.selectedHeader?.company,
+          poHeader: state.selectedHeader?.id,
+        );
+        updatedDetails = [...state.createDetails, newDetail];
+      }
 
       emit(
         state.copyWith(
           createDetails: updatedDetails,
-          selectedDetail: newDetail,
+          selectedDetail: existingIndex != -1
+              ? updatedDetails[existingIndex]
+              : updatedDetails.last,
           status: PurchaseOrderStatus.success,
           //  successMessage: 'Purchase order detail added',
         ),
@@ -978,7 +1021,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
           poHeader: state.selectedHeader!.id,
           company: state.selectedHeader!.company,
           dateUpdated: DateTime.now(),
-          userId: state.userId,
+          userId: state.userId ?? authBloc.state.userId!.id,
           poReceiveStatus: await _getUdcDetailId('N', 'PR'),
           quantityOpen: detail.quantityTransaction,
           amountOpen: detail.amountExtendedCost,
@@ -999,7 +1042,10 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to save row: $e'));
+      //emit(state.errorState('Failed to save row: $e'));
+      if (kDebugMode) {
+        developer.log('Failed to save row: $e');
+      }
     }
   }
 
@@ -1020,10 +1066,20 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
 
       // Check and update header status based on all details
       if (event.detail.poHeader != null) {
-        await repository.updateHeaderReceiptStatus(event.detail.poHeader!);
+        final changed = await repository.updateHeaderReceiptStatus(
+          event.detail.poHeader!,
+        );
 
-        // Update item costs
-        await repository.updateItemCostsForHeader(event.detail.poHeader!);
+        // JAVA LOGIC: Only update costs if status changed
+        int companyId = state.companyId ?? authBloc.state.companyId!;
+        int userId = state.userId ?? authBloc.state.userId!.id;
+        if (changed) {
+          await itemCostsRepository.updatingItemCosts(
+            headerId: event.detail.poHeader!,
+            companyId: companyId,
+            userId: userId,
+          );
+        }
       }
 
       emit(
@@ -1033,7 +1089,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to save row: $e'));
+      if (kDebugMode) {
+        developer.log('Failed to save row: $e');
+      }
     }
   }
 
@@ -1118,7 +1176,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       }
     } catch (e) {
       // Silently fail, just don't set UOM
-      print('Default uom not setted: $e');
+      if (kDebugMode) {
+        developer.log('Default uom not setted: $e');
+      }
     }
   }
 
@@ -1230,7 +1290,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
           amountOpen: detail.amountOpen,
           company: detail.company,
           dateReceived: DateTime.now(),
-          userId: state.userId,
+          userId: state.userId ?? authBloc.state.userId?.id,
           dateUpdated: DateTime.now(),
           amountReceived: detail.amountReceived,
           quantityRecieved: detail.quantityRecieved,
@@ -1292,12 +1352,12 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
           unitOfMeasure: detail.unitOfMeasure,
           branchRecieved:
               detail.autoReceiptReceiver?.branchRecieved ??
-              await _getUserBranchId(state.userId!),
+              (state.userId ?? authBloc.state.userId?.id),
           location: detail.autoReceiptReceiver?.location,
           dateEffective: detail.dateEffective,
           dateExpiration: detail.dateExpiration,
           batchNumberSupplier: detail.batchNumberSupplier,
-          userId: state.userId,
+          userId: state.userId ?? authBloc.state.userId?.id,
           dateUpdated: DateTime.now(),
           tempId: _getNextReceiverTempId(receivers),
         );
@@ -1344,7 +1404,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
           amountOpen: detail.amountOpen,
           company: detail.company,
           dateReceived: DateTime.now(),
-          userId: state.userId,
+          userId: state.userId ?? authBloc.state.userId?.id,
           dateUpdated: DateTime.now(),
           tempId: _getNextReceiverTempId(state.editReceivers),
         );
@@ -1419,6 +1479,38 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     emit(state.loadingState('save_purchase_order_receipt'));
 
     try {
+      // 🎯 UPDATE ITEM COSTS BEFORE STOCK (Java logic)
+      // Call once for the header before processing receivers
+      // This ensures we have costs set BEFORE stock updates/receivers creation
+      int? currentCompanyId = state.companyId ?? authBloc.state.companyId;
+      int? currentUserId = state.userId ?? authBloc.state.userId?.id;
+      if (currentCompanyId != null && currentUserId != null) {
+        try {
+          int? headerId = state.selectedHeader?.id;
+          // If header is missing in state, try to get from first receiver if available
+          if (headerId == null &&
+              state.editReceivers.isNotEmpty &&
+              state.editReceivers.first.poDetail != null) {
+            final detail = await repository.getDetailById(
+              state.editReceivers.first.poDetail!,
+            );
+            headerId = detail?.poHeader;
+          }
+
+          if (headerId != null) {
+            await itemCostsRepository.updatingItemCosts(
+              headerId: headerId,
+              companyId: currentCompanyId,
+              userId: currentUserId,
+            );
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            developer.log('⚠️ Failed to update item costs at start: $e');
+          }
+        }
+      }
+
       bool hasErrors = false;
       bool hasSuccess = false;
       final updatedReceivers = <PurchaseOrderReceiver>[];
@@ -1442,19 +1534,21 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
           quantityOpen: quantityOpen,
           amountOpen: amountOpen,
           dateUpdated: DateTime.now(),
-          userId: state.userId,
+          userId: currentUserId,
           validCell: true,
         );
 
         int id;
         if (receiver.id == null) {
-          print('💾 Creating receiver with:');
-          print('  poDetail: ${receiverToSave.poDetail}');
-          print('  itemNumber: ${receiverToSave.itemNumber}');
-          print('  company: ${receiverToSave.company}');
-          print('  branchRecieved: ${receiverToSave.branchRecieved}');
-          print('  location: ${receiverToSave.location}');
-          print('  unitOfMeasure: ${receiverToSave.unitOfMeasure}');
+          if (kDebugMode) {
+            developer.log('💾 Creating receiver with:');
+            developer.log('  poDetail: ${receiverToSave.poDetail}');
+            developer.log('  itemNumber: ${receiverToSave.itemNumber}');
+            developer.log('  company: ${receiverToSave.company}');
+            developer.log('  branchRecieved: ${receiverToSave.branchRecieved}');
+            developer.log('  location: ${receiverToSave.location}');
+            developer.log('  unitOfMeasure: ${receiverToSave.unitOfMeasure}');
+          }
 
           id = await repository.createPurchaseOrderReceiver(receiverToSave);
           final savedReceiver = receiverToSave.copyWith(id: id);
@@ -1468,22 +1562,75 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
             // Fallback: load detail and derive order number from its header
             final detail = await repository.getDetailById(receiver.poDetail!);
             orderNumber ??= detail?.poHeaderRef?.orderNumber;
-            companyId ??= detail?.company;
+            companyId ??= detail?.company ?? authBloc.state.companyId;
           }
 
-          print(
-            '🔎 Stock update check - headerId: ${state.selectedHeader?.id}, '
-            'orderNumber: $orderNumber, companyId: $companyId',
-          );
+          if (kDebugMode) {
+            developer.log(
+              '🔎 Stock update check - headerId: ${state.selectedHeader?.id}, '
+              'orderNumber: $orderNumber, companyId: $companyId',
+            );
+          }
+
+          // 🎯 ENRICH RECEIVER WITH DETAIL (ENSURE SUPPLIER/ORDERTYPE)
+          var enrichedReceiver = savedReceiver;
+          if (enrichedReceiver.poDetail != null) {
+            try {
+              final detail = await repository.getDetailById(
+                enrichedReceiver.poDetail!,
+              );
+              if (detail != null) {
+                enrichedReceiver = enrichedReceiver.copyWith(
+                  poDetailRef: detail,
+                );
+              }
+            } catch (e) {
+              if (kDebugMode) {
+                developer.log(
+                  'WARNING: Could not enrich PurchaseOrderReceiver with detail: $e',
+                );
+              }
+            }
+          }
 
           if (orderNumber != null && companyId != null) {
             await stockService.updateStockItemAvailabilityPor(
-              receiver: savedReceiver,
+              receiver: enrichedReceiver,
               companyId: companyId,
               orderNumber: orderNumber,
             );
           } else {
-            print('⚠️ Skipping stock update: missing orderNumber or companyId');
+            if (kDebugMode) {
+              developer.log(
+                '⚠️ Skipping stock update: missing orderNumber or companyId',
+              );
+            }
+          }
+
+          // 🎯 AUTO PRICING: Update unit prices based on margin plans
+          // This happens AFTER stock update but before status update
+          // Fetch item cost for this specific item
+          if (receiver.itemNumber != null && currentCompanyId != null) {
+            try {
+              final itemCost = await itemCostsRepository
+                  .findByItemNumberAndCompany(
+                    receiver.itemNumber!,
+                    currentCompanyId,
+                  );
+
+              if (itemCost.isNotEmpty) {
+                await pricingService.unitPriceUpdate(
+                  itemCost: itemCost.first,
+                  receiver: enrichedReceiver,
+                  companyId: currentCompanyId,
+                  userId: currentUserId ?? 0,
+                );
+              }
+            } catch (e) {
+              if (kDebugMode) {
+                developer.log('⚠️ Pricing update failed (non-critical): $e');
+              }
+            }
           }
 
           hasSuccess = true;
@@ -1531,18 +1678,28 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         );
 
         // Refresh data
-        if (state.selectedHeader != null) {
-          add(
-            LoadPurchaseOrderDetails(
-              headerId: state.selectedHeader!.id!,
-              companyId:
-                  state.selectedHeader!.company ?? authBloc.state.companyId!,
-            ),
-          );
+        if (state.selectedHeader?.id != null) {
+          final headerId = state.selectedHeader!.id!;
+          final companyId =
+              state.selectedHeader!.company ?? authBloc.state.companyId;
+
+          if (companyId != null) {
+            add(
+              LoadPurchaseOrderDetails(
+                headerId: headerId,
+                companyId: companyId,
+              ),
+            );
+          } else if (kDebugMode) {
+            developer.log('⚠️ Cannot refresh details: Missing companyId');
+          }
         }
       }
     } catch (e) {
       emit(state.errorState('Failed to save receipt and update stock: $e'));
+      if (kDebugMode) {
+        developer.log('Failed to save receipt and update stock: $e');
+      }
     }
   }
 
@@ -1568,20 +1725,35 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       quantityRecieved: detailQuantityReceived,
       amountReceived: detailAmountReceived,
       poReceiveStatus: quantityOpen == 0
-          ? await _getUdcDetailId('C', 'PR')
+          ? await _getUdcDetailId('R', 'PR')
           : await _getUdcDetailId('P', 'PR'),
       dateUpdated: DateTime.now(),
-      userId: state.userId,
+      userId: state.userId ?? authBloc.state.userId?.id,
     );
 
     await repository.updatePurchaseOrderDetail(updatedDetail);
 
     // Only update header if poHeader is not null
     if (updatedDetail.poHeader != null) {
-      await repository.updateHeaderReceiptStatus(updatedDetail.poHeader!);
-      await repository.updateItemCostsForHeader(updatedDetail.poHeader!);
+      final changed = await repository.updateHeaderReceiptStatus(
+        updatedDetail.poHeader!,
+      );
+
+      // JAVA LOGIC: Only update costs if status changed (Conditional Item Cost Update)
+      // This happens AFTER stock update (since this method is called at end of flow)
+      int? currentCompanyId = state.companyId ?? authBloc.state.companyId;
+      int? currentUserId = state.userId ?? authBloc.state.userId?.id;
+      if (changed && currentCompanyId != null && currentUserId != null) {
+        await itemCostsRepository.updatingItemCosts(
+          headerId: updatedDetail.poHeader!,
+          companyId: currentCompanyId,
+          userId: currentUserId,
+        );
+      }
     } else {
-      print('⚠️ poHeader is null, skipping header status update');
+      if (kDebugMode) {
+        developer.log('⚠️ poHeader is null, skipping header status update');
+      }
     }
   }
 
@@ -1591,35 +1763,43 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     final effectiveDate = receiver.dateEffective;
     final expirationDate = receiver.dateExpiration;
 
-    print('🔍 Validating receiver:');
-    print('  itemNumber: ${receiver.itemNumber}');
-    print('  unitOfMeasure: ${receiver.unitOfMeasure}');
-    print('  quantityRecieved: $quantityRecieved');
-    print('  quantityOpen: $quantityOpen');
-    print('  effectiveDate: $effectiveDate');
-    print('  expirationDate: $expirationDate');
-    print('  branchRecieved: ${receiver.branchRecieved}');
-    print('  location: ${receiver.location}');
+    if (kDebugMode) {
+      developer.log('🔍 Validating receiver:');
+      developer.log('  itemNumber: ${receiver.itemNumber}');
+      developer.log('  unitOfMeasure: ${receiver.unitOfMeasure}');
+      developer.log('  quantityRecieved: $quantityRecieved');
+      developer.log('  quantityOpen: $quantityOpen');
+      developer.log('  effectiveDate: $effectiveDate');
+      developer.log('  expirationDate: $expirationDate');
+      developer.log('  branchRecieved: ${receiver.branchRecieved}');
+      developer.log('  location: ${receiver.location}');
+    }
 
     // Basic quantity validation
     if (quantityRecieved <= 0 || quantityRecieved > quantityOpen) {
-      print(
-        '❌ Quantity validation failed: recieved=$quantityRecieved, open=$quantityOpen',
-      );
+      if (kDebugMode) {
+        developer.log(
+          '❌ Quantity validation failed: recieved=$quantityRecieved, open=$quantityOpen',
+        );
+      }
       return false;
     }
 
     // Date validation (same as Java)
     if (effectiveDate != null && expirationDate != null) {
       if (effectiveDate.isAfter(expirationDate)) {
-        print(
-          '❌ Date validation failed: effective=$effectiveDate > expiration=$expirationDate',
-        );
+        if (kDebugMode) {
+          developer.log(
+            '❌ Date validation failed: effective=$effectiveDate > expiration=$expirationDate',
+          );
+        }
         return false;
       }
     }
 
-    print('✅ Receiver validation passed');
+    if (kDebugMode) {
+      developer.log('✅ Receiver validation passed');
+    }
     return true;
   }
 
@@ -1637,7 +1817,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       quantityOpen: quantityOpen,
       amountOpen: amountOpen,
       dateUpdated: DateTime.now(),
-      userId: state.userId,
+      userId: state.userId ?? authBloc.state.userId?.id,
       validCell: true,
     );
 
@@ -1669,10 +1849,10 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         quantityRecieved: detailQuantityReceived,
         amountReceived: detailAmountReceived,
         poReceiveStatus: quantityOpen == 0
-            ? await _getUdcDetailId('C', 'PR')
+            ? await _getUdcDetailId('R', 'PR')
             : await _getUdcDetailId('P', 'PR'),
         dateUpdated: DateTime.now(),
-        userId: state.userId,
+        userId: state.userId ?? authBloc.state.userId?.id,
       );
 
       await repository.updatePurchaseOrderDetail(updatedDetail);
@@ -1681,7 +1861,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       await repository.updateHeaderReceiptStatus(updatedDetail.poHeader!);
 
       // Update item costs
-      await repository.updateItemCostsForHeader(updatedDetail.poHeader!);
+      // await repository.updateItemCostsForHeader(updatedDetail.poHeader!);
 
       // Update item cost table
       //  await _updateItemCostTable(savedReceiver);//aman said ''comment ketederege tewew
@@ -1702,7 +1882,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       }
     } catch (e) {
       // Log but don't fail
-      print('Failed to update item cost table: $e');
+      if (kDebugMode) {
+        developer.log('Failed to update item cost table: $e');
+      }
     }
   }*/
 
@@ -1726,7 +1908,10 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         ),
       );
     } catch (e) {
-      emit(state.errorState('Failed to save receipt in edit: $e'));
+      //emit(state.errorState('Failed to save receipt in edit: $e'));
+      if (kDebugMode) {
+        developer.log('Failed to save receipt in edit: $e');
+      }
     }
   }
 
@@ -2097,9 +2282,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
   ) {
     final newHeader = PurchaseOrderHeader(
       tempId: _getNextHeaderTempId(state.createHeaders),
-      company: state.companyId,
-      dateTransaction: DateTime.now(),
-      userId: state.userId,
+      company: state.companyId ?? authBloc.state.companyId!,
+      dateTransation: DateTime.now(),
+      userId: state.userId ?? authBloc.state.userId?.id,
       dateUpdated: DateTime.now(),
     );
 
@@ -2118,9 +2303,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
   ) {
     final newHeader = PurchaseOrderHeader(
       tempId: _getNextHeaderTempId(state.editHeaders),
-      company: state.companyId,
-      dateTransaction: DateTime.now(),
-      userId: state.userId,
+      company: state.companyId ?? authBloc.state.companyId!,
+      dateTransation: DateTime.now(),
+      userId: state.userId ?? authBloc.state.userId?.id,
       dateUpdated: DateTime.now(),
     );
 
@@ -2160,7 +2345,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     } catch (e) {
       // Silently fail, default to 1
       emit(state.copyWith(nextOrderNumber: 1));
-      print('Failed to generate next order number: $e');
+      if (kDebugMode) {
+        developer.log('Failed to generate next order number: $e');
+      }
     }
   }
 
@@ -2341,7 +2528,10 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
 
       add(RefreshPurchaseOrders());
     } catch (e) {
-      emit(state.errorState('Failed to save multiple purchase orders: $e'));
+      //emit(state.errorState('Failed to save multiple purchase orders: $e'));
+      if (kDebugMode) {
+        developer.log('Failed to save multiple purchase orders: $e');
+      }
     }
   }
 
@@ -2637,10 +2827,13 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     } catch (e) {
       emit(
         state.copyWith(
-          creditPaymentError: 'Failed to save credit payment: $e',
+          //creditPaymentError: 'Failed to save credit payment: $e',
           creditPaymentSuccess: false,
         ),
       );
+      if (kDebugMode) {
+        developer.log('Failed to save credit payment: $e');
+      }
     }
   }
 
@@ -2761,6 +2954,1006 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       );
     } catch (e) {
       emit(state.errorState('Failed to filter credit payments: $e'));
+    }
+  }
+
+  // ============================================================================
+  // PURCHASE TRANSACTION REPORT EVENT HANDLERS
+  // ============================================================================
+
+  Future<void> _onLoadPurchaseTransactionReport(
+    LoadPurchaseTransactionReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: PurchaseOrderStatus.loading));
+
+      // Fetch paginated data based on filter view type
+      final result = await purchaseOrderReportRepository
+          .getPurchaseTransactionReport(
+            companyId: event.companyId,
+            page: event.page,
+            pageSize: event.pageSize,
+            supplierId: event.filters.supplierId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+            purchaseType: event.filters.purchaseType,
+          );
+
+      // Calculate totals
+      final totalsResult = await purchaseOrderReportRepository
+          .calculatePurchaseOrderTransactionTotals(
+            companyId: event.companyId,
+            supplierId: event.filters.supplierId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+            purchaseType: event.filters.purchaseType,
+          );
+
+      final totals = PurchaseTransactionTotals(
+        totalAmountGross: totalsResult['totalAmountGross'] as double,
+        totalGrandAmountGross: totalsResult['totalGrandAmountGross'] as double,
+        totalCount: totalsResult['totalCount'] as int,
+        currentPage: result['currentPage'] as int,
+        totalPages: result['totalPages'] as int,
+      );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loaded,
+          purchaseTransactionReports:
+              result['headers'] as List<PurchaseOrderHeader>,
+          purchaseTransactionFilters: event.filters,
+          purchaseTransactionTotals: totals,
+          purchaseTransactionPage: result['currentPage'] as int,
+          purchaseTransactionPageSize: event.pageSize,
+          purchaseTransactionTotalCount: result['totalCount'] as int,
+          purchaseTransactionTotalPages: result['totalPages'] as int,
+          hasMorePurchaseTransaction:
+              (result['currentPage'] as int) < (result['totalPages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load sales transaction report: $e'));
+    }
+  }
+
+  Future<void> _onLoadMorePurchaseTransactionReport(
+    LoadMorePurchaseTransactionReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    if (!state.hasMorePurchaseTransaction) return;
+
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadingMorePurchaseTransactionReport,
+        ),
+      );
+      final nextPage = state.purchaseTransactionPage + 1;
+      final filters = state.purchaseTransactionFilters;
+
+      // Fetch next page
+      final result = await purchaseOrderReportRepository
+          .getPurchaseTransactionReport(
+            companyId: state.companyId ?? authBloc.state.companyId!,
+            page: nextPage,
+            pageSize: state.purchaseTransactionPageSize,
+            supplierId: filters.supplierId,
+            startDate: filters.dateFrom,
+            endDate: filters.dateTo,
+            purchaseType: filters.purchaseType,
+          );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loaded,
+          purchaseTransactionReports: [
+            ...state.purchaseTransactionReports,
+            ...(result['headers'] as List<PurchaseOrderHeader>),
+          ],
+          purchaseTransactionPage: result['currentPage'] as int,
+          hasMorePurchaseTransaction:
+              (result['currentPage'] as int) < (result['totalPages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load more transactions: $e'));
+    }
+  }
+
+  Future<void> _onUpdatePurchaseTransactionFilters(
+    UpdatePurchaseTransactionReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    // Reload data with new filters
+    add(
+      LoadPurchaseTransactionReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.purchaseTransactionPageSize,
+        filters: event.filters,
+      ),
+    );
+  }
+
+  void _onClearPurchaseTransactionFilters(
+    ClearPurchaseTransactionReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) {
+    // Reload with empty filters
+    add(
+      LoadPurchaseTransactionReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.purchaseTransactionPageSize,
+        filters: const PurchaseReportFilters(),
+      ),
+    );
+  }
+
+  Future<void> _onExportPurchaseTransactionToExcel(
+    ExportPurchaseTransactionReportToExcel event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.exportingPurchaseTransactionReport,
+        ),
+      );
+
+      // TODO: Implement Excel export logic
+      // This will be similar to _onExportTransactions but for the report data
+      // You'll need to fetch all data (not paginated) and create Excel file
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedPurchaseTransactionReport,
+          exportPurchaseTransactionMessage:
+              'Excel export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedPurchaseTransactionReport,
+          exportPurchaseTransactionMessage: 'Failed to export to Excel: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportPurchaseTransactionToPDF(
+    ExportPurchaseTransactionReportToPDF event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.exportingPurchaseTransactionReport,
+        ),
+      );
+
+      // TODO: Implement PDF export logic
+      // This will be similar to Excel export but generate PDF
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedPurchaseTransactionReport,
+          exportPurchaseTransactionMessage:
+              'PDF export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedPurchaseTransactionReport,
+          exportPurchaseTransactionMessage: 'Failed to export to PDF: $e',
+        ),
+      );
+    }
+  }
+
+  // ============================================================================
+  // GRN REPORT EVENT HANDLERS
+  // ============================================================================
+
+  Future<void> _onLoadGRNReport(
+    LoadGRNReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: PurchaseOrderStatus.loadingGRNReport));
+
+      // Fetch paginated data based on filter view type
+      final result = await purchaseOrderReportRepository
+          .getPurchaseOrderReceiverReport(
+            companyId: event.companyId,
+            page: event.page,
+            pageSize: event.pageSize,
+            supplierId: event.filters.supplierId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+          );
+
+      // Calculate totals
+      final totalsResult = await purchaseOrderReportRepository
+          .calculatePurchaseOrderReceiverTotals(
+            companyId: event.companyId,
+            supplierId: event.filters.supplierId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+          );
+
+      final totals = GRNTotals(
+        totalReceivedAmount: totalsResult['total_received_amount'] as double,
+        totalReceivedQuantity:
+            totalsResult['total_received_quantity'] as double,
+        totalCount: totalsResult['total_count'] as int,
+        currentPage: result['current_page'] as int,
+        totalPages: result['total_pages'] as int,
+      );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedGRNReport,
+          grnReports: result['receivers'] as List<PurchaseOrderReceiver>,
+          grnFilters: event.filters,
+          grnTotals: totals,
+          grnPage: result['current_page'] as int,
+          grnPageSize: event.pageSize,
+          grnTotalCount: result['total_count'] as int,
+          grnTotalPages: result['total_pages'] as int,
+          hasMoreGRN:
+              (result['current_page'] as int) < (result['total_pages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load GRN report: $e'));
+    }
+  }
+
+  Future<void> _onLoadMoreGRNReport(
+    LoadMoreGRNReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    if (!state.hasMoreGRN) return;
+
+    try {
+      emit(state.copyWith(status: PurchaseOrderStatus.loadingMoreGRNReport));
+      final nextPage = state.grnPage + 1;
+      final filters = state.grnFilters;
+
+      // Fetch next page
+      final result = await purchaseOrderReportRepository
+          .getPurchaseOrderReceiverReport(
+            companyId: state.companyId ?? authBloc.state.companyId!,
+            page: nextPage,
+            pageSize: state.grnPageSize,
+            supplierId: filters.supplierId,
+            startDate: filters.dateFrom,
+            endDate: filters.dateTo,
+          );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedGRNReport,
+          grnReports: [
+            ...state.grnReports,
+            ...(result['receivers'] as List<PurchaseOrderReceiver>),
+          ],
+          grnPage: result['current_page'] as int,
+          hasMoreGRN:
+              (result['current_page'] as int) < (result['total_pages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load more GRN report: $e'));
+    }
+  }
+
+  Future<void> _onUpdateGRNFilters(
+    UpdateGRNReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    // Reload data with new filters
+    add(
+      LoadGRNReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.grnPageSize,
+        filters: event.filters,
+      ),
+    );
+  }
+
+  void _onClearGRNFilters(
+    ClearGRNReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) {
+    // Reload with empty filters
+    add(
+      LoadGRNReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.grnPageSize,
+        filters: const PurchaseReportFilters(),
+      ),
+    );
+  }
+
+  Future<void> _onExportGRNToExcel(
+    ExportGRNReportToExcel event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: PurchaseOrderStatus.exportingGRNReport));
+
+      // TODO: Implement Excel export logic
+      // This will be similar to _onExportTransactions but for the report data
+      // You'll need to fetch all data (not paginated) and create Excel file
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedGRNReport,
+          exportGRNMessage: 'Excel export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedGRNReport,
+          exportGRNMessage: 'Failed to export to Excel: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportGRNToPDF(
+    ExportGRNReportToPDF event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(status: PurchaseOrderStatus.exportingGRNReport));
+
+      // TODO: Implement PDF export logic
+      // This will be similar to Excel export but generate PDF
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedGRNReport,
+          exportGRNMessage: 'PDF export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedGRNReport,
+          exportGRNMessage: 'Failed to export to PDF: $e',
+        ),
+      );
+    }
+  }
+  // ============================================================================
+  // PENDING PURCHASE REPORT EVENT HANDLERS
+  // ============================================================================
+
+  Future<void> _onLoadPendingPurchaseReport(
+    LoadPendingPurchaseReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadingPendingPurchaseReport,
+        ),
+      );
+
+      // Fetch paginated data based on filter view type
+      final result = await purchaseOrderReportRepository
+          .getPendingPurchaseOrderReport(
+            companyId: event.companyId,
+            page: event.page,
+            pageSize: event.pageSize,
+            supplierId: event.filters.supplierId,
+            itemId: event.filters.itemId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+          );
+
+      // Calculate totals
+      final totalsResult = await purchaseOrderReportRepository
+          .calculatePendingPurchaseOrderTotals(
+            companyId: event.companyId,
+            supplierId: event.filters.supplierId,
+            itemId: event.filters.itemId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+          );
+
+      final totals = PendingPurchaseTotals(
+        totalRemainigQuantity:
+            (totalsResult['total_quantity_open'] as num?)?.toDouble() ?? 0.0,
+        totalTransactionQunatity:
+            (totalsResult['total_quantity_transaction'] as num?)?.toDouble() ??
+            0.0,
+        totalReceivedQuantity:
+            (totalsResult['total_quantity_recieved'] as num?)?.toDouble() ??
+            0.0,
+        totalCount: (totalsResult['total_count'] as int?) ?? 0,
+        currentPage: (result['current_page'] as int?) ?? 1,
+        totalPages: (result['total_pages'] as int?) ?? 1,
+      );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedGRNReport,
+          pendingPurchaseReports:
+              result['details'] as List<PurchaseOrderDetail>,
+          pendingPurchaseFilters: event.filters,
+          pendingPurchaseTotals: totals,
+          pendingPurchasePage: result['current_page'] as int,
+          pendingPurchasePageSize: event.pageSize,
+          pendingPurchaseTotalCount: result['total_count'] as int,
+          pendingPurchaseTotalPages: result['total_pages'] as int,
+          hasMorePendingPurchase:
+              (result['current_page'] as int) < (result['total_pages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load Pending purchase report: $e'));
+    }
+  }
+
+  Future<void> _onLoadMorePendingPurchaseReport(
+    LoadMorePendingPurchaseReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    if (!state.hasMorePendingPurchase) return;
+
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadingMorePendingPurchaseReport,
+        ),
+      );
+      final nextPage = state.pendingPurchasePage + 1;
+      final filters = state.pendingPurchaseFilters;
+
+      // Fetch next page
+      final result = await purchaseOrderReportRepository
+          .getPendingPurchaseOrderReport(
+            companyId: state.companyId ?? authBloc.state.companyId!,
+            page: nextPage,
+            pageSize: state.pendingPurchasePageSize,
+            supplierId: filters.supplierId,
+            startDate: filters.dateFrom,
+            endDate: filters.dateTo,
+          );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedPendingPurchaseReport,
+          pendingPurchaseReports: [
+            ...state.pendingPurchaseReports,
+            ...(result['details'] as List<PurchaseOrderDetail>),
+          ],
+          pendingPurchasePage: result['current_page'] as int,
+          hasMorePendingPurchase:
+              (result['current_page'] as int) < (result['total_pages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load more pending purchase report: $e'));
+    }
+  }
+
+  Future<void> _onUpdatePendingPurchaseFilters(
+    UpdatePendingPurchaseReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    // Reload data with new filters
+    add(
+      LoadPendingPurchaseReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.pendingPurchasePageSize,
+        filters: event.filters,
+      ),
+    );
+  }
+
+  void _onClearPendingPurchaseFilters(
+    ClearPendingPurchaseReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) {
+    // Reload with empty filters
+    add(
+      LoadPendingPurchaseReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.pendingPurchasePageSize,
+        filters: const PurchaseReportFilters(),
+      ),
+    );
+  }
+
+  Future<void> _onExportPendingPurchaseToExcel(
+    ExportPendingPurchaseReportToExcel event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.exportingPendingPurchaseReport,
+        ),
+      );
+
+      // TODO: Implement Excel export logic
+      // This will be similar to _onExportTransactions but for the report data
+      // You'll need to fetch all data (not paginated) and create Excel file
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedPendingPurchaseReport,
+          exportPendingPurchaseMessage:
+              'Excel export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedPendingPurchaseReport,
+          exportPendingPurchaseMessage: 'Failed to export to Excel: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportPendingPurchaseToPDF(
+    ExportPendingPurchaseReportToPDF event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.exportingPendingPurchaseReport,
+        ),
+      );
+
+      // TODO: Implement PDF export logic
+      // This will be similar to Excel export but generate PDF
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedPendingPurchaseReport,
+          exportPendingPurchaseMessage: 'PDF export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedGRNReport,
+          exportGRNMessage: 'Failed to export to PDF: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onLoadCreditPaymentReport(
+    LoadCreditPaymentReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadingCreditPaymentReport,
+          creditPaymentPage: event.page,
+          creditPaymentFilters: event.filters,
+        ),
+      );
+
+      final int offset = (event.page - 1) * event.pageSize;
+
+      final receipts = await purchaseOrderReportRepository
+          .getCreditPaymentReport(
+            companyId: event.companyId,
+            supplierId: event.filters.supplierId,
+            sortBy: event.sortBy,
+            limit: event.pageSize,
+            offset: offset,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+          );
+
+      final totalCount = await purchaseOrderReportRepository
+          .getCreditPaymentReportCount(
+            companyId: event.companyId,
+            supplierId: event.filters.supplierId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+          );
+
+      // Post-processing logic (Same as before but on the fetched page)
+      // Group by Sales Order Header
+      final Map<int, List<CreditPayment>> groupedPayments = {};
+      for (var payment in receipts) {
+        if (payment.poHeaderRef?.id != null) {
+          if (!groupedPayments.containsKey(payment.poHeaderRef!.id)) {
+            groupedPayments[payment.poHeaderRef!.id!] = [];
+          }
+          groupedPayments[payment.poHeaderRef!.id]!.add(payment);
+        }
+      }
+
+      final List<CreditPayment> processedPayments = [];
+
+      groupedPayments.forEach((poId, poPayments) {
+        // Sort by date receipt (Ascending for calculation?)
+        // Java code sorts retrieving by DESC, then in memory compares by DateReceipt.
+        // Assuming DateReceipt is comparable.
+        poPayments.sort((a, b) {
+          final aDate = a.datePayment ?? DateTime(0);
+          final bDate = b.datePayment ?? DateTime(0);
+          return aDate.compareTo(bDate);
+        });
+
+        // Calculate Remaining Values
+        // remaining starts at PO Amount Gross
+        double remaining = poPayments.isNotEmpty
+            ? (poPayments.first.poHeaderRef?.amountGross ?? 0.0)
+            : 0.0;
+
+        for (var payment in poPayments) {
+          remaining -= (payment.paymentAmount ?? 0.0);
+          payment.setRemaining(remaining < 0 ? 0.0 : remaining);
+          processedPayments.add(payment);
+        }
+      });
+      processedPayments.sort(
+        (a, b) => (b.datePayment ?? DateTime(0)).compareTo(
+          a.datePayment ?? DateTime(0),
+        ),
+      );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedCreditPaymentReport,
+          creditPaymentReports: processedPayments,
+          hasMoreCreditPayment: receipts.length == event.pageSize,
+          creditPaymentTotalCount: totalCount,
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load credit receipts report: $e'));
+    }
+  }
+
+  Future<void> _onLoadMoreCreditPaymentReport(
+    LoadMoreCreditPaymentReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    if (state.hasMoreCreditPayment &&
+        state.status != PurchaseOrderStatus.loadingMoreCreditPaymentReport) {
+      final nextPage = state.creditPaymentPage + 1;
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadingMoreCreditPaymentReport,
+        ),
+      );
+
+      // Trigger load for next page. But wait, reusing _onLoad replaces the list.
+      // I need to append.
+      // So I should implement the logic here, or make _onLoad handle appending (if I passed a flag).
+      // Standard pattern: Separate handler or helper.
+      // I will implement helper logic here.
+
+      try {
+        final int offset = (nextPage - 1) * state.creditPaymentPageSize;
+        final receipts = await purchaseOrderReportRepository
+            .getCreditPaymentReport(
+              companyId: state.companyId ?? 1, // Default or generic
+              supplierId: state.creditPaymentFilters.supplierId,
+              limit: state.creditPaymentPageSize,
+              offset: offset,
+            );
+
+        // Process newly fetched receipts
+        // Note: Remaining value calculation is PER PAGE here as per logic discussion.
+        final Map<int, List<CreditPayment>> groupedPayments = {};
+        for (var payment in receipts) {
+          if (payment.poHeaderRef?.id != null) {
+            if (!groupedPayments.containsKey(payment.poHeaderRef!.id)) {
+              groupedPayments[payment.poHeaderRef!.id!] = [];
+            }
+            groupedPayments[payment.poHeaderRef!.id]!.add(payment);
+          }
+        }
+
+        final List<CreditPayment> processedPayments = [];
+        groupedPayments.forEach((poId, poPayments) {
+          poPayments.sort(
+            (a, b) => (a.datePayment ?? DateTime(0)).compareTo(
+              b.datePayment ?? DateTime(0),
+            ),
+          );
+          double remaining = poPayments.isNotEmpty
+              ? (poPayments.first.poHeaderRef?.amountGross ?? 0.0)
+              : 0.0;
+          for (var payment in poPayments) {
+            remaining -= (payment.paymentAmount ?? 0.0);
+            payment.setRemaining(remaining);
+            processedPayments.add(payment);
+          }
+        });
+        processedPayments.sort(
+          (a, b) => (b.datePayment ?? DateTime(0)).compareTo(
+            a.datePayment ?? DateTime(0),
+          ),
+        );
+
+        emit(
+          state.copyWith(
+            status: PurchaseOrderStatus.loadedCreditPaymentReport,
+            creditPayments: List.of(state.creditPayments)
+              ..addAll(processedPayments),
+            creditPaymentPage: nextPage,
+            hasMoreCreditPayment:
+                receipts.length == state.creditPaymentPageSize,
+          ),
+        );
+      } catch (e) {
+        emit(state.errorState('Failed to load more credit payments: $e'));
+      }
+    }
+  }
+
+  Future<void> _onUpdateCreditPaymentFilters(
+    UpdateCreditPaymentReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    emit(state.copyWith(creditPaymentFilters: event.filters));
+    add(
+      LoadCreditPaymentReport(
+        companyId: state.companyId ?? 1,
+        filters: event.filters,
+        page: 1,
+        pageSize: state.creditPaymentPageSize,
+      ),
+    );
+  }
+
+  Future<void> _onClearCreditPaymentFilters(
+    ClearCreditPaymentReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    emit(state.copyWith(creditPaymentFilters: const PurchaseReportFilters()));
+    add(
+      LoadCreditPaymentReport(
+        companyId: state.companyId ?? 1,
+        filters: const PurchaseReportFilters(),
+        page: 1,
+        pageSize: state.creditPaymentPageSize,
+      ),
+    );
+  }
+
+  Future<void> _onExportCreditPaymentToExcel(
+    ExportCreditPaymentReportToExcel event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    // Placeholder for export logic
+    emit(state.successState('Export to Excel not implemented yet'));
+  }
+
+  Future<void> _onExportCreditPaymentToPDF(
+    ExportCreditPaymentReportToPDF event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    // Placeholder for export logic
+    emit(state.successState('Export to PDF not implemented yet'));
+  }
+  // ============================================================================
+  // Aged Credit Payment REPORT EVENT HANDLERS
+  // ============================================================================
+
+  Future<void> _onLoadAgedCreditPaymentReport(
+    LoadAgedCreditPaymentReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadingAgedCreditPaymentReport,
+        ),
+      );
+
+      // Fetch paginated data based on filter view type
+      final result = await purchaseOrderReportRepository
+          .getAgedCreditPaymentReport(
+            companyId: event.companyId,
+            page: event.page,
+            pageSize: event.pageSize,
+            supplierId: event.filters.supplierId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+            purchaseType: event.filters.purchaseType,
+          );
+
+      // Calculate totals
+      final totalsResult = await purchaseOrderReportRepository
+          .calculateAgedCreditPaymentTotals(
+            companyId: event.companyId,
+            supplierId: event.filters.supplierId,
+            startDate: event.filters.dateFrom,
+            endDate: event.filters.dateTo,
+          );
+
+      final totals = AgedCreditPaymentTotals(
+        totalGrossAmount: totalsResult['totalGrossAmount'] as double,
+        totalPaidAmount: totalsResult['totalPaidAmount'] as double,
+        totalRemainingAmount: totalsResult['totalRemainingAmount'] as double,
+        totalCount:
+            totalsResult['totalCount'] as int? ??
+            0, // Adjusted as repo calc doesn't return count, but report result does
+        currentPage: result['currentPage'] as int,
+        totalPages: result['totalPages'] as int,
+      );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedAgedCreditPaymentReport,
+          agedCreditPaymentReport:
+              result['headers'] as List<PurchaseOrderHeader>,
+          agedCreditPaymentReportFilters: event.filters,
+          agedCreditPaymentReportTotals: totals,
+          agedCreditPaymentReportPage: result['currentPage'] as int,
+          agedCreditPaymentReportPageSize: event.pageSize,
+          agedCreditPaymentReportTotalCount: result['totalCount'] as int,
+          agedCreditPaymentReportTotalPages: result['totalPages'] as int,
+          hasMoreAgedCreditPaymentReport:
+              (result['currentPage'] as int) < (result['totalPages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load aged credit payment report: $e'));
+    }
+  }
+
+  Future<void> _onLoadMoreAgedCreditPaymentReport(
+    LoadMoreAgedCreditPaymentReport event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    if (!state.hasMoreAgedCreditPaymentReport) return;
+
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadingMoreAgedCreditPaymentReport,
+        ),
+      );
+      final nextPage = state.agedCreditPaymentReportPage + 1;
+      final filters = state.agedCreditPaymentReportFilters;
+
+      // Fetch next page
+      final result = await purchaseOrderReportRepository
+          .getAgedCreditPaymentReport(
+            companyId: state.companyId ?? authBloc.state.companyId!,
+            page: nextPage,
+            pageSize: state.agedCreditPaymentReportPageSize,
+            supplierId: filters.supplierId,
+            startDate: filters.dateFrom,
+            endDate: filters.dateTo,
+          );
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedAgedCreditPaymentReport,
+          agedCreditPaymentReport: [
+            ...state.agedCreditPaymentReport,
+            ...(result['headers'] as List<PurchaseOrderHeader>),
+          ],
+          agedCreditPaymentReportPage: result['currentPage'] as int,
+          hasMoreAgedCreditPaymentReport:
+              (result['currentPage'] as int) < (result['totalPages'] as int),
+        ),
+      );
+    } catch (e) {
+      emit(state.errorState('Failed to load more aged credit payments: $e'));
+    }
+  }
+
+  Future<void> _onUpdateAgedCreditPaymentFilters(
+    UpdateAgedCreditPaymentReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    // Reload data with new filters
+    add(
+      LoadAgedCreditPaymentReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.agedCreditPaymentReportPageSize,
+        filters: event.filters,
+      ),
+    );
+  }
+
+  void _onClearAgedCreditPaymentFilters(
+    ClearAgedCreditPaymentReportFilters event,
+    Emitter<PurchaseOrderState> emit,
+  ) {
+    // Reload with empty filters
+    add(
+      LoadAgedCreditPaymentReport(
+        companyId: state.companyId ?? authBloc.state.companyId!,
+        page: 1,
+        pageSize: state.agedCreditPaymentReportPageSize,
+        filters: const PurchaseReportFilters(),
+      ),
+    );
+  }
+
+  Future<void> _onExportAgedCreditPaymentToExcel(
+    ExportAgedCreditPaymentReportToExcel event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.exportingAgedCreditPaymentReport,
+        ),
+      );
+
+      // TODO: Implement Excel export logic
+      // This will be similar to _onExportTransactions but for the report data
+      // You'll need to fetch all data (not paginated) and create Excel file
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedAgedCreditPaymentReport,
+          exportAgedCreditPaymentReportMessage:
+              'Excel export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedAgedCreditPaymentReport,
+          exportAgedCreditPaymentReportMessage: 'Failed to export to Excel: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> _onExportAgedCreditPaymentToPDF(
+    ExportAgedCreditPaymentReportToPDF event,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
+    try {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.exportingAgedCreditPaymentReport,
+        ),
+      );
+
+      // TODO: Implement PDF export logic
+      // This will be similar to Excel export but generate PDF
+
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedAgedCreditPaymentReport,
+          exportAgedCreditPaymentReportMessage:
+              'PDF export functionality coming soon',
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: PurchaseOrderStatus.loadedAgedCreditPaymentReport,
+          exportAgedCreditPaymentReportMessage: 'Failed to export to PDF: $e',
+        ),
+      );
     }
   }
 
