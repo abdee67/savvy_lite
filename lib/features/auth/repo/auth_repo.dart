@@ -62,6 +62,44 @@ class AuthRepository extends BaseRepository {
     return UserModel.fromMap(users.first);
   }
 
+  /// Find a user by their local ID, joining with company info.
+  /// Used after remote data population to load the newly-inserted user.
+  Future<UserModel?> findUserById(int userId) async {
+    final db = await databaseService.database;
+
+    final users = await db.rawQuery(
+      '''
+      SELECT u.*, c.company_name, c.logo_company
+      FROM user_table u
+      LEFT JOIN company_table c ON u.company = c.id
+      WHERE u.id = ? AND u.status = "active"
+    ''',
+      [userId],
+    );
+
+    if (users.isEmpty) return null;
+    return UserModel.fromMap(users.first);
+  }
+
+  /// Find a user by their sync_key, joining with company info.
+  /// Used after remote data population when we know the sync_key but not the local ID.
+  Future<UserModel?> findUserBySyncKey(String syncKey) async {
+    final db = await databaseService.database;
+
+    final users = await db.rawQuery(
+      '''
+      SELECT u.*, c.company_name, c.logo_company
+      FROM user_table u
+      LEFT JOIN company_table c ON u.company = c.id
+      WHERE u.sync_key = ? AND u.status = "active"
+    ''',
+      [syncKey],
+    );
+
+    if (users.isEmpty) return null;
+    return UserModel.fromMap(users.first);
+  }
+
   /// Get the user's roles and privileges via join tables.
   Future<UserWithRole> getUserWithRolesAndPrivileges(UserModel user) async {
     final db = await databaseService.database;

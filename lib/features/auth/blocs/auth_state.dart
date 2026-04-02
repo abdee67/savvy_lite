@@ -17,6 +17,7 @@ enum AuthStatus {
   unauthenticated,
   error,
   licenseActivationRequired,
+  remoteLoginInProgress,
 }
 
 class AuthState extends Equatable {

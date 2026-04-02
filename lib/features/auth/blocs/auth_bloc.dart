@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
+import 'package:savvy_stock/core/services/conectitvity_service.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/admin/users/models/user_with_role.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_event.dart';
@@ -15,6 +16,8 @@ import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/auth/repo/auth_repo.dart';
+import 'package:savvy_stock/features/auth/services/company_data_populator.dart';
+import 'package:savvy_stock/features/auth/services/remote_auth_service.dart';
 import 'package:savvy_stock/features/company/models/company_model.dart';
 import 'package:savvy_stock/features/licensing/model/license_validation_result_model.dart';
 import 'package:savvy_stock/features/licensing/services/license_service.dart';
@@ -23,6 +26,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRepository repository;
   final FlutterSecureStorage secureStorage;
   final LicenseService licenseService;
+  final RemoteAuthService remoteAuthService;
+  final CompanyDataPopulator companyDataPopulator;
+  final ConnectivityService connectivityService;
 
   // Keep databaseService accessor for hasAnyCompany check
   LocalDatabaseService get databaseService => repository.databaseService;
@@ -43,6 +49,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.repository,
     required this.secureStorage,
     required this.licenseService,
+    required this.remoteAuthService,
+    required this.companyDataPopulator,
+    required this.connectivityService,
   }) : super(AuthState(status: AuthStatus.initial)) {
     on<CheckAuthStatus>(_onCheckAuthStatus);
     on<LoginRequested>(_onLoginRequested);
@@ -53,6 +62,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   // features/auth/blocs/auth_bloc.dart - Updated LoginRequested handler
+  // Now with remote server fallback when local credentials not found
   Future<void> _onLoginRequested(
     LoginRequested event,
     Emitter<AuthState> emit,
@@ -66,24 +76,106 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       developer.log('Username entered: ${event.username}');
       developer.log('Hashed password: $hashedPassword');
 
-      // Check user credentials with company info
-      final user = await repository.findUserByCredentials(
+      // ─── Step 1: Try local credentials first ──────────────────────
+      UserModel? user = await repository.findUserByCredentials(
         event.username,
         hashedPassword,
       );
 
+      // ─── Step 2: If local fails, try remote server ────────────────
       if (user == null) {
-        developer.log('No users found matching credentials');
-        emit(
-          AuthState(
-            status: AuthStatus.failure,
-            message: 'Invalid credentials or inactive account',
-            errorType: AuthErrorType.invalidCredentials,
-            occuredAt: DateTime.now(),
-          ),
+        developer.log('No local user found. Attempting remote login...');
+
+        // Check connectivity before making network call
+        if (!connectivityService.isConnected) {
+          developer.log('Device is offline — cannot verify with server');
+          emit(
+            AuthState(
+              status: AuthStatus.failure,
+              message: 'Invalid credentials locally. '
+                  'Connect to the internet to verify with server.',
+              errorType: AuthErrorType.networkError,
+              occuredAt: DateTime.now(),
+            ),
+          );
+          return;
+        }
+
+        // Show remote login progress
+        emit(AuthState(
+          status: AuthStatus.remoteLoginInProgress,
+          message: 'Verifying with server...',
+        ));
+
+        // Call the Java server
+        final remoteResponse = await remoteAuthService.login(
+          event.username,
+          hashedPassword,
         );
-        return;
+
+        if (!remoteResponse.success || !remoteResponse.hasCompanyData) {
+          developer.log(
+            'Remote login failed: ${remoteResponse.message}',
+          );
+          emit(
+            AuthState(
+              status: AuthStatus.failure,
+              message: remoteResponse.message ??
+                  'Invalid credentials or inactive account',
+              errorType: AuthErrorType.invalidCredentials,
+              occuredAt: DateTime.now(),
+            ),
+          );
+          return;
+        }
+
+        // ─── Step 3: Populate local DB with company data ────────────
+        emit(AuthState(
+          status: AuthStatus.remoteLoginInProgress,
+          message: 'Setting up your account...',
+        ));
+
+        final localUserId = await companyDataPopulator.populateFromRemoteLogin(
+          remoteResponse,
+        );
+
+        if (localUserId == null) {
+          developer.log('Failed to populate local database');
+          emit(
+            AuthState(
+              status: AuthStatus.failure,
+              message: 'Failed to set up account data. Please try again.',
+              errorType: AuthErrorType.unknown,
+              occuredAt: DateTime.now(),
+            ),
+          );
+          return;
+        }
+
+        // ─── Step 4: Re-query local DB for the newly inserted user ──
+        user = await repository.findUserById(localUserId);
+
+        if (user == null) {
+          developer.log('User not found after population (id=$localUserId)');
+          emit(
+            AuthState(
+              status: AuthStatus.failure,
+              message: 'Account setup completed but login failed. '
+                  'Please try logging in again.',
+              errorType: AuthErrorType.unknown,
+              occuredAt: DateTime.now(),
+            ),
+          );
+          return;
+        }
+
+        developer.log(
+          'Remote login successful — local user ID: ${user.id}',
+        );
       }
+
+      // ─── Step 5: Continue normal login flow ───────────────────────
+      // (works for both local-found and remote-populated users)
 
       // Get user roles with their privileges through proper joins
       final userWithRoles =

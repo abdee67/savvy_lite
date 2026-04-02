@@ -89,6 +89,8 @@ import 'package:savvy_stock/features/reports/cash_flow/repo/cash_flow_repo.dart'
 import 'package:savvy_stock/features/purchase/other_expenses/bloc/other_expenses_bloc.dart';
 import 'package:savvy_stock/features/purchase/other_expenses/repo/other_expense_repository.dart';
 import 'package:savvy_stock/features/auth/services/password_reset_service.dart';
+import 'package:savvy_stock/features/auth/services/remote_auth_service.dart';
+import 'package:savvy_stock/features/auth/services/company_data_populator.dart';
 
 final getIt = GetIt.instance;
 
@@ -356,6 +358,15 @@ void initDependencies() {
   getIt.registerLazySingleton<PasswordResetService>(
     () => PasswordResetService(databaseService: getIt()),
   );
+  getIt.registerLazySingleton<RemoteAuthService>(
+    () => RemoteAuthService(
+      httpClient: getIt(),
+      databaseService: getIt(),
+    ),
+  );
+  getIt.registerLazySingleton<CompanyDataPopulator>(
+    () => CompanyDataPopulator(databaseService: getIt()),
+  );
   getIt.registerLazySingleton<PricingService>(
     () => PricingService(
       databaseService: getIt(),
@@ -371,6 +382,9 @@ void initDependencies() {
       repository: getIt(),
       secureStorage: getIt(),
       licenseService: getIt(),
+      remoteAuthService: getIt(),
+      companyDataPopulator: getIt(),
+      connectivityService: getIt(),
     ),
   );
   getIt.registerLazySingleton<UserBloc>(
