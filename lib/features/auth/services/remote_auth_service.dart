@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/model/remote_login_response.dart';
@@ -61,9 +62,13 @@ class RemoteAuthService {
       developer.log(
         'RemoteAuthService: Server responded with status ${response.statusCode}',
       );
+      List<RemoteLoginResponse> parseBody (String json){
+        final data = jsonDecode(response.body) as List;
+        return data.map((e) => RemoteLoginResponse.fromJson(e)).toList();
+      }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final body = await compute (parseBody,response.body) as Map<String, dynamic>;
         final loginResponse = RemoteLoginResponse.fromJson(body);
 
         if (loginResponse.success) {

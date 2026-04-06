@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:savvy_stock/core/services/sync/models/sync_event_model.dart';
 
@@ -47,9 +48,9 @@ class SyncReceiver {
         queryParams['since'] = lastSyncTime;
       }
 
-      final url = Uri.parse('$targetUrl/api/sync/pull').replace(
-        queryParameters: queryParams.isNotEmpty ? queryParams : null,
-      );
+      final url = Uri.parse(
+        '$targetUrl/api/sync/pull',
+      ).replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
 
       final response = await httpClient
           .get(url, headers: _buildHeaders())
