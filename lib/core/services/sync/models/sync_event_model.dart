@@ -7,6 +7,7 @@ class SyncStatus {
   static const String inProgress = 'IN_PROGRESS';
   static const String success = 'SUCCESS';
   static const String failed = 'FAILED';
+  static const String initialPending = 'INITIAL_PENDING';
 }
 
 /// Model representing a sync event that captures a local CRUD operation
@@ -29,6 +30,7 @@ class SyncEventModel {
   final String? sourceAddress;
   final String? sourceId;
   final String syncStatus; // PENDING, IN_PROGRESS, SUCCESS, FAILED
+  final int? sequenceNumber;
 
   SyncEventModel({
     this.id,
@@ -43,6 +45,7 @@ class SyncEventModel {
     this.sourceAddress,
     this.sourceId,
     this.syncStatus = SyncStatus.pending,
+    this.sequenceNumber,
   });
 
   /// Generate a new unique sourceKey.
@@ -66,6 +69,7 @@ class SyncEventModel {
       sourceAddress: map['source_address'] as String?,
       sourceId: map['source_id'] as String?,
       syncStatus: map['sync_status'] as String? ?? SyncStatus.pending,
+      sequenceNumber: map['sequence_number'] as int?,
     );
   }
 
@@ -82,6 +86,7 @@ class SyncEventModel {
       'source_address': sourceAddress,
       'source_id': sourceId,
       'sync_status': syncStatus,
+      'sequence_number': sequenceNumber,
     };
     if (id != null) map['id'] = id;
     return map;
@@ -100,6 +105,7 @@ class SyncEventModel {
     String? sourceAddress,
     String? sourceId,
     String? syncStatus,
+    int? sequenceNumber,
   }) {
     return SyncEventModel(
       id: id ?? this.id,
@@ -114,6 +120,7 @@ class SyncEventModel {
       sourceAddress: sourceAddress ?? this.sourceAddress,
       sourceId: sourceId ?? this.sourceId,
       syncStatus: syncStatus ?? this.syncStatus,
+      sequenceNumber: sequenceNumber ?? this.sequenceNumber,
     );
   }
 
