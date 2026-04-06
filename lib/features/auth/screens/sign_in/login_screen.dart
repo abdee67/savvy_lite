@@ -86,6 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
       },
       builder: (context, state) {
         final isLoading = state.status == AuthStatus.loading;
+        final isSyncing = state.status == AuthStatus.initialSyncInProgress;
         final isInitialCheck =
             state.status == AuthStatus.loading &&
             state.message?.contains('Checking') == true;
@@ -124,6 +125,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // Loading overlay for login action (not initial check)
                 if (isLoading && !isInitialCheck) _buildLoadingOverlay(),
+
+                // Full-screen blocking sync overlay
+                if (isSyncing) _buildSyncOverlay(state),
 
                 // Subtle indicator for initial auth check
                 if (isLoading && isInitialCheck) _buildInitialCheckIndicator(),
@@ -387,6 +391,107 @@ class _LoginScreenState extends State<LoginScreen> {
               style: TextStyle(fontSize: 12, color: Colors.white),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Full-screen blocking overlay showing initial data sync progress.
+  /// Cannot be dismissed — user must wait for sync to complete.
+  Widget _buildSyncOverlay(AuthState state) {
+    final progress = state.syncProgress ?? 0;
+    final message = state.message ?? 'Setting up your data...';
+    final syncTable = state.syncTable ?? '';
+
+    return PopScope(
+      canPop: false,
+      child: Container(
+        color: const Color(0xFF0C4772).withOpacity(0.95),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Animated icon
+                SpinKitDoubleBounce(
+                  size: 60,
+                  color: Colors.white,
+                ),
+                const SizedBox(height: 32),
+
+                // Title
+                const Text(
+                  'Setting Up Your Account',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Status message
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white.withOpacity(0.8),
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Progress bar
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: progress / 100,
+                    minHeight: 8,
+                    backgroundColor: Colors.white.withOpacity(0.2),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      Colors.greenAccent,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Percentage text
+                Text(
+                  '${progress.toStringAsFixed(0)}%',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.greenAccent,
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Current table being synced
+                if (syncTable.isNotEmpty)
+                  Text(
+                    syncTable,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withOpacity(0.5),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+
+                const SizedBox(height: 24),
+
+                // Warning text
+                Text(
+                  'Please do not close the app',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white.withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

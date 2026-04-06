@@ -16,8 +16,7 @@ import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/auth/repo/auth_repo.dart';
-import 'package:savvy_stock/features/auth/services/company_data_populator.dart';
-import 'package:savvy_stock/features/auth/services/remote_auth_service.dart';
+import 'package:savvy_stock/features/auth/services/initial_data_sync_service.dart';
 import 'package:savvy_stock/features/company/models/company_model.dart';
 import 'package:savvy_stock/features/licensing/model/license_validation_result_model.dart';
 import 'package:savvy_stock/features/licensing/services/license_service.dart';
@@ -26,8 +25,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRepository repository;
   final FlutterSecureStorage secureStorage;
   final LicenseService licenseService;
-  final RemoteAuthService remoteAuthService;
-  final CompanyDataPopulator companyDataPopulator;
+  final InitialDataSyncService initialDataSyncService;
   final ConnectivityService connectivityService;
 
   // Keep databaseService accessor for hasAnyCompany check
@@ -49,8 +47,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.repository,
     required this.secureStorage,
     required this.licenseService,
-    required this.remoteAuthService,
-    required this.companyDataPopulator,
+    required this.initialDataSyncService,
     required this.connectivityService,
   }) : super(AuthState(status: AuthStatus.initial)) {
     on<CheckAuthStatus>(_onCheckAuthStatus);
@@ -92,7 +89,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           emit(
             AuthState(
               status: AuthStatus.failure,
-              message: 'Invalid credentials locally. '
+              message:
+                  'Invalid credentials locally. '
                   'Connect to the internet to verify with server.',
               errorType: AuthErrorType.networkError,
               occuredAt: DateTime.now(),
@@ -101,46 +99,51 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           return;
         }
 
-        // Show remote login progress
-        emit(AuthState(
-          status: AuthStatus.remoteLoginInProgress,
-          message: 'Verifying with server...',
-        ));
+        // Get server base URL
+        final serverBaseUrl = await repository.getServerBaseUrl();
 
-        // Call the Java server
-        final remoteResponse = await remoteAuthService.login(
-          event.username,
-          hashedPassword,
-        );
-
-        if (!remoteResponse.success || !remoteResponse.hasCompanyData) {
-          developer.log(
-            'Remote login failed: ${remoteResponse.message}',
-          );
+        if (serverBaseUrl == null || serverBaseUrl.isEmpty) {
           emit(
             AuthState(
               status: AuthStatus.failure,
-              message: remoteResponse.message ??
-                  'Invalid credentials or inactive account',
-              errorType: AuthErrorType.invalidCredentials,
+              message:
+                  'No server URL configured. '
+                  'Please configure the server URL first.',
+              errorType: AuthErrorType.networkError,
               occuredAt: DateTime.now(),
             ),
           );
           return;
         }
 
-        // ─── Step 3: Populate local DB with company data ────────────
-        emit(AuthState(
-          status: AuthStatus.remoteLoginInProgress,
-          message: 'Setting up your account...',
-        ));
+        // ─── Step 3: Download & sync ALL company data ────────────────
+        emit(
+          AuthState(
+            status: AuthStatus.initialSyncInProgress,
+            message: 'Connecting to server...',
+            syncProgress: 0,
+            syncTable: '',
+          ),
+        );
 
-        final localUserId = await companyDataPopulator.populateFromRemoteLogin(
-          remoteResponse,
+        final localUserId = await initialDataSyncService.downloadAndApply(
+          serverBaseUrl: serverBaseUrl,
+          username: event.username,
+          passwordHash: hashedPassword,
+          onProgress: (progress) {
+            emit(
+              AuthState(
+                status: AuthStatus.initialSyncInProgress,
+                message: progress.message,
+                syncProgress: progress.percentage,
+                syncTable: progress.currentTable,
+              ),
+            );
+          },
         );
 
         if (localUserId == null) {
-          developer.log('Failed to populate local database');
+          developer.log('Initial data sync failed or returned no user');
           emit(
             AuthState(
               status: AuthStatus.failure,
@@ -156,11 +159,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         user = await repository.findUserById(localUserId);
 
         if (user == null) {
-          developer.log('User not found after population (id=$localUserId)');
+          developer.log('User not found after sync (id=$localUserId)');
           emit(
             AuthState(
               status: AuthStatus.failure,
-              message: 'Account setup completed but login failed. '
+              message:
+                  'Account setup completed but login failed. '
                   'Please try logging in again.',
               errorType: AuthErrorType.unknown,
               occuredAt: DateTime.now(),
@@ -170,7 +174,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         }
 
         developer.log(
-          'Remote login successful — local user ID: ${user.id}',
+          'Initial data sync successful — local user ID: ${user.id}',
         );
       }
 
@@ -178,8 +182,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       // (works for both local-found and remote-populated users)
 
       // Get user roles with their privileges through proper joins
-      final userWithRoles =
-          await repository.getUserWithRolesAndPrivileges(user);
+      final userWithRoles = await repository.getUserWithRolesAndPrivileges(
+        user,
+      );
 
       // Validate License
       final licenseResult = await licenseService.loadAndValidateLicense();

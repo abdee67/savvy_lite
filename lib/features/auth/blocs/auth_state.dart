@@ -18,6 +18,7 @@ enum AuthStatus {
   error,
   licenseActivationRequired,
   remoteLoginInProgress,
+  initialSyncInProgress,
 }
 
 class AuthState extends Equatable {
@@ -45,6 +46,8 @@ class AuthState extends Equatable {
   final CompanySelectionRequired? companySelectionRequired;
   final String? companyLogo;
   final bool hasExistingCompany;
+  final double? syncProgress;
+  final String? syncTable;
 
   const AuthState({
     required this.status,
@@ -68,6 +71,8 @@ class AuthState extends Equatable {
     this.companySelectionRequired,
     this.companyLogo,
     this.hasExistingCompany = false,
+    this.syncProgress,
+    this.syncTable,
   });
 
   // --- Helper Getters ---
@@ -261,6 +266,8 @@ class AuthState extends Equatable {
     CompanySelectionRequired? companySelectionRequired,
     String? companyLogo,
     bool? hasExistingCompany,
+    double? syncProgress,
+    String? syncTable,
   }) {
     return AuthState(
       status: status ?? this.status,
@@ -286,6 +293,8 @@ class AuthState extends Equatable {
           companySelectionRequired ?? this.companySelectionRequired,
       companyLogo: companyLogo ?? this.companyLogo,
       hasExistingCompany: hasExistingCompany ?? this.hasExistingCompany,
+      syncProgress: syncProgress ?? this.syncProgress,
+      syncTable: syncTable ?? this.syncTable,
     );
   }
 
@@ -312,6 +321,8 @@ class AuthState extends Equatable {
     companySelectionRequired,
     companyLogo,
     hasExistingCompany,
+    syncProgress,
+    syncTable,
   ];
 }
 

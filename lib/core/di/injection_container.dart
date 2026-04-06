@@ -90,7 +90,7 @@ import 'package:savvy_stock/features/purchase/other_expenses/bloc/other_expenses
 import 'package:savvy_stock/features/purchase/other_expenses/repo/other_expense_repository.dart';
 import 'package:savvy_stock/features/auth/services/password_reset_service.dart';
 import 'package:savvy_stock/features/auth/services/remote_auth_service.dart';
-import 'package:savvy_stock/features/auth/services/company_data_populator.dart';
+import 'package:savvy_stock/features/auth/services/initial_data_sync_service.dart';
 
 final getIt = GetIt.instance;
 
@@ -361,11 +361,15 @@ void initDependencies() {
   getIt.registerLazySingleton<RemoteAuthService>(
     () => RemoteAuthService(
       httpClient: getIt(),
-      databaseService: getIt(),
+      authRepository: getIt(),
     ),
   );
-  getIt.registerLazySingleton<CompanyDataPopulator>(
-    () => CompanyDataPopulator(databaseService: getIt()),
+  getIt.registerLazySingleton<InitialDataSyncService>(
+    () => InitialDataSyncService(
+      authRepository: getIt(),
+      syncRepository: getIt(),
+      httpClient: getIt(),
+    ),
   );
   getIt.registerLazySingleton<PricingService>(
     () => PricingService(
@@ -382,8 +386,7 @@ void initDependencies() {
       repository: getIt(),
       secureStorage: getIt(),
       licenseService: getIt(),
-      remoteAuthService: getIt(),
-      companyDataPopulator: getIt(),
+      initialDataSyncService: getIt(),
       connectivityService: getIt(),
     ),
   );
