@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/model/remote_login_response.dart';
+import 'package:savvy_stock/features/auth/repo/auth_repo.dart';
 
 /// Service that authenticates users against the remote Java server.
 ///
@@ -13,11 +14,11 @@ import 'package:savvy_stock/features/auth/model/remote_login_response.dart';
 /// needed to populate the local database.
 class RemoteAuthService {
   final http.Client httpClient;
-  final LocalDatabaseService databaseService;
+  final AuthRepository authRepository;
 
   RemoteAuthService({
     required this.httpClient,
-    required this.databaseService,
+    required this.authRepository,
   });
 
   /// Authenticate against the remote Java server.
@@ -33,7 +34,7 @@ class RemoteAuthService {
   ) async {
     try {
       // 1. Get the server base URL from system_url_config
-      final baseUrl = await _getServerBaseUrl();
+      final baseUrl = await authRepository.getServerBaseUrl();
       if (baseUrl == null || baseUrl.isEmpty) {
         developer.log('RemoteAuthService: No server URL configured');
         return RemoteLoginResponse.failure(
@@ -105,42 +106,6 @@ class RemoteAuthService {
       return RemoteLoginResponse.failure(
         'Remote login failed: ${e.toString()}',
       );
-    }
-  }
-
-  /// Get the server base URL from the system_url_config table.
-  ///
-  /// Looks for a record with config_key = 'auth_server' and active = 'Y'.
-  Future<String?> _getServerBaseUrl() async {
-    try {
-      final db = await databaseService.database;
-      final results = await db.query(
-        'system_url_config',
-        where: "config_key = ? AND active = ?",
-        whereArgs: ['auth_server', 'Y'],
-        limit: 1,
-      );
-
-      if (results.isNotEmpty) {
-        return results.first['config_value'] as String?;
-      }
-
-      // Fallback: try any active config
-      final fallback = await db.query(
-        'system_url_config',
-        where: "active = ?",
-        whereArgs: ['Y'],
-        limit: 1,
-      );
-
-      if (fallback.isNotEmpty) {
-        return fallback.first['config_value'] as String?;
-      }
-
-      return null;
-    } catch (e) {
-      developer.log('RemoteAuthService: Error getting server URL: $e');
-      return null;
     }
   }
 }
