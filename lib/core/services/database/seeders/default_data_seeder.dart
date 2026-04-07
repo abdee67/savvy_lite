@@ -16,7 +16,7 @@ class DefaultDataSeeder extends BaseRepository {
 
     try {
       // Get Lot Type 'X' (Expiration Date)
-      final List<Map<String, dynamic>> lotTypes = await db.query(
+      final List<Map<String, dynamic>> udcDetails = await db.query(
         'udc_details',
         columns: ['id'],
         where: "detail_code = ? AND udc_group = ?",
@@ -24,8 +24,8 @@ class DefaultDataSeeder extends BaseRepository {
       );
 
       int? lotTypeId;
-      if (lotTypes.isNotEmpty) {
-        lotTypeId = lotTypes.first['id'] as int;
+      if (udcDetails.isNotEmpty) {
+        lotTypeId = udcDetails.first['id'] as int;
       }
 
       final payload = withSyncKey({
@@ -104,13 +104,13 @@ class DefaultDataSeeder extends BaseRepository {
 
     for (final udcHeader in udcHeaderSeedData) {
       final payload = withSyncKey(udcHeader);
-      final id = await db.insert('udc_header', payload);
-      captureSync(
+      await db.insert('udc_header', payload);
+      /*captureSync(
         tableName: 'udc_header',
         entityMap: payload,
-        entityId: id.toString(),
+        entityId: udcHeader['id'].toString(),
         operation: 'INSERT',
-      );
+      );*/ //default data is not upposed to sync cuz there it is default data in the server already
     }
     developer.log('udc header data inserted');
 
@@ -893,27 +893,25 @@ class DefaultDataSeeder extends BaseRepository {
       },
     ];
 
-    for (final lotType in udcDetailsSeedData) {
+    for (final udcDetail in udcDetailsSeedData) {
       // 1. Wrap with withSyncKey to generate the UUID
-      final payload = withSyncKey(lotType);
+      final payload = withSyncKey(udcDetail);
 
       // 2. Await the insert, which returns the auto-incremented ID
-      final id = await db.insert('udc_details', payload);
+      await db.insert('udc_details', payload);
 
-      captureSync(
+      /*captureSync(
         tableName: 'udc_details',
         entityMap: payload,
-        entityId: id.toString(), // 3. Use the returned ID here
+        entityId: udcDetail['id'].toString(), // 3. Use the returned ID here
         operation: 'INSERT',
         company: null,
-      );
+      );*/ //default data is not supposed to sync cuz there is default data in the server already
     }
     developer.log('Inserted default udc headers and details');
 
     // Seed privileges (system-wide definitions - not company specific)
-    await PrivilegeSeeder(
-      databaseService: databaseService,
-    ).seedPrivileges(db);
+    await PrivilegeSeeder(databaseService: databaseService).seedPrivileges(db);
     developer.log('Seeded privileges');
 
     // Seed default Admin role with all privileges (template for new companies)
@@ -983,6 +981,18 @@ CREATE TABLE customer_table (
       'CREATE INDEX fk_customer_table_company_idx ON customer_table (company)',
     );
     developer.log('Created table: customer_table');
+
+    // Seed default system_url_config
+    final urlPayload = withSyncKey({
+      'config_key': 'server_url', // The key you use to lookup the target URL
+      'config_value': 'https://673a-196-188-161-77.ngrok-free.app/stock',
+      'environment': 'development',
+      'active': 'Y',
+      'company': '1',
+    });
+    
+    await db.insert('system_url_config', urlPayload);
+    developer.log('Seeded default system_url_config: ${urlPayload['config_value']}');
 
     developer.log(
       '✅ Database initialized. User registration will create company data.',

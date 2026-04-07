@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:savvy_stock/core/errors/failures.dart';
 
 class ConnectivityService with ChangeNotifier {
   final Connectivity _connectivity = Connectivity();
@@ -26,7 +27,7 @@ class ConnectivityService with ChangeNotifier {
   Future<void> initConnectivity() async {
     try {
       final result = await _connectivity.checkConnectivity();
-      _isConnected = result != ConnectivityResult.none;
+      _isConnected = !result.contains(ConnectivityResult.none);
       _connectivityController.add(_isConnected);
       notifyListeners();
     } catch (e) {
@@ -38,7 +39,7 @@ class ConnectivityService with ChangeNotifier {
 
   void _setupListeners() {
     _connectivity.onConnectivityChanged.listen((result) {
-      final newStatus = result != ConnectivityResult.none;
+      final newStatus = !result.contains(ConnectivityResult.none);
       if (newStatus != _isConnected) {
         _isConnected = newStatus;
         _connectivityController.add(_isConnected);
@@ -51,10 +52,27 @@ class ConnectivityService with ChangeNotifier {
   /// Performs a DNS lookup to verify real connectivity.
   Future<bool> hasInternetAccess() async {
     try {
-      final result = await InternetAddress.lookup('google.com')
-          .timeout(const Duration(seconds: 5));
+      final result = await InternetAddress.lookup(
+        'google.com',
+      ).timeout(const Duration(seconds: 5));
       return result.isNotEmpty && result.first.rawAddress.isNotEmpty;
     } catch (_) {
+      return false;
+    }
+  }
+
+  //check connectivity
+  Future<Object> checkConnectivity() async {
+    try {
+      final result = await _connectivity.checkConnectivity();
+      if (result.contains(ConnectivityResult.none)) {
+        return NetworkFailure('No internet connection');
+      }
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        developer.log('Could not check connectivity: $e');
+      }
       return false;
     }
   }

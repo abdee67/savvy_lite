@@ -796,13 +796,13 @@ class PrivilegeSeeder extends BaseRepository {
       };
 
       await db.insert('privilege_table', withSyncKey(fullPrivilege));
-      captureSync(
+      /*captureSync(
         tableName: 'privilege_table',
         entityMap: fullPrivilege,
         entityId: fullPrivilege['id'].toString(),
         operation: 'INSERT',
         company: fullPrivilege['company'].toString(),
-      );
+      );*/ //default data is not supposed to sync cuz there is default data in the server already
     }
   }
 

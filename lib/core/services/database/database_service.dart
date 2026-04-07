@@ -191,7 +191,7 @@ class LocalDatabaseService {
         source_address TEXT CHECK(length(source_address) <= 100),
         source_id TEXT CHECK(length(source_id) <= 100),
         sync_status TEXT DEFAULT 'PENDING' CHECK(length(sync_status) <= 20),
-        sequence_number INTEGER
+        sequence_number INTEGER CHECK(length(sequence_number) <= 2)
       )
     ''');
     developer.log('Created table: sync_event');
