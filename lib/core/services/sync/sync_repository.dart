@@ -36,8 +36,10 @@ class SyncRepository {
         limit: 1,
       );
       if (existing.isNotEmpty) {
-        developer.log('⏭️ SyncRepo: Skipping duplicate event '
-            'sourceKey=${event.sourceKey}');
+        developer.log(
+          '⏭️ SyncRepo: Skipping duplicate event '
+          'sourceKey=${event.sourceKey}',
+        );
         return existing.first['id'] as int;
       }
     }
@@ -45,8 +47,10 @@ class SyncRepository {
     final map = event.toMap();
     map.remove('id');
     final id = await db.insert('sync_event', map);
-    developer.log('📦 SyncRepo: Inserted sync_event id=$id '
-        'entity=${event.entityName} op=${event.operation}');
+    developer.log(
+      '📦 SyncRepo: Inserted sync_event id=$id '
+      'entity=${event.entityName} op=${event.operation}',
+    );
     return id;
   }
 
@@ -94,8 +98,10 @@ class SyncRepository {
       whereArgs: [eventId, fromStatus],
     );
     if (updated == 0) {
-      developer.log('⚠️ SyncRepo: Status transition failed for event $eventId '
-          '($fromStatus → $toStatus) — event may have been modified');
+      developer.log(
+        '⚠️ SyncRepo: Status transition failed for event $eventId '
+        '($fromStatus → $toStatus) — event may have been modified',
+      );
     }
   }
 
@@ -164,19 +170,22 @@ class SyncRepository {
 
     // We filter in Dart for the backoff timing since SQLite date handling
     // is limited. Query gets all candidates, then filter.
-    final rows = await db.rawQuery('''
+    final rows = await db.rawQuery(
+      '''
       SELECT sdd.* FROM sync_device_detail sdd
       INNER JOIN sync_event se ON sdd.sync_event = se.id
       WHERE sdd.sync_status IN (?, ?)
         AND sdd.retry_count < ?
       ORDER BY se.id ASC
       LIMIT ?
-    ''', [
-      SyncStatus.pending,
-      SyncStatus.failed,
-      SyncDeviceDetailModel.maxRetries,
-      limit * 2, // Fetch extra to account for backoff filtering
-    ]);
+    ''',
+      [
+        SyncStatus.pending,
+        SyncStatus.failed,
+        SyncDeviceDetailModel.maxRetries,
+        limit * 2, // Fetch extra to account for backoff filtering
+      ],
+    );
 
     final details = rows.map((r) => SyncDeviceDetailModel.fromMap(r)).toList();
 
@@ -219,27 +228,31 @@ class SyncRepository {
     required int currentRetryCount,
   }) async {
     final db = await databaseService.database;
-    final backoff =
-        SyncDeviceDetailModel.calculateBackoff(currentRetryCount);
+    final backoff = SyncDeviceDetailModel.calculateBackoff(currentRetryCount);
     final nextRetry = DateTime.now().add(backoff).toIso8601String();
 
-    await db.rawUpdate('''
+    await db.rawUpdate(
+      '''
       UPDATE sync_device_detail
       SET sync_status = ?,
           last_attempt = ?,
           last_error = ?,
           retry_count = retry_count + 1
       WHERE id = ?
-    ''', [
-      SyncStatus.failed,
-      DateTime.now().toIso8601String(),
-      error ?? 'Unknown error',
-      detailId,
-    ]);
+    ''',
+      [
+        SyncStatus.failed,
+        DateTime.now().toIso8601String(),
+        error ?? 'Unknown error',
+        detailId,
+      ],
+    );
 
-    developer.log('⏳ SyncRepo: Detail $detailId failed, retry '
-        '${currentRetryCount + 1}/${SyncDeviceDetailModel.maxRetries}, '
-        'next retry after ${backoff.inSeconds}s');
+    developer.log(
+      '⏳ SyncRepo: Detail $detailId failed, retry '
+      '${currentRetryCount + 1}/${SyncDeviceDetailModel.maxRetries}, '
+      'next retry after ${backoff.inSeconds}s',
+    );
   }
 
   /// Reset stale IN_PROGRESS device details to PENDING (crash recovery).
@@ -256,10 +269,13 @@ class SyncRepository {
   /// Check if all device details for an event are SUCCESS.
   Future<bool> areAllDetailsSuccessful(int syncEventId) async {
     final db = await databaseService.database;
-    final pending = await db.rawQuery('''
+    final pending = await db.rawQuery(
+      '''
       SELECT COUNT(*) as count FROM sync_device_detail
       WHERE sync_event = ? AND sync_status != ?
-    ''', [syncEventId, SyncStatus.success]);
+    ''',
+      [syncEventId, SyncStatus.success],
+    );
     return ((pending.first['count'] as int?) ?? 0) == 0;
   }
 
@@ -268,18 +284,19 @@ class SyncRepository {
   // ═══════════════════════════════════════════════════════════════════════
 
   /// Get active target server URLs, optionally filtered by company.
+  /// Also includes globally configured URLs where `company IS NULL`.
   Future<List<Map<String, dynamic>>> getTargetUrls(String? company) async {
     final db = await databaseService.database;
     if (company == null || company.isEmpty) {
       return await db.query(
         'system_url_config',
-        where: "active = ?",
+        where: "active = ? AND company IS NULL",
         whereArgs: ['Y'],
       );
     }
     return await db.query(
       'system_url_config',
-      where: "active = ? AND company = ?",
+      where: "active = ? AND (company = ? OR company IS NULL)",
       whereArgs: ['Y', company],
     );
   }
@@ -336,14 +353,18 @@ class SyncRepository {
   /// This prevents database bloat.
   Future<int> cleanUpOldEvents(int daysOld) async {
     final db = await databaseService.database;
-    final cutoff =
-        DateTime.now().subtract(Duration(days: daysOld)).toIso8601String();
+    final cutoff = DateTime.now()
+        .subtract(Duration(days: daysOld))
+        .toIso8601String();
 
     // First delete associated device details
-    await db.rawDelete('''
+    await db.rawDelete(
+      '''
       DELETE FROM sync_device_detail WHERE sync_event IN
       (SELECT id FROM sync_event WHERE sync_status = ? AND created_at < ?)
-    ''', [SyncStatus.success, cutoff]);
+    ''',
+      [SyncStatus.success, cutoff],
+    );
 
     // Then delete the events
     return await db.delete(

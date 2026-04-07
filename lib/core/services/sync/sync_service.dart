@@ -317,43 +317,142 @@ class SyncService {
         // Sort by ID to maintain operation order
         events.sort((a, b) => (a.id ?? 0).compareTo(b.id ?? 0));
 
-        // Push batch to server (sourceKey ensures idempotency)
-        final results = await syncSender.pushEvents(events, targetUrl);
+        // Push batch to server
+        final payloadJson = jsonEncode(events.map((e) => e.toMap()).toList());
 
-        // Update statuses based on results
-        for (final event in events) {
-          final detail = eventDetailMap[event.id];
-          if (detail == null || detail.id == null) continue;
-
-          final key = event.sourceKey ?? event.id.toString();
-          final success = results[key] ?? false;
-
-          if (success) {
-            await syncRepository.markDeviceDetailSuccess(detail.id!);
-
-            // Check if all details for this event are done
-            if (detail.syncEvent != null) {
-              final allDone = await syncRepository
-                  .areAllDetailsSuccessful(detail.syncEvent!);
-              if (allDone) {
-                await syncRepository.transitionEventStatus(
-                  detail.syncEvent!,
-                  SyncStatus.pending,
-                  SyncStatus.success,
-                );
-              }
+        try {
+          final response = await syncSender.postJson('$targetUrl/api/sync/push', payloadJson);
+          await _handleResponse(response, events, eventDetailMap);
+        } catch (ex) {
+          developer.log('❌ SyncService: Push to $targetUrl failed completely: $ex');
+          for (final event in events) {
+            final detail = eventDetailMap[event.id];
+            if (detail?.id != null) {
+              await syncRepository.markDeviceDetailFailed(
+                detail!.id!,
+                error: ex.toString(),
+                currentRetryCount: detail.retryCount,
+              );
             }
-          } else {
-            await syncRepository.markDeviceDetailFailed(
-              detail.id!,
-              error: 'Push failed to $targetUrl',
-              currentRetryCount: detail.retryCount,
-            );
           }
         }
       }
     } catch (e) {
       developer.log('❌ SyncService: Push error: $e');
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  //  RESPONSE HANDLING
+  // ═══════════════════════════════════════════════════════════════════════
+
+  /// Handle HTTP response for multiple events in bulk (dart equivalent of Java handleResponse)
+  Future<void> _handleResponse(
+    String response,
+    List<SyncEventModel> events,
+    Map<int, SyncDeviceDetailModel> eventDetailMap,
+  ) async {
+    if (response.trim().isEmpty) {
+      developer.log('⚠️ SyncService: Empty response, nothing to update.');
+      await _markRetryBulk(events, eventDetailMap, 'EMPTY_RESPONSE');
+      return;
+    }
+
+    // 🔥 CRITICAL FIX — detect HTML
+    final trimmed = response.trim();
+    if (trimmed.startsWith('<')) {
+      developer.log('❌ SyncService: HTML received instead of JSON: ${trimmed.substring(0, trimmed.length.clamp(0, 200))}');
+      await _markRetryBulk(events, eventDetailMap, 'HTML_RESPONSE');
+      return;
+    }
+
+    try {
+      final body = jsonDecode(trimmed);
+      
+      // If it's a 409 conflict, we treat it as Success out of the box in SyncSender
+      // but if the status code was 409 we might be handling a raw empty body.
+      if (body is! Map<String, dynamic>) {
+        await _markRetryBulk(events, eventDetailMap, 'INVALID_JSON_ROOT');
+        return;
+      }
+
+      final savedItemNode = body['savedItem'];
+      if (savedItemNode is! List || savedItemNode.isEmpty) {
+        developer.log('ℹ️ SyncService: No event IDs found in response.');
+        await _markRetryBulk(events, eventDetailMap, 'No IDs in response');
+        return;
+      }
+
+      final eventIds = <int>[];
+      for (final node in savedItemNode) {
+        if (node is Map && node['id'] != null) {
+          eventIds.add(int.parse(node['id'].toString()));
+        }
+      }
+
+      if (eventIds.isEmpty) {
+        await _markRetryBulk(events, eventDetailMap, 'No IDs in response');
+        return;
+      }
+
+      if (response.contains('"OK"')) {
+        // Mark matched event IDs as success
+        for (final eventId in eventIds) {
+          final detail = eventDetailMap[eventId];
+          if (detail?.id != null) {
+            await syncRepository.markDeviceDetailSuccess(detail!.id!);
+            if (detail.syncEvent != null) {
+              final allDone = await syncRepository.areAllDetailsSuccessful(detail.syncEvent!);
+              if (allDone) {
+                await syncRepository.transitionEventStatus(
+                  detail.syncEvent!, 
+                  SyncStatus.pending, 
+                  SyncStatus.success,
+                );
+              }
+            }
+          }
+        }
+        
+        // Also handle events that we sent but were not explicitly in savedItem (maybe failed on server side)
+        // For events not in eventIds, we'll mark them as failed.
+        for (final event in events) {
+          if (event.id != null && !eventIds.contains(event.id)) {
+             final detail = eventDetailMap[event.id];
+             if (detail?.id != null) {
+               await syncRepository.markDeviceDetailFailed(
+                 detail!.id!,
+                 error: 'Not acknowledged by target',
+                 currentRetryCount: detail.retryCount,
+               );
+             }
+          }
+        }
+        
+        developer.log('✅ SyncService: Sync successful for event IDs: $eventIds');
+      } else {
+        await _markRetryBulk(events, eventDetailMap, response);
+      }
+    } catch (e) {
+      developer.log('❌ SyncService: Failed to parse response or update SyncDeviceDetail: $e');
+      await _markRetryBulk(events, eventDetailMap, e.toString());
+    }
+  }
+
+  Future<void> _markRetryBulk(
+    List<SyncEventModel> events, 
+    Map<int, SyncDeviceDetailModel> eventDetailMap, 
+    String reason,
+  ) async {
+    for (final event in events) {
+      final detail = eventDetailMap[event.id];
+      if (detail?.id != null) {
+        await syncRepository.markDeviceDetailFailed(
+          detail!.id!,
+          error: reason,
+          currentRetryCount: detail.retryCount,
+        );
+      }
     }
   }
 

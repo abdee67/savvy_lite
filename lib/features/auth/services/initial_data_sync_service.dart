@@ -155,8 +155,10 @@ class InitialDataSyncService {
     if (response.statusCode == 200 || response.statusCode == 201) {
       final body = jsonDecode(response.body);
 
-      // The server returns { "success": true, "events": [...] }
-      if (body is Map<String, dynamic>) {
+      // Support both { "success": true, "events": [...] } and raw List [...]
+      if (body is List) {
+        return body.whereType<Map<String, dynamic>>().toList();
+      } else if (body is Map<String, dynamic>) {
         final success = body['success'] as bool? ?? false;
         if (!success) {
           developer.log(

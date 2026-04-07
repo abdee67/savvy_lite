@@ -58,7 +58,12 @@ class SyncReceiver {
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
-        final List<dynamic> eventsList = body['events'] ?? [];
+        List<dynamic> eventsList = [];
+        if (body is List) {
+          eventsList = body;
+        } else if (body is Map<String, dynamic>) {
+          eventsList = body['events'] ?? [];
+        }
 
         developer.log(
           '📥 SyncReceiver: Pulled ${eventsList.length} events from $targetUrl',
