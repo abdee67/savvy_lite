@@ -92,6 +92,26 @@ class SyncEventModel {
     return map;
   }
 
+  /// Convert to a map suitable for the Java backend (camelCase keys).
+  Map<String, dynamic> toServerMap() {
+    final map = <String, dynamic>{
+      'entityName': entityName,
+      'entityId': entityId,
+      'operation': operation,
+      'payload': payload,
+      'sourceNode': sourceNode,
+      'createdAt': createdAt,
+      'company': company, // If company was string, might need parsing depending on server. Currently sending as String/Int.
+      'sourceKey': sourceKey,
+      'sourceAddress': sourceAddress,
+      'sourceId': sourceId,
+      'syncStatus': syncStatus,
+      'sequenceNumber': sequenceNumber,
+    };
+    if (id != null) map['id'] = id;
+    return map;
+  }
+
   SyncEventModel copyWith({
     int? id,
     String? entityName,

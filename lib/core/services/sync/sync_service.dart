@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
+import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
 import 'package:savvy_stock/core/services/conectitvity_service.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
@@ -36,6 +39,9 @@ class SyncService {
   /// Source node identifier for this device.
   String? _sourceNode;
 
+  /// Username for pull requests.
+  String? _username;
+
   /// Periodic sync timer (1-minute interval).
   Timer? _syncTimer;
 
@@ -65,10 +71,11 @@ class SyncService {
   /// 1. Recovers stale IN_PROGRESS events (crash recovery)
   /// 2. Starts the 1-minute periodic sync timer
   /// 3. Runs an initial sync after a short delay
-  Future<void> start({String? sourceNode}) async {
+  Future<void> start({String? sourceNode, String? username}) async {
     if (_running) return;
     _running = true;
-    _sourceNode = sourceNode;
+    _sourceNode = 'ANDROID';
+    _username = username;
 
     developer.log('🔄 SyncService: Starting...');
 
@@ -77,10 +84,7 @@ class SyncService {
     await syncRepository.recoverStaleInProgressDetails();
 
     // Periodic sync every 1 minute
-    _syncTimer = Timer.periodic(
-      const Duration(minutes: 1),
-      (_) => syncCycle(),
-    );
+    _syncTimer = Timer.periodic(const Duration(minutes: 1), (_) => syncCycle());
 
     // Initial sync after 5 seconds (let app finish initializing)
     Future.delayed(const Duration(seconds: 5), () => syncCycle());
@@ -121,7 +125,7 @@ class SyncService {
     if (_isSyncTable(tableName)) return;
 
     try {
-      final event = _buildEvent(
+      final event = await _buildEvent(
         tableName: tableName,
         entityMap: entityMap,
         entityId: entityId,
@@ -136,6 +140,66 @@ class SyncService {
     }
   }
 
+  /// Cache for entity sequence numbers loaded from JSON
+  static final Map<String, int> _entitySequenceCache = {};
+
+  Future<void> _loadEntitySequencesIfNeeded() async {
+    if (_entitySequenceCache.isNotEmpty) return;
+    try {
+      final jsonString = await rootBundle.loadString(
+        'lib/core/constants/sync_sequence.json',
+      );
+      final sequenceEntries = jsonDecode(jsonString) as List<dynamic>;
+      for (final entry in sequenceEntries) {
+        if (entry is Map<String, dynamic>) {
+          final entityName = entry['entity'];
+          final sequence = entry['sequence'];
+          if (entityName != null && sequence != null) {
+            _entitySequenceCache[entityName.toString()] =
+                int.tryParse(sequence.toString()) ?? 0;
+          }
+        }
+      }
+    } catch (e) {
+      developer.log('❌ SyncService: Failed to load sync sequences: $e');
+    }
+  }
+
+  Future<int?> _resolveSequenceNumber(String entityName) async {
+    await _loadEntitySequencesIfNeeded();
+    final seq = _entitySequenceCache[entityName];
+    if (seq == null) {
+      developer.log(
+        '⚠️ SyncService: Failed to resolve sequence number for entity $entityName',
+      );
+    }
+    return seq;
+  }
+
+  String? _cachedMachineId;
+
+  Future<String> _getMachineId() async {
+    if (_cachedMachineId != null) return _cachedMachineId!;
+    final deviceInfoPlugin = DeviceInfoPlugin();
+    try {
+      if (Platform.isAndroid) {
+        final androidInfo = await deviceInfoPlugin.androidInfo;
+        _cachedMachineId = androidInfo.id;
+      } else if (Platform.isIOS) {
+        final iosInfo = await deviceInfoPlugin.iosInfo;
+        _cachedMachineId = iosInfo.identifierForVendor ?? 'Unknown_IOS';
+      } else if (Platform.isWindows) {
+        final windowsInfo = await deviceInfoPlugin.windowsInfo;
+        _cachedMachineId = windowsInfo.deviceId;
+      } else {
+        _cachedMachineId = 'Unknown_Device';
+      }
+    } catch (e) {
+      _cachedMachineId = 'Unknown_Device';
+    }
+    return _cachedMachineId!;
+  }
+
   /// Tables that should never be synced.
   bool _isSyncTable(String tableName) {
     const syncTables = {
@@ -148,13 +212,13 @@ class SyncService {
   }
 
   /// Build a SyncEventModel from entity data.
-  SyncEventModel _buildEvent({
+  Future<SyncEventModel> _buildEvent({
     required String tableName,
     required Map<String, dynamic> entityMap,
     required String entityId,
     required String operation,
     String? company,
-  }) {
+  }) async {
     // Generate unique sourceKey for idempotency
     final sourceKey = SyncEventModel.generateSourceKey(_sourceNode);
 
@@ -164,17 +228,22 @@ class SyncService {
       if (value != null) cleanMap[key] = value;
     });
 
+    final sequenceNumber = await _resolveSequenceNumber(tableName);
+    final deviceId = await _getMachineId();
+
     return SyncEventModel(
       entityName: tableName,
       entityId: entityId,
       operation: operation.toUpperCase(),
       payload: jsonEncode(cleanMap),
-      sourceNode: _sourceNode,
+      sourceNode: 'ANDROID',
       createdAt: DateTime.now().toIso8601String(),
       company: company,
       sourceKey: sourceKey,
-      sourceId: entityId,
+      sourceAddress: deviceId,
+      sourceId: sourceKey,
       syncStatus: SyncStatus.pending,
+      sequenceNumber: sequenceNumber,
     );
   }
 
@@ -204,8 +273,10 @@ class SyncService {
   /// Run a full sync cycle: push → pull → cleanup.
   Future<void> syncCycle() async {
     if (!_running || _isSyncing) {
-      developer.log('🔄 SyncService: Skipping (running=$_running, '
-          'syncing=$_isSyncing)');
+      developer.log(
+        '🔄 SyncService: Skipping (running=$_running, '
+        'syncing=$_isSyncing)',
+      );
       return;
     }
     _isSyncing = true;
@@ -231,8 +302,10 @@ class SyncService {
 
       // 4. Log status
       final counts = await syncRepository.getEventCountsByStatus();
-      developer.log('🔄 SyncService: ─── Sync cycle end ─── '
-          'Status: $counts');
+      developer.log(
+        '🔄 SyncService: ─── Sync cycle end ─── '
+        'Status: $counts',
+      );
     } catch (e) {
       developer.log('❌ SyncService: Sync cycle error: $e');
     } finally {
@@ -303,8 +376,9 @@ class SyncService {
 
         for (final detail in deviceDetails) {
           if (detail.syncEvent != null) {
-            final event =
-                await syncRepository.getSyncEventById(detail.syncEvent!);
+            final event = await syncRepository.getSyncEventById(
+              detail.syncEvent!,
+            );
             if (event != null) {
               events.add(event);
               eventDetailMap[event.id!] = detail;
@@ -318,13 +392,21 @@ class SyncService {
         events.sort((a, b) => (a.id ?? 0).compareTo(b.id ?? 0));
 
         // Push batch to server
-        final payloadJson = jsonEncode(events.map((e) => e.toMap()).toList());
+        // Use camelCase serialization for the Java Jackson backend
+        final payloadJson = jsonEncode(
+          events.map((e) => e.toServerMap()).toList(),
+        );
 
         try {
-          final response = await syncSender.postJson('$targetUrl/api/sync/push', payloadJson);
+          final response = await syncSender.postJson(
+            '$targetUrl/api/sync/push',
+            payloadJson,
+          );
           await _handleResponse(response, events, eventDetailMap);
         } catch (ex) {
-          developer.log('❌ SyncService: Push to $targetUrl failed completely: $ex');
+          developer.log(
+            '❌ SyncService: Push to $targetUrl failed completely: $ex',
+          );
           for (final event in events) {
             final detail = eventDetailMap[event.id];
             if (detail?.id != null) {
@@ -361,14 +443,16 @@ class SyncService {
     // 🔥 CRITICAL FIX — detect HTML
     final trimmed = response.trim();
     if (trimmed.startsWith('<')) {
-      developer.log('❌ SyncService: HTML received instead of JSON: ${trimmed.substring(0, trimmed.length.clamp(0, 200))}');
+      developer.log(
+        '❌ SyncService: HTML received instead of JSON: ${trimmed.substring(0, trimmed.length.clamp(0, 200))}',
+      );
       await _markRetryBulk(events, eventDetailMap, 'HTML_RESPONSE');
       return;
     }
 
     try {
       final body = jsonDecode(trimmed);
-      
+
       // If it's a 409 conflict, we treat it as Success out of the box in SyncSender
       // but if the status code was 409 we might be handling a raw empty body.
       if (body is! Map<String, dynamic>) {
@@ -402,46 +486,52 @@ class SyncService {
           if (detail?.id != null) {
             await syncRepository.markDeviceDetailSuccess(detail!.id!);
             if (detail.syncEvent != null) {
-              final allDone = await syncRepository.areAllDetailsSuccessful(detail.syncEvent!);
+              final allDone = await syncRepository.areAllDetailsSuccessful(
+                detail.syncEvent!,
+              );
               if (allDone) {
                 await syncRepository.transitionEventStatus(
-                  detail.syncEvent!, 
-                  SyncStatus.pending, 
+                  detail.syncEvent!,
+                  SyncStatus.pending,
                   SyncStatus.success,
                 );
               }
             }
           }
         }
-        
+
         // Also handle events that we sent but were not explicitly in savedItem (maybe failed on server side)
         // For events not in eventIds, we'll mark them as failed.
         for (final event in events) {
           if (event.id != null && !eventIds.contains(event.id)) {
-             final detail = eventDetailMap[event.id];
-             if (detail?.id != null) {
-               await syncRepository.markDeviceDetailFailed(
-                 detail!.id!,
-                 error: 'Not acknowledged by target',
-                 currentRetryCount: detail.retryCount,
-               );
-             }
+            final detail = eventDetailMap[event.id];
+            if (detail?.id != null) {
+              await syncRepository.markDeviceDetailFailed(
+                detail!.id!,
+                error: 'Not acknowledged by target',
+                currentRetryCount: detail.retryCount,
+              );
+            }
           }
         }
-        
-        developer.log('✅ SyncService: Sync successful for event IDs: $eventIds');
+
+        developer.log(
+          '✅ SyncService: Sync successful for event IDs: $eventIds',
+        );
       } else {
         await _markRetryBulk(events, eventDetailMap, response);
       }
     } catch (e) {
-      developer.log('❌ SyncService: Failed to parse response or update SyncDeviceDetail: $e');
+      developer.log(
+        '❌ SyncService: Failed to parse response or update SyncDeviceDetail: $e',
+      );
       await _markRetryBulk(events, eventDetailMap, e.toString());
     }
   }
 
   Future<void> _markRetryBulk(
-    List<SyncEventModel> events, 
-    Map<int, SyncDeviceDetailModel> eventDetailMap, 
+    List<SyncEventModel> events,
+    Map<int, SyncDeviceDetailModel> eventDetailMap,
     String reason,
   ) async {
     for (final event in events) {
@@ -468,6 +558,11 @@ class SyncService {
   ///
   /// Conflict resolution: **last-write-wins** based on timestamp.
   Future<void> _pullFromServers() async {
+    if (_username == null) {
+      developer.log('🔄 SyncService: No username set — skipping pull');
+      return;
+    }
+
     try {
       final targets = await syncRepository.getAllTargetUrls();
 
@@ -476,45 +571,109 @@ class SyncService {
         return;
       }
 
+      final db = await databaseService.database;
+
       for (final target in targets) {
         final targetUrl = target['config_value'] as String? ?? '';
         if (targetUrl.isEmpty) continue;
 
         final nodeId = target['config_key'] as String?;
-        String? lastSyncTime;
-
-        // Get last sync time for this node
-        if (nodeId != null) {
-          final statuses = await syncRepository.getNodeStatuses();
-          final matching = statuses.where((s) => s.nodeId == nodeId);
-          if (matching.isNotEmpty) {
-            lastSyncTime = matching.first.lastSeen;
-          }
-        }
 
         // Pull events from server
+        final deviceId = await _getMachineId();
         final events = await syncReceiver.pullEvents(
           targetUrl,
-          lastSyncTime: lastSyncTime,
+          userName: _username ?? '',
+          sourceAddress: deviceId,
         );
 
         if (events.isEmpty) continue;
 
-        // Apply each event in order (server already orders by created_at)
+        // Filter out already-synced events by checking source_id in local sync_event table.
+        // The server sends its own sync_event ID which we store as source_id locally.
+        // If source_id already exists, this event was already pulled — skip it.
+        final List<SyncEventModel> newEvents = [];
         for (final event in events) {
-          await _applyReceivedEvent(event);
+          final serverId = event.id?.toString();
+          if (serverId == null || serverId.isEmpty) {
+            newEvents.add(event);
+            continue;
+          }
+
+          final existing = await db.query(
+            'sync_event',
+            where: 'source_id = ?',
+            whereArgs: [serverId],
+            limit: 1,
+          );
+
+          if (existing.isEmpty) {
+            newEvents.add(event);
+          } else {
+            developer.log(
+              '⏭️ Skipping already-synced event source_id=$serverId',
+            );
+          }
+        }
+
+        if (newEvents.isEmpty) {
+          developer.log(
+            '🔄 SyncService: All events from $targetUrl already synced',
+          );
+          continue;
+        }
+
+        // Apply each new event and track successfully processed server IDs
+        final List<String> acknowledgedIds = [];
+
+        for (final event in newEvents) {
+          try {
+            await _applyReceivedEvent(event);
+
+            // Store the pulled event in local sync_event table with server ID as source_id
+            final localEvent = SyncEventModel(
+              entityName: event.entityName,
+              entityId: event.entityId,
+              operation: event.operation,
+              payload: event.payload,
+              sourceNode: event.sourceNode,
+              createdAt: event.createdAt,
+              company: event.company,
+              sourceKey: event.sourceKey,
+              sourceAddress: deviceId,
+              sourceId: event.id?.toString(), // Server's sync_event ID
+              syncStatus: SyncStatus.success,
+              sequenceNumber: event.sequenceNumber,
+            );
+            await db.insert('sync_event', localEvent.toMap());
+
+            if (event.id != null) {
+              acknowledgedIds.add(event.id.toString());
+            }
+          } catch (e) {
+            developer.log(
+              '❌ SyncService: Failed to apply event ${event.entityName}#${event.entityId}: $e',
+            );
+          }
+        }
+
+        // Acknowledge successfully received events to the server
+        if (acknowledgedIds.isNotEmpty) {
+          await syncReceiver.updateSyncEvent(targetUrl, acknowledgedIds);
         }
 
         // Update last sync time
-        if (nodeId != null && events.isNotEmpty) {
-          final latestTime = events.last.createdAt;
+        if (nodeId != null && newEvents.isNotEmpty) {
+          final latestTime = newEvents.last.createdAt;
           final company = target['company']?.toString() ?? '';
-          await syncRepository.upsertNodeStatus(SyncNodeStatusModel(
-            nodeId: nodeId,
-            company: company,
-            lastSeen: latestTime ?? DateTime.now().toIso8601String(),
-            sourceNode: _sourceNode,
-          ));
+          await syncRepository.upsertNodeStatus(
+            SyncNodeStatusModel(
+              nodeId: nodeId,
+              company: company,
+              lastSeen: latestTime ?? DateTime.now().toIso8601String(),
+              sourceNode: _sourceNode,
+            ),
+          );
         }
       }
     } catch (e) {
@@ -540,24 +699,34 @@ class SyncService {
       final tableName = event.entityName;
       final operation = event.operation.toUpperCase();
 
+      // Resolve via sync_key to manage duplicates securely across UUID boundaries
+      final syncKey = entityData['sync_key']?.toString();
+
+      // Remove remote ID so local SQLite driver cleanly auto-increments
+      entityData.remove('id');
+
+      List<Map<String, Object?>> existing = [];
+      if (syncKey != null) {
+        existing = await db.query(
+          tableName,
+          where: 'sync_key = ?',
+          whereArgs: [syncKey],
+          limit: 1,
+        );
+      }
+
       switch (operation) {
         case 'INSERT':
-          final existing = await db.query(
-            tableName,
-            where: 'id = ?',
-            whereArgs: [entityData['id']],
-            limit: 1,
-          );
           if (existing.isEmpty) {
             await db.insert(tableName, entityData);
             developer.log('📥 Applied INSERT on $tableName');
           } else {
-            // Entity exists — last-write-wins: update if incoming is newer
+            final localId = existing.first['id'];
             await db.update(
               tableName,
               entityData,
               where: 'id = ?',
-              whereArgs: [entityData['id']],
+              whereArgs: [localId],
             );
             developer.log(
               '📥 Applied INSERT→UPDATE on $tableName (already existed)',
@@ -566,22 +735,27 @@ class SyncService {
           break;
 
         case 'UPDATE':
-          await db.update(
-            tableName,
-            entityData,
-            where: 'id = ?',
-            whereArgs: [entityData['id']],
-          );
-          developer.log('📥 Applied UPDATE on $tableName');
+          if (existing.isNotEmpty) {
+            final localId = existing.first['id'];
+            await db.update(
+              tableName,
+              entityData,
+              where: 'id = ?',
+              whereArgs: [localId],
+            );
+            developer.log('📥 Applied UPDATE on $tableName');
+          } else {
+            await db.insert(tableName, entityData);
+            developer.log('📥 Applied UPDATE→INSERT on $tableName');
+          }
           break;
 
         case 'DELETE':
-          await db.delete(
-            tableName,
-            where: 'id = ?',
-            whereArgs: [entityData['id']],
-          );
-          developer.log('📥 Applied DELETE on $tableName');
+          if (existing.isNotEmpty) {
+            final localId = existing.first['id'];
+            await db.delete(tableName, where: 'id = ?', whereArgs: [localId]);
+            developer.log('📥 Applied DELETE on $tableName');
+          }
           break;
 
         default:
@@ -615,5 +789,11 @@ class SyncService {
   void setAuthToken(String? token) {
     syncSender.authToken = token;
     syncReceiver.authToken = token;
+  }
+
+  /// Set user credentials for pull requests.
+  void setCredentials({required String username}) {
+    _username = username;
+    developer.log('🔄 SyncService: Credentials set for user: $username');
   }
 }

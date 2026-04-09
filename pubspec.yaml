@@ -102,6 +102,7 @@ flutter:
     - assets/images/onboarding_background.png
     - assets/keys/public_key.cer
     - .env
+    - lib/core/constants/sync_sequence.json
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

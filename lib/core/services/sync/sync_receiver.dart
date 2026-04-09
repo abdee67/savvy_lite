@@ -38,31 +38,28 @@ class SyncReceiver {
   /// maintains correct sequencing (INSERT before UPDATE/DELETE).
   Future<List<SyncEventModel>> pullEvents(
     String targetUrl, {
-    String? lastSyncTime,
+    required String userName,
+    required String sourceAddress,
   }) async {
     if (targetUrl.isEmpty) return [];
 
     try {
-      final queryParams = <String, String>{};
-      if (lastSyncTime != null && lastSyncTime.isNotEmpty) {
-        queryParams['since'] = lastSyncTime;
-      }
-
-      final url = Uri.parse(
-        '$targetUrl/api/sync/pull',
-      ).replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+      // Match Java PullClient: GET /api/pull?userName=...&sourceAddress=...
+      final url = Uri.parse('$targetUrl/api/sync/pull').replace(
+        queryParameters: {'userName': userName, 'sourceAddress': sourceAddress},
+      );
 
       final response = await httpClient
           .get(url, headers: _buildHeaders())
           .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
+        final bodyData = jsonDecode(response.body);
         List<dynamic> eventsList = [];
-        if (body is List) {
-          eventsList = body;
-        } else if (body is Map<String, dynamic>) {
-          eventsList = body['events'] ?? [];
+        if (bodyData is List) {
+          eventsList = bodyData;
+        } else if (bodyData is Map<String, dynamic>) {
+          eventsList = bodyData['events'] ?? [];
         }
 
         developer.log(
@@ -116,6 +113,39 @@ class SyncReceiver {
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
       developer.log('❌ SyncReceiver: Node status report error: $e');
+      return false;
+    }
+  }
+
+  /// Notify the server that the given sync events were successfully received
+  /// and applied locally. Uses the server's own sync event IDs (source_id).
+  ///
+  /// Endpoint: POST /updateSyncEvent
+  Future<bool> updateSyncEvent(
+    String targetUrl,
+    List<String> serverSyncEventIds,
+  ) async {
+    if (targetUrl.isEmpty || serverSyncEventIds.isEmpty) return false;
+
+    try {
+      final url = Uri.parse('$targetUrl/api/sync/updateSyncEvent');
+
+      final response = await httpClient
+          .post(
+            url,
+            headers: _buildHeaders(),
+            body: jsonEncode(serverSyncEventIds),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      developer.log(
+        '📤 SyncReceiver: Acknowledged ${serverSyncEventIds.length} events '
+        '→ status=${response.statusCode}',
+      );
+
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      developer.log('❌ SyncReceiver: updateSyncEvent error: $e');
       return false;
     }
   }

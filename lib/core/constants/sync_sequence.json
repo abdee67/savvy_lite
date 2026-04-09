@@ -1,0 +1,274 @@
+[
+    {
+        "entity": "UdcHeader",
+        "sequence": 1
+    },
+    {
+        "entity": "MessageUsers",
+        "sequence": 1
+    },
+    {
+        "entity": "CommissionRule",
+        "sequence": 1
+    },
+    {
+        "entity": "SystemConfiguration",
+        "sequence": 1
+    },
+    {
+        "entity": "UdcDetails",
+        "sequence": 2
+    },
+    {
+        "entity": "Salesperson",
+        "sequence": 2
+    },
+    {
+        "entity": "SubscriptionManagement",
+        "sequence": 2
+    },
+    {
+        "entity": "CompanyTable",
+        "sequence": 3
+    },
+    {
+        "entity": "BranchTable",
+        "sequence": 4
+    },
+    {
+        "entity": "CustomerTable",
+        "sequence": 4
+    },
+    {
+        "entity": "NextNumber",
+        "sequence": 4
+    },
+    {
+        "entity": "DraftExcelData",
+        "sequence": 4
+    },
+    {
+        "entity": "MorCredential",
+        "sequence": 4
+    },
+    {
+        "entity": "ReferenceDetailsTable",
+        "sequence": 4
+    },
+    {
+        "entity": "SystemUrlConfig",
+        "sequence": 4
+    },
+    {
+        "entity": "PaymentAttempts",
+        "sequence": 4
+    },
+    {
+        "entity": "CompanySubscription",
+        "sequence": 4
+    },
+    {
+        "entity": "Employees",
+        "sequence": 5
+    },
+    {
+        "entity": "UserTable",
+        "sequence": 6
+    },
+    {
+        "entity": "PrevilageTable",
+        "sequence": 6
+    },
+    {
+        "entity": "RoleTable",
+        "sequence": 6
+    },
+    {
+        "entity": "UserRole",
+        "sequence": 7
+    },
+    {
+        "entity": "RolePrevilage",
+        "sequence": 7
+    },
+    {
+        "entity": "ItemsTable",
+        "sequence": 7
+    },
+    {
+        "entity": "SupplierTable",
+        "sequence": 7
+    },
+    {
+        "entity": "TaxRateArea",
+        "sequence": 7
+    },
+    {
+        "entity": "ItemsInBranch",
+        "sequence": 8
+    },
+    {
+        "entity": "ItemMaster",
+        "sequence": 8
+    },
+    {
+        "entity": "LocationMaster",
+        "sequence": 9
+    },
+    {
+        "entity": "ItemLocations",
+        "sequence": 10
+    },
+    {
+        "entity": "ItemUomConversions",
+        "sequence": 10
+    },
+    {
+        "entity": "StdUomConversions",
+        "sequence": 10
+    },
+    {
+        "entity": "LotMaster",
+        "sequence": 11
+    },
+    {
+        "entity": "LotExpirationColors",
+        "sequence": 11
+    },
+    {
+        "entity": "ItemTransactions",
+        "sequence": 12
+    },
+    {
+        "entity": "FsTable",
+        "sequence": 6
+    },
+    {
+        "entity": "EmployeeAttachedStores",
+        "sequence": 6
+    },
+    {
+        "entity": "PasswordHistory",
+        "sequence": 6
+    },
+    {
+        "entity": "PasswordStrengthConfig",
+        "sequence": 6
+    },
+    {
+        "entity": "Message",
+        "sequence": 2
+    },
+    {
+        "entity": "QueuedMessage",
+        "sequence": 3
+    },
+    {
+        "entity": "NotificationTable",
+        "sequence": 6
+    },
+    {
+        "entity": "NotificationIdList",
+        "sequence": 7
+    },
+    {
+        "entity": "AuditLogsTable",
+        "sequence": 6
+    },
+    {
+        "entity": "OrderHeader",
+        "sequence": 13
+    },
+    {
+        "entity": "OrderDetails",
+        "sequence": 14
+    },
+    {
+        "entity": "OrderLogs",
+        "sequence": 15
+    },
+    {
+        "entity": "SalesOrderHeader",
+        "sequence": 13
+    },
+    {
+        "entity": "SalesOrderDetails",
+        "sequence": 14
+    },
+    {
+        "entity": "SalesReturnHeader",
+        "sequence": 13
+    },
+    {
+        "entity": "SalesReturnDetails",
+        "sequence": 14
+    },
+    {
+        "entity": "QuoteOrderHeader",
+        "sequence": 13
+    },
+    {
+        "entity": "QuoteOrderDetails",
+        "sequence": 14
+    },
+    {
+        "entity": "PurchaseOrderHeader",
+        "sequence": 13
+    },
+    {
+        "entity": "PurchaseOrderDetail",
+        "sequence": 14
+    },
+    {
+        "entity": "PurchaseOrderReceiver",
+        "sequence": 15
+    },
+    {
+        "entity": "CreditPaymentTable",
+        "sequence": 15
+    },
+    {
+        "entity": "CreditReceiptTable",
+        "sequence": 15
+    },
+    {
+        "entity": "PoAdditionalCosts",
+        "sequence": 15
+    },
+    {
+        "entity": "InvoiceHistoryHeader",
+        "sequence": 13
+    },
+    {
+        "entity": "InvoiceHistoryDetail",
+        "sequence": 14
+    },
+    {
+        "entity": "ItemCostTable",
+        "sequence": 10
+    },
+    {
+        "entity": "OtherExpenseTable",
+        "sequence": 6
+    },
+    {
+        "entity": "OtherIncomeTable",
+        "sequence": 6
+    },
+    {
+        "entity": "Commission",
+        "sequence": 6
+    },
+    {
+        "entity": "SubscriptionAddons",
+        "sequence": 6
+    },
+    {
+        "entity": "License",
+        "sequence": 6
+    },
+    {
+        "entity": "SystemConstant",
+        "sequence": 6
+    }
+]

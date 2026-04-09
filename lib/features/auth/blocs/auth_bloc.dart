@@ -7,8 +7,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
+import 'package:savvy_stock/core/di/injection_container.dart';
 import 'package:savvy_stock/core/services/conectitvity_service.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
+import 'package:savvy_stock/core/services/sync/sync_service.dart';
 import 'package:savvy_stock/features/admin/users/models/user_with_role.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_event.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_state.dart';
@@ -234,6 +236,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         value: user.company.toString(),
       );
       await secureStorage.write(key: _userIdKey, value: user.id.toString());
+
+      // Inject credentials into SyncService for background pull cycles
+      getIt<SyncService>().setCredentials(
+        username: user.userName!,
+      );
 
       emit(
         AuthState(
