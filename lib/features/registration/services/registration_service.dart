@@ -79,13 +79,35 @@ class RegistrationService extends BaseRepository {
         final payloadForCompany = withSyncKey(companyMap);
         final companyId = await txn.insert('company_table', payloadForCompany);
         captureSync(
-          tableName: 'company_table',
+          tableName: 'CompanyTable',
           entityMap: payloadForCompany,
           entityId: companyId.toString(),
           operation: 'INSERT',
           company: companyId.toString(),
         );
         developer.log('Created company with ID: $companyId');
+
+        // 1.5 Insert SubscriptionManagement plan explicitly
+        final payloadForSubscription = withSyncKey({
+          'name': settings.name ?? 'Free Trial',
+          'description': settings.description ?? 'Free trial subscription',
+          'initial_subscription_branches': settings.initialSubscriptionBranches,
+          'initial_subscription_users': settings.initialSubscriptionUsers,
+          'initial_payment': settings.initialPayment,
+          'initial_subscription_days': settings.initialSubscriptionDays,
+          'status': settings.status ?? 'active',
+        });
+        final subscriptionId = await txn.insert(
+          'subscription_management',
+          payloadForSubscription,
+        );
+        captureSync(
+          tableName: 'SubscriptionManagement',
+          entityMap: payloadForSubscription,
+          entityId: subscriptionId.toString(),
+          operation: 'INSERT',
+          company: companyId.toString(),
+        );
 
         // 2. Create CompanySubscription
         final now = DateTime.now();
@@ -95,7 +117,8 @@ class RegistrationService extends BaseRepository {
 
         final payloadForCompanySubscription = withSyncKey({
           'company_id': companyId,
-          'subscription_id': settings.id,
+          'subscription_id':
+              subscriptionId, // Use the new subscription ID directly
           'date_subscribed': now.toIso8601String(),
           'date_effective': now.toIso8601String(),
           'date_expire': expireDate.toIso8601String(),
@@ -106,7 +129,7 @@ class RegistrationService extends BaseRepository {
           payloadForCompanySubscription,
         );
         captureSync(
-          tableName: 'company_subscription',
+          tableName: 'CompanySubscription',
           entityMap: payloadForCompanySubscription,
           entityId: id.toString(),
           operation: 'INSERT',
@@ -122,7 +145,7 @@ class RegistrationService extends BaseRepository {
         final payloadForBranch = withSyncKey(branchMap);
         final branchId = await txn.insert('branch_table', payloadForBranch);
         captureSync(
-          tableName: 'branch_table',
+          tableName: 'BranchTable',
           entityMap: payloadForBranch,
           entityId: branchId.toString(),
           operation: 'INSERT',
@@ -139,7 +162,7 @@ class RegistrationService extends BaseRepository {
         final payloadForEmployee = withSyncKey(employeeMap);
         final employeeId = await txn.insert('employees', payloadForEmployee);
         captureSync(
-          tableName: 'employees',
+          tableName: 'Employees',
           entityMap: payloadForEmployee,
           entityId: employeeId.toString(),
           operation: 'INSERT',
@@ -175,7 +198,7 @@ class RegistrationService extends BaseRepository {
         final payloadForUser = withSyncKey(userMap);
         userId = await txn.insert('user_table', payloadForUser);
         captureSync(
-          tableName: 'user_table',
+          tableName: 'UserTable',
           entityMap: payloadForUser,
           entityId: userId.toString(),
           operation: 'INSERT',
@@ -201,7 +224,7 @@ class RegistrationService extends BaseRepository {
         });
         final idFs = await txn.insert('fs_table', payloadForFsTable);
         captureSync(
-          tableName: 'fs_table',
+          tableName: 'FsTable',
           entityMap: payloadForFsTable,
           entityId: idFs.toString(),
           operation: 'INSERT',
@@ -222,14 +245,14 @@ class RegistrationService extends BaseRepository {
             'description': 'Administrator role',
             'company': companyId,
             'date_created': DateTime.now().toIso8601String(),
-            'created_by': employeeId,
+            'created_by': userId,
           });
           final adminRoleId = await txn.insert(
             'role_table',
             payloadForAdminRole,
           );
           captureSync(
-            tableName: 'role_table',
+            tableName: 'RoleTable',
             entityMap: payloadForAdminRole,
             entityId: adminRoleId.toString(),
             operation: 'INSERT',
@@ -240,12 +263,12 @@ class RegistrationService extends BaseRepository {
           final payloadForUserRole = withSyncKey({
             'user_id': userId,
             'role_table_id': adminRoleId,
-            'created_by': employeeId,
+            'created_by': userId,
             'date_created': DateTime.now().toIso8601String(),
           });
           final idUserRole = await txn.insert('user_role', payloadForUserRole);
           captureSync(
-            tableName: 'user_role',
+            tableName: 'UserRole',
             entityMap: payloadForUserRole,
             entityId: idUserRole.toString(),
             operation: 'INSERT',
@@ -260,13 +283,13 @@ class RegistrationService extends BaseRepository {
               'role_table_id': adminRoleId,
               'privilege_table_id': privilege['id'],
               'date_created': DateTime.now().toIso8601String(),
-              'created_by': employeeId,
+              'created_by': userId,
             });
             // 2. Insert the wrapped payload
             final id = await txn.insert('role_privilege', payload);
             // 3. Pass the payload to captureSync
             captureSync(
-              tableName: 'role_privilege',
+              tableName: 'RolePrevilage',
               entityMap: payload, // Uses the map that now contains sync_key
               entityId: id.toString(),
               operation: 'INSERT',
@@ -287,7 +310,7 @@ class RegistrationService extends BaseRepository {
             });
             final newRoleId = await txn.insert('role_table', payload);
             captureSync(
-              tableName: 'role_table',
+              tableName: 'RoleTable',
               entityMap: payload,
               entityId: newRoleId.toString(),
               operation: 'INSERT',
@@ -311,7 +334,7 @@ class RegistrationService extends BaseRepository {
               });
               final id = await txn.insert('role_privilege', payload);
               captureSync(
-                tableName: 'role_privilege',
+                tableName: 'RolePrevilage',
                 entityMap: payload,
                 entityId: id.toString(),
                 operation: 'INSERT',
@@ -328,7 +351,7 @@ class RegistrationService extends BaseRepository {
             });
             final id = await txn.insert('user_role', payloadForUserRole);
             captureSync(
-              tableName: 'user_role',
+              tableName: 'UserRole',
               entityMap: payloadForUserRole,
               entityId: id.toString(),
               operation: 'INSERT',
@@ -352,7 +375,7 @@ class RegistrationService extends BaseRepository {
           });
           final id = await txn.insert('next_number', payload);
           captureSync(
-            tableName: 'next_number',
+            tableName: 'NextNumber',
             entityMap: payload,
             entityId: id.toString(),
             operation: 'INSERT',
@@ -361,26 +384,53 @@ class RegistrationService extends BaseRepository {
         }
         developer.log('Created next numbers: ${defaultNextNumbers.length}');
 
-        // 9. Copy default SystemConstants
-        final defaultConstants = await txn.rawQuery('''
-          SELECT * FROM system_constant WHERE company IS NULL
-        ''');
+        // 9. Generate default SystemConstants
+        final List<Map<String, dynamic>> udcDetails = await txn.query(
+          'udc_details',
+          columns: ['id'],
+          where: "detail_code = ? AND udc_group = ?",
+          whereArgs: ['X', 'LT'],
+        );
 
-        for (final sc in defaultConstants) {
-          final newConstant = Map<String, dynamic>.from(sc);
-          newConstant.remove('id');
-          newConstant['company'] = companyId;
-          final payload = withSyncKey(newConstant);
-          final id = await txn.insert('system_constant', payload);
-          captureSync(
-            tableName: 'system_constant',
-            entityMap: payload,
-            entityId: id.toString(),
-            operation: 'INSERT',
-            company: companyId.toString(),
-          );
+        int? lotTypeId;
+        if (udcDetails.isNotEmpty) {
+          lotTypeId = udcDetails.first['id'] as int;
         }
-        developer.log('Created system constants: ${defaultConstants.length}');
+
+        final systemConstPayload = withSyncKey({
+          'apply_lot_mgm': 'Y',
+          'apply_location_mgm': 'Y',
+          'decimal_places': 2,
+          'generate_barcode_for_item': 'N',
+          'company': companyId,
+          'rate_vat_percentage': 15.0,
+          'rate_with_percentage': 2.0,
+          'with_hold_initials': 1000.0,
+          'auto_sales_price': 'N',
+          'lot_qty_auto_for_sales': 'Y',
+          'discount_display': 'Y',
+          'tax_info_display': 'Y',
+          'reorder_point_uom_type': 'I',
+          'currency_code': 'Birr',
+          'pos_integrated': 'N',
+          'apply_overhead_cost': 'N',
+          'attached_branch_only': 'N',
+          'days_left': 180,
+          'location_category_level': 1,
+          'is_synced': 0,
+          'lot_type': lotTypeId,
+          'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          'updated_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        });
+        final idSc = await txn.insert('system_constant', systemConstPayload);
+        captureSync(
+          tableName: 'SystemConfiguration',
+          entityMap: systemConstPayload,
+          entityId: idSc.toString(),
+          operation: 'INSERT',
+          company: companyId.toString(),
+        );
+        developer.log('Created default system constants');
       });
 
       developer.log('Registration completed successfully');
@@ -451,38 +501,17 @@ class RegistrationService extends BaseRepository {
       return SubscriptionManagement.fromMap(result.first);
     }
 
-    // If no subscription exists, create a default free trial
-    final payloadForSubscription = withSyncKey({
-      'name': 'Free Trial',
-      'description': 'Free trial with 2 branches and 3 users',
-      'initial_subscription_branches': 2,
-      'initial_subscription_users': 3,
-      'initial_payment': 0.0,
-      'initial_subscription_days': 5,
-      'status': 'active',
-    });
-    final id = await db.insert(
-      'subscription_management',
-      payloadForSubscription,
+    // Just return the default configuration in memory
+    // It will be persisted during the registration transaction
+    return const SubscriptionManagement(
+      name: 'Free Trial',
+      description: 'Free trial with 2 branches and 3 users',
+      initialSubscriptionBranches: 2,
+      initialSubscriptionUsers: 3,
+      initialPayment: 0.0,
+      initialSubscriptionDays: 5,
+      status: 'active',
     );
-    captureSync(
-      tableName: 'subscription_management',
-      entityMap: payloadForSubscription,
-      entityId: id.toString(),
-      operation: 'INSERT',
-    );
-
-    final inserted = await db.query(
-      'subscription_management',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-
-    if (inserted.isNotEmpty) {
-      return SubscriptionManagement.fromMap(inserted.first);
-    }
-
-    return null;
   }
 
   /// Generate 6-digit confirmation code
