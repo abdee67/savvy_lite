@@ -584,6 +584,39 @@ CREATE TABLE items_in_branch (
     );
     developer.log('Created table: items_in_branch');
 
+    // 13. Create customer table
+    await db.execute('''
+CREATE TABLE customer_table (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  customer_id INTEGER,
+  customer_name TEXT CHECK(length(customer_name) <= 45),
+  phone_number TEXT CHECK(length(phone_number) <= 45),
+  address TEXT CHECK(length(address) <= 45),
+  country TEXT CHECK(length(country) <= 45),
+  state TEXT CHECK(length(state) <= 45),
+  region TEXT CHECK(length(region) <= 45),
+  city TEXT CHECK(length(city) <= 45),
+  tin_number TEXT CHECK(length(tin_number) <= 45),
+  address1 TEXT CHECK(length(address1) <= 45),
+  address2 TEXT CHECK(length(address2) <= 45),
+  address3 TEXT CHECK(length(address3) <= 45),
+  address4 TEXT CHECK(length(address4) <= 45),
+  fax TEXT CHECK(length(fax) <= 45),
+  phone_2 TEXT CHECK(length(phone_2) <= 45),
+  contact_name TEXT CHECK(length(contact_name) <= 45),
+  contact_title TEXT CHECK(length(contact_title) <= 45),
+  company INTEGER,
+  sync_key TEXT CHECK(length(sync_key) <= 36),
+  defaults_value TEXT CHECK(length(defaults_value) <= 1),
+  UNIQUE (id),
+  FOREIGN KEY (company) REFERENCES company_table (id)
+);
+''');
+    await db.execute(
+      'CREATE INDEX fk_customer_table_company_idx ON customer_table (company)',
+    );
+    developer.log('Created table: customer_table');
+
     // 14. Create system_constant table
     await db.execute('''
       CREATE TABLE system_constant (
@@ -1901,7 +1934,6 @@ CREATE INDEX fk_fs_table_company_idx ON fs_table (company);
     // Seed against the onCreate database instance to avoid re-entering the
     // database getter while the database is still bootstrapping.
     await defaultDataSeeder.insertDefaultData(db);
-    await defaultDataSeeder.insertDefaultSystemConstant(db);
   }
 
   // Helper method to debug specific table

@@ -11,64 +11,6 @@ class DefaultDataSeeder extends BaseRepository {
 
   DefaultDataSeeder({required this.databaseService});
 
-  Future<void> insertDefaultSystemConstant(Database db) async {
-    developer.log('Inserting default system constant...');
-
-    try {
-      // Get Lot Type 'X' (Expiration Date)
-      final List<Map<String, dynamic>> udcDetails = await db.query(
-        'udc_details',
-        columns: ['id'],
-        where: "detail_code = ? AND udc_group = ?",
-        whereArgs: ['X', 'LT'],
-      );
-
-      int? lotTypeId;
-      if (udcDetails.isNotEmpty) {
-        lotTypeId = udcDetails.first['id'] as int;
-      }
-
-      final payload = withSyncKey({
-        'apply_lot_mgm': 'Y',
-        'apply_location_mgm': 'Y',
-        'decimal_places': 2,
-        'generate_barcode_for_item': 'N',
-        'company': 1, // Default company
-        'rate_vat_percentage': 15.0,
-        'rate_with_percentage': 2.0,
-        'with_hold_initials': 1000.0,
-        'auto_sales_price': 'N',
-        'lot_qty_auto_for_sales': 'Y',
-        'discount_display': 'Y',
-        'tax_info_display': 'Y',
-        'reorder_point_uom_type': 'I',
-        'currency_code': 'Birr',
-        'pos_integrated': 'N',
-        'apply_overhead_cost': 'N',
-        'attached_branch_only': 'N',
-        'days_left': 180,
-        'location_category_level': 1,
-        'is_synced': 0,
-        'lot_type': lotTypeId,
-        'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-        'updated_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      });
-      final id = await db.insert('system_constant', payload);
-      captureSync(
-        tableName: 'system_constant',
-        entityMap: payload,
-        entityId: id.toString(),
-        operation: 'INSERT',
-        company:
-            '1', // cuz its default company and one phone is for one company
-      );
-
-      developer.log('Default system constant inserted');
-    } catch (e) {
-      developer.log('Error inserting default system constant: $e');
-    }
-  }
-
   Future<void> insertDefaultData(Database db) async {
     developer.log('Inserting default data...');
 
@@ -914,85 +856,19 @@ class DefaultDataSeeder extends BaseRepository {
     await PrivilegeSeeder(databaseService: databaseService).seedPrivileges(db);
     developer.log('Seeded privileges');
 
-    // Seed default Admin role with all privileges (template for new companies)
-    final payloadForAdminRole = withSyncKey({
-      'name': 'Admin',
-      'description': 'Default Administrator Role',
-      'created_by': 1,
-      'date_created': DateTime.now().toIso8601String(),
-    });
-    final adminRoleId = await db.insert('role_table', payloadForAdminRole);
-
-    captureSync(
-      tableName: 'role_table',
-      entityMap: payloadForAdminRole,
-      entityId: adminRoleId.toString(),
-      operation: 'INSERT',
-      company: null,
-    );
-
-    final allPrivileges = await db.query('privilege_table');
-    for (final privilege in allPrivileges) {
-      final payload = withSyncKey({
-        'role_table_id': adminRoleId,
-        'privilege_table_id': privilege['id'],
-        'created_by': 1,
-        'date_created': DateTime.now().toIso8601String(),
-      });
-      final id = await db.insert('role_privilege', payload);
-      captureSync(
-        tableName: 'role_privilege',
-        entityMap: payload,
-        entityId: id.toString(),
-        operation: 'INSERT',
-        company: null,
-      );
-    }
-    developer.log('Seeded default Admin role with all privileges');
-
-    // 13. Create customer table
-    await db.execute('''
-CREATE TABLE customer_table (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  customer_id INTEGER,
-  customer_name TEXT CHECK(length(customer_name) <= 45),
-  phone_number TEXT CHECK(length(phone_number) <= 45),
-  address TEXT CHECK(length(address) <= 45),
-  country TEXT CHECK(length(country) <= 45),
-  state TEXT CHECK(length(state) <= 45),
-  region TEXT CHECK(length(region) <= 45),
-  city TEXT CHECK(length(city) <= 45),
-  tin_number TEXT CHECK(length(tin_number) <= 45),
-  address1 TEXT CHECK(length(address1) <= 45),
-  address2 TEXT CHECK(length(address2) <= 45),
-  address3 TEXT CHECK(length(address3) <= 45),
-  address4 TEXT CHECK(length(address4) <= 45),
-  fax TEXT CHECK(length(fax) <= 45),
-  phone_2 TEXT CHECK(length(phone_2) <= 45),
-  contact_name TEXT CHECK(length(contact_name) <= 45),
-  contact_title TEXT CHECK(length(contact_title) <= 45),
-  company INTEGER,
-  defaults_value TEXT CHECK(length(defaults_value) <= 1),
-  UNIQUE (id),
-  FOREIGN KEY (company) REFERENCES company_table (id)
-);
-''');
-    await db.execute(
-      'CREATE INDEX fk_customer_table_company_idx ON customer_table (company)',
-    );
-    developer.log('Created table: customer_table');
-
     // Seed default system_url_config
     final urlPayload = withSyncKey({
       'config_key': 'server_url', // The key you use to lookup the target URL
-      'config_value': 'https://673a-196-188-161-77.ngrok-free.app/stock',
+      'config_value': 'https://ee20-196-188-161-166.ngrok-free.app/stock',
       'environment': 'development',
       'active': 'Y',
       'company': '1',
     });
-    
+
     await db.insert('system_url_config', urlPayload);
-    developer.log('Seeded default system_url_config: ${urlPayload['config_value']}');
+    developer.log(
+      'Seeded default system_url_config: ${urlPayload['config_value']}',
+    );
 
     developer.log(
       '✅ Database initialized. User registration will create company data.',
