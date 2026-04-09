@@ -262,7 +262,7 @@ class ItemTransactionRepository extends BaseRepository {
 
     await db.insert('item_transactions', withSyncKey(transaction.toMap()));
     captureSync(
-      tableName: 'item_transactions',
+      tableName: 'ItemTransactions',
       entityMap: transaction.toMap(),
       entityId: transaction.id.toString(),
       operation: 'INSERT',
@@ -402,7 +402,7 @@ class ItemTransactionRepository extends BaseRepository {
 
     await db.insert('item_transactions', withSyncKey(transaction.toMap()));
     captureSync(
-      tableName: 'item_transactions',
+      tableName: 'ItemTransactions',
       entityMap: transaction.toMap(),
       entityId: transaction.id.toString(),
       operation: 'INSERT',
@@ -584,7 +584,7 @@ class ItemTransactionRepository extends BaseRepository {
     }
     await db.insert('item_transactions', withSyncKey(transaction.toMap()));
     captureSync(
-      tableName: 'item_transactions',
+      tableName: 'ItemTransactions',
       entityMap: transaction.toMap(),
       entityId: transaction.id.toString(),
       operation: 'INSERT',
@@ -750,7 +750,7 @@ class ItemTransactionRepository extends BaseRepository {
         );
         batch.insert('item_transactions', enriched.toMap());
         captureSync(
-          tableName: 'item_transactions',
+          tableName: 'ItemTransactions',
           entityMap: enriched.toMap(),
           entityId: enriched.id.toString(),
           operation: 'INSERT',
@@ -2082,7 +2082,7 @@ class ItemTransactionRepository extends BaseRepository {
     final id = await db.insert('item_transactions', withSyncKey(transaction.toMap()));
 
     captureSync(
-      tableName: 'item_transactions',
+      tableName: 'ItemTransactions',
       entityMap: transaction.toMap(),
       entityId: id.toString(),
       operation: 'INSERT',
@@ -2101,7 +2101,7 @@ class ItemTransactionRepository extends BaseRepository {
       whereArgs: [transaction.id, authBloc.state.companyId],
     );
     captureSync(
-      tableName: 'item_transactions',
+      tableName: 'ItemTransactions',
       entityMap: transaction.toMap(),
       entityId: transaction.id.toString(),
       operation: 'UPDATE',
@@ -2124,7 +2124,7 @@ class ItemTransactionRepository extends BaseRepository {
     );
     for (final row in itemRows) {
     captureSync(
-      tableName: 'item_transactions',
+      tableName: 'ItemTransactions',
       entityMap: row,
       entityId: row['id'].toString(),
       operation: 'DELETE',
@@ -2154,7 +2154,7 @@ class ItemTransactionRepository extends BaseRepository {
         );
         for (final row in itemRows) {
         captureSync(
-          tableName: 'item_transactions',
+          tableName: 'ItemTransactions',
           entityMap: row,
           entityId: row['id'].toString(),
           operation: 'DELETE',

@@ -116,7 +116,7 @@ class LocationMasterRepository extends BaseRepository {
     final id = await db.insert('location_master', withSyncKey(locationMap));
     
     captureSync(
-      tableName: 'location_master',
+      tableName: 'LocationMaster',
       entityMap: locationMap,
       entityId: id.toString(),
       operation: 'INSERT',
@@ -145,7 +145,7 @@ class LocationMasterRepository extends BaseRepository {
     
     if (rowsAffected > 0) {
       captureSync(
-        tableName: 'location_master',
+        tableName: 'LocationMaster',
         entityMap: locationMap,
         entityId: location.id.toString(),
         operation: 'UPDATE',
@@ -177,7 +177,7 @@ class LocationMasterRepository extends BaseRepository {
     );
     for (final row in itemRows) {
     captureSync(
-      tableName: 'item_location',
+      tableName: 'ItemLocation',
       entityMap: row,
       entityId: row['id'].toString(),
       operation: 'DELETE',
@@ -201,7 +201,7 @@ class LocationMasterRepository extends BaseRepository {
     if (rowsAffected > 0) {
       for (final row in locationRows) {
       captureSync(
-        tableName: 'location_master',
+        tableName: 'LocationMaster',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
@@ -242,7 +242,7 @@ class LocationMasterRepository extends BaseRepository {
       );
       for (final row in itemRows) {
       captureSync(
-        tableName: 'item_location',
+        tableName: 'ItemLocation',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
@@ -258,7 +258,7 @@ class LocationMasterRepository extends BaseRepository {
       }
       for (final row in locationRows) {
       captureSync(
-        tableName: 'location_master',
+        tableName: 'LocationMaster',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
@@ -364,7 +364,7 @@ class LocationMasterRepository extends BaseRepository {
 
         batch.insert('item_location', itemLocation.toMap());
         captureSync(
-          tableName: 'item_location',
+          tableName: 'ItemLocation',
           entityMap: itemLocation.toMap(),
           entityId: itemLocation.id.toString(),
           operation: 'INSERT',
@@ -399,7 +399,7 @@ class LocationMasterRepository extends BaseRepository {
     );
     for (final row in itemRows) {
     captureSync(
-      tableName: 'item_location',
+      tableName: 'ItemLocation',
       entityMap: row,
       entityId: row['id'].toString(),
       operation: 'DELETE',
@@ -424,7 +424,7 @@ class LocationMasterRepository extends BaseRepository {
 
       batch.insert('item_location', itemLocation.toMap());
       captureSync(
-        tableName: 'item_location',
+        tableName: 'ItemLocation',
         entityMap: itemLocation.toMap(),
         entityId: itemLocation.id.toString(),
         operation: 'INSERT',
@@ -655,7 +655,7 @@ class LocationMasterRepository extends BaseRepository {
       locationMap.remove('id');
       batch.insert('location_master', locationMap);
       captureSync(
-        tableName: 'location_master',
+        tableName: 'LocationMaster',
         entityMap: locationMap,
         entityId: location.id.toString(),
         operation: 'INSERT',

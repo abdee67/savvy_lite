@@ -57,7 +57,7 @@ class LotExpirationColorsRepository extends BaseRepository {
     final id = await db.insert('lot_expiration_colors', withSyncKey(colorMap));
     
     captureSync(
-      tableName: 'lot_expiration_colors',
+      tableName: 'LotExpirationColors',
       entityMap: colorMap,
       entityId: id.toString(),
       operation: 'INSERT',
@@ -82,7 +82,7 @@ class LotExpirationColorsRepository extends BaseRepository {
     
     if (rowsAffected > 0) {
       captureSync(
-        tableName: 'lot_expiration_colors',
+        tableName: 'LotExpirationColors',
         entityMap: color.toMap(),
         entityId: color.id.toString(),
         operation: 'UPDATE',
@@ -111,7 +111,7 @@ class LotExpirationColorsRepository extends BaseRepository {
     if (rowsAffected > 0) {
       for (final row in colorRows) {
       captureSync(
-        tableName: 'lot_expiration_colors',
+        tableName: 'LotExpirationColors',
         entityMap: row,
         entityId: id.toString(),
         operation: 'DELETE',
@@ -145,7 +145,7 @@ class LotExpirationColorsRepository extends BaseRepository {
       );
       for (final row in colorRows) {
       captureSync(
-        tableName: 'lot_expiration_colors',
+        tableName: 'LotExpirationColors',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',

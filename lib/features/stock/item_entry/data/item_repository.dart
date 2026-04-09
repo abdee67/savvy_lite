@@ -23,7 +23,7 @@ class StockItemsEntryRepository extends BaseRepository {
     // Capture sync event
     itemMap['id'] = id;
     captureSync(
-      tableName: 'items_table',
+      tableName: 'ItemsTable',
       entityMap: itemMap,
       entityId: id.toString(),
       operation: 'INSERT',
@@ -42,7 +42,7 @@ class StockItemsEntryRepository extends BaseRepository {
       whereArgs: [item.id, item.company],
     );
     captureSync(
-      tableName: 'items_table',
+      tableName: 'ItemsTable',
       entityMap: item.toMap(),
       entityId: item.id.toString(),
       operation: 'UPDATE',
@@ -67,7 +67,7 @@ class StockItemsEntryRepository extends BaseRepository {
     );
     for (final row in itemRows) {
     captureSync(
-      tableName: 'items_table',
+      tableName: 'ItemsTable',
       entityMap: row,
       entityId: row['id'].toString(),
       operation: 'DELETE',

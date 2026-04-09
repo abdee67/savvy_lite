@@ -169,7 +169,7 @@ class SystemConstantRepository extends BaseRepository {
       );
       map['id'] = id;
       captureSync(
-        tableName: 'system_constant',
+            tableName: 'SystemConfiguration',
         entityMap: map,
         entityId: id.toString(),
         operation: 'INSERT',
@@ -195,7 +195,7 @@ class SystemConstantRepository extends BaseRepository {
       );
       developer.log('Updated $count system constant(s)');
       captureSync(
-        tableName: 'system_constant',
+            tableName: 'SystemConfiguration',
         entityMap: map,
         entityId: systemConstant.id.toString(),
         operation: 'UPDATE',
@@ -224,7 +224,7 @@ class SystemConstantRepository extends BaseRepository {
       );
       for (final row in constantRows) {
       captureSync(
-        tableName: 'system_constant',
+            tableName: 'SystemConfiguration',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
@@ -383,7 +383,7 @@ class SystemConstantRepository extends BaseRepository {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
       captureSync(
-        tableName: 'system_constant',
+            tableName: 'SystemConfiguration',
         entityMap: constant.copyWith(isSynced: true).toDatabaseMap(),
         entityId: constant.id.toString(),
         operation: 'INSERT',
@@ -419,7 +419,7 @@ class SystemConstantRepository extends BaseRepository {
       'created_at': DateTime.now().millisecondsSinceEpoch,
     }));
     captureSync(
-      tableName: 'sync_queue',
+      tableName: 'SyncQueue',
       entityMap: {
         'table_name': tableName,
         'record_id': recordId,
@@ -462,7 +462,7 @@ class SystemConstantRepository extends BaseRepository {
             whereArgs: [remoteConstant.id],
           );
           captureSync(
-            tableName: 'system_constant',
+                tableName: 'SystemConfiguration',
             entityMap: remoteConstant.copyWith(isSynced: true).toDatabaseMap(),
             entityId: remoteConstant.id.toString(),
             operation: 'UPDATE',

@@ -121,11 +121,12 @@ Future<void> _initializeAndRunApp() async {
     }
     if (kDebugMode) {
       //await LocalDatabaseService().resetDatabase();
-      // await getIt<LicenseService>().clearLicense();
+      //await getIt<LicenseService>().clearLicense();
       //  // await LocalDatabaseService().debugTable('branch_table');
       //await LocalDatabaseService().debugTable('items_in_branch');
       //await LocalDatabaseService().debugTable('item_cost');
-      //await LocalDatabaseService().debugTable('item_location');
+      //await LocalDatabaseService().deb
+      //ugTable('item_location');
       //await LocalDatabaseService().debugTable('lot_master');
       //await LocalDatabaseService().debugTable('item_master');
       //await LocalDatabaseService().debugTable('items_table');
@@ -153,7 +154,7 @@ Future<void> _initializeAndRunApp() async {
       //await LocalDatabaseService().debugTable('role_privilege');
       //await LocalDatabaseService().debugTable('other_expense_table');
       // await LocalDatabaseService().debugTable('next_number');
-      //await LocalDatabaseService().debugTable('sync_event');
+      await LocalDatabaseService().debugTable('sync_event');
       await LocalDatabaseService().debugTable('sync_device_detail');
       // await LocalDatabaseService().debugTable('sync_node_status');
     }

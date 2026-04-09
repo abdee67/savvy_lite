@@ -28,7 +28,7 @@ class ItemCostRepository extends BaseRepository {
     final id = await db.insert('item_cost', withSyncKey(itemMap));
     itemMap['id'] = id;
     captureSync(
-      tableName: 'item_cost',
+      tableName: 'ItemCostTable',
       entityMap: itemMap,
       entityId: id.toString(),
       operation: 'INSERT',
@@ -47,7 +47,7 @@ class ItemCostRepository extends BaseRepository {
       whereArgs: [itemCost.id],
     );
     captureSync(
-      tableName: 'item_cost',
+      tableName: 'ItemCostTable',
       entityMap: itemCost.toMap(),
       entityId: itemCost.id.toString(),
       operation: 'UPDATE',
@@ -70,7 +70,7 @@ class ItemCostRepository extends BaseRepository {
     if (itemCost != null) {
       for (final row in itemCostRows) {
       captureSync(
-        tableName: 'item_cost',
+        tableName: 'ItemCostTable',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
@@ -625,7 +625,7 @@ class ItemCostRepository extends BaseRepository {
             );
 
             captureSync(
-              tableName: 'item_cost',
+              tableName: 'ItemCostTable',
               entityMap: {
                 'item_number': itemNumber,
                 'amount_unit_cost': finalCost,
@@ -661,7 +661,7 @@ class ItemCostRepository extends BaseRepository {
           }));
 
           captureSync(
-            tableName: 'item_cost',
+            tableName: 'ItemCostTable',
             entityMap: {
               'item_number': itemNumber,
               'amount_unit_cost': unitCostAvg,

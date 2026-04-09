@@ -119,7 +119,7 @@ class ItemLocationsRepository extends BaseRepository {
     final id = await db.insert('item_location', withSyncKey(itemMap));
     itemMap['id'] = id;
     captureSync(
-      tableName: 'item_location',
+      tableName: 'ItemLocations',
       entityMap: itemMap,
       entityId: id.toString(),
       operation: 'INSERT',
@@ -138,7 +138,7 @@ class ItemLocationsRepository extends BaseRepository {
       whereArgs: [item.id, item.company],
     );
     captureSync(
-      tableName: 'item_location',
+      tableName: 'ItemLocations',
       entityMap: item.toMap(),
       entityId: item.id.toString(),
       operation: 'UPDATE',
@@ -167,7 +167,7 @@ class ItemLocationsRepository extends BaseRepository {
     );
     for (final row in itemRows) {
     captureSync(
-      tableName: 'item_location',
+      tableName: 'ItemLocations',
       entityMap: row,
       entityId: row['id'].toString(),
       operation: 'DELETE',
@@ -380,7 +380,7 @@ class ItemLocationsRepository extends BaseRepository {
       whereArgs: [id, companyId],
     );
     captureSync(
-      tableName: 'item_location',
+      tableName: 'ItemLocations',
       entityMap: {'quantity_on_hand': quantity},
       entityId: id.toString(),
       operation: 'UPDATE',
@@ -474,7 +474,7 @@ class ItemLocationsRepository extends BaseRepository {
       whereArgs: [companyId, location.itemNumber, location.branch],
     );
     captureSync(
-      tableName: 'items_in_branch',
+      tableName: 'ItemsInBranch',
       entityMap: {'quantity_available': totalLocationQty},
       entityId: location.itemNumber.toString(),
       operation: 'UPDATE',

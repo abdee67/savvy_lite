@@ -160,7 +160,7 @@ class ItemUomConversionsRepository extends BaseRepository {
     itemMap.remove('id'); // Remove ID for new insertion
     final result = await db.insert('item_uom_conversions', withSyncKey(itemMap));
     captureSync(
-      tableName: 'item_uom_conversions',
+      tableName: 'ItemUomConversions',
       entityMap: itemMap,
       entityId: result.toString(),
       operation: 'INSERT',
@@ -179,7 +179,7 @@ class ItemUomConversionsRepository extends BaseRepository {
       whereArgs: [item.id, item.company],
     );
     captureSync(
-      tableName: 'item_uom_conversions',
+      tableName: 'ItemUomConversions',
       entityMap: item.toMap(),
       entityId: item.id.toString(),
       operation: 'UPDATE',
@@ -204,7 +204,7 @@ class ItemUomConversionsRepository extends BaseRepository {
     );
     for (final row in itemRows) {
     captureSync(
-      tableName: 'item_uom_conversions',
+      tableName: 'ItemUomConversions',
       entityMap: row,
       entityId: row['id'].toString(),
       operation: 'DELETE',
@@ -798,7 +798,7 @@ class ItemUomConversionsRepository extends BaseRepository {
         itemMap.remove('id');
         batch.insert('item_uom_conversions', itemMap);
         captureSync(
-          tableName: 'item_uom_conversions',
+          tableName: 'ItemUomConversions',
           entityMap: itemMap,
           entityId: item.id.toString(),
           operation: 'INSERT',
@@ -826,7 +826,7 @@ class ItemUomConversionsRepository extends BaseRepository {
           whereArgs: [item.id, item.company],
         );
         captureSync(
-          tableName: 'item_uom_conversions',
+          tableName: 'ItemUomConversions',
           entityMap: item.toMap(),
           entityId: item.id.toString(),
           operation: 'UPDATE',
@@ -860,7 +860,7 @@ class ItemUomConversionsRepository extends BaseRepository {
         );
         for (final row in itemRows) {
         captureSync(
-          tableName: 'item_uom_conversions',
+          tableName: 'ItemUomConversions',
           entityMap: row,
           entityId: row['id'].toString(),
           operation: 'DELETE',
