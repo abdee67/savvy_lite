@@ -40,7 +40,7 @@ class SalesOrderDetailRepository  extends BaseRepository{
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
     captureSync(
-      tableName: 'sales_order_details',
+      tableName: 'SalesOrderDetail',
       entityMap: details.toMap(),
       entityId: id.toString(),
       operation: 'INSERT',
@@ -191,7 +191,7 @@ class SalesOrderDetailRepository  extends BaseRepository{
       whereArgs: [details.id],
     );
     captureSync(
-      tableName: 'sales_order_details',
+      tableName: 'SalesOrderDetail',
       entityMap: details.toMap(),
       entityId: details.id.toString(),
       operation: 'UPDATE',
@@ -212,7 +212,7 @@ class SalesOrderDetailRepository  extends BaseRepository{
     // Capture sync with full row data
     for (final row in detailRows) {
     captureSync(
-      tableName: 'sales_order_details',
+      tableName: 'SalesOrderDetail',
       entityMap: row,
       entityId: row['id'].toString(),
       operation: 'DELETE',
@@ -250,7 +250,7 @@ class SalesOrderDetailRepository  extends BaseRepository{
     // Capture sync with full row data
     for (final row in detailRows) {
     captureSync(
-      tableName: 'sales_order_details',
+      tableName: 'SalesOrderDetail',
       entityMap: row,
       entityId: row['id'].toString(),
       operation: 'DELETE',

@@ -23,7 +23,7 @@ class QuotationOrderRepository extends BaseRepository {
         withSyncKey(header.toMap()),
       );
       captureSync(
-        tableName: 'quote_order_header',
+        tableName: 'QuoteOrderHeader',
         entityMap: header.toMap(),
         entityId: result.toString(),
         operation: 'INSERT',
@@ -140,7 +140,7 @@ class QuotationOrderRepository extends BaseRepository {
         whereArgs: [header.id],
       );
       captureSync(
-        tableName: 'quote_order_header',
+        tableName: 'QuoteOrderHeader',
         entityMap: header.toMap(),
         entityId: header.id.toString(),
         operation: 'UPDATE',
@@ -166,7 +166,7 @@ class QuotationOrderRepository extends BaseRepository {
     );
     for (final row in existingQuotationOrder) {
       captureSync(
-        tableName: 'quote_order_header',
+        tableName: 'QuoteOrderHeader',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
@@ -285,7 +285,7 @@ class QuotationOrderRepository extends BaseRepository {
         withSyncKey(detail.toMap()),
       );
       captureSync(
-        tableName: 'quote_order_details',
+        tableName: 'QuoteOrderDetail',
         entityMap: detail.toMap(),
         entityId: id.toString(),
         operation: 'INSERT',
@@ -368,7 +368,7 @@ class QuotationOrderRepository extends BaseRepository {
         whereArgs: [detail.id],
       );
       captureSync(
-        tableName: 'quote_order_details',
+        tableName: 'QuoteOrderDetail',
         entityMap: detail.toMap(),
         entityId: detail.id.toString(),
         operation: 'UPDATE',
@@ -396,7 +396,7 @@ class QuotationOrderRepository extends BaseRepository {
     // Capture sync with full row data
     for (final row in detailRows) {
       captureSync(
-        tableName: 'quote_order_details',
+        tableName: 'QuoteOrderDetail',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',

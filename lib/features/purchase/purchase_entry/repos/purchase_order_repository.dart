@@ -30,7 +30,7 @@ class PurchaseOrderRepository extends BaseRepository {
       final id = await db.insert('purchase_order_header', withSyncKey(headerMap));
       headerMap['id'] = id;
       captureSync(
-        tableName: 'purchase_order_header',
+        tableName: 'PurchaseOrderHeader',
         entityMap: headerMap,
         entityId: id.toString(),
         operation: 'INSERT',
@@ -52,7 +52,7 @@ class PurchaseOrderRepository extends BaseRepository {
         whereArgs: [header.id],
       );
       captureSync(
-        tableName: 'purchase_order_header',
+        tableName: 'PurchaseOrderHeader',
         entityMap: header.toMap(),
         entityId: header.id.toString(),
         operation: 'UPDATE',
@@ -95,7 +95,7 @@ class PurchaseOrderRepository extends BaseRepository {
       // Capture sync with full row data
       for (final row in detailRows) {
         captureSync(
-          tableName: 'purchase_order_detail',
+          tableName: 'PurchaseOrderDetail',
           entityMap: row,
           entityId: row['id'].toString(),
           operation: 'DELETE',
@@ -104,7 +104,7 @@ class PurchaseOrderRepository extends BaseRepository {
       }
       for (final row in headerRows) {
         captureSync(
-          tableName: 'purchase_order_header',
+          tableName: 'PurchaseOrderHeader',
           entityMap: row,
           entityId: row['id'].toString(),
           operation: 'DELETE',
@@ -452,7 +452,7 @@ class PurchaseOrderRepository extends BaseRepository {
           whereArgs: [headerId],
         );
         captureSync(
-          tableName: 'purchase_order_header',
+          tableName: 'PurchaseOrderHeader',
           entityMap: {
             'id': headerId,
             'amount_gross': grossAmount,
@@ -481,7 +481,7 @@ class PurchaseOrderRepository extends BaseRepository {
       final id = await db.insert('purchase_order_detail', withSyncKey(map));
       map['id'] = id;
       captureSync(
-        tableName: 'purchase_order_detail',
+        tableName: 'PurchaseOrderDetail',
         entityMap: map,
         entityId: id.toString(),
         operation: 'INSERT',
@@ -503,7 +503,7 @@ class PurchaseOrderRepository extends BaseRepository {
         whereArgs: [detail.id],
       );
       captureSync(
-        tableName: 'purchase_order_detail',
+        tableName: 'PurchaseOrderDetail',
         entityMap: detail.toMap(),
         entityId: detail.id.toString(),
         operation: 'UPDATE',
@@ -532,7 +532,7 @@ class PurchaseOrderRepository extends BaseRepository {
 
       for (final row in detailRows) {
         captureSync(
-          tableName: 'purchase_order_detail',
+          tableName: 'PurchaseOrderDetail',
           entityMap: row,
           entityId: row['id'].toString(),
           operation: 'DELETE',
@@ -566,7 +566,7 @@ class PurchaseOrderRepository extends BaseRepository {
 
       for (final row in detailRows) {
         captureSync(
-          tableName: 'purchase_order_detail',
+          tableName: 'PurchaseOrderDetail',
           entityMap: row,
           entityId: row['id'].toString(),
           operation: 'DELETE',
@@ -832,7 +832,7 @@ class PurchaseOrderRepository extends BaseRepository {
           whereArgs: [detailId],
         );
         captureSync(
-          tableName: 'purchase_order_detail',
+          tableName: 'PurchaseOrderDetail',
           entityMap: {'id': detailId, 'po_receive_status': udcId},
           entityId: detailId.toString(),
           operation: 'UPDATE',
@@ -855,7 +855,7 @@ class PurchaseOrderRepository extends BaseRepository {
       final id = await db.insert('purchase_order_receiver', withSyncKey(map));
       map['id'] = id;
       captureSync(
-        tableName: 'purchase_order_receiver',
+        tableName: 'PurchaseOrderReceiver',
         entityMap: map,
         entityId: id.toString(),
         operation: 'INSERT',
@@ -879,7 +879,7 @@ class PurchaseOrderRepository extends BaseRepository {
         whereArgs: [receiver.id],
       );
       captureSync(
-        tableName: 'purchase_order_receiver',
+        tableName: 'PurchaseOrderReceiver',
         entityMap: receiver.toMap(),
         entityId: receiver.id.toString(),
         operation: 'UPDATE',
@@ -908,7 +908,7 @@ class PurchaseOrderRepository extends BaseRepository {
 
       for (final row in receiverRows) {
         captureSync(
-          tableName: 'purchase_order_receiver',
+          tableName: 'PurchaseOrderReceiver',
           entityMap: row,
           entityId: row['id'].toString(),
           operation: 'DELETE',
@@ -1199,7 +1199,7 @@ class PurchaseOrderRepository extends BaseRepository {
               whereArgs: [headerId],
             );
             captureSync(
-              tableName: 'purchase_order_header',
+              tableName: 'PurchaseOrderHeader',
               entityMap: {
                 'id': headerId,
                 'po_receive_status': udcId,
@@ -1306,7 +1306,7 @@ class PurchaseOrderRepository extends BaseRepository {
               'date_updated': DateTime.now().toIso8601String(),
             }));
             captureSync(
-              tableName: 'item_cost',
+              tableName: 'ItemCost',
               entityMap: {
                 'item_number': itemNumber,
                 'amount_unit_cost': weightedAverageCost,
@@ -1373,7 +1373,7 @@ class PurchaseOrderRepository extends BaseRepository {
           'updated_at': DateTime.now().toIso8601String(),
         }));
         captureSync(
-          tableName: 'items_in_branch',
+          tableName: 'ItemsInBranch',
           entityMap: {
             'item_number': itemNumber,
             'branch': branchRecieved,
@@ -1659,7 +1659,7 @@ class PurchaseOrderRepository extends BaseRepository {
       // Capture sync with full row data
       for (final row in receiverRows) {
         captureSync(
-          tableName: 'purchase_order_receiver',
+          tableName: 'PurchaseOrderReceiver',
           entityMap: row,
           entityId: row['id'].toString(),
           operation: 'DELETE',
@@ -1668,7 +1668,7 @@ class PurchaseOrderRepository extends BaseRepository {
       }
       for (final row in detailRows) {
         captureSync(
-          tableName: 'purchase_order_detail',
+          tableName: 'PurchaseOrderDetail',
           entityMap: row,
           entityId: row['id'].toString(),
           operation: 'DELETE',
@@ -1677,7 +1677,7 @@ class PurchaseOrderRepository extends BaseRepository {
       }
       for (final row in headerRows) {
         captureSync(
-          tableName: 'purchase_order_header',
+          tableName: 'PurchaseOrderHeader',
           entityMap: row,
           entityId: row['id'].toString(),
           operation: 'DELETE',
@@ -1937,7 +1937,7 @@ class PurchaseOrderRepository extends BaseRepository {
     try {
       final result = await db.insert('credit_payment_table', withSyncKey(payment.toMap()));
       captureSync(
-        tableName: 'credit_payment_table',
+        tableName: 'CreditPaymentTable',
         entityMap: payment.toMap(),
         entityId: result.toString(),
         operation: 'INSERT',
@@ -1960,7 +1960,7 @@ class PurchaseOrderRepository extends BaseRepository {
         whereArgs: [payment.id],
       );
       captureSync(
-        tableName: 'credit_payment_table',
+        tableName: 'CreditPaymentTable',
         entityMap: payment.toMap(),
         entityId: result.toString(),
         operation: 'UPDATE',
@@ -2128,7 +2128,6 @@ class PurchaseOrderRepository extends BaseRepository {
       throw Exception('Failed to get credit payments summary by supplier: $e');
     }
   }
-
   /// Batch delete credit payments
   Future<void> deleteCreditPaymentBatch(List<int> ids) async {
     if (ids.isEmpty) return;
@@ -2145,7 +2144,6 @@ class PurchaseOrderRepository extends BaseRepository {
       throw Exception('Failed to delete credit payment batch: $e');
     }
   }
-
   /// Get credit payment aging report (similar to purchase order aging)
   Future<List<Map<String, dynamic>>> getCreditPaymentAgingReport({
     required int companyId,

@@ -18,7 +18,7 @@ class SalesReturnRepository  extends BaseRepository{
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
     captureSync(
-      tableName: 'sales_return_header',
+      tableName: 'SalesReturnHeader',
       entityMap: header.toMap(),
       entityId: map.toString(),
       operation: 'INSERT',
@@ -36,7 +36,7 @@ class SalesReturnRepository  extends BaseRepository{
       whereArgs: [header.id],
     );
     captureSync(
-      tableName: 'sales_return_header',
+      tableName: 'SalesReturnHeader',
       entityMap: header.toMap(),
       entityId: header.id.toString(),
       operation: 'UPDATE',
@@ -55,7 +55,7 @@ class SalesReturnRepository  extends BaseRepository{
     await db.delete('sales_return_header', where: 'id = ?', whereArgs: [id]);
     for (final row in headerRows) {
     captureSync(
-      tableName: 'sales_return_header',
+      tableName: 'SalesReturnHeader',
       entityMap: row,
       entityId: row['id'].toString(),
       operation: 'DELETE',
@@ -74,7 +74,7 @@ class SalesReturnRepository  extends BaseRepository{
     final header = await getSalesReturnHeaderById(id);
     if (header != null) {
       captureSync(
-        tableName: 'sales_return_header',
+        tableName: 'SalesReturnHeader',
         entityMap: header.toMap(),
         entityId: id.toString(),
         operation: 'UPDATE',
@@ -213,7 +213,7 @@ class SalesReturnRepository  extends BaseRepository{
     );
 
     captureSync(
-      tableName: 'sales_return_details',
+      tableName: 'SalesReturnDetails',
       entityMap: detail.toMap(),
       entityId: detail.id.toString(),
       operation: 'UPDATE',

@@ -36,7 +36,7 @@ class SalesOrderHeaderRepository  extends BaseRepository{
       );
       headerMap['id'] = id;
       captureSync(
-        tableName: 'sales_order_header',
+        tableName: 'SalesOrderHeader',
         entityMap: headerMap,
         entityId: id.toString(),
         operation: 'INSERT',
@@ -98,7 +98,7 @@ class SalesOrderHeaderRepository  extends BaseRepository{
         whereArgs: [header.id],
       );
       captureSync(
-        tableName: 'sales_order_header',
+        tableName: 'SalesOrderHeader',
         entityMap: header.toMap(),
         entityId: header.id.toString(),
         operation: 'UPDATE',
@@ -127,7 +127,7 @@ class SalesOrderHeaderRepository  extends BaseRepository{
     // Capture sync with full row data
     for (final row in headerRows) {
     captureSync(
-      tableName: 'sales_order_header',
+      tableName: 'SalesOrderHeader',
       entityMap: row,
       entityId: row['id'].toString(),
       operation: 'DELETE',
@@ -273,7 +273,7 @@ class SalesOrderHeaderRepository  extends BaseRepository{
     final header = await getById(id);
     if (header != null) {
       captureSync(
-        tableName: 'sales_order_header',
+        tableName: 'SalesOrderHeader',
         entityMap: header.toMap(),
         entityId: id.toString(),
         operation: 'UPDATE',
@@ -646,7 +646,7 @@ class SalesOrderHeaderRepository  extends BaseRepository{
         whereArgs: [itemInBranchId, companyId],
       );
       captureSync(
-        tableName: 'items_in_branch',
+        tableName: 'ItemsInBranch',
         entityMap: {'id': itemInBranchId, 'company': companyId, 'quantity_available': newQty},
         entityId: itemInBranchId.toString(),
         operation: 'UPDATE',
@@ -723,7 +723,7 @@ class SalesOrderHeaderRepository  extends BaseRepository{
     try {
       final id = await db.insert('sales_order_header', withSyncKey(header.toMap()));
       captureSync(
-        tableName: 'sales_order_header',
+        tableName: 'SalesOrderHeader',
         entityMap: header.toMap(),
         entityId: id.toString(),
         operation: 'INSERT',
@@ -755,7 +755,7 @@ class SalesOrderHeaderRepository  extends BaseRepository{
         whereArgs: [header.id],
       );
       captureSync(
-        tableName: 'sales_order_header',
+        tableName: 'SalesOrderHeader',
         entityMap: header.toMap(),
         entityId: header.id.toString(),
         operation: 'UPDATE',
@@ -783,7 +783,7 @@ class SalesOrderHeaderRepository  extends BaseRepository{
     // Capture sync with full row data
     for (final row in headerRows) {
     captureSync(
-      tableName: 'sales_order_header',
+      tableName: 'SalesOrderHeader',
       entityMap: row,
       entityId: row['id'].toString(),
       operation: 'DELETE',
@@ -898,7 +898,7 @@ class SalesOrderHeaderRepository  extends BaseRepository{
     try {
       final id = await db.insert('credit_receipt_table', withSyncKey(receipt.toMap()));
       captureSync(
-        tableName: 'credit_receipt_table',
+        tableName: 'CreditReceiptTable',
         entityMap: receipt.toMap(),
         entityId: id.toString(),
         operation: 'INSERT',
@@ -920,7 +920,7 @@ class SalesOrderHeaderRepository  extends BaseRepository{
         whereArgs: [receipt.id],
       );
       captureSync(
-        tableName: 'credit_receipt_table',
+        tableName: 'CreditReceiptTable',
         entityMap: receipt.toMap(),
         entityId: receipt.id.toString(),
         operation: 'UPDATE',
@@ -947,7 +947,7 @@ class SalesOrderHeaderRepository  extends BaseRepository{
       // Capture sync with full row data
       for (final row in receiptRows) {
       captureSync(
-        tableName: 'credit_receipt_table',
+        tableName: 'CreditReceiptTable',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',

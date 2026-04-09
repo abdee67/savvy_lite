@@ -116,7 +116,7 @@ class InvoiceHistoryHeaderRepository  extends BaseRepository{
       );
 
       captureSync(
-        tableName: tableName,
+        tableName: 'InvoiceHeader',
         entityMap: header.toMap(),
         entityId: id.toString(),
         operation: 'INSERT',
@@ -152,7 +152,7 @@ class InvoiceHistoryHeaderRepository  extends BaseRepository{
       }
 
       captureSync(
-        tableName: tableName,
+        tableName: 'InvoiceHeader',
         entityMap: header.toMap(),
         entityId: header.id.toString(),
         operation: 'UPDATE',
@@ -187,7 +187,7 @@ class InvoiceHistoryHeaderRepository  extends BaseRepository{
       }
       for (final row in headerRows) {
       captureSync(
-        tableName: tableName,
+        tableName: 'InvoiceHeader',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
@@ -218,7 +218,7 @@ class InvoiceHistoryHeaderRepository  extends BaseRepository{
       ''', ids);
       for (final row in headerRows) {
       captureSync(
-        tableName: tableName,
+        tableName: 'InvoiceHeader',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
