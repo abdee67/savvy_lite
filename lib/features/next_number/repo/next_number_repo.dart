@@ -71,7 +71,7 @@ class NextNumberRepository extends BaseRepository {
     final id = await db.insert('next_number', withSyncKey(itemMap));
     itemMap['id'] = id;
     captureSync(
-      tableName: 'next_number',
+      tableName: 'NextNumber',
       entityMap: itemMap,
       entityId: id.toString(),
       operation: 'INSERT',
@@ -90,7 +90,7 @@ class NextNumberRepository extends BaseRepository {
       whereArgs: [item.id, item.company],
     );
     captureSync(
-      tableName: 'next_number',
+      tableName: 'NextNumber',
       entityMap: item.toMap(),
       entityId: item.id.toString(),
       operation: 'UPDATE',
@@ -118,7 +118,7 @@ class NextNumberRepository extends BaseRepository {
     );
     for(final row in existingNextNumber){
     captureSync(
-      tableName: 'next_number',
+      tableName: 'NextNumber',
       entityMap: row,
       entityId: row['id'].toString(),
       operation: 'DELETE',

@@ -32,7 +32,7 @@ class EmployeeRepository extends BaseRepository {
     final id = await db.insert('employees', withSyncKey(employeeMap));
     employeeMap['id'] = id;
     captureSync(
-      tableName: 'employees',
+      tableName: 'Employees',
       entityMap: employeeMap,
       entityId: id.toString(),
       operation: 'INSERT',
@@ -51,7 +51,7 @@ class EmployeeRepository extends BaseRepository {
       whereArgs: [employee.id, companyId],
     );
     captureSync(
-      tableName: 'employees',
+      tableName: 'Employees',
       entityMap: employee.toMap(),
       entityId: employee.id.toString(),
       operation: 'UPDATE',
@@ -80,7 +80,7 @@ class EmployeeRepository extends BaseRepository {
     // Capture sync with full row data
     for (final row in employeeRows) {
       captureSync(
-        tableName: 'employees',
+        tableName: 'Employees',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
@@ -112,7 +112,7 @@ class EmployeeRepository extends BaseRepository {
     // Capture sync with full row data
     for (final row in employeeRows) {
       captureSync(
-        tableName: 'employees',
+        tableName: 'Employees',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',

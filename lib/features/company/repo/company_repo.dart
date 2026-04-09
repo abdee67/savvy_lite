@@ -26,7 +26,7 @@ class CompanyRepository extends BaseRepository {
     final id = await db.insert('company_table', withSyncKey(companyMap));
     companyMap['id'] = id;
     captureSync(
-      tableName: 'company_table',
+      tableName: 'CompanyTable',
       entityMap: companyMap,
       entityId: id.toString(),
       operation: 'INSERT',
@@ -46,7 +46,7 @@ class CompanyRepository extends BaseRepository {
       whereArgs: [company.id],
     );
     captureSync(
-      tableName: 'company_table',
+      tableName: 'CompanyTable',
       entityMap: companyMap,
       entityId: company.id.toString(),
       operation: 'UPDATE',
@@ -69,7 +69,7 @@ class CompanyRepository extends BaseRepository {
     );
     for (final row in existingCompany) {
       captureSync(
-        tableName: 'company_table',
+        tableName: 'CompanyTable',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
@@ -96,7 +96,7 @@ class CompanyRepository extends BaseRepository {
     );
     for (final row in existingCompany) {
       captureSync(
-        tableName: 'company_table',
+        tableName: 'CompanyTable',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
