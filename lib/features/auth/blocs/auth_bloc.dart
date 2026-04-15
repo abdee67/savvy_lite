@@ -238,9 +238,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       await secureStorage.write(key: _userIdKey, value: user.id.toString());
 
       // Inject credentials into SyncService for background pull cycles
-      getIt<SyncService>().setCredentials(
-        username: user.userName!,
-      );
+      final syncService = getIt<SyncService>();
+      syncService.setCredentials(username: user.userName!);
+      syncService.setAuthToken(token);
 
       emit(
         AuthState(
@@ -407,6 +407,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         final roles = (tokenData['roles'] as List)
             .map((r) => Role.fromMap(r))
             .toList();
+
+        final syncService = getIt<SyncService>();
+        if (user.userName != null) {
+          syncService.setCredentials(username: user.userName!);
+        }
+        syncService.setAuthToken(token);
 
         emit(
           AuthState(
