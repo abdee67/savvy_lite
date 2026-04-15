@@ -75,7 +75,7 @@ class SupplierRepositoryImpl extends BaseRepository implements SupplierRepositor
     final id = await db.insert('supplier_table', withSyncKey(supplierMap));
     supplierMap['id'] = id;
     captureSync(
-      tableName: 'SupplierTable',
+      tableName: 'supplier_table',
       entityMap: supplierMap,
       entityId: id.toString(),
       operation: 'INSERT',
@@ -97,7 +97,7 @@ class SupplierRepositoryImpl extends BaseRepository implements SupplierRepositor
       whereArgs: [supplier.id, supplier.company],
     );
     captureSync(
-      tableName: 'SupplierTable',
+      tableName: 'supplier_table',
       entityMap: supplierMap,
       entityId: supplier.id.toString(),
       operation: 'UPDATE',
@@ -121,7 +121,7 @@ class SupplierRepositoryImpl extends BaseRepository implements SupplierRepositor
     );
     for(final row in existingSupplier){
     captureSync(
-      tableName: 'SupplierTable',
+      tableName: 'supplier_table',
       entityMap: row,
       entityId: row['id'].toString(),
       operation: 'DELETE',

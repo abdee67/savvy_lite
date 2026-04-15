@@ -51,7 +51,7 @@ class RoleRepository extends BaseRepository {
     }
 
     captureSync(
-      tableName: 'RoleTable',
+      tableName: 'role_table',
       entityMap: payload,
       entityId: roleId.toString(),
       operation: 'INSERT',
@@ -73,7 +73,7 @@ class RoleRepository extends BaseRepository {
     );
 
     captureSync(
-      tableName: 'RoleTable',
+      tableName: 'role_table',
       entityMap: role.toMap(),
       entityId: role.id.toString(),
       operation: 'UPDATE',
@@ -109,7 +109,7 @@ class RoleRepository extends BaseRepository {
     // Capture sync for each deleted row with full data
     for (final row in existingRows) {
       captureSync(
-        tableName: 'RolePrevilage',
+        tableName: 'role_privilege',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
@@ -176,7 +176,7 @@ class RoleRepository extends BaseRepository {
     // Capture sync with full row data for each deleted row
     for (final row in userRoleRows) {
       captureSync(
-        tableName: 'UserRole',
+        tableName: 'user_role',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
@@ -185,7 +185,7 @@ class RoleRepository extends BaseRepository {
     }
     for (final row in rolePrivilegeRows) {
       captureSync(
-        tableName: 'RolePrevilage',
+        tableName: 'role_privilege',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
@@ -194,7 +194,7 @@ class RoleRepository extends BaseRepository {
     }
     for (final row in roleRows) {
       captureSync(
-        tableName: 'RoleTable',
+        tableName: 'role_table',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
@@ -251,7 +251,7 @@ class RoleRepository extends BaseRepository {
     // Capture sync with full row data
     for (final row in userRoleRows) {
       captureSync(
-        tableName: 'UserRole',
+        tableName: 'user_role',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
@@ -260,7 +260,7 @@ class RoleRepository extends BaseRepository {
     }
     for (final row in rolePrivilegeRows) {
       captureSync(
-        tableName: 'RolePrevilage',
+        tableName: 'role_privilege',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
@@ -269,7 +269,7 @@ class RoleRepository extends BaseRepository {
     }
     for (final row in roleRows) {
       captureSync(
-        tableName: 'RoleTable',
+        tableName: 'role_table',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
@@ -298,7 +298,7 @@ class RoleRepository extends BaseRepository {
       final id = await db.insert('role_privilege', payload);
       payload['id'] = id;
       captureSync(
-        tableName: 'RolePrevilage',
+        tableName: 'role_privilege',
         entityMap: payload,
         entityId: id.toString(),
         operation: 'INSERT',

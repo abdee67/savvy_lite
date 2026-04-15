@@ -289,7 +289,7 @@ class LotMasterRepository extends BaseRepository {
     final id = await db.insert('lot_master', withSyncKey(lotMap));
     lotMap['id'] = id;
     captureSync(
-      tableName: 'LotMaster',
+      tableName: 'lot_master',
       entityMap: lotMap,
       entityId: id.toString(),
       operation: 'INSERT',
@@ -308,7 +308,7 @@ class LotMasterRepository extends BaseRepository {
       whereArgs: [lot.id, lot.company],
     );
     captureSync(
-      tableName: 'LotMaster',
+      tableName: 'lot_master',
       entityMap: lot.toMap(),
       entityId: lot.id.toString(),
       operation: 'UPDATE',
@@ -332,7 +332,7 @@ class LotMasterRepository extends BaseRepository {
       whereArgs: [itemNumber, branch, companyId],
     );
     captureSync(
-      tableName: 'LotMaster',
+      tableName: 'lot_master',
       entityMap: {
         'item_number': itemNumber,
         'branch': branch,
@@ -360,7 +360,7 @@ class LotMasterRepository extends BaseRepository {
       whereArgs: [itemNumber, companyId],
     );
     captureSync(
-      tableName: 'LotMaster',
+      tableName: 'lot_master',
       entityMap: {
         'item_number': itemNumber,
         'company': companyId,
@@ -388,13 +388,13 @@ class LotMasterRepository extends BaseRepository {
       whereArgs: [id, companyId],
     );
     for (final row in lotRows) {
-    captureSync(
-      tableName: 'LotMaster',
-      entityMap: row,
-      entityId: row['id'].toString(),
-      operation: 'DELETE',
-      company: companyId.toString(),
-    );
+      captureSync(
+        tableName: 'lot_master',
+        entityMap: row,
+        entityId: row['id'].toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
+      );
     }
     return result;
   }
@@ -421,14 +421,14 @@ class LotMasterRepository extends BaseRepository {
         whereArgs: [id, companyId],
       );
       for (final row in lotRows) {
-      captureSync(
-        tableName: 'LotMaster',
-        entityMap: row,
-        entityId: row['id'].toString(),
-        operation: 'DELETE',
-        company: companyId.toString(),
-      );
-    }
+        captureSync(
+          tableName: 'lot_master',
+          entityMap: row,
+          entityId: row['id'].toString(),
+          operation: 'DELETE',
+          company: companyId.toString(),
+        );
+      }
     }
 
     await batch.commit();
@@ -453,7 +453,7 @@ class LotMasterRepository extends BaseRepository {
       whereArgs: [companyId, itemNumber, branch, location],
     );
     captureSync(
-      tableName: 'ItemLocations',
+      tableName: 'item_location',
       entityMap: {
         'company': companyId,
         'item_number': itemNumber,
@@ -486,7 +486,7 @@ class LotMasterRepository extends BaseRepository {
       whereArgs: [companyId, itemNumber, branch],
     );
     captureSync(
-      tableName: 'ItemsInBranch',
+      tableName: 'items_in_branch',
       entityMap: {
         'company': companyId,
         'item_number': itemNumber,
@@ -507,7 +507,7 @@ class LotMasterRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final id = await db.insert('item_transactions', withSyncKey(transaction));
     captureSync(
-      tableName: 'ItemTransactions',
+      tableName: 'item_transactions',
       entityMap: transaction,
       entityId: id.toString(),
       operation: 'INSERT',
@@ -841,7 +841,7 @@ class LotMasterRepository extends BaseRepository {
       whereArgs: [lotNumber, companyId, quantity],
     );
     captureSync(
-      tableName: 'LotMaster',
+      tableName: 'lot_master',
       entityMap: {
         'lot_number': lotNumber,
         'company': companyId,
@@ -1070,7 +1070,7 @@ class LotMasterRepository extends BaseRepository {
       whereArgs: [companyId, lot.itemNumber, lot.branch, lot.location],
     );
     captureSync(
-      tableName: 'ItemLocations',
+      tableName: 'item_location',
       entityMap: {
         'company': companyId,
         'item_number': lot.itemNumber,
@@ -1112,7 +1112,7 @@ class LotMasterRepository extends BaseRepository {
       whereArgs: [companyId, lot.itemNumber, lot.branch],
     );
     captureSync(
-      tableName: 'ItemsInBranch',
+      tableName: 'items_in_branch',
       entityMap: {
         'company': companyId,
         'item_number': lot.itemNumber,

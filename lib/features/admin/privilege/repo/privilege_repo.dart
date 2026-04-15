@@ -47,7 +47,7 @@ class PrivilegeRepository extends BaseRepository {
     final id = await db.insert('privilege_table', map);
 
     captureSync(
-      tableName: 'PrevilageTable',
+      tableName: 'privilege_table',
       entityMap: {...map, 'id': id},
       entityId: id.toString(),
       operation: 'INSERT',
@@ -68,7 +68,7 @@ class PrivilegeRepository extends BaseRepository {
     );
 
     captureSync(
-      tableName: 'PrevilageTable',
+      tableName: 'privilege_table',
       entityMap: privilege.toMap(),
       entityId: privilege.id.toString(),
       operation: 'UPDATE',
@@ -110,7 +110,7 @@ class PrivilegeRepository extends BaseRepository {
     // Capture sync with full row data
     for (final row in privilegeRows) {
       captureSync(
-        tableName: 'PrevilageTable',
+        tableName: 'privilege_table',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
@@ -118,7 +118,7 @@ class PrivilegeRepository extends BaseRepository {
     }
     for (final row in rolePrivilegeRows) {
       captureSync(
-        tableName: 'RolePrevilage',
+        tableName: 'role_privilege',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',

@@ -120,7 +120,7 @@ class InvoiceHistoryDetailRepository extends BaseRepository {
 
       mapToSave['id'] = id;
       captureSync(
-        tableName: 'InvoiceDetail',
+        tableName: 'invoice_history_detail',
         entityMap: mapToSave,
         entityId: id.toString(),
         operation: 'INSERT',
@@ -181,7 +181,7 @@ class InvoiceHistoryDetailRepository extends BaseRepository {
         whereArgs: [detail.id],
       );
       captureSync(
-        tableName: 'InvoiceDetail',
+        tableName: 'invoice_history_detail',
         entityMap: mapToSave,
         entityId: detail.id.toString(),
         operation: 'UPDATE',
@@ -195,7 +195,7 @@ class InvoiceHistoryDetailRepository extends BaseRepository {
       }
 
       captureSync(
-        tableName: 'InvoiceDetail',
+        tableName: 'invoice_history_detail',
         entityMap: mapToSave,
         entityId: detail.id.toString(),
         operation: 'UPDATE',
@@ -232,7 +232,7 @@ class InvoiceHistoryDetailRepository extends BaseRepository {
         // Capture sync with full row data
         for (final row in detailRows) {
         captureSync(
-          tableName: 'InvoiceDetail',
+          tableName: 'invoice_history_detail',
           entityMap: row,
           entityId: row['id'].toString(),
           operation: 'DELETE',
@@ -270,7 +270,7 @@ class InvoiceHistoryDetailRepository extends BaseRepository {
       // Capture sync with full row data
       for (final row in detailRows) {
       captureSync(
-        tableName: 'InvoiceDetail',
+        tableName: 'invoice_history_detail',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
@@ -304,7 +304,7 @@ class InvoiceHistoryDetailRepository extends BaseRepository {
       );
       for (final row in detailRows) {
       captureSync(
-        tableName: 'InvoiceDetail',
+        tableName: 'invoice_history_detail',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
@@ -754,7 +754,7 @@ class InvoiceHistoryDetailRepository extends BaseRepository {
       );
 
       captureSync(
-        tableName: 'InvoiceDetail',
+        tableName: 'invoice_history_detail',
         entityMap: {'id': detailIds, 'company': companyId},
         entityId: detailIds.toString(),
         operation: 'UPDATE',
@@ -783,7 +783,7 @@ class InvoiceHistoryDetailRepository extends BaseRepository {
       );
 
       captureSync(
-        tableName: 'InvoiceDetail',
+        tableName: 'invoice_history_detail',
         entityMap: {'company': companyId},
         entityId: companyId.toString(),
         operation: 'UPDATE',

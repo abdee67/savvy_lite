@@ -67,7 +67,7 @@ class SyncSender {
         .post(uri, headers: headers, body: jsonBody)
         .timeout(_requestTimeout);
 
-   /* if (kDebugMode) {
+    /* if (kDebugMode) {
       developer.log('SyncSender: Response: ${response.body}');
     }*/
 
@@ -141,6 +141,8 @@ class SyncSender {
       return;
     }
 
-    throw StateError('HTTP $status client error: ${response.body}');
+    developer.log('🚨 SyncSender HTTP $status ERROR!');
+    developer.log('🚨 Server Response Body: ${response.body}');
+    throw StateError('HTTP $status client error. See logs above for details.');
   }
 }

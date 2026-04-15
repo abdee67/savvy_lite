@@ -36,7 +36,7 @@ class BranchRepository extends BaseRepository {
     final id = await db.insert('branch_table', withSyncKey(branchMap));
     branchMap['id'] = id;
     captureSync(
-      tableName: 'BranchTable',
+      tableName: 'branch_table',
       entityMap: branchMap,
       entityId: id.toString(),
       operation: 'INSERT',
@@ -56,7 +56,7 @@ class BranchRepository extends BaseRepository {
       whereArgs: [branch.id, companyId],
     );
     captureSync(
-      tableName: 'BranchTable',
+      tableName: 'branch_table',
       entityMap: branchMap,
       entityId: branch.id.toString(),
       operation: 'UPDATE',
@@ -79,7 +79,7 @@ class BranchRepository extends BaseRepository {
     );
     for(final row in existingBranch){
     captureSync(
-      tableName: 'BranchTable',
+      tableName: 'branch_table',
       entityMap: row,
       entityId: row['id'].toString(),
       operation: 'DELETE',

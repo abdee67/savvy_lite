@@ -262,7 +262,7 @@ class ItemTransactionRepository extends BaseRepository {
 
     await db.insert('item_transactions', withSyncKey(transaction.toMap()));
     captureSync(
-      tableName: 'ItemTransactions',
+      tableName: 'item_transactions',
       entityMap: transaction.toMap(),
       entityId: transaction.id.toString(),
       operation: 'INSERT',
@@ -402,7 +402,7 @@ class ItemTransactionRepository extends BaseRepository {
 
     await db.insert('item_transactions', withSyncKey(transaction.toMap()));
     captureSync(
-      tableName: 'ItemTransactions',
+      tableName: 'item_transactions',
       entityMap: transaction.toMap(),
       entityId: transaction.id.toString(),
       operation: 'INSERT',
@@ -584,7 +584,7 @@ class ItemTransactionRepository extends BaseRepository {
     }
     await db.insert('item_transactions', withSyncKey(transaction.toMap()));
     captureSync(
-      tableName: 'ItemTransactions',
+      tableName: 'item_transactions',
       entityMap: transaction.toMap(),
       entityId: transaction.id.toString(),
       operation: 'INSERT',
@@ -750,7 +750,7 @@ class ItemTransactionRepository extends BaseRepository {
         );
         batch.insert('item_transactions', enriched.toMap());
         captureSync(
-          tableName: 'ItemTransactions',
+          tableName: 'item_transactions',
           entityMap: enriched.toMap(),
           entityId: enriched.id.toString(),
           operation: 'INSERT',
@@ -2079,10 +2079,13 @@ class ItemTransactionRepository extends BaseRepository {
 
   Future<int> createTransaction(ItemTransactionModel transaction) async {
     final db = await databaseService.database;
-    final id = await db.insert('item_transactions', withSyncKey(transaction.toMap()));
+    final id = await db.insert(
+      'item_transactions',
+      withSyncKey(transaction.toMap()),
+    );
 
     captureSync(
-      tableName: 'ItemTransactions',
+      tableName: 'item_transactions',
       entityMap: transaction.toMap(),
       entityId: id.toString(),
       operation: 'INSERT',
@@ -2101,7 +2104,7 @@ class ItemTransactionRepository extends BaseRepository {
       whereArgs: [transaction.id, authBloc.state.companyId],
     );
     captureSync(
-      tableName: 'ItemTransactions',
+      tableName: 'item_transactions',
       entityMap: transaction.toMap(),
       entityId: transaction.id.toString(),
       operation: 'UPDATE',
@@ -2123,14 +2126,14 @@ class ItemTransactionRepository extends BaseRepository {
       whereArgs: [id, authBloc.state.companyId],
     );
     for (final row in itemRows) {
-    captureSync(
-      tableName: 'ItemTransactions',
-      entityMap: row,
-      entityId: row['id'].toString(),
-      operation: 'DELETE',
-      company: authBloc.state.companyId.toString(),
-    );
-  }
+      captureSync(
+        tableName: 'item_transactions',
+        entityMap: row,
+        entityId: row['id'].toString(),
+        operation: 'DELETE',
+        company: authBloc.state.companyId.toString(),
+      );
+    }
   }
 
   Future<void> deleteTransactions(
@@ -2141,7 +2144,8 @@ class ItemTransactionRepository extends BaseRepository {
     // Fetch full row data BEFORE deleting
     final itemRows = await db.query(
       'item_transactions',
-      where: 'id IN (${transactions.map((t) => t.id).join(',')}) AND company = ?',
+      where:
+          'id IN (${transactions.map((t) => t.id).join(',')}) AND company = ?',
       whereArgs: [authBloc.state.companyId],
     );
 
@@ -2153,14 +2157,14 @@ class ItemTransactionRepository extends BaseRepository {
           whereArgs: [transaction.id, authBloc.state.companyId],
         );
         for (final row in itemRows) {
-        captureSync(
-          tableName: 'ItemTransactions',
-          entityMap: row,
-          entityId: row['id'].toString(),
-          operation: 'DELETE',
-          company: authBloc.state.companyId.toString(),
-        );
-      }
+          captureSync(
+            tableName: 'item_transactions',
+            entityMap: row,
+            entityId: row['id'].toString(),
+            operation: 'DELETE',
+            company: authBloc.state.companyId.toString(),
+          );
+        }
       }
     }
 

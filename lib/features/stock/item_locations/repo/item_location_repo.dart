@@ -119,7 +119,7 @@ class ItemLocationsRepository extends BaseRepository {
     final id = await db.insert('item_location', withSyncKey(itemMap));
     itemMap['id'] = id;
     captureSync(
-      tableName: 'ItemLocations',
+      tableName: 'item_location',
       entityMap: itemMap,
       entityId: id.toString(),
       operation: 'INSERT',
@@ -138,7 +138,7 @@ class ItemLocationsRepository extends BaseRepository {
       whereArgs: [item.id, item.company],
     );
     captureSync(
-      tableName: 'ItemLocations',
+      tableName: 'item_location',
       entityMap: item.toMap(),
       entityId: item.id.toString(),
       operation: 'UPDATE',
@@ -166,13 +166,13 @@ class ItemLocationsRepository extends BaseRepository {
       whereArgs: [id, companyId],
     );
     for (final row in itemRows) {
-    captureSync(
-      tableName: 'ItemLocations',
-      entityMap: row,
-      entityId: row['id'].toString(),
-      operation: 'DELETE',
-      company: companyId.toString(),
-    );
+      captureSync(
+        tableName: 'item_location',
+        entityMap: row,
+        entityId: row['id'].toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
+      );
     }
     return result;
   }
@@ -380,7 +380,7 @@ class ItemLocationsRepository extends BaseRepository {
       whereArgs: [id, companyId],
     );
     captureSync(
-      tableName: 'ItemLocations',
+      tableName: 'item_location',
       entityMap: {'quantity_on_hand': quantity},
       entityId: id.toString(),
       operation: 'UPDATE',
@@ -467,14 +467,14 @@ class ItemLocationsRepository extends BaseRepository {
     );
 
     // 3. Update items in branch
-   final result = await db.update(
+    final result = await db.update(
       'items_in_branch',
       {'quantity_available': totalLocationQty},
       where: 'company = ? AND item_number = ? AND branch = ?',
       whereArgs: [companyId, location.itemNumber, location.branch],
     );
     captureSync(
-      tableName: 'ItemsInBranch',
+      tableName: 'items_in_branch',
       entityMap: {'quantity_available': totalLocationQty},
       entityId: location.itemNumber.toString(),
       operation: 'UPDATE',

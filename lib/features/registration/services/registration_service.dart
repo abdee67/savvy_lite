@@ -79,7 +79,7 @@ class RegistrationService extends BaseRepository {
         final payloadForCompany = withSyncKey(companyMap);
         final companyId = await txn.insert('company_table', payloadForCompany);
         captureSync(
-          tableName: 'CompanyTable',
+          tableName: 'company_table',
           entityMap: payloadForCompany,
           entityId: companyId.toString(),
           operation: 'INSERT',
@@ -102,7 +102,7 @@ class RegistrationService extends BaseRepository {
           payloadForSubscription,
         );
         captureSync(
-          tableName: 'SubscriptionManagement',
+          tableName: 'subscription_management',
           entityMap: payloadForSubscription,
           entityId: subscriptionId.toString(),
           operation: 'INSERT',
@@ -129,7 +129,7 @@ class RegistrationService extends BaseRepository {
           payloadForCompanySubscription,
         );
         captureSync(
-          tableName: 'CompanySubscription',
+          tableName: 'company_subscription',
           entityMap: payloadForCompanySubscription,
           entityId: id.toString(),
           operation: 'INSERT',
@@ -145,7 +145,7 @@ class RegistrationService extends BaseRepository {
         final payloadForBranch = withSyncKey(branchMap);
         final branchId = await txn.insert('branch_table', payloadForBranch);
         captureSync(
-          tableName: 'BranchTable',
+          tableName: 'branch_table',
           entityMap: payloadForBranch,
           entityId: branchId.toString(),
           operation: 'INSERT',
@@ -162,7 +162,7 @@ class RegistrationService extends BaseRepository {
         final payloadForEmployee = withSyncKey(employeeMap);
         final employeeId = await txn.insert('employees', payloadForEmployee);
         captureSync(
-          tableName: 'Employees',
+          tableName: 'employees',
           entityMap: payloadForEmployee,
           entityId: employeeId.toString(),
           operation: 'INSERT',
@@ -198,7 +198,7 @@ class RegistrationService extends BaseRepository {
         final payloadForUser = withSyncKey(userMap);
         userId = await txn.insert('user_table', payloadForUser);
         captureSync(
-          tableName: 'UserTable',
+          tableName: 'user_table',
           entityMap: payloadForUser,
           entityId: userId.toString(),
           operation: 'INSERT',
@@ -224,7 +224,7 @@ class RegistrationService extends BaseRepository {
         });
         final idFs = await txn.insert('fs_table', payloadForFsTable);
         captureSync(
-          tableName: 'FsTable',
+          tableName: 'fs_table',
           entityMap: payloadForFsTable,
           entityId: idFs.toString(),
           operation: 'INSERT',
@@ -252,7 +252,7 @@ class RegistrationService extends BaseRepository {
             payloadForAdminRole,
           );
           captureSync(
-            tableName: 'RoleTable',
+            tableName: 'role_table',
             entityMap: payloadForAdminRole,
             entityId: adminRoleId.toString(),
             operation: 'INSERT',
@@ -268,7 +268,7 @@ class RegistrationService extends BaseRepository {
           });
           final idUserRole = await txn.insert('user_role', payloadForUserRole);
           captureSync(
-            tableName: 'UserRole',
+            tableName: 'user_role',
             entityMap: payloadForUserRole,
             entityId: idUserRole.toString(),
             operation: 'INSERT',
@@ -289,7 +289,7 @@ class RegistrationService extends BaseRepository {
             final id = await txn.insert('role_privilege', payload);
             // 3. Pass the payload to captureSync
             captureSync(
-              tableName: 'RolePrevilage',
+              tableName: 'role_privilege',
               entityMap: payload, // Uses the map that now contains sync_key
               entityId: id.toString(),
               operation: 'INSERT',
@@ -310,7 +310,7 @@ class RegistrationService extends BaseRepository {
             });
             final newRoleId = await txn.insert('role_table', payload);
             captureSync(
-              tableName: 'RoleTable',
+              tableName: 'role_table',
               entityMap: payload,
               entityId: newRoleId.toString(),
               operation: 'INSERT',
@@ -334,7 +334,7 @@ class RegistrationService extends BaseRepository {
               });
               final id = await txn.insert('role_privilege', payload);
               captureSync(
-                tableName: 'RolePrevilage',
+                tableName: 'role_privilege',
                 entityMap: payload,
                 entityId: id.toString(),
                 operation: 'INSERT',
@@ -351,7 +351,7 @@ class RegistrationService extends BaseRepository {
             });
             final id = await txn.insert('user_role', payloadForUserRole);
             captureSync(
-              tableName: 'UserRole',
+              tableName: 'user_role',
               entityMap: payloadForUserRole,
               entityId: id.toString(),
               operation: 'INSERT',
@@ -375,7 +375,7 @@ class RegistrationService extends BaseRepository {
           });
           final id = await txn.insert('next_number', payload);
           captureSync(
-            tableName: 'NextNumber',
+            tableName: 'next_number',
             entityMap: payload,
             entityId: id.toString(),
             operation: 'INSERT',
@@ -424,7 +424,7 @@ class RegistrationService extends BaseRepository {
         });
         final idSc = await txn.insert('system_constant', systemConstPayload);
         captureSync(
-          tableName: 'SystemConfiguration',
+          tableName: 'system_constant',
           entityMap: systemConstPayload,
           entityId: idSc.toString(),
           operation: 'INSERT',

@@ -199,7 +199,7 @@ class UdcRepository extends BaseRepository {
         final id = await db.insert('udc_details', withSyncKey(map));
         map['id'] = id;
         captureSync(
-          tableName: 'UdcDetails',
+          tableName: 'udc_details',
           entityMap: map,
           entityId: id.toString(),
           operation: 'INSERT',
@@ -212,7 +212,7 @@ class UdcRepository extends BaseRepository {
           whereArgs: [detail.id],
         );
         captureSync(
-          tableName: 'UdcDetails',
+          tableName: 'udc_details',
           entityMap: map,
           entityId: detail.id.toString(),
           operation: 'UPDATE',

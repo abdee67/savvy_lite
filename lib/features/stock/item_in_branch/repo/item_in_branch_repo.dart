@@ -22,8 +22,7 @@ class StockItemInBranchRepository extends BaseRepository {
     final id = await db.insert('items_in_branch', withSyncKey(itemMap));
     itemMap['id'] = id;
     captureSync(
-      tableName: 'ItemInBranch',
-      entityMap: itemMap,
+        tableName: 'items_in_branch',      entityMap: itemMap,
       entityId: id.toString(),
       operation: 'INSERT',
       company: item.company?.toString(),
@@ -59,8 +58,7 @@ class StockItemInBranchRepository extends BaseRepository {
       whereArgs: [item.id, item.company, item.branch],
     );
     captureSync(
-      tableName: 'ItemInBranch',
-      entityMap: item.toMap(),
+        tableName: 'items_in_branch',      entityMap: item.toMap(),
       entityId: item.id.toString(),
       operation: 'UPDATE',
       company: item.company?.toString(),
@@ -84,8 +82,7 @@ class StockItemInBranchRepository extends BaseRepository {
     );
     for (final row in itemRows) {
     captureSync(
-      tableName: 'ItemInBranch',
-      entityMap: row,
+        tableName: 'items_in_branch',      entityMap: row,
       entityId: row['id'].toString(),
       operation: 'DELETE',
       company: companyId.toString(),
@@ -115,8 +112,7 @@ class StockItemInBranchRepository extends BaseRepository {
     );
     for (final row in itemRows) {
     captureSync(
-      tableName: 'ItemInBranch',
-      entityMap: row,
+        tableName: 'items_in_branch',      entityMap: row,
       entityId: row['id'].toString(),
       operation: 'DELETE',
       company: companyId.toString(),
@@ -355,7 +351,7 @@ class StockItemInBranchRepository extends BaseRepository {
         whereArgs: [itemNumber, branch, companyId],
       );
       captureSync(
-        tableName: 'LotMaster',
+        tableName: 'lot_master',
         entityMap: {'unit_price': unitPrice},
         entityId: itemNumber.toString(),
         operation: 'UPDATE',
@@ -370,8 +366,7 @@ class StockItemInBranchRepository extends BaseRepository {
       whereArgs: [id, companyId],
     );
     captureSync(
-      tableName: 'ItemInBranch',
-      entityMap: {'unit_price': unitPrice},
+        tableName: 'items_in_branch',      entityMap: {'unit_price': unitPrice},
       entityId: id.toString(),
       operation: 'UPDATE',
       company: companyId.toString(),
@@ -394,8 +389,7 @@ class StockItemInBranchRepository extends BaseRepository {
       whereArgs: [id, companyId],
     );
     captureSync(
-      tableName: 'ItemInBranch',
-      entityMap: {'quantity_available': quantity},
+        tableName: 'items_in_branch',      entityMap: {'quantity_available': quantity},
       entityId: id.toString(),
       operation: 'UPDATE',
       company: companyId.toString(),
@@ -418,8 +412,7 @@ class StockItemInBranchRepository extends BaseRepository {
       whereArgs: [id, companyId],
     );
     captureSync(
-      tableName: 'ItemInBranch',
-      entityMap: {'margin_type': marginType, 'margin_rate': marginRate},
+        tableName: 'items_in_branch',      entityMap: {'margin_type': marginType, 'margin_rate': marginRate},
       entityId: id.toString(),
       operation: 'UPDATE',
       company: companyId.toString(),

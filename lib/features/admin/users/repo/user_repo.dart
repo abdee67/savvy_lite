@@ -87,7 +87,7 @@ class UserRepository extends BaseRepository {
 
     userMap['id'] = userId;
     captureSync(
-      tableName: 'UserTable',
+      tableName: 'user_table',
       entityMap: userMap,
       entityId: userId.toString(),
       operation: 'INSERT',
@@ -151,7 +151,7 @@ class UserRepository extends BaseRepository {
     }
 
     captureSync(
-      tableName: 'UserTable',
+      tableName: 'user_table',
       entityMap: userMap,
       entityId: updatedUser.id.toString(),
       operation: 'UPDATE',
@@ -200,7 +200,7 @@ class UserRepository extends BaseRepository {
     // Capture sync with full row data
     for (final row in userRows) {
       captureSync(
-        tableName: 'UserTable',
+        tableName: 'user_table',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
@@ -249,7 +249,7 @@ class UserRepository extends BaseRepository {
     // Capture sync with full row data
     for (final row in userRoleRows) {
       captureSync(
-        tableName: 'UserRole',
+        tableName: 'user_role',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
@@ -258,7 +258,7 @@ class UserRepository extends BaseRepository {
     }
     for (final row in userRows) {
       captureSync(
-        tableName: 'UserTable',
+        tableName: 'user_table',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
@@ -320,7 +320,7 @@ class UserRepository extends BaseRepository {
       final id = await db.insert('user_role', payload);
       payload['id'] = id;
       captureSync(
-        tableName: 'UserRole',
+        tableName: 'user_role',
         entityMap: payload,
         entityId: id.toString(),
         operation: 'INSERT',
@@ -345,7 +345,7 @@ class UserRepository extends BaseRepository {
     // Capture sync with full row data
     for (final row in existingRows) {
       captureSync(
-        tableName: 'UserRole',
+        tableName: 'user_role',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',

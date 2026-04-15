@@ -29,7 +29,7 @@ class OtherExpenseRepository extends BaseRepository {
     final id = await db.insert(_tableName, withSyncKey(map));
     map['id'] = id;
     captureSync(
-      tableName: 'OtherExpenseTable',
+      tableName: 'other_expense_table',
       entityMap: map,
       entityId: id.toString(),
       operation: 'INSERT',
@@ -48,7 +48,7 @@ class OtherExpenseRepository extends BaseRepository {
       whereArgs: [expense.id],
     );
     captureSync(
-      tableName: 'OtherExpenseTable',
+      tableName: 'other_expense_table',
       entityMap: expense.toMap(),
       entityId: expense.id.toString(),
       operation: 'UPDATE',
@@ -68,7 +68,7 @@ class OtherExpenseRepository extends BaseRepository {
     final result = await db.delete(_tableName, where: 'id = ?', whereArgs: [id]);
     for(final row in existingExpense){
     captureSync(
-      tableName: 'OtherExpenseTable',
+      tableName: 'other_expense_table',
       entityMap: row,
       entityId: row['id'].toString(),
       operation: 'DELETE',

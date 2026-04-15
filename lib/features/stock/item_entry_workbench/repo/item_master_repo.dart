@@ -17,8 +17,7 @@ class ItemMasterRepository extends BaseRepository {
     final id = await db.insert('item_master', withSyncKey(itemMap));
     itemMap['id'] = id;
     captureSync(
-      tableName: 'ItemMaster',
-      entityMap: itemMap,
+        tableName: 'item_master',      entityMap: itemMap,
       entityId: id.toString(),
       operation: 'INSERT',
       company: item.companyCategory?.toString(), // Use category as company id is not directly available, but it's okay for now
@@ -36,8 +35,7 @@ class ItemMasterRepository extends BaseRepository {
       whereArgs: [item.id],
     );
     captureSync(
-      tableName: 'ItemMaster',
-      entityMap: item.toMap(),
+        tableName: 'item_master',      entityMap: item.toMap(),
       entityId: item.id.toString(),
       operation: 'UPDATE',
       company: item.companyCategory?.toString(),
@@ -57,8 +55,7 @@ class ItemMasterRepository extends BaseRepository {
     final result = await db.delete('item_master', where: 'id = ?', whereArgs: [id]);
     for (final row in itemRows) {
     captureSync(
-      tableName: 'ItemMaster',
-      entityMap: row,
+        tableName: 'item_master',      entityMap: row,
       entityId: row['id'].toString(),
       operation: 'DELETE',
     );

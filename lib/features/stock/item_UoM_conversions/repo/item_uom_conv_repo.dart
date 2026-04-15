@@ -158,9 +158,12 @@ class ItemUomConversionsRepository extends BaseRepository {
     final db = await databaseService.database;
     final itemMap = item.toMap();
     itemMap.remove('id'); // Remove ID for new insertion
-    final result = await db.insert('item_uom_conversions', withSyncKey(itemMap));
+    final result = await db.insert(
+      'item_uom_conversions',
+      withSyncKey(itemMap),
+    );
     captureSync(
-      tableName: 'ItemUomConversions',
+      tableName: 'item_uom_conversions',
       entityMap: itemMap,
       entityId: result.toString(),
       operation: 'INSERT',
@@ -179,7 +182,7 @@ class ItemUomConversionsRepository extends BaseRepository {
       whereArgs: [item.id, item.company],
     );
     captureSync(
-      tableName: 'ItemUomConversions',
+      tableName: 'item_uom_conversions',
       entityMap: item.toMap(),
       entityId: item.id.toString(),
       operation: 'UPDATE',
@@ -203,13 +206,13 @@ class ItemUomConversionsRepository extends BaseRepository {
       whereArgs: [id, companyId],
     );
     for (final row in itemRows) {
-    captureSync(
-      tableName: 'ItemUomConversions',
-      entityMap: row,
-      entityId: row['id'].toString(),
-      operation: 'DELETE',
-      company: companyId.toString(),
-    );
+      captureSync(
+        tableName: 'item_uom_conversions',
+        entityMap: row,
+        entityId: row['id'].toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
+      );
     }
     return result;
   }
@@ -798,7 +801,7 @@ class ItemUomConversionsRepository extends BaseRepository {
         itemMap.remove('id');
         batch.insert('item_uom_conversions', itemMap);
         captureSync(
-          tableName: 'ItemUomConversions',
+          tableName: 'item_uom_conversions',
           entityMap: itemMap,
           entityId: item.id.toString(),
           operation: 'INSERT',
@@ -826,7 +829,7 @@ class ItemUomConversionsRepository extends BaseRepository {
           whereArgs: [item.id, item.company],
         );
         captureSync(
-          tableName: 'ItemUomConversions',
+          tableName: 'item_uom_conversions',
           entityMap: item.toMap(),
           entityId: item.id.toString(),
           operation: 'UPDATE',
@@ -859,13 +862,13 @@ class ItemUomConversionsRepository extends BaseRepository {
           whereArgs: [item.id, item.company],
         );
         for (final row in itemRows) {
-        captureSync(
-          tableName: 'ItemUomConversions',
-          entityMap: row,
-          entityId: row['id'].toString(),
-          operation: 'DELETE',
-          company: item.company.toString(),
-        );
+          captureSync(
+            tableName: 'item_uom_conversions',
+            entityMap: row,
+            entityId: row['id'].toString(),
+            operation: 'DELETE',
+            company: item.company.toString(),
+          );
         }
       }
 

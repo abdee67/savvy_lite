@@ -52,7 +52,7 @@ class CustomerRepository extends BaseRepository {
     final id = await db.insert('customer_table', withSyncKey(customerMap));
     customerMap['id'] = id;
     captureSync(
-      tableName: 'CustomerTable',
+      tableName: 'customer_table',
       entityMap: customerMap,
       entityId: id.toString(),
       operation: 'INSERT',
@@ -71,7 +71,7 @@ class CustomerRepository extends BaseRepository {
       whereArgs: [customer.id, customer.company],
     );
     captureSync(
-      tableName: 'CustomerTable',
+      tableName: 'customer_table',
       entityMap: customer.toMap(),
       entityId: customer.id.toString(),
       operation: 'UPDATE',
@@ -97,7 +97,7 @@ class CustomerRepository extends BaseRepository {
     // Capture sync with full row data
     for (final row in customerRows) {
       captureSync(
-        tableName: 'CustomerTable',
+        tableName: 'customer_table',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',

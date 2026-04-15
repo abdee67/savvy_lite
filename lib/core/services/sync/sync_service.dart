@@ -143,6 +143,12 @@ class SyncService {
   /// Cache for entity sequence numbers loaded from JSON
   static final Map<String, int> _entitySequenceCache = {};
 
+  /// Cache to map snake_case local SQLite table names to PascalCase Java Entity Names
+  static final Map<String, String> _tableToEntityCache = {};
+
+  /// Cache to map PascalCase Java Entity Names back to snake_case local SQLite table names
+  static final Map<String, String> _entityToTableCache = {};
+
   Future<void> _loadEntitySequencesIfNeeded() async {
     if (_entitySequenceCache.isNotEmpty) return;
     try {
@@ -150,22 +156,65 @@ class SyncService {
         'lib/core/constants/sync_sequence.json',
       );
       final sequenceEntries = jsonDecode(jsonString) as List<dynamic>;
+
+      final exp = RegExp(r'(?<=[a-z])([A-Z])');
+
       for (final entry in sequenceEntries) {
         if (entry is Map<String, dynamic>) {
-          final entityName = entry['entity'];
+          final entityName = entry['entity']?.toString();
           final sequence = entry['sequence'];
           if (entityName != null && sequence != null) {
-            _entitySequenceCache[entityName.toString()] =
+            _entitySequenceCache[entityName] =
                 int.tryParse(sequence.toString()) ?? 0;
+
+            // Map EntityName to snake_case table name for bi-directional resolution
+            final tableName = entityName
+                .replaceAllMapped(exp, (m) => '_${m.group(1)}')
+                .toLowerCase();
+            _entityToTableCache[entityName] = tableName;
+            _tableToEntityCache[tableName] = entityName;
           }
         }
       }
+
+      // Explicit manual mappings for typos or irregular names in JSON
+      _tableToEntityCache['user_role'] = 'UserRole';
+      _entityToTableCache['UserRole'] = 'user_role';
+
+      _tableToEntityCache['role_privilege'] = 'RolePrevilage';
+      _entityToTableCache['RolePrevilage'] = 'role_privilege';
+
+      _tableToEntityCache['privilege_table'] = 'PrevilageTable';
+      _entityToTableCache['PrevilageTable'] = 'privilege_table';
+
+      _tableToEntityCache['system_constant'] = 'SystemConfiguration';
+      _entityToTableCache['SystemConfiguration'] = 'system_constant';
+
+      _tableToEntityCache['item_cost'] = 'ItemCostTable';
+      _entityToTableCache['ItemCostTable'] = 'item_cost';
+
+      _tableToEntityCache['item_location'] = 'ItemLocations';
+      _entityToTableCache['ItemLocations'] = 'item_location';
     } catch (e) {
       developer.log('❌ SyncService: Failed to load sync sequences: $e');
     }
   }
 
-  Future<int?> _resolveSequenceNumber(String entityName) async {
+  /// Maps a snake_case SQLite table name to the Java Entity name from JSON.
+  Future<String> resolveEntityName(String tableName) async {
+    await _loadEntitySequencesIfNeeded();
+    return _tableToEntityCache[tableName] ??
+        tableName; // Fallback if not mapped
+  }
+
+  /// Maps a Java Entity name from JSON back to a snake_case SQLite table name.
+  Future<String> resolveTableName(String entityName) async {
+    await _loadEntitySequencesIfNeeded();
+    return _entityToTableCache[entityName] ??
+        entityName; // Fallback if not mapped
+  }
+
+  Future<int?> resolveSequenceNumber(String entityName) async {
     await _loadEntitySequencesIfNeeded();
     final seq = _entitySequenceCache[entityName];
     if (seq == null) {
@@ -227,12 +276,12 @@ class SyncService {
     entityMap.forEach((key, value) {
       if (value != null) cleanMap[key] = value;
     });
-
-    final sequenceNumber = await _resolveSequenceNumber(tableName);
+    final entityName = await resolveEntityName(tableName);
+    final sequenceNumber = await resolveSequenceNumber(entityName);
     final deviceId = await _getMachineId();
 
     return SyncEventModel(
-      entityName: tableName,
+      entityName: entityName,
       entityId: entityId,
       operation: operation.toUpperCase(),
       payload: jsonEncode(cleanMap),
@@ -292,7 +341,7 @@ class SyncService {
         await _pushPendingEvents();
 
         // 2. PULL: Fetch new events from server
-        await _pullFromServers();
+        // await _pullFromServers();
       } else {
         developer.log('📴 SyncService: Offline — skipping push/pull');
       }
@@ -397,6 +446,8 @@ class SyncService {
           events.map((e) => e.toServerMap()).toList(),
         );
 
+        developer.log('🚀 SyncService: Pushing payload to $targetUrl/api/sync/push: $payloadJson');
+
         try {
           final response = await syncSender.postJson(
             '$targetUrl/api/sync/push',
@@ -467,44 +518,49 @@ class SyncService {
         return;
       }
 
-      final eventIds = <int>[];
+      final eventKeys = <String>[];
       for (final node in savedItemNode) {
-        if (node is Map && node['id'] != null) {
-          eventIds.add(int.parse(node['id'].toString()));
+        if (node is Map) {
+          final key =
+              node['sourceKey']?.toString() ?? node['sourceId']?.toString();
+          if (key != null && key.isNotEmpty) {
+            eventKeys.add(key);
+          }
         }
       }
 
-      if (eventIds.isEmpty) {
-        await _markRetryBulk(events, eventDetailMap, 'No IDs in response');
+      if (eventKeys.isEmpty) {
+        await _markRetryBulk(
+          events,
+          eventDetailMap,
+          'No sourceKeys in response',
+        );
         return;
       }
 
       if (response.contains('"OK"')) {
-        // Mark matched event IDs as success
-        for (final eventId in eventIds) {
-          final detail = eventDetailMap[eventId];
-          if (detail?.id != null) {
-            await syncRepository.markDeviceDetailSuccess(detail!.id!);
-            if (detail.syncEvent != null) {
-              final allDone = await syncRepository.areAllDetailsSuccessful(
-                detail.syncEvent!,
-              );
-              if (allDone) {
-                await syncRepository.transitionEventStatus(
+        // Mark matched events as success
+        for (final event in events) {
+          if (event.sourceKey != null && eventKeys.contains(event.sourceKey)) {
+            final detail = eventDetailMap[event.id!];
+            if (detail?.id != null) {
+              await syncRepository.markDeviceDetailSuccess(detail!.id!);
+              if (detail.syncEvent != null) {
+                final allDone = await syncRepository.areAllDetailsSuccessful(
                   detail.syncEvent!,
-                  SyncStatus.pending,
-                  SyncStatus.success,
                 );
+                if (allDone) {
+                  await syncRepository.transitionEventStatus(
+                    detail.syncEvent!,
+                    SyncStatus.pending,
+                    SyncStatus.success,
+                  );
+                }
               }
             }
-          }
-        }
-
-        // Also handle events that we sent but were not explicitly in savedItem (maybe failed on server side)
-        // For events not in eventIds, we'll mark them as failed.
-        for (final event in events) {
-          if (event.id != null && !eventIds.contains(event.id)) {
-            final detail = eventDetailMap[event.id];
+          } else {
+            // Also handle events that we sent but were not explicitly in savedItem
+            final detail = eventDetailMap[event.id!];
             if (detail?.id != null) {
               await syncRepository.markDeviceDetailFailed(
                 detail!.id!,
@@ -516,7 +572,7 @@ class SyncService {
         }
 
         developer.log(
-          '✅ SyncService: Sync successful for event IDs: $eventIds',
+          '✅ SyncService: Sync successful for event sourceKeys: $eventKeys',
         );
       } else {
         await _markRetryBulk(events, eventDetailMap, response);
@@ -696,7 +752,10 @@ class SyncService {
 
       final db = await databaseService.database;
       final entityData = jsonDecode(event.payload) as Map<String, dynamic>;
-      final tableName = event.entityName;
+
+      // Map incoming PascalCase entity name back to local SQLite snake_case table
+      final tableName = await resolveTableName(event.entityName);
+
       final operation = event.operation.toUpperCase();
 
       // Resolve via sync_key to manage duplicates securely across UUID boundaries

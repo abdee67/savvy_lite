@@ -28,7 +28,7 @@ class ItemCostRepository extends BaseRepository {
     final id = await db.insert('item_cost', withSyncKey(itemMap));
     itemMap['id'] = id;
     captureSync(
-      tableName: 'ItemCostTable',
+      tableName: 'item_cost',
       entityMap: itemMap,
       entityId: id.toString(),
       operation: 'INSERT',
@@ -47,7 +47,7 @@ class ItemCostRepository extends BaseRepository {
       whereArgs: [itemCost.id],
     );
     captureSync(
-      tableName: 'ItemCostTable',
+      tableName: 'item_cost',
       entityMap: itemCost.toMap(),
       entityId: itemCost.id.toString(),
       operation: 'UPDATE',
@@ -66,17 +66,21 @@ class ItemCostRepository extends BaseRepository {
       where: 'id = ?',
       whereArgs: [id],
     );
-    final result = await db.delete('item_cost', where: 'id = ?', whereArgs: [id]);
+    final result = await db.delete(
+      'item_cost',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
     if (itemCost != null) {
       for (final row in itemCostRows) {
-      captureSync(
-        tableName: 'ItemCostTable',
-        entityMap: row,
-        entityId: row['id'].toString(),
-        operation: 'DELETE',
-        company: itemCost.company?.toString(),
-      );
-    }
+        captureSync(
+          tableName: 'item_cost',
+          entityMap: row,
+          entityId: row['id'].toString(),
+          operation: 'DELETE',
+          company: itemCost.company?.toString(),
+        );
+      }
     }
     return result;
   }
@@ -625,7 +629,7 @@ class ItemCostRepository extends BaseRepository {
             );
 
             captureSync(
-              tableName: 'ItemCostTable',
+              tableName: 'item_cost',
               entityMap: {
                 'item_number': itemNumber,
                 'amount_unit_cost': finalCost,
@@ -652,16 +656,19 @@ class ItemCostRepository extends BaseRepository {
           }
         } else {
           // Create new item cost record
-          await db.insert('item_cost', withSyncKey({
-            'item_number': itemNumber,
-            'amount_unit_cost': unitCostAvg,
-            'company': companyId,
-            'user_id': userId,
-            'date_updated': DateTime.now().toIso8601String(),
-          }));
+          await db.insert(
+            'item_cost',
+            withSyncKey({
+              'item_number': itemNumber,
+              'amount_unit_cost': unitCostAvg,
+              'company': companyId,
+              'user_id': userId,
+              'date_updated': DateTime.now().toIso8601String(),
+            }),
+          );
 
           captureSync(
-            tableName: 'ItemCostTable',
+            tableName: 'item_cost',
             entityMap: {
               'item_number': itemNumber,
               'amount_unit_cost': unitCostAvg,

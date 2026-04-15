@@ -169,7 +169,7 @@ class SystemConstantRepository extends BaseRepository {
       );
       map['id'] = id;
       captureSync(
-            tableName: 'SystemConfiguration',
+            tableName: 'system_constant',
         entityMap: map,
         entityId: id.toString(),
         operation: 'INSERT',
@@ -195,7 +195,7 @@ class SystemConstantRepository extends BaseRepository {
       );
       developer.log('Updated $count system constant(s)');
       captureSync(
-            tableName: 'SystemConfiguration',
+            tableName: 'system_constant',
         entityMap: map,
         entityId: systemConstant.id.toString(),
         operation: 'UPDATE',
@@ -224,7 +224,7 @@ class SystemConstantRepository extends BaseRepository {
       );
       for (final row in constantRows) {
       captureSync(
-            tableName: 'SystemConfiguration',
+            tableName: 'system_constant',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
@@ -383,7 +383,7 @@ class SystemConstantRepository extends BaseRepository {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
       captureSync(
-            tableName: 'SystemConfiguration',
+            tableName: 'system_constant',
         entityMap: constant.copyWith(isSynced: true).toDatabaseMap(),
         entityId: constant.id.toString(),
         operation: 'INSERT',
@@ -419,8 +419,7 @@ class SystemConstantRepository extends BaseRepository {
       'created_at': DateTime.now().millisecondsSinceEpoch,
     }));
     captureSync(
-      tableName: 'SyncQueue',
-      entityMap: {
+    tableName: 'sync_queue',      entityMap: {
         'table_name': tableName,
         'record_id': recordId,
         'operation': operation,
@@ -462,7 +461,7 @@ class SystemConstantRepository extends BaseRepository {
             whereArgs: [remoteConstant.id],
           );
           captureSync(
-                tableName: 'SystemConfiguration',
+                tableName: 'system_constant',
             entityMap: remoteConstant.copyWith(isSynced: true).toDatabaseMap(),
             entityId: remoteConstant.id.toString(),
             operation: 'UPDATE',

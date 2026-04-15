@@ -216,7 +216,7 @@ class FSNMRRepository extends BaseRepository {
     ruleMap.remove('id');
     final id = await db.insert('fast_slow_nonmoving_rule_table', withSyncKey(ruleMap));
     captureSync(
-      tableName: 'FsTable',
+      tableName: 'fast_slow_nonmoving_rule_table',
       entityMap: ruleMap,
       entityId: id.toString(),
       operation: 'INSERT',
@@ -235,7 +235,7 @@ class FSNMRRepository extends BaseRepository {
       whereArgs: [rule.id, rule.company],
     );
     captureSync(
-      tableName: 'FsTable',
+      tableName: 'fast_slow_nonmoving_rule_table',
       entityMap: rule.toMap(),
       entityId: rule.id.toString(),
       operation: 'UPDATE',
@@ -259,7 +259,7 @@ class FSNMRRepository extends BaseRepository {
     );
     for(final row in existingRule){
     captureSync(
-      tableName: 'FsTable',
+      tableName: 'fast_slow_nonmoving_rule_table',
       entityMap: row,
       entityId: row['id'].toString(),
       operation: 'DELETE',
@@ -291,7 +291,7 @@ class FSNMRRepository extends BaseRepository {
       );
       for(final row in existingRule){
       captureSync(
-        tableName: 'FsTable',
+        tableName: 'fast_slow_nonmoving_rule_table',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
@@ -513,7 +513,7 @@ class FSNMRRepository extends BaseRepository {
         whereArgs: [rule.id, rule.company],
       );
       captureSync(
-        tableName: 'FsTable',
+        tableName: 'fast_slow_nonmoving_rule_table',
         entityMap: rule.toMap(),
         entityId: rule.id.toString(),
         operation: 'UPDATE',
