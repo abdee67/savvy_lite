@@ -1,10 +1,19 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+
+class SyncHttpException implements Exception {
+  final int statusCode;
+  final String responseBody;
+
+  SyncHttpException(this.statusCode, this.responseBody);
+
+  @override
+  String toString() =>
+      'HTTP $statusCode client error${responseBody.isEmpty ? '' : ': $responseBody'}';
+}
 
 /// Retryable server exception for HTTP 5xx errors
 class RetryableServerException implements Exception {
@@ -22,9 +31,9 @@ class RetryableServerException implements Exception {
 /// - Auto-injection of Bearer tokens
 /// - Exponential/progressive backoff
 class SyncSender {
-  static const Duration _requestTimeout = Duration(seconds: 10);
-  static const int _maxRetries = 3;
-  static const int _baseRetryDelayMs = 500;
+  static const Duration _requestTimeout = Duration(seconds: 30);
+  static const int _maxRetries = 5;
+  static const int _baseRetryDelayMs = 2000;
 
   final http.Client httpClient;
 
@@ -107,9 +116,11 @@ class SyncSender {
           rethrow;
         }
 
-        await Future.delayed(
-          Duration(milliseconds: _baseRetryDelayMs * attempt),
+        final delayMs = _baseRetryDelayMs * attempt;
+        developer.log(
+          '🔁 SyncSender: Retry $attempt/$_maxRetries after ${delayMs}ms — $ex',
         );
+        await Future.delayed(Duration(milliseconds: delayMs));
       }
     }
   }
@@ -143,6 +154,6 @@ class SyncSender {
 
     developer.log('🚨 SyncSender HTTP $status ERROR!');
     developer.log('🚨 Server Response Body: ${response.body}');
-    throw StateError('HTTP $status client error. See logs above for details.');
+    throw SyncHttpException(status, response.body);
   }
 }

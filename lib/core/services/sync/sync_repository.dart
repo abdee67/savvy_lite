@@ -243,7 +243,9 @@ class SyncRepository {
       [
         SyncStatus.failed,
         DateTime.now().toIso8601String(),
-        error ?? 'Unknown error',
+        (error ?? 'Unknown error').length > 1000
+            ? (error ?? 'Unknown error').substring(0, 1000)
+            : (error ?? 'Unknown error'),
         detailId,
       ],
     );

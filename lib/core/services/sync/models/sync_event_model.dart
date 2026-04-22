@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:uuid/uuid.dart';
 
 /// Lifecycle states for sync events.
@@ -56,20 +58,32 @@ class SyncEventModel {
   }
 
   factory SyncEventModel.fromMap(Map<String, dynamic> map) {
+    final rawPayload = map['payload'];
+
     return SyncEventModel(
       id: map['id'] as int?,
-      entityName: map['entity_name'] as String? ?? '',
-      entityId: map['entity_id'] as String?,
-      operation: map['operation'] as String? ?? '',
-      payload: map['payload'] as String? ?? '',
-      sourceNode: map['source_node'] as String?,
-      createdAt: map['created_at'] as String?,
-      company: map['company'] as String?,
-      sourceKey: map['source_key'] as String?,
-      sourceAddress: map['source_address'] as String?,
-      sourceId: map['source_id'] as String?,
-      syncStatus: map['sync_status'] as String? ?? SyncStatus.pending,
-      sequenceNumber: map['sequence_number'] as int?,
+      entityName:
+          map['entity_name']?.toString() ?? map['entityName']?.toString() ?? '',
+      entityId:
+          map['entity_id']?.toString() ?? map['entityId']?.toString(),
+      operation: map['operation']?.toString() ?? '',
+      payload: rawPayload is String ? rawPayload : jsonEncode(rawPayload ?? {}),
+      sourceNode:
+          map['source_node']?.toString() ?? map['sourceNode']?.toString(),
+      createdAt:
+          map['created_at']?.toString() ?? map['createdAt']?.toString(),
+      company: map['company']?.toString(),
+      sourceKey:
+          map['source_key']?.toString() ?? map['sourceKey']?.toString(),
+      sourceAddress:
+          map['source_address']?.toString() ?? map['sourceAddress']?.toString(),
+      sourceId: map['source_id']?.toString() ?? map['sourceId']?.toString(),
+      syncStatus:
+          map['sync_status']?.toString() ??
+          map['syncStatus']?.toString() ??
+          SyncStatus.pending,
+      sequenceNumber:
+          map['sequence_number'] as int? ?? map['sequenceNumber'] as int?,
     );
   }
 
@@ -93,24 +107,38 @@ class SyncEventModel {
   }
 
   /// Convert to a map suitable for the Java backend (camelCase keys).
-  Map<String, dynamic> toServerMap() {
+  /// Excludes local-only fields (id, syncStatus) that the server doesn't expect.
+  /// Strips null values to avoid Jackson deserialization errors.
+  Map<String, dynamic> toServerMap({bool useCamelCase = true}) {
+    // Fix entityId: convert string "null" to actual null, parse to int if possible
+    dynamic resolvedEntityId = entityId;
+    if (resolvedEntityId == 'null' || resolvedEntityId == null) {
+      resolvedEntityId = null;
+    } else {
+      resolvedEntityId =
+          int.tryParse(resolvedEntityId.toString()) ?? resolvedEntityId;
+    }
+
     final map = <String, dynamic>{
-      'entityName': entityName,
-      'entityId': entityId,
+      useCamelCase ? 'entityName' : 'entity_name': entityName,
+      useCamelCase ? 'entityId' : 'entity_id': resolvedEntityId,
       'operation': operation,
+      // Backend expects payload as a JSON string (not a nested object).
       'payload': payload,
-      'sourceNode': sourceNode,
-      'createdAt': createdAt,
-      'company': company, // If company was string, might need parsing depending on server. Currently sending as String/Int.
-      'sourceKey': sourceKey,
-      'sourceAddress': sourceAddress,
-      'sourceId': sourceId,
-      'syncStatus': syncStatus,
-      'sequenceNumber': sequenceNumber,
+      useCamelCase ? 'sourceNode' : 'source_node': sourceNode,
+      useCamelCase ? 'createdAt' : 'created_at': createdAt,
+      'company': int.tryParse(company?.toString() ?? '') ?? company,
+      useCamelCase ? 'sourceKey' : 'source_key': sourceKey,
+      useCamelCase ? 'sourceAddress' : 'source_address': sourceAddress,
+      useCamelCase ? 'sourceId' : 'source_id': sourceId,
+      useCamelCase ? 'sequenceNumber' : 'sequence_number': sequenceNumber,
     };
-    if (id != null) map['id'] = id;
+
+    // Remove null entries — Jackson may reject unknown nulls
+    map.removeWhere((key, value) => value == null);
     return map;
   }
+
 
   SyncEventModel copyWith({
     int? id,

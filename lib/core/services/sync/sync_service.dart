@@ -341,7 +341,7 @@ class SyncService {
         await _pushPendingEvents();
 
         // 2. PULL: Fetch new events from server
-        // await _pullFromServers();
+        await _pullFromServers();
       } else {
         developer.log('📴 SyncService: Offline — skipping push/pull');
       }
@@ -440,19 +440,8 @@ class SyncService {
         // Sort by ID to maintain operation order
         events.sort((a, b) => (a.id ?? 0).compareTo(b.id ?? 0));
 
-        // Push batch to server
-        // Use camelCase serialization for the Java Jackson backend
-        final payloadJson = jsonEncode(
-          events.map((e) => e.toServerMap()).toList(),
-        );
-
-        developer.log('🚀 SyncService: Pushing payload to $targetUrl/api/sync/push: $payloadJson');
-
         try {
-          final response = await syncSender.postJson(
-            '$targetUrl/api/sync/push',
-            payloadJson,
-          );
+          final response = await _pushBatchWithFallback(targetUrl, events);
           await _handleResponse(response, events, eventDetailMap);
         } catch (ex) {
           developer.log(
@@ -476,6 +465,54 @@ class SyncService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════
+  Future<String> _pushBatchWithFallback(
+    String targetUrl,
+    List<SyncEventModel> events,
+  ) async {
+    final pushUrl = '$targetUrl/api/sync/push';
+    final primaryPayloadJson = _buildPushPayloadJson(
+      events,
+      useCamelCase: true,
+    );
+
+    developer.log(
+      'SyncService: Pushing payload to $pushUrl: $primaryPayloadJson',
+    );
+
+    try {
+      return await syncSender.postJson(pushUrl, primaryPayloadJson);
+    } on SyncHttpException catch (ex) {
+      if (ex.statusCode != 400) rethrow;
+
+      final fallbackPayloadJson = _buildPushPayloadJson(
+        events,
+        useCamelCase: false,
+      );
+
+      if (fallbackPayloadJson == primaryPayloadJson) {
+        rethrow;
+      }
+
+      developer.log(
+        'SyncService: HTTP 400 on camelCase push, retrying snake_case payload.',
+      );
+      developer.log(
+        'SyncService: Retry payload to $pushUrl: $fallbackPayloadJson',
+      );
+
+      return syncSender.postJson(pushUrl, fallbackPayloadJson);
+    }
+  }
+
+  String _buildPushPayloadJson(
+    List<SyncEventModel> events, {
+    required bool useCamelCase,
+  }) {
+    return jsonEncode(
+      events.map((e) => e.toServerMap(useCamelCase: useCamelCase)).toList(),
+    );
+  }
+
   //  RESPONSE HANDLING
   // ═══════════════════════════════════════════════════════════════════════
 
@@ -511,7 +548,7 @@ class SyncService {
         return;
       }
 
-      final savedItemNode = body['savedItem'];
+      final savedItemNode = body['savedItem'] ?? body['saved_item'];
       if (savedItemNode is! List || savedItemNode.isEmpty) {
         developer.log('ℹ️ SyncService: No event IDs found in response.');
         await _markRetryBulk(events, eventDetailMap, 'No IDs in response');
@@ -522,7 +559,10 @@ class SyncService {
       for (final node in savedItemNode) {
         if (node is Map) {
           final key =
-              node['sourceKey']?.toString() ?? node['sourceId']?.toString();
+              node['sourceKey']?.toString() ??
+              node['sourceId']?.toString() ??
+              node['source_key']?.toString() ??
+              node['source_id']?.toString();
           if (key != null && key.isNotEmpty) {
             eventKeys.add(key);
           }
