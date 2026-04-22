@@ -290,7 +290,7 @@ class SyncService {
       company: company,
       sourceKey: sourceKey,
       sourceAddress: deviceId,
-      sourceId: sourceKey,
+      // sourceId is reserved for numeric server-side identifiers.
       syncStatus: SyncStatus.pending,
       sequenceNumber: sequenceNumber,
     );
@@ -469,15 +469,26 @@ class SyncService {
     String targetUrl,
     List<SyncEventModel> events,
   ) async {
-    final pushUrl = '$targetUrl/api/sync/push';
+    final normalizedTargetUrl = targetUrl.endsWith('/')
+        ? targetUrl.substring(0, targetUrl.length - 1)
+        : targetUrl;
+    final pushUrl = '$normalizedTargetUrl/api/sync/push';
     final primaryPayloadJson = _buildPushPayloadJson(
+      events,
+      useCamelCase: true,
+    );
+    final primaryPayloadSchemaJson = _buildPushPayloadSchemaJson(
       events,
       useCamelCase: true,
     );
 
     developer.log(
-      'SyncService: Pushing payload to $pushUrl: $primaryPayloadJson',
+      '🔍 SyncService: Push diagnostics (primary) finalUrl=$pushUrl',
     );
+    developer.log(
+      '🔍 SyncService: Push diagnostics (primary) payloadSchema=$primaryPayloadSchemaJson',
+    );
+    developer.log('SyncService: Pushing payload to $pushUrl');
 
     try {
       return await syncSender.postJson(pushUrl, primaryPayloadJson);
@@ -485,6 +496,10 @@ class SyncService {
       if (ex.statusCode != 400) rethrow;
 
       final fallbackPayloadJson = _buildPushPayloadJson(
+        events,
+        useCamelCase: false,
+      );
+      final fallbackPayloadSchemaJson = _buildPushPayloadSchemaJson(
         events,
         useCamelCase: false,
       );
@@ -497,8 +512,12 @@ class SyncService {
         'SyncService: HTTP 400 on camelCase push, retrying snake_case payload.',
       );
       developer.log(
-        'SyncService: Retry payload to $pushUrl: $fallbackPayloadJson',
+        '🔍 SyncService: Push diagnostics (fallback) finalUrl=$pushUrl',
       );
+      developer.log(
+        '🔍 SyncService: Push diagnostics (fallback) payloadSchema=$fallbackPayloadSchemaJson',
+      );
+      developer.log('SyncService: Retry payload to $pushUrl');
 
       return syncSender.postJson(pushUrl, fallbackPayloadJson);
     }
@@ -511,6 +530,81 @@ class SyncService {
     return jsonEncode(
       events.map((e) => e.toServerMap(useCamelCase: useCamelCase)).toList(),
     );
+  }
+
+  String _buildPushPayloadSchemaJson(
+    List<SyncEventModel> events, {
+    required bool useCamelCase,
+  }) {
+    final topLevelFieldTypes = <String, String>{};
+    final payloadFieldTypes = <String, String>{};
+    final operations = <String>{};
+    final entities = <String>{};
+    var payloadFieldLimitReached = false;
+
+    for (final event in events) {
+      operations.add(event.operation);
+      entities.add(event.entityName);
+
+      final serverMap = event.toServerMap(useCamelCase: useCamelCase);
+      serverMap.forEach((key, value) {
+        topLevelFieldTypes.putIfAbsent(key, () => _schemaTypeOf(value));
+      });
+
+      try {
+        final decodedPayload = jsonDecode(event.payload);
+        if (decodedPayload is Map) {
+          decodedPayload.forEach((key, value) {
+            final keyString = key.toString();
+            if (payloadFieldTypes.containsKey(keyString)) {
+              return;
+            }
+            if (payloadFieldTypes.length >= 40) {
+              payloadFieldLimitReached = true;
+              return;
+            }
+            payloadFieldTypes[keyString] = _schemaTypeOf(value);
+          });
+        } else {
+          payloadFieldTypes.putIfAbsent('__payload__', () => 'non_map_json');
+        }
+      } catch (_) {
+        payloadFieldTypes.putIfAbsent('__payload__', () => 'non_json_string');
+      }
+    }
+
+    final sortedTopLevel = Map<String, String>.fromEntries(
+      topLevelFieldTypes.entries.toList()
+        ..sort((a, b) => a.key.compareTo(b.key)),
+    );
+    final sortedPayload = Map<String, String>.fromEntries(
+      payloadFieldTypes.entries.toList()
+        ..sort((a, b) => a.key.compareTo(b.key)),
+    );
+    final sortedOperations = operations.toList()..sort();
+    final sortedEntities = entities.toList()..sort();
+
+    return jsonEncode({
+      'rootType': 'List<Map<String,dynamic>>',
+      'eventCount': events.length,
+      'keyStyle': useCamelCase ? 'camelCase' : 'snake_case',
+      'topLevelFieldTypes': sortedTopLevel,
+      'payloadFieldTypesSample': sortedPayload,
+      'payloadFieldLimitReached': payloadFieldLimitReached,
+      'operations': sortedOperations,
+      'entitiesSample': sortedEntities.take(10).toList(),
+    });
+  }
+
+  String _schemaTypeOf(dynamic value) {
+    if (value == null) return 'null';
+    if (value is String) return 'string';
+    if (value is int) return 'int';
+    if (value is double) return 'double';
+    if (value is bool) return 'bool';
+    if (value is List) return 'list';
+    if (value is Map) return 'map';
+    return value.runtimeType.toString();
   }
 
   //  RESPONSE HANDLING

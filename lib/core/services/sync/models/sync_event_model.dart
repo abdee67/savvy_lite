@@ -64,17 +64,14 @@ class SyncEventModel {
       id: map['id'] as int?,
       entityName:
           map['entity_name']?.toString() ?? map['entityName']?.toString() ?? '',
-      entityId:
-          map['entity_id']?.toString() ?? map['entityId']?.toString(),
+      entityId: map['entity_id']?.toString() ?? map['entityId']?.toString(),
       operation: map['operation']?.toString() ?? '',
       payload: rawPayload is String ? rawPayload : jsonEncode(rawPayload ?? {}),
       sourceNode:
           map['source_node']?.toString() ?? map['sourceNode']?.toString(),
-      createdAt:
-          map['created_at']?.toString() ?? map['createdAt']?.toString(),
+      createdAt: map['created_at']?.toString() ?? map['createdAt']?.toString(),
       company: map['company']?.toString(),
-      sourceKey:
-          map['source_key']?.toString() ?? map['sourceKey']?.toString(),
+      sourceKey: map['source_key']?.toString() ?? map['sourceKey']?.toString(),
       sourceAddress:
           map['source_address']?.toString() ?? map['sourceAddress']?.toString(),
       sourceId: map['source_id']?.toString() ?? map['sourceId']?.toString(),
@@ -110,35 +107,79 @@ class SyncEventModel {
   /// Excludes local-only fields (id, syncStatus) that the server doesn't expect.
   /// Strips null values to avoid Jackson deserialization errors.
   Map<String, dynamic> toServerMap({bool useCamelCase = true}) {
-    // Fix entityId: convert string "null" to actual null, parse to int if possible
-    dynamic resolvedEntityId = entityId;
-    if (resolvedEntityId == 'null' || resolvedEntityId == null) {
+    final resolvedEntityName = _normalizeEntityNameForServer(entityName);
+
+    // Fix entityId: convert string "null" to actual null. Do not cast to int.
+    String? resolvedEntityId = entityId?.toString();
+    if (resolvedEntityId == 'null' || resolvedEntityId?.isEmpty == true) {
       resolvedEntityId = null;
-    } else {
-      resolvedEntityId =
-          int.tryParse(resolvedEntityId.toString()) ?? resolvedEntityId;
+    }
+
+    String? resolvedSourceId = sourceId?.toString();
+    if (resolvedSourceId == 'null' ||
+        resolvedSourceId?.trim().isEmpty == true) {
+      resolvedSourceId = null;
     }
 
     final map = <String, dynamic>{
-      useCamelCase ? 'entityName' : 'entity_name': entityName,
+      useCamelCase ? 'entityName' : 'entity_name': resolvedEntityName,
       useCamelCase ? 'entityId' : 'entity_id': resolvedEntityId,
       'operation': operation,
       // Backend expects payload as a JSON string (not a nested object).
-      'payload': payload,
-      useCamelCase ? 'sourceNode' : 'source_node': sourceNode,
-      useCamelCase ? 'createdAt' : 'created_at': createdAt,
-      'company': int.tryParse(company?.toString() ?? '') ?? company,
-      useCamelCase ? 'sourceKey' : 'source_key': sourceKey,
-      useCamelCase ? 'sourceAddress' : 'source_address': sourceAddress,
-      useCamelCase ? 'sourceId' : 'source_id': sourceId,
-      useCamelCase ? 'sequenceNumber' : 'sequence_number': sequenceNumber,
+      // Fix known legacy typos in the payload string (like 'unit_of_meansure_default')
+      'payload': payload?.replaceAll(
+        'unit_of_meansure_default',
+        'unit_of_measure_default',
+      ),
+      useCamelCase ? 'sourceNode' : 'source_node': sourceNode?.toString(),
+      useCamelCase ? 'createdAt' : 'created_at': _formatDateForJava(createdAt),
+      'company': company?.toString(),
+      useCamelCase ? 'sourceKey' : 'source_key': sourceKey?.toString(),
+      useCamelCase ? 'sourceAddress' : 'source_address': sourceAddress
+          ?.toString(),
     };
+    if (resolvedSourceId != null) {
+      map[useCamelCase ? 'sourceId' : 'source_id'] = resolvedSourceId;
+    }
 
     // Remove null entries — Jackson may reject unknown nulls
     map.removeWhere((key, value) => value == null);
     return map;
   }
 
+  /// Format dates for Java's Jackson parser (strips microseconds, adds Z if needed)
+  String? _formatDateForJava(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return null;
+    try {
+      final dt = DateTime.parse(dateStr).toUtc();
+      var iso = dt.toIso8601String(); // e.g. 2026-04-16T10:25:35.032137Z
+      if (iso.endsWith('Z')) {
+        iso = iso.substring(0, iso.length - 1);
+      }
+      // If it has a dot, we only want 3 digits after the dot.
+      final dotIndex = iso.indexOf('.');
+      if (dotIndex != -1) {
+        final end = (dotIndex + 4) < iso.length ? (dotIndex + 4) : iso.length;
+        iso = iso.substring(0, end);
+      }
+      return '${iso}Z';
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
+  /// Normalize known legacy entity-name typos before sending to server.
+  /// Keeps local DB compatibility while matching stricter backend contracts.
+  String _normalizeEntityNameForServer(String rawEntityName) {
+    switch (rawEntityName) {
+      case 'RolePrevilage':
+        return 'RolePrivilege';
+      case 'PrevilageTable':
+        return 'PrivilegeTable';
+      default:
+        return rawEntityName;
+    }
+  }
 
   SyncEventModel copyWith({
     int? id,
