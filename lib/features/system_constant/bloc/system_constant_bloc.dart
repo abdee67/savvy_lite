@@ -14,7 +14,6 @@ class SystemConstantBloc
     extends Bloc<SystemConstantEvent, SystemConstantState> {
   final SystemConstantRepository systemConstantRepository;
   //final AuthService authService;
-  Timer? _syncTimer;
   final SystemConstantsService systemConstantService;
   final AuthBloc authBloc;
 
@@ -39,8 +38,6 @@ class SystemConstantBloc
     on<RemoveInCreate>(_onRemoveInCreate);
     on<RemoveInEdit>(_onRemoveInEdit);
     on<SyncSystemConstants>(_onSyncSystemConstants);
-    on<PullSystemConstants>(_onPullSystemConstants);
-    on<RetryFailedOperations>(_onRetryFailedOperations);
 
     // Load data immediately when bloc is created
     // add(LoadSystemConstants(authBloc.state.companyId!));
@@ -48,15 +45,8 @@ class SystemConstantBloc
     // _startSyncTimer();
   }
 
-  void _startSyncTimer() {
-    _syncTimer = Timer.periodic(const Duration(minutes: 5), (timer) {
-      add(const SyncSystemConstants());
-    });
-  }
-
   @override
   Future<void> close() {
-    _syncTimer?.cancel();
     return super.close();
   }
 
@@ -195,64 +185,6 @@ class SystemConstantBloc
     }
   }
 
-  Future<void> _onPullSystemConstants(
-    PullSystemConstants event,
-    Emitter<SystemConstantState> emit,
-  ) async {
-    try {
-      emit(state.copyWith(status: SystemConstantStatus.syncing));
-      await systemConstantRepository.pullLatestSystemConstants();
-
-      // Reload data after pull
-      final systemConstants = await systemConstantRepository
-          .getSystemConstants();
-      emit(
-        state.copyWith(
-          status: SystemConstantStatus.success,
-          systemConstants: systemConstants,
-          errorMessage: null,
-        ),
-      );
-    } catch (e) {
-      emit(
-        state.copyWith(
-          status: SystemConstantStatus.failure,
-          errorMessage: 'Failed to pull latest data: $e',
-        ),
-      );
-    }
-  }
-
-  Future<void> _onRetryFailedOperations(
-    RetryFailedOperations event,
-    Emitter<SystemConstantState> emit,
-  ) async {
-    try {
-      emit(state.copyWith(status: SystemConstantStatus.syncing));
-
-      // Retry any failed operations
-      await systemConstantRepository.syncSystemConstants();
-
-      // Reload data
-      final systemConstants = await systemConstantRepository
-          .getSystemConstants();
-
-      emit(
-        state.copyWith(
-          status: SystemConstantStatus.success,
-          systemConstants: systemConstants,
-          errorMessage: null,
-        ),
-      );
-    } catch (e) {
-      emit(
-        state.copyWith(
-          status: SystemConstantStatus.failure,
-          errorMessage: 'Failed to retry operations: $e',
-        ),
-      );
-    }
-  }
 
   Future<void> _onCreateSystemConstant(
     CreateSystemConstant event,

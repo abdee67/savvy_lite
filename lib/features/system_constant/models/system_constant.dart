@@ -236,6 +236,53 @@ class SystemConstant {
           : null,
     );
   }
+
+  /// Factory for deserializing Java server camelCase payload.
+  /// The server sends keys like `syncKey`, `dateLastUpdated` (epoch millis),
+  /// `applyLotMgm`, etc. Boolean fields like `applyLotMgmBoolean` are
+  /// ignored (they are derived from the string Y/N fields).
+  factory SystemConstant.fromServerMap(Map<String, dynamic> map) {
+    DateTime? parseEpoch(dynamic value) {
+      if (value == null) return null;
+      if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
+      if (value is String) {
+        final asInt = int.tryParse(value);
+        if (asInt != null) return DateTime.fromMillisecondsSinceEpoch(asInt);
+        try {
+          return DateTime.parse(value);
+        } catch (_) {}
+      }
+      return null;
+    }
+
+    return SystemConstant(
+      id: map['id'] as int?,
+      applyLotMgm: map['applyLotMgm']?.toString(),
+      applyOverheadCost: map['applyOverheadCost']?.toString(),
+      applyLocationMgm: map['applyLocationMgm']?.toString(),
+      interfaceCustomer: map['interfaceCustomer']?.toString(),
+      interfaceEmployee: map['interfaceEmployee']?.toString(),
+      decimalPlaces: map['decimalPlaces'] as int?,
+      dateLastUpdated: parseEpoch(map['dateLastUpdated']),
+      timeLastUpdated: parseEpoch(map['timeLastUpdated']),
+      updatedBy: map['updatedBy'] as int?,
+      generateBarcodeForItem: map['generateBarcodeForItem']?.toString(),
+      company: map['company'] as int?,
+      rateVatPercentage: (map['rateVatPercentage'] as num?)?.toDouble(),
+      rateWithholdingPercentage: (map['rateWithPercentage'] as num?)?.toDouble(),
+      withHoldInitials: (map['withHoldInitials'] as num?)?.toDouble(),
+      autoSalesPrice: map['autoSalesPrice']?.toString(),
+      lotType: map['lotType'] as int?,
+      locationCategoryLevel: map['locationCategoryLevel'] as int?,
+      lotQtyAutoForSales: map['lotQtyAutoForSales']?.toString(),
+      discountDisplay: map['discountDisplay']?.toString(),
+      taxInfoDisplay: map['taxInfoDisplay']?.toString(),
+      daysLeft: map['daysLeft'] as int?,
+      currencyCode: map['currencyCode']?.toString(),
+      reorderPointUomType: map['reorderPointUomType']?.toString(),
+      isSynced: true,
+    );
+  }
   bool get shouldAutoGenerateBarcodeForItem => generateBarcodeForItem == 'Y';
 
   SystemConstant copyWith({

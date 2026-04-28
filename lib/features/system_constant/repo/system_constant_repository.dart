@@ -31,56 +31,17 @@ class SystemConstantRepository extends BaseRepository {
 
   final LocalDatabaseService localDatabaseService;
 
-  // Offline-first: Try API first, fallback to local database
-  Future<List<SystemConstant>> getSystemConstants() async {
-    try {
-      // First try to get from API
-      developer.log(
-        'Attemptinggggggggggggg to fetch system constants from API...',
-      );
-      final remoteConstants = await _getRemoteSystemConstants();
-
-      // Save to local database
-      await _saveSystemConstantsToLocal(remoteConstants);
-
-      developer.log(
-        'Successfully retrieved ${remoteConstants.length} system constants from API',
-      );
-      return remoteConstants;
-    } catch (e) {
-      // If API fails, try to get from local database
-      developer.log('API failed, falling back to local database: $e');
-      return await getLocalSystemConstants();
-    }
-  }
-
   // Get system constant by ID with offline-first approach
   Future<SystemConstant> getSystemConstant(int id) async {
     try {
-      // First try to get from API
-      developer.log('Attempting to fetch system constant from API...');
-      final remoteConstant = await _getRemoteSystemConstant(id);
-
-      // Save to local database
-      await _saveSystemConstantToLocal(remoteConstant);
-      developer.log('Successfully retrieved system constant from API');
-      return remoteConstant;
-    } on NetworkException {
-      // If API fails, try to get from local database
-      try {
-        final localConstant = await _getLocalSystemConstant(id);
-        if (localConstant != null) {
-          developer.log(
-            'Successfully retrieved system constant from local database',
-          );
-          return localConstant;
-        }
-        rethrow; // Re-throw if no local data
-      } catch (dbError) {
-        throw NetworkException('Failed to fetch system constant: $dbError');
+      final localConstant = await _getLocalSystemConstant(id);
+      if (localConstant != null) {
+        developer.log('Successfully retrieved system constant from database');
+        return localConstant;
       }
+      throw NetworkException('Failed to fetch system constant');
     } catch (e) {
-      rethrow;
+      throw NetworkException('Failed to fetch system constant: $e');
     }
   }
 
@@ -103,7 +64,7 @@ class SystemConstantRepository extends BaseRepository {
 
       if (companyMaps.isNotEmpty) {
         final constant = SystemConstant.fromDatabaseMap(companyMaps.first);
-        developer.log('Using company constant: ${constant.toJson()}');
+        //  developer.log('Using company constant: ${constant.toJson()}');
         return constant;
       }
 
@@ -133,7 +94,7 @@ class SystemConstantRepository extends BaseRepository {
     }
   }
 
-  Future<List<SystemConstant>> getLocalSystemConstants() async {
+  Future<List<SystemConstant>> getSystemConstants() async {
     final db = await databaseService.database;
     try {
       final List<Map<String, dynamic>> maps = await db.query('system_constant');
@@ -161,22 +122,27 @@ class SystemConstantRepository extends BaseRepository {
   Future<int> insertLocalSystemConstant(SystemConstant systemConstant) async {
     final db = await databaseService.database;
     try {
-      final map = systemConstant.toDatabaseMap();
-      map.remove('id');
-      final id = await db.insert(
-        'system_constant', withSyncKey(map),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-      map['id'] = id;
-      captureSync(
-            tableName: 'system_constant',
-        entityMap: map,
-        entityId: id.toString(),
-        operation: 'INSERT',
-        company: systemConstant.company?.toString(),
-      );
-      developer.log('Inserted system constant with ID: $id');
-      return id;
+      return await db.transaction((txn) async {
+        final map = systemConstant.toDatabaseMap();
+        map.remove('id');
+        final mapWithSyncKey = withSyncKey(map);
+        final id = await txn.insert(
+          'system_constant',
+          mapWithSyncKey,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        mapWithSyncKey['id'] = id;
+        await captureSync(
+          tableName: 'system_constant',
+          entityMap: mapWithSyncKey,
+          entityId: id.toString(),
+          operation: 'INSERT',
+          company: systemConstant.company?.toString(),
+          txn: txn,
+        );
+        developer.log('Inserted system constant with ID: $id');
+        return id;
+      });
     } catch (e) {
       developer.log('Error inserting system constant: $e');
       rethrow;
@@ -186,22 +152,42 @@ class SystemConstantRepository extends BaseRepository {
   Future<int> _updateLocalSystemConstant(SystemConstant systemConstant) async {
     final db = await databaseService.database;
     try {
-      final map = systemConstant.toDatabaseMap();
-      final count = await db.update(
-        'system_constant',
-        map,
-        where: 'id = ?',
-        whereArgs: [systemConstant.id],
-      );
-      developer.log('Updated $count system constant(s)');
-      captureSync(
-            tableName: 'system_constant',
-        entityMap: map,
-        entityId: systemConstant.id.toString(),
-        operation: 'UPDATE',
-        company: systemConstant.company?.toString(),
-      );
-      return count;
+      return await db.transaction((txn) async {
+        // Fetch existing sync_key before updating
+        final existingRows = await txn.query(
+          'system_constant',
+          columns: ['sync_key'],
+          where: 'id = ?',
+          whereArgs: [systemConstant.id],
+        );
+        final syncKey = existingRows.isNotEmpty
+            ? existingRows.first['sync_key']
+            : null;
+
+        final map = systemConstant.toDatabaseMap();
+
+        final count = await txn.update(
+          'system_constant',
+          map,
+          where: 'id = ?',
+          whereArgs: [systemConstant.id],
+        );
+        developer.log('Updated $count system constant(s)');
+
+        if (syncKey != null) {
+          map['sync_key'] = syncKey;
+        }
+
+        await captureSync(
+          tableName: 'system_constant',
+          entityMap: map,
+          entityId: systemConstant.id.toString(),
+          operation: 'UPDATE',
+          company: systemConstant.company?.toString(),
+          txn: txn,
+        );
+        return count;
+      });
     } catch (e) {
       developer.log('Error updating system constant: $e');
       rethrow;
@@ -211,87 +197,32 @@ class SystemConstantRepository extends BaseRepository {
   Future<int> _deleteLocalSystemConstant(int id) async {
     final db = await databaseService.database;
     try {
-      // Fetch full row data BEFORE deleting
-      final constantRows = await db.query(
-        'system_constant',
-        where: 'id = ?',
-        whereArgs: [id],
-      );
-      final count = await db.delete(
-        'system_constant',
-        where: 'id = ?',
-        whereArgs: [id],
-      );
-      for (final row in constantRows) {
-      captureSync(
+      return await db.transaction((txn) async {
+        // Fetch full row data BEFORE deleting
+        final constantRows = await txn.query(
+          'system_constant',
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+        final count = await txn.delete(
+          'system_constant',
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+        for (final row in constantRows) {
+          await captureSync(
             tableName: 'system_constant',
-        entityMap: row,
-        entityId: row['id'].toString(),
-        operation: 'DELETE',
-      );
-      }
-      return count;
+            entityMap: row,
+            entityId: row['id'].toString(),
+            operation: 'DELETE',
+            txn: txn,
+          );
+        }
+        return count;
+      });
     } catch (e) {
       developer.log('Error deleting local system constant: $e');
       rethrow;
-    }
-  }
-
-  // Remote API operations - Modified to handle offline scenarios gracefully
-  Future<List<SystemConstant>> _getRemoteSystemConstants() async {
-    // For testing, we'll simulate API failure to force offline mode
-    developer.log('Simulating API failure for testing purposes');
-    throw NetworkException('API not available in testing mode');
-
-    // If you want to actually try the API, use this code instead:
-    /*
-    try {
-      final response = await httpClient.get(
-        Uri.parse('$baseUrl/system-constants'),
-        headers: await _getAuthHeaders(),
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        developer.log('Retrieved ${data.length} system constants from API');
-        return data.map((json) => SystemConstant.fromJson(json)).toList();
-      } else {
-        throw ServerException(
-          'Failed to load system constants: ${response.statusCode}',
-          response.statusCode,
-        );
-      }
-    } on ServerException {
-      rethrow;
-    } catch (e) {
-      throw NetworkException('Network error: $e');
-    }
-    */
-  }
-
-  Future<SystemConstant> _getRemoteSystemConstant(int id) async {
-    try {
-      final response = await httpClient
-          .get(
-            Uri.parse('$baseUrl/system-constants/$id'),
-            headers: await _getAuthHeaders(),
-          )
-          .timeout(const Duration(seconds: 30));
-
-      if (response.statusCode == 200) {
-        return SystemConstant.fromJson(json.decode(response.body));
-      } else if (response.statusCode == 404) {
-        throw NotFoundException('System constant not found');
-      } else {
-        throw ServerException(
-          'Failed to load system constant: ${response.statusCode}',
-          response.statusCode,
-        );
-      }
-    } on ServerException {
-      rethrow;
-    } catch (e) {
-      throw NetworkException('Network error: $e');
     }
   }
 
@@ -316,8 +247,6 @@ class SystemConstantRepository extends BaseRepository {
           return;
         }
       }
-      // For testing, we'll skip API and go directly to local database
-      developer.log('Bypassing API - saving directly to local database');
       await insertLocalSystemConstant(systemConstant.copyWith(isSynced: false));
     } catch (e) {
       developer.log('Error saving system constant: $e');
@@ -328,8 +257,6 @@ class SystemConstantRepository extends BaseRepository {
   // Update system constant (offline-first)
   Future<void> updateSystemConstant(SystemConstant systemConstant) async {
     try {
-      // For testing, we'll skip API and go directly to local database
-      developer.log('Bypassing API - updating directly in local database');
       await _updateLocalSystemConstant(
         systemConstant.copyWith(isSynced: false),
       );
@@ -341,29 +268,8 @@ class SystemConstantRepository extends BaseRepository {
 
   Future<void> deleteSystemConstant(int id) async {
     try {
-      // First try to delete via API
-      final response = await httpClient
-          .delete(
-            Uri.parse('$baseUrl/system-constants/$id'),
-            headers: await _getAuthHeaders(),
-          )
-          .timeout(const Duration(seconds: 30));
-
-      if (response.statusCode == 204) {
-        // Delete from local database
-        await _deleteLocalSystemConstant(id);
-      } else {
-        throw ServerException(
-          'Failed to delete system constant: ${response.statusCode}',
-          response.statusCode,
-        );
-      }
-    } on NetworkException catch (e) {
-      // If API fails, mark for deletion in local database
-      await _addToSyncQueue('system_constant', id, 'delete', null);
-      throw NetworkException(
-        'Marked for deletion (will sync later): ${e.message}',
-      );
+      // Delete from local database
+      await _deleteLocalSystemConstant(id);
     } catch (e) {
       rethrow;
     }
@@ -377,14 +283,17 @@ class SystemConstantRepository extends BaseRepository {
     final batch = db.batch();
 
     for (final constant in constants) {
+      final mapWithSyncKey = withSyncKey(
+        constant.copyWith(isSynced: true).toDatabaseMap(),
+      );
       batch.insert(
         'system_constant',
-        constant.copyWith(isSynced: true).toDatabaseMap(),
+        mapWithSyncKey,
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
-      captureSync(
-            tableName: 'system_constant',
-        entityMap: constant.copyWith(isSynced: true).toDatabaseMap(),
+      await captureSync(
+        tableName: 'system_constant',
+        entityMap: mapWithSyncKey,
         entityId: constant.id.toString(),
         operation: 'INSERT',
         company: constant.company?.toString(),
@@ -402,122 +311,6 @@ class SystemConstantRepository extends BaseRepository {
     developer.log(
       'Saved system constant to local database: ${constant.id} constant',
     );
-  }
-
-  Future<void> _addToSyncQueue(
-    String tableName,
-    int? recordId,
-    String operation,
-    Map<String, dynamic>? data,
-  ) async {
-    final db = await localDatabaseService.database;
-    await db.insert('sync_queue', withSyncKey({
-      'table_name': tableName,
-      'record_id': recordId,
-      'operation': operation,
-      'data': data != null ? json.encode(data) : null,
-      'created_at': DateTime.now().millisecondsSinceEpoch,
-    }));
-    captureSync(
-    tableName: 'sync_queue',      entityMap: {
-        'table_name': tableName,
-        'record_id': recordId,
-        'operation': operation,
-        'data': data != null ? json.encode(data) : null,
-        'created_at': DateTime.now().millisecondsSinceEpoch,
-      },
-      entityId: recordId.toString(),
-      operation: 'INSERT',
-      company: authBloc.state.companyId.toString(),
-    );
-  }
-
-  Future<Map<String, String>> _getAuthHeaders() async {
-    // Implement your auth token retrieval
-    final token = await _getAuthToken();
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    };
-  }
-
-  Future<void> pullLatestSystemConstants() async {
-    try {
-      final remoteSystemConstants = await getSystemConstants();
-      final db = await localDatabaseService.database;
-
-      for (final remoteConstant in remoteSystemConstants) {
-        // Check if exists locally
-        final existing = await getSystemConstant(remoteConstant.id!);
-
-        if (existing.lastSyncTime == null ||
-            remoteConstant.lastSyncTime != null &&
-                remoteConstant.lastSyncTime!.isAfter(existing.lastSyncTime!)) {
-          // Update existing record if remote is newer
-          await db.update(
-            'system_constant',
-            remoteConstant.copyWith(isSynced: true).toDatabaseMap(),
-            where: 'id = ?',
-            whereArgs: [remoteConstant.id],
-          );
-          captureSync(
-                tableName: 'system_constant',
-            entityMap: remoteConstant.copyWith(isSynced: true).toDatabaseMap(),
-            entityId: remoteConstant.id.toString(),
-            operation: 'UPDATE',
-            company: remoteConstant.company?.toString(),
-          );
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        developer.log('Failed to pull latest system constants: $e');
-      }
-    }
-  }
-
-  // Sync operations - Modified for testing
-  Future<void> syncSystemConstants() async {
-    developer.log('Sync called - but bypassing for testing');
-    // For testing, we won't actually try to sync since there's no API
-    return;
-
-    /*
-    // Actual sync implementation would go here
-    final db = await localDatabaseService.database;
-    
-    try {
-      // Get unsynced changes
-      final unsyncedItems = await db.query(
-        'system_constant',
-        where: 'is_synced = ?',
-        whereArgs: [0],
-      );
-      
-      developer.log('Found ${unsyncedItems.length} unsynced system constants');
-      
-      for (final item in unsyncedItems) {
-        final systemConstant = SystemConstant.fromDatabaseMap(item);
-        
-        try {
-          if (systemConstant.id == null) {
-            await createSystemConstant(systemConstant);
-          } else {
-            await updateSystemConstant(systemConstant);
-          }
-        } catch (e) {
-          developer.log('Failed to sync system constant ${systemConstant.id}: $e');
-        }
-      }
-    } catch (e) {
-      developer.log('Error during system constants sync: $e');
-    }
-    */
-  }
-
-  Future<String> _getAuthToken() async {
-    // Implement your auth token retrieval logic
-    return 'your-auth-token';
   }
 
   //check if a system constant exists for a company

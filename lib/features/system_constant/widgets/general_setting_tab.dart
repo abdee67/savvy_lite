@@ -102,10 +102,7 @@ class _GeneralSettingsTabState extends State<GeneralSettingsTab> {
           });
         }
 
-        // Debug output to see what's happening
-        developer.log(
-          'UI Building with system constant: ${_localSystemConstant.toJson()}',
-        );
+    
 
         return Form(
           key: widget.formKey,

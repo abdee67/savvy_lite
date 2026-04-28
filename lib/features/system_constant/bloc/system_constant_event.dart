@@ -33,13 +33,6 @@ class SyncSystemConstants extends SystemConstantEvent {
   List<Object> get props => [];
 }
 
-class PullSystemConstants extends SystemConstantEvent {
-  const PullSystemConstants();
-
-  @override
-  List<Object> get props => [];
-}
-
 class LoadSystemConstantsForCompany extends SystemConstantEvent {
   final int companyId;
 

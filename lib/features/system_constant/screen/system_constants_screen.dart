@@ -76,30 +76,6 @@ class _SystemConstantsScreenState extends State<SystemConstantsScreen>
           appBar: AppBar(
             title: const Text('System Configuration'),
             actions: [
-              IconButton(
-                icon: Icon(
-                  state.isOnline ? Icons.cloud : Icons.cloud_off,
-                  color: state.isOnline ? Colors.green : Colors.orange,
-                ),
-                onPressed: () {
-                  if (!state.isOnline) {
-                    context.read<SystemConstantBloc>().add(
-                      const RetryFailedOperations(),
-                    );
-                  }
-                },
-                tooltip: state.isOnline ? 'Online' : 'Offline - Tap to retry',
-              ),
-              /**  IconButton(
-                icon: Icon(Iconsax.safe_home),
-                onPressed: () {
-                  context.read<SystemConstantBloc>().add(
-                    const DebugSystemConstants(),
-                  );
-                },
-                tooltip: 'Debug system constants',
-              ),
-*/
               // Sync button
               if (state.unsyncedCount > 0)
                 IconButton(

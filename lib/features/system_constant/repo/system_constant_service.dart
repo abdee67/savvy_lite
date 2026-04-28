@@ -114,7 +114,7 @@ class SystemConstantsService with ChangeNotifier {
   // Helper to get local constants as fallback
   Future<SystemConstant> _getLocalSystemConstants() async {
     try {
-      final constants = await _repository.getLocalSystemConstants();
+      final constants = await _repository.getSystemConstants();
       if (constants.isNotEmpty) {
         return constants.first;
       }
