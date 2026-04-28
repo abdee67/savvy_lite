@@ -60,8 +60,16 @@ class SyncEventModel {
   factory SyncEventModel.fromMap(Map<String, dynamic> map) {
     final rawPayload = map['payload'];
 
+    // Safe int parser — handles both int and String values from server
+    int? safeInt(dynamic value) {
+      if (value == null) return null;
+      if (value is int) return value;
+      if (value is String) return int.tryParse(value);
+      return null;
+    }
+
     return SyncEventModel(
-      id: map['id'] as int?,
+      id: safeInt(map['id']),
       entityName:
           map['entity_name']?.toString() ?? map['entityName']?.toString() ?? '',
       entityId: map['entity_id']?.toString() ?? map['entityId']?.toString(),
@@ -80,7 +88,7 @@ class SyncEventModel {
           map['syncStatus']?.toString() ??
           SyncStatus.pending,
       sequenceNumber:
-          map['sequence_number'] as int? ?? map['sequenceNumber'] as int?,
+          safeInt(map['sequence_number']) ?? safeInt(map['sequenceNumber']),
     );
   }
 
@@ -107,8 +115,6 @@ class SyncEventModel {
   /// Excludes local-only fields (id, syncStatus) that the server doesn't expect.
   /// Strips null values to avoid Jackson deserialization errors.
   Map<String, dynamic> toServerMap({bool useCamelCase = true}) {
-    final resolvedEntityName = _normalizeEntityNameForServer(entityName);
-
     // Fix entityId: convert string "null" to actual null. Do not cast to int.
     String? resolvedEntityId = entityId?.toString();
     if (resolvedEntityId == 'null' || resolvedEntityId?.isEmpty == true) {
@@ -122,21 +128,17 @@ class SyncEventModel {
     }
 
     final map = <String, dynamic>{
-      useCamelCase ? 'entityName' : 'entity_name': resolvedEntityName,
+      useCamelCase ? 'entityName' : 'entity_name': entityName,
       useCamelCase ? 'entityId' : 'entity_id': resolvedEntityId,
       'operation': operation,
-      // Backend expects payload as a JSON string (not a nested object).
-      // Fix known legacy typos in the payload string (like 'unit_of_meansure_default')
-      'payload': payload?.replaceAll(
-        'unit_of_meansure_default',
-        'unit_of_measure_default',
-      ),
+      'payload': payload,
       useCamelCase ? 'sourceNode' : 'source_node': sourceNode?.toString(),
       useCamelCase ? 'createdAt' : 'created_at': _formatDateForJava(createdAt),
       'company': company?.toString(),
       useCamelCase ? 'sourceKey' : 'source_key': sourceKey?.toString(),
       useCamelCase ? 'sourceAddress' : 'source_address': sourceAddress
           ?.toString(),
+      useCamelCase ? 'sequenceNumber' : 'sequence_number': sequenceNumber,
     };
     if (resolvedSourceId != null) {
       map[useCamelCase ? 'sourceId' : 'source_id'] = resolvedSourceId;
@@ -165,19 +167,6 @@ class SyncEventModel {
       return '${iso}Z';
     } catch (_) {
       return dateStr;
-    }
-  }
-
-  /// Normalize known legacy entity-name typos before sending to server.
-  /// Keeps local DB compatibility while matching stricter backend contracts.
-  String _normalizeEntityNameForServer(String rawEntityName) {
-    switch (rawEntityName) {
-      case 'RolePrevilage':
-        return 'RolePrivilege';
-      case 'PrevilageTable':
-        return 'PrivilegeTable';
-      default:
-        return rawEntityName;
     }
   }
 

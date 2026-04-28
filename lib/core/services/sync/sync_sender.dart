@@ -64,10 +64,12 @@ class SyncSender {
     String? bearerToken,
   ) async {
     final uri = Uri.parse(url);
-    final headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    };
+    final headers = <String, String>{}
+      ..addAll({
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+      });
     if (bearerToken != null && bearerToken.isNotEmpty) {
       headers['Authorization'] = 'Bearer $bearerToken';
     }

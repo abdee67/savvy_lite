@@ -4,6 +4,7 @@ import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/core/services/sync/models/sync_device_detail_model.dart';
 import 'package:savvy_stock/core/services/sync/models/sync_event_model.dart';
 import 'package:savvy_stock/core/services/sync/models/sync_node_status_model.dart';
+import 'package:sqflite/sqflite.dart';
 
 /// Repository handling all local SQLite CRUD operations for sync tables.
 ///
@@ -287,16 +288,21 @@ class SyncRepository {
 
   /// Get active target server URLs, optionally filtered by company.
   /// Also includes globally configured URLs where `company IS NULL`.
-  Future<List<Map<String, dynamic>>> getTargetUrls(String? company) async {
+  Future<List<Map<String, dynamic>>> getTargetUrls(
+    String? company, {
+    Transaction? txn,
+  }) async {
     final db = await databaseService.database;
+    final executor = txn ?? db;
+
     if (company == null || company.isEmpty) {
-      return await db.query(
+      return await executor.query(
         'system_url_config',
         where: "active = ? AND company IS NULL",
         whereArgs: ['Y'],
       );
     }
-    return await db.query(
+    return await executor.query(
       'system_url_config',
       where: "active = ? AND (company = ? OR company IS NULL)",
       whereArgs: ['Y', company],

@@ -42,13 +42,15 @@ abstract class BaseRepository {
   /// [entityId] — the primary key of the entity (as string)
   /// [operation] — 'INSERT', 'UPDATE', or 'DELETE'
   /// [company] — the company ID (as string, nullable)
-  void captureSync({
+  /// [txn] — optional Transaction for atomic operations
+  Future<void> captureSync({
     required String tableName,
     required Map<String, dynamic> entityMap,
     required String entityId,
     required String operation,
     String? company,
-  }) {
+    Transaction? txn,
+  }) async {
     if (databaseService.isInitializing) {
       developer.log(
         'Skipping sync capture for $tableName during database initialization',
@@ -57,12 +59,13 @@ abstract class BaseRepository {
     }
 
     try {
-      syncService?.capture(
+      await syncService?.capture(
         tableName: tableName,
         entityMap: entityMap,
         entityId: entityId,
         operation: operation,
         company: company,
+        txn: txn,
       );
     } catch (e) {
       developer.log('⚠️ BaseRepo: captureSync error (non-fatal): $e');

@@ -8,6 +8,9 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:savvy_stock/core/services/conectitvity_service.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/core/services/sync/models/sync_device_detail_model.dart';
+import 'package:savvy_stock/features/company/models/company_model.dart';
+import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:savvy_stock/core/services/sync/models/sync_event_model.dart';
 import 'package:savvy_stock/core/services/sync/models/sync_node_status_model.dart';
 import 'package:savvy_stock/core/services/sync/sync_receiver.dart';
@@ -52,7 +55,7 @@ class SyncService {
   bool _isSyncing = false;
 
   /// Batch size for processing events.
-  static const int _batchSize = 50;
+  static const int _batchSize = 500;
 
   SyncService({
     required this.syncRepository,
@@ -120,6 +123,7 @@ class SyncService {
     required String entityId,
     required String operation,
     String? company,
+    Transaction? txn,
   }) async {
     // Never sync the sync tables themselves
     if (_isSyncTable(tableName)) return;
@@ -134,7 +138,7 @@ class SyncService {
       );
 
       // Persist directly to SQLite — no memory queue
-      await _persistEventWithDetails(event);
+      await _persistEventWithDetails(event, txn: txn);
     } catch (e) {
       developer.log('❌ SyncService: Error capturing event: $e');
     }
@@ -186,9 +190,6 @@ class SyncService {
 
       _tableToEntityCache['privilege_table'] = 'PrevilageTable';
       _entityToTableCache['PrevilageTable'] = 'privilege_table';
-
-      _tableToEntityCache['system_constant'] = 'SystemConfiguration';
-      _entityToTableCache['SystemConfiguration'] = 'system_constant';
 
       _tableToEntityCache['item_cost'] = 'ItemCostTable';
       _entityToTableCache['ItemCostTable'] = 'item_cost';
@@ -297,21 +298,40 @@ class SyncService {
   }
 
   /// Persist event and create SyncDeviceDetail rows for each target.
-  Future<void> _persistEventWithDetails(SyncEventModel event) async {
-    final eventId = await syncRepository.insertSyncEvent(event);
+  /// When [txn] is provided, inserts use the same transaction for atomicity.
+  Future<void> _persistEventWithDetails(SyncEventModel event, {Transaction? txn}) async {
+    if (txn != null) {
+      // Use transaction directly for atomic operations
+      final map = event.toMap();
+      map.remove('id');
+      final eventId = await txn.insert('sync_event', map);
 
-    // Find target URLs for this company
-    final targets = await syncRepository.getTargetUrls(event.company);
-
-    for (final target in targets) {
-      final detail = SyncDeviceDetailModel(
-        syncEvent: eventId,
-        company: event.company,
-        deviceAddress: target['id'] as int?,
-        syncStatus: SyncStatus.pending,
-        retryCount: 0,
-      );
-      await syncRepository.insertSyncDeviceDetail(detail);
+      final targets = await syncRepository.getTargetUrls(event.company, txn: txn);
+      for (final target in targets) {
+        final detailMap = SyncDeviceDetailModel(
+          syncEvent: eventId,
+          company: event.company,
+          deviceAddress: target['id'] as int?,
+          syncStatus: SyncStatus.pending,
+          retryCount: 0,
+        ).toMap();
+        detailMap.remove('id');
+        await txn.insert('sync_device_detail', detailMap);
+      }
+    } else {
+      // Original path — outside transaction
+      final eventId = await syncRepository.insertSyncEvent(event);
+      final targets = await syncRepository.getTargetUrls(event.company);
+      for (final target in targets) {
+        final detail = SyncDeviceDetailModel(
+          syncEvent: eventId,
+          company: event.company,
+          deviceAddress: target['id'] as int?,
+          syncStatus: SyncStatus.pending,
+          retryCount: 0,
+        );
+        await syncRepository.insertSyncDeviceDetail(detail);
+      }
     }
   }
 
@@ -871,11 +891,54 @@ class SyncService {
     }
   }
 
+  // ═══════════════════════════════════════════════════════════════════════
+  //  PAYLOAD CONVERSION — Model-aware deserialization
+  // ═══════════════════════════════════════════════════════════════════════
+
+  /// Convert a camelCase string to snake_case (fallback for unmapped entities).
+  String _camelToSnake(String input) {
+    return input.replaceAllMapped(
+      RegExp(r'([a-z0-9])([A-Z])'),
+      (match) => '${match.group(1)}_${match.group(2)!.toLowerCase()}',
+    );
+  }
+
+  /// Fallback: convert all keys from camelCase to snake_case.
+  Map<String, dynamic> _convertKeysToSnakeCase(Map<String, dynamic> input) {
+    final result = <String, dynamic>{};
+    for (final entry in input.entries) {
+      result[_camelToSnake(entry.key)] = entry.value;
+    }
+    return result;
+  }
+
+  /// Model-aware payload conversion.
+  /// For known entities, uses their fromServerMap → toDatabaseMap pipeline
+  /// for accurate key mapping and type conversion.
+  /// Falls back to generic camelCase→snake_case for unmapped entities.
+  Map<String, dynamic> _convertServerPayloadToDbMap(
+    String entityName,
+    Map<String, dynamic> serverPayload,
+  ) {
+    switch (entityName) {
+      case 'SystemConstant':
+        final model = SystemConstant.fromServerMap(serverPayload);
+        return model.toDatabaseMap();
+      case 'CompanyTable':
+        final model = Company.fromServerMap(serverPayload);
+        return model.toMap();
+      default:
+        // Fallback: generic camelCase→snake_case for entities without fromServerMap
+        return _convertKeysToSnakeCase(serverPayload);
+    }
+  }
+
   /// Apply a received sync event to the local database.
   ///
+  /// Uses model-aware deserialization for known entities (fromServerMap → toDatabaseMap)
+  /// and wraps the DB operation + sync event log in a transaction for atomicity.
+  ///
   /// Conflict resolution: **last-write-wins**.
-  /// If an entity already exists and the incoming event is newer,
-  /// it overwrites the local data.
   Future<void> _applyReceivedEvent(SyncEventModel event) async {
     try {
       // Skip events from this node (avoid round-trip syncing)
@@ -885,75 +948,99 @@ class SyncService {
       }
 
       final db = await databaseService.database;
-      final entityData = jsonDecode(event.payload) as Map<String, dynamic>;
+      final rawPayload = jsonDecode(event.payload) as Map<String, dynamic>;
 
       // Map incoming PascalCase entity name back to local SQLite snake_case table
       final tableName = await resolveTableName(event.entityName);
-
       final operation = event.operation.toUpperCase();
 
-      // Resolve via sync_key to manage duplicates securely across UUID boundaries
-      final syncKey = entityData['sync_key']?.toString();
+      // Convert payload using model-aware pipeline (or fallback)
+      final entityData = _convertServerPayloadToDbMap(
+        event.entityName,
+        rawPayload,
+      );
 
-      // Remove remote ID so local SQLite driver cleanly auto-increments
+      // Extract sync_key — also check camelCase key from server payload
+      final syncKey =
+          entityData['sync_key']?.toString() ??
+          rawPayload['syncKey']?.toString();
+
+      // Ensure sync_key is in the DB map
+      if (syncKey != null) {
+        entityData['sync_key'] = syncKey;
+      }
+
+      // Remove remote ID so local SQLite auto-increments
       entityData.remove('id');
 
-      List<Map<String, Object?>> existing = [];
-      if (syncKey != null) {
-        existing = await db.query(
-          tableName,
-          where: 'sync_key = ?',
-          whereArgs: [syncKey],
-          limit: 1,
-        );
-      }
+      developer.log(
+        '📥 Applying $operation on $tableName (syncKey=$syncKey, '
+        'entity=${event.entityName})',
+      );
 
-      switch (operation) {
-        case 'INSERT':
-          if (existing.isEmpty) {
-            await db.insert(tableName, entityData);
-            developer.log('📥 Applied INSERT on $tableName');
-          } else {
-            final localId = existing.first['id'];
-            await db.update(
-              tableName,
-              entityData,
-              where: 'id = ?',
-              whereArgs: [localId],
-            );
-            developer.log(
-              '📥 Applied INSERT→UPDATE on $tableName (already existed)',
-            );
-          }
-          break;
+      // Wrap in transaction for atomicity
+      await db.transaction((txn) async {
+        List<Map<String, Object?>> existing = [];
+        if (syncKey != null) {
+          existing = await txn.query(
+            tableName,
+            where: 'sync_key = ?',
+            whereArgs: [syncKey],
+            limit: 1,
+          );
+        }
 
-        case 'UPDATE':
-          if (existing.isNotEmpty) {
-            final localId = existing.first['id'];
-            await db.update(
-              tableName,
-              entityData,
-              where: 'id = ?',
-              whereArgs: [localId],
-            );
-            developer.log('📥 Applied UPDATE on $tableName');
-          } else {
-            await db.insert(tableName, entityData);
-            developer.log('📥 Applied UPDATE→INSERT on $tableName');
-          }
-          break;
+        switch (operation) {
+          case 'INSERT':
+            if (existing.isEmpty) {
+              await txn.insert(tableName, entityData);
+              developer.log('📥 Applied INSERT on $tableName');
+            } else {
+              final localId = existing.first['id'];
+              await txn.update(
+                tableName,
+                entityData,
+                where: 'id = ?',
+                whereArgs: [localId],
+              );
+              developer.log(
+                '📥 Applied INSERT→UPDATE on $tableName (already existed)',
+              );
+            }
+            break;
 
-        case 'DELETE':
-          if (existing.isNotEmpty) {
-            final localId = existing.first['id'];
-            await db.delete(tableName, where: 'id = ?', whereArgs: [localId]);
-            developer.log('📥 Applied DELETE on $tableName');
-          }
-          break;
+          case 'UPDATE':
+            if (existing.isNotEmpty) {
+              final localId = existing.first['id'];
+              await txn.update(
+                tableName,
+                entityData,
+                where: 'id = ?',
+                whereArgs: [localId],
+              );
+              developer.log('📥 Applied UPDATE on $tableName');
+            } else {
+              await txn.insert(tableName, entityData);
+              developer.log('📥 Applied UPDATE→INSERT on $tableName');
+            }
+            break;
 
-        default:
-          developer.log('⚠️ Unknown operation: $operation');
-      }
+          case 'DELETE':
+            if (existing.isNotEmpty) {
+              final localId = existing.first['id'];
+              await txn.delete(
+                tableName,
+                where: 'id = ?',
+                whereArgs: [localId],
+              );
+              developer.log('📥 Applied DELETE on $tableName');
+            }
+            break;
+
+          default:
+            developer.log('⚠️ Unknown operation: $operation');
+        }
+      });
     } catch (e) {
       developer.log(
         '❌ SyncService: Error applying event '

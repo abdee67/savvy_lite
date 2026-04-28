@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
 
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:savvy_stock/core/services/sync/models/sync_event_model.dart';
 
@@ -21,14 +20,65 @@ class SyncReceiver {
 
   /// Build standard headers.
   Map<String, String> _buildHeaders() {
-    final headers = <String, String>{
+    final headers = <String, String>{};
+    headers.addAll({
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-    };
+    });
     if (authToken != null && authToken!.isNotEmpty) {
       headers['Authorization'] = 'Bearer $authToken';
     }
     return headers;
+  }
+
+  String _normalizeBaseUrl(String targetUrl) {
+    return targetUrl.endsWith('/')
+        ? targetUrl.substring(0, targetUrl.length - 1)
+        : targetUrl;
+  }
+
+  List<Uri> _buildPullUris(
+    String targetUrl, {
+    required String userName,
+    required String sourceAddress,
+  }) {
+    final normalizedBaseUrl = _normalizeBaseUrl(targetUrl);
+    final queryParameters = {
+      'userName': userName,
+      'sourceAddress': sourceAddress,
+    };
+
+    final endpoints = <String>{'$normalizedBaseUrl/api/sync/pull'};
+
+    return endpoints
+        .map(
+          (endpoint) =>
+              Uri.parse(endpoint).replace(queryParameters: queryParameters),
+        )
+        .toList();
+  }
+
+  List<SyncEventModel> _parsePulledEvents(String responseBody) {
+    final bodyData = jsonDecode(responseBody);
+    List<dynamic> eventsList = [];
+    if (bodyData is List) {
+      eventsList = bodyData;
+    } else if (bodyData is Map<String, dynamic>) {
+      // Server may return events under different keys depending on endpoint
+      eventsList =
+          bodyData['savedItem'] ??
+          bodyData['saved_item'] ??
+          bodyData['events'] ??
+          [];
+    }
+
+    developer.log(
+      'SyncReceiver: Parsed ${eventsList.length} events from response',
+    );
+
+    return eventsList.map((e) {
+      return SyncEventModel.fromMap(e as Map<String, dynamic>);
+    }).toList();
   }
 
   /// Pull new sync events from a target server URL since [lastSyncTime].
@@ -40,49 +90,95 @@ class SyncReceiver {
     String targetUrl, {
     required String userName,
     required String sourceAddress,
+    List<String>? sourceAddressCandidates,
   }) async {
     if (targetUrl.isEmpty) return [];
 
     try {
-      // Match Java PullClient: GET /api/pull?userName=...&sourceAddress=...
-      final url = Uri.parse('$targetUrl/api/sync/pull').replace(
-        queryParameters: {'userName': userName, 'sourceAddress': sourceAddress},
-      );
+      final attemptedSourceAddresses = <String>{};
+      final candidateSourceAddresses = <String>[
+        sourceAddress,
+        ...?sourceAddressCandidates,
+      ].where((candidate) => attemptedSourceAddresses.add(candidate)).toList();
 
-      final response = await httpClient
-          .get(url, headers: _buildHeaders())
-          .timeout(const Duration(seconds: 30));
+      for (
+        var sourceIndex = 0;
+        sourceIndex < candidateSourceAddresses.length;
+        sourceIndex++
+      ) {
+        final currentSourceAddress = candidateSourceAddresses[sourceIndex];
+        final pullUris = _buildPullUris(
+          targetUrl,
+          userName: userName,
+          sourceAddress: currentSourceAddress,
+        );
 
-      if (response.statusCode == 200) {
-        final bodyData = jsonDecode(response.body);
-        List<dynamic> eventsList = [];
-        if (bodyData is List) {
-          eventsList = bodyData;
-        } else if (bodyData is Map<String, dynamic>) {
-          eventsList = bodyData['events'] ?? [];
+        for (var index = 0; index < pullUris.length; index++) {
+          final url = pullUris[index];
+          final response = await httpClient
+              .get(url, headers: _buildHeaders())
+              .timeout(const Duration(seconds: 30));
+
+          if (response.statusCode == 200) {
+            final events = _parsePulledEvents(response.body);
+            developer.log(
+              'SyncReceiver: Pulled ${events.length} events from $url',
+            );
+            return events;
+          }
+
+          if (response.statusCode == 401 || response.statusCode == 403) {
+            developer.log(
+              'SyncReceiver: Auth failed (${response.statusCode}) at $url',
+            );
+            return [];
+          }
+
+          developer.log(
+            'SyncReceiver: Pull failed status=${response.statusCode} at $url: '
+            '${response.body}',
+          );
+
+          final isLastEndpointAttempt = index == pullUris.length - 1;
+          final shouldRetryLegacyEndpoint =
+              !isLastEndpointAttempt &&
+              (response.statusCode >= 500 ||
+                  response.statusCode == 400 ||
+                  response.statusCode == 404 ||
+                  response.statusCode == 405);
+
+          if (shouldRetryLegacyEndpoint) {
+            developer.log(
+              'SyncReceiver: Retrying pull with legacy endpoint for $targetUrl',
+            );
+            continue;
+          }
+
+          final isLastSourceAddress =
+              sourceIndex == candidateSourceAddresses.length - 1;
+          final shouldRetryNextSourceAddress =
+              isLastEndpointAttempt &&
+              !isLastSourceAddress &&
+              (response.statusCode >= 500 ||
+                  response.statusCode == 400 ||
+                  response.statusCode == 404 ||
+                  response.statusCode == 405);
+
+          if (shouldRetryNextSourceAddress) {
+            developer.log(
+              'SyncReceiver: Retrying pull with alternate sourceAddress '
+              '${candidateSourceAddresses[sourceIndex + 1]}',
+            );
+            break;
+          }
+
+          return [];
         }
-
-        developer.log(
-          '📥 SyncReceiver: Pulled ${eventsList.length} events from $targetUrl',
-        );
-
-        return eventsList.map((e) {
-          return SyncEventModel.fromMap(e as Map<String, dynamic>);
-        }).toList();
-      } else if (response.statusCode == 401 || response.statusCode == 403) {
-        developer.log(
-          '🔒 SyncReceiver: Auth failed (${response.statusCode}) at $targetUrl',
-        );
-        return [];
-      } else {
-        developer.log(
-          '❌ SyncReceiver: Pull failed status=${response.statusCode}: '
-          '${response.body}',
-        );
-        return [];
       }
+
+      return [];
     } catch (e) {
-      developer.log('❌ SyncReceiver: Pull error from $targetUrl: $e');
+      developer.log('SyncReceiver: Pull error from $targetUrl: $e');
       return [];
     }
   }
@@ -112,7 +208,7 @@ class SyncReceiver {
 
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
-      developer.log('❌ SyncReceiver: Node status report error: $e');
+      developer.log('SyncReceiver: Node status report error: $e');
       return false;
     }
   }
@@ -139,13 +235,13 @@ class SyncReceiver {
           .timeout(const Duration(seconds: 15));
 
       developer.log(
-        '📤 SyncReceiver: Acknowledged ${serverSyncEventIds.length} events '
-        '→ status=${response.statusCode}',
+        'SyncReceiver: Acknowledged ${serverSyncEventIds.length} events '
+        'status=${response.statusCode}',
       );
 
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
-      developer.log('❌ SyncReceiver: updateSyncEvent error: $e');
+      developer.log('SyncReceiver: updateSyncEvent error: $e');
       return false;
     }
   }
