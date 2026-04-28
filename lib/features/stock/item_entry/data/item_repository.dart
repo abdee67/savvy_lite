@@ -19,29 +19,48 @@ class StockItemsEntryRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final itemMap = item.toMap();
     itemMap.remove('id');
-    final id = await db.insert('items_table', withSyncKey(itemMap));
-    // Capture sync event
-    itemMap['id'] = id;
+    final payload = withSyncKey(itemMap);
+    final id = await db.insert('items_table', payload);
+    payload['id'] = id;
     captureSync(
-        tableName: 'items_table',      entityMap: itemMap,
+      tableName: 'items_table',
+      entityMap: payload,
       entityId: id.toString(),
       operation: 'INSERT',
       company: item.company?.toString(),
     );
     return id;
   }
+  
 
   // Update existing item
   Future<int> update(ItemEntryModel item, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
-    final result = await db.update(
+
+    // Fetch existing sync_key before updating
+    final existingRows = await db.query(
       'items_table',
-      item.toMap(),
+      columns: ['sync_key'],
       where: 'id = ? AND company = ?',
       whereArgs: [item.id, item.company],
     );
+    final syncKey = existingRows.isNotEmpty ? existingRows.first['sync_key'] : null;
+
+    final payload = item.toMap();
+    final result = await db.update(
+      'items_table',
+      payload,
+      where: 'id = ? AND company = ?',
+      whereArgs: [item.id, item.company],
+    );
+
+    if (syncKey != null) {
+      payload['sync_key'] = syncKey;
+    }
+
     captureSync(
-        tableName: 'items_table',      entityMap: item.toMap(),
+      tableName: 'items_table',
+      entityMap: payload,
       entityId: item.id.toString(),
       operation: 'UPDATE',
       company: item.company?.toString(),
@@ -448,11 +467,33 @@ class StockItemsEntryRepository extends BaseRepository {
     final batch = db.batch();
 
     for (final item in items) {
-      batch.update(
+      // Fetch existing sync_key
+      final existingRows = await db.query(
         'items_table',
-        item.toMap(),
+        columns: ['sync_key'],
         where: 'id = ? AND company = ?',
         whereArgs: [item.id, item.company],
+      );
+      final syncKey = existingRows.isNotEmpty ? existingRows.first['sync_key'] : null;
+
+      final payload = item.toMap();
+      batch.update(
+        'items_table',
+        payload,
+        where: 'id = ? AND company = ?',
+        whereArgs: [item.id, item.company],
+      );
+
+      if (syncKey != null) {
+        payload['sync_key'] = syncKey;
+      }
+
+      captureSync(
+        tableName: 'items_table',
+        entityMap: payload,
+        entityId: item.id.toString(),
+        operation: 'UPDATE',
+        company: item.company?.toString(),
       );
     }
 

@@ -25,11 +25,12 @@ class ItemCostRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final itemMap = itemCost.toMap();
     itemMap.remove('id'); // Remove id for new insertion
-    final id = await db.insert('item_cost', withSyncKey(itemMap));
-    itemMap['id'] = id;
+    final payload = withSyncKey(itemMap);
+    final id = await db.insert('item_cost', payload);
+    payload['id'] = id;
     captureSync(
       tableName: 'item_cost',
-      entityMap: itemMap,
+      entityMap: payload,
       entityId: id.toString(),
       operation: 'INSERT',
       company: itemCost.company?.toString(),
@@ -40,15 +41,31 @@ class ItemCostRepository extends BaseRepository {
   // Update existing item cost
   Future<int> update(ItemCost itemCost, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
-    final result = await db.update(
+
+    // Fetch existing sync_key before updating
+    final existingRows = await db.query(
       'item_cost',
-      itemCost.toMap(),
+      columns: ['sync_key'],
       where: 'id = ?',
       whereArgs: [itemCost.id],
     );
+    final syncKey = existingRows.isNotEmpty ? existingRows.first['sync_key'] : null;
+
+    final payload = itemCost.toMap();
+    final result = await db.update(
+      'item_cost',
+      payload,
+      where: 'id = ?',
+      whereArgs: [itemCost.id],
+    );
+
+    if (syncKey != null) {
+      payload['sync_key'] = syncKey;
+    }
+
     captureSync(
       tableName: 'item_cost',
-      entityMap: itemCost.toMap(),
+      entityMap: payload,
       entityId: itemCost.id.toString(),
       operation: 'UPDATE',
       company: itemCost.company?.toString(),
@@ -243,11 +260,33 @@ class ItemCostRepository extends BaseRepository {
 
     for (final item in items) {
       if (item.id != null) {
-        batch.update(
+        // Fetch existing sync_key
+        final existingRows = await db.query(
           'item_cost',
-          item.toMap(),
+          columns: ['sync_key'],
           where: 'id = ?',
           whereArgs: [item.id],
+        );
+        final syncKey = existingRows.isNotEmpty ? existingRows.first['sync_key'] : null;
+
+        final payload = item.toMap();
+        batch.update(
+          'item_cost',
+          payload,
+          where: 'id = ?',
+          whereArgs: [item.id],
+        );
+
+        if (syncKey != null) {
+          payload['sync_key'] = syncKey;
+        }
+
+        captureSync(
+          tableName: 'item_cost',
+          entityMap: payload,
+          entityId: item.id.toString(),
+          operation: 'UPDATE',
+          company: item.company?.toString(),
         );
       }
     }
@@ -617,27 +656,30 @@ class ItemCostRepository extends BaseRepository {
               );
             }
 
+            final syncKey = existingCostResult.first['sync_key'];
+            final payload = {
+              'item_number': itemNumber,
+              'amount_unit_cost': finalCost,
+              'company': companyId,
+              'user_id': userId,
+              'date_updated': DateTime.now().toIso8601String(),
+            };
+
             await db.update(
               'item_cost',
-              {
-                'amount_unit_cost': finalCost,
-                'date_updated': DateTime.now().toIso8601String(),
-                'user_id': userId,
-              },
-              where: 'item_number = ? AND company = ?',
-              whereArgs: [itemNumber, companyId],
+              payload,
+              where: 'id = ?',
+              whereArgs: [existingCostResult.first['id']],
             );
+
+            if (syncKey != null) {
+              payload['sync_key'] = syncKey;
+            }
 
             captureSync(
               tableName: 'item_cost',
-              entityMap: {
-                'item_number': itemNumber,
-                'amount_unit_cost': finalCost,
-                'company': companyId,
-                'user_id': userId,
-                'date_updated': DateTime.now().toIso8601String(),
-              },
-              entityId: itemNumber.toString(),
+              entityMap: payload,
+              entityId: existingCostResult.first['id'].toString(),
               operation: 'UPDATE',
               company: companyId.toString(),
             );
@@ -656,27 +698,20 @@ class ItemCostRepository extends BaseRepository {
           }
         } else {
           // Create new item cost record
-          await db.insert(
-            'item_cost',
-            withSyncKey({
-              'item_number': itemNumber,
-              'amount_unit_cost': unitCostAvg,
-              'company': companyId,
-              'user_id': userId,
-              'date_updated': DateTime.now().toIso8601String(),
-            }),
-          );
+          final payload = withSyncKey({
+            'item_number': itemNumber,
+            'amount_unit_cost': unitCostAvg,
+            'company': companyId,
+            'user_id': userId,
+            'date_updated': DateTime.now().toIso8601String(),
+          });
+          final id = await db.insert('item_cost', payload);
+          payload['id'] = id;
 
           captureSync(
             tableName: 'item_cost',
-            entityMap: {
-              'item_number': itemNumber,
-              'amount_unit_cost': unitCostAvg,
-              'company': companyId,
-              'user_id': userId,
-              'date_updated': DateTime.now().toIso8601String(),
-            },
-            entityId: itemNumber.toString(),
+            entityMap: payload,
+            entityId: id.toString(),
             operation: 'INSERT',
             company: companyId.toString(),
           );

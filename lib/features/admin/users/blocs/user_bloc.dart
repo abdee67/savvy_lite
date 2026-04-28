@@ -126,7 +126,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       await repository.insertUser(
         event.user,
         companyId!,
-        createdBy!,
+        createdBy,
         roles: event.roles,
       );
 

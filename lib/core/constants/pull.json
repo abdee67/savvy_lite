@@ -1,0 +1,96 @@
+{
+    "savedItem": [
+        {
+            "company": "1",
+            "createdAt": "2026-04-25T01:05:00Z[UTC]",
+            "entityId": "1",
+            "entityName": "CompanyTable",
+            "id": 1910,
+            "operation": "UPDATE",
+            "payload": "{\"id\": 1, \"city\": \"Adiss Abeba\", \"state\": \"Adiss Abeba\", \"region\": \"Bole\", \"country\": \"Ethiopia\", \"syncKey\": \"e3c68c27-2ce0-11f1-ba03-0068eb65e65a\", \"daysLeft\": 375, \"tinNumber\": \"\", \"userLimmit\": 5, \"addressLine\": \"Addis Ababa\", \"companyName\": \"Heaven Perfume\", \"dateUpdated\": 1776988800000, \"logoCompany\": \"heaven_black_logo11.png\", \"branchLimmit\": 1, \"phoneNumber1\": \"0941691404\", \"phoneNumber2\": \"\", \"phoneNumber3\": \"\", \"emailAddress1\": \"yisakworku1501@gmail.com\", \"emailAddress2\": \"yisakworku1501@gmail.com\", \"subscriptionFee\": 9500.0}",
+            "sequenceNumber": "05",
+            "sourceKey": "LOCAL-9c365b49-0fac-4311-b9a4-1fc7f1f9edd7",
+            "sourceNode": "LOCAL",
+            "syncStatus": "PENDING"
+        },
+        {
+            "company": "1",
+            "createdAt": "2026-04-26T01:05:00Z[UTC]",
+            "entityId": "1",
+            "entityName": "CompanyTable",
+            "id": 1923,
+            "operation": "UPDATE",
+            "payload": "{\"id\": 1, \"city\": \"Adiss Abeba\", \"state\": \"Adiss Abeba\", \"region\": \"Bole\", \"country\": \"Ethiopia\", \"syncKey\": \"e3c68c27-2ce0-11f1-ba03-0068eb65e65a\", \"daysLeft\": 374, \"tinNumber\": \"\", \"userLimmit\": 5, \"addressLine\": \"Addis Ababa\", \"companyName\": \"Heaven Perfume\", \"dateUpdated\": 1777075200000, \"logoCompany\": \"heaven_black_logo11.png\", \"branchLimmit\": 1, \"phoneNumber1\": \"0941691404\", \"phoneNumber2\": \"\", \"phoneNumber3\": \"\", \"emailAddress1\": \"yisakworku1501@gmail.com\", \"emailAddress2\": \"yisakworku1501@gmail.com\", \"subscriptionFee\": 9500.0}",
+            "sequenceNumber": "05",
+            "sourceKey": "LOCAL-d9975dfb-d33e-4dbe-a406-526cbdea26bd",
+            "sourceNode": "LOCAL",
+            "syncStatus": "PENDING"
+        },
+        {
+            "company": "1",
+            "createdAt": "2026-04-27T01:05:00Z[UTC]",
+            "entityId": "1",
+            "entityName": "CompanyTable",
+            "id": 1936,
+            "operation": "UPDATE",
+            "payload": "{\"id\": 1, \"city\": \"Adiss Abeba\", \"state\": \"Adiss Abeba\", \"region\": \"Bole\", \"country\": \"Ethiopia\", \"syncKey\": \"e3c68c27-2ce0-11f1-ba03-0068eb65e65a\", \"daysLeft\": 373, \"tinNumber\": \"\", \"userLimmit\": 5, \"addressLine\": \"Addis Ababa\", \"companyName\": \"Heaven Perfume\", \"dateUpdated\": 1777161600000, \"logoCompany\": \"heaven_black_logo11.png\", \"branchLimmit\": 1, \"phoneNumber1\": \"0941691404\", \"phoneNumber2\": \"\", \"phoneNumber3\": \"\", \"emailAddress1\": \"yisakworku1501@gmail.com\", \"emailAddress2\": \"yisakworku1501@gmail.com\", \"subscriptionFee\": 9500.0}",
+            "sequenceNumber": "05",
+            "sourceKey": "LOCAL-76673975-9cf7-4958-8e71-b474a2b23151",
+            "sourceNode": "LOCAL",
+            "syncStatus": "PENDING"
+        },
+        {
+            "company": "1",
+            "createdAt": "2026-04-24T08:38:06Z[UTC]",
+            "entityId": "1",
+            "entityName": "SystemConstant",
+            "id": 1908,
+            "operation": "UPDATE",
+            "payload": "{\"id\": 1, \"company\": 1, \"syncKey\": \"76b32d9a-2ce1-11f1-ba03-0068eb65e65a\", \"validCell\": false, \"applyLotMgm\": \"N\", \"currencyCode\": \"Birr\", \"decimalPlaces\": 2, \"autoSalesPrice\": \"N\", \"taxInfoDisplay\": \"Y\", \"dateLastUpdated\": 1777019885839, \"discountDisplay\": \"Y\", \"timeLastUpdated\": 1777019885839, \"applyLocationMgm\": \"Y\", \"withHoldInitials\": 34000.0, \"applyOverheadCost\": \"N\", \"interfaceCustomer\": \"N\", \"interfaceEmployee\": \"N\", \"rateVatPercentage\": 0.0, \"applyLotMgmBoolean\": false, \"attachedBranchOnly\": \"N\", \"expirationDateLeft\": 90, \"lotQtyAutoForSales\": \"Y\", \"posIntvalueBoolean\": false, \"reorderPointUomType\": \"I\", \"reviewSalesTodayOnly\": false, \"autoSalesPriceBoolean\": false, \"locationCategoryLevel\": 1, \"taxInfoDisplayBoolean\": true, \"discountDisplayBoolean\": true, \"generateBarcodeForItem\": \"Y\", \"applyLocationMgmBoolean\": true, \"applyOverheadCostBoolean\": false, \"interfaceCustomerBoolean\": false, \"interfaceEmployeeBoolean\": false, \"attachedBranchOnlyBoolean\": false, \"lotQtyAutoForSalesBoolean\": true, \"generateBarcodeForItemBoolean\": true}",
+            "sequenceNumber": "06",
+            "sourceKey": "LOCAL-1ae88d68-8113-44fe-8562-23b8684c9980",
+            "sourceNode": "LOCAL",
+            "syncStatus": "PENDING"
+        },
+        {
+            "company": "1",
+            "createdAt": "2026-04-27T07:01:40Z[UTC]",
+            "entityId": "1",
+            "entityName": "SystemConstant",
+            "id": 1951,
+            "operation": "UPDATE",
+            "payload": "{\"id\": 1, \"company\": 1, \"syncKey\": \"76b32d9a-2ce1-11f1-ba03-0068eb65e65a\", \"validCell\": false, \"applyLotMgm\": \"N\", \"currencyCode\": \"Birr\", \"decimalPlaces\": 2, \"autoSalesPrice\": \"N\", \"taxInfoDisplay\": \"Y\", \"dateLastUpdated\": 1777273300231, \"discountDisplay\": \"Y\", \"timeLastUpdated\": 1777273300231, \"applyLocationMgm\": \"Y\", \"withHoldInitials\": 4000.0, \"applyOverheadCost\": \"N\", \"interfaceCustomer\": \"N\", \"interfaceEmployee\": \"N\", \"rateVatPercentage\": 0.0, \"applyLotMgmBoolean\": false, \"attachedBranchOnly\": \"N\", \"expirationDateLeft\": 90, \"lotQtyAutoForSales\": \"Y\", \"posIntvalueBoolean\": false, \"reorderPointUomType\": \"I\", \"reviewSalesTodayOnly\": false, \"autoSalesPriceBoolean\": false, \"locationCategoryLevel\": 1, \"taxInfoDisplayBoolean\": true, \"discountDisplayBoolean\": true, \"generateBarcodeForItem\": \"Y\", \"applyLocationMgmBoolean\": true, \"applyOverheadCostBoolean\": false, \"interfaceCustomerBoolean\": false, \"interfaceEmployeeBoolean\": false, \"attachedBranchOnlyBoolean\": false, \"lotQtyAutoForSalesBoolean\": true, \"generateBarcodeForItemBoolean\": true}",
+            "sequenceNumber": "06",
+            "sourceKey": "LOCAL-3457a3fe-5841-4c21-9d4a-bc93f873b8d6",
+            "sourceNode": "LOCAL",
+            "syncStatus": "PENDING"
+        },
+        {
+            "company": "1",
+            "createdAt": "2026-04-27T07:08:38Z[UTC]",
+            "entityId": "1",
+            "entityName": "SystemConstant",
+            "id": 1952,
+            "operation": "UPDATE",
+            "payload": "{\"id\": 1, \"company\": 1, \"syncKey\": \"76b32d9a-2ce1-11f1-ba03-0068eb65e65a\", \"validCell\": false, \"applyLotMgm\": \"N\", \"currencyCode\": \"Birr\", \"decimalPlaces\": 2, \"autoSalesPrice\": \"N\", \"taxInfoDisplay\": \"Y\", \"dateLastUpdated\": 1777248000000, \"discountDisplay\": \"Y\", \"timeLastUpdated\": 1777273718477, \"applyLocationMgm\": \"Y\", \"withHoldInitials\": 4000.0, \"applyOverheadCost\": \"N\", \"interfaceCustomer\": \"N\", \"interfaceEmployee\": \"N\", \"rateVatPercentage\": 0.0, \"applyLotMgmBoolean\": false, \"attachedBranchOnly\": \"N\", \"expirationDateLeft\": 90, \"lotQtyAutoForSales\": \"Y\", \"posIntvalueBoolean\": false, \"rateWithPercentage\": 10.0, \"reorderPointUomType\": \"I\", \"reviewSalesTodayOnly\": false, \"autoSalesPriceBoolean\": false, \"locationCategoryLevel\": 1, \"taxInfoDisplayBoolean\": true, \"discountDisplayBoolean\": true, \"generateBarcodeForItem\": \"Y\", \"applyLocationMgmBoolean\": true, \"applyOverheadCostBoolean\": false, \"interfaceCustomerBoolean\": false, \"interfaceEmployeeBoolean\": false, \"attachedBranchOnlyBoolean\": false, \"lotQtyAutoForSalesBoolean\": true, \"generateBarcodeForItemBoolean\": true}",
+            "sequenceNumber": "06",
+            "sourceKey": "LOCAL-8ab260bb-6dfc-42b2-8037-a17d159be8d3",
+            "sourceNode": "LOCAL",
+            "syncStatus": "PENDING"
+        },
+        {
+            "company": "1",
+            "createdAt": "2026-04-27T08:37:14.072Z[UTC]",
+            "entityId": "1",
+            "entityName": "SystemConstant",
+            "id": 1959,
+            "operation": "UPDATE",
+            "payload": "{\"id\":1,\"applyLotMgm\":\"N\",\"reviewSalesTodayOnly\":false,\"applyLocationMgm\":\"Y\",\"interfaceCustomer\":\"N\",\"interfaceEmployee\":\"N\",\"generateBarcodeForItem\":\"Y\",\"discountDisplay\":\"Y\",\"taxInfoDisplay\":\"Y\",\"currencyCode\":\"Birr\",\"decimalPlaces\":2,\"expirationDateLeft\":90,\"locationCategoryLevel\":1,\"dateLastUpdated\":1777248000000,\"timeLastUpdated\":1777279034055,\"rateVatPercentage\":0.0,\"rateWithPercentage\":10.0,\"withHoldInitials\":32444.0,\"autoSalesPrice\":\"N\",\"lotQtyAutoForSales\":\"Y\",\"reorderPointUomType\":\"I\",\"applyOverheadCost\":\"N\",\"attachedBranchOnly\":\"N\",\"company\":1,\"syncKey\":\"76b32d9a-2ce1-11f1-ba03-0068eb65e65a\",\"applyLotMgmBoolean\":false,\"applyLocationMgmBoolean\":true,\"interfaceCustomerBoolean\":false,\"interfaceEmployeeBoolean\":false,\"generateBarcodeForItemBoolean\":true,\"autoSalesPriceBoolean\":false,\"lotQtyAutoForSalesBoolean\":true,\"discountDisplayBoolean\":true,\"taxInfoDisplayBoolean\":true,\"validCell\":false,\"posIntvalueBoolean\":false,\"applyOverheadCostBoolean\":false,\"attachedBranchOnlyBoolean\":false}",
+            "sequenceNumber": "06",
+            "sourceKey": "LOCAL-321fbc29-b88b-4303-84cb-51b54fbfb28b",
+            "sourceNode": "LOCAL",
+            "syncStatus": "PENDING"
+        }
+    ],
+    "status": "OK"
+}

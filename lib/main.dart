@@ -155,8 +155,9 @@ Future<void> _initializeAndRunApp() async {
       //await LocalDatabaseService().debugTable('other_expense_table');
       // await LocalDatabaseService().debugTable('next_number');
       await LocalDatabaseService().debugTable('sync_event');
-      await LocalDatabaseService().debugTable('sync_device_detail');
+      //await LocalDatabaseService().debugTable('sync_device_detail');
       // await LocalDatabaseService().debugTable('sync_node_status');
+      await LocalDatabaseService().debugTable('system_constant');
     }
   } catch (error, stackTrace) {
     if (kDebugMode) {

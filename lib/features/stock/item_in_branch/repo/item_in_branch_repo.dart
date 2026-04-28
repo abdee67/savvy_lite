@@ -36,29 +36,57 @@ class StockItemInBranchRepository extends BaseRepository {
 
     // Sync lot prices if unit price is present
     if (item.unitPrice != null && item.company != null) {
+      // Fetch affected lot_master rows first
+      final affectedLots = await db.query(
+        'lot_master',
+        where: 'item_number = ? AND branch = ? AND company = ?',
+        whereArgs: [item.itemNumber, item.branch, item.company],
+      );
+
       await db.update(
         'lot_master',
         {'unit_price': item.unitPrice},
         where: 'item_number = ? AND branch = ? AND company = ?',
         whereArgs: [item.itemNumber, item.branch, item.company],
       );
-      captureSync(
-        tableName: 'LotMaster',
-        entityMap: {'unit_price': item.unitPrice},
-        entityId: item.itemNumber.toString(),
-        operation: 'UPDATE',
-        company: item.company?.toString(),
-      );
+
+      for (final row in affectedLots) {
+        final payload = Map<String, dynamic>.from(row);
+        payload['unit_price'] = item.unitPrice;
+        captureSync(
+          tableName: 'lot_master',
+          entityMap: payload,
+          entityId: row['id'].toString(),
+          operation: 'UPDATE',
+          company: item.company?.toString(),
+        );
+      }
     }
 
+    // Fetch existing sync_key for items_in_branch
+    final existingRows = await db.query(
+      'items_in_branch',
+      columns: ['sync_key'],
+      where: 'id = ? AND company = ? AND branch = ?',
+      whereArgs: [item.id, item.company, item.branch],
+    );
+    final syncKey = existingRows.isNotEmpty ? existingRows.first['sync_key'] : null;
+
+    final payload = item.toMap();
     final result = await db.update(
       'items_in_branch',
-      item.toMap(),
+      payload,
       where: 'id = ? AND company = ? AND branch = ? ',
       whereArgs: [item.id, item.company, item.branch],
     );
+
+    if (syncKey != null) {
+      payload['sync_key'] = syncKey;
+    }
+
     captureSync(
-        tableName: 'items_in_branch',      entityMap: item.toMap(),
+      tableName: 'items_in_branch',
+      entityMap: payload,
       entityId: item.id.toString(),
       operation: 'UPDATE',
       company: item.company?.toString(),
@@ -343,6 +371,13 @@ class StockItemInBranchRepository extends BaseRepository {
       final itemNumber = itemBranch.first['item_number'] as int;
       final branch = itemBranch.first['branch'] as int;
 
+      // Fetch affected lots
+      final affectedLots = await db.query(
+        'lot_master',
+        where: 'item_number = ? AND branch = ? AND company = ?',
+        whereArgs: [itemNumber, branch, companyId],
+      );
+
       // Update lots for this item+branch
       await db.update(
         'lot_master',
@@ -350,14 +385,26 @@ class StockItemInBranchRepository extends BaseRepository {
         where: 'item_number = ? AND branch = ? AND company = ?',
         whereArgs: [itemNumber, branch, companyId],
       );
-      captureSync(
-        tableName: 'lot_master',
-        entityMap: {'unit_price': unitPrice},
-        entityId: itemNumber.toString(),
-        operation: 'UPDATE',
-        company: companyId.toString(),
-      );
+
+      for (final row in affectedLots) {
+        final payload = Map<String, dynamic>.from(row);
+        payload['unit_price'] = unitPrice;
+        captureSync(
+          tableName: 'lot_master',
+          entityMap: payload,
+          entityId: row['id'].toString(),
+          operation: 'UPDATE',
+          company: companyId.toString(),
+        );
+      }
     }
+
+    // Fetch existing sync_key
+    final existingRows = await db.query(
+      'items_in_branch',
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
+    );
 
     final result = await db.update(
       'items_in_branch',
@@ -365,35 +412,52 @@ class StockItemInBranchRepository extends BaseRepository {
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
-    captureSync(
-        tableName: 'items_in_branch',      entityMap: {'unit_price': unitPrice},
-      entityId: id.toString(),
-      operation: 'UPDATE',
-      company: companyId.toString(),
-    );
+
+    for (final row in existingRows) {
+      final payload = Map<String, dynamic>.from(row);
+      payload['unit_price'] = unitPrice;
+      captureSync(
+        tableName: 'items_in_branch',
+        entityMap: payload,
+        entityId: id.toString(),
+        operation: 'UPDATE',
+        company: companyId.toString(),
+      );
+    }
     return result;
   }
 
   // Update quantity on hand for item in branch
   Future<int> updateQuantity(int id, double quantity, int companyId) async {
     final db = await databaseService.database;
+
+    // Fetch existing
+    final existingRows = await db.query(
+      'items_in_branch',
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
+    );
+
     final result = await db.update(
       'items_in_branch',
       {
-        // Keep both on-hand and available quantities in sync so that
-        // UI (which reads quantity_available) reflects stock changes.
-        //  'quantity_on_hand': quantity,
         'quantity_available': quantity,
       },
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
-    captureSync(
-        tableName: 'items_in_branch',      entityMap: {'quantity_available': quantity},
-      entityId: id.toString(),
-      operation: 'UPDATE',
-      company: companyId.toString(),
-    );
+
+    for (final row in existingRows) {
+      final payload = Map<String, dynamic>.from(row);
+      payload['quantity_available'] = quantity;
+      captureSync(
+        tableName: 'items_in_branch',
+        entityMap: payload,
+        entityId: id.toString(),
+        operation: 'UPDATE',
+        company: companyId.toString(),
+      );
+    }
     return result;
   }
 
@@ -405,18 +469,33 @@ class StockItemInBranchRepository extends BaseRepository {
     int companyId,
   ) async {
     final db = await databaseService.database;
+
+    // Fetch existing
+    final existingRows = await db.query(
+      'items_in_branch',
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
+    );
+
     final result = await db.update(
       'items_in_branch',
       {'margin_type': marginType, 'margin_rate': marginRate},
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
-    captureSync(
-        tableName: 'items_in_branch',      entityMap: {'margin_type': marginType, 'margin_rate': marginRate},
-      entityId: id.toString(),
-      operation: 'UPDATE',
-      company: companyId.toString(),
-    );
+
+    for (final row in existingRows) {
+      final payload = Map<String, dynamic>.from(row);
+      payload['margin_type'] = marginType;
+      payload['margin_rate'] = marginRate;
+      captureSync(
+        tableName: 'items_in_branch',
+        entityMap: payload,
+        entityId: id.toString(),
+        operation: 'UPDATE',
+        company: companyId.toString(),
+      );
+    }
     return result;
   }
 
@@ -578,11 +657,33 @@ class StockItemInBranchRepository extends BaseRepository {
     final batch = db.batch();
 
     for (final item in items) {
-      batch.update(
+      // Fetch existing sync_key
+      final existingRows = await db.query(
         'items_in_branch',
-        item.toMap(),
+        columns: ['sync_key'],
         where: 'id = ? AND company = ?',
         whereArgs: [item.id, item.company],
+      );
+      final syncKey = existingRows.isNotEmpty ? existingRows.first['sync_key'] : null;
+
+      final payload = item.toMap();
+      batch.update(
+        'items_in_branch',
+        payload,
+        where: 'id = ? AND company = ?',
+        whereArgs: [item.id, item.company],
+      );
+
+      if (syncKey != null) {
+        payload['sync_key'] = syncKey;
+      }
+
+      captureSync(
+        tableName: 'items_in_branch',
+        entityMap: payload,
+        entityId: item.id.toString(),
+        operation: 'UPDATE',
+        company: item.company?.toString(),
       );
     }
 

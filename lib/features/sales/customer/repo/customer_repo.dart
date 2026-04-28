@@ -48,12 +48,13 @@ class CustomerRepository extends BaseRepository {
   Future<int> createCustomer(Customer customer) async {
     final db = await databaseService.database;
     final customerMap = customer.toMap();
-    customerMap.remove('id'); // Remove ID for new insertion
-    final id = await db.insert('customer_table', withSyncKey(customerMap));
-    customerMap['id'] = id;
+    customerMap.remove('id');
+    final payload = withSyncKey(customerMap);
+    final id = await db.insert('customer_table', payload);
+    payload['id'] = id;
     captureSync(
       tableName: 'customer_table',
-      entityMap: customerMap,
+      entityMap: payload,
       entityId: id.toString(),
       operation: 'INSERT',
       company: customer.company?.toString(),
@@ -64,15 +65,31 @@ class CustomerRepository extends BaseRepository {
   // Update existing customer
   Future<int> updateCustomer(Customer customer) async {
     final db = await databaseService.database;
-    final result = await db.update(
+
+    // Fetch existing sync_key before updating
+    final existingRows = await db.query(
       'customer_table',
-      customer.toMap(),
+      columns: ['sync_key'],
       where: 'id = ? AND company = ?',
       whereArgs: [customer.id, customer.company],
     );
+    final syncKey = existingRows.isNotEmpty ? existingRows.first['sync_key'] : null;
+
+    final payload = customer.toMap();
+    final result = await db.update(
+      'customer_table',
+      payload,
+      where: 'id = ? AND company = ?',
+      whereArgs: [customer.id, customer.company],
+    );
+
+    if (syncKey != null) {
+      payload['sync_key'] = syncKey;
+    }
+
     captureSync(
       tableName: 'customer_table',
-      entityMap: customer.toMap(),
+      entityMap: payload,
       entityId: customer.id.toString(),
       operation: 'UPDATE',
       company: customer.company?.toString(),
@@ -110,17 +127,31 @@ class CustomerRepository extends BaseRepository {
   // Batch delete multiple customers
   Future<void> deleteMultipleCustomers(List<int> ids, int companyId) async {
     final db = await databaseService.database;
-    final batch = db.batch();
+    final placeholders = List.filled(ids.length, '?').join(',');
+    final whereArgs = [...ids, companyId];
 
-    for (final id in ids) {
-      batch.delete(
-        'customer_table',
-        where: 'id = ? AND company = ?',
-        whereArgs: [id, companyId],
+    // Fetch full row data BEFORE deleting
+    final itemRows = await db.query(
+      'customer_table',
+      where: 'id IN ($placeholders) AND company = ?',
+      whereArgs: whereArgs,
+    );
+
+    await db.delete(
+      'customer_table',
+      where: 'id IN ($placeholders) AND company = ?',
+      whereArgs: whereArgs,
+    );
+
+    for (final row in itemRows) {
+      captureSync(
+        tableName: 'customer_table',
+        entityMap: row,
+        entityId: row['id'].toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
       );
     }
-
-    await batch.commit();
   }
 
   // Search customers by name

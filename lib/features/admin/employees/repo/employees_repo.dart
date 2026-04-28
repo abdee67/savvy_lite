@@ -28,15 +28,16 @@ class EmployeeRepository extends BaseRepository {
     final employeeMap = employee.toMap();
     employeeMap.remove('id');
     employeeMap['company'] = companyId;
-    
-    final id = await db.insert('employees', withSyncKey(employeeMap));
-    employeeMap['id'] = id;
+    final payload = withSyncKey(employeeMap);
+    final id = await db.insert('employees', payload);
+    payload['id'] = id;
+
     captureSync(
       tableName: 'employees',
-      entityMap: employeeMap,
+      entityMap: payload,
       entityId: id.toString(),
       operation: 'INSERT',
-      company: companyId.toString(),
+      company: payload['company'].toString(),
     );
     return id;
   }
@@ -44,15 +45,32 @@ class EmployeeRepository extends BaseRepository {
   // Update existing employee
   Future<int> updateEmployee(Employee employee, int companyId) async {
     final db = await databaseService.database;
-    final result = await db.update(
+
+    // Fetch existing sync_key before updating
+    final existingRows = await db.query(
       'employees',
-      employee.toMap(),
+      columns: ['sync_key'],
       where: 'id = ? AND company = ?',
       whereArgs: [employee.id, companyId],
     );
+    final syncKey = existingRows.isNotEmpty ? existingRows.first['sync_key'] : null;
+
+    final payload = employee.toMap();
+    final result = await db.update(
+      'employees',
+      payload,
+      where: 'id = ? AND company = ?',
+      whereArgs: [employee.id, companyId],
+    );
+
+    // Include the original sync_key in the captureSync payload
+    if (syncKey != null) {
+      payload['sync_key'] = syncKey;
+    }
+
     captureSync(
       tableName: 'employees',
-      entityMap: employee.toMap(),
+      entityMap: payload,
       entityId: employee.id.toString(),
       operation: 'UPDATE',
       company: companyId.toString(),
@@ -91,7 +109,10 @@ class EmployeeRepository extends BaseRepository {
   }
 
   // Delete multiple employees
-  Future<void> deleteMultipleEmployees(List<int> employeeIds, int companyId) async {
+  Future<void> deleteMultipleEmployees(
+    List<int> employeeIds,
+    int companyId,
+  ) async {
     final db = await databaseService.database;
     final placeholders = List.filled(employeeIds.length, '?').join(',');
     final whereArgs = [...employeeIds, companyId];
@@ -145,7 +166,7 @@ class EmployeeRepository extends BaseRepository {
         where: 'id = ? AND company = ?',
         whereArgs: [employeeId, companyId],
       );
-      
+
       if (results.isNotEmpty) {
         return Employee.fromMap(results.first);
       }
@@ -159,7 +180,8 @@ class EmployeeRepository extends BaseRepository {
   Future<List<Employee>> searchEmployees(String query, int companyId) async {
     try {
       final db = await databaseService.database;
-      final employees = await db.rawQuery('''
+      final employees = await db.rawQuery(
+        '''
         SELECT * FROM employees 
         WHERE company = ? 
         AND (
@@ -169,14 +191,10 @@ class EmployeeRepository extends BaseRepository {
           email LIKE ?
         )
         ORDER BY name_first ASC, name_last ASC
-      ''', [
-        companyId,
-        '%$query%',
-        '%$query%',
-        '%$query%',
-        '%$query%'
-      ]);
-      
+      ''',
+        [companyId, '%$query%', '%$query%', '%$query%', '%$query%'],
+      );
+
       return employees.map((p) => Employee.fromMap(p)).toList();
     } catch (e) {
       return [];
@@ -187,33 +205,44 @@ class EmployeeRepository extends BaseRepository {
   Future<void> batchInsertEmployees(List<Employee> employees) async {
     final db = await databaseService.database;
     final batch = db.batch();
-    
+
     for (final employee in employees) {
+      final payload = withSyncKey(employee.toMap());
       batch.insert(
         'employees',
-        employee.toMap(),
+        payload,
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
+      captureSync(
+        tableName: 'employees',
+        entityMap: payload,
+        entityId: employee.id.toString(),
+        operation: 'INSERT',
+        company: employee.company?.toString(),
+      );
     }
-    
+
     await batch.commit();
   }
 
   // Get employees by IDs
-  Future<List<Employee>> getEmployeesByIds(List<int> employeeIds, int companyId) async {
+  Future<List<Employee>> getEmployeesByIds(
+    List<int> employeeIds,
+    int companyId,
+  ) async {
     try {
       if (employeeIds.isEmpty) return [];
-      
+
       final db = await databaseService.database;
       final placeholders = List.filled(employeeIds.length, '?').join(',');
       final whereArgs = [...employeeIds, companyId];
-      
+
       final results = await db.query(
         'employees',
         where: 'id IN ($placeholders) AND company = ?',
         whereArgs: whereArgs,
       );
-      
+
       return results.map((p) => Employee.fromMap(p)).toList();
     } catch (e) {
       return [];

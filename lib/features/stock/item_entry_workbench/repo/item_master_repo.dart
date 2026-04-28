@@ -14,13 +14,15 @@ class ItemMasterRepository extends BaseRepository {
     final db = await databaseService.database;
     final itemMap = item.toMap();
     itemMap.remove('id');
-    final id = await db.insert('item_master', withSyncKey(itemMap));
-    itemMap['id'] = id;
+    final payload = withSyncKey(itemMap);
+    final id = await db.insert('item_master', payload);
+    payload['id'] = id;
     captureSync(
-        tableName: 'item_master',      entityMap: itemMap,
+      tableName: 'item_master',
+      entityMap: payload,
       entityId: id.toString(),
       operation: 'INSERT',
-      company: item.companyCategory?.toString(), // Use category as company id is not directly available, but it's okay for now
+      company: item.companyCategory?.toString(),
     );
     return id;
   }
@@ -28,14 +30,31 @@ class ItemMasterRepository extends BaseRepository {
   // Update existing item master
   Future<int> update(ItemMaster item) async {
     final db = await databaseService.database;
-    final result = await db.update(
+
+    // Fetch existing sync_key before updating
+    final existingRows = await db.query(
       'item_master',
-      item.toMap(),
+      columns: ['sync_key'],
       where: 'id = ?',
       whereArgs: [item.id],
     );
+    final syncKey = existingRows.isNotEmpty ? existingRows.first['sync_key'] : null;
+
+    final payload = item.toMap();
+    final result = await db.update(
+      'item_master',
+      payload,
+      where: 'id = ?',
+      whereArgs: [item.id],
+    );
+
+    if (syncKey != null) {
+      payload['sync_key'] = syncKey;
+    }
+
     captureSync(
-        tableName: 'item_master',      entityMap: item.toMap(),
+      tableName: 'item_master',
+      entityMap: payload,
       entityId: item.id.toString(),
       operation: 'UPDATE',
       company: item.companyCategory?.toString(),
@@ -66,13 +85,25 @@ class ItemMasterRepository extends BaseRepository {
   // Delete multiple item masters
   Future<void> deleteMultiple(List<int> ids) async {
     final db = await databaseService.database;
-    final batch = db.batch();
+    final placeholders = List.filled(ids.length, '?').join(',');
 
-    for (final id in ids) {
-      batch.delete('item_master', where: 'id = ?', whereArgs: [id]);
+    // Fetch full row data BEFORE deleting
+    final itemRows = await db.query(
+      'item_master',
+      where: 'id IN ($placeholders)',
+      whereArgs: ids,
+    );
+
+    await db.delete('item_master', where: 'id IN ($placeholders)', whereArgs: ids);
+
+    for (final row in itemRows) {
+      captureSync(
+        tableName: 'item_master',
+        entityMap: row,
+        entityId: row['id'].toString(),
+        operation: 'DELETE',
+      );
     }
-
-    await batch.commit();
   }
 
   // Find item master by ID
@@ -355,11 +386,33 @@ class ItemMasterRepository extends BaseRepository {
 
     for (final item in items) {
       if (item.id != null) {
-        batch.update(
+        // Fetch existing sync_key
+        final existingRows = await db.query(
           'item_master',
-          item.toMap(),
+          columns: ['sync_key'],
           where: 'id = ?',
           whereArgs: [item.id],
+        );
+        final syncKey = existingRows.isNotEmpty ? existingRows.first['sync_key'] : null;
+
+        final payload = item.toMap();
+        batch.update(
+          'item_master',
+          payload,
+          where: 'id = ?',
+          whereArgs: [item.id],
+        );
+
+        if (syncKey != null) {
+          payload['sync_key'] = syncKey;
+        }
+
+        captureSync(
+          tableName: 'item_master',
+          entityMap: payload,
+          entityId: item.id.toString(),
+          operation: 'UPDATE',
+          company: item.companyCategory?.toString(),
         );
       }
     }

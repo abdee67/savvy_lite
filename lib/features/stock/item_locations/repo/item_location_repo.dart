@@ -115,31 +115,49 @@ class ItemLocationsRepository extends BaseRepository {
   Future<int> createItemLocation(ItemLocation item, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
     final itemMap = item.toMap();
-    itemMap.remove('id'); // Remove ID for new insertion
-    final id = await db.insert('item_location', withSyncKey(itemMap));
-    itemMap['id'] = id;
+    itemMap.remove('id');
+    final payload = withSyncKey(itemMap);
+    final id = await db.insert('item_location', payload);
+    payload['id'] = id;
     captureSync(
       tableName: 'item_location',
-      entityMap: itemMap,
+      entityMap: payload,
       entityId: id.toString(),
       operation: 'INSERT',
       company: item.company?.toString(),
     );
     return id;
   }
+  
 
   // Update existing item location
   Future<int> updateItemLocation(ItemLocation item, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
-    final result = await db.update(
+
+    // Fetch existing sync_key before updating
+    final existingRows = await db.query(
       'item_location',
-      item.toMap(),
+      columns: ['sync_key'],
       where: 'id = ? AND company = ?',
       whereArgs: [item.id, item.company],
     );
+    final syncKey = existingRows.isNotEmpty ? existingRows.first['sync_key'] : null;
+
+    final payload = item.toMap();
+    final result = await db.update(
+      'item_location',
+      payload,
+      where: 'id = ? AND company = ?',
+      whereArgs: [item.id, item.company],
+    );
+
+    if (syncKey != null) {
+      payload['sync_key'] = syncKey;
+    }
+
     captureSync(
       tableName: 'item_location',
-      entityMap: item.toMap(),
+      entityMap: payload,
       entityId: item.id.toString(),
       operation: 'UPDATE',
       company: item.company?.toString(),
@@ -272,17 +290,31 @@ class ItemLocationsRepository extends BaseRepository {
     Transaction? txn,
   }) async {
     final db = txn ?? await databaseService.database;
-    final batch = db.batch();
+    final placeholders = List.filled(ids.length, '?').join(',');
+    final whereArgs = [...ids, companyId];
 
-    for (final id in ids) {
-      batch.delete(
-        'item_location',
-        where: 'id = ? AND company = ?',
-        whereArgs: [id, companyId],
+    // Fetch full row data BEFORE deleting
+    final itemRows = await db.query(
+      'item_location',
+      where: 'id IN ($placeholders) AND company = ?',
+      whereArgs: whereArgs,
+    );
+
+    await db.delete(
+      'item_location',
+      where: 'id IN ($placeholders) AND company = ?',
+      whereArgs: whereArgs,
+    );
+
+    for (final row in itemRows) {
+      captureSync(
+        tableName: 'item_location',
+        entityMap: row,
+        entityId: row['id'].toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
       );
     }
-
-    await batch.commit();
   }
 
   // Search item locations
@@ -373,19 +405,32 @@ class ItemLocationsRepository extends BaseRepository {
     required double quantity,
   }) async {
     final db = await databaseService.database;
+
+    // Fetch existing
+    final existingRows = await db.query(
+      'item_location',
+      where: 'id = ? AND company = ?',
+      whereArgs: [id, companyId],
+    );
+
     final result = await db.update(
       'item_location',
       {'quantity_on_hand': quantity},
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
-    captureSync(
-      tableName: 'item_location',
-      entityMap: {'quantity_on_hand': quantity},
-      entityId: id.toString(),
-      operation: 'UPDATE',
-      company: companyId.toString(),
-    );
+
+    for (final row in existingRows) {
+      final payload = Map<String, dynamic>.from(row);
+      payload['quantity_on_hand'] = quantity;
+      captureSync(
+        tableName: 'item_location',
+        entityMap: payload,
+        entityId: id.toString(),
+        operation: 'UPDATE',
+        company: companyId.toString(),
+      );
+    }
     return result;
   }
 
@@ -467,19 +512,31 @@ class ItemLocationsRepository extends BaseRepository {
     );
 
     // 3. Update items in branch
-    final result = await db.update(
+    // Fetch existing sync_key for items_in_branch
+    final existingIb = await db.query(
+      'items_in_branch',
+      where: 'company = ? AND item_number = ? AND branch = ?',
+      whereArgs: [companyId, location.itemNumber, location.branch],
+    );
+
+    await db.update(
       'items_in_branch',
       {'quantity_available': totalLocationQty},
       where: 'company = ? AND item_number = ? AND branch = ?',
       whereArgs: [companyId, location.itemNumber, location.branch],
     );
-    captureSync(
-      tableName: 'items_in_branch',
-      entityMap: {'quantity_available': totalLocationQty},
-      entityId: location.itemNumber.toString(),
-      operation: 'UPDATE',
-      company: companyId.toString(),
-    );
+
+    for (final row in existingIb) {
+      final payload = Map<String, dynamic>.from(row);
+      payload['quantity_available'] = totalLocationQty;
+      captureSync(
+        tableName: 'items_in_branch',
+        entityMap: payload,
+        entityId: row['id'].toString(),
+        operation: 'UPDATE',
+        company: companyId.toString(),
+      );
+    }
 
     // 4. Transaction creation will be handled by item_transaction_repo
     // to avoid circular dependency

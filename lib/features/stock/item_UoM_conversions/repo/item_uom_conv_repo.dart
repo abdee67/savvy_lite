@@ -157,33 +157,47 @@ class ItemUomConversionsRepository extends BaseRepository {
   Future<int> createItemUomConversion(ItemUomConversion item) async {
     final db = await databaseService.database;
     final itemMap = item.toMap();
-    itemMap.remove('id'); // Remove ID for new insertion
-    final result = await db.insert(
-      'item_uom_conversions',
-      withSyncKey(itemMap),
-    );
+    itemMap.remove('id');
+    final payload = withSyncKey(itemMap);
+    final id = await db.insert('item_uom_conversions', payload);
+    payload['id'] = id;
     captureSync(
       tableName: 'item_uom_conversions',
-      entityMap: itemMap,
-      entityId: result.toString(),
+      entityMap: payload,
+      entityId: id.toString(),
       operation: 'INSERT',
       company: item.company?.toString(),
     );
-    return result;
+    return id;
   }
 
-  // Update existing UoM conversion
   Future<int> updateItemUomConversion(ItemUomConversion item) async {
     final db = await databaseService.database;
-    final result = await db.update(
+
+    // Fetch existing sync_key before updating
+    final existingRows = await db.query(
       'item_uom_conversions',
-      item.toMap(),
+      columns: ['sync_key'],
       where: 'id = ? AND company = ?',
       whereArgs: [item.id, item.company],
     );
+    final syncKey = existingRows.isNotEmpty ? existingRows.first['sync_key'] : null;
+
+    final payload = item.toMap();
+    final result = await db.update(
+      'item_uom_conversions',
+      payload,
+      where: 'id = ? AND company = ?',
+      whereArgs: [item.id, item.company],
+    );
+
+    if (syncKey != null) {
+      payload['sync_key'] = syncKey;
+    }
+
     captureSync(
       tableName: 'item_uom_conversions',
-      entityMap: item.toMap(),
+      entityMap: payload,
       entityId: item.id.toString(),
       operation: 'UPDATE',
       company: item.company?.toString(),
@@ -799,13 +813,14 @@ class ItemUomConversionsRepository extends BaseRepository {
       for (final item in items) {
         final itemMap = item.toMap();
         itemMap.remove('id');
-        batch.insert('item_uom_conversions', itemMap);
+        final payload = withSyncKey(itemMap);
+        batch.insert('item_uom_conversions', payload);
         captureSync(
           tableName: 'item_uom_conversions',
-          entityMap: itemMap,
+          entityMap: payload,
           entityId: item.id.toString(),
           operation: 'INSERT',
-          company: item.company.toString(),
+          company: item.company?.toString(),
         );
       }
 
@@ -822,18 +837,33 @@ class ItemUomConversionsRepository extends BaseRepository {
 
     try {
       for (final item in items) {
-        batch.update(
+        // Fetch existing sync_key
+        final existingRows = await db.query(
           'item_uom_conversions',
-          item.toMap(),
+          columns: ['sync_key'],
           where: 'id = ? AND company = ?',
           whereArgs: [item.id, item.company],
         );
+        final syncKey = existingRows.isNotEmpty ? existingRows.first['sync_key'] : null;
+
+        final payload = item.toMap();
+        batch.update(
+          'item_uom_conversions',
+          payload,
+          where: 'id = ? AND company = ?',
+          whereArgs: [item.id, item.company],
+        );
+
+        if (syncKey != null) {
+          payload['sync_key'] = syncKey;
+        }
+
         captureSync(
           tableName: 'item_uom_conversions',
-          entityMap: item.toMap(),
+          entityMap: payload,
           entityId: item.id.toString(),
           operation: 'UPDATE',
-          company: item.company.toString(),
+          company: item.company?.toString(),
         );
       }
 
@@ -861,15 +891,16 @@ class ItemUomConversionsRepository extends BaseRepository {
           where: 'id = ? AND company = ?',
           whereArgs: [item.id, item.company],
         );
-        for (final row in itemRows) {
-          captureSync(
-            tableName: 'item_uom_conversions',
-            entityMap: row,
-            entityId: row['id'].toString(),
-            operation: 'DELETE',
-            company: item.company.toString(),
-          );
-        }
+      }
+
+      for (final row in itemRows) {
+        captureSync(
+          tableName: 'item_uom_conversions',
+          entityMap: row,
+          entityId: row['id'].toString(),
+          operation: 'DELETE',
+          company: items.first.company?.toString(),
+        );
       }
 
       await batch.commit(noResult: true);

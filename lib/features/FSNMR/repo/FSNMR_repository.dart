@@ -214,10 +214,12 @@ class FSNMRRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final ruleMap = rule.toMap();
     ruleMap.remove('id');
-    final id = await db.insert('fast_slow_nonmoving_rule_table', withSyncKey(ruleMap));
+    final payload = withSyncKey(ruleMap);
+    final id = await db.insert('fast_slow_nonmoving_rule_table', payload);
+    payload['id'] = id;
     captureSync(
       tableName: 'fast_slow_nonmoving_rule_table',
-      entityMap: ruleMap,
+      entityMap: payload,
       entityId: id.toString(),
       operation: 'INSERT',
       company: rule.company?.toString(),
@@ -225,18 +227,34 @@ class FSNMRRepository extends BaseRepository {
     return id;
   }
 
-  // Update existing rule
   Future<int> update(FastSlowNonMovingRule rule, {Transaction? txn}) async {
     final db = txn ?? await databaseService.database;
-    final result = await db.update(
+    // Fetch existing sync_key before updating
+    final existingRows = await db.query(
       'fast_slow_nonmoving_rule_table',
-      rule.toMap(),
+      columns: ['sync_key'],
       where: 'id = ? AND company = ?',
       whereArgs: [rule.id, rule.company],
     );
+    final syncKey = existingRows.isNotEmpty
+        ? existingRows.first['sync_key']
+        : null;
+
+    final payload = rule.toMap();
+    final result = await db.update(
+      'fast_slow_nonmoving_rule_table',
+      payload,
+      where: 'id = ? AND company = ?',
+      whereArgs: [rule.id, rule.company],
+    );
+
+    if (syncKey != null) {
+      payload['sync_key'] = syncKey;
+    }
+
     captureSync(
       tableName: 'fast_slow_nonmoving_rule_table',
-      entityMap: rule.toMap(),
+      entityMap: payload,
       entityId: rule.id.toString(),
       operation: 'UPDATE',
       company: rule.company?.toString(),
@@ -257,14 +275,14 @@ class FSNMRRepository extends BaseRepository {
       where: 'id = ? AND company = ?',
       whereArgs: [id, companyId],
     );
-    for(final row in existingRule){
-    captureSync(
-      tableName: 'fast_slow_nonmoving_rule_table',
-      entityMap: row,
-      entityId: row['id'].toString(),
-      operation: 'DELETE',
-      company: companyId.toString(),
-    );
+    for (final row in existingRule) {
+      captureSync(
+        tableName: 'fast_slow_nonmoving_rule_table',
+        entityMap: row,
+        entityId: row['id'].toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
+      );
     }
     return result;
   }
@@ -289,18 +307,16 @@ class FSNMRRepository extends BaseRepository {
         where: 'id = ? AND company = ?',
         whereArgs: [id, companyId],
       );
-      for(final row in existingRule){
-      captureSync(
-        tableName: 'fast_slow_nonmoving_rule_table',
-        entityMap: row,
-        entityId: row['id'].toString(),
-        operation: 'DELETE',
-        company: companyId.toString(),
-      );
+      for (final row in existingRule) {
+        captureSync(
+          tableName: 'fast_slow_nonmoving_rule_table',
+          entityMap: row,
+          entityId: row['id'].toString(),
+          operation: 'DELETE',
+          company: companyId.toString(),
+        );
+      }
     }
-    }
-
-    await batch.commit();
   }
 
   // Find rule by ID with full joins
@@ -506,15 +522,32 @@ class FSNMRRepository extends BaseRepository {
     final batch = db.batch();
 
     for (final rule in rules) {
-      batch.update(
+      // Fetch existing sync_key
+      final existingRows = await db.query(
         'fast_slow_nonmoving_rule_table',
-        rule.toMap(),
+        columns: ['sync_key'],
         where: 'id = ? AND company = ?',
         whereArgs: [rule.id, rule.company],
       );
+      final syncKey = existingRows.isNotEmpty
+          ? existingRows.first['sync_key']
+          : null;
+
+      final payload = rule.toMap();
+      batch.update(
+        'fast_slow_nonmoving_rule_table',
+        payload,
+        where: 'id = ? AND company = ?',
+        whereArgs: [rule.id, rule.company],
+      );
+
+      if (syncKey != null) {
+        payload['sync_key'] = syncKey;
+      }
+
       captureSync(
         tableName: 'fast_slow_nonmoving_rule_table',
-        entityMap: rule.toMap(),
+        entityMap: payload,
         entityId: rule.id.toString(),
         operation: 'UPDATE',
         company: rule.company?.toString(),

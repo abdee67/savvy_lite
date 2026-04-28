@@ -859,7 +859,7 @@ class DefaultDataSeeder extends BaseRepository {
     // Seed default system_url_config
     final urlPayload = withSyncKey({
       'config_key': 'server_url', // The key you use to lookup the target URL
-      'config_value': 'https://d412-102-218-51-141.ngrok-free.app/stock',
+      'config_value': 'https://techequations.com/stock',
       'environment': 'development',
       'active': 'Y',
       'company': '1',

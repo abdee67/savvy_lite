@@ -260,11 +260,13 @@ class ItemTransactionRepository extends BaseRepository {
       customer: customer ?? soD?.orderHeader?.customerBillTo,
     );
 
-    await db.insert('item_transactions', withSyncKey(transaction.toMap()));
+    final payload = withSyncKey(transaction.toMap());
+    final id = await db.insert('item_transactions', payload);
+    payload['id'] = id;
     captureSync(
       tableName: 'item_transactions',
-      entityMap: transaction.toMap(),
-      entityId: transaction.id.toString(),
+      entityMap: payload,
+      entityId: id.toString(),
       operation: 'INSERT',
       company: companyId.toString(),
     );
@@ -400,11 +402,13 @@ class ItemTransactionRepository extends BaseRepository {
           soD?.orderHeader?.customerBillTo,
     );
 
-    await db.insert('item_transactions', withSyncKey(transaction.toMap()));
+    final payload = withSyncKey(transaction.toMap());
+    final id = await db.insert('item_transactions', payload);
+    payload['id'] = id;
     captureSync(
       tableName: 'item_transactions',
-      entityMap: transaction.toMap(),
-      entityId: transaction.id.toString(),
+      entityMap: payload,
+      entityId: id.toString(),
       operation: 'INSERT',
       company: companyId.toString(),
     );
@@ -582,11 +586,13 @@ class ItemTransactionRepository extends BaseRepository {
     if (kDebugMode) {
       developer.log('DEBUG: Inserting transaction');
     }
-    await db.insert('item_transactions', withSyncKey(transaction.toMap()));
+    final payload = withSyncKey(transaction.toMap());
+    final id = await db.insert('item_transactions', payload);
+    payload['id'] = id;
     captureSync(
       tableName: 'item_transactions',
-      entityMap: transaction.toMap(),
-      entityId: transaction.id.toString(),
+      entityMap: payload,
+      entityId: id.toString(),
       operation: 'INSERT',
       company: companyId.toString(),
     );
@@ -748,10 +754,11 @@ class ItemTransactionRepository extends BaseRepository {
           companyId,
           explicitCode: transactionTypeCode,
         );
-        batch.insert('item_transactions', enriched.toMap());
+        final payload = withSyncKey(enriched.toMap());
+        batch.insert('item_transactions', payload);
         captureSync(
           tableName: 'item_transactions',
-          entityMap: enriched.toMap(),
+          entityMap: payload,
           entityId: enriched.id.toString(),
           operation: 'INSERT',
           company: companyId.toString(),

@@ -22,33 +22,20 @@ class SalesOrderHeaderRepository extends BaseRepository {
     final db = await _db;
     try {
       final headerMap = header.toMap();
-
-      // Log the data being inserted for debugging
-      if (kDebugMode) {
-        developer.log(
-          'DEBUG: Creating sales order header with data: $headerMap',
-        );
-      }
-
+      final payload = withSyncKey(headerMap);
       final id = await db.insert(
         'sales_order_header',
-        withSyncKey(headerMap),
+        payload,
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
-      headerMap['id'] = id;
+      payload['id'] = id;
       captureSync(
         tableName: 'sales_order_header',
-        entityMap: headerMap,
+        entityMap: payload,
         entityId: id.toString(),
         operation: 'INSERT',
         company: header.company?.toString(),
       );
-
-      if (kDebugMode) {
-        developer.log(
-          'DEBUG: Sales order header created successfully with ID: $id',
-        );
-      }
       return id;
     } catch (e, stackTrace) {
       if (kDebugMode) {
@@ -92,15 +79,30 @@ class SalesOrderHeaderRepository extends BaseRepository {
   Future<int> updateSalesOrderHeader(SalesOrderHeader header) async {
     final db = await _db;
     try {
-      final result = await db.update(
+      // Fetch existing sync_key
+      final existingRows = await db.query(
         'sales_order_header',
-        header.toMap(),
+        columns: ['sync_key'],
         where: 'id = ?',
         whereArgs: [header.id],
       );
+      final syncKey = existingRows.isNotEmpty ? existingRows.first['sync_key'] : null;
+
+      final payload = header.toMap();
+      final result = await db.update(
+        'sales_order_header',
+        payload,
+        where: 'id = ?',
+        whereArgs: [header.id],
+      );
+
+      if (syncKey != null) {
+        payload['sync_key'] = syncKey;
+      }
+
       captureSync(
         tableName: 'sales_order_header',
-        entityMap: header.toMap(),
+        entityMap: payload,
         entityId: header.id.toString(),
         operation: 'UPDATE',
         company: header.company?.toString(),
@@ -262,6 +264,14 @@ class SalesOrderHeaderRepository extends BaseRepository {
     String? commentIfVoid,
   }) async {
     final db = await _db;
+
+    // Fetch existing
+    final existingRows = await db.query(
+      'sales_order_header',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
     final result = await db.update(
       'sales_order_header',
       {
@@ -271,14 +281,17 @@ class SalesOrderHeaderRepository extends BaseRepository {
       where: 'id = ?',
       whereArgs: [id],
     );
-    final header = await getById(id);
-    if (header != null) {
+
+    for (final row in existingRows) {
+      final payload = Map<String, dynamic>.from(row);
+      payload['void_indicator'] = voidIndicator;
+      if (commentIfVoid != null) payload['comment_ifVoid'] = commentIfVoid;
       captureSync(
-             tableName: 'sales_order_header',
-        entityMap: header.toMap(),
+        tableName: 'sales_order_header',
+        entityMap: payload,
         entityId: id.toString(),
         operation: 'UPDATE',
-        company: header.company?.toString(),
+        company: row['company']?.toString(),
       );
     }
     return result;
@@ -730,13 +743,16 @@ class SalesOrderHeaderRepository extends BaseRepository {
   Future<int> create(SalesOrderHeader header) async {
     final db = await _db;
     try {
+      final headerMap = header.toMap();
+      final payload = withSyncKey(headerMap);
       final id = await db.insert(
         'sales_order_header',
-        withSyncKey(header.toMap()),
+        payload,
       );
+      payload['id'] = id;
       captureSync(
-             tableName: 'sales_order_header',
-        entityMap: header.toMap(),
+        tableName: 'sales_order_header',
+        entityMap: payload,
         entityId: id.toString(),
         operation: 'INSERT',
         company: header.company?.toString(),
@@ -760,15 +776,30 @@ class SalesOrderHeaderRepository extends BaseRepository {
   Future<int> update(SalesOrderHeader header) async {
     final db = await _db;
     try {
-      final result = await db.update(
+      // Fetch existing sync_key
+      final existingRows = await db.query(
         'sales_order_header',
-        header.toMap(),
+        columns: ['sync_key'],
         where: 'id = ?',
         whereArgs: [header.id],
       );
+      final syncKey = existingRows.isNotEmpty ? existingRows.first['sync_key'] : null;
+
+      final payload = header.toMap();
+      final result = await db.update(
+        'sales_order_header',
+        payload,
+        where: 'id = ?',
+        whereArgs: [header.id],
+      );
+
+      if (syncKey != null) {
+        payload['sync_key'] = syncKey;
+      }
+
       captureSync(
-             tableName: 'sales_order_header',
-        entityMap: header.toMap(),
+        tableName: 'sales_order_header',
+        entityMap: payload,
         entityId: header.id.toString(),
         operation: 'UPDATE',
         company: header.company?.toString(),

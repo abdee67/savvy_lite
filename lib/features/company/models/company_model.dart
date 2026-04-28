@@ -175,6 +175,54 @@ class Company extends Equatable {
     };
   }
 
+  /// Factory for deserializing Java server camelCase payload.
+  /// The server sends keys like `companyName`, `phoneNumber1`,
+  /// `dateUpdated` (epoch millis), `syncKey`, etc.
+  factory Company.fromServerMap(Map<String, dynamic> map) {
+    DateTime? parseEpoch(dynamic value) {
+      if (value == null) return null;
+      if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
+      if (value is String) {
+        final asInt = int.tryParse(value);
+        if (asInt != null) return DateTime.fromMillisecondsSinceEpoch(asInt);
+        try {
+          return DateTime.parse(value);
+        } catch (_) {}
+      }
+      return null;
+    }
+
+    return Company(
+      id: map['id'] as int?,
+      companyName: (map['companyName'] ?? '') as String,
+      tinNumber: map['tinNumber'] as String?,
+      phoneNumber1: map['phoneNumber1'] as String?,
+      phoneNumber2: map['phoneNumber2'] as String?,
+      phoneNumber3: map['phoneNumber3'] as String?,
+      emailAddress1: map['emailAddress1'] as String?,
+      emailAddress2: map['emailAddress2'] as String?,
+      city: map['city'] as String?,
+      region: map['region'] as String?,
+      state: map['state'] as String?,
+      country: map['country'] as String?,
+      addressLine: map['addressLine'] as String?,
+      logoCompany: map['logoCompany'] as String?,
+      subscriptionFee: (map['subscriptionFee'] as num?)?.toDouble(),
+      userLimmit: map['userLimmit'] as int?,
+      branchLimmit: map['branchLimmit'] as int?,
+      daysLeft: map['daysLeft'] as int?,
+      woreda: map['woreda'] as String?,
+      categoryCode: map['categoryCode'] as int?,
+      referredBySalespersonId: map['referredBySalespersonId'] as int?,
+      dateCreated: parseEpoch(map['dateCreated']),
+      dateUpdated: parseEpoch(map['dateUpdated']),
+      marginRate: (map['marginRate'] as num?)?.toDouble(),
+      marginType: map['marginType'] as String?,
+      reorderPoint: (map['reorderPoint'] as num?)?.toDouble(),
+      inventoryPlanner: map['inventoryPlanner'] as int?,
+    );
+  }
+
   Company copyWith({
     int? id,
     String? companyName,

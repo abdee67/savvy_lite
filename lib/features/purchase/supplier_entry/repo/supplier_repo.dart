@@ -72,11 +72,12 @@ class SupplierRepositoryImpl extends BaseRepository implements SupplierRepositor
       ..['date_created'] = DateTime.now().toIso8601String()
       ..['date_updated'] = DateTime.now().toIso8601String();
 
-    final id = await db.insert('supplier_table', withSyncKey(supplierMap));
-    supplierMap['id'] = id;
+    final payload = withSyncKey(supplierMap);
+    final id = await db.insert('supplier_table', payload);
+    payload['id'] = id;
     captureSync(
       tableName: 'supplier_table',
-      entityMap: supplierMap,
+      entityMap: payload,
       entityId: id.toString(),
       operation: 'INSERT',
       company: supplier.company?.toString(),
@@ -87,6 +88,16 @@ class SupplierRepositoryImpl extends BaseRepository implements SupplierRepositor
   @override
   Future<int> updateSupplier(SupplierModel supplier) async {
     final db = await databaseService.database;
+
+    // Fetch existing sync_key before updating
+    final existingRows = await db.query(
+      'supplier_table',
+      columns: ['sync_key'],
+      where: 'id = ? AND company = ?',
+      whereArgs: [supplier.id, supplier.company],
+    );
+    final syncKey = existingRows.isNotEmpty ? existingRows.first['sync_key'] : null;
+
     final supplierMap = supplier.toMap()
       ..['date_updated'] = DateTime.now().toIso8601String();
 
@@ -96,6 +107,11 @@ class SupplierRepositoryImpl extends BaseRepository implements SupplierRepositor
       where: 'id = ? AND company = ?',
       whereArgs: [supplier.id, supplier.company],
     );
+
+    if (syncKey != null) {
+      supplierMap['sync_key'] = syncKey;
+    }
+
     captureSync(
       tableName: 'supplier_table',
       entityMap: supplierMap,
@@ -135,12 +151,30 @@ class SupplierRepositoryImpl extends BaseRepository implements SupplierRepositor
   Future<void> deleteMultipleSuppliers(List<int> ids, int companyId) async {
     final db = await databaseService.database;
     final placeholders = List.filled(ids.length, '?').join(',');
+    final whereArgs = [...ids, companyId];
+
+    // Fetch full row data BEFORE deleting
+    final itemRows = await db.query(
+      'supplier_table',
+      where: 'id IN ($placeholders) AND company = ?',
+      whereArgs: whereArgs,
+    );
 
     await db.delete(
       'supplier_table',
       where: 'id IN ($placeholders) AND company = ?',
-      whereArgs: [...ids, companyId],
+      whereArgs: whereArgs,
     );
+
+    for (final row in itemRows) {
+      captureSync(
+        tableName: 'supplier_table',
+        entityMap: row,
+        entityId: row['id'].toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
+      );
+    }
   }
 
   @override
@@ -154,7 +188,16 @@ class SupplierRepositoryImpl extends BaseRepository implements SupplierRepositor
         ..['date_created'] = DateTime.now().toIso8601String()
         ..['date_updated'] = DateTime.now().toIso8601String();
 
-      batch.insert('supplier_table', supplierMap);
+      final payload = withSyncKey(supplierMap);
+      batch.insert('supplier_table', payload);
+
+      captureSync(
+        tableName: 'supplier_table',
+        entityMap: payload,
+        entityId: supplier.id.toString(),
+        operation: 'INSERT',
+        company: supplier.company?.toString(),
+      );
     }
 
     await batch.commit(noResult: true);
@@ -166,6 +209,15 @@ class SupplierRepositoryImpl extends BaseRepository implements SupplierRepositor
     final batch = db.batch();
 
     for (final supplier in suppliers) {
+      // Fetch existing sync_key
+      final existingRows = await db.query(
+        'supplier_table',
+        columns: ['sync_key'],
+        where: 'id = ? AND company = ?',
+        whereArgs: [supplier.id, supplier.company],
+      );
+      final syncKey = existingRows.isNotEmpty ? existingRows.first['sync_key'] : null;
+
       final supplierMap = supplier.toMap()
         ..['date_updated'] = DateTime.now().toIso8601String();
 
@@ -174,6 +226,18 @@ class SupplierRepositoryImpl extends BaseRepository implements SupplierRepositor
         supplierMap,
         where: 'id = ?',
         whereArgs: [supplier.id],
+      );
+
+      if (syncKey != null) {
+        supplierMap['sync_key'] = syncKey;
+      }
+
+      captureSync(
+        tableName: 'supplier_table',
+        entityMap: supplierMap,
+        entityId: supplier.id.toString(),
+        operation: 'UPDATE',
+        company: supplier.company?.toString(),
       );
     }
 

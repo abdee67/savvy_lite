@@ -112,12 +112,12 @@ class LocationMasterRepository extends BaseRepository {
     final db = txn ?? await databaseService.database;
     final locationMap = _prepareLocationMap(location, false, userId, companyId);
     locationMap.remove('id');
-
-    final id = await db.insert('location_master', withSyncKey(locationMap));
-
+    final payload = withSyncKey(locationMap);
+    final id = await db.insert('location_master', payload);
+    payload['id'] = id;
     captureSync(
       tableName: 'location_master',
-      entityMap: locationMap,
+      entityMap: payload,
       entityId: id.toString(),
       operation: 'INSERT',
       company: companyId.toString(),
@@ -134,6 +134,16 @@ class LocationMasterRepository extends BaseRepository {
     Transaction? txn,
   }) async {
     final db = txn ?? await databaseService.database;
+
+    // Fetch existing sync_key before updating
+    final existingRows = await db.query(
+      'location_master',
+      columns: ['sync_key'],
+      where: 'id = ? AND company = ?',
+      whereArgs: [location.id, companyId],
+    );
+    final syncKey = existingRows.isNotEmpty ? existingRows.first['sync_key'] : null;
+
     final locationMap = _prepareLocationMap(location, true, userId, companyId);
 
     final rowsAffected = await db.update(
@@ -144,6 +154,9 @@ class LocationMasterRepository extends BaseRepository {
     );
 
     if (rowsAffected > 0) {
+      if (syncKey != null) {
+        locationMap['sync_key'] = syncKey;
+      }
       captureSync(
         tableName: 'location_master',
         entityMap: locationMap,
@@ -240,31 +253,32 @@ class LocationMasterRepository extends BaseRepository {
         where: 'location = ? AND company = ?',
         whereArgs: [locationId, companyId],
       );
-      for (final row in itemRows) {
-        captureSync(
-          tableName: 'item_location',
-          entityMap: row,
-          entityId: row['id'].toString(),
-          operation: 'DELETE',
-          company: companyId.toString(),
-        );
+      // Delete the location
+      batch.delete(
+        'location_master',
+        where: 'id = ? AND company = ?',
+        whereArgs: [locationId, companyId],
+      );
+    }
 
-        // Delete the location
-        batch.delete(
-          'location_master',
-          where: 'id = ? AND company = ?',
-          whereArgs: [locationId, companyId],
-        );
-      }
-      for (final row in locationRows) {
-        captureSync(
-          tableName: 'location_master',
-          entityMap: row,
-          entityId: row['id'].toString(),
-          operation: 'DELETE',
-          company: companyId.toString(),
-        );
-      }
+    for (final row in itemRows) {
+      captureSync(
+        tableName: 'item_location',
+        entityMap: row,
+        entityId: row['id'].toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
+      );
+    }
+
+    for (final row in locationRows) {
+      captureSync(
+        tableName: 'location_master',
+        entityMap: row,
+        entityId: row['id'].toString(),
+        operation: 'DELETE',
+        company: companyId.toString(),
+      );
     }
 
     final results = await batch.commit();
@@ -362,10 +376,11 @@ class LocationMasterRepository extends BaseRepository {
           company: companyId,
         );
 
-        batch.insert('item_location', itemLocation.toMap());
+        final payload = withSyncKey(itemLocation.toMap());
+        batch.insert('item_location', payload);
         captureSync(
           tableName: 'item_location',
-          entityMap: itemLocation.toMap(),
+          entityMap: payload,
           entityId: itemLocation.id.toString(),
           operation: 'INSERT',
           company: companyId.toString(),
@@ -422,10 +437,11 @@ class LocationMasterRepository extends BaseRepository {
         company: companyId,
       );
 
-      batch.insert('item_location', itemLocation.toMap());
+      final payload = withSyncKey(itemLocation.toMap());
+      batch.insert('item_location', payload);
       captureSync(
         tableName: 'item_location',
-        entityMap: itemLocation.toMap(),
+        entityMap: payload,
         entityId: itemLocation.id.toString(),
         operation: 'INSERT',
         company: companyId.toString(),
@@ -653,10 +669,11 @@ class LocationMasterRepository extends BaseRepository {
         companyId,
       );
       locationMap.remove('id');
-      batch.insert('location_master', locationMap);
+      final payload = withSyncKey(locationMap);
+      batch.insert('location_master', payload);
       captureSync(
         tableName: 'location_master',
-        entityMap: locationMap,
+        entityMap: payload,
         entityId: location.id.toString(),
         operation: 'INSERT',
         company: companyId.toString(),
@@ -676,6 +693,15 @@ class LocationMasterRepository extends BaseRepository {
     final batch = db.batch();
 
     for (final location in locations) {
+      // Fetch existing sync_key
+      final existingRows = await db.query(
+        'location_master',
+        columns: ['sync_key'],
+        where: 'id = ? AND company = ?',
+        whereArgs: [location.id, companyId],
+      );
+      final syncKey = existingRows.isNotEmpty ? existingRows.first['sync_key'] : null;
+
       final locationMap = _prepareLocationMap(
         location,
         true,
@@ -687,6 +713,18 @@ class LocationMasterRepository extends BaseRepository {
         locationMap,
         where: 'id = ? AND company = ?',
         whereArgs: [location.id, companyId],
+      );
+
+      if (syncKey != null) {
+        locationMap['sync_key'] = syncKey;
+      }
+
+      captureSync(
+        tableName: 'location_master',
+        entityMap: locationMap,
+        entityId: location.id.toString(),
+        operation: 'UPDATE',
+        company: companyId.toString(),
       );
     }
 

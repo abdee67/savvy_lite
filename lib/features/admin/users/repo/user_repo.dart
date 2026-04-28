@@ -1,4 +1,3 @@
-
 import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
@@ -19,9 +18,7 @@ class UserRepository extends BaseRepository {
     final db = await databaseService.database;
     final users = await db.query('user_table');
 
-    return Future.wait(
-      users.map((u) => _getUserWithRoles(u, db)),
-    );
+    return Future.wait(users.map((u) => _getUserWithRoles(u, db)));
   }
 
   /// Check if a username already exists.
@@ -78,20 +75,21 @@ class UserRepository extends BaseRepository {
         )
         .toMap();
     userMap.remove('id');
+    final payload = withSyncKey(userMap);
 
-    final userId = await db.insert('user_table', withSyncKey(userMap));
+    final userId = await db.insert('user_table', payload);
 
     if (roles.isNotEmpty) {
       await _assignRoles(db, userId, roles, createdBy);
     }
 
-    userMap['id'] = userId;
+    payload['id'] = userId;
     captureSync(
       tableName: 'user_table',
-      entityMap: userMap,
+      entityMap: payload,
       entityId: userId.toString(),
       operation: 'INSERT',
-      company: companyId.toString(),
+      company: payload['company'].toString(),
     );
 
     return userId;
@@ -126,6 +124,17 @@ class UserRepository extends BaseRepository {
       );
     }
 
+    // Fetch existing sync_key before updating
+    final existingRows = await db.query(
+      'user_table',
+      columns: ['sync_key'],
+      where: 'id = ? AND company = ?',
+      whereArgs: [updatedUser.id, companyId],
+    );
+    final syncKey = existingRows.isNotEmpty
+        ? existingRows.first['sync_key']
+        : null;
+
     // Prepare map – strip password fields if not being changed
     final userMap = updatedUser.toMap();
     if (finalPassword == null || finalPassword.isEmpty) {
@@ -144,18 +153,22 @@ class UserRepository extends BaseRepository {
       throw Exception('Failed to update user – no rows affected');
     }
 
+    if (syncKey != null) {
+      userMap['sync_key'] = syncKey;
+    }
+
     // Update roles if provided
     if (roles.isNotEmpty) {
-      await _removeRoles(db, updatedUser.id!);
-      await _assignRoles(db, updatedUser.id!, roles, updatedBy);
+      await _removeRoles(db, updatedUser.id);
+      await _assignRoles(db, updatedUser.id, roles, updatedBy);
     }
 
     captureSync(
       tableName: 'user_table',
       entityMap: userMap,
-      entityId: updatedUser.id.toString(),
+      entityId: userMap['id'].toString(),
       operation: 'UPDATE',
-      company: companyId.toString(),
+      company: userMap['company'].toString(),
     );
 
     return result;
@@ -212,10 +225,7 @@ class UserRepository extends BaseRepository {
   }
 
   /// Delete multiple users by id.
-  Future<void> deleteMultipleUsers(
-    List<int> userIds,
-    int companyId,
-  ) async {
+  Future<void> deleteMultipleUsers(List<int> userIds, int companyId) async {
     final db = await databaseService.database;
     final placeholders = List.filled(userIds.length, '?').join(',');
     final whereArgs = [...userIds, companyId];
@@ -273,10 +283,19 @@ class UserRepository extends BaseRepository {
     final batch = db.batch();
 
     for (final user in users) {
+      final payload = withSyncKey(user.toMap());
+      payload.remove('id');
       batch.insert(
         'user_table',
-        user.toMap(),
+        payload,
         conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      captureSync(
+        tableName: 'user_table',
+        entityMap: payload,
+        entityId: user.id.toString(),
+        operation: 'INSERT',
+        company: user.company.toString(),
       );
     }
 
@@ -324,6 +343,7 @@ class UserRepository extends BaseRepository {
         entityMap: payload,
         entityId: id.toString(),
         operation: 'INSERT',
+        company: payload['company'].toString(),
       );
     }
   }
@@ -336,11 +356,7 @@ class UserRepository extends BaseRepository {
       whereArgs: [userId],
     );
 
-    await db.delete(
-      'user_role',
-      where: 'user_id = ?',
-      whereArgs: [userId],
-    );
+    await db.delete('user_role', where: 'user_id = ?', whereArgs: [userId]);
 
     // Capture sync with full row data
     for (final row in existingRows) {

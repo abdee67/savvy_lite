@@ -53,11 +53,13 @@ class LotExpirationColorsRepository extends BaseRepository {
     final colorMap = color.toMap();
     colorMap.remove('id');
     colorMap['company'] = companyId;
-
-    final id = await db.insert('lot_expiration_colors', withSyncKey(colorMap));
+    final payload = withSyncKey(colorMap);
+    final id = await db.insert('lot_expiration_colors', payload);
+    payload['id'] = id;
     
     captureSync(
-        tableName: 'lot_expiration_colors',      entityMap: colorMap,
+      tableName: 'lot_expiration_colors',
+      entityMap: payload,
       entityId: id.toString(),
       operation: 'INSERT',
       company: companyId.toString(),
@@ -72,16 +74,31 @@ class LotExpirationColorsRepository extends BaseRepository {
     int companyId,
   ) async {
     final db = await databaseService.database;
+
+    // Fetch existing sync_key before updating
+    final existingRows = await db.query(
+      'lot_expiration_colors',
+      columns: ['sync_key'],
+      where: 'id = ? AND company = ?',
+      whereArgs: [color.id, companyId],
+    );
+    final syncKey = existingRows.isNotEmpty ? existingRows.first['sync_key'] : null;
+
+    final payload = color.toMap();
     final rowsAffected = await db.update(
       'lot_expiration_colors',
-      color.toMap(),
+      payload,
       where: 'id = ? AND company = ?',
       whereArgs: [color.id, companyId],
     );
     
     if (rowsAffected > 0) {
+      if (syncKey != null) {
+        payload['sync_key'] = syncKey;
+      }
       captureSync(
-          tableName: 'lot_expiration_colors',        entityMap: color.toMap(),
+        tableName: 'lot_expiration_colors',
+        entityMap: payload,
         entityId: color.id.toString(),
         operation: 'UPDATE',
         company: companyId.toString(),
@@ -140,14 +157,16 @@ class LotExpirationColorsRepository extends BaseRepository {
         where: 'id = ? AND company = ?',
         whereArgs: [color.id, companyId],
       );
-      for (final row in colorRows) {
+    }
+
+    for (final row in colorRows) {
       captureSync(
-          tableName: 'lot_expiration_colors',        entityMap: row,
+        tableName: 'lot_expiration_colors',
+        entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',
         company: companyId.toString(),
       );
-      }
     }
 
     await batch.commit();

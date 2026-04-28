@@ -240,7 +240,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       // Inject credentials into SyncService for background pull cycles
       final syncService = getIt<SyncService>();
       syncService.setCredentials(username: user.userName!);
-      syncService.setAuthToken(token);
+      // Use a lightweight token for sync to avoid exceeding Apache's
+      // header size limit (the full token contains all privileges/roles).
+      final syncToken = _createSyncToken(user);
+      syncService.setAuthToken(syncToken);
 
       emit(
         AuthState(
@@ -412,7 +415,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         if (user.userName != null) {
           syncService.setCredentials(username: user.userName!);
         }
-        syncService.setAuthToken(token);
+        // Use a lightweight token for sync to avoid exceeding Apache's
+        // header size limit (the full token contains all privileges/roles).
+        final syncToken = _createSyncToken(user);
+        syncService.setAuthToken(syncToken);
 
         emit(
           AuthState(
@@ -574,6 +580,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       'jti': Random().nextInt(1000000), // Mock JWT ID
     };
 
+    return base64Url.encode(utf8.encode(json.encode(tokenData)));
+  }
+
+  /// Creates a minimal token for sync HTTP requests.
+  ///
+  /// The full [_createToken] embeds the entire user object, all privileges,
+  /// and all roles — which can easily exceed Apache's default 8 KB header
+  /// size limit (`LimitRequestFieldSize`). This lightweight variant only
+  /// includes the fields the server actually needs to authenticate the
+  /// sync request.
+  String _createSyncToken(UserModel user) {
+    final tokenData = {
+      'user_id': user.id,
+      'username': user.userName,
+      'company': user.company,
+      'auth_time': DateTime.now().millisecondsSinceEpoch,
+      'exp': DateTime.now()
+          .add(const Duration(hours: 2))
+          .millisecondsSinceEpoch,
+      'jti': Random().nextInt(1000000),
+    };
     return base64Url.encode(utf8.encode(json.encode(tokenData)));
   }
 
