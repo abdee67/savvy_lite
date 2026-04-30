@@ -17,6 +17,36 @@ import 'package:savvy_stock/core/services/sync/sync_receiver.dart';
 import 'package:savvy_stock/core/services/sync/sync_repository.dart';
 import 'package:savvy_stock/core/services/sync/sync_sender.dart';
 
+class _DbColumnInfo {
+  final String name;
+  final String type;
+
+  const _DbColumnInfo({required this.name, required this.type});
+
+  String get normalizedType => type.toUpperCase();
+  bool get isInteger => normalizedType.contains('INT');
+  bool get isReal =>
+      normalizedType.contains('REAL') ||
+      normalizedType.contains('FLOA') ||
+      normalizedType.contains('DOUB');
+  bool get isText =>
+      normalizedType.contains('CHAR') ||
+      normalizedType.contains('CLOB') ||
+      normalizedType.contains('TEXT');
+}
+
+class _OrderedSyncEvent {
+  final SyncEventModel event;
+  final int sequence;
+  final int originalIndex;
+
+  const _OrderedSyncEvent({
+    required this.event,
+    required this.sequence,
+    required this.originalIndex,
+  });
+}
+
 /// Core sync engine — Dart equivalent of Java SyncUtil1.
 ///
 /// Architecture improvements over Java version:
@@ -56,6 +86,8 @@ class SyncService {
 
   /// Batch size for processing events.
   static const int _batchSize = 500;
+
+  final Map<String, Map<String, _DbColumnInfo>> _tableSchemaCache = {};
 
   SyncService({
     required this.syncRepository,
@@ -299,14 +331,20 @@ class SyncService {
 
   /// Persist event and create SyncDeviceDetail rows for each target.
   /// When [txn] is provided, inserts use the same transaction for atomicity.
-  Future<void> _persistEventWithDetails(SyncEventModel event, {Transaction? txn}) async {
+  Future<void> _persistEventWithDetails(
+    SyncEventModel event, {
+    Transaction? txn,
+  }) async {
     if (txn != null) {
       // Use transaction directly for atomic operations
       final map = event.toMap();
       map.remove('id');
       final eventId = await txn.insert('sync_event', map);
 
-      final targets = await syncRepository.getTargetUrls(event.company, txn: txn);
+      final targets = await syncRepository.getTargetUrls(
+        event.company,
+        txn: txn,
+      );
       for (final target in targets) {
         final detailMap = SyncDeviceDetailModel(
           syncEvent: eventId,
@@ -756,6 +794,85 @@ class SyncService {
     }
   }
 
+  Future<List<SyncEventModel>> _orderReceivedEvents(
+    List<SyncEventModel> events,
+  ) async {
+    final ordered = <_OrderedSyncEvent>[];
+    final sequenceByEntity = <String, int?>{};
+
+    for (var i = 0; i < events.length; i++) {
+      final event = events[i];
+      var sequence = event.sequenceNumber;
+      if (sequence == null) {
+        if (sequenceByEntity.containsKey(event.entityName)) {
+          sequence = sequenceByEntity[event.entityName];
+        } else {
+          sequence = await resolveSequenceNumber(event.entityName);
+          sequenceByEntity[event.entityName] = sequence;
+        }
+      }
+      sequence ??= 1 << 30;
+
+      ordered.add(
+        _OrderedSyncEvent(event: event, sequence: sequence, originalIndex: i),
+      );
+    }
+
+    ordered.sort((a, b) {
+      final sequenceCompare = a.sequence.compareTo(b.sequence);
+      if (sequenceCompare != 0) return sequenceCompare;
+
+      final createdCompare = _compareCreatedAt(
+        a.event.createdAt,
+        b.event.createdAt,
+      );
+      if (createdCompare != 0) return createdCompare;
+
+      final idCompare = (a.event.id ?? 0).compareTo(b.event.id ?? 0);
+      if (idCompare != 0) return idCompare;
+
+      return a.originalIndex.compareTo(b.originalIndex);
+    });
+
+    return ordered.map((entry) => entry.event).toList();
+  }
+
+  int _compareCreatedAt(String? left, String? right) {
+    final leftDate = left == null ? null : DateTime.tryParse(left);
+    final rightDate = right == null ? null : DateTime.tryParse(right);
+
+    if (leftDate != null && rightDate != null) {
+      return leftDate.compareTo(rightDate);
+    }
+    if (leftDate != null) return -1;
+    if (rightDate != null) return 1;
+
+    return (left ?? '').compareTo(right ?? '');
+  }
+
+  String? _latestCreatedAt(List<SyncEventModel> events) {
+    DateTime? latestDate;
+    String? latestRaw;
+
+    for (final event in events) {
+      final raw = event.createdAt;
+      if (raw == null || raw.isEmpty) continue;
+
+      final parsed = DateTime.tryParse(raw);
+      if (parsed == null) {
+        latestRaw ??= raw;
+        continue;
+      }
+
+      if (latestDate == null || parsed.isAfter(latestDate)) {
+        latestDate = parsed;
+        latestRaw = raw;
+      }
+    }
+
+    return latestRaw;
+  }
+
   // ═══════════════════════════════════════════════════════════════════════
   //  PULL — Server → Local
   // ═══════════════════════════════════════════════════════════════════════
@@ -835,8 +952,9 @@ class SyncService {
 
         // Apply each new event and track successfully processed server IDs
         final List<String> acknowledgedIds = [];
+        final orderedEvents = await _orderReceivedEvents(newEvents);
 
-        for (final event in newEvents) {
+        for (final event in orderedEvents) {
           try {
             await _applyReceivedEvent(event);
 
@@ -874,7 +992,7 @@ class SyncService {
 
         // Update last sync time
         if (nodeId != null && newEvents.isNotEmpty) {
-          final latestTime = newEvents.last.createdAt;
+          final latestTime = _latestCreatedAt(newEvents);
           final company = target['company']?.toString() ?? '';
           await syncRepository.upsertNodeStatus(
             SyncNodeStatusModel(
@@ -897,40 +1015,172 @@ class SyncService {
 
   /// Convert a camelCase string to snake_case (fallback for unmapped entities).
   String _camelToSnake(String input) {
-    return input.replaceAllMapped(
-      RegExp(r'([a-z0-9])([A-Z])'),
-      (match) => '${match.group(1)}_${match.group(2)!.toLowerCase()}',
-    );
+    final normalized = input.trim().replaceAll('-', '_');
+    return normalized
+        .replaceAllMapped(
+          RegExp(r'([A-Z]+)([A-Z][a-z])'),
+          (match) => '${match.group(1)}_${match.group(2)}',
+        )
+        .replaceAllMapped(
+          RegExp(r'([a-z0-9])([A-Z])'),
+          (match) => '${match.group(1)}_${match.group(2)}',
+        )
+        .toLowerCase();
   }
 
-  /// Fallback: convert all keys from camelCase to snake_case.
-  Map<String, dynamic> _convertKeysToSnakeCase(Map<String, dynamic> input) {
+  /// Registry for complex entities that require strict model validation
+  /// or specialized mapping logic. Most of the 40+ tables do not need to be here.
+  static final Map<String, Map<String, dynamic> Function(Map<String, dynamic>)>
+  _payloadMappers = {
+    'SystemConstant': (data) =>
+        SystemConstant.fromServerMap(data).toDatabaseMap(),
+    'CompanyTable': (data) => Company.fromServerMap(data).toMap(),
+  };
+
+  bool _isSafeSqlIdentifier(String value) {
+    return RegExp(r'^[A-Za-z_][A-Za-z0-9_]*$').hasMatch(value);
+  }
+
+  Future<Map<String, _DbColumnInfo>> _getTableSchema(
+    Database db,
+    String tableName,
+  ) async {
+    final cached = _tableSchemaCache[tableName];
+    if (cached != null) return cached;
+
+    if (!_isSafeSqlIdentifier(tableName)) {
+      throw StateError('Unsafe table name received from sync: $tableName');
+    }
+
+    final rows = await db.rawQuery('PRAGMA table_info($tableName)');
+    if (rows.isEmpty) {
+      throw StateError(
+        'Unknown local table "$tableName" for received sync entity',
+      );
+    }
+
+    final schema = <String, _DbColumnInfo>{};
+    for (final row in rows) {
+      final columnName = row['name']?.toString();
+      if (columnName == null || columnName.isEmpty) continue;
+
+      schema[columnName] = _DbColumnInfo(
+        name: columnName,
+        type: row['type']?.toString() ?? '',
+      );
+    }
+
+    _tableSchemaCache[tableName] = schema;
+    return schema;
+  }
+
+  Map<String, dynamic> _normalizeServerPayloadKeys(
+    Map<String, dynamic> serverPayload,
+  ) {
     final result = <String, dynamic>{};
-    for (final entry in input.entries) {
+    for (final entry in serverPayload.entries) {
       result[_camelToSnake(entry.key)] = entry.value;
     }
     return result;
   }
 
-  /// Model-aware payload conversion.
-  /// For known entities, uses their fromServerMap → toDatabaseMap pipeline
-  /// for accurate key mapping and type conversion.
-  /// Falls back to generic camelCase→snake_case for unmapped entities.
-  Map<String, dynamic> _convertServerPayloadToDbMap(
-    String entityName,
-    Map<String, dynamic> serverPayload,
-  ) {
-    switch (entityName) {
-      case 'SystemConstant':
-        final model = SystemConstant.fromServerMap(serverPayload);
-        return model.toDatabaseMap();
-      case 'CompanyTable':
-        final model = Company.fromServerMap(serverPayload);
-        return model.toMap();
-      default:
-        // Fallback: generic camelCase→snake_case for entities without fromServerMap
-        return _convertKeysToSnakeCase(serverPayload);
+  dynamic _coerceValueForColumn(dynamic value, _DbColumnInfo column) {
+    if (value == null) return null;
+    if (value is bool) return value ? 1 : 0;
+
+    if (value is DateTime) {
+      return column.isInteger
+          ? value.millisecondsSinceEpoch
+          : value.toIso8601String();
     }
+
+    if (value is Map || value is List) {
+      return jsonEncode(value);
+    }
+
+    if (column.isInteger) {
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      if (value is String) {
+        final trimmed = value.trim();
+        if (trimmed.isEmpty) return null;
+        return int.tryParse(trimmed) ??
+            double.tryParse(trimmed)?.toInt() ??
+            DateTime.tryParse(trimmed)?.millisecondsSinceEpoch ??
+            value;
+      }
+    }
+
+    if (column.isReal) {
+      if (value is num) return value.toDouble();
+      if (value is String) {
+        final trimmed = value.trim();
+        if (trimmed.isEmpty) return null;
+        return double.tryParse(trimmed) ?? value;
+      }
+    }
+
+    if (column.isText && value is! String) {
+      return value.toString();
+    }
+
+    return value;
+  }
+
+  Map<String, dynamic> _filterAndCoercePayloadForTable({
+    required String tableName,
+    required Map<String, _DbColumnInfo> tableSchema,
+    required Map<String, dynamic> mappedPayload,
+  }) {
+    final result = <String, dynamic>{};
+    final ignoredFields = <String>[];
+
+    for (final entry in mappedPayload.entries) {
+      final exactColumn = tableSchema[entry.key];
+      final normalizedColumn = tableSchema[_camelToSnake(entry.key)];
+      final column = exactColumn ?? normalizedColumn;
+
+      if (column == null) {
+        ignoredFields.add(entry.key);
+        continue;
+      }
+
+      result[column.name] = _coerceValueForColumn(entry.value, column);
+    }
+
+    if (ignoredFields.isNotEmpty) {
+      developer.log(
+        'SyncService: Ignored ${ignoredFields.length} unknown field(s) '
+        'for $tableName: ${ignoredFields.take(8).join(', ')}',
+      );
+    }
+
+    return result;
+  }
+
+  /// Converts a server payload into a SQLite-ready row.
+  ///
+  /// Dart/Flutter cannot safely use Java-style runtime class reflection in
+  /// production builds, so this uses a small explicit mapper registry for
+  /// complex entities and cached SQLite schema metadata for every other table.
+  Future<Map<String, dynamic>> _convertServerPayloadToDbMap({
+    required Database db,
+    required String entityName,
+    required String tableName,
+    required Map<String, dynamic> serverPayload,
+    Map<String, _DbColumnInfo>? tableSchema,
+  }) async {
+    final mapper = _payloadMappers[entityName];
+    final mappedPayload = mapper != null
+        ? mapper(serverPayload)
+        : _normalizeServerPayloadKeys(serverPayload);
+    final schema = tableSchema ?? await _getTableSchema(db, tableName);
+
+    return _filterAndCoercePayloadForTable(
+      tableName: tableName,
+      tableSchema: schema,
+      mappedPayload: mappedPayload,
+    );
   }
 
   /// Apply a received sync event to the local database.
@@ -953,11 +1203,15 @@ class SyncService {
       // Map incoming PascalCase entity name back to local SQLite snake_case table
       final tableName = await resolveTableName(event.entityName);
       final operation = event.operation.toUpperCase();
+      final tableSchema = await _getTableSchema(db, tableName);
 
       // Convert payload using model-aware pipeline (or fallback)
-      final entityData = _convertServerPayloadToDbMap(
-        event.entityName,
-        rawPayload,
+      final entityData = await _convertServerPayloadToDbMap(
+        db: db,
+        entityName: event.entityName,
+        tableName: tableName,
+        serverPayload: rawPayload,
+        tableSchema: tableSchema,
       );
 
       // Extract sync_key — also check camelCase key from server payload
@@ -981,7 +1235,7 @@ class SyncService {
       // Wrap in transaction for atomicity
       await db.transaction((txn) async {
         List<Map<String, Object?>> existing = [];
-        if (syncKey != null) {
+        if (syncKey != null && tableSchema.containsKey('sync_key')) {
           existing = await txn.query(
             tableName,
             where: 'sync_key = ?',
@@ -990,10 +1244,41 @@ class SyncService {
           );
         }
 
+        // Fallback matching for singleton tables that may not have a local
+        // sync_key yet from older installs.
+        if (existing.isEmpty) {
+          if (tableName == 'company_table' && tableSchema.containsKey('id')) {
+            final remoteId = rawPayload['id'];
+            if (remoteId != null) {
+              existing = await txn.query(
+                tableName,
+                where: 'id = ?',
+                whereArgs: [remoteId],
+                limit: 1,
+              );
+            }
+          } else if (tableName == 'system_constant' &&
+              tableSchema.containsKey('company')) {
+            final companyId = entityData['company'] ?? rawPayload['company'];
+            if (companyId != null) {
+              existing = await txn.query(
+                tableName,
+                where: 'company = ?',
+                whereArgs: [companyId],
+                limit: 1,
+              );
+            }
+          }
+        }
+
         switch (operation) {
           case 'INSERT':
             if (existing.isEmpty) {
-              await txn.insert(tableName, entityData);
+              await txn.insert(
+                tableName,
+                entityData,
+                conflictAlgorithm: ConflictAlgorithm.replace,
+              );
               developer.log('📥 Applied INSERT on $tableName');
             } else {
               final localId = existing.first['id'];
@@ -1020,7 +1305,11 @@ class SyncService {
               );
               developer.log('📥 Applied UPDATE on $tableName');
             } else {
-              await txn.insert(tableName, entityData);
+              await txn.insert(
+                tableName,
+                entityData,
+                conflictAlgorithm: ConflictAlgorithm.replace,
+              );
               developer.log('📥 Applied UPDATE→INSERT on $tableName');
             }
             break;
@@ -1046,6 +1335,7 @@ class SyncService {
         '❌ SyncService: Error applying event '
         '${event.entityName}#${event.entityId}: $e',
       );
+      rethrow;
     }
   }
 

@@ -114,13 +114,13 @@ Future<void> _initializeAndRunApp() async {
     final syncService = getIt<SyncService>();
     await syncService.start();
 
-    if (AppConfig.isTestMode) {
-      developer.log('🚀 APP RUNNING IN TEST MODE');
-      developer.log('📱 API calls bypassed');
-      developer.log('💾 Using local database only');
-    }
+    // if (AppConfig.isTestMode) {
+    //   developer.log('🚀 APP RUNNING IN TEST MODE');
+    //   developer.log('📱 API calls bypassed');
+    //   developer.log('💾 Using local database only');
+    // }
     if (kDebugMode) {
-      //await LocalDatabaseService().resetDatabase();
+      // await LocalDatabaseService().resetDatabase();
       //await getIt<LicenseService>().clearLicense();
       //  // await LocalDatabaseService().debugTable('branch_table');
       //await LocalDatabaseService().debugTable('items_in_branch');
@@ -154,10 +154,11 @@ Future<void> _initializeAndRunApp() async {
       //await LocalDatabaseService().debugTable('role_privilege');
       //await LocalDatabaseService().debugTable('other_expense_table');
       // await LocalDatabaseService().debugTable('next_number');
-      await LocalDatabaseService().debugTable('sync_event');
+      //await LocalDatabaseService().debugTable('sync_event');
       //await LocalDatabaseService().debugTable('sync_device_detail');
       // await LocalDatabaseService().debugTable('sync_node_status');
       await LocalDatabaseService().debugTable('system_constant');
+      await LocalDatabaseService().debugTable('company_table');
     }
   } catch (error, stackTrace) {
     if (kDebugMode) {
