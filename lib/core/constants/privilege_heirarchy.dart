@@ -201,7 +201,25 @@ class PrivilegeHierarchy {
 
   /// Check if a privilege is a top-level dashboard
   static bool isDashboardPrivilege(String privilegeUri) {
-    return hierarchy[privilegeUri] == null;
+    return hierarchy.containsKey(privilegeUri) &&
+        hierarchy[privilegeUri] == null;
+  }
+
+  /// Check direct access, allowing dashboard access when the user has any
+  /// mapped child feature under that dashboard.
+  static bool hasDirectOrImpliedPrivilege(
+    List<String> userPrivileges,
+    String privilegeUri,
+  ) {
+    if (userPrivileges.contains(privilegeUri)) return true;
+    if (!isDashboardPrivilege(privilegeUri)) return false;
+
+    return userPrivileges.any((userPrivilege) {
+      if (!hierarchy.containsKey(userPrivilege)) return false;
+      return getRequiredPrivilegeHierarchy(
+        userPrivilege,
+      ).contains(privilegeUri);
+    });
   }
 
   /// Get the complete hierarchy required to access a privilege

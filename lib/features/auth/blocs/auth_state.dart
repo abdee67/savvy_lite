@@ -85,14 +85,17 @@ class AuthState extends Equatable {
       return userWithRole!.hasPrivilege(privilegeUri);
     }
     // Fallback to direct privileges list
-    return privileges.any((privilege) => privilege.uri == privilegeUri);
+    return PrivilegeHierarchy.hasDirectOrImpliedPrivilege(
+      privileges.map((privilege) => privilege.uri).toList(),
+      privilegeUri,
+    );
   }
 
   bool hasAnyPrivilege(List<String> privilegeUris) {
     if (userWithRole != null) {
       return userWithRole!.hasAnyPrivilege(privilegeUris);
     }
-    return privileges.any((privilege) => privilegeUris.contains(privilege.uri));
+    return privilegeUris.any(hasPrivilege);
   }
 
   bool hasRole(String roleName) {

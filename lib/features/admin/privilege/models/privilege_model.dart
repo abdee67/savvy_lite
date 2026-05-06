@@ -1,4 +1,5 @@
 import 'package:savvy_stock/core/constants/privilege_heirarchy.dart';
+import 'package:savvy_stock/core/constants/privilege_route_mapper.dart';
 
 class Privilege {
   final int id;
@@ -68,16 +69,21 @@ class Privilege {
       return false;
     }
 
+    final id = asInt(map['id']) ?? 0;
+    final rawUri = asString(map['link'] ?? map['button']);
+
     return Privilege(
-      id: asInt(map['id']) ?? 0,
+      id: id,
       name: asString(map['name']),
       description: asString(map['description']),
-      createdBy: asInt(map['created_by'])!,
-      dateCreated: parseDate(map['date_created'])!,
+      createdBy: asInt(map['created_by']),
+      dateCreated:
+          parseDate(map['date_created']) ??
+          DateTime.fromMillisecondsSinceEpoch(0),
       updatedBy: asInt(map['updated_by']),
       dateUpdated: parseDate(map['date_updated']),
       type: asString(map['type']),
-      uri: asString(map['link'] ?? map['button']),
+      uri: PrivilegeRouteMapper.toAppRoute(id: id, serverRoute: rawUri),
       linkLabel: asString(map['link_lable']),
       buttonLabel: asString(map['button_lable']),
       vendorOnly: asVendorOnly(map['vendor_only']),

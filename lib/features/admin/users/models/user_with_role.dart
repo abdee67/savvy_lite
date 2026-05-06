@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:savvy_stock/core/constants/privilege_heirarchy.dart';
 import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 import 'package:savvy_stock/features/admin/users/models/user_model.dart';
@@ -16,13 +17,14 @@ class UserWithRole extends Equatable {
       roles.expand((role) => role.privileges).toList();
 
   bool hasPrivilege(String privilegeUri) {
-    return allPrivileges.any((privilege) => privilege.uri == privilegeUri);
+    return PrivilegeHierarchy.hasDirectOrImpliedPrivilege(
+      allPrivileges.map((privilege) => privilege.uri).toList(),
+      privilegeUri,
+    );
   }
 
   bool hasAnyPrivilege(List<String> privilegeUris) {
-    return allPrivileges.any(
-      (privilege) => privilegeUris.contains(privilege.uri),
-    );
+    return privilegeUris.any(hasPrivilege);
   }
 
   bool hasRole(String roleName) {
