@@ -525,7 +525,7 @@ class _ItemTransactionsFormPageState extends State<ItemTransactionsFormPage> {
               BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
                 builder: (context, state) {
                   final transactionTypes = state.details
-                      .where((udc) => udc.udcGroup == 'TT')
+                      .where((udc) => udc.udcGroupRef!.udcCode == 'TT')
                       .toList();
 
                   return CustomDropdown<UdcDetails>(

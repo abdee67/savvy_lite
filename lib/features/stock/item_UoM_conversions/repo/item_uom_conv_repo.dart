@@ -137,10 +137,11 @@ class ItemUomConversionsRepository extends BaseRepository {
       }
 
       // Get UdcDetails for all unique IDs
+      //udc_group is null for all udc details in udc_detail so get it from udc header by reocrd_header since it is a foreing key in udc_details
       final placeholders = List.filled(uomIds.length, '?').join(',');
       final uomDetailsResult = await db.rawQuery('''
       SELECT * FROM udc_details 
-      WHERE id IN ($placeholders) AND udc_group = 'UM'
+      WHERE id IN ($placeholders) AND record_header = (SELECT id FROM udc_header WHERE udc_code = 'UM')
       ORDER BY description_1
       ''', uomIds);
 
@@ -181,7 +182,9 @@ class ItemUomConversionsRepository extends BaseRepository {
       where: 'id = ? AND company = ?',
       whereArgs: [item.id, item.company],
     );
-    final syncKey = existingRows.isNotEmpty ? existingRows.first['sync_key'] : null;
+    final syncKey = existingRows.isNotEmpty
+        ? existingRows.first['sync_key']
+        : null;
 
     final payload = item.toMap();
     final result = await db.update(
@@ -844,7 +847,9 @@ class ItemUomConversionsRepository extends BaseRepository {
           where: 'id = ? AND company = ?',
           whereArgs: [item.id, item.company],
         );
-        final syncKey = existingRows.isNotEmpty ? existingRows.first['sync_key'] : null;
+        final syncKey = existingRows.isNotEmpty
+            ? existingRows.first['sync_key']
+            : null;
 
         final payload = item.toMap();
         batch.update(

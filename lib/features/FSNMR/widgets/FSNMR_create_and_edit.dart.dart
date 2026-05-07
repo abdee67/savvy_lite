@@ -318,7 +318,7 @@ class _FSNMRCreateAndEditPageState extends State<FSNMRCreateAndEditPage> {
                 }
                 //only load 'FQ' group
                 final udcList = state.details
-                    .where((u) => u.udcGroup == 'FQ')
+                    .where((u) => u.udcGroupRef?.udcCode == 'FQ')
                     .toList();
                 if (udcList.isEmpty) {
                   return const Padding(
@@ -408,7 +408,7 @@ class _FSNMRCreateAndEditPageState extends State<FSNMRCreateAndEditPage> {
                 }
                 //only load 'UM' group
                 final udcList = state.details
-                    .where((u) => u.udcGroup == 'UM')
+                    .where((u) => u.udcGroupRef?.udcCode == 'UM')
                     .toList();
                 if (udcList.isEmpty) {
                   return const Padding(

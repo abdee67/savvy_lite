@@ -385,11 +385,16 @@ class RegistrationService extends BaseRepository {
         developer.log('Created next numbers: ${defaultNextNumbers.length}');
 
         // 9. Generate default SystemConstants
+
+        final defaultHeaderLotTypeId = await txn.rawQuery(
+          "SELECT id FROM udc_header WHERE udc_code = 'LT'",
+        );
+
         final List<Map<String, dynamic>> udcDetails = await txn.query(
           'udc_details',
           columns: ['id'],
-          where: "detail_code = ? AND udc_group = ?",
-          whereArgs: ['X', 'LT'],
+          where: "detail_code = ? AND record_header = ?",
+          whereArgs: ['X', defaultHeaderLotTypeId.first['id']],
         );
 
         int? lotTypeId;

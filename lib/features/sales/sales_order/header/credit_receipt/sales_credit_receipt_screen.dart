@@ -578,7 +578,7 @@ class _CreditReceiptScreenState extends State<CreditReceiptScreen> {
             BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
               builder: (context, udcState) {
                 final paymentInstruments = udcState.details
-                    .where((udc) => udc.udcGroup == 'PI')
+                    .where((udc) => udc.udcGroupRef?.udcCode == 'PI')
                     .toList();
 
                 return CustomDropdown<int>(

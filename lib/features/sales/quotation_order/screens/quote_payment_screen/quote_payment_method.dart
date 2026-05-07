@@ -184,7 +184,7 @@ class _PaymentMethodState extends State<PaymentMethod> {
                 BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
                   builder: (context, state) {
                     final paymentInstrument = state.details
-                        .where((udc) => udc.udcGroup == 'PI')
+                        .where((udc) => udc.udcGroupRef?.udcCode == 'PI')
                         .toList();
 
                     return CustomDropdown(

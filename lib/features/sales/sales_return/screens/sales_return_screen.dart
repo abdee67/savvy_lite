@@ -807,7 +807,7 @@ class _SalesReturnScreen extends State<SalesReturnScreen> {
             BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
               builder: (context, state) {
                 final returnReasons = state.details
-                    .where((udc) => udc.udcGroup == 'SR')
+                    .where((udc) => udc.udcGroupRef?.udcCode == 'SR')
                     .toList();
 
                 return CustomDropdown(

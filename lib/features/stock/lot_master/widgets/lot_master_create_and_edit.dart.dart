@@ -653,7 +653,7 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
             BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
               builder: (context, state) {
                 final uomItems = state.details
-                    .where((udc) => udc.udcGroup == 'UM')
+                    .where((udc) => udc.udcGroupRef?.udcCode == 'UM')
                     .toList();
 
                 return CustomDropdown(
@@ -813,7 +813,7 @@ class _LotMasterFormPageState extends State<LotMasterFormPage> {
             BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
               builder: (context, state) {
                 final lotStatusItems = state.details
-                    .where((udc) => udc.udcGroup == 'LS')
+                    .where((udc) => udc.udcGroupRef!.udcCode == 'LS')
                     .toList();
 
                 return CustomDropdown(

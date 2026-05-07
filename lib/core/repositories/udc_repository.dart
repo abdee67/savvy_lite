@@ -62,8 +62,14 @@ class UdcRepository extends BaseRepository {
       final db = txn ?? await databaseService.database;
       final result = await db.rawQuery(
         '''
-      SELECT * FROM udc_details 
-      WHERE id = ?
+      SELECT d.*, 
+             h.id as header_id,
+             h.udc_code as udc_code,
+             h.udc_description as udc_description,
+             h.sync_key as sync_key
+      FROM udc_details d
+      LEFT JOIN udc_header h ON d.record_header = h.id
+      WHERE d.id = ?
     ''',
         [id],
       );
@@ -85,10 +91,14 @@ class UdcRepository extends BaseRepository {
     try {
       final List<Map<String, dynamic>> maps = await db.rawQuery(
         '''
-        SELECT udc_details.* 
-        FROM udc_details 
-        INNER JOIN udc_header ON udc_details.record_header = udc_header.id 
-        WHERE udc_details.detail_code = ? AND udc_header.udc_code = ?
+        SELECT d.*, 
+               h.id as header_id,
+               h.udc_code as udc_code,
+               h.udc_description as udc_description,
+               h.sync_key as sync_key
+        FROM udc_details d 
+        INNER JOIN udc_header h ON d.record_header = h.id 
+        WHERE d.detail_code = ? AND h.udc_code = ?
         ''',
         [detailCode, headerCode],
       );
@@ -110,10 +120,14 @@ class UdcRepository extends BaseRepository {
     try {
       final List<Map<String, dynamic>> maps = await db.rawQuery(
         '''
-        SELECT udc_details.* 
-        FROM udc_details 
-        INNER JOIN udc_header ON udc_details.record_header = udc_header.id 
-        WHERE udc_details.detail_code = ? AND udc_header.udc_code = ?
+        SELECT d.*, 
+               h.id as header_id,
+               h.udc_code as udc_code,
+               h.udc_description as udc_description,
+               h.sync_key as sync_key
+        FROM udc_details d 
+        INNER JOIN udc_header h ON d.record_header = h.id 
+        WHERE d.detail_code = ? AND h.udc_code = ?
         ''',
         [detailCode, headerCode],
       );
@@ -166,10 +180,14 @@ class UdcRepository extends BaseRepository {
     try {
       final List<Map<String, dynamic>> maps = await db.rawQuery(
         '''
-        SELECT udc_details.* 
-        FROM udc_details 
-        INNER JOIN udc_header ON udc_details.record_header = udc_header.id 
-        WHERE udc_header.udc_code = ?
+        SELECT d.*, 
+               h.id as header_id,
+               h.udc_code as udc_code,
+               h.udc_description as udc_description,
+               h.sync_key as sync_key
+        FROM udc_details d 
+        INNER JOIN udc_header h ON d.record_header = h.id 
+        WHERE h.udc_code = ?
       ''',
         [headerCode],
       );
@@ -191,7 +209,6 @@ class UdcRepository extends BaseRepository {
       final map = detail.toDatabaseMap();
       // Ensure these are always set for UOM
       map['record_header'] = headerId;
-      map['udc_group'] = 'UM';
 
       if (detail.id == 0) {
         // If it's a new record

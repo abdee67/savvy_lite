@@ -1,3 +1,5 @@
+import 'package:savvy_stock/features/udc_detail/models/udc_header.dart';
+
 class UdcDetails {
   int id;
   String detailCode;
@@ -5,6 +7,7 @@ class UdcDetails {
   final String? description2;
   final int? recordHeader;
   final String? udcGroup;
+  final UdcHeader? udcGroupRef;
 
   UdcDetails({
     required this.id,
@@ -13,6 +16,7 @@ class UdcDetails {
     this.description2,
     this.recordHeader,
     this.udcGroup,
+    this.udcGroupRef,
   });
 
   factory UdcDetails.empty() {
@@ -25,15 +29,29 @@ class UdcDetails {
       udcGroup: '',
     );
   }
+  static int? asInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    if (v is String) return int.tryParse(v);
+    return null;
+  }
 
   factory UdcDetails.fromJson(Map<String, dynamic> json) {
     return UdcDetails(
-      id: json['id'],
-      detailCode: json['detail_code'],
-      description1: json['description_1'],
-      description2: json['description_2'],
-      recordHeader: json['record_header'],
-      udcGroup: json['udc_group'],
+      id: asInt(json['id']) ?? 0,
+      detailCode: json['detail_code']?.toString() ?? '',
+      description1: json['description_1']?.toString() ?? '',
+      description2: json['description_2']?.toString(),
+      recordHeader: asInt(json['record_header']),
+      udcGroup: json['udc_group']?.toString(),
+      udcGroupRef: json['record_header'] != null
+          ? UdcHeader(
+              id: asInt(json['record_header']),
+              udcCode: json['udc_code']?.toString() ?? '',
+              udcDescription: json['udc_description']?.toString() ?? '',
+              syncKey: json['sync_key']?.toString(),
+            )
+          : null,
     );
   }
 

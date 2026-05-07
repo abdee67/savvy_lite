@@ -1,20 +1,17 @@
 import 'package:bloc/bloc.dart';
-import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/auth/blocs/auth_bloc.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_event.dart';
 import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_state.dart';
-import 'package:savvy_stock/core/repositories/udc_repository.dart';
+import 'package:savvy_stock/features/udc_detail/repo/udc_detail_repo.dart';
 import 'package:savvy_stock/features/udc_detail/models/udc_details.dart';
 
 class UdcDetailsBloc extends Bloc<UdcDetailsEvent, UdcDetailsState> {
-  final LocalDatabaseService databaseService;
+  final UdcDetailRepo repository;
   final AuthBloc authBloc;
-  final UdcRepository udcRepository;
 
   UdcDetailsBloc({
-    required this.databaseService,
+    required this.repository,
     required this.authBloc,
-    required this.udcRepository,
   }) : super(const UdcDetailsState()) {
     on<LoadUdcDetailsByGroup>(_onLoadUdcDetailsByGroup);
     on<LoadAllUdcDetails>(_onLoadAllUdcDetails);
@@ -29,18 +26,9 @@ class UdcDetailsBloc extends Bloc<UdcDetailsEvent, UdcDetailsState> {
   ) async {
     emit(state.copyWith(status: UdcDetailsStatus.loading));
     try {
-      final db = await databaseService.database;
+      final details = await repository.findByGroup(event.groupCode);
 
-      final results = await db.rawQuery(
-        '''
-      SELECT d.* FROM udc_details d
-      INNER JOIN udc_header h ON d.record_header = h.id
-      WHERE h.udc_code = ?
-    ''',
-        [event.groupCode],
-      );
-
-      if (results.isEmpty) {
+      if (details.isEmpty) {
         emit(
           state.copyWith(
             status: UdcDetailsStatus.failure,
@@ -49,8 +37,6 @@ class UdcDetailsBloc extends Bloc<UdcDetailsEvent, UdcDetailsState> {
         );
         return;
       }
-
-      final details = results.map((r) => UdcDetails.fromJson(r)).toList();
 
       emit(
         state.copyWith(
@@ -76,10 +62,9 @@ class UdcDetailsBloc extends Bloc<UdcDetailsEvent, UdcDetailsState> {
   ) async {
     emit(state.copyWith(status: UdcDetailsStatus.loading));
     try {
-      final db = await databaseService.database;
-
-      final results = await db.query('udc_details');
-      if (results.isEmpty) {
+      final details = await repository.findAll();
+      
+      if (details.isEmpty) {
         emit(
           state.copyWith(
             status: UdcDetailsStatus.failure,
@@ -88,8 +73,6 @@ class UdcDetailsBloc extends Bloc<UdcDetailsEvent, UdcDetailsState> {
         );
         return;
       }
-
-      final details = results.map((r) => UdcDetails.fromJson(r)).toList();
 
       emit(
         state.copyWith(
@@ -120,9 +103,9 @@ class UdcDetailsBloc extends Bloc<UdcDetailsEvent, UdcDetailsState> {
       ),
     );
     try {
-      await udcRepository.saveUomEntry(event.detail);
+      await repository.create(event.detail);
 
-      // Invalidate list of items to trigger re-query (matching Java setEditItems(null))
+      // Invalidate list of items to trigger re-query
       if (state.groupCode != null) {
         add(LoadUdcDetailsByGroup(state.groupCode!));
       }
@@ -154,7 +137,7 @@ class UdcDetailsBloc extends Bloc<UdcDetailsEvent, UdcDetailsState> {
       ),
     );
     try {
-      await udcRepository.saveUomEntry(event.detail);
+      await repository.update(event.detail);
 
       if (state.groupCode != null) {
         add(LoadUdcDetailsByGroup(state.groupCode!));
@@ -189,27 +172,17 @@ class UdcDetailsBloc extends Bloc<UdcDetailsEvent, UdcDetailsState> {
       ),
     );
     try {
-      final db = await databaseService.database;
-      int deletedRows = 0;
-
-      // A transaction ensures atomicity: either all deletions succeed, or none do.
-      await db.transaction((txn) async {
-        // Building a WHERE IN clause with placeholders
-        final placeholders = List.filled(event.ids.length, '?').join(',');
-        deletedRows = await txn.delete(
-          'udc_details',
-          where: 'id IN ($placeholders)',
-          whereArgs: event.ids,
-        );
-      });
+      await repository.deleteMultiple(event.ids);
+      
       final remainingDetails = state.details
           .where((d) => !event.ids.contains(d.id))
           .toList();
+          
       emit(
         state.copyWith(
           status: UdcDetailsStatus.success,
           details: remainingDetails,
-          message: '$deletedRows UDC details deleted successfully',
+          message: '${event.ids.length} UDC details deleted successfully',
         ),
       );
     } catch (e) {
@@ -222,3 +195,4 @@ class UdcDetailsBloc extends Bloc<UdcDetailsEvent, UdcDetailsState> {
     }
   }
 }
+
