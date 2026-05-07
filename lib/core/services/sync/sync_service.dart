@@ -495,17 +495,22 @@ class SyncService {
 
         if (events.isEmpty) continue;
 
-        // Sort by ID to maintain operation order
-        events.sort((a, b) => (a.id ?? 0).compareTo(b.id ?? 0));
-
+        // Sort by sequence number and creation order to ensure dependency-safe pushing
+        final orderedEvents = await _orderEventsByDependency(events);
+ 
+        final sequenceSummary = orderedEvents
+            .map((e) => '${e.entityName}(${e.sequenceNumber ?? '?'})')
+            .join(' -> ');
+        developer.log('📤 SyncService: Pushing sequence to $targetUrl: $sequenceSummary');
+ 
         try {
-          final response = await _pushBatchWithFallback(targetUrl, events);
-          await _handleResponse(response, events, eventDetailMap);
+          final response = await _pushBatchWithFallback(targetUrl, orderedEvents);
+          await _handleResponse(response, orderedEvents, eventDetailMap);
         } catch (ex) {
           developer.log(
             '❌ SyncService: Push to $targetUrl failed completely: $ex',
           );
-          for (final event in events) {
+          for (final event in orderedEvents) {
             final detail = eventDetailMap[event.id];
             if (detail?.id != null) {
               await syncRepository.markDeviceDetailFailed(
@@ -700,9 +705,10 @@ class SyncService {
         return;
       }
 
+      final status = body['status']?.toString().toUpperCase();
       final savedItemNode = body['savedItem'] ?? body['saved_item'];
       if (savedItemNode is! List || savedItemNode.isEmpty) {
-        developer.log('ℹ️ SyncService: No event IDs found in response.');
+        developer.log('ℹ️ SyncService: No event IDs found in response. Server returned: $body');
         await _markRetryBulk(events, eventDetailMap, 'No IDs in response');
         return;
       }
@@ -793,8 +799,9 @@ class SyncService {
       }
     }
   }
+  
 
-  Future<List<SyncEventModel>> _orderReceivedEvents(
+  Future<List<SyncEventModel>> _orderEventsByDependency(
     List<SyncEventModel> events,
   ) async {
     final ordered = <_OrderedSyncEvent>[];
@@ -952,7 +959,7 @@ class SyncService {
 
         // Apply each new event and track successfully processed server IDs
         final List<String> acknowledgedIds = [];
-        final orderedEvents = await _orderReceivedEvents(newEvents);
+        final orderedEvents = await _orderEventsByDependency(newEvents);
 
         for (final event in orderedEvents) {
           try {
