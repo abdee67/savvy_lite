@@ -311,7 +311,6 @@ class AppRouter {
           parentPrivilege: AppRoutes.salesCustomerInfo,
           child: PaymentScreen(
             authBloc: authBloc,
-            orderData: state.extra as Map<String, dynamic>?,
           ),
         ),
         redirect: _protectedRouteRedirect,

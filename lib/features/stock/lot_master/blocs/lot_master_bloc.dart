@@ -924,8 +924,6 @@ class LotMasterBloc extends Bloc<LotMasterEvent, LotMasterState> {
       'lot_number': item.lotNumber,
       'lot_status': item.lotStatus,
       'supplier': item.batchNumberSupplier,
-      'customer': '',
-      'order_type': '',
       'unit_of_measure': uom,
       'before_store_quantity_available': item.quantityAvailable,
       'unit_cost': item.unitPrice,

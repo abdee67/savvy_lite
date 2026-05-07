@@ -15,6 +15,7 @@ import 'package:savvy_stock/features/sales/customer/widget/customer_section.dart
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
+import 'package:savvy_stock/features/sales/sales_order/sales_item_entry/screens/sales_item_entry.dart';
 
 class CustomerInfoScreen extends StatelessWidget {
   final AuthBloc authBloc;
@@ -626,22 +627,10 @@ class _CustomerInfoScreenContentState extends State<CustomerInfoScreenContent> {
       );
     }
 
-    if (context.read<AuthBloc>().state.hasAccessToPrivilege(
-      AppRoutes.salesItemEntry,
-    )) {
-      final customerData = {
-        'billToCustomer': _selectedBillToCustomer,
-        'shipToCustomer': _selectedShipToCustomer,
-        'currentHeader': context
-            .read<SalesOrderCoordinatorBloc>()
-            .state
-            .currentHeader,
-      };
-
-      context.push(AppRoutes.salesItemEntry, extra: customerData);
-    } else {
-      _showErrorSnackBar(context, 'No access to sales item entry');
-    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => ItemEntryScreen()),
+    );
   }
 
   void _showErrorSnackBar(BuildContext context, String message) {

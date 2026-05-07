@@ -19,12 +19,10 @@ import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_event.dart';
 
 class PaymentScreen extends StatefulWidget {
   final AuthBloc authBloc;
-  final Map<String, dynamic>? orderData;
 
   const PaymentScreen({
     super.key,
     required this.authBloc,
-    required this.orderData,
   });
 
   @override
@@ -52,14 +50,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     // Initialize payment data in coordinator
     final coordinatorBloc = context.read<SalesOrderCoordinatorBloc>();
-    final customer = widget.orderData?['customer'] as Customer?;
-    final orderDetails = widget.orderData?['orderDetails'] as List<dynamic>?;
-    final orderHeader = widget.orderData?['orderHeader'] as dynamic;
-    final totalAmount = widget.orderData?['totalAmount'] as double?;
-
-    if (customer != null) {
-      coordinatorBloc.add(SyncCustomerToOrder(customer: customer));
-    }
 
     // Initialize payment calculations
     if (kDebugMode) {
@@ -146,7 +136,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   ),
                 ),
                 // Lower Section - Order Summary
-                PaymentMethod(salesState: state, orderData: widget.orderData),
+                PaymentMethod(salesState: state),
               ],
             ),
           ),

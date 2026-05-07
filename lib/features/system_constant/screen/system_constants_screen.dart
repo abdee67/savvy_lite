@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:savvy_stock/features/FSNMR/screens/FSNMR_dashboard.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
 import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
@@ -140,7 +141,7 @@ class _SystemConstantsScreenState extends State<SystemConstantsScreen>
                   formKey: _formKey,
                   authBloc: widget.authBloc,
                 ),
-                const ReportSetupTab(),
+                FSNMRDashboard(authBloc: widget.authBloc),
               ],
             ),
           ),

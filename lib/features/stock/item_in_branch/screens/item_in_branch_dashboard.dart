@@ -14,6 +14,7 @@ import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_b
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_event.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_state.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/models/item_in_branch_model.dart';
+import 'package:savvy_stock/features/stock/item_in_branch/widgets/item_in_branch_create_and_edit.dart.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 
 class ItemInBranchDashboard extends StatefulWidget {
@@ -157,7 +158,17 @@ class _ItemInBranchDashboardState extends State<ItemInBranchDashboard>
   }
 
   void _navigateToEditScreen(ItemInBranchModel item) {
-    context.push(AppRoutes.editItemInBranch, extra: item);
+    // context.push(
+    //   AppRoutes.editItemInBranch,
+    //   extra: item,
+    // ); //we dont have a link (privilege) in server for editing stock/item_in_branch, so we use just normal routing
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            ItemInBranchFormPage(authBloc: widget.authBloc, item: item),
+      ),
+    );
   }
 
   void _safeDelete(BuildContext context, {int? index}) {

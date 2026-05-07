@@ -8,6 +8,7 @@ import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_event.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/bloc/purchase_order_state.dart';
 import 'package:savvy_stock/features/purchase/purchase_entry/models/purchase_order_detail_model.dart';
+import 'package:savvy_stock/features/purchase/purchase_entry/screens/purchase_payment/screens/payment_screen.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 
 class PurchaseItemEntryConfirmedItem extends StatefulWidget {
@@ -162,14 +163,24 @@ class _PurchaseItemEntryConfirmedItemState
 
   void _navigateToPayment(BuildContext context, PurchaseOrderState state) {
     final authState = context.read<AuthBloc>().state;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            PurchasePaymentScreen(orderData: state as Map<String, dynamic>),
+      ),
+    );
 
-    if (authState.hasAccessToPrivilege(AppRoutes.purchaseOrderPayment)) {
-      context.push(AppRoutes.purchaseOrderPayment);
+    /* if (authState.hasAccessToPrivilege(AppRoutes.purchaseOrderPayment)) {
+      context.push(AppRoutes.purchaseOrderPayment);//
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No access to payment screen')),
+        const SnackBar(
+          content: Text('No access to payment screen'),
+          backgroundColor: Colors.red,
+        ),
       );
-    }
+    }*/ ////we dont have a link (privilege) in server for editing stock/item_in_branch, so we use just normal routing
   }
 
   void _clearAllItems(BuildContext context) {

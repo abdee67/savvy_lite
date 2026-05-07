@@ -56,7 +56,7 @@ class DefaultDataSeeder extends BaseRepository {
 
     final urlPayload = withSyncKey({
       'config_key': 'server_url',
-      'config_value': 'https://techequations.com/stock',
+      'config_value': 'https://0c00-102-208-96-132.ngrok-free.app/stock',
       'environment': 'production',
       'active': 'Y',
       'company': '1',

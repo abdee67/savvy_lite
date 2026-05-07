@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:savvy_stock/features/FSNMR/screens/FSNMR_dashboard.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart';
@@ -283,8 +284,6 @@ class _HomePageState extends State<HomePage> {
                 onSelected: (value) {
                   if (value == 'System Constants') {
                     context.push(AppRoutes.systemConstants);
-                  } else if (value == 'FSNMR') {
-                    context.push(AppRoutes.fsnmrManagement);
                   } else if (value == 'License Detail') {
                     context.push(AppRoutes.licenseDetails);
                   } else if (value == 'Other Expenses') {

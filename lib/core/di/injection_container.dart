@@ -91,6 +91,7 @@ import 'package:savvy_stock/features/purchase/other_expenses/repo/other_expense_
 import 'package:savvy_stock/features/auth/services/password_reset_service.dart';
 import 'package:savvy_stock/features/auth/services/remote_auth_service.dart';
 import 'package:savvy_stock/features/auth/services/initial_data_sync_service.dart';
+import 'package:savvy_stock/features/udc_detail/repo/udc_detail_repo.dart';
 
 final getIt = GetIt.instance;
 
@@ -326,6 +327,9 @@ void initDependencies() {
       udcRepository: getIt(),
     ),
   );
+  getIt.registerLazySingleton<UdcDetailRepo>(
+    () => UdcDetailRepo(databaseService: getIt()),
+  );
   getIt.registerLazySingleton<PurchaseOrderStockService>(
     () => PurchaseOrderStockService(
       itemLocationsRepository: getIt(),
@@ -359,10 +363,7 @@ void initDependencies() {
     () => PasswordResetService(databaseService: getIt()),
   );
   getIt.registerLazySingleton<RemoteAuthService>(
-    () => RemoteAuthService(
-      httpClient: getIt(),
-      authRepository: getIt(),
-    ),
+    () => RemoteAuthService(httpClient: getIt(), authRepository: getIt()),
   );
   getIt.registerLazySingleton<InitialDataSyncService>(
     () => InitialDataSyncService(
@@ -450,11 +451,7 @@ void initDependencies() {
     () => ItemUomConversionBloc(repository: getIt(), authBloc: getIt()),
   );
   getIt.registerFactory<UdcDetailsBloc>(
-    () => UdcDetailsBloc(
-      databaseService: getIt(),
-      authBloc: getIt(),
-      udcRepository: getIt(),
-    ),
+    () => UdcDetailsBloc(repository: getIt(), authBloc: getIt()),
   );
   getIt.registerFactory<LocationMasterBloc>(
     () => LocationMasterBloc(

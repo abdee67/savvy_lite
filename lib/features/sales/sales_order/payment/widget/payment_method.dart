@@ -12,12 +12,10 @@ import 'package:savvy_stock/features/udc_detail/blocs/udc_detail_state.dart';
 
 class PaymentMethod extends StatefulWidget {
   final SalesOrderCoordinatorState salesState;
-  final dynamic orderData;
 
   const PaymentMethod({
     super.key,
     required this.salesState,
-    required this.orderData,
   });
 
   @override
@@ -310,7 +308,7 @@ class _PaymentMethodState extends State<PaymentMethod> {
             BlocBuilder<UdcDetailsBloc, UdcDetailsState>(
               builder: (context, udcState) {
                 final paymentInstruments = udcState.details
-                    .where((udc) => udc.udcGroup == 'PI')
+                    .where((udc) => udc.udcGroupRef!.udcCode == 'PI')
                     .toList();
 
                 return CustomDropdown<int>(

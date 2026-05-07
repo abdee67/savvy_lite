@@ -10,6 +10,7 @@ import 'package:savvy_stock/features/sales/sales_order/detail/model/sales_order_
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
+import 'package:savvy_stock/features/sales/sales_order/payment/screens/payment_screen.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_bloc.dart';
 import 'package:savvy_stock/features/stock/item_in_branch/blocs/item_in_branch_event.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
@@ -173,8 +174,13 @@ class _SalesItemEntryConfirmedItemState
       );
       return;
     }
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PaymentScreen(authBloc: context.read<AuthBloc>()),
+      ),
+    );
 
-    if (context.read<AuthBloc>().state.hasAccessToPrivilege(
+    /*  if (context.read<AuthBloc>().state.hasAccessToPrivilege(
       AppRoutes.paymentSummary,
     )) {
       context.push(
@@ -188,7 +194,7 @@ class _SalesItemEntryConfirmedItemState
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No access to payment summary')),
       );
-    }
+    }*/
   }
 
   double _calculateTotalAmount(List<SalesOrderDetail> details) {

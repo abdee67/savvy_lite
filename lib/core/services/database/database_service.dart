@@ -1811,7 +1811,7 @@ CREATE TABLE subscription_management (
   name TEXT CHECK (length(name) <= 20),
   description TEXT CHECK (length(description) <= 60),
   max_storage INTEGER,
-  popular TEXT CHECK (length(popular) <= 1),
+  popular TEXT CHECK (length(popular) <= 1) DEFAULT '0',
   features TEXT CHECK (length(features) <= 200),
   sync_key TEXT CHECK(length(sync_key) <= 36),
 

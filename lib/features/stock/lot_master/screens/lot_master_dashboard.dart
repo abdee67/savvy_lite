@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:savvy_stock/features/stock/lot_master/widgets/lot_master_create_and_edit.dart.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_event.dart';
 import 'package:savvy_stock/core/constants/app_routes.dart';
@@ -208,7 +209,13 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
     final companyId = context.read<AuthBloc>().state.companyId;
     if (companyId != null) {
       context.read<LotMasterBloc>().add(PrepareCreateLot(companyId));
-      context.push(AppRoutes.lotCreation).then((_) {
+      // context.push(AppRoutes.lotCreation)// we dont have a link (privilege) in server for editing stock/item_in_branch, so we use just normal routing
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => LotMasterFormPage(authBloc: widget.authBloc),
+        ),
+      ).then((_) {
         // Refresh on return
         context.read<LotMasterBloc>().add(
           RefreshLotMasters(widget.authBloc.state.companyId!),
@@ -226,7 +233,14 @@ class _LotMasterDashboardState extends State<LotMasterDashboard>
 
   void _navigateToEditScreen(LotMaster lot) {
     context.read<LotMasterBloc>().add(PrepareEditLot(lot));
-    context.push(AppRoutes.lotEdit, extra: lot).then((_) {
+    // context.push(AppRoutes.lotEdit, extra: lot)//.then((_) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            LotMasterFormPage(authBloc: widget.authBloc, lot: lot),
+      ),
+    ).then((_) {
       // Refresh on return
       context.read<LotMasterBloc>().add(
         RefreshLotMasters(widget.authBloc.state.companyId!),

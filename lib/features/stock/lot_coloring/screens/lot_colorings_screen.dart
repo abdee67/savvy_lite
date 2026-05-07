@@ -199,7 +199,15 @@ class _LotExpirationColorsDashboardState
         builder: (context) =>
             LotExpirationColorsFormPage(authBloc: widget.authBloc),
       ),
-    );
+    ).then((result) {
+      // Refresh the list when returning from form
+      if (result == true) {
+        context.read<LotExpirationColorsBloc>().add(
+          SearchLotExpirationColors(''),
+        );
+        _applyFilters();
+      }
+    });
   }
 
   void _navigateToEditScreen(LotExpirationColor color) {

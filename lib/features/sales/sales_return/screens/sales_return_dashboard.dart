@@ -9,6 +9,7 @@ import 'package:savvy_stock/features/sales/sales_return/bloc/sales_return_bloc.d
 import 'package:savvy_stock/features/sales/sales_return/bloc/sales_return_event.dart';
 import 'package:savvy_stock/features/sales/sales_return/bloc/sales_return_state.dart';
 import 'package:savvy_stock/features/sales/sales_return/models/void_sales_header.dart';
+import 'package:savvy_stock/features/sales/sales_return/screens/sales_return_screen.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
 
 class SalesReturnDashBoardPage extends StatefulWidget {
@@ -191,8 +192,8 @@ class _SalesReturnDashBoardPageState extends State<SalesReturnDashBoardPage>
         actions: [
           IconButton(
             icon: const Icon(Iconsax.filter),
-            onPressed: () => context.push(AppRoutes.salesReturnFilter),
-            tooltip: 'Reports Home',
+            onPressed: () => SalesReturnScreen(authBloc: widget.authBloc),
+            tooltip: 'Sales Return',
           ),
         ],
       ),

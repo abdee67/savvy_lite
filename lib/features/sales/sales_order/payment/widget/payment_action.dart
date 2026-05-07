@@ -5,6 +5,7 @@ import 'package:savvy_stock/core/constants/app_routes.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_bloc.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_event.dart';
 import 'package:savvy_stock/features/sales/sales_order/integration/bloc/sales_order_coordinator_state.dart';
+import 'package:savvy_stock/features/sales/sales_order/invoice/screens/invoice_review_screen.dart';
 
 class PaymentAction extends StatefulWidget {
   const PaymentAction({super.key});
@@ -35,7 +36,10 @@ class _PaymentActionState extends State<PaymentAction> {
       ),
     );*/
     // Listen for completion
-    context.push(AppRoutes.salesInvoice);
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const InvoiceReviewScreen()),
+    );
   }
 
   @override
