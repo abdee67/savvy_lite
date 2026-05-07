@@ -202,10 +202,6 @@ class UserModel extends Equatable {
       'salesperson': salesperson,
       'super_user': superUser,
       'table_number': tableNumber,
-      if (companyRef != null) ...{
-        'company_name': companyRef!.companyName,
-        'logo_company': companyRef!.logoCompany,
-      },
     };
   }
 

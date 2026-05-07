@@ -281,10 +281,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               labelText: 'Refrence id *',
               prefixIcon: const Icon(Iconsax.user_octagon),
               inputFormatters: [LengthLimitingTextInputFormatter(45)],
+              keyboardType: TextInputType.number,
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Please enter refrence id';
                 }
+
                 if (value.length > 45) {
                   return 'Reference ID must be 45 characters or less';
                 }
