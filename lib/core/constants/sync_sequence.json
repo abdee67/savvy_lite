@@ -4,19 +4,7 @@
         "sequence": 1
     },
     {
-        "entity": "SystemConfiguration",
-        "sequence": 1
-    },
-    {
-        "entity": "CommissionRule",
-        "sequence": 1
-    },
-    {
         "entity": "SubscriptionManagement",
-        "sequence": 2
-    },
-    {
-        "entity": "Salesperson",
         "sequence": 2
     },
     {
@@ -24,16 +12,8 @@
         "sequence": 3
     },
     {
-        "entity": "ItemMaster",
-        "sequence": 4
-    },
-    {
         "entity": "CompanyTable",
         "sequence": 5
-    },
-    {
-        "entity": "TaxRateArea",
-        "sequence": 6
     },
     {
         "entity": "BranchTable",
@@ -52,27 +32,7 @@
         "sequence": 6
     },
     {
-        "entity": "DraftExcelData",
-        "sequence": 6
-    },
-    {
-        "entity": "MorCredential",
-        "sequence": 6
-    },
-    {
-        "entity": "ReferenceDetailsTable",
-        "sequence": 6
-    },
-    {
-        "entity": "PaymentAttempts",
-        "sequence": 6
-    },
-    {
         "entity": "CompanySubscription",
-        "sequence": 6
-    },
-    {
-        "entity": "SubscriptionAddons",
         "sequence": 6
     },
     {
@@ -88,10 +48,6 @@
         "sequence": 6
     },
     {
-        "entity": "PasswordStrengthConfig",
-        "sequence": 6
-    },
-    {
         "entity": "FsTable",
         "sequence": 6
     },
@@ -100,28 +56,12 @@
         "sequence": 6
     },
     {
-        "entity": "NotificationTable",
-        "sequence": 6
-    },
-    {
-        "entity": "CreditLimitTable",
-        "sequence": 7
-    },
-    {
         "entity": "Employees",
         "sequence": 8
     },
     {
         "entity": "UserTable",
         "sequence": 9
-    },
-    {
-        "entity": "EmailAccounts",
-        "sequence": 10
-    },
-    {
-        "entity": "PasswordHistory",
-        "sequence": 10
     },
     {
         "entity": "RoleTable",
@@ -160,10 +100,6 @@
         "sequence": 18
     },
     {
-        "entity": "StdUomConversions",
-        "sequence": 18
-    },
-    {
         "entity": "ItemCostTable",
         "sequence": 18
     },
@@ -180,20 +116,12 @@
         "sequence": 21
     },
     {
-        "entity": "EmployeeAttachedStores",
-        "sequence": 22
-    },
-    {
         "entity": "OrderHeader",
         "sequence": 23
     },
     {
         "entity": "OrderDetails",
         "sequence": 24
-    },
-    {
-        "entity": "OrderLogs",
-        "sequence": 25
     },
     {
         "entity": "QuoteOrderHeader",
@@ -232,10 +160,6 @@
         "sequence": 34
     },
     {
-        "entity": "PoAdditionalCosts",
-        "sequence": 35
-    },
-    {
         "entity": "InvoiceHistoryHeader",
         "sequence": 36
     },
@@ -250,21 +174,5 @@
     {
         "entity": "CreditReceiptTable",
         "sequence": 38
-    },
-    {
-        "entity": "NotificationIdList",
-        "sequence": 39
-    },
-    {
-        "entity": "Commission",
-        "sequence": 40
-    },
-    {
-        "entity": "License",
-        "sequence": 41
-    },
-    {
-        "entity": "AuditLogsTable",
-        "sequence": 42
     }
 ]

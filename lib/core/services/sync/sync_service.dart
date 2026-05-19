@@ -74,6 +74,7 @@ class SyncService {
 
   /// Username for pull requests.
   String? _username;
+  int? _id;
 
   /// Periodic sync timer (1-minute interval).
   Timer? _syncTimer;
@@ -86,6 +87,77 @@ class SyncService {
 
   /// Batch size for processing events.
   static const int _batchSize = 500;
+
+  static const Map<String, String> _bootstrapFkMappings = {
+    'company': 'company_table',
+    'branch': 'branch_table',
+    'created_by': 'employees',
+    'updated_by': 'employees',
+    'user_id': 'user_table',
+    'ubpdated_by': 'user_table',
+    'employees_id': 'employees',
+    'salesperson': 'salespersons',
+    'item_number': 'items_table',
+    'unit_of_measure': 'udc_details',
+    'from_uom': 'udc_details',
+    'to_uom': 'udc_details',
+    'tax_rate_area': 'tax_rate_area',
+    'defualt_uom': 'udc_details',
+    'company_category': 'udc_details',
+    'category_code_01': 'udc_details',
+    'category_code_02': 'udc_details',
+    'category_code_03': 'udc_details',
+    'category_code_04': 'udc_details',
+    'category_code_05': 'udc_details',
+    'category_code_06': 'udc_details',
+    'category_code_07': 'udc_details',
+    'category_code_08': 'udc_details',
+    'category_code_09': 'udc_details',
+    'category_code_10': 'udc_details',
+    'location': 'location_master',
+    'lot_number': 'lot_master',
+    'lot_status': 'udc_details',
+    'lot_type': 'udc_details',
+    'color_type': 'udc_details',
+    'role_table_id': 'role_table',
+    'previlage_table_id': 'previlage_table',
+    'customer_bill_to': 'customer_table',
+    'customer_table_id': 'customer_table',
+    'customer': 'customer_table',
+    'sales_order_header_id': 'sales_order_header',
+    'sales_return_header_id': 'sales_return_header',
+    'items_table_id': 'items_table',
+    'item_in_branch': 'items_in_branch',
+    'item_branch': 'items_in_branch',
+    'item_location': 'item_location',
+    'branch_value': 'branch_table',
+    'branch_recieved': 'branch_table',
+    'supplier_id': 'supplier_table',
+    'supplier': 'supplier_table',
+    'po_header': 'purchase_order_header',
+    'po_detail': 'purchase_order_detail',
+    'payment_instrument': 'udc_details',
+    'payment_status': 'udc_details',
+    'payment_term': 'udc_details',
+    'po_receive_status': 'udc_details',
+    'order_type': 'udc_details',
+    'transaction_type': 'udc_details',
+    'transaction_number': 'udc_details',
+    'return_status': 'udc_details',
+    'return_reason': 'udc_details',
+    'prforma_status': 'udc_details',
+    'category_code': 'udc_details',
+    'so_header': 'sales_order_header',
+    'quote_order_header_id': 'quote_order_header',
+    'invoice_history': 'invoice_history_header',
+    'referred_by_salesperson_id': 'salespersons',
+    'inventory_planner': 'employees',
+    'company_id': 'company_table',
+    'subscription_id': 'subscription_management',
+    'record_header': 'udc_header',
+    'branch_id': 'branch_table',
+    'unit_of_meansure_default': 'udc_details',
+  };
 
   final Map<String, Map<String, _DbColumnInfo>> _tableSchemaCache = {};
 
@@ -106,11 +178,12 @@ class SyncService {
   /// 1. Recovers stale IN_PROGRESS events (crash recovery)
   /// 2. Starts the 1-minute periodic sync timer
   /// 3. Runs an initial sync after a short delay
-  Future<void> start({String? sourceNode, String? username}) async {
+  Future<void> start({String? sourceNode, String? username, int? id}) async {
     if (_running) return;
     _running = true;
-    _sourceNode = 'ANDROID';
     _username = username;
+    _sourceNode = 'ANDROID';
+    _id = id;
 
     developer.log('🔄 SyncService: Starting...');
 
@@ -220,8 +293,8 @@ class SyncService {
       _tableToEntityCache['role_privilege'] = 'RolePrevilage';
       _entityToTableCache['RolePrevilage'] = 'role_privilege';
 
-      _tableToEntityCache['privilege_table'] = 'PrevilageTable';
-      _entityToTableCache['PrevilageTable'] = 'privilege_table';
+      _tableToEntityCache['previlage_table'] = 'PrevilageTable';
+      _entityToTableCache['PrevilageTable'] = 'previlage_table';
 
       _tableToEntityCache['item_cost'] = 'ItemCostTable';
       _entityToTableCache['ItemCostTable'] = 'item_cost';
@@ -497,14 +570,19 @@ class SyncService {
 
         // Sort by sequence number and creation order to ensure dependency-safe pushing
         final orderedEvents = await _orderEventsByDependency(events);
- 
+
         final sequenceSummary = orderedEvents
             .map((e) => '${e.entityName}(${e.sequenceNumber ?? '?'})')
             .join(' -> ');
-        developer.log('📤 SyncService: Pushing sequence to $targetUrl: $sequenceSummary');
- 
+        developer.log(
+          '📤 SyncService: Pushing sequence to $targetUrl: $sequenceSummary',
+        );
+
         try {
-          final response = await _pushBatchWithFallback(targetUrl, orderedEvents);
+          final response = await _pushBatchWithFallback(
+            targetUrl,
+            orderedEvents,
+          );
           await _handleResponse(response, orderedEvents, eventDetailMap);
         } catch (ex) {
           developer.log(
@@ -591,7 +669,17 @@ class SyncService {
     required bool useCamelCase,
   }) {
     return jsonEncode(
-      events.map((e) => e.toServerMap(useCamelCase: useCamelCase)).toList(),
+      events.map((e) {
+        final serverMap = e.toServerMap(useCamelCase: useCamelCase);
+        // Convert the inner payload from snake_case DB keys to camelCase server keys
+        if (useCamelCase && serverMap.containsKey('payload')) {
+          serverMap['payload'] = _convertDbPayloadToServerPayload(
+            e.entityName,
+            e.payload,
+          );
+        }
+        return serverMap;
+      }).toList(),
     );
   }
 
@@ -615,7 +703,11 @@ class SyncService {
       });
 
       try {
-        final decodedPayload = jsonDecode(event.payload);
+        // Use converted payload (camelCase) for diagnostics — same as what gets pushed
+        final convertedPayload = useCamelCase
+            ? _convertDbPayloadToServerPayload(event.entityName, event.payload)
+            : event.payload;
+        final decodedPayload = jsonDecode(convertedPayload);
         if (decodedPayload is Map) {
           decodedPayload.forEach((key, value) {
             final keyString = key.toString();
@@ -705,10 +797,11 @@ class SyncService {
         return;
       }
 
-      final status = body['status']?.toString().toUpperCase();
       final savedItemNode = body['savedItem'] ?? body['saved_item'];
       if (savedItemNode is! List || savedItemNode.isEmpty) {
-        developer.log('ℹ️ SyncService: No event IDs found in response. Server returned: $body');
+        developer.log(
+          'ℹ️ SyncService: No event IDs found in response. Server returned: $body',
+        );
         await _markRetryBulk(events, eventDetailMap, 'No IDs in response');
         return;
       }
@@ -799,7 +892,6 @@ class SyncService {
       }
     }
   }
-  
 
   Future<List<SyncEventModel>> _orderEventsByDependency(
     List<SyncEventModel> events,
@@ -892,8 +984,8 @@ class SyncService {
   ///
   /// Conflict resolution: **last-write-wins** based on timestamp.
   Future<void> _pullFromServers() async {
-    if (_username == null) {
-      developer.log('🔄 SyncService: No username set — skipping pull');
+    if (_username == null && _id == null) {
+      developer.log('🔄 SyncService: No username and id set — skipping pull');
       return;
     }
 
@@ -905,115 +997,343 @@ class SyncService {
         return;
       }
 
-      final db = await databaseService.database;
-
       for (final target in targets) {
         final targetUrl = target['config_value'] as String? ?? '';
         if (targetUrl.isEmpty) continue;
 
         final nodeId = target['config_key'] as String?;
+        final company = target['company']?.toString();
 
-        // Pull events from server
         final deviceId = await _getMachineId();
-        final events = await syncReceiver.pullEvents(
-          targetUrl,
+        await _pullFromTargetUrl(
+          targetUrl: targetUrl,
+          nodeId: nodeId,
+          company: company,
           userName: _username ?? '',
           sourceAddress: deviceId,
+          id: _id,
         );
-
-        if (events.isEmpty) continue;
-
-        // Filter out already-synced events by checking source_id in local sync_event table.
-        // The server sends its own sync_event ID which we store as source_id locally.
-        // If source_id already exists, this event was already pulled — skip it.
-        final List<SyncEventModel> newEvents = [];
-        for (final event in events) {
-          final serverId = event.id?.toString();
-          if (serverId == null || serverId.isEmpty) {
-            newEvents.add(event);
-            continue;
-          }
-
-          final existing = await db.query(
-            'sync_event',
-            where: 'source_id = ?',
-            whereArgs: [serverId],
-            limit: 1,
-          );
-
-          if (existing.isEmpty) {
-            newEvents.add(event);
-          } else {
-            developer.log(
-              '⏭️ Skipping already-synced event source_id=$serverId',
-            );
-          }
-        }
-
-        if (newEvents.isEmpty) {
-          developer.log(
-            '🔄 SyncService: All events from $targetUrl already synced',
-          );
-          continue;
-        }
-
-        // Apply each new event and track successfully processed server IDs
-        final List<String> acknowledgedIds = [];
-        final orderedEvents = await _orderEventsByDependency(newEvents);
-
-        for (final event in orderedEvents) {
-          try {
-            await _applyReceivedEvent(event);
-
-            // Store the pulled event in local sync_event table with server ID as source_id
-            final localEvent = SyncEventModel(
-              entityName: event.entityName,
-              entityId: event.entityId,
-              operation: event.operation,
-              payload: event.payload,
-              sourceNode: event.sourceNode,
-              createdAt: event.createdAt,
-              company: event.company,
-              sourceKey: event.sourceKey,
-              sourceAddress: deviceId,
-              sourceId: event.id?.toString(), // Server's sync_event ID
-              syncStatus: SyncStatus.success,
-              sequenceNumber: event.sequenceNumber,
-            );
-            await db.insert('sync_event', localEvent.toMap());
-
-            if (event.id != null) {
-              acknowledgedIds.add(event.id.toString());
-            }
-          } catch (e) {
-            developer.log(
-              '❌ SyncService: Failed to apply event ${event.entityName}#${event.entityId}: $e',
-            );
-          }
-        }
-
-        // Acknowledge successfully received events to the server
-        if (acknowledgedIds.isNotEmpty) {
-          await syncReceiver.updateSyncEvent(targetUrl, acknowledgedIds);
-        }
-
-        // Update last sync time
-        if (nodeId != null && newEvents.isNotEmpty) {
-          final latestTime = _latestCreatedAt(newEvents);
-          final company = target['company']?.toString() ?? '';
-          await syncRepository.upsertNodeStatus(
-            SyncNodeStatusModel(
-              nodeId: nodeId,
-              company: company,
-              lastSeen: latestTime ?? DateTime.now().toIso8601String(),
-              sourceNode: _sourceNode,
-            ),
-          );
-        }
       }
     } catch (e) {
       developer.log('❌ SyncService: Pull error: $e');
     }
+  }
+
+  Future<int> _pullFromTargetUrl({
+    required String targetUrl,
+    required String userName,
+    required String sourceAddress,
+    int? id,
+    String? nodeId,
+    String? company,
+    bool throwOnError = false,
+  }) async {
+    final events = await syncReceiver.pullEvents(
+      targetUrl,
+      userName: userName,
+      sourceAddress: sourceAddress,
+      id: id,
+      throwOnError: throwOnError,
+    );
+
+    if (events.isEmpty) {
+      return 0;
+    }
+
+    final db = await databaseService.database;
+
+    // Filter out already-synced events by checking source_id in local sync_event table.
+    // The server sends its own sync_event ID which we store as source_id locally.
+    // If source_id already exists, this event was already pulled — skip it.
+    final List<SyncEventModel> newEvents = [];
+    for (final event in events) {
+      final serverId = event.id?.toString();
+      if (serverId == null || serverId.isEmpty) {
+        newEvents.add(event);
+        continue;
+      }
+
+      final existing = await db.query(
+        'sync_event',
+        where: 'source_id = ?',
+        whereArgs: [serverId],
+        limit: 1,
+      );
+
+      if (existing.isEmpty) {
+        newEvents.add(event);
+      } else {
+        developer.log('⏭️ Skipping already-synced event source_id=$serverId');
+      }
+    }
+
+    if (newEvents.isEmpty) {
+      developer.log(
+        '🔄 SyncService: All events from $targetUrl already synced',
+      );
+      return 0;
+    }
+
+    if ((id ?? 0) == 0) {
+      return _applyBootstrapPulledEvents(
+        targetUrl: targetUrl,
+        events: newEvents,
+        sourceAddress: sourceAddress,
+        nodeId: nodeId,
+        company: company,
+        throwOnError: throwOnError,
+      );
+    }
+
+    final List<String> acknowledgedIds = [];
+    final orderedEvents = await _orderEventsByDependency(newEvents);
+    var appliedCount = 0;
+    final shouldCheckOwnEvents = id != null && id > 0;
+
+    for (final event in orderedEvents) {
+      try {
+        await _applyReceivedEvent(
+          event,
+          skipOwnNodeCheck: shouldCheckOwnEvents,
+          localSourceAddress: sourceAddress,
+        );
+
+        final localEvent = SyncEventModel(
+          entityName: event.entityName,
+          entityId: event.entityId,
+          operation: event.operation,
+          payload: event.payload,
+          sourceNode: event.sourceNode,
+          createdAt: event.createdAt,
+          company: event.company,
+          sourceKey: event.sourceKey,
+          sourceAddress: event.sourceAddress ?? sourceAddress,
+          sourceId: event.id?.toString(),
+          syncStatus: SyncStatus.success,
+          sequenceNumber: event.sequenceNumber,
+        );
+        await db.insert('sync_event', localEvent.toMap());
+
+        if (event.id != null) {
+          acknowledgedIds.add(event.id.toString());
+        }
+        appliedCount++;
+      } catch (e) {
+        developer.log(
+          '❌ SyncService: Failed to apply event ${event.entityName}#${event.entityId}: $e',
+        );
+        if (throwOnError) {
+          rethrow;
+        }
+      }
+    }
+
+    if (acknowledgedIds.isNotEmpty) {
+      await syncReceiver.updateSyncEvent(targetUrl, acknowledgedIds);
+    }
+
+    if (nodeId != null && newEvents.isNotEmpty) {
+      final latestTime = _latestCreatedAt(newEvents);
+      await syncRepository.upsertNodeStatus(
+        SyncNodeStatusModel(
+          nodeId: nodeId,
+          company: company ?? '',
+          lastSeen: latestTime ?? DateTime.now().toIso8601String(),
+          sourceNode: _sourceNode,
+        ),
+      );
+    }
+
+    return appliedCount;
+  }
+
+  Future<int> _applyBootstrapPulledEvents({
+    required String targetUrl,
+    required List<SyncEventModel> events,
+    required String sourceAddress,
+    String? nodeId,
+    String? company,
+    bool throwOnError = false,
+  }) async {
+    final db = await databaseService.database;
+    final orderedEvents = await _orderEventsByDependency(events);
+    final idMap = <String, Map<int, int>>{};
+    final List<String> acknowledgedIds = [];
+    var appliedCount = 0;
+
+    for (final event in orderedEvents) {
+      try {
+        final rawPayload = jsonDecode(event.payload) as Map<String, dynamic>;
+        final tableName = await resolveTableName(event.entityName);
+        final operation = event.operation.toUpperCase();
+        final tableSchema = await _getTableSchema(db, tableName);
+        final remoteRecordId = _parseRemoteRecordId(
+          event,
+          rawPayload,
+          tableSchema,
+        );
+
+        final entityData = await _convertServerPayloadToDbMap(
+          db: db,
+          entityName: event.entityName,
+          tableName: tableName,
+          serverPayload: rawPayload,
+          tableSchema: tableSchema,
+        );
+
+        final syncKey =
+            entityData['sync_key']?.toString() ??
+            rawPayload['syncKey']?.toString();
+
+        if (syncKey != null) {
+          entityData['sync_key'] = syncKey;
+        }
+
+        entityData.remove('id');
+        _remapBootstrapForeignKeys(entityData, idMap);
+
+        developer.log(
+          '📥 Applying $operation on $tableName (syncKey=$syncKey, '
+          'entity=${event.entityName}, bootstrap=true)',
+        );
+
+        int? localId;
+
+        await db.transaction((txn) async {
+          List<Map<String, Object?>> existing = [];
+
+          if (syncKey != null && tableSchema.containsKey('sync_key')) {
+            existing = await txn.query(
+              tableName,
+              where: 'sync_key = ?',
+              whereArgs: [syncKey],
+              limit: 1,
+            );
+          }
+
+          if (existing.isEmpty &&
+              remoteRecordId != null &&
+              tableSchema.containsKey('id')) {
+            existing = await txn.query(
+              tableName,
+              where: 'id = ?',
+              whereArgs: [remoteRecordId],
+              limit: 1,
+            );
+          }
+
+          switch (operation) {
+            case 'INSERT':
+              if (existing.isEmpty) {
+                localId = await txn.insert(
+                  tableName,
+                  entityData,
+                  conflictAlgorithm: ConflictAlgorithm.replace,
+                );
+                developer.log('📥 Applied INSERT on $tableName');
+              } else {
+                localId = _coerceInt(existing.first['id']);
+                await txn.update(
+                  tableName,
+                  entityData,
+                  where: 'id = ?',
+                  whereArgs: [localId],
+                );
+                developer.log(
+                  '📥 Applied INSERT→UPDATE on $tableName (already existed)',
+                );
+              }
+              break;
+
+            case 'UPDATE':
+              if (existing.isNotEmpty) {
+                localId = _coerceInt(existing.first['id']);
+                await txn.update(
+                  tableName,
+                  entityData,
+                  where: 'id = ?',
+                  whereArgs: [localId],
+                );
+                developer.log('📥 Applied UPDATE on $tableName');
+              } else {
+                localId = await txn.insert(
+                  tableName,
+                  entityData,
+                  conflictAlgorithm: ConflictAlgorithm.replace,
+                );
+                developer.log('📥 Applied UPDATE→INSERT on $tableName');
+              }
+              break;
+
+            case 'DELETE':
+              if (existing.isNotEmpty) {
+                localId = _coerceInt(existing.first['id']);
+                await txn.delete(
+                  tableName,
+                  where: 'id = ?',
+                  whereArgs: [localId],
+                );
+                developer.log('📥 Applied DELETE on $tableName');
+              }
+              break;
+
+            default:
+              developer.log('⚠️ Unknown operation: $operation');
+          }
+        });
+
+        if (remoteRecordId != null && localId != null) {
+          idMap.putIfAbsent(tableName, () => {})[remoteRecordId] = localId!;
+        }
+
+        final localEvent = SyncEventModel(
+          entityName: event.entityName,
+          entityId: event.entityId,
+          operation: event.operation,
+          payload: event.payload,
+          sourceNode: event.sourceNode,
+          createdAt: event.createdAt,
+          company: event.company,
+          sourceKey: event.sourceKey,
+          sourceAddress: event.sourceAddress ?? sourceAddress,
+          sourceId: event.id?.toString(),
+          syncStatus: SyncStatus.success,
+          sequenceNumber: event.sequenceNumber,
+        );
+        await db.insert('sync_event', localEvent.toMap());
+
+        if (event.id != null) {
+          acknowledgedIds.add(event.id.toString());
+        }
+        appliedCount++;
+      } catch (e) {
+        developer.log(
+          '❌ SyncService: Failed bootstrap apply for '
+          '${event.entityName}#${event.entityId}: $e',
+        );
+        if (throwOnError) {
+          rethrow;
+        }
+      }
+    }
+
+    if (acknowledgedIds.isNotEmpty) {
+      await syncReceiver.updateSyncEvent(targetUrl, acknowledgedIds);
+    }
+
+    if (nodeId != null && events.isNotEmpty) {
+      final latestTime = _latestCreatedAt(events);
+      await syncRepository.upsertNodeStatus(
+        SyncNodeStatusModel(
+          nodeId: nodeId,
+          company: company ?? '',
+          lastSeen: latestTime ?? DateTime.now().toIso8601String(),
+          sourceNode: _sourceNode,
+        ),
+      );
+    }
+
+    return appliedCount;
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -1043,6 +1363,82 @@ class SyncService {
         SystemConstant.fromServerMap(data).toDatabaseMap(),
     'CompanyTable': (data) => Company.fromServerMap(data).toMap(),
   };
+
+  /// Registry for push: convert snake_case DB payload → camelCase server payload.
+  /// Uses fromDatabaseMap → toServerPayloadMap for model-aware conversion.
+  static final Map<String, Map<String, dynamic> Function(Map<String, dynamic>)>
+  _serverPayloadMappers = {
+    'SystemConstant': (data) =>
+        SystemConstant.fromDatabaseMap(data).toServerPayloadMap(),
+    'CompanyTable': (data) => Company.fromMap(data).toServerPayloadMap(),
+  };
+
+  /// Convert a snake_case string to camelCase (fallback for unmapped entities).
+  /// e.g. 'sync_key' → 'syncKey', 'company_name' → 'companyName'
+  String _snakeToCamel(String input) {
+    final parts = input.split('_');
+    if (parts.length <= 1) return input;
+    return parts.first +
+        parts
+            .skip(1)
+            .map(
+              (p) => p.isEmpty ? '' : '${p[0].toUpperCase()}${p.substring(1)}',
+            )
+            .join();
+  }
+
+  /// Fallback: convert all keys from snake_case to camelCase.
+  Map<String, dynamic> _convertKeysToCamelCase(Map<String, dynamic> input) {
+    final result = <String, dynamic>{};
+    for (final entry in input.entries) {
+      result[_snakeToCamel(entry.key)] = entry.value;
+    }
+    return result;
+  }
+
+  /// Model-aware DB payload → server payload conversion (reverse of _convertServerPayloadToDbMap).
+  /// For known entities, uses their fromDatabaseMap → toServerPayloadMap pipeline,
+  /// then merges any remaining fields from the original DB payload (like sync_key)
+  /// using generic snake_case→camelCase conversion so no data is lost.
+  /// Falls back to generic snake_case→camelCase for unmapped entities.
+  String _convertDbPayloadToServerPayload(
+    String entityName,
+    String payloadJson,
+  ) {
+    try {
+      final dbMap = jsonDecode(payloadJson) as Map<String, dynamic>;
+      final mapper = _serverPayloadMappers[entityName];
+
+      if (mapper != null) {
+        // Model-aware: convert known fields via the model pipeline
+        final modelMap = mapper(dbMap);
+
+        // Merge remaining fields the model doesn't carry (e.g. sync_key)
+        // using generic snake→camel conversion
+        final allCamelKeys = _convertKeysToCamelCase(dbMap);
+        for (final entry in allCamelKeys.entries) {
+          modelMap.putIfAbsent(entry.key, () => entry.value);
+        }
+
+        // Remove local-only fields the server doesn't need
+        modelMap.remove('isSynced');
+        modelMap.remove('lastSyncTime');
+
+        modelMap.removeWhere((_, v) => v == null);
+        return jsonEncode(modelMap);
+      } else {
+        // Generic fallback for unmapped entities
+        final serverMap = _convertKeysToCamelCase(dbMap);
+        serverMap.removeWhere((_, v) => v == null);
+        return jsonEncode(serverMap);
+      }
+    } catch (e) {
+      developer.log(
+        '⚠️ SyncService: Payload conversion failed for $entityName: $e',
+      );
+      return payloadJson; // Return original on failure
+    }
+  }
 
   bool _isSafeSqlIdentifier(String value) {
     return RegExp(r'^[A-Za-z_][A-Za-z0-9_]*$').hasMatch(value);
@@ -1196,10 +1592,18 @@ class SyncService {
   /// and wraps the DB operation + sync event log in a transaction for atomicity.
   ///
   /// Conflict resolution: **last-write-wins**.
-  Future<void> _applyReceivedEvent(SyncEventModel event) async {
+  Future<void> _applyReceivedEvent(
+    SyncEventModel event, {
+    bool skipOwnNodeCheck = true,
+    String? localSourceAddress,
+  }) async {
     try {
-      // Skip events from this node (avoid round-trip syncing)
-      if (_sourceNode != null && event.sourceNode == _sourceNode) {
+      // Skip only true round-trip events for this same device during normal sync.
+      if (skipOwnNodeCheck &&
+          await _isOwnRoundTripEvent(
+            event,
+            localSourceAddress: localSourceAddress,
+          )) {
         developer.log('⏭️ Skipping own event: ${event.sourceKey}');
         return;
       }
@@ -1225,6 +1629,11 @@ class SyncService {
       final syncKey =
           entityData['sync_key']?.toString() ??
           rawPayload['syncKey']?.toString();
+      final remoteRecordId = _parseRemoteRecordId(
+        event,
+        rawPayload,
+        tableSchema,
+      );
 
       // Ensure sync_key is in the DB map
       if (syncKey != null) {
@@ -1278,9 +1687,47 @@ class SyncService {
           }
         }
 
+        if (existing.isEmpty &&
+            remoteRecordId != null &&
+            tableSchema.containsKey('id')) {
+          existing = await txn.query(
+            tableName,
+            where: 'id = ?',
+            whereArgs: [remoteRecordId],
+            limit: 1,
+          );
+        }
+
+        final existingLocalId = _coerceInt(
+          existing.isNotEmpty ? existing.first['id'] : null,
+        );
+        if (existingLocalId != null &&
+            remoteRecordId != null &&
+            existingLocalId != remoteRecordId &&
+            tableSchema.containsKey('id')) {
+          final repaired = await _repairExistingRowId(
+            txn,
+            tableName: tableName,
+            currentId: existingLocalId,
+            targetId: remoteRecordId,
+            syncKey: syncKey,
+          );
+          if (repaired) {
+            existing = await txn.query(
+              tableName,
+              where: 'id = ?',
+              whereArgs: [remoteRecordId],
+              limit: 1,
+            );
+          }
+        }
+
         switch (operation) {
           case 'INSERT':
             if (existing.isEmpty) {
+              if (remoteRecordId != null && tableSchema.containsKey('id')) {
+                entityData['id'] = remoteRecordId;
+              }
               await txn.insert(
                 tableName,
                 entityData,
@@ -1312,6 +1759,9 @@ class SyncService {
               );
               developer.log('📥 Applied UPDATE on $tableName');
             } else {
+              if (remoteRecordId != null && tableSchema.containsKey('id')) {
+                entityData['id'] = remoteRecordId;
+              }
               await txn.insert(
                 tableName,
                 entityData,
@@ -1346,16 +1796,172 @@ class SyncService {
     }
   }
 
+  int? _coerceInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString());
+  }
+
+  int? _parseRemoteRecordId(
+    SyncEventModel event,
+    Map<String, dynamic> rawPayload,
+    Map<String, _DbColumnInfo> tableSchema,
+  ) {
+    if (!tableSchema.containsKey('id')) {
+      return null;
+    }
+
+    return _coerceInt(rawPayload['id']) ?? _coerceInt(event.entityId);
+  }
+
+  void _remapBootstrapForeignKeys(
+    Map<String, dynamic> data,
+    Map<String, Map<int, int>> idMap,
+  ) {
+    for (final entry in _bootstrapFkMappings.entries) {
+      final fkColumn = entry.key;
+      final parentTable = entry.value;
+
+      if (!data.containsKey(fkColumn) || data[fkColumn] == null) {
+        continue;
+      }
+
+      if (parentTable == 'udc_details' || parentTable == 'udc_header') {
+        continue;
+      }
+
+      final serverValue = _coerceInt(data[fkColumn]);
+      if (serverValue == null) {
+        continue;
+      }
+
+      final localId = idMap[parentTable]?[serverValue];
+      if (localId != null) {
+        data[fkColumn] = localId;
+      }
+    }
+  }
+
+  Future<bool> _repairExistingRowId(
+    Transaction txn, {
+    required String tableName,
+    required int currentId,
+    required int targetId,
+    String? syncKey,
+  }) async {
+    final collision = await txn.query(
+      tableName,
+      columns: ['id'],
+      where: 'id = ?',
+      whereArgs: [targetId],
+      limit: 1,
+    );
+
+    if (collision.isNotEmpty) {
+      developer.log(
+        '⚠️ SyncService: Skipping ID repair for $tableName '
+        '(syncKey=$syncKey) because target id $targetId already exists',
+      );
+      return false;
+    }
+
+    final updated = await txn.update(
+      tableName,
+      {'id': targetId},
+      where: 'id = ?',
+      whereArgs: [currentId],
+    );
+
+    if (updated > 0) {
+      developer.log(
+        '🔧 SyncService: Repaired $tableName primary key '
+        'from $currentId to $targetId (syncKey=$syncKey)',
+      );
+      return true;
+    }
+
+    return false;
+  }
+
+  Future<bool> _isOwnRoundTripEvent(
+    SyncEventModel event, {
+    String? localSourceAddress,
+  }) async {
+    final normalizedLocalAddress = localSourceAddress?.trim();
+    final normalizedEventAddress = event.sourceAddress?.trim();
+
+    if (normalizedLocalAddress != null &&
+        normalizedLocalAddress.isNotEmpty &&
+        normalizedEventAddress != null &&
+        normalizedEventAddress.isNotEmpty) {
+      return normalizedLocalAddress == normalizedEventAddress;
+    }
+
+    final sourceKey = event.sourceKey?.trim();
+    if (sourceKey == null || sourceKey.isEmpty) {
+      return false;
+    }
+
+    final db = await databaseService.database;
+    final existing = await db.query(
+      'sync_event',
+      columns: ['id'],
+      where: 'source_key = ?',
+      whereArgs: [sourceKey],
+      limit: 1,
+    );
+
+    return existing.isNotEmpty;
+  }
+
   // ═══════════════════════════════════════════════════════════════════════
   //  PUBLIC API
   // ═══════════════════════════════════════════════════════════════════════
 
   bool get isRunning => _running;
-  String? get sourceNode => _sourceNode;
-  set sourceNode(String? node) => _sourceNode = node;
 
   /// Force an immediate sync cycle (call from UI "Sync Now" button, etc.)
   Future<void> forceSyncNow() async => syncCycle();
+
+  Future<int> pullFromServerForBootstrap({
+    required String targetUrl,
+    required String username,
+    int id = 0,
+  }) async {
+    final normalizedTargetUrl = targetUrl.trim();
+    final normalizedUsername = username.trim();
+    if (normalizedTargetUrl.isEmpty || normalizedUsername.isEmpty) {
+      return 0;
+    }
+
+    final deviceId = await _getMachineId();
+    return _pullFromTargetUrl(
+      targetUrl: normalizedTargetUrl,
+      userName: normalizedUsername,
+      sourceAddress: deviceId,
+      id: id,
+      throwOnError: true,
+    );
+  }
+
+  Future<List<SyncEventModel>> orderEventsByDependency(
+    List<SyncEventModel> events,
+  ) async {
+    return _orderEventsByDependency(events);
+  }
+
+  Future<void> applyReceivedEvent(
+    SyncEventModel event, {
+    bool skipOwnNodeCheck = true,
+    String? localSourceAddress,
+  }) async {
+    await _applyReceivedEvent(
+      event,
+      skipOwnNodeCheck: skipOwnNodeCheck,
+      localSourceAddress: localSourceAddress,
+    );
+  }
 
   /// Get sync queue status for monitoring/UI display.
   Future<Map<String, int>> getStatus() async {
@@ -1369,8 +1975,11 @@ class SyncService {
   }
 
   /// Set user credentials for pull requests.
-  void setCredentials({required String username}) {
+  void setCredentials({required String username, required int id}) {
     _username = username;
-    developer.log('🔄 SyncService: Credentials set for user: $username');
+    _id = id;
+    developer.log(
+      '🔄 SyncService: Credentials set for user: $username with id : $id',
+    );
   }
 }

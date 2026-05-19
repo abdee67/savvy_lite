@@ -283,6 +283,42 @@ class SystemConstant {
       isSynced: true,
     );
   }
+
+  /// Convert to camelCase map for the Java server (push payload).
+  /// This is the reverse of fromServerMap — used when sending local data
+  /// back to the server. Dates are sent as epoch millis.
+  /// Local-only fields (is_synced, last_sync_time) are excluded.
+  Map<String, dynamic> toServerPayloadMap() {
+    final map = <String, dynamic>{
+      if (id != null) 'id': id,
+      'applyLotMgm': applyLotMgm,
+      'applyOverheadCost': applyOverheadCost,
+      'applyLocationMgm': applyLocationMgm,
+      'interfaceCustomer': interfaceCustomer,
+      'interfaceEmployee': interfaceEmployee,
+      'decimalPlaces': decimalPlaces,
+      'dateLastUpdated': dateLastUpdated?.millisecondsSinceEpoch,
+      'timeLastUpdated': timeLastUpdated?.millisecondsSinceEpoch,
+      'updatedBy': updatedBy,
+      'generateBarcodeForItem': generateBarcodeForItem,
+      'company': company,
+      'rateVatPercentage': rateVatPercentage,
+      'rateWithPercentage': rateWithholdingPercentage,
+      'withHoldInitials': withHoldInitials,
+      'autoSalesPrice': autoSalesPrice,
+      'lotType': lotType,
+      'locationCategoryLevel': locationCategoryLevel,
+      'lotQtyAutoForSales': lotQtyAutoForSales,
+      'discountDisplay': discountDisplay,
+      'taxInfoDisplay': taxInfoDisplay,
+      'daysLeft': daysLeft,
+      'currencyCode': currencyCode,
+      'reorderPointUomType': reorderPointUomType,
+    };
+    map.removeWhere((_, v) => v == null);
+    return map;
+  }
+
   bool get shouldAutoGenerateBarcodeForItem => generateBarcodeForItem == 'Y';
 
   SystemConstant copyWith({
