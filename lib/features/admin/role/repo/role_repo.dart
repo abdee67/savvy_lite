@@ -290,7 +290,7 @@ class RoleRepository extends BaseRepository {
     for (final privilegeId in privilegeIds) {
       final payload = withSyncKey({
         'role_table_id': roleId,
-        'privilege_table_id': privilegeId,
+        'previlage_table_id': privilegeId,
         'company': companyId,
         'created_by': createdBy,
         'date_created': DateTime.now().toIso8601String(),

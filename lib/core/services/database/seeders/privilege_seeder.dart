@@ -795,9 +795,9 @@ class PrivilegeSeeder extends BaseRepository {
         'date_updated': DateTime.now().toIso8601String(),
       };
 
-      await db.insert('privilege_table', withSyncKey(fullPrivilege));
+      await db.insert('previlage_table', withSyncKey(fullPrivilege));
       captureSync(
-        tableName: 'privilege_table',
+        tableName: 'previlage_table',
         entityMap: fullPrivilege,
         entityId: fullPrivilege['id'].toString(),
         operation: 'INSERT',

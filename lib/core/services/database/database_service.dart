@@ -293,7 +293,7 @@ class LocalDatabaseService {
 
     //6.create privilege table
     await db.execute('''
-  CREATE TABLE privilege_table (
+  CREATE TABLE previlage_table (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT CHECK(length(name) <= 45),
     description TEXT CHECK(length(description) <= 100),
@@ -313,12 +313,12 @@ class LocalDatabaseService {
   );
 ''');
     await db.execute(
-      'CREATE INDEX fk_pt_created_by_idx ON privilege_table(created_by)',
+      'CREATE INDEX fk_pt_created_by_idx ON previlage_table(created_by)',
     );
     await db.execute(
-      'CREATE INDEX fk_pt_updated_by_idx ON privilege_table(updated_by)',
+      'CREATE INDEX fk_pt_updated_by_idx ON previlage_table(updated_by)',
     );
-    developer.log('Created table: privilege_table');
+    developer.log('Created table: previlage_table');
 
     //7.Create role table
     await db.execute('''
@@ -354,14 +354,14 @@ class LocalDatabaseService {
   CREATE TABLE role_privilege (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     role_table_id INTEGER,
-    privilege_table_id INTEGER,
+    previlage_table_id INTEGER,
     created_by INTEGER,
     updated_by INTEGER,
     date_created TEXT,
     date_updated TEXT,
     sync_key TEXT CHECK(length(sync_key) <= 36),
     FOREIGN KEY (role_table_id) REFERENCES role_table(id),
-    FOREIGN KEY (privilege_table_id) REFERENCES privilege_table(id),
+    FOREIGN KEY (previlage_table_id) REFERENCES previlage_table(id),
     FOREIGN KEY (created_by) REFERENCES employees(id),
     FOREIGN KEY (updated_by) REFERENCES employees(id)
   );
@@ -370,7 +370,7 @@ class LocalDatabaseService {
       'CREATE INDEX fk_rt_has_pt_rt1_idx ON role_privilege(role_table_id)',
     );
     await db.execute(
-      'CREATE INDEX fk_rt_has_pt_pt1_idx ON role_privilege(privilege_table_id)',
+      'CREATE INDEX fk_rt_has_pt_pt1_idx ON role_privilege(previlage_table_id)',
     );
     await db.execute(
       'CREATE INDEX fk_role_privilege_employees1_idx ON role_privilege(created_by)',
@@ -403,6 +403,8 @@ class LocalDatabaseService {
         confirmations_expire_time TEXT,
         user_email TEXT CHECK(length(user_email) <= 100),
         table_number TEXT CHECK(length(table_number) <= 45),
+        admin_user TEXT,
+        valid_cell TEXT,
         sync_key TEXT CHECK(length(sync_key) <= 36),
         FOREIGN KEY (employees_id) REFERENCES employees(id),
         FOREIGN KEY (created_by) REFERENCES employees(id),
@@ -1893,7 +1895,7 @@ CREATE INDEX fk_fs_table_company_idx ON fs_table (company);
     await db.execute('CREATE INDEX idx_company ON company_table(id)');
     await db.execute('CREATE INDEX idx_user_company ON user_table(company)');
     await db.execute(
-      'CREATE INDEX idx_privilege_uri ON privilege_table(link_lable)',
+      'CREATE INDEX idx_privilege_uri ON previlage_table(link_lable)',
     );
     await db.execute(
       'CREATE INDEX idx_role_table_id ON user_role(role_table_id)',

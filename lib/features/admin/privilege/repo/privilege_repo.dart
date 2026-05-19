@@ -13,7 +13,7 @@ class PrivilegeRepository extends BaseRepository {
   /// Load all privileges.
   Future<List<Privilege>> loadPrivileges() async {
     final db = await databaseService.database;
-    final results = await db.query('privilege_table');
+    final results = await db.query('previlage_table');
     return results.map((p) => Privilege.fromMap(p)).toList();
   }
 
@@ -44,10 +44,10 @@ class PrivilegeRepository extends BaseRepository {
       'date_created': DateTime.now().toIso8601String(),
     });
 
-    final id = await db.insert('privilege_table', map);
+    final id = await db.insert('previlage_table', map);
 
     captureSync(
-      tableName: 'privilege_table',
+      tableName: 'previlage_table',
       entityMap: {...map, 'id': id},
       entityId: id.toString(),
       operation: 'INSERT',
@@ -61,14 +61,14 @@ class PrivilegeRepository extends BaseRepository {
     final db = await databaseService.database;
 
     final result = await db.update(
-      'privilege_table',
+      'previlage_table',
       privilege.toMap(),
       where: 'id = ?',
       whereArgs: [privilege.id],
     );
 
     captureSync(
-      tableName: 'privilege_table',
+      tableName: 'previlage_table',
       entityMap: privilege.toMap(),
       entityId: privilege.id.toString(),
       operation: 'UPDATE',
@@ -83,19 +83,19 @@ class PrivilegeRepository extends BaseRepository {
 
     // Fetch full row data BEFORE deleting
     final privilegeRows = await db.query(
-      'privilege_table',
+      'previlage_table',
       where: 'id = ?',
       whereArgs: [privilegeId],
     );
     final rolePrivilegeRows = await db.query(
       'role_privilege',
-      where: 'privilege_table_id = ?',
+      where: 'previlage_table_id = ?',
       whereArgs: [privilegeId],
     );
 
     // Delete privilege
     await db.delete(
-      'privilege_table',
+      'previlage_table',
       where: 'id = ?',
       whereArgs: [privilegeId],
     );
@@ -103,14 +103,14 @@ class PrivilegeRepository extends BaseRepository {
     // Delete role_privilege associations
     await db.delete(
       'role_privilege',
-      where: 'privilege_table_id = ?',
+      where: 'previlage_table_id = ?',
       whereArgs: [privilegeId],
     );
 
     // Capture sync with full row data
     for (final row in privilegeRows) {
       captureSync(
-        tableName: 'privilege_table',
+        tableName: 'previlage_table',
         entityMap: row,
         entityId: row['id'].toString(),
         operation: 'DELETE',

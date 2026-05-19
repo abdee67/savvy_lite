@@ -34,12 +34,12 @@ class DefaultDataSeeder extends BaseRepository {
 
     for (final privilege in serverPrivilegeSeedData) {
       batch.insert(
-        'privilege_table',
+        'previlage_table',
         Map<String, Object?>.from(privilege),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
       /*captureSync(
-        tableName: 'privilege_table',
+        tableName: 'previlage_table',
         entityMap: Map<String, Object?>.from(privilege),
         entityId: privilege['id'].toString(),
         operation: 'insert',
@@ -56,10 +56,9 @@ class DefaultDataSeeder extends BaseRepository {
 
     final urlPayload = withSyncKey({
       'config_key': 'server_url',
-      'config_value': 'https://0c00-102-208-96-132.ngrok-free.app/stock',
+      'config_value': 'https://f274-196-190-62-197.ngrok-free.app/stock',
       'environment': 'production',
       'active': 'Y',
-      'company': '1',
     });
 
     await db.insert(

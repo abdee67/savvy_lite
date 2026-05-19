@@ -64,8 +64,8 @@ class Role extends Equatable {
     // Get privileges through role_privilege table
     final privilegeResults = await db.rawQuery(
       '''
-      SELECT p.* FROM privilege_table p
-      INNER JOIN role_privilege rp ON rp.privilege_table_id = p.id
+      SELECT p.* FROM previlage_table p
+      INNER JOIN role_privilege rp ON rp.previlage_table_id = p.id
       WHERE rp.role_table_id = ?
     ''',
       [role.id],

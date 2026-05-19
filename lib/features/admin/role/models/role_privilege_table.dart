@@ -1,7 +1,7 @@
 class RolePrivilegeTable {
   final int? id;
   final int roleTableId;
-  final int privilegeTableId;
+  final int previlageTableId;
   final int createdBy;
   final String dateCreated;
   final int? updatedBy;
@@ -11,7 +11,7 @@ class RolePrivilegeTable {
   RolePrivilegeTable({
     this.id,
     required this.roleTableId,
-    required this.privilegeTableId,
+    required this.previlageTableId,
     required this.createdBy,
     required this.dateCreated,
     this.updatedBy,
@@ -23,7 +23,7 @@ class RolePrivilegeTable {
     return RolePrivilegeTable(
       id: map['id'],
       roleTableId: map['role_table_id'],
-      privilegeTableId: map['privilege_table_id'],
+      previlageTableId: map['previlage_table_id'],
       createdBy: map['created_by'],
       dateCreated: map['date_created'],
       updatedBy: map['updated_by'],
@@ -36,7 +36,7 @@ class RolePrivilegeTable {
     return {
       'id': id,
       'role_table_id': roleTableId,
-      'privilege_table_id': privilegeTableId,
+      'previlage_table_id': previlageTableId,
       'created_by': createdBy,
       'date_created': dateCreated,
       'updated_by': updatedBy,
