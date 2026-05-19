@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:savvy_stock/features/FSNMR/screens/FSNMR_dashboard.dart';
+import 'package:savvy_stock/features/FSNMR/widgets/fsnmr_tab.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_state.dart';
 import 'package:savvy_stock/features/system_constant/models/system_constant.dart';
 import 'package:savvy_stock/features/system_constant/bloc/system_constant_bloc.dart';
@@ -26,11 +26,29 @@ class _SystemConstantsScreenState extends State<SystemConstantsScreen>
   SystemConstant _editedSystemConstant = SystemConstant();
   bool _hasChanges = false;
   bool _initialLoadComplete = false;
+  final GlobalKey<FSNMRTabState> _fsnmrTabKey = GlobalKey<FSNMRTabState>();
+  int _activeTabIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_handleTabSelection);
+  }
+
+  void _handleTabSelection() {
+    if (_tabController.indexIsChanging) {
+      setState(() {
+        _activeTabIndex = _tabController.index;
+      });
+    } else {
+      // Handle the case where the index has finished changing
+      if (_activeTabIndex != _tabController.index) {
+        setState(() {
+          _activeTabIndex = _tabController.index;
+        });
+      }
+    }
   }
 
   @override
@@ -105,6 +123,13 @@ class _SystemConstantsScreenState extends State<SystemConstantsScreen>
                   onPressed: _resetChanges,
                   tooltip: 'Reset Changes',
                 ),
+              if (_activeTabIndex == 1)
+                IconButton(
+                  icon: const Icon(Iconsax.add),
+                  onPressed: () =>
+                      _fsnmrTabKey.currentState?.navigateToCreateRule(),
+                  tooltip: 'Create Rule',
+                ),
             ],
             bottom: TabBar(
               controller: _tabController,
@@ -122,7 +147,7 @@ class _SystemConstantsScreenState extends State<SystemConstantsScreen>
                 Tab(
                   icon: Icon(Iconsax.document, color: Colors.amber),
                   child: Text(
-                    'Report Setup',
+                    'FSNMR Rules',
                     style: TextStyle(
                       color: Colors.amber,
                       fontWeight: FontWeight.bold,
@@ -141,7 +166,10 @@ class _SystemConstantsScreenState extends State<SystemConstantsScreen>
                   formKey: _formKey,
                   authBloc: widget.authBloc,
                 ),
-                FSNMRDashboard(authBloc: widget.authBloc),
+                FSNMRTab(
+                  key: _fsnmrTabKey,
+                  authBloc: widget.authBloc,
+                ),
               ],
             ),
           ),

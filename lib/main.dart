@@ -149,17 +149,21 @@ Future<void> _initializeAndRunApp() async {
       //await LocalDatabaseService().debugTable('credit_payment_table');
       //await LocalDatabaseService().debugTable('company_table');
       //await LocalDatabaseService().debugTable('udc_details');
-      //await LocalDatabaseService().debugTable('user_table');
+      // await LocalDatabaseService().debugTable('user_table');
+      //   await LocalDatabaseService().debugTable('branch_table');
+      //   await LocalDatabaseService().debugTable('employees');
+      //   await LocalDatabaseService().debugTable('company_table');
+
       //await LocalDatabaseService().debugTable('user_role');
-      //await LocalDatabaseService().debugTable('privilege_table');
+      //await LocalDatabaseService().debugTable('previlage_table');
       //await LocalDatabaseService().debugTable('role_privilege');
       //await LocalDatabaseService().debugTable('other_expense_table');
       // await LocalDatabaseService().debugTable('next_number');
-      await LocalDatabaseService().debugTable('sync_event');
-     // await LocalDatabaseService().debugTable('sync_device_detail');
-      // await LocalDatabaseService().debugTable('sync_node_status');
+      //await LocalDatabaseService().debugTable('sync_event');
+      // await LocalDatabaseService().debugTable('sync_device_detail');
+      //await LocalDatabaseService().debugTable('sync_node_status');
       //await LocalDatabaseService().debugTable('system_constant');
-      await LocalDatabaseService().debugTable('subscription_management');
+      // await LocalDatabaseService().debugTable('subscription_management');
     }
   } catch (error, stackTrace) {
     if (kDebugMode) {
