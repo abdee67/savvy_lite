@@ -354,7 +354,7 @@ void initDependencies() {
     () => FSNMRRepository(databaseService: getIt()),
   );
   getIt.registerLazySingleton<RegistrationService>(
-    () => RegistrationService(databaseService: getIt()),
+    () => RegistrationService(databaseService: getIt(), httpClient: getIt()),
   );
   getIt.registerLazySingleton<LicenseService>(
     () => LicenseService(secureStorage: getIt(), deviceInfoPlugin: getIt()),
@@ -368,7 +368,7 @@ void initDependencies() {
   getIt.registerLazySingleton<InitialDataSyncService>(
     () => InitialDataSyncService(
       authRepository: getIt(),
-      syncRepository: getIt(),
+      syncService: getIt(),
       httpClient: getIt(),
     ),
   );

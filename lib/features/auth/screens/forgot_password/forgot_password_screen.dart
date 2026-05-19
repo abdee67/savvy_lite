@@ -39,7 +39,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             content: Text(connectivityResult.toString()),
             backgroundColor: Colors.orange,
             behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 4),
+            duration: const Duration(seconds: 4),
           ),
         );
       }

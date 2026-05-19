@@ -136,11 +136,11 @@ class UserModel extends Equatable {
     return result.toHexString();
   }*/
 
-  static Future<String> sha256Hash(password) async {
+  static Future<String> sha256Hash(String password) async {
     final bytes = utf8.encode(password);
     final digest = SHA256Digest();
     final hash = digest.process(bytes);
-    return hash.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
+    return base64Encode(hash);
   }
 
   // Factory method for creating new users with hashed password
@@ -191,7 +191,7 @@ class UserModel extends Equatable {
       'date_updated': dateUpdated?.toIso8601String(),
       'usercol': usercol,
       'branch': branch,
-      'status': 'active',
+      'status': 'Active',
       'password_last_updated': passwordLastUpdated?.toIso8601String(),
       'company': company,
       'user_email': userEmail,

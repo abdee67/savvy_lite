@@ -52,8 +52,9 @@ class CompanyDataPopulator extends BaseRepository {
 
         // ─── 2. Company Subscription ─────────────────────────────────
         if (response.companySubscription != null) {
-          final subData =
-              Map<String, dynamic>.from(response.companySubscription!);
+          final subData = Map<String, dynamic>.from(
+            response.companySubscription!,
+          );
           subData['company_id'] = localCompanyId;
           await _upsertBySyncKey(
             txn,
@@ -130,31 +131,26 @@ class CompanyDataPopulator extends BaseRepository {
           if (serverRoleId != null && roleIdMap.containsKey(serverRoleId)) {
             rpData['role_table_id'] = roleIdMap[serverRoleId];
           }
-          // privilege_table_id stays the same — privileges are system-level
+          // previlage_table_id stays the same — previlages are system-level
           // and have the same IDs on every device (seeded identically).
           // However, if sync_key is used, we should look up by sync_key.
-          final serverPrivilegeId = rpData['privilege_table_id'] as int?;
+          final serverPrivilegeId = rpData['previlage_table_id'] as int?;
           if (serverPrivilegeId != null) {
             final localPrivilegeId = await _findLocalIdBySyncKeyOrFallback(
               txn,
-              'privilege_table',
+              'previlage_table',
               rpData['sync_key'] as String?,
               serverPrivilegeId,
             );
             if (localPrivilegeId != null) {
-              rpData['privilege_table_id'] = localPrivilegeId;
+              rpData['previlage_table_id'] = localPrivilegeId;
             }
           }
           // Remap created_by
           if (rpData['created_by'] == serverEmployeeId) {
             rpData['created_by'] = localEmployeeId;
           }
-          await _upsertBySyncKey(
-            txn,
-            'role_privilege',
-            rpData,
-            rpData['id'],
-          );
+          await _upsertBySyncKey(txn, 'role_privilege', rpData, rpData['id']);
         }
         developer.log(
           'CompanyDataPopulator: Inserted ${response.rolePrivileges.length} '
@@ -201,12 +197,7 @@ class CompanyDataPopulator extends BaseRepository {
           if (urData['created_by'] == serverEmployeeId) {
             urData['created_by'] = localEmployeeId;
           }
-          await _upsertBySyncKey(
-            txn,
-            'user_role',
-            urData,
-            urData['id'],
-          );
+          await _upsertBySyncKey(txn, 'user_role', urData, urData['id']);
         }
         developer.log(
           'CompanyDataPopulator: Inserted ${response.userRoles.length} '
@@ -325,7 +316,7 @@ class CompanyDataPopulator extends BaseRepository {
 
   /// Look up a local ID by sync_key first, falling back to direct ID match.
   ///
-  /// This is used for privilege_table lookups where privileges are system-level
+  /// This is used for previlage_table lookups where privileges are system-level
   /// and already seeded locally, but the server's IDs may differ.
   Future<int?> _findLocalIdBySyncKeyOrFallback(
     Transaction txn,

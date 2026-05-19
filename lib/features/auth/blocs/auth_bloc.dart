@@ -36,7 +36,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   static const _tokenKey = 'jwt_token';
   static const _companyKey = 'company';
   static const _userIdKey = 'user_id';
-  static const _passwordKey = 'password';
 
   UserModel? _currentUser;
   Company? _currentCompany;
@@ -81,8 +80,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         hashedPassword,
       );
 
-      // ─── Step 2: If local fails, try remote server ────────────────
+      // ─── Step 2: If local fails, decide whether remote bootstrap is needed ──
       if (user == null) {
+        final localUser = await repository.findActiveUserByUsername(
+          event.username,
+        );
+
+        if (localUser != null) {
+          developer.log(
+            'Local user exists but password did not match for ${event.username}',
+          );
+          emit(
+            AuthState(
+              status: AuthStatus.failure,
+              message: 'Invalid username or password.',
+              errorType: AuthErrorType.invalidCredentials,
+              occuredAt: DateTime.now(),
+            ),
+          );
+          return;
+        }
+
         developer.log('No local user found. Attempting remote login...');
 
         // Check connectivity before making network call
@@ -92,8 +110,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             AuthState(
               status: AuthStatus.failure,
               message:
-                  'Invalid credentials locally. '
-                  'Connect to the internet to verify with server.',
+                  'User not found on this device. '
+                  'Connect to the internet to verify with the server.',
               errorType: AuthErrorType.networkError,
               occuredAt: DateTime.now(),
             ),
@@ -128,10 +146,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           ),
         );
 
-        final localUserId = await initialDataSyncService.downloadAndApply(
+        final syncResult = await initialDataSyncService.downloadAndApply(
           serverBaseUrl: serverBaseUrl,
           username: event.username,
-          passwordHash: hashedPassword,
           onProgress: (progress) {
             emit(
               AuthState(
@@ -144,13 +161,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           },
         );
 
-        if (localUserId == null) {
-          developer.log('Initial data sync failed or returned no user');
+        if (!syncResult.isSuccess || syncResult.localUserId == null) {
+          developer.log(
+            'Initial data sync failed: ${syncResult.errorMessage ?? 'unknown error'}',
+          );
           emit(
             AuthState(
               status: AuthStatus.failure,
-              message: 'Failed to set up account data. Please try again.',
-              errorType: AuthErrorType.unknown,
+              message:
+                  syncResult.errorMessage ??
+                  'Failed to set up account data. Please try again.',
+              errorType: _mapSyncErrorType(syncResult.errorMessage),
               occuredAt: DateTime.now(),
             ),
           );
@@ -158,10 +179,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         }
 
         // ─── Step 4: Re-query local DB for the newly inserted user ──
-        user = await repository.findUserById(localUserId);
+        user = await repository.findUserById(syncResult.localUserId!);
 
         if (user == null) {
-          developer.log('User not found after sync (id=$localUserId)');
+          developer.log(
+            'User not found after sync (id=${syncResult.localUserId})',
+          );
           emit(
             AuthState(
               status: AuthStatus.failure,
@@ -184,9 +207,73 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       // (works for both local-found and remote-populated users)
 
       // Get user roles with their privileges through proper joins
-      final userWithRoles = await repository.getUserWithRolesAndPrivileges(
+      var userWithRoles = await repository.getUserWithRolesAndPrivileges(
         user,
       );
+
+      developer.log(
+        'AuthBloc: Loaded ${userWithRoles.roles.length} role(s) and '
+        '${userWithRoles.allPrivileges.length} privilege(s) for '
+        '${event.username}.',
+      );
+
+      if ((userWithRoles.roles.isEmpty || userWithRoles.allPrivileges.isEmpty) &&
+          connectivityService.isConnected) {
+        final serverBaseUrl = await repository.getServerBaseUrl();
+        if (serverBaseUrl != null && serverBaseUrl.isNotEmpty) {
+          developer.log(
+            'AuthBloc: No roles/privileges found for ${event.username}. '
+            'Attempting repair sync before finalizing login.',
+          );
+
+          emit(
+            AuthState(
+              status: AuthStatus.initialSyncInProgress,
+              message: 'Refreshing account access...',
+              syncProgress: 0,
+              syncTable: 'user_role',
+            ),
+          );
+
+          final repairResult = await initialDataSyncService.downloadAndApply(
+            serverBaseUrl: serverBaseUrl,
+            username: event.username,
+            onProgress: (progress) {
+              emit(
+                AuthState(
+                  status: AuthStatus.initialSyncInProgress,
+                  message: progress.message,
+                  syncProgress: progress.percentage,
+                  syncTable: progress.currentTable,
+                ),
+              );
+            },
+          );
+
+          if (repairResult.isSuccess) {
+            final repairedUser = await repository.findUserByCredentials(
+              event.username,
+              hashedPassword,
+            );
+            if (repairedUser != null) {
+              user = repairedUser;
+              userWithRoles = await repository.getUserWithRolesAndPrivileges(
+                repairedUser,
+              );
+              developer.log(
+                'AuthBloc: Repair sync reloaded user ${repairedUser.id} '
+                'with ${userWithRoles.roles.length} roles and '
+                '${userWithRoles.allPrivileges.length} privileges.',
+              );
+            }
+          } else {
+            developer.log(
+              'AuthBloc: Repair sync failed: '
+              '${repairResult.errorMessage ?? 'unknown error'}',
+            );
+          }
+        }
+      }
 
       // Validate License
       final licenseResult = await licenseService.loadAndValidateLicense();
@@ -239,7 +326,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       // Inject credentials into SyncService for background pull cycles
       final syncService = getIt<SyncService>();
-      syncService.setCredentials(username: user.userName!);
+      syncService.setCredentials(username: user.userName!, id: user.id);
       // Use a lightweight token for sync to avoid exceeding Apache's
       // header size limit (the full token contains all privileges/roles).
       final syncToken = _createSyncToken(user);
@@ -413,7 +500,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
         final syncService = getIt<SyncService>();
         if (user.userName != null) {
-          syncService.setCredentials(username: user.userName!);
+          syncService.setCredentials(username: user.userName!, id: user.id);
         }
         // Use a lightweight token for sync to avoid exceeding Apache's
         // header size limit (the full token contains all privileges/roles).
@@ -559,6 +646,28 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         currentState.copyWith(companyId: event.companyId),
       ); // State remains the same, but company name and id changed
     }
+  }
+
+  AuthErrorType _mapSyncErrorType(String? message) {
+    final normalizedMessage = message?.toLowerCase() ?? '';
+
+    if (normalizedMessage.contains('invalid username') ||
+        normalizedMessage.contains('invalid password') ||
+        normalizedMessage.contains('invalid credential')) {
+      return AuthErrorType.invalidCredentials;
+    }
+
+    if (normalizedMessage.contains('not authorized')) {
+      return AuthErrorType.serverError;
+    }
+
+    if (normalizedMessage.contains('server') ||
+        normalizedMessage.contains('connect') ||
+        normalizedMessage.contains('network')) {
+      return AuthErrorType.networkError;
+    }
+
+    return AuthErrorType.unknown;
   }
 
   String _createToken(

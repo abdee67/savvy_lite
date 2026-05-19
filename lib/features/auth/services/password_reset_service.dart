@@ -199,7 +199,7 @@ class PasswordResetService {
       final result = await db.query(
         'user_table',
         where: 'user_email = ? AND status = ?',
-        whereArgs: [email.toLowerCase().trim(), 'active'],
+        whereArgs: [email.toLowerCase().trim(), 'Active'],
       );
       return result.isNotEmpty;
     } catch (e) {

@@ -6,7 +6,6 @@ import 'package:pointycastle/export.dart';
 import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/core/services/sync/models/sync_event_model.dart';
-import 'package:savvy_stock/features/admin/privilege/models/privilege_model.dart';
 import 'package:savvy_stock/features/admin/role/models/role_model.dart';
 import 'package:savvy_stock/features/admin/users/models/user_model.dart';
 import 'package:savvy_stock/features/admin/users/models/user_with_role.dart';
@@ -50,12 +49,38 @@ class AuthRepository extends BaseRepository {
       SELECT u.*, c.company_name, c.logo_company
       FROM user_table u
       LEFT JOIN company_table c ON u.company = c.id
-      WHERE u.user_name = ? AND u.password = ? AND u.status = "active"
+      WHERE u.user_name = ?
+        AND u.password = ?
+        AND u.status = 'Active'
     ''',
       [username, hashedPassword],
     );
 
     developer.log('Found ${users.length} users matching credentials');
+
+    if (users.isEmpty) {
+      return null;
+    }
+
+    return UserModel.fromMap(users.first);
+  }
+
+  /// Look up an active user by username only.
+  /// Used to distinguish "user not on this device yet" from "wrong password".
+  Future<UserModel?> findActiveUserByUsername(String username) async {
+    final db = await databaseService.database;
+
+    final users = await db.rawQuery(
+      '''
+      SELECT u.*, c.company_name, c.logo_company
+      FROM user_table u
+      LEFT JOIN company_table c ON u.company = c.id
+      WHERE u.user_name = ?
+        AND u.status = 'Active'
+      LIMIT 1
+    ''',
+      [username],
+    );
 
     if (users.isEmpty) {
       return null;
@@ -74,7 +99,8 @@ class AuthRepository extends BaseRepository {
       SELECT u.*, c.company_name, c.logo_company
       FROM user_table u
       LEFT JOIN company_table c ON u.company = c.id
-      WHERE u.id = ? AND u.status = "active"
+      WHERE u.id = ?
+        AND u.status = 'Active'
     ''',
       [userId],
     );
@@ -93,7 +119,8 @@ class AuthRepository extends BaseRepository {
       SELECT u.*, c.company_name, c.logo_company
       FROM user_table u
       LEFT JOIN company_table c ON u.company = c.id
-      WHERE u.sync_key = ? AND u.status = "active"
+      WHERE u.sync_key = ?
+        AND u.status = 'Active'
     ''',
       [syncKey],
     );
@@ -148,33 +175,60 @@ class AuthRepository extends BaseRepository {
     final bytes = utf8.encode(password);
     final digest = SHA256Digest();
     final hash = digest.process(bytes);
-    return hash.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
+    return base64Encode(hash);
   }
 
   Future<String?> getServerBaseUrl() async {
     try {
       final db = await databaseService.database;
-      final results = await db.query(
-        'system_url_config',
-        where: "config_key = ? AND active = ?",
-        whereArgs: ['auth_server', 'Y'],
-        limit: 1,
+
+      final preferred = await db.rawQuery(
+        '''
+        SELECT config_value
+        FROM system_url_config
+        WHERE active = ? AND company IS NULL
+          AND config_key IN (?, ?)
+        ORDER BY CASE WHEN config_key = ? THEN 0 ELSE 1 END, id ASC
+        LIMIT 1
+      ''',
+        ['Y', 'auth_server', 'server_url', 'auth_server'],
       );
 
-      if (results.isNotEmpty) {
-        return results.first['config_value'] as String?;
+      final preferredValue = _readConfigValue(preferred);
+      if (preferredValue != null) {
+        return preferredValue;
       }
 
-      // Fallback: try any active config
-      final fallback = await db.query(
-        'system_url_config',
-        where: "active = ?",
-        whereArgs: ['Y'],
-        limit: 1,
+      final globalFallback = await db.rawQuery(
+        '''
+        SELECT config_value
+        FROM system_url_config
+        WHERE active = ? AND company IS NULL
+        ORDER BY id ASC
+        LIMIT 1
+      ''',
+        ['Y'],
       );
 
-      if (fallback.isNotEmpty) {
-        return fallback.first['config_value'] as String?;
+      final globalFallbackValue = _readConfigValue(globalFallback);
+      if (globalFallbackValue != null) {
+        return globalFallbackValue;
+      }
+
+      final fallback = await db.rawQuery(
+        '''
+        SELECT config_value
+        FROM system_url_config
+        WHERE active = ?
+        ORDER BY CASE WHEN company IS NULL THEN 0 ELSE 1 END, id ASC
+        LIMIT 1
+      ''',
+        ['Y'],
+      );
+
+      final fallbackValue = _readConfigValue(fallback);
+      if (fallbackValue != null) {
+        return fallbackValue;
       }
 
       return null;
@@ -182,6 +236,86 @@ class AuthRepository extends BaseRepository {
       developer.log('RemoteAuthService: Error getting server URL: $e');
       return null;
     }
+  }
+
+  Future<void> updateDefaultServerBaseUrl(String serverBaseUrl) async {
+    final normalizedUrl = serverBaseUrl.trim();
+    if (normalizedUrl.isEmpty) {
+      return;
+    }
+
+    try {
+      final db = await databaseService.database;
+      await db.transaction((txn) async {
+        final existing = await txn.rawQuery(
+          '''
+          SELECT id, config_value
+          FROM system_url_config
+          WHERE company IS NULL
+          ORDER BY CASE WHEN active = ? THEN 0 ELSE 1 END,
+                   CASE
+                     WHEN config_key = ? THEN 0
+                     WHEN config_key = ? THEN 1
+                     ELSE 2
+                   END,
+                   id ASC
+          LIMIT 1
+        ''',
+          ['Y', 'auth_server', 'server_url'],
+        );
+
+        if (existing.isNotEmpty) {
+          final rowId = existing.first['id'] as int?;
+          final currentValue = existing.first['config_value']
+              ?.toString()
+              .trim();
+
+          if (rowId != null && currentValue != normalizedUrl) {
+            await txn.update(
+              'system_url_config',
+              {'config_value': normalizedUrl, 'active': 'Y'},
+              where: 'id = ?',
+              whereArgs: [rowId],
+            );
+            developer.log(
+              'AuthRepository: Updated default server URL '
+              'from ${currentValue ?? '(empty)'} to $normalizedUrl',
+            );
+          } else {
+            developer.log(
+              'AuthRepository: Default server URL already set to $normalizedUrl',
+            );
+          }
+          return;
+        }
+
+        await txn.insert('system_url_config', {
+          'config_key': 'server_url',
+          'config_value': normalizedUrl,
+          'environment': 'production',
+          'active': 'Y',
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+        developer.log(
+          'AuthRepository: Inserted default server URL $normalizedUrl',
+        );
+      });
+    } catch (e) {
+      developer.log('AuthRepository: Error updating default server URL: $e');
+      rethrow;
+    }
+  }
+
+  String? _readConfigValue(List<Map<String, Object?>> rows) {
+    if (rows.isEmpty) {
+      return null;
+    }
+
+    final value = rows.first['config_value']?.toString().trim();
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+
+    return value;
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -244,7 +378,7 @@ class AuthRepository extends BaseRepository {
   ///
   /// For each event:
   /// 1. Decode the JSON payload
-  /// 2. Skip locally-seeded tables (udc_header, udc_details, privilege_table)
+  /// 2. Skip locally-seeded tables (udc_header, udc_details, previlage_table)
   /// 3. Upsert the record into the target table using sync_key
   /// 4. Mark the event as SUCCESS
   ///
@@ -257,7 +391,7 @@ class AuthRepository extends BaseRepository {
     final locallySeededTables = {
       'udc_header',
       'udc_details',
-      'privilege_table',
+      'previlage_table',
     };
 
     final db = await databaseService.database;
@@ -451,7 +585,7 @@ class AuthRepository extends BaseRepository {
 
       // Role / Privilege
       'role_table_id': 'role_table',
-      'privilege_table_id': 'privilege_table',
+      'previlage_table_id': 'previlage_table',
 
       // Sales
       'customer_bill_to': 'customer_table',
@@ -513,7 +647,7 @@ class AuthRepository extends BaseRepository {
       }
 
       // Privilege table is also locally seeded — no remapping needed
-      if (parentTable == 'privilege_table') {
+      if (parentTable == 'previlage_table') {
         continue;
       }
 
