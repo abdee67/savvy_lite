@@ -1,6 +1,9 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:math';
 
+import 'package:http/http.dart' as http;
 import 'package:savvy_stock/core/repositories/base_repo.dart';
 import 'package:savvy_stock/core/services/database/database_service.dart';
 import 'package:savvy_stock/features/admin/users/models/user_model.dart';
@@ -29,8 +32,10 @@ class RegistrationResult {
 class RegistrationService extends BaseRepository {
   @override
   final LocalDatabaseService databaseService;
+  final http.Client httpClient;
 
-  RegistrationService({required this.databaseService});
+  RegistrationService({required this.databaseService, http.Client? httpClient})
+    : httpClient = httpClient ?? http.Client();
 
   /// Main registration method - creates all entities in a transaction
   /// Mirrors Java's register(SignupData signupData) method
@@ -47,6 +52,14 @@ class RegistrationService extends BaseRepository {
       }
 
       final settings = signupData.initialSettings!;
+      final registrationTime = DateTime.now();
+      final hashedPassword = await UserModel.sha256Hash(
+        signupData.adminUser.password!,
+      );
+      final confirmationCode = _generateConfirmationCode();
+      final confirmationExpireTime = registrationTime.add(
+        const Duration(minutes: 10),
+      );
 
       // Check company count limit (max 1 for this app)
       final companyCount = Sqflite.firstIntValue(
@@ -59,31 +72,102 @@ class RegistrationService extends BaseRepository {
         );
       }
 
+      final usernameAvailable = await isUsernameAvailable(
+        signupData.adminUser.userName!,
+      );
+      if (!usernameAvailable) {
+        return const RegistrationResult(
+          success: false,
+          message: 'Username already taken',
+        );
+      }
+
+      final baseCompanyMap = signupData.company
+          .copyWith(
+            userLimmit: settings.initialSubscriptionUsers,
+            branchLimmit: settings.initialSubscriptionBranches,
+            emailAddress1: signupData.adminUser.userEmail,
+            daysLeft: settings.initialSubscriptionDays,
+            subscriptionFee: settings.initialPayment,
+            dateCreated: registrationTime,
+          )
+          .toMap();
+      baseCompanyMap.remove('id');
+      final payloadForCompany = withSyncKey(
+        _blankStringsToNull(baseCompanyMap),
+      );
+
+      final baseBranchMap = withSyncKey(_buildBranchMap(signupData));
+      final baseEmployeeMap = withSyncKey(_buildEmployeeMap(signupData));
+      final serverUserMap = withSyncKey(
+        _buildServerUserMap(signupData: signupData),
+      );
+
+      final verifyResult = await _verifyUserWithServer(
+        company: payloadForCompany,
+        branch: baseBranchMap,
+        employee: baseEmployeeMap,
+        user: serverUserMap,
+      );
+
+      if (!verifyResult.success) {
+        return RegistrationResult(
+          success: false,
+          message: verifyResult.message,
+        );
+      }
+
+      final verifiedCompanyId = verifyResult.companyId!;
+      final verifiedBranchId = verifyResult.branchId;
+      final verifiedEmployeeId = verifyResult.employeeId;
+      final verifiedUserId = verifyResult.userId;
+      if (verifiedBranchId == null ||
+          verifiedBranchId <= 0 ||
+          verifiedEmployeeId == null ||
+          verifiedEmployeeId <= 0 ||
+          verifiedUserId == null ||
+          verifiedUserId <= 0) {
+        return const RegistrationResult(
+          success: false,
+          message:
+              'Server did not return valid branch, employee, and user ids.',
+        );
+      }
+
+      final existingCompanyIdCount = Sqflite.firstIntValue(
+        await db.rawQuery('SELECT COUNT(*) FROM company_table WHERE id = ?', [
+          verifiedCompanyId,
+        ]),
+      );
+      if (existingCompanyIdCount != null && existingCompanyIdCount > 0) {
+        return const RegistrationResult(
+          success: false,
+          message: 'Company id already exists locally',
+        );
+      }
+      if (await _idExists('branch_table', verifiedBranchId) ||
+          await _idExists('employees', verifiedEmployeeId) ||
+          await _idExists('user_table', verifiedUserId)) {
+        return const RegistrationResult(
+          success: false,
+          message: 'Server id already exists locally',
+        );
+      }
+
       // Perform all inserts in a transaction
       int? userId;
-      String? confirmationCode;
 
       await db.transaction((txn) async {
         // 1. Create Company with subscription limits
-        final companyMap = signupData.company
-            .copyWith(
-              userLimmit: settings.initialSubscriptionUsers,
-              branchLimmit: settings.initialSubscriptionBranches,
-              emailAddress1: signupData.adminUser.userEmail,
-              daysLeft: settings.initialSubscriptionDays,
-              subscriptionFee: settings.initialPayment,
-              dateCreated: DateTime.now(),
-            )
-            .toMap();
-        companyMap.remove('id');
-        final payloadForCompany = withSyncKey(companyMap);
+        payloadForCompany['id'] = verifiedCompanyId;
         final companyId = await txn.insert('company_table', payloadForCompany);
-        captureSync(
+        await captureSync(
           tableName: 'company_table',
           entityMap: payloadForCompany,
           entityId: companyId.toString(),
-          operation: 'INSERT',
+          operation: 'UPDATE',
           company: companyId.toString(),
+          txn: txn,
         );
         developer.log('Created company with ID: $companyId');
 
@@ -95,18 +179,19 @@ class RegistrationService extends BaseRepository {
           'initial_subscription_users': settings.initialSubscriptionUsers,
           'initial_payment': settings.initialPayment,
           'initial_subscription_days': settings.initialSubscriptionDays,
-          'status': settings.status ?? 'active',
+          'status': _normalizeServerStatus(settings.status),
         });
         final subscriptionId = await txn.insert(
           'subscription_management',
           payloadForSubscription,
         );
-        captureSync(
+        await captureSync(
           tableName: 'subscription_management',
           entityMap: payloadForSubscription,
           entityId: subscriptionId.toString(),
           operation: 'INSERT',
           company: companyId.toString(),
+          txn: txn,
         );
 
         // 2. Create CompanySubscription
@@ -122,87 +207,85 @@ class RegistrationService extends BaseRepository {
           'date_subscribed': now.toIso8601String(),
           'date_effective': now.toIso8601String(),
           'date_expire': expireDate.toIso8601String(),
-          'status': 'active',
+          'status': 'Active',
         });
         final id = await txn.insert(
           'company_subscription',
           payloadForCompanySubscription,
         );
-        captureSync(
+        await captureSync(
           tableName: 'company_subscription',
           entityMap: payloadForCompanySubscription,
           entityId: id.toString(),
           operation: 'INSERT',
           company: companyId.toString(),
+          txn: txn,
         );
         developer.log('Created company subscription');
 
         // 3. Create Branch
-        final branchMap = signupData.primaryBranch.toMap();
-        branchMap.remove('id');
+        final branchMap = Map<String, dynamic>.from(baseBranchMap);
+        branchMap['id'] = verifiedBranchId;
         branchMap['company'] = companyId;
 
         final payloadForBranch = withSyncKey(branchMap);
         final branchId = await txn.insert('branch_table', payloadForBranch);
-        captureSync(
+        await captureSync(
           tableName: 'branch_table',
           entityMap: payloadForBranch,
           entityId: branchId.toString(),
-          operation: 'INSERT',
+          operation: 'UPDATE',
           company: companyId.toString(),
+          txn: txn,
         );
         developer.log('Created branch with ID: $branchId');
 
         // 4. Create Employee
-        final employeeMap = signupData.employee.toMap();
-        employeeMap.remove('id');
+        final employeeMap = Map<String, dynamic>.from(baseEmployeeMap);
+        employeeMap['id'] = verifiedEmployeeId;
         employeeMap['company'] = companyId;
         employeeMap['branch'] = branchId;
 
         final payloadForEmployee = withSyncKey(employeeMap);
         final employeeId = await txn.insert('employees', payloadForEmployee);
-        captureSync(
+        await captureSync(
           tableName: 'employees',
           entityMap: payloadForEmployee,
           entityId: employeeId.toString(),
-          operation: 'INSERT',
+          operation: 'UPDATE',
           company: companyId.toString(),
+          txn: txn,
         );
         developer.log('Created employee with ID: $employeeId');
 
         // 5. Create Admin User
-        final hashedPassword = await UserModel.sha256Hash(
-          signupData.adminUser.password!,
-        );
-        confirmationCode = _generateConfirmationCode();
-        final confirmationExpireTime = DateTime.now().add(
-          const Duration(minutes: 10),
-        );
-
         final userMap = {
+          'id': verifiedUserId,
           'employees_id': employeeId,
           'branch': branchId,
           'company': companyId,
           'password': hashedPassword,
-          'status': 'active',
-          'date_created': DateTime.now().millisecondsSinceEpoch,
-          'password_last_updated': DateTime.now().millisecondsSinceEpoch,
+          'status': 'Active',
+          'date_created': registrationTime.millisecondsSinceEpoch,
+          'password_last_updated': registrationTime.millisecondsSinceEpoch,
           'confirmation_code': confirmationCode,
           'confirmations_expire_time':
               confirmationExpireTime.millisecondsSinceEpoch,
           'user_email': signupData.adminUser.userEmail,
           'user_name': signupData.adminUser.userName,
           'type': 'Company',
+          'sync_key': serverUserMap['sync_key'],
         };
 
         final payloadForUser = withSyncKey(userMap);
         userId = await txn.insert('user_table', payloadForUser);
-        captureSync(
+        await captureSync(
           tableName: 'user_table',
           entityMap: payloadForUser,
           entityId: userId.toString(),
-          operation: 'INSERT',
+          operation: 'UPDATE',
           company: companyId.toString(),
+          txn: txn,
         );
         developer.log('Created user with ID: $userId');
 
@@ -223,12 +306,13 @@ class RegistrationService extends BaseRepository {
           'postfix_up_to_four': postfixCode,
         });
         final idFs = await txn.insert('fs_table', payloadForFsTable);
-        captureSync(
+        await captureSync(
           tableName: 'fs_table',
           entityMap: payloadForFsTable,
           entityId: idFs.toString(),
           operation: 'INSERT',
           company: companyId.toString(),
+          txn: txn,
         );
         developer.log('Created FS table entry');
 
@@ -251,12 +335,13 @@ class RegistrationService extends BaseRepository {
             'role_table',
             payloadForAdminRole,
           );
-          captureSync(
+          await captureSync(
             tableName: 'role_table',
             entityMap: payloadForAdminRole,
             entityId: adminRoleId.toString(),
             operation: 'INSERT',
             company: companyId.toString(),
+            txn: txn,
           );
 
           // Assign admin role to user
@@ -267,33 +352,35 @@ class RegistrationService extends BaseRepository {
             'date_created': DateTime.now().toIso8601String(),
           });
           final idUserRole = await txn.insert('user_role', payloadForUserRole);
-          captureSync(
+          await captureSync(
             tableName: 'user_role',
             entityMap: payloadForUserRole,
             entityId: idUserRole.toString(),
             operation: 'INSERT',
             company: companyId.toString(),
+            txn: txn,
           );
 
           // Assign ALL privileges to this Admin role
-          final allPrivileges = await txn.query('privilege_table');
+          final allPrivileges = await txn.query('previlage_table');
           for (final privilege in allPrivileges) {
             // 1. Create the new record map first, THEN wrap it with withSyncKey
             final payload = withSyncKey({
               'role_table_id': adminRoleId,
-              'privilege_table_id': privilege['id'],
+              'previlage_table_id': privilege['id'],
               'date_created': DateTime.now().toIso8601String(),
               'created_by': userId,
             });
             // 2. Insert the wrapped payload
             final id = await txn.insert('role_privilege', payload);
             // 3. Pass the payload to captureSync
-            captureSync(
+            await captureSync(
               tableName: 'role_privilege',
               entityMap: payload, // Uses the map that now contains sync_key
               entityId: id.toString(),
               operation: 'INSERT',
               company: companyId.toString(),
+              txn: txn,
             );
           }
           developer.log('Assigned all privileges to Admin role');
@@ -309,12 +396,13 @@ class RegistrationService extends BaseRepository {
               'created_by': employeeId,
             });
             final newRoleId = await txn.insert('role_table', payload);
-            captureSync(
+            await captureSync(
               tableName: 'role_table',
               entityMap: payload,
               entityId: newRoleId.toString(),
               operation: 'INSERT',
               company: companyId.toString(),
+              txn: txn,
             );
 
             // Copy privileges for this role
@@ -328,17 +416,18 @@ class RegistrationService extends BaseRepository {
             for (final privilege in defaultPrivileges) {
               final payload = withSyncKey({
                 'role_table_id': newRoleId,
-                'privilege_table_id': privilege['privilege_table_id'],
+                'previlage_table_id': privilege['previlage_table_id'],
                 'date_created': DateTime.now().toIso8601String(),
                 'created_by': employeeId,
               });
               final id = await txn.insert('role_privilege', payload);
-              captureSync(
+              await captureSync(
                 tableName: 'role_privilege',
                 entityMap: payload,
                 entityId: id.toString(),
                 operation: 'INSERT',
                 company: companyId.toString(),
+                txn: txn,
               );
             }
 
@@ -350,12 +439,13 @@ class RegistrationService extends BaseRepository {
               'date_created': DateTime.now().toIso8601String(),
             });
             final id = await txn.insert('user_role', payloadForUserRole);
-            captureSync(
+            await captureSync(
               tableName: 'user_role',
               entityMap: payloadForUserRole,
               entityId: id.toString(),
               operation: 'INSERT',
               company: companyId.toString(),
+              txn: txn,
             );
           }
         }
@@ -374,12 +464,13 @@ class RegistrationService extends BaseRepository {
             'company': companyId,
           });
           final id = await txn.insert('next_number', payload);
-          captureSync(
+          await captureSync(
             tableName: 'next_number',
             entityMap: payload,
             entityId: id.toString(),
             operation: 'INSERT',
             company: companyId.toString(),
+            txn: txn,
           );
         }
         developer.log('Created next numbers: ${defaultNextNumbers.length}');
@@ -428,12 +519,13 @@ class RegistrationService extends BaseRepository {
           'updated_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
         });
         final idSc = await txn.insert('system_constant', systemConstPayload);
-        captureSync(
+        await captureSync(
           tableName: 'system_constant',
           entityMap: systemConstPayload,
           entityId: idSc.toString(),
           operation: 'INSERT',
           company: companyId.toString(),
+          txn: txn,
         );
         developer.log('Created default system constants');
       });
@@ -515,8 +607,19 @@ class RegistrationService extends BaseRepository {
       initialSubscriptionUsers: 3,
       initialPayment: 0.0,
       initialSubscriptionDays: 5,
-      status: 'active',
+      status: 'Active',
     );
+  }
+
+  String _normalizeServerStatus(String? status) {
+    final trimmed = status?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return 'Active';
+    }
+    if (trimmed.toLowerCase() == 'active') {
+      return 'Active';
+    }
+    return trimmed;
   }
 
   /// Generate 6-digit confirmation code
@@ -590,4 +693,382 @@ class RegistrationService extends BaseRepository {
       return false;
     }
   }
+
+  Map<String, dynamic> _buildBranchMap(SignupData signupData) {
+    final map = Map<String, dynamic>.from(signupData.primaryBranch.toMap());
+    map.remove('id');
+    map.remove('company');
+    return _blankStringsToNull(map);
+  }
+
+  Map<String, dynamic> _buildEmployeeMap(SignupData signupData) {
+    final map = Map<String, dynamic>.from(signupData.employee.toMap());
+    map.remove('id');
+    map.remove('company');
+    map.remove('branch');
+    return _blankStringsToNull(map);
+  }
+
+  Map<String, dynamic> _buildServerUserMap({required SignupData signupData}) {
+    final map = <String, dynamic>{
+      'password': signupData.adminUser.password,
+      'user_email': signupData.adminUser.userEmail,
+      'user_name': signupData.adminUser.userName,
+      'type': 'Company',
+    };
+    return _blankStringsToNull(map);
+  }
+
+  Future<_VerifyUserResult> _verifyUserWithServer({
+    required Map<String, dynamic> company,
+    required Map<String, dynamic> branch,
+    required Map<String, dynamic> employee,
+    required Map<String, dynamic> user,
+  }) async {
+    final baseUrl = await _getServerBaseUrl();
+    if (baseUrl == null || baseUrl.isEmpty) {
+      return const _VerifyUserResult.failure(
+        'No server URL configured. Please configure the server URL first.',
+      );
+    }
+
+    final payload = jsonEncode({
+      'company': _convertKeysToCamelCase(company),
+      'branch': _convertKeysToCamelCase(branch),
+      'employees': _convertKeysToCamelCase(employee),
+      'user': _convertKeysToCamelCase(user),
+    });
+
+    http.Response? lastResponse;
+    for (final url in _verifyUserUrls(baseUrl)) {
+      try {
+        developer.log('Content to send: $payload');
+        developer.log('RegistrationService: Verifying registration at $url');
+        final response = await httpClient
+            .post(
+              Uri.parse(url),
+              headers: const {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'ngrok-skip-browser-warning': 'true',
+              },
+              body: payload,
+            )
+            .timeout(const Duration(seconds: 120));
+
+        lastResponse = response;
+        developer.log(
+          'RegistrationService: verifyUser response '
+          '(${response.statusCode}): ${response.body}',
+        );
+        if (response.statusCode == 404 || response.statusCode == 405) {
+          continue;
+        }
+
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          return _VerifyUserResult.failure(
+            'Server verification failed (${response.statusCode}). Please try again.',
+          );
+        }
+
+        return _parseVerifyUserResponse(response.body);
+      } on FormatException {
+        return const _VerifyUserResult.failure(
+          'Invalid server verification response.',
+        );
+      } on TimeoutException {
+        return const _VerifyUserResult.failure(
+          'Server verification timed out. Please try again.',
+        );
+      } on http.ClientException {
+        return const _VerifyUserResult.failure(
+          'Cannot reach server. Please check your internet connection.',
+        );
+      }
+    }
+
+    final status = lastResponse?.statusCode;
+    return _VerifyUserResult.failure(
+      status == null
+          ? 'Could not verify registration with server.'
+          : 'Server verification endpoint not found ($status).',
+    );
+  }
+
+  List<String> _verifyUserUrls(String baseUrl) {
+    final normalized = baseUrl.replaceAll(RegExp(r'/+$'), '');
+    return <String>{
+      //  '$normalized/verifyUser',
+      // '$normalized/api/auth/verifyUser',
+      '$normalized/api/sync/verifyUser',
+    }.toList();
+  }
+
+  String _snakeToCamel(String input) {
+    final parts = input.split('_');
+    if (parts.length <= 1) return input;
+    return parts.first +
+        parts
+            .skip(1)
+            .map(
+              (part) => part.isEmpty
+                  ? ''
+                  : '${part[0].toUpperCase()}${part.substring(1)}',
+            )
+            .join();
+  }
+
+  Map<String, dynamic> _convertKeysToCamelCase(Map<String, dynamic> input) {
+    final result = <String, dynamic>{};
+    for (final entry in input.entries) {
+      result[_snakeToCamel(entry.key)] = entry.value;
+    }
+    return result;
+  }
+
+  Map<String, dynamic> _blankStringsToNull(Map<String, dynamic> input) {
+    final result = <String, dynamic>{};
+    for (final entry in input.entries) {
+      final value = entry.value;
+      result[entry.key] = value is String && value.trim().isEmpty
+          ? null
+          : value;
+    }
+    return result;
+  }
+
+  _VerifyUserResult _parseVerifyUserResponse(String body) {
+    final decoded = jsonDecode(body);
+    final data = decoded is List && decoded.isNotEmpty
+        ? decoded.first
+        : decoded;
+
+    if (data is bool) {
+      return data
+          ? const _VerifyUserResult.failure(
+              'Server did not return a company id.',
+            )
+          : const _VerifyUserResult.failure('Username already taken');
+    }
+
+    if (data is! Map<String, dynamic>) {
+      return const _VerifyUserResult.failure(
+        'Invalid server verification response.',
+      );
+    }
+
+    final usernameAvailable = _readAvailability(data);
+    if (usernameAvailable == false) {
+      return const _VerifyUserResult.failure('Username already taken');
+    }
+
+    final companyId = _readCompanyId(data);
+    if (companyId == null || companyId <= 0) {
+      return const _VerifyUserResult.failure(
+        'Server did not return a valid company id.',
+      );
+    }
+
+    final result = _VerifyUserResult.success(
+      companyId: companyId,
+      branchId: _readEntityId(data, const ['branchId', 'branch_id'], 'branch'),
+      employeeId: _readEntityId(data, const [
+        'employeeId',
+        'employeesId',
+        'employee_id',
+        'employees_id',
+      ], 'employees'),
+      userId: _readEntityId(data, const ['userId', 'user_id'], 'user'),
+      created: _readBool(data['created']),
+    );
+    developer.log(
+      'RegistrationService: parsed verifyUser ids '
+      'companyId=${result.companyId}, branchId=${result.branchId}, '
+      'employeeId=${result.employeeId}, userId=${result.userId}, '
+      'created=${result.created}',
+    );
+    return result;
+  }
+
+  bool? _readAvailability(Map<String, dynamic> data) {
+    const keys = [
+      'usernameAvailable',
+      'userNameAvailable',
+      'isUsernameAvailable',
+      'available',
+      'valid',
+      'success',
+      'username',
+      'user',
+    ];
+
+    for (final key in keys) {
+      final value = data[key];
+      if (value is bool) return value;
+      if (value is String) {
+        final normalized = value.toLowerCase();
+        if (normalized == 'true' || normalized == 'available') return true;
+        if (normalized == 'false' || normalized == 'taken') return false;
+      }
+    }
+
+    const unavailableWhenTrueKeys = [
+      'usernameExists',
+      'userNameExists',
+      'userExists',
+      'exists',
+      'duplicate',
+      'duplicated',
+    ];
+
+    for (final key in unavailableWhenTrueKeys) {
+      final value = data[key];
+      if (value is bool) return !value;
+      if (value is String) {
+        final normalized = value.toLowerCase();
+        if (normalized == 'true') return false;
+        if (normalized == 'false') return true;
+      }
+    }
+
+    return null;
+  }
+
+  int? _readCompanyId(Map<String, dynamic> data) {
+    const keys = [
+      'companyId',
+      'company_id',
+      'latestCompanyId',
+      'newCompanyId',
+      'nextCompanyId',
+      'tenantId',
+      'id',
+    ];
+
+    for (final key in keys) {
+      final parsed = _asInt(data[key]);
+      if (parsed != null) return parsed;
+    }
+
+    final company = data['company'];
+    if (company is Map<String, dynamic>) {
+      return _asInt(company['id']) ?? _asInt(company['companyId']);
+    }
+    return _asInt(company);
+  }
+
+  int? _readEntityId(
+    Map<String, dynamic> data,
+    List<String> keys,
+    String nestedKey,
+  ) {
+    for (final key in keys) {
+      final parsed = _asInt(data[key]);
+      if (parsed != null) return parsed;
+    }
+
+    final nested = data[nestedKey];
+    if (nested is Map<String, dynamic>) {
+      return _asInt(nested['id']) ??
+          _asInt(nested['${nestedKey}Id']) ??
+          _asInt(nested['${nestedKey}_id']);
+    }
+    return _asInt(nested);
+  }
+
+  bool? _readBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is String) {
+      final normalized = value.toLowerCase();
+      if (normalized == 'true') return true;
+      if (normalized == 'false') return false;
+    }
+    return null;
+  }
+
+  int? _asInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
+
+  Future<String?> _getServerBaseUrl() async {
+    try {
+      final db = await databaseService.database;
+      final results = await db.query(
+        'system_url_config',
+        where: "config_key = ? AND active = ?",
+        whereArgs: ['auth_server', 'Y'],
+        limit: 1,
+      );
+
+      if (results.isNotEmpty) {
+        return results.first['config_value'] as String?;
+      }
+
+      final fallback = await db.query(
+        'system_url_config',
+        where: "active = ?",
+        whereArgs: ['Y'],
+        limit: 1,
+      );
+
+      if (fallback.isNotEmpty) {
+        return fallback.first['config_value'] as String?;
+      }
+
+      return null;
+    } catch (e) {
+      developer.log('RegistrationService: Error getting server URL: $e');
+      return null;
+    }
+  }
+
+  Future<bool> _idExists(String tableName, int id) async {
+    final db = await databaseService.database;
+    final count = Sqflite.firstIntValue(
+      await db.rawQuery('SELECT COUNT(*) FROM $tableName WHERE id = ?', [id]),
+    );
+    return count != null && count > 0;
+  }
+}
+
+class _VerifyUserResult {
+  final bool success;
+  final String message;
+  final int? companyId;
+  final int? branchId;
+  final int? employeeId;
+  final int? userId;
+  final bool? created;
+
+  const _VerifyUserResult._({
+    required this.success,
+    required this.message,
+    this.companyId,
+    this.branchId,
+    this.employeeId,
+    this.userId,
+    this.created,
+  });
+
+  const _VerifyUserResult.failure(String message)
+    : this._(success: false, message: message);
+
+  const _VerifyUserResult.success({
+    required int companyId,
+    int? branchId,
+    int? employeeId,
+    int? userId,
+    bool? created,
+  }) : this._(
+         success: true,
+         message: 'Registration verified',
+         companyId: companyId,
+         branchId: branchId,
+         employeeId: employeeId,
+         userId: userId,
+         created: created,
+       );
 }

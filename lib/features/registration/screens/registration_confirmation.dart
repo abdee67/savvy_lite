@@ -114,12 +114,18 @@ class _ConfirmationPageState extends State<ConfirmationPage> {
           _showSuccessDialog(context);
         } else if (state.status == RegistrationStatus.failure) {
           setState(() => _isSubmitting = false);
+          final isUsernameTaken =
+              state.validationErrors.containsKey('username') ||
+              (state.message?.toLowerCase().contains('username') ?? false);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.message ?? 'Registration failed'),
               backgroundColor: Colors.red,
             ),
           );
+          if (isUsernameTaken && Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
         }
       },
       child: Scaffold(

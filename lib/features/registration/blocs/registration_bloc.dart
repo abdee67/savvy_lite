@@ -329,10 +329,23 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
           developer.log('Registration successful: User ID ${result.userId}');
         }
       } else {
+        final isUsernameTaken = result.message.toLowerCase().contains(
+          'username',
+        );
+        final errors = Map<String, String>.from(state.validationErrors);
+        if (isUsernameTaken) {
+          errors['username'] = 'Username already taken';
+        }
+
         emit(
           state.copyWith(
             status: RegistrationStatus.failure,
             message: result.message,
+            currentStep: isUsernameTaken ? 3 : state.currentStep,
+            usernameAvailable: isUsernameTaken
+                ? false
+                : state.usernameAvailable,
+            validationErrors: errors,
           ),
         );
         if (kDebugMode) {

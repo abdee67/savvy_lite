@@ -106,20 +106,14 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
       return;
     }
 
-    // Parse full name
-    final nameParts = fullNameController.text.trim().split(' ');
-    final firstName = nameParts.isNotEmpty ? nameParts[0] : '';
-    final middleName = nameParts.length > 2
-        ? nameParts.sublist(1, nameParts.length - 1).join(' ')
-        : '';
-    final lastName = nameParts.length > 1 ? nameParts.last : '';
+    final parsedName = _parseFullName(fullNameController.text);
 
     // Create employee
     final employee = Employee(
       id: 0,
-      nameFirst: firstName,
-      nameLast: lastName,
-      nameMiddle: middleName,
+      nameFirst: parsedName.first,
+      nameLast: parsedName.last,
+      nameMiddle: parsedName.middle,
       email: emailController.text.trim(),
       phoneHome: phoneController.text.trim(),
       title: 'Administrator',
@@ -181,6 +175,30 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
         builder: (_) =>
             BlocProvider.value(value: bloc, child: const ConfirmationPage()),
       ),
+    );
+  }
+
+  ({String first, String middle, String last}) _parseFullName(String value) {
+    final parts = value
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList();
+
+    if (parts.isEmpty) {
+      return (first: '', middle: '', last: '');
+    }
+    if (parts.length == 1) {
+      return (first: parts.first, middle: '', last: '');
+    }
+    if (parts.length == 2) {
+      return (first: parts.first, middle: '', last: parts.last);
+    }
+
+    return (
+      first: parts.first,
+      middle: parts.sublist(1, parts.length - 1).join(' '),
+      last: parts.last,
     );
   }
 
@@ -438,7 +456,9 @@ class _AdminFormScreenState extends State<AdminFormScreen> {
                             ElevatedButton.icon(
                               onPressed: _goBack,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white.withOpacity(0.2),
+                                backgroundColor: Colors.white.withValues(
+                                  alpha: 0.2,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(25),
                                 ),
